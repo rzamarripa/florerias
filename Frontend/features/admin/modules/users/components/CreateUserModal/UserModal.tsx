@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Building,
-  Check,
   Edit,
   Eye,
   EyeOff,
@@ -26,12 +25,14 @@ import {
   type UpdateUserData,
 } from "../../services/users";
 import styles from "./UserModal.module.css";
+import { Role } from "../../../roles/services/role";
 
 interface UsersModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingUserId?: string | null;
   users?: any[];
+  roles: Role[];
 }
 
 const UsersModal: React.FC<UsersModalProps> = ({
@@ -39,6 +40,7 @@ const UsersModal: React.FC<UsersModalProps> = ({
   onClose,
   editingUserId,
   users = [],
+  roles,
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,14 +79,6 @@ const UsersModal: React.FC<UsersModalProps> = ({
   ): errors is FieldErrors<CreateUserFormData> => {
     return !isEditing;
   };
-
-  const roles = [
-    { value: "", label: "Seleccionar rol" },
-    { value: "684a5f1f0fa9dc00579ba18a", label: "Super Admin" },
-    { value: "684a5f1f0fa9dc00579ba18b", label: "Gerente" },
-    { value: "684a5f1f0fa9dc00579ba18c", label: "Egresos" },
-    { value: "684a5f1f0fa9dc00579ba18d", label: "Asistente" },
-  ];
 
   const departments = [
     { value: "", label: "Seleccionar departamento" },
@@ -126,6 +120,13 @@ const UsersModal: React.FC<UsersModalProps> = ({
     }
   }, [isEditing, currentUser, isOpen, reset]);
 
+  const getFirstName = (fullName: string) => {
+    const parts = fullName.trim().split(/\s+/);
+    const givenNames =
+      parts.length > 3 ? parts.slice(0, 2).join(" ") : parts[0];
+      return givenNames
+  };
+
   const onSubmit = async (data: CreateUserFormData | UpdateUserFormData) => {
     try {
       setLoading(true);
@@ -136,7 +137,7 @@ const UsersModal: React.FC<UsersModalProps> = ({
           username: data.username,
           department: data.department,
           profile: {
-            nombre: data.profile.nombre,
+            nombre: getFirstName(data.profile.nombreCompleto),
             nombreCompleto: data.profile.nombreCompleto,
             estatus: data.profile.estatus,
           },
@@ -151,7 +152,7 @@ const UsersModal: React.FC<UsersModalProps> = ({
           password: createData.password,
           department: createData.department,
           profile: {
-            nombre: createData.profile.nombre || "",
+            nombre: getFirstName(createData.profile.nombreCompleto) || "",
             nombreCompleto: createData.profile.nombreCompleto,
             estatus: createData.profile.estatus,
           },
@@ -371,9 +372,10 @@ const UsersModal: React.FC<UsersModalProps> = ({
                     {...register("role")}
                     disabled={loading}
                   >
+                    <option value="">Seleccione el rol de usuario</option>
                     {roles.map((role) => (
-                      <option key={role.value} value={role.value}>
-                        {role.label}
+                      <option key={role._id} value={role._id}>
+                        {role.name}
                       </option>
                     ))}
                   </select>
@@ -401,28 +403,12 @@ const UsersModal: React.FC<UsersModalProps> = ({
                     ))}
                   </select>
                 </div>
-
-                <div className="col-12">
-                  <div className={`form-check ${styles.modernCheckbox}`}>
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="userStatus"
-                      {...register("profile.estatus")}
-                      disabled={loading}
-                    />
-                    <label className="form-check-label" htmlFor="userStatus">
-                      <Check size={14} className="me-2" />
-                      Usuario activo (puede iniciar sesión inmediatamente)
-                    </label>
-                  </div>
-                </div>
               </div>
 
               <div className={styles.modalFooter}>
                 <button
                   type="button"
-                  className="btn btn-outline-secondary rounded-pill px-4"
+                  className="  btn btn-outline-secondary rounded-sm px-4"
                   onClick={handleClose}
                   disabled={loading}
                 >
@@ -430,7 +416,7 @@ const UsersModal: React.FC<UsersModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary rounded-pill px-4"
+                  className="btn btn-primary rounded-sm px-4"
                   disabled={loading}
                 >
                   {loading ? (

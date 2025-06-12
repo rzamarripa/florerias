@@ -185,6 +185,8 @@
 }
 
 .modalFooter {
+  margin-top: 1rem;
+  border-radius: 1rem;
   padding: 1.5rem 2rem;
   background: #f8fafc;
   border-top: 1px solid #e2e8f0;

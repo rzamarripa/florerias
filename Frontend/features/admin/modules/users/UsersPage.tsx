@@ -1,6 +1,5 @@
 "use client";
-
-import { Download, RefreshCw, Search, UserPlus } from "lucide-react";
+import { PlusCircleIcon, Search, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import ActionsDropdown from "./components/ActionsDropdown/ActionsDropdown";
 import CreateUserModal from "./components/CreateUserModal/UserModal";
@@ -8,14 +7,16 @@ import RoleBadge from "./components/RoleBadge/RoleBadge";
 import StatusBadge from "./components/StatusBadge/StatusBadge";
 import { usersService, type User } from "./services/users";
 import styles from "./UsersPage.module.css";
+import { Role, rolesService } from "../roles/services/role";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [roleFilter, setRoleFilter] = useState<string>("");
+  const [searchUsersSearch, setSearchUsersTerm] = useState<string>("");
+  const [searchRolesSearch, setSearchRolesTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const [pagination, setPagination] = useState({
@@ -28,6 +29,28 @@ const UsersPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
+  const fetchRoles = async (page: number = pagination.page) => {
+    try {
+      setError(null);
+
+      const response = await rolesService.getAllRoles({
+        page,
+        limit: pagination.limit,
+        ...(searchRolesSearch && { username: searchRolesSearch }),
+      });
+
+      if (response.data) {
+        setRoles(response.data);
+      }
+
+      if (response.pagination) {
+        setPagination(response.pagination);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+    } 
+  };
+
   const fetchUsers = async (page: number = pagination.page) => {
     try {
       setLoading(true);
@@ -36,7 +59,7 @@ const UsersPage: React.FC = () => {
       const response = await usersService.getAllUsers({
         page,
         limit: pagination.limit,
-        ...(searchTerm && { username: searchTerm }),
+        ...(searchUsersSearch && { username: searchUsersSearch }),
         ...(statusFilter && { estatus: statusFilter }),
       });
 
@@ -55,20 +78,15 @@ const UsersPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+      fetchUsers(1);
+  }, [searchUsersSearch, statusFilter]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      fetchUsers(1);
+      fetchRoles(1);
     }, 500);
-
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, statusFilter]);
-
-  const handleRefresh = (): void => {
-    fetchUsers(pagination.page);
-  };
+  }, [searchRolesSearch]);
 
   const handleAddUser = (): void => {
     setEditingUserId(null);
@@ -84,10 +102,6 @@ const UsersPage: React.FC = () => {
     setShowCreateModal(false);
     setEditingUserId(null);
     fetchUsers(pagination.page);
-  };
-
-  const handleExport = (): void => {
-    console.log("Exportar usuarios");
   };
 
   const handlePageChange = (page: number): void => {
@@ -134,7 +148,9 @@ const UsersPage: React.FC = () => {
       <div className={styles.pageHeader}>
         <div className={styles.headerLeft}>
           <div className={styles.iconContainer}>
-            <span className={styles.iconEmoji}>👥</span>
+            <span className={styles.iconEmoji}>
+              <Users />
+            </span>
           </div>
           <div>
             <h1 className={styles.pageTitle}>
@@ -146,23 +162,8 @@ const UsersPage: React.FC = () => {
         </div>
 
         <div className={styles.headerActions}>
-          <button
-            className={styles.refreshBtn}
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            <RefreshCw
-              size={14}
-              className={`${styles.btnIcon} ${loading ? styles.spin : ""}`}
-            />
-            Actualizar
-          </button>
-          <button className={styles.exportBtn} onClick={handleExport}>
-            <Download size={14} className={styles.btnIcon} />
-            Exportar
-          </button>
           <button className={styles.addUserBtn} onClick={handleAddUser}>
-            <UserPlus size={14} className={styles.btnIcon} />
+            <PlusCircleIcon size={14} className={styles.btnIcon} />
             Nuevo Usuario
           </button>
         </div>
@@ -176,21 +177,22 @@ const UsersPage: React.FC = () => {
               type="text"
               className={styles.searchInput}
               placeholder="Buscar usuarios..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchUsersSearch}
+              onChange={(e) => setSearchUsersTerm(e.target.value)}
             />
           </div>
           <div className={styles.filterSelect}>
             <select
+              value={searchRolesSearch}
               className={styles.selectInput}
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
+              onChange={(e) => setSearchRolesTerm(e.target.value)}
             >
               <option value="">Todos los roles</option>
-              <option value="SuperAdmin">Super Admin</option>
-              <option value="Gerente">Gerente</option>
-              <option value="Egresos">Egresos</option>
-              <option value="Sin rol">Sin rol</option>
+              {roles.map((role) => (
+                <option key={role._id} value={role._id}>
+                  {role.name}
+                </option>
+              ))}
             </select>
           </div>
           <div className={styles.filterSelect}>
@@ -206,15 +208,6 @@ const UsersPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {loading && (
-        <div className={styles.loadingContainer}>
-          <div className={styles.spinner}>
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p className={styles.loadingText}>Cargando usuarios...</p>
-        </div>
-      )}
 
       <div className={styles.tableCard}>
         <div className={styles.tableWrapper}>
@@ -236,19 +229,16 @@ const UsersPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 && !loading ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={8} className={styles.emptyState}>
-                    <div>
-                      <div className={styles.emptyIcon}>📭</div>
-                      <h6>No se encontraron usuarios</h6>
-                      <p className={styles.emptyText}>
-                        Intenta ajustar los filtros de búsqueda
-                      </p>
+                  <td colSpan={8} className={styles.loadingContainer}>
+                    <div className={styles.spinner}>
+                      <span className="visually-hidden">Cargando...</span>
                     </div>
+                    <p className={styles.loadingText}>Cargando usuarios...</p>
                   </td>
                 </tr>
-              ) : (
+              )  : (
                 users.map((user, index) => (
                   <tr key={user._id} className={styles.tableRow}>
                     <td className={styles.tableCell}>
@@ -376,6 +366,7 @@ const UsersPage: React.FC = () => {
         onClose={handleCloseModal}
         editingUserId={editingUserId}
         users={users}
+        roles={roles}
       />
     </div>
   );

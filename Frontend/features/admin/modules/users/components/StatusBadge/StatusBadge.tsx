@@ -1,5 +1,6 @@
 import React from "react";
 import styles from "./StatusBadge.module.css";
+import { Badge } from "react-bootstrap";
 
 interface StatusBadgeProps {
   status: boolean;
@@ -7,12 +8,9 @@ interface StatusBadgeProps {
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   return (
-    <span
-      className={`${styles.badge} ${status ? styles.active : styles.inactive}`}
-    >
-      <span className={styles.indicator}>{status ? "🟢" : "🔴"}</span>
+    <Badge className={`${styles.badge} ${status ? styles.active : styles.inactive}`}>
       {status ? "Activo" : "Inactivo"}
-    </span>
+    </Badge>
   );
 };
 

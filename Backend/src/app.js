@@ -20,7 +20,6 @@ app.use(generalLimiter);
 app.use(
   cors({
     origin: "*",
-    credentials: true,
   })
 );
 

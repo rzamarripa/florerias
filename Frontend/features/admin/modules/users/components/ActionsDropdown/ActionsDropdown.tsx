@@ -1,4 +1,4 @@
-import { Eye, Lock, MoreVertical, RefreshCcw, SquarePen } from "lucide-react";
+import { Eye, Lock, MoreVertical, SquarePen } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { type User } from "../../services/users";
 import styles from "./ActionsDropdown.module.css";
@@ -118,13 +118,6 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
             >
               <SquarePen className={styles.itemIcon} />
               Editar Usuario
-            </button>
-            <button
-              className={styles.dropdownItem}
-              onClick={() => handleAction("Cambiar rol")}
-            >
-              <RefreshCcw className={styles.itemIcon} />
-              Cambiar Rol
             </button>
             <div className={styles.dropdownDivider} />
             <button
