@@ -1,7 +1,7 @@
 "use client";
 
+import MainLayout from "@/components/layout/MainLayout";
 import { LayoutProvider } from "@/context/useLayoutContext";
-import MainLayout from "@/layouts/MainLayout";
 import { useUserSessionStore } from "@/stores";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";

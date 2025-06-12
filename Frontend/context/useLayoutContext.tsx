@@ -26,8 +26,8 @@ import {
 import { useLocalStorage } from "usehooks-ts";
 
 const INIT_STATE: LayoutState = {
-  skin: "classic",
-  theme: "light",
+  skin: "modern",
+  theme: "system",
   orientation: "vertical",
   sidenav: {
     size: "default",
