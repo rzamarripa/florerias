@@ -1,3 +1,5 @@
+"use client";
+
 import { Download, RefreshCw, Search, UserPlus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import ActionsDropdown from "./components/ActionsDropdown/ActionsDropdown";
