@@ -3,7 +3,7 @@
 import { Download, RefreshCw, Search, UserPlus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import ActionsDropdown from "./components/ActionsDropdown/ActionsDropdown";
-import CreateUserModal from "./components/CreateUserModal/CreateUserModal";
+import CreateUserModal from "./components/CreateUserModal/UserModal";
 import RoleBadge from "./components/RoleBadge/RoleBadge";
 import StatusBadge from "./components/StatusBadge/StatusBadge";
 import { usersService, type User } from "./services/users";
