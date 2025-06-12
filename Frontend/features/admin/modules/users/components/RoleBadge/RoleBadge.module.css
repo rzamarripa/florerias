@@ -1,0 +1,51 @@
+.badge {
+  background: linear-gradient(135deg, #059669 0%, #0891b2 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 400;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9999px;
+  display: inline-block;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.superAdmin {
+  opacity: 1;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+}
+
+.gerente {
+  opacity: 0.9;
+  background: linear-gradient(135deg, #059669 0%, #0891b2 100%);
+}
+
+.egresos {
+  opacity: 0.8;
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+}
+
+.sinRol {
+  opacity: 0.6;
+  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+}
+
+.default {
+  opacity: 0.7;
+  background: linear-gradient(135deg, #059669 0%, #0891b2 100%);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.375rem 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+}

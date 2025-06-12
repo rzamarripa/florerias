@@ -1,11 +1,11 @@
-import Link from 'next/link'
-import { BreadcrumbItem } from 'react-bootstrap'
-import { TbChevronRight } from 'react-icons/tb'
+import Link from "next/link";
+import { BreadcrumbItem } from "react-bootstrap";
+import { TbChevronRight } from "react-icons/tb";
 
 type PageBreadcrumbProps = {
-  title: string
-  subtitle?: string
-}
+  title: string;
+  subtitle?: string;
+};
 
 const PageBreadcrumb = ({ title, subtitle }: PageBreadcrumbProps) => {
   return (
@@ -16,14 +16,15 @@ const PageBreadcrumb = ({ title, subtitle }: PageBreadcrumbProps) => {
             <>
               <BreadcrumbItem linkAs={Link} href="/gestion/users">
                 {subtitle}
-              </BreadcrumbItem>  <TbChevronRight />
+              </BreadcrumbItem>{" "}
+              <TbChevronRight />
             </>
           )}
           <BreadcrumbItem active>{title}</BreadcrumbItem>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default PageBreadcrumb
+export default PageBreadcrumb;
