@@ -25,7 +25,7 @@ import {
   type CreateUserData,
   type UpdateUserData,
 } from "../../services/users";
-import styles from "./UsersModal.module.css";
+import styles from "./UserModal.module.css";
 
 interface UsersModalProps {
   isOpen: boolean;
