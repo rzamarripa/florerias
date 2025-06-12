@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, MoreVertical, UserPlus, Download, RefreshCw, Filter } from 'lucide-react';
+import { Search, MoreVertical, UserPlus, Download, RefreshCw, Filter, SquarePen, RefreshCcw, Lock, Eye } from 'lucide-react';
 import { useUsersStore } from '@/stores/users';
 import CreateUserModal from './AddUserModal';
 
@@ -19,6 +19,7 @@ const UsersTableWithStore: React.FC = () => {
     const [roleFilter, setRoleFilter] = useState<string>('');
     const [statusFilter, setStatusFilter] = useState<string>('');
     const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+    const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
     // Load users on mount
     useEffect(() => {
@@ -31,7 +32,18 @@ const UsersTableWithStore: React.FC = () => {
     };
 
     const handleAddUser = (): void => {
+        setEditingUserId(null);
         setShowCreateModal(true);
+    };
+
+    const handleEditUser = (userId: string): void => {
+        setEditingUserId(userId);
+        setShowCreateModal(true);
+    };
+
+    const handleCloseModal = (): void => {
+        setShowCreateModal(false);
+        setEditingUserId(null);
     };
 
     const handleExport = (): void => {
@@ -41,21 +53,85 @@ const UsersTableWithStore: React.FC = () => {
     // Actions Dropdown Component
     const ActionsDropdown: React.FC<{ user: any }> = ({ user }) => {
         const [isOpen, setIsOpen] = useState<boolean>(false);
+        const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+
+        // Close dropdown on scroll or resize
+        useEffect(() => {
+            const handleScrollOrResize = () => {
+                if (isOpen) {
+                    setIsOpen(false);
+                }
+            };
+
+            if (isOpen) {
+                window.addEventListener('scroll', handleScrollOrResize, true);
+                window.addEventListener('resize', handleScrollOrResize);
+            }
+
+            return () => {
+                window.removeEventListener('scroll', handleScrollOrResize, true);
+                window.removeEventListener('resize', handleScrollOrResize);
+            };
+        }, [isOpen]);
+
+        const handleToggle = (e: React.MouseEvent) => {
+            if (!isOpen) {
+                const button = e.currentTarget as HTMLElement;
+                const rect = button.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+
+                // Calculate position relative to viewport
+                let top = rect.bottom + 5;
+                let right = viewportWidth - rect.right;
+
+                // Adjust if dropdown would go off-screen
+                if (top + 200 > viewportHeight) {
+                    top = rect.top - 200;
+                }
+
+                if (right < 0) {
+                    right = 10;
+                }
+
+                setDropdownPosition({ top, right });
+            }
+            setIsOpen(!isOpen);
+        };
 
         const handleAction = (action: string): void => {
             setIsOpen(false);
-            console.log(`${action} usuario:`, user.username);
+
+            switch (action) {
+                case 'Ver detalles':
+                    console.log('Ver detalles usuario:', user.username);
+                    break;
+                case 'Editar':
+                    handleEditUser(user._id);
+                    break;
+                case 'Cambiar rol':
+                    console.log('Cambiar rol usuario:', user.username);
+                    break;
+                case 'Desactivar':
+                case 'Activar':
+                    console.log(`${action} usuario:`, user.username);
+                    break;
+                default:
+                    console.log(`${action} usuario:`, user.username);
+            }
         };
 
         return (
-            <div className="position-relative">
-                <button
-                    className="btn btn-light btn-sm border-0 rounded-circle d-flex align-items-center justify-content-center"
-                    style={{ width: '32px', height: '32px' }}
-                    onClick={() => setIsOpen(!isOpen)}
-                >
-                    <MoreVertical size={16} className="text-muted" />
-                </button>
+            <>
+                <div className="dropdown-container">
+                    <button
+                        className="btn btn-light btn-sm border-0 rounded-circle d-flex align-items-center justify-content-center"
+                        style={{ width: '32px', height: '32px' }}
+                        onClick={handleToggle}
+                    >
+                        <MoreVertical size={16} className="text-muted" />
+                    </button>
+                </div>
 
                 {isOpen && (
                     <>
@@ -65,12 +141,20 @@ const UsersTableWithStore: React.FC = () => {
                             onClick={() => setIsOpen(false)}
                         />
                         <div
-                            className="dropdown-menu show position-absolute shadow-lg border-0 rounded-3"
+                            className="dropdown-menu-portal show shadow-lg border-0 rounded-3"
                             style={{
-                                right: 0,
+                                position: 'fixed',
+                                top: `${dropdownPosition.top}px`,
+                                right: `${dropdownPosition.right}px`,
                                 zIndex: 1050,
                                 minWidth: '180px',
-                                marginTop: '5px'
+                                maxHeight: '300px',
+                                overflowY: 'auto',
+                                background: 'white',
+                                border: '1px solid rgba(0,0,0,0.1)',
+                                borderRadius: '12px',
+                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                                padding: '0.5rem 0'
                             }}
                         >
                             <h6 className="dropdown-header text-muted fw-semibold">Acciones</h6>
@@ -78,32 +162,32 @@ const UsersTableWithStore: React.FC = () => {
                                 className="dropdown-item py-2 border-0 bg-transparent"
                                 onClick={() => handleAction('Ver detalles')}
                             >
-                                <i className="me-2">👁️</i>Ver Detalles
+                                <i className="me-2"><Eye /></i>Ver Detalles
                             </button>
                             <button
                                 className="dropdown-item py-2 border-0 bg-transparent"
                                 onClick={() => handleAction('Editar')}
                             >
-                                <i className="me-2">✏️</i>Editar Usuario
+                                <i className="me-2"><SquarePen /></i>Editar Usuario
                             </button>
                             <button
                                 className="dropdown-item py-2 border-0 bg-transparent"
                                 onClick={() => handleAction('Cambiar rol')}
                             >
-                                <i className="me-2">🔄</i>Cambiar Rol
+                                <i className="me-2"><RefreshCcw /></i>Cambiar Rol
                             </button>
                             <div className="dropdown-divider my-1" />
                             <button
                                 className={`dropdown-item py-2 border-0 bg-transparent ${user.profile.estatus ? 'text-danger' : 'text-success'}`}
                                 onClick={() => handleAction(user.profile.estatus ? 'Desactivar' : 'Activar')}
                             >
-                                <i className="me-2">{user.profile.estatus ? '🔒' : '🔓'}</i>
+                                <i className="me-2">{user.profile.estatus ? <Lock /> : <Lock />}</i>
                                 {user.profile.estatus ? 'Desactivar' : 'Activar'}
                             </button>
                         </div>
                     </>
                 )}
-            </div>
+            </>
         );
     };
 
@@ -288,8 +372,8 @@ const UsersTableWithStore: React.FC = () => {
             )}
 
             {/* Table Card */}
-            <div className="card border-0 shadow-sm rounded-4">
-                <div className="table-responsive">
+            <div className="card border-0 shadow-sm rounded-4" style={{ overflow: 'visible' }}>
+                <div className="table-responsive-wrapper">
                     <table className="table table-hover mb-0">
                         <thead className="table-light">
                             <tr>
@@ -361,7 +445,7 @@ const UsersTableWithStore: React.FC = () => {
                                         <td className="px-4 py-4 text-center">
                                             <StatusBadge status={user.profile.estatus} />
                                         </td>
-                                        <td className="px-4 py-4 text-center">
+                                        <td className="px-4 py-4 text-center position-relative">
                                             <ActionsDropdown user={user} />
                                         </td>
                                     </tr>
@@ -420,10 +504,11 @@ const UsersTableWithStore: React.FC = () => {
                 )}
             </div>
 
-            {/* Create User Modal */}
+            {/* Create/Edit User Modal */}
             <CreateUserModal
                 isOpen={showCreateModal}
-                onClose={() => setShowCreateModal(false)}
+                onClose={handleCloseModal}
+                editingUserId={editingUserId}
             />
 
             <style jsx>{`
@@ -436,13 +521,91 @@ const UsersTableWithStore: React.FC = () => {
           to { transform: rotate(360deg); }
         }
 
+        .table-responsive-wrapper {
+          overflow-x: auto;
+          overflow-y: visible;
+          max-width: 100%;
+          border-radius: 16px;
+        }
+
+        .table {
+          min-width: 100%;
+          margin-bottom: 0;
+          white-space: nowrap;
+        }
+
+        .table th,
+        .table td {
+          padding: 1rem 0.75rem;
+          vertical-align: middle;
+        }
+
+        .table th:first-child,
+        .table td:first-child {
+          padding-left: 1.5rem;
+        }
+
+        .table th:last-child,
+        .table td:last-child {
+          padding-right: 1.5rem;
+          position: relative;
+        }
+
         .table tbody tr:hover {
           background-color: rgba(8, 145, 178, 0.08) !important;
+        }
+
+        .dropdown-container {
+          position: relative;
+          display: inline-block;
+        }
+
+        .dropdown-menu-portal {
+          position: fixed !important;
+          background: white;
+          border: 1px solid rgba(0,0,0,0.1);
+          border-radius: 12px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+          padding: 0.5rem 0;
+          z-index: 1050;
+        }
+
+        .dropdown-item {
+          display: block;
+          width: 100%;
+          padding: 0.5rem 1rem;
+          clear: both;
+          font-weight: 400;
+          color: #374151;
+          text-align: inherit;
+          text-decoration: none;
+          white-space: nowrap;
+          background-color: transparent;
+          border: 0;
+          cursor: pointer;
+          transition: all 0.15s ease-in-out;
         }
 
         .dropdown-item:hover {
           background-color: rgba(8, 145, 178, 0.15) !important;
           border-radius: 8px;
+          margin: 0 0.5rem;
+        }
+
+        .dropdown-header {
+          display: block;
+          padding: 0.5rem 1rem;
+          margin-bottom: 0;
+          font-size: 0.875rem;
+          color: #6b7280;
+          white-space: nowrap;
+        }
+
+        .dropdown-divider {
+          height: 0;
+          margin: 0.5rem 0;
+          overflow: hidden;
+          border-top: 1px solid #e5e7eb;
         }
 
         .btn:focus {
@@ -468,6 +631,70 @@ const UsersTableWithStore: React.FC = () => {
           background: linear-gradient(135deg, #059669 0%, #0891b2 100%);
           border-color: #0891b2;
           color: white;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+          .table {
+            min-width: 800px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .table {
+            min-width: 600px;
+            font-size: 0.875rem;
+          }
+          
+          .table th,
+          .table td {
+            padding: 0.75rem 0.5rem;
+          }
+          
+          .badge {
+            font-size: 0.7rem !important;
+          }
+        }
+
+        @media (max-width: 576px) {
+          .table {
+            min-width: 500px;
+            font-size: 0.8rem;
+          }
+          
+          .table th,
+          .table td {
+            padding: 0.5rem 0.25rem;
+          }
+
+          .table th:first-child,
+          .table td:first-child {
+            padding-left: 0.75rem;
+          }
+
+          .table th:last-child,
+          .table td:last-child {
+            padding-right: 0.75rem;
+          }
+        }
+
+        /* Ensure no overflow issues */
+        .card {
+          overflow: visible;
+        }
+
+        .card-body {
+          overflow: visible;
+        }
+
+        /* Better text wrapping for smaller screens */
+        @media (max-width: 992px) {
+          .table td:nth-child(4),
+          .table th:nth-child(4) {
+            max-width: 150px;
+            white-space: normal;
+            word-wrap: break-word;
+          }
         }
       `}</style>
         </div>

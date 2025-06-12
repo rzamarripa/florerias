@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
-import { X, User, Mail, Lock, Building, Shield, Eye, EyeOff, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, User, Mail, Lock, Building, Shield, Eye, EyeOff, Check, Edit } from 'lucide-react';
 import { useUsersStore } from '@/stores/users';
+import { useUsersCreateStore } from '@/stores/users/useUserCreateStore';
+import { useUsersUpdateStore } from '@/stores/users/useUserUpdateStore';
 
 interface CreateUserModalProps {
     isOpen: boolean;
     onClose: () => void;
+    editingUserId?: string | null;
 }
 
-const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) => {
+const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, editingUserId }) => {
     // Store hooks
-    const { createUser, isCreating, createError, clearErrors } = useUsersStore();
+    const { users } = useUsersStore();
+    const { createUser, isCreating, createError, clearError: clearCreateError } = useUsersCreateStore();
+    const { updateUser, isUpdating, updateError, clearError: clearUpdateError } = useUsersUpdateStore();
+
+    // Determine if we're editing
+    const isEditing = Boolean(editingUserId);
+    const currentUser = isEditing ? users.find(u => u._id === editingUserId) : null;
+
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -26,6 +36,38 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Load user data when editing
+    useEffect(() => {
+        if (isEditing && currentUser) {
+            setFormData({
+                username: currentUser.username || '',
+                password: '', // Don't pre-fill password for editing
+                confirmPassword: '',
+                profile: {
+                    nombre: currentUser.profile?.nombre || '',
+                    nombreCompleto: currentUser.profile?.nombreCompleto || '',
+                    estatus: currentUser.profile?.estatus ?? true,
+                },
+                department: currentUser.department || '',
+                role: currentUser.role?._id || currentUser.role?._id || '',
+            });
+        } else {
+            // Reset form for creating new user
+            setFormData({
+                username: '',
+                password: '',
+                confirmPassword: '',
+                profile: {
+                    nombre: '',
+                    nombreCompleto: '',
+                    estatus: true,
+                },
+                department: '',
+                role: '',
+            });
+        }
+    }, [isEditing, currentUser, isOpen]);
 
     const roles = [
         { value: '', label: 'Seleccionar rol' },
@@ -53,16 +95,19 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
             newErrors.username = 'El nombre de usuario debe tener al menos 3 caracteres';
         }
 
-        if (!formData.password) {
-            newErrors.password = 'La contraseña es requerida';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
-        }
+        // Password validation only for creating new users
+        if (!isEditing) {
+            if (!formData.password) {
+                newErrors.password = 'La contraseña es requerida';
+            } else if (formData.password.length < 6) {
+                newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+            }
 
-        if (!formData.confirmPassword) {
-            newErrors.confirmPassword = 'Confirma tu contraseña';
-        } else if (formData.password !== formData.confirmPassword) {
-            newErrors.confirmPassword = 'Las contraseñas no coinciden';
+            if (!formData.confirmPassword) {
+                newErrors.confirmPassword = 'Confirma tu contraseña';
+            } else if (formData.password !== formData.confirmPassword) {
+                newErrors.confirmPassword = 'Las contraseñas no coinciden';
+            }
         }
 
         if (!formData.profile.nombreCompleto.trim()) {
@@ -83,17 +128,37 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
         if (!validateForm()) return;
 
         try {
-            // Limpiar errores previos del store
-            if (clearErrors) clearErrors();
+            // Clear previous errors
+            if (isEditing) {
+                clearUpdateError();
+            } else {
+                clearCreateError();
+            }
 
-            // Usar createUser del store
-            await createUser(formData);
+            if (isEditing && editingUserId) {
+                // Update user - exclude password fields for update
+                const updateData = {
+                    username: formData.username,
+                    department: formData.department,
+                    profile: {
+                        nombre: formData.profile.nombre,
+                        nombreCompleto: formData.profile.nombreCompleto,
+                        estatus: formData.profile.estatus,
+                    },
+                    role: formData.role,
+                };
 
-            // Si llegamos aquí, el usuario se creó exitosamente
+                await updateUser(editingUserId, updateData);
+            } else {
+                // Create new user
+                await createUser(formData);
+            }
+
+            // If we get here, the operation was successful
             handleClose();
         } catch (error) {
-            // El error ya está manejado en el store
-            console.error('Error creating user:', error);
+            // Errors are already handled in the stores
+            console.error('Error saving user:', error);
         }
     };
 
@@ -111,8 +176,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
             role: '',
         });
         setErrors({});
-        // Limpiar errores del store también
-        if (clearErrors) clearErrors();
+        // Clear errors from both stores
+        clearCreateError();
+        clearUpdateError();
         onClose();
     };
 
@@ -138,6 +204,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
 
     if (!isOpen) return null;
 
+    const isLoading = isCreating || isUpdating;
+    const currentError = createError || updateError;
+
     return (
         <div className="modal-backdrop">
             <div className="modal-container">
@@ -146,17 +215,28 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
                     <div className="modal-header">
                         <div className="d-flex align-items-center">
                             <div className="header-icon">
-                                <User size={24} className="text-white" />
+                                {isEditing ? (
+                                    <Edit size={24} className="text-white" />
+                                ) : (
+                                    <User size={24} className="text-white" />
+                                )}
                             </div>
                             <div className="ms-3">
-                                <h3 className="modal-title">Crear Nuevo Usuario</h3>
-                                <p className="modal-subtitle">Completa la información del usuario</p>
+                                <h3 className="modal-title">
+                                    {isEditing ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
+                                </h3>
+                                <p className="modal-subtitle">
+                                    {isEditing
+                                        ? 'Modifica la información del usuario'
+                                        : 'Completa la información del usuario'
+                                    }
+                                </p>
                             </div>
                         </div>
                         <button
                             className="btn-close-custom"
                             onClick={handleClose}
-                            disabled={isCreating}
+                            disabled={isLoading}
                         >
                             <X size={20} />
                         </button>
@@ -165,13 +245,16 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
                     {/* Body */}
                     <div className="modal-body">
                         {/* Error from Store */}
-                        {createError && (
+                        {currentError && (
                             <div className="alert alert-danger alert-dismissible mb-4" role="alert">
-                                <strong>Error:</strong> {createError}
+                                <strong>Error:</strong> {currentError}
                                 <button
                                     type="button"
                                     className="btn-close"
-                                    onClick={() => clearErrors && clearErrors()}
+                                    onClick={() => {
+                                        clearCreateError();
+                                        clearUpdateError();
+                                    }}
                                     aria-label="Close"
                                 />
                             </div>
@@ -210,55 +293,60 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
                                 {errors.nombreCompleto && <div className="invalid-feedback">{errors.nombreCompleto}</div>}
                             </div>
 
-                            {/* Password */}
-                            <div className="col-md-6">
-                                <label className="form-label">
-                                    <Lock size={16} className="me-2 text-primary" />
-                                    Contraseña *
-                                </label>
-                                <div className="password-input">
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        className={`form-control modern-input ${errors.password ? 'is-invalid' : ''}`}
-                                        placeholder="Mínimo 6 caracteres"
-                                        value={formData.password}
-                                        onChange={(e) => updateField('password', e.target.value)}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="password-toggle"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                    >
-                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                    </button>
-                                </div>
-                                {errors.password && <div className="invalid-feedback">{errors.password}</div>}
-                            </div>
+                            {/* Password fields - only show for creating new users */}
+                            {!isEditing && (
+                                <>
+                                    {/* Password */}
+                                    <div className="col-md-6">
+                                        <label className="form-label">
+                                            <Lock size={16} className="me-2 text-primary" />
+                                            Contraseña *
+                                        </label>
+                                        <div className="password-input">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                className={`form-control modern-input ${errors.password ? 'is-invalid' : ''}`}
+                                                placeholder="Mínimo 6 caracteres"
+                                                value={formData.password}
+                                                onChange={(e) => updateField('password', e.target.value)}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="password-toggle"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                            >
+                                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            </button>
+                                        </div>
+                                        {errors.password && <div className="invalid-feedback">{errors.password}</div>}
+                                    </div>
 
-                            {/* Confirm Password */}
-                            <div className="col-md-6">
-                                <label className="form-label">
-                                    <Lock size={16} className="me-2 text-primary" />
-                                    Confirmar Contraseña *
-                                </label>
-                                <div className="password-input">
-                                    <input
-                                        type={showConfirmPassword ? 'text' : 'password'}
-                                        className={`form-control modern-input ${errors.confirmPassword ? 'is-invalid' : ''}`}
-                                        placeholder="Repite la contraseña"
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => updateField('confirmPassword', e.target.value)}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="password-toggle"
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    >
-                                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                    </button>
-                                </div>
-                                {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword}</div>}
-                            </div>
+                                    {/* Confirm Password */}
+                                    <div className="col-md-6">
+                                        <label className="form-label">
+                                            <Lock size={16} className="me-2 text-primary" />
+                                            Confirmar Contraseña *
+                                        </label>
+                                        <div className="password-input">
+                                            <input
+                                                type={showConfirmPassword ? 'text' : 'password'}
+                                                className={`form-control modern-input ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                                                placeholder="Repite la contraseña"
+                                                value={formData.confirmPassword}
+                                                onChange={(e) => updateField('confirmPassword', e.target.value)}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="password-toggle"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            >
+                                                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            </button>
+                                        </div>
+                                        {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword}</div>}
+                                    </div>
+                                </>
+                            )}
 
                             {/* Role */}
                             <div className="col-md-6">
@@ -324,25 +412,29 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
                             type="button"
                             className="btn btn-outline-secondary rounded-pill px-4"
                             onClick={handleClose}
-                            disabled={isCreating}
+                            disabled={isLoading}
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             className="btn btn-primary rounded-pill px-4"
-                            disabled={isCreating}
+                            disabled={isLoading}
                             onClick={handleSubmit}
                         >
-                            {isCreating ? (
+                            {isLoading ? (
                                 <>
                                     <span className="spinner-border spinner-border-sm me-2" />
-                                    Creando...
+                                    {isEditing ? 'Actualizando...' : 'Creando...'}
                                 </>
                             ) : (
                                 <>
-                                    <User size={16} className="me-2" />
-                                    Crear Usuario
+                                    {isEditing ? (
+                                        <Edit size={16} className="me-2" />
+                                    ) : (
+                                        <User size={16} className="me-2" />
+                                    )}
+                                    {isEditing ? 'Actualizar Usuario' : 'Crear Usuario'}
                                 </>
                             )}
                         </button>
