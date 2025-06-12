@@ -9,18 +9,14 @@ type PageBreadcrumbProps = {
 
 const PageBreadcrumb = ({ title, subtitle }: PageBreadcrumbProps) => {
   return (
-    <div className="page-title-head d-flex align-items-center">
-      <div className="flex-grow-1">
-        <h4 className="fs-sm text-uppercase fw-bold m-0">{title}</h4>
-      </div>
+    <div className="page-title-head d-flex align-items-start mx-1 my-2">
       <div className="text-end">
-        <div className="breadcrumb m-0 py-0 d-flex align-items-center gap-1"> 
-          <BreadcrumbItem linkAs={Link} href="">Inspinia</BreadcrumbItem> <TbChevronRight />
+        <div className="breadcrumb py-1 d-flex align-items-center gap-1">
           {subtitle && (
             <>
-            <BreadcrumbItem linkAs={Link} href="">
-              {subtitle}
-            </BreadcrumbItem>  <TbChevronRight  />
+              <BreadcrumbItem linkAs={Link} href="/gestion/users">
+                {subtitle}
+              </BreadcrumbItem>  <TbChevronRight />
             </>
           )}
           <BreadcrumbItem active>{title}</BreadcrumbItem>

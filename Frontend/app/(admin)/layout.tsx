@@ -1,5 +1,5 @@
 "use client";
-
+import 'bootstrap/dist/css/bootstrap.min.css';
 import { LayoutProvider } from "@/context/useLayoutContext";
 import MainLayout from "@/layouts/MainLayout";
 import React from "react";
@@ -10,8 +10,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+
     <LayoutProvider>
-      <MainLayout>{children}</MainLayout>
+      <MainLayout>
+        {children}
+      </MainLayout>
     </LayoutProvider>
   );
 }

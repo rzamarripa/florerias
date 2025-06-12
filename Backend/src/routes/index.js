@@ -7,7 +7,6 @@ import userRoutes from "./userRoutes.js";
 
 const router = Router();
 
-// TODO: Divide routes from auth and users into two separate controllers
 router.use("/users", userRoutes);
 router.use("/roles", roleRoutes);
 router.use("/pages", pageRoutes);

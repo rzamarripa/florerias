@@ -13,7 +13,7 @@ import router from "./routes/index.js";
 connectDB();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3005;
 
 app.use(generalLimiter);
 

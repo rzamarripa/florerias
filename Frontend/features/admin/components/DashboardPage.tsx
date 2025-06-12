@@ -1,11 +1,23 @@
 "use client";
-
 import { useUserSessionStore } from "@/stores";
 import { Badge, Button, Card, Col, Container, Row } from "react-bootstrap";
 import { HiCheckCircle, HiCog, HiDocumentText, HiUsers } from "react-icons/hi2";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const DashboardPage = () => {
-  const { user, logout } = useUserSessionStore();
+  const { user, logout, isLoading } = useUserSessionStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/auth/sign-in');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading || !user) {
+    return null;
+  }
 
   return (
     <div className="min-vh-100 bg-light py-4">
