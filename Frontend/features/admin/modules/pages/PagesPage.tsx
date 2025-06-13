@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { Search, Plus, Edit, FileText, Loader2, Trash } from "lucide-react";
-import styles from "./pages.module.css";
-import { pagesService, Page } from "./services/pages";
-import CreatePageModal from "./components/addpage/AddPageModal";
-import EditPageModal from "./components/editPage/EditPagesModal"; 
+import { Edit, FileText, Plus, Search, Trash } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Alert, Button, Form, Table } from "react-bootstrap";
+import CreatePageModal from "./components/AddPageModal";
+import EditPageModal from "./components/EditPagesModal";
+import { Page, pagesService } from "./services/pages";
 
 const PaginasTable: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -12,7 +12,6 @@ const PaginasTable: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
-  
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
 
@@ -77,7 +76,6 @@ const PaginasTable: React.FC = () => {
     fetchPages();
   };
 
-  // Funciones para el modal de edición
   const handleEditPageClick = (pageId: string): void => {
     setSelectedPageId(pageId);
     setShowEditModal(true);
@@ -95,268 +93,213 @@ const PaginasTable: React.FC = () => {
   const clearError = (): void => {
     setError(null);
   };
-  
+
   const handleDeletePage = async (id: string) => {
-    const response = await pagesService.deletePage(id)
-    if(response.success){
-      fetchPages()
+    const response = await pagesService.deletePage(id);
+    if (response.success) {
+      fetchPages();
     }
-    console.log(response)
-  }
+    console.log(response);
+  };
 
   return (
-    <div className="container-fluid py-4 px-0">
-      {error && (
-        <div className={`alert alert-danger alert-dismissible fade show mb-4 mx-4`}>
-          <strong>Error:</strong> {error}
-          <button
-            type="button"
-            className="btn-close"
-            onClick={clearError}
-            aria-label="Close"
-          />
-        </div>
-      )}
-
-      <div className="row h-100 mx-0">
-        <div className="col px-0">
-          <div
-            className={`card shadow-sm border-0 h-100 d-flex flex-column ${styles.card}`}
+    <div className="row">
+      <div className="col-12">
+        {error && (
+          <Alert
+            variant="danger"
+            dismissible
+            onClose={clearError}
+            className="mb-4"
           >
-            <div
-              className={`card-header bg-white border-0 pt-4 pb-3 px-4 ${styles.cardHeader}`}
-            >
-              <div className="d-flex align-items-center justify-content-between w-100">
-                <div className="d-flex align-items-center">
-                  <div
-                    className={`rounded-circle d-flex align-items-center justify-content-center me-3 ${styles.iconCircle}`}
-                  >
-                    <FileText size={24} />
-                  </div>
-                  <div>
-                    <h2 className={`mb-1 ${styles.fwBold} text-dark`}>
-                      Páginas
-                      <span className={`badge ms-2 ${styles.countBadge}`}>
-                        {filteredPaginas.length}
-                      </span>
-                    </h2>
-                    <p className={`${styles.textMuted} mb-0`}>
-                      Lista de páginas del sistema
-                    </p>
-                  </div>
-                </div>
-                
-                <button
-                  className={`btn btn-sm px-3 ${styles.fwSemibold} ${styles.newPageBtn}`}
-                  style={{ marginRight: '-1rem' }}
-                  onClick={handleNewPageClick}
-                  type="button"
-                >
-                  <Plus size={16} className="me-2" />
-                  Nueva Página
-                </button>
+            <strong>Error:</strong> {error}
+          </Alert>
+        )}
+
+        <div className="card">
+          <div className="card-header border-light d-flex justify-content-between align-items-center py-3">
+            <div className="d-flex gap-2">
+              <div className="position-relative" style={{ maxWidth: 400 }}>
+                <Form.Control
+                  type="search"
+                  placeholder="Buscar páginas..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="shadow-none px-4"
+                  style={{
+                    fontSize: 15,
+                    paddingLeft: "2.5rem",
+                  }}
+                />
+                <Search
+                  className="text-muted position-absolute"
+                  size={18}
+                  style={{
+                    left: "0.75rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                  }}
+                />
               </div>
             </div>
 
-            <div className={`card-body px-4 flex-grow-1 ${styles.cardBody}`}>
-              {/* Filtros y búsqueda */}
-              <div className={`row mb-4 ${styles.stickyTop} bg-white py-2`}>
-                <div className="col-md-4">
-                  <div className="input-group">
-                    <span
-                      className={`input-group-text bg-light border-end-0 ${styles.inputGroupText}`}
-                    >
-                      <Search size={16} className={styles.textMuted} />
-                    </span>
-                    <input
-                      type="text"
-                      className={`form-control border-start-0 ps-0 ${styles.formControl}`}
-                      placeholder="Buscar páginas..."
-                      value={searchTerm}
-                      onChange={handleSearchChange}
-                    />
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <select
-                    className={`form-select ${styles.formSelect}`}
-                    value={selectedType}
-                    onChange={handleTypeChange}
-                  >
-                    <option value="todos">Todos los estados</option>
-                    <option value="activos">Páginas activas</option>
-                    <option value="inactivos">Páginas inactivas</option>
-                  </select>
-                </div>
-              </div>
+            <div className="d-flex align-items-center gap-2">
+              <Form.Select
+                value={selectedType}
+                onChange={handleTypeChange}
+                style={{ minWidth: "150px" }}
+                size="sm"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="activos">Páginas activas</option>
+                <option value="inactivos">Páginas inactivas</option>
+              </Form.Select>
 
-              {/* Tabla */}
-              <div className={`bg-white rounded ${styles.tableResponsive}`}>
-                <table className={`table table-hover mb-0 ${styles.table}`}>
-                  <thead className={`${styles.stickyTop} bg-white`}>
-                    <tr className={styles.borderBottom2}>
-                      <th
-                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
-                      >
-                        #
-                      </th>
-                      <th
-                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
-                      >
-                        Página
-                      </th>
-                      <th
-                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
-                      >
-                        Ruta
-                      </th>
-                      <th
-                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
-                      >
-                        Estado
-                      </th>
-                      <th
-                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
-                      >
-                        Fecha Creación
-                      </th>
-                      <th
-                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
-                      >
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={6} className="text-center py-5">
-                          <div className="d-flex flex-column align-items-center">
-                            <Loader2
-                              size={32}
-                              className={`${styles.textMuted} mb-2`}
-                              style={{ animation: "spin 1s linear infinite" }}
-                            />
-                            <p className={styles.textMuted}>
-                              Cargando páginas...
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredPaginas.map((pagina: Page, index: number) => {
-                        return (
-                          <tr key={pagina._id} className="border-bottom">
-                            <td className="py-3 align-middle">
-                              <span
-                                className={`${styles.textMuted} ${styles.fwMedium}`}
-                              >
-                                {index + 1}
-                              </span>
-                            </td>
-                            <td className="py-3 align-middle">
-                              <div>
-                                <div
-                                  className={`${styles.fwSemibold} text-dark mb-0`}
-                                >
-                                  {pagina.name}
-                                </div>
-                                {pagina.description && (
-                                  <small className={styles.textMuted}>
-                                    {pagina.description}
-                                  </small>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 align-middle">
-                              <code
-                                className={`${styles.textMuted} px-2 py-1 rounded ${styles.codeTag} ${styles.codeBackground}`}
-                              >
-                                {pagina.path}
-                              </code>
-                            </td>
-                            <td className="py-3 align-middle">
-                              <span
-                                className={`badge ${
-                                  pagina.status ? "bg-success" : "bg-secondary"
-                                }`}
-                              >
-                                {pagina.status ? "Activo" : "Inactivo"}
-                              </span>
-                            </td>
-                            <td className="py-3 align-middle">
-                              <span className={styles.textMuted}>
-                                {new Date(pagina.createdAt).toLocaleDateString(
-                                  "es-ES",
-                                  {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  }
-                                )}
-                              </span>
-                            </td>
-                            <td className="py-3 align-middle">
-                              <div className="d-flex justify-content-start align-items-center">
-                                <Edit
-                                  onClick={() => handleEditPageClick(pagina._id)}
-                                  style={{
-                                    fontSize: "1.3rem",
-                                    marginRight: "2rem",
-                                    cursor: "pointer",
-                                  }}
-                                  className="text-success"
-                                />
-                                <Trash
-                                  onClick={() => handleDeletePage(pagina._id)}
-                                  style={{
-                                    fontSize: "1.3rem",
-                                    cursor: "pointer",
-                                  }}
-                                  className="text-danger trash-icon"
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {!loading && filteredPaginas.length === 0 && (
-                <div className={styles.emptyState}>
-                  <FileText size={48} className={`${styles.textMuted} mb-3`} />
-                  <h5 className={styles.textMuted}>
-                    No se encontraron páginas
-                  </h5>
-                  <p className={styles.textMuted}>
-                    {searchTerm || selectedType !== "todos"
-                      ? "Intenta cambiar los filtros de búsqueda"
-                      : "No hay páginas disponibles en el sistema"}
-                  </p>
-                </div>
-              )}
+              <Button
+                variant="primary"
+                className="d-flex align-items-center gap-2 text-nowrap px-3"
+                onClick={handleNewPageClick}
+              >
+                <Plus size={18} />
+                Nueva Página
+              </Button>
             </div>
           </div>
+
+          <div className="table-responsive shadow-sm">
+            <Table className="table table-custom table-centered table-select table-hover w-100 mb-0">
+              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
+                <tr>
+                  <th>#</th>
+                  <th>PÁGINA</th>
+                  <th>RUTA</th>
+                  <th>ESTADO</th>
+                  <th className="text-nowrap">FECHA CREACIÓN</th>
+                  <th>ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-4">
+                      <div className="d-flex flex-column align-items-center">
+                        <div
+                          className="spinner-border text-primary mb-2"
+                          role="status"
+                        >
+                          <span className="visually-hidden">Cargando...</span>
+                        </div>
+                        <p className="text-muted mb-0 small">
+                          Cargando páginas...
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPaginas.map((pagina: Page, index: number) => (
+                    <tr key={pagina._id}>
+                      <td>
+                        <span className="text-muted fw-medium">
+                          {index + 1}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="d-flex flex-column">
+                          <span className="fw-medium text-dark">
+                            {pagina.name}
+                          </span>
+                          {pagina.description && (
+                            <small className="text-muted">
+                              {pagina.description}
+                            </small>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <code className="bg-light text-muted px-2 py-1 rounded small">
+                          {pagina.path}
+                        </code>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge fs-6 ${
+                            pagina.status
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
+                        >
+                          {pagina.status ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted">
+                          {new Date(pagina.createdAt).toLocaleDateString(
+                            "es-ES",
+                            {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="d-flex justify-content-center gap-1">
+                          <button
+                            className="btn btn-light btn-icon btn-sm rounded-circle"
+                            title="Editar página"
+                            onClick={() => handleEditPageClick(pagina._id)}
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            className="btn btn-light btn-icon btn-sm rounded-circle"
+                            title="Eliminar página"
+                            onClick={() => handleDeletePage(pagina._id)}
+                          >
+                            <Trash size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+
+            {!loading && filteredPaginas.length === 0 && (
+              <div className="text-center py-5">
+                <FileText size={48} className="text-muted mb-3" />
+                <h5 className="text-muted">No se encontraron páginas</h5>
+                <p className="text-muted">
+                  {searchTerm || selectedType !== "todos"
+                    ? "Intenta cambiar los filtros de búsqueda"
+                    : "No hay páginas disponibles en el sistema"}
+                </p>
+              </div>
+            )}
+
+            <div className="d-flex justify-content-between align-items-center p-3 border-top">
+              <span className="text-muted">
+                Mostrando {filteredPaginas.length} páginas
+              </span>
+            </div>
+          </div>
+
+          <CreatePageModal
+            show={showCreateModal}
+            onHide={handleCloseModal}
+            onPageCreated={handlePageCreated}
+          />
+
+          <EditPageModal
+            show={showEditModal}
+            onHide={handleCloseEditModal}
+            onPageUpdated={handlePageUpdated}
+            pageId={selectedPageId}
+          />
         </div>
       </div>
-
-      {/* Modal para crear nueva página */}
-      <CreatePageModal
-        show={showCreateModal}
-        onHide={handleCloseModal}
-        onPageCreated={handlePageCreated}
-      />
-
-      {/* Modal para editar página */}
-      <EditPageModal
-        show={showEditModal}
-        onHide={handleCloseEditModal}
-        onPageUpdated={handlePageUpdated}
-        pageId={selectedPageId}
-      />
     </div>
   );
 };

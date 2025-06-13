@@ -13,7 +13,6 @@ import {
   ListGroup,
   Row,
 } from "react-bootstrap";
-import styles from "./RolesPage.module.css";
 import { rolesService } from "./services/roles";
 import { Module, Page, Role, SelectedModules } from "./types";
 
@@ -193,22 +192,7 @@ const RolesPage: React.FC = () => {
   };
 
   return (
-    <Container fluid className={styles.container}>
-      <Row className="mb-3">
-        <Col>
-          <div className="d-flex align-items-center">
-            <Users className="me-2" size={24} />
-            <h2 className="mb-0">Roles por Usuario</h2>
-            <Badge bg="primary" className="ms-2">
-              {roles.length} roles
-            </Badge>
-          </div>
-          <p className="text-muted">
-            Herramienta para administrar los roles de los usuarios
-          </p>
-        </Col>
-      </Row>
-
+    <Container fluid className="p-4 min-vh-100">
       {error && (
         <Row className="mb-3">
           <Col>
@@ -250,7 +234,15 @@ const RolesPage: React.FC = () => {
                     action
                     active={selectedRole?._id === role._id}
                     onClick={() => handleRoleSelect(role)}
-                    className={styles.roleItem}
+                    className="cursor-pointer border-start-0 border-end-0 border-top-0"
+                    style={{
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      borderLeft:
+                        selectedRole?._id === role._id
+                          ? "3px solid #007bff"
+                          : "3px solid transparent",
+                    }}
                   >
                     <div className="d-flex align-items-center justify-content-between">
                       <div className="d-flex align-items-center">
@@ -313,12 +305,32 @@ const RolesPage: React.FC = () => {
               </Card.Header>
               <Card.Body>
                 {loading && !isEditing ? (
-                  <div className="text-center">Cargando...</div>
+                  <div className="text-center py-4">
+                    <div
+                      className="spinner-border text-primary mb-2"
+                      role="status"
+                    >
+                      <span className="visually-hidden">Cargando...</span>
+                    </div>
+                    <p className="text-muted mb-0">Cargando módulos...</p>
+                  </div>
                 ) : (
-                  <div className={styles.modulesContainer}>
+                  <div
+                    className="pe-2"
+                    style={{
+                      maxHeight: "600px",
+                      overflowY: "auto",
+                    }}
+                  >
                     {pages.map((page: Page) => (
-                      <div key={page._id} className={styles.pageSection}>
-                        <div className={styles.pageHeader}>
+                      <div
+                        key={page._id}
+                        className="mb-4 border rounded overflow-hidden"
+                      >
+                        <div
+                          className="bg-light p-3 border-bottom"
+                          style={{ fontSize: "14px", color: "#495057" }}
+                        >
                           <div className="d-flex align-items-center">
                             <FileText size={16} />
                             <strong className="ms-2">{page.name}</strong>
@@ -327,13 +339,20 @@ const RolesPage: React.FC = () => {
                         </div>
 
                         {page.modules.map((module: Module) => (
-                          <div key={module._id} className={styles.moduleItem}>
+                          <div
+                            key={module._id}
+                            className="p-3 border-bottom"
+                            style={{
+                              transition: "background-color 0.2s ease",
+                            }}
+                          >
                             <div className="d-flex align-items-center justify-content-between">
                               <label
                                 htmlFor={module._id}
-                                className="mb-0 flex-grow-1"
+                                className="mb-0 flex-grow-1 text-dark"
                                 style={{
                                   cursor: isEditing ? "pointer" : "default",
+                                  fontSize: "14px",
                                 }}
                               >
                                 {module.name}
@@ -357,8 +376,8 @@ const RolesPage: React.FC = () => {
                         ))}
 
                         {page.modules.length === 0 && (
-                          <div className={styles.noModules}>
-                            <span className="text-muted">
+                          <div className="p-4 text-center">
+                            <span className="text-muted fst-italic">
                               Sin módulos disponibles
                             </span>
                           </div>

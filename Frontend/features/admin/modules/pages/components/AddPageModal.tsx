@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
-import { Modal, Button, Form, Row, Col, Table } from 'react-bootstrap';
-import { X, Plus, Trash2 } from 'lucide-react';
-import { z } from 'zod';
-import { pagesService, CreatePageData } from '../../services/pages';
-import { modulesService, CreateModuleData } from '../../services/modules';
-import styles from './addpage.module.css';
-import { CreatePageFormData, createPageSchema, ModuleRow } from '../../schemas';
-
-
+import { Plus, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { Alert, Button, Col, Form, Modal, Row, Table } from "react-bootstrap";
+import { z } from "zod";
+import { CreatePageFormData, createPageSchema, ModuleRow } from "../schemas";
+import { CreateModuleData, modulesService } from "../services/modules";
+import { CreatePageData, pagesService } from "../services/pages";
 
 interface CreatePageModalProps {
   show: boolean;
@@ -15,31 +12,39 @@ interface CreatePageModalProps {
   onPageCreated: () => void;
 }
 
-
-const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageCreated }) => {
+const CreatePageModal: React.FC<CreatePageModalProps> = ({
+  show,
+  onHide,
+  onPageCreated,
+}) => {
   const [formData, setFormData] = useState<CreatePageFormData>({
-    name: '',
-    path: '',
-    description: '',
-    modules: []
+    name: "",
+    path: "",
+    description: "",
+    modules: [],
   });
-  
+
   const [modules, setModules] = useState<ModuleRow[]>([]);
-  const [currentModule, setCurrentModule] = useState({ nombre: '', description: '' });
+  const [currentModule, setCurrentModule] = useState({
+    nombre: "",
+    description: "",
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  const handleInputChange = (field: keyof CreatePageFormData, value: string) => {
-    setFormData(prev => ({
+  const handleInputChange = (
+    field: keyof CreatePageFormData,
+    value: string
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-    
-    // Limpiar error del campo cuando el usuario empiece a escribir
+
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: ''
+        [field]: "",
       }));
     }
   };
@@ -49,16 +54,16 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
       const newModule: ModuleRow = {
         id: Date.now().toString(),
         nombre: currentModule.nombre.trim(),
-        description: currentModule.description.trim()
+        description: currentModule.description.trim(),
       };
-      
-      setModules(prev => [...prev, newModule]);
-      setCurrentModule({ nombre: '', description: '' });
+
+      setModules((prev) => [...prev, newModule]);
+      setCurrentModule({ nombre: "", description: "" });
     }
   };
 
   const handleRemoveModule = (id: string) => {
-    setModules(prev => prev.filter(module => module.id !== id));
+    setModules((prev) => prev.filter((module) => module.id !== id));
   };
 
   const validateForm = (): boolean => {
@@ -69,7 +74,7 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.errors.forEach(err => {
+        error.errors.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0] as string] = err.message;
           }
@@ -82,117 +87,107 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     try {
       setLoading(true);
-      
-      // 1. Crear la página SIN módulos
+
       const pageData: CreatePageData = {
         name: formData.name,
         path: formData.path,
-        description: formData.description || undefined
-        // NO enviamos módulos aquí
+        description: formData.description || undefined,
       };
 
       const pageResponse = await pagesService.createPage(pageData);
-      
+
       if (!pageResponse.success || !pageResponse.data) {
-        throw new Error('Error al crear la página');
+        throw new Error("Error al crear la página");
       }
 
       const createdPageId = pageResponse.data._id;
 
       if (modules.length > 0) {
         const moduleIds: string[] = [];
-        
+
         for (const mod of modules) {
           const moduleData: CreateModuleData = {
             name: mod.nombre,
             description: mod.description,
-            page: createdPageId
+            page: createdPageId,
           };
 
           const moduleResponse = await modulesService.createModule(moduleData);
-          
+
           if (moduleResponse.success && moduleResponse.data) {
             moduleIds.push(moduleResponse.data._id);
           }
         }
-
-        // Esto depende de si tu backend maneja automáticamente la relación
-        // Por ahora lo omito ya que el Module ya tiene referencia a Page
       }
-      
-      // Resetear formulario
-      setFormData({ name: '', path: '', description: '', modules: [] });
+
+      setFormData({ name: "", path: "", description: "", modules: [] });
       setModules([]);
-      setCurrentModule({ nombre: '', description: '' });
+      setCurrentModule({ nombre: "", description: "" });
       setErrors({});
-      
+
       onPageCreated();
       onHide();
     } catch (error) {
-      console.error('Error creating page:', error);
-      setErrors({ general: error instanceof Error ? error.message : 'Error al crear la página' });
+      console.error("Error creating page:", error);
+      setErrors({
+        general:
+          error instanceof Error ? error.message : "Error al crear la página",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    setFormData({ name: '', path: '', description: '', modules: [] });
+    setFormData({ name: "", path: "", description: "", modules: [] });
     setModules([]);
-    setCurrentModule({ nombre: '', description: '' });
+    setCurrentModule({ nombre: "", description: "" });
     setErrors({});
     onHide();
   };
 
   return (
-    <Modal 
-      show={show} 
-      onHide={handleClose} 
-      size="lg" 
+    <Modal
+      show={show}
+      onHide={handleClose}
+      size="lg"
       centered
-      className={styles.modal}
+      backdrop="static"
     >
-      <Modal.Header className={`${styles.modalHeader} border-0`}>
-        <Modal.Title className={styles.modalTitle}>
+      <Modal.Header closeButton className="border-0 pb-2">
+        <Modal.Title className="h4 fw-semibold mb-0">
           Crear nueva página
         </Modal.Title>
-        <Button
-          variant="link"
-          className={styles.closeButton}
-          onClick={handleClose}
-        >
-          <X size={20} />
-        </Button>
       </Modal.Header>
 
-      <Modal.Body className={styles.modalBody}>
+      <Modal.Body className="px-4">
         {errors.general && (
-          <div className="alert alert-danger">
+          <Alert variant="danger" className="mb-3">
             {errors.general}
-          </div>
+          </Alert>
         )}
 
         <Form onSubmit={handleSubmit}>
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group>
-                <Form.Label className={styles.formLabel}>
+                <Form.Label className="fw-medium mb-2 small">
                   Nombre de la página
                 </Form.Label>
                 <Form.Control
                   type="text"
                   placeholder="Nombre de la página"
                   value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
                   isInvalid={!!errors.name}
-                  className={styles.formControl}
+                  className="shadow-none"
                 />
                 <Form.Control.Feedback type="invalid">
                   {errors.name}
@@ -201,16 +196,16 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
             </Col>
             <Col md={6}>
               <Form.Group>
-                <Form.Label className={styles.formLabel}>
+                <Form.Label className="fw-medium mb-2 small">
                   Ruta de la página
                 </Form.Label>
                 <Form.Control
                   type="text"
                   placeholder="Ruta de la página"
                   value={formData.path}
-                  onChange={(e) => handleInputChange('path', e.target.value)}
+                  onChange={(e) => handleInputChange("path", e.target.value)}
                   isInvalid={!!errors.path}
-                  className={styles.formControl}
+                  className="shadow-none"
                 />
                 <Form.Control.Feedback type="invalid">
                   {errors.path}
@@ -222,7 +217,7 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
           <Row className="mb-4">
             <Col>
               <Form.Group>
-                <Form.Label className={styles.formLabel}>
+                <Form.Label className="fw-medium mb-2 small">
                   Descripción (opcional)
                 </Form.Label>
                 <Form.Control
@@ -230,42 +225,56 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
                   rows={3}
                   placeholder="Descripción de la página"
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  className={styles.formControl}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
+                  className="shadow-none"
                 />
               </Form.Group>
             </Col>
           </Row>
 
           <div className="mb-4">
-            <h5 className={styles.sectionTitle}>Módulos de la página</h5>
-            
+            <h5 className="fw-semibold mb-3 pb-2 border-bottom">
+              Módulos de la página
+            </h5>
+
             <Row className="mb-3">
               <Col md={5}>
                 <Form.Group>
-                  <Form.Label className={styles.formLabel}>
+                  <Form.Label className="fw-medium mb-2 small">
                     Nombre del módulo
                   </Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="Nombre del módulo"
                     value={currentModule.nombre}
-                    onChange={(e) => setCurrentModule(prev => ({ ...prev, nombre: e.target.value }))}
-                    className={styles.formControl}
+                    onChange={(e) =>
+                      setCurrentModule((prev) => ({
+                        ...prev,
+                        nombre: e.target.value,
+                      }))
+                    }
+                    className="shadow-none"
                   />
                 </Form.Group>
               </Col>
               <Col md={5}>
                 <Form.Group>
-                  <Form.Label className={styles.formLabel}>
+                  <Form.Label className="fw-medium mb-2 small">
                     Descripción del módulo
                   </Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="Descripción del módulo"
                     value={currentModule.description}
-                    onChange={(e) => setCurrentModule(prev => ({ ...prev, description: e.target.value }))}
-                    className={styles.formControl}
+                    onChange={(e) =>
+                      setCurrentModule((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    className="shadow-none"
                   />
                 </Form.Group>
               </Col>
@@ -274,7 +283,7 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
                   variant="primary"
                   onClick={handleAddModule}
                   disabled={!currentModule.nombre.trim()}
-                  className={styles.addButton}
+                  className="fw-medium w-100"
                 >
                   <Plus size={16} className="me-2" />
                   Agregar
@@ -283,21 +292,25 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
             </Row>
 
             {modules.length > 0 && (
-              <div className={styles.modulesTable}>
+              <div className="border rounded overflow-hidden">
                 <Table responsive className="mb-0">
-                  <thead>
+                  <thead className="table-light">
                     <tr>
-                      <th>Nombre del módulo</th>
-                      <th>Descripción del módulo</th>
-                      <th>Acciones</th>
+                      <th className="fw-semibold small">Nombre del módulo</th>
+                      <th className="fw-semibold small">
+                        Descripción del módulo
+                      </th>
+                      <th className="fw-semibold small">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {modules.map((module) => (
                       <tr key={module.id}>
-                        <td>{module.nombre}</td>
-                        <td>{module.description}</td>
-                        <td>
+                        <td className="align-middle small">{module.nombre}</td>
+                        <td className="align-middle small">
+                          {module.description}
+                        </td>
+                        <td className="align-middle">
                           <Button
                             variant="outline-danger"
                             size="sm"
@@ -316,21 +329,28 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
         </Form>
       </Modal.Body>
 
-      <Modal.Footer className={`${styles.modalFooter} border-0`}>
-        <Button 
-          variant="secondary" 
+      <Modal.Footer className="border-0">
+        <Button
+          variant="secondary"
           onClick={handleClose}
-          className={styles.cancelButton}
+          className="fw-medium px-4"
         >
           Cerrar
         </Button>
-        <Button 
-          variant="primary" 
+        <Button
+          variant="primary"
           onClick={handleSubmit}
           disabled={loading}
-          className={styles.saveButton}
+          className="fw-medium px-4"
         >
-          {loading ? 'Guardando...' : 'Guardar'}
+          {loading ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" />
+              Guardando...
+            </>
+          ) : (
+            "Guardar"
+          )}
         </Button>
       </Modal.Footer>
     </Modal>
