@@ -122,6 +122,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
         show={show}
         onHide={handleClose}
         size="lg"
+        centered
         backdrop="static"
         keyboard={!loading}
       >
