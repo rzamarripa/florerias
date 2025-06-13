@@ -1,13 +1,22 @@
 "use client";
 import { PlusCircleIcon, Search, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import ActionsDropdown from "./components/ActionsDropdown/ActionsDropdown";
+import {
+  Badge,
+  Button,
+  Card,
+  Col,
+  Container,
+  Form,
+  InputGroup,
+  Row,
+  Table,
+} from "react-bootstrap";
+import { Role, rolesService } from "../roles/services/role";
+import { Actions } from "./components/ActionsDropdown/Actions";
 import CreateUserModal from "./components/CreateUserModal/UserModal";
-import RoleBadge from "./components/RoleBadge/RoleBadge";
 import StatusBadge from "./components/StatusBadge/StatusBadge";
 import { usersService, type User } from "./services/users";
-import styles from "./UsersPage.module.css";
-import { Role, rolesService } from "../roles/services/role";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -48,7 +57,7 @@ const UsersPage: React.FC = () => {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
-    } 
+    }
   };
 
   const fetchUsers = async (page: number = pagination.page) => {
@@ -78,7 +87,7 @@ const UsersPage: React.FC = () => {
   };
 
   useEffect(() => {
-      fetchUsers(1);
+    fetchUsers(1);
   }, [searchUsersSearch, statusFilter]);
 
   useEffect(() => {
@@ -130,11 +139,9 @@ const UsersPage: React.FC = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <Container fluid>
       {error && (
-        <div
-          className={`alert alert-danger alert-dismissible fade show ${styles.errorAlert}`}
-        >
+        <div className="alert alert-danger alert-dismissible fade show mb-4">
           <strong>Error:</strong> {error}
           <button
             type="button"
@@ -145,171 +152,203 @@ const UsersPage: React.FC = () => {
         </div>
       )}
 
-      <div className={styles.pageHeader}>
-        <div className={styles.headerLeft}>
-          <div className={styles.iconContainer}>
-            <span className={styles.iconEmoji}>
-              <Users />
-            </span>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex align-items-center">
+          <div className="bg-primary rounded-circle p-3 me-3">
+            <Users size={24} className="text-white" />
           </div>
           <div>
-            <h1 className={styles.pageTitle}>
-              Usuarios
-              <span className={styles.countBadge}>{users.length}</span>
-            </h1>
-            <p className={styles.userRole}>Su Rol: SuperAdmin</p>
+            <h2 className="fw-bold text-dark m-0">USUARIOS</h2>
           </div>
         </div>
-
-        <div className={styles.headerActions}>
-          <button className={styles.addUserBtn} onClick={handleAddUser}>
-            <PlusCircleIcon size={14} className={styles.btnIcon} />
-            Nuevo Usuario
-          </button>
-        </div>
+        <Button
+          variant="primary"
+          onClick={handleAddUser}
+          className="d-flex align-items-center"
+        >
+          <PlusCircleIcon size={16} className="me-2" />
+          Agregar Usuario
+        </Button>
       </div>
 
-      <div className={styles.filtersCard}>
-        <div className={styles.filtersContainer}>
-          <div className={styles.searchContainer}>
-            <Search size={16} className={styles.searchIcon} />
-            <input
-              type="text"
-              className={styles.searchInput}
-              placeholder="Buscar usuarios..."
-              value={searchUsersSearch}
-              onChange={(e) => setSearchUsersTerm(e.target.value)}
-            />
-          </div>
-          <div className={styles.filterSelect}>
-            <select
-              value={searchRolesSearch}
-              className={styles.selectInput}
-              onChange={(e) => setSearchRolesTerm(e.target.value)}
-            >
-              <option value="">Todos los roles</option>
-              {roles.map((role) => (
-                <option key={role._id} value={role._id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className={styles.filterSelect}>
-            <select
-              className={styles.selectInput}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Todos los estados</option>
-              <option value="true">Activo</option>
-              <option value="false">Inactivo</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <Card className="shadow-sm">
+        <Card.Body>
+          <Row className="g-3 align-items-end">
+            <Col md={4}>
+              <InputGroup>
+                <InputGroup.Text className="bg-light border-end-0">
+                  <Search size={16} className="text-muted" />
+                </InputGroup.Text>
+                <Form.Control
+                  type="text"
+                  placeholder="Buscar usuarios..."
+                  value={searchUsersSearch}
+                  onChange={(e) => setSearchUsersTerm(e.target.value)}
+                  className="border-start-0"
+                />
+              </InputGroup>
+            </Col>
+            <Col md={3}>
+              <Form.Select
+                value={searchRolesSearch}
+                onChange={(e) => setSearchRolesTerm(e.target.value)}
+              >
+                <option value="">Todos los roles</option>
+                {roles.map((role) => (
+                  <option key={role._id} value={role._id}>
+                    {role.name}
+                  </option>
+                ))}
+              </Form.Select>
+            </Col>
+            <Col md={3}>
+              <Form.Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">Todos los estados</option>
+                <option value="true">Activo</option>
+                <option value="false">Inactivo</option>
+              </Form.Select>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
-      <div className={styles.tableCard}>
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead className={styles.tableHead}>
-              <tr>
-                <th className={styles.tableHeader}>#</th>
-                <th className={styles.tableHeader}>Rol</th>
-                <th className={styles.tableHeader}>Usuario</th>
-                <th className={styles.tableHeader}>Nombre Completo</th>
-                <th className={styles.tableHeader}>Departamento</th>
-                <th className={styles.tableHeader}>Fecha Creación</th>
-                <th className={`${styles.tableHeader} ${styles.textCenter}`}>
-                  Estatus
-                </th>
-                <th className={`${styles.tableHeader} ${styles.textCenter}`}>
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+      <Card className="shadow-sm">
+        <Card.Body className="p-0">
+          <div className="table-responsive">
+            <Table className="table-hover mb-0">
+              <thead className="table-light">
                 <tr>
-                  <td colSpan={8} className={styles.loadingContainer}>
-                    <div className={styles.spinner}>
-                      <span className="visually-hidden">Cargando...</span>
-                    </div>
-                    <p className={styles.loadingText}>Cargando usuarios...</p>
-                  </td>
+                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
+                    #
+                  </th>
+                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
+                    Usuario
+                  </th>
+                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
+                    Rol
+                  </th>
+                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
+                    Nombre Completo
+                  </th>
+                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
+                    Departamento
+                  </th>
+                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
+                    Fecha Creación
+                  </th>
+                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small text-center">
+                    Estatus
+                  </th>
+                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small text-center">
+                    Acciones
+                  </th>
                 </tr>
-              )  : (
-                users.map((user, index) => (
-                  <tr key={user._id} className={styles.tableRow}>
-                    <td className={styles.tableCell}>
-                      <span className={styles.indexNumber}>
-                        {(pagination.page - 1) * pagination.limit + index + 1}
-                      </span>
-                    </td>
-                    <td className={styles.tableCell}>
-                      <RoleBadge role={user.role} />
-                    </td>
-                    <td className={styles.tableCell}>
-                      <div className={styles.userInfo}>
-                        <div className={styles.userAvatar}>
-                          <span className={styles.avatarText}>
-                            {user.username.charAt(0).toUpperCase()}
-                          </span>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-4">
+                      <div className="d-flex flex-column align-items-center">
+                        <div
+                          className="spinner-border text-primary mb-2"
+                          role="status"
+                        >
+                          <span className="visually-hidden">Cargando...</span>
                         </div>
-                        <span className={styles.username}>{user.username}</span>
+                        <p className="text-muted mb-0 small">
+                          Cargando usuarios...
+                        </p>
                       </div>
                     </td>
-                    <td className={styles.tableCell}>
-                      <span className={styles.fullName}>
-                        {user.profile.nombreCompleto || user.profile.nombre}
-                      </span>
-                    </td>
-                    <td className={styles.tableCell}>
-                      <span className={styles.department}>
-                        {user.department || "No especificado"}
-                      </span>
-                    </td>
-                    <td className={styles.tableCell}>
-                      <span className={styles.createdDate}>
-                        {new Date(user.createdAt).toLocaleDateString("es-ES", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </td>
-                    <td className={`${styles.tableCell} ${styles.textCenter}`}>
-                      <StatusBadge status={user.profile.estatus} />
-                    </td>
-                    <td className={`${styles.tableCell} ${styles.textCenter}`}>
-                      <ActionsDropdown
-                        user={user}
-                        onEdit={handleEditUser}
-                        onToggleStatus={handleToggleUserStatus}
-                      />
-                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  users.map((user, index) => (
+                    <tr key={user._id}>
+                      <td className="py-2 px-3 align-middle">
+                        <span className="text-muted fw-medium">
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 align-middle">
+                        <div className="d-flex align-items-center">
+                          <div
+                            className="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              minWidth: "32px",
+                            }}
+                          >
+                            <span className="text-white fw-bold small">
+                              {user.username.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="fw-medium text-dark">
+                            {user.username}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 align-middle">
+                        <Badge bg="primary" className="px-2 py-1">
+                          {user.role?.name || "Sin rol"}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-3 align-middle">
+                        <span className="text-dark">
+                          {user.profile.nombreCompleto || user.profile.nombre}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 align-middle">
+                        <span className="text-muted">
+                          {user.department || "No especificado"}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 align-middle">
+                        <span className="text-muted">
+                          {new Date(user.createdAt).toLocaleDateString(
+                            "es-ES",
+                            {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 align-middle text-center">
+                        <StatusBadge status={user.profile.estatus} />
+                      </td>
+                      <td className="py-2 px-3 align-middle text-center">
+                        <Actions
+                          user={user}
+                          onEdit={handleEditUser}
+                          onToggleStatus={handleToggleUserStatus}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          </div>
 
-        {pagination.pages > 1 && (
-          <div className={styles.paginationContainer}>
-            <div className={styles.paginationInfo}>
-              <span className={styles.paginationText}>
+          {pagination.pages > 1 && (
+            <div className="d-flex justify-content-between align-items-center py-2 px-3 border-top bg-light">
+              <span className="text-muted small">
                 Mostrando {users.length} de {pagination.total} usuarios
               </span>
               <nav>
-                <ul className={styles.pagination}>
+                <ul className="pagination pagination-sm mb-0">
                   <li
-                    className={`${styles.pageItem} ${
-                      pagination.page === 1 ? styles.disabled : ""
+                    className={`page-item ${
+                      pagination.page === 1 ? "disabled" : ""
                     }`}
                   >
                     <button
-                      className={styles.pageLink}
+                      className="page-link"
                       onClick={() => handlePageChange(pagination.page - 1)}
                       disabled={pagination.page === 1}
                     >
@@ -324,12 +363,12 @@ const UsersPage: React.FC = () => {
                       return (
                         <li
                           key={pageNum}
-                          className={`${styles.pageItem} ${
-                            pagination.page === pageNum ? styles.active : ""
+                          className={`page-item ${
+                            pagination.page === pageNum ? "active" : ""
                           }`}
                         >
                           <button
-                            className={styles.pageLink}
+                            className="page-link"
                             onClick={() => handlePageChange(pageNum)}
                           >
                             {pageNum}
@@ -340,14 +379,12 @@ const UsersPage: React.FC = () => {
                   )}
 
                   <li
-                    className={`${styles.pageItem} ${
-                      pagination.page === pagination.pages
-                        ? styles.disabled
-                        : ""
+                    className={`page-item ${
+                      pagination.page === pagination.pages ? "disabled" : ""
                     }`}
                   >
                     <button
-                      className={styles.pageLink}
+                      className="page-link"
                       onClick={() => handlePageChange(pagination.page + 1)}
                       disabled={pagination.page === pagination.pages}
                     >
@@ -357,9 +394,9 @@ const UsersPage: React.FC = () => {
                 </ul>
               </nav>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </Card.Body>
+      </Card>
 
       <CreateUserModal
         isOpen={showCreateModal}
@@ -368,7 +405,7 @@ const UsersPage: React.FC = () => {
         users={users}
         roles={roles}
       />
-    </div>
+    </Container>
   );
 };
 

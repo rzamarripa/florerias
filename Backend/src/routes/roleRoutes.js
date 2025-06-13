@@ -9,13 +9,14 @@ import {
 import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router();
+
 router.use(protect);
 
 router.get("/", getAllRoles);
 
-router.post("/", authorize(["SuperAdmin", "Admin"]), createRole);
-
 router.get("/:id", getRoleById);
+
+router.post("/", authorize(["SuperAdmin", "Admin"]), createRole);
 
 router.put("/:id", authorize(["SuperAdmin", "Admin"]), updateRole);
 

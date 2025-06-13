@@ -1,0 +1,26 @@
+.actionsGroup {
+  display: flex;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+}
+
+.actionBtn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 16px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: background 0.18s;
+  padding: 0 !important;
+}
+
+.actionBtn:hover,
+.actionBtn:focus-visible {
+  background: #f1f3f9 !important;
+  box-shadow: 0 2px 8px 0 rgba(16, 30, 54, 0.08);
+}

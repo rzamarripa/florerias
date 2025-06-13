@@ -12,35 +12,10 @@ export const rolesService = {
     return response;
   },
 
-  updateRoleModules: async (roleId: string, moduleIds: string[]) => {
-    const response = await apiCall(`/roles/${roleId}/modules`, {
+  updateRole: async (roleId: string, modules: string[]) => {
+    const response = await apiCall<Role>(`/roles/${roleId}`, {
       method: "PUT",
-      body: JSON.stringify({ modules: moduleIds }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    return response;
-  },
-
-  createRole: async (roleData: {
-    name: string;
-    description: string;
-    modules: string[];
-  }) => {
-    const response = await apiCall("/roles", {
-      method: "POST",
-      body: JSON.stringify(roleData),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    return response;
-  },
-
-  deleteRole: async (roleId: string) => {
-    const response = await apiCall(`/roles/${roleId}`, {
-      method: "DELETE",
+      body: JSON.stringify({ modules }),
     });
     return response;
   },
