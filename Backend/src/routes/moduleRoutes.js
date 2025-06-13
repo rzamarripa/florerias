@@ -1,38 +1,41 @@
-import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import express from "express";
 import {
+  activateModule,
   createModule,
+  deleteModule,
+  deleteModulePermanently,
   getAllModules,
   getModuleById,
   getModulesByPage,
+  getModulesByRole,
   updateModule,
-  deleteModule,
-  activateModule,
-  deleteModulePermanently
-} from '../controllers/moduleController.js';
+} from "../controllers/moduleController.js";
+import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Aplicar protección a todas las rutas
 router.use(protect);
 
-// Rutas principales CRUD
-router.route('/')
+router
+  .route("/")
   .get(getAllModules)
-  .post(authorize(['SuperAdmin', 'Admin']), createModule);
+  .post(authorize(["SuperAdmin", "Admin"]), createModule);
 
-// Ruta para obtener módulos por página
-router.get('/page/:pageId', getModulesByPage);
+router.get("/role/:roleId", getModulesByRole);
+router.get("/page/:pageId", getModulesByPage);
 
-router.route('/:id')
+router
+  .route("/:id")
   .get(getModuleById)
-  .put(authorize(['SuperAdmin', 'Admin']), updateModule)
-  .delete(authorize(['SuperAdmin', 'Admin']), deleteModule);
+  .put(authorize(["SuperAdmin", "Admin"]), updateModule)
+  .delete(authorize(["SuperAdmin", "Admin"]), deleteModule);
 
-// Rutas específicas para manejo de estado
-router.put('/:id/activate', authorize(['SuperAdmin', 'Admin']), activateModule);
+router.put("/:id/activate", authorize(["SuperAdmin", "Admin"]), activateModule);
 
-// Ruta para eliminación permanente (solo SuperAdmin)
-router.delete('/:id/permanent', authorize(['SuperAdmin']), deleteModulePermanently);
+router.delete(
+  "/:id/permanent",
+  authorize(["SuperAdmin"]),
+  deleteModulePermanently
+);
 
 export default router;
