@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+
 const { Schema } = mongoose;
 
 const userSchema = new Schema(
@@ -25,6 +26,10 @@ const userSchema = new Schema(
         type: Boolean,
         default: true,
       },
+      image: {
+        data: Buffer,
+        contentType: String,
+      },
     },
     role: {
       type: Schema.Types.ObjectId,
@@ -47,12 +52,10 @@ const userSchema = new Schema(
 
 userSchema.pre("save", async function (next) {
   console.log("Hook pre-save ejecutándose...");
-
   if (!this.isModified("password")) {
     console.log("Password no modificado, saltando hash");
     return next();
   }
-
   console.log("Hasheando password...", this.password);
   this.password = await bcrypt.hash(this.password, 12);
   console.log("Password hasheado:", this.password);
@@ -64,13 +67,34 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 };
 
 userSchema.methods.getPublicProfile = function () {
+  const profile = { ...this.profile };
+  
+  // Si hay imagen, convertir a base64 para el frontend
+  if (profile.image && profile.image.data) {
+    const base64Image = `data:${profile.image.contentType};base64,${profile.image.data.toString('base64')}`;
+    profile.image = base64Image;
+  }
+  
   return {
     _id: this._id,
     username: this.username,
-    profile: this.profile,
+    profile: profile,
     role: this.role,
     createdAt: this.createdAt,
   };
+};
+
+// Método para obtener datos del usuario con imagen en base64
+userSchema.methods.toJSON = function() {
+  const user = this.toObject();
+  
+  // Convertir imagen a base64 si existe
+  if (user.profile && user.profile.image && user.profile.image.data) {
+    const base64Image = `data:${user.profile.image.contentType};base64,${user.profile.image.data.toString('base64')}`;
+    user.profile.image = base64Image;
+  }
+  
+  return user;
 };
 
 const User = mongoose.model("User", userSchema);

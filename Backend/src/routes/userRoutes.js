@@ -9,22 +9,26 @@ import {
   loginUser,
   registerUser,
   updateUser,
+  upload,
 } from "../controllers/userController.js";
 import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.post("/register", registerUser);
+// Rutas públicas
+router.post("/register", upload.single('image'), registerUser);
 router.post("/login", loginUser);
 
+// Middleware de autenticación para todas las rutas siguientes
 router.use(protect);
 
+// Rutas protegidas
 router.route("/").get(getAllUsers);
 
 router
   .route("/:id")
   .get(getUserById)
-  .put(updateUser)
+  .put(upload.single('image'), updateUser)
   .delete(authorize(["SuperAdmin", "Admin"]), deleteUser);
 
 router.put("/:id/password", changePassword);

@@ -1,13 +1,13 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Badge, Button, Form, Table } from "react-bootstrap";
 import { Role, rolesService } from "../roles/services/role";
 import { Actions } from "./components/Actions";
-import CreateUserModal from "./components/UserModal";
 import { usersService, type User } from "./services/users";
+import UserModal from "./components/UserModal";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -24,9 +24,6 @@ const UsersPage: React.FC = () => {
     total: 0,
     pages: 0,
   });
-
-  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const fetchRoles = async (page: number = pagination.page) => {
     try {
@@ -52,19 +49,21 @@ const UsersPage: React.FC = () => {
     try {
       setLoading(true);
 
-      const response = await usersService.getAllUsers({
+      const data = await usersService.getAllUsers({
         page,
         limit: pagination.limit,
         ...(searchUsersSearch && { username: searchUsersSearch }),
         ...(statusFilter && { estatus: statusFilter }),
       });
 
-      if (response.data) {
-        setUsers(response.data);
+      console.log(data)
+
+      if (data.data) {
+        setUsers(data.data);
       }
 
-      if (response.pagination) {
-        setPagination(response.pagination);
+      if (data.pagination) {
+        setPagination(data.pagination);
       }
     } catch (err) {
       console.error("Error fetching users:", err);
@@ -83,22 +82,6 @@ const UsersPage: React.FC = () => {
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [searchRolesSearch]);
-
-  const handleAddUser = (): void => {
-    setEditingUserId(null);
-    setShowCreateModal(true);
-  };
-
-  const handleEditUser = (userId: string): void => {
-    setEditingUserId(userId);
-    setShowCreateModal(true);
-  };
-
-  const handleCloseModal = (): void => {
-    setShowCreateModal(false);
-    setEditingUserId(null);
-    fetchUsers(pagination.page);
-  };
 
   const handlePageChange = (page: number): void => {
     fetchUsers(page);
@@ -179,14 +162,10 @@ const UsersPage: React.FC = () => {
                 <option value="false">Inactivo</option>
               </Form.Select>
 
-              <Button
-                variant="primary"
-                className="d-flex align-items-center gap-2 text-nowrap px-3"
-                onClick={handleAddUser}
-              >
-                <Plus size={18} />
-                Agregar Usuario
-              </Button>
+              <UserModal
+                roles={roles}
+                onSuccess={() => fetchUsers(pagination.page)}
+              />
             </div>
           </div>
 
@@ -296,8 +275,9 @@ const UsersPage: React.FC = () => {
                       <td>
                         <Actions
                           user={user}
-                          onEdit={handleEditUser}
+                          roles={roles}
                           onToggleStatus={handleToggleUserStatus}
+                          onUserUpdated={() => fetchUsers(pagination.page)}
                         />
                       </td>
                     </tr>
@@ -351,14 +331,6 @@ const UsersPage: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <CreateUserModal
-            isOpen={showCreateModal}
-            onClose={handleCloseModal}
-            editingUserId={editingUserId}
-            users={users}
-            roles={roles}
-          />
         </div>
       </div>
     </div>

@@ -205,17 +205,19 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
     }
 
     try {
+      console.log('id del modulo: ',moduleId)
       setDeletingModules((prev) => new Set(prev).add(moduleId));
 
       const response = await pagesService.removeModuleFromPage(
         pageId,
         moduleId
       );
-
+      console.log(response)
       if (response.success) {
         setExistingModules((prev) =>
           prev.filter((module) => module.id !== moduleId)
         );
+        console.log('se elimino')
 
         if (errors.general) {
           setErrors((prev) => ({ ...prev, general: "" }));
@@ -523,14 +525,13 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
                                   variant="outline-danger"
                                   size="sm"
                                   onClick={() => {
-                                    console.log("=== CLICK ELIMINAR ==="); // Debug log
-                                    console.log("Módulo completo:", module); // Debug log
-                                    console.log("ID del módulo:", module.id); // Debug log
+                                    console.log("=== CLICK ELIMINAR ==="); 
+                                    console.log("Módulo completo:", module); 
+                                    console.log("ID del módulo:", module.id); 
                                     console.log(
                                       "Es existente:",
                                       module.isExisting
-                                    ); // Debug log
-                                    console.log("PageId actual:", pageId); // Debug log
+                                    ); 
 
                                     if (module.isExisting) {
                                       handleRemoveExistingModule(module.id);

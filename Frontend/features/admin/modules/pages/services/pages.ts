@@ -156,6 +156,8 @@ export const pagesService = {
   },
 
   removeModuleFromPage: async (pageId: string, moduleId: string) => {
+    console.log('llamando al delete odule from page')
+    console.log(pageId, moduleId)
     const response = await apiCall<Page>(`/pages/${pageId}/modules/${moduleId}`, {
       method: "DELETE",
     });

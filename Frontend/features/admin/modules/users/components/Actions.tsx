@@ -1,14 +1,22 @@
-import { BsCheck2, BsEye, BsPencil } from "react-icons/bs";
+import { BsCheck2, BsEye } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
+import { Role } from "../../roles/services/role";
 import { type User } from "../services/users";
+import UserModal from "./UserModal";
 
 interface ActionsProps {
   user: User;
-  onEdit: (userId: string) => void;
+  roles: Role[];
   onToggleStatus: (user: User) => Promise<void>;
+  onUserUpdated?: () => void; // Callback para refrescar la lista después de actualizar
 }
 
-export const Actions = ({ user, onEdit, onToggleStatus }: ActionsProps) => (
+export const Actions = ({ 
+  user, 
+  roles, 
+  onToggleStatus, 
+  onUserUpdated 
+}: ActionsProps) => (
   <div className="d-flex justify-content-center gap-1">
     <button
       className="btn btn-light btn-icon btn-sm rounded-circle"
@@ -18,17 +26,14 @@ export const Actions = ({ user, onEdit, onToggleStatus }: ActionsProps) => (
     >
       <BsEye size={16} />
     </button>
-    <button
-      className="btn btn-light btn-icon btn-sm rounded-circle"
-      title="Editar usuario"
-      onClick={(e) => {
-        e.preventDefault();
-        onEdit(user._id);
-      }}
-      tabIndex={0}
-    >
-      <BsPencil size={16} />
-    </button>
+
+    {/* Modal de edición - ahora simplificado */}
+    <UserModal 
+      user={user} 
+      roles={roles} 
+      onSuccess={onUserUpdated}
+    />
+
     {user.profile.estatus ? (
       <button
         className="btn btn-light btn-icon btn-sm rounded-circle"

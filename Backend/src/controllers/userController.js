@@ -1,6 +1,24 @@
 import jwt from "jsonwebtoken";
+import multer from "multer";
 import { Role } from "../models/Roles.js";
 import { User } from "../models/User.js";
+
+// Configuración de multer para manejar archivos en memoria
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB máximo
+  },
+  fileFilter: (req, file, cb) => {
+    // Validar que sea una imagen
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten archivos de imagen'), false);
+    }
+  },
+});
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -11,7 +29,25 @@ const generateToken = (id) => {
 const registerUser = async (req, res) => {
   try {
     console.log("Registering user with data:", req.body);
-    const { username, password, department, profile, role } = req.body;
+    console.log("Content-Type:", req.headers['content-type']);
+    console.log("Has file:", !!req.file);
+    
+    let userData;
+    
+    // Verificar si se envió como FormData o JSON
+    if (req.body.userData) {
+      // Datos enviados como FormData
+      console.log("Processing as FormData");
+      userData = JSON.parse(req.body.userData);
+    } else {
+      // Datos enviados como JSON
+      console.log("Processing as JSON");
+      userData = req.body;
+    }
+    
+    console.log("Final userData:", userData);
+    
+    const { username, password, department, profile, role } = userData;
 
     const userExists = await User.findOne({ username });
     if (userExists) {
@@ -20,10 +56,11 @@ const registerUser = async (req, res) => {
         message: "User already exists with this username",
       });
     }
-    console.log('role: ', role)
+    
+    console.log('role: ', role);
     if (role) {
       const roleExists = await Role.findById(role);
-      console.log(roleExists)
+      console.log(roleExists);
       if (!roleExists) {
         return res.status(400).json({
           success: false,
@@ -32,7 +69,7 @@ const registerUser = async (req, res) => {
       }
     }
 
-    const userData = {
+    const newUserData = {
       username,
       password,
       department,
@@ -45,7 +82,15 @@ const registerUser = async (req, res) => {
       role: role || null,
     };
 
-    const user = await User.create(userData);
+    // Agregar imagen si se subió
+    if (req.file) {
+      newUserData.profile.image = {
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+      };
+    }
+
+    const user = await User.create(newUserData);
 
     res.status(201).json({
       success: true,
@@ -62,6 +107,7 @@ const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Error in registerUser:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -219,7 +265,18 @@ const getUserById = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { username, department, profile, role } = req.body;
+    let userData;
+    
+    // Verificar si se envió como FormData o JSON
+    if (req.body.userData) {
+      // Datos enviados como FormData
+      userData = JSON.parse(req.body.userData);
+    } else {
+      // Datos enviados como JSON
+      userData = req.body;
+    }
+    
+    const { username, department, profile, role } = userData;
 
     const updateData = {};
 
@@ -232,6 +289,23 @@ const updateUser = async (req, res) => {
         nombreCompleto: profile.nombreCompleto,
         path: profile.path,
         estatus: profile.estatus,
+      };
+      
+      // Mantener la imagen existente si no se sube una nueva
+      const existingUser = await User.findById(req.params.id);
+      if (existingUser && existingUser.profile.image) {
+        updateData.profile.image = existingUser.profile.image;
+      }
+    }
+
+    // Agregar nueva imagen si se subió
+    if (req.file) {
+      if (!updateData.profile) {
+        updateData.profile = {};
+      }
+      updateData.profile.image = {
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
       };
     }
 
@@ -264,6 +338,7 @@ const updateUser = async (req, res) => {
       data: user,
     });
   } catch (error) {
+    console.error("Error in updateUser:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -415,6 +490,7 @@ const assignRoles = async (req, res) => {
   }
 };
 
+// Exportar el middleware de multer junto con las funciones
 export {
   activateUser,
   assignRoles,
@@ -425,4 +501,5 @@ export {
   loginUser,
   registerUser,
   updateUser,
+  upload,
 };

@@ -160,12 +160,14 @@ const updatePage = async (req, res) => {
 
 const deletePage = async (req, res) => {
   try {
+    console.log(req.params.id)
     const page = await Page.findByIdAndUpdate(
       req.params.id,
       { status: false },
       { new: true }
     );
 
+    console.log(page)
     if (!page) {
       return res.status(404).json({
         success: false,
@@ -280,7 +282,9 @@ const addModuleToPage = async (req, res) => {
 const removeModuleFromPage = async (req, res) => {
   try {
     const { moduleId } = req.params;
-
+    console.log('moduleId: ', moduleId);
+    console.log('pageId: ', req.params.id);
+    
     const page = await Page.findById(req.params.id);
     if (!page) {
       return res.status(404).json({
@@ -288,21 +292,26 @@ const removeModuleFromPage = async (req, res) => {
         message: "Page not found",
       });
     }
-
-    // Verificar si el módulo está asociado a la página
+    
+    console.log(page);
+    
+    // CORRECCIÓN: m es directamente un ObjectId, no un objeto con moduleId
     const moduleExists = page.modules.some(
-      (m) => m.moduleId.toString() === moduleId.toString()
+      (m) => m.toString() === moduleId.toString()
     );
-
+    
+    console.log('modulo existente', moduleExists);
+    
     if (!moduleExists) {
       return res.status(404).json({
         success: false,
         message: "Module not found in this page",
       });
     }
-
+    
+    console.log('holaaaaaaa');
     await page.removeModule(moduleId);
-    await page.populate("modules.moduleId", "name description status");
+    await page.populate("modules", "name description status");
 
     res.status(200).json({
       success: true,
