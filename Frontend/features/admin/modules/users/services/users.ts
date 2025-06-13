@@ -9,6 +9,7 @@ export interface User {
     nombreCompleto: string;
     path: string;
     estatus: boolean;
+    image?: string;
   };
   role?: {
     _id: string;

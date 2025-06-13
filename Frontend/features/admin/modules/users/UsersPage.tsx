@@ -1,29 +1,18 @@
 "use client";
 
-import { PlusCircleIcon, Search, Users } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import Image from "next/image";
 import React, { useEffect, useState } from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  Col,
-  Container,
-  Form,
-  InputGroup,
-  Row,
-  Table,
-} from "react-bootstrap";
+import { Badge, Button, Form, Table } from "react-bootstrap";
 import { Role, rolesService } from "../roles/services/role";
-import { Actions } from "./components/ActionsDropdown/Actions";
+import { Actions } from "./components/Actions";
 import CreateUserModal from "./components/CreateUserModal/UserModal";
-import StatusBadge from "./components/StatusBadge/StatusBadge";
 import { usersService, type User } from "./services/users";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [searchUsersSearch, setSearchUsersTerm] = useState<string>("");
   const [searchRolesSearch, setSearchRolesTerm] = useState<string>("");
@@ -41,8 +30,6 @@ const UsersPage: React.FC = () => {
 
   const fetchRoles = async (page: number = pagination.page) => {
     try {
-      setError(null);
-
       const response = await rolesService.getAllRoles({
         page,
         limit: pagination.limit,
@@ -57,14 +44,13 @@ const UsersPage: React.FC = () => {
         setPagination(response.pagination);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
+      console.error("Error fetching roles:", err);
     }
   };
 
   const fetchUsers = async (page: number = pagination.page) => {
     try {
       setLoading(true);
-      setError(null);
 
       const response = await usersService.getAllUsers({
         page,
@@ -81,7 +67,7 @@ const UsersPage: React.FC = () => {
         setPagination(response.pagination);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
+      console.error("Error fetching users:", err);
     } finally {
       setLoading(false);
     }
@@ -118,10 +104,6 @@ const UsersPage: React.FC = () => {
     fetchUsers(page);
   };
 
-  const clearErrors = (): void => {
-    setError(null);
-  };
-
   const handleToggleUserStatus = async (user: User): Promise<void> => {
     try {
       if (user.profile.estatus) {
@@ -131,68 +113,52 @@ const UsersPage: React.FC = () => {
       }
       fetchUsers(pagination.page);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Error al cambiar estado del usuario"
-      );
+      console.error("Error toggling user status:", err);
     }
   };
 
   return (
-    <Container fluid>
-      {error && (
-        <div className="alert alert-danger alert-dismissible fade show mb-4">
-          <strong>Error:</strong> {error}
-          <button
-            type="button"
-            className="btn-close"
-            onClick={clearErrors}
-            aria-label="Close"
-          />
-        </div>
-      )}
-
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex align-items-center">
-          <div className="bg-primary rounded-circle p-3 me-3">
-            <Users size={24} className="text-white" />
-          </div>
-          <div>
-            <h2 className="fw-bold text-dark m-0">USUARIOS</h2>
-          </div>
-        </div>
-        <Button
-          variant="primary"
-          onClick={handleAddUser}
-          className="d-flex align-items-center"
-        >
-          <PlusCircleIcon size={16} className="me-2" />
-          Agregar Usuario
-        </Button>
-      </div>
-
-      <Card className="shadow-sm">
-        <Card.Body>
-          <Row className="g-3 align-items-end">
-            <Col md={4}>
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-end-0">
-                  <Search size={16} className="text-muted" />
-                </InputGroup.Text>
+    <div className="row">
+      <div className="col-12">
+        <div className="card">
+          <div className="card-header border-light d-flex justify-content-between align-items-center py-3">
+            <div className="d-flex gap-2">
+              <div className="position-relative" style={{ maxWidth: 400 }}>
                 <Form.Control
-                  type="text"
+                  type="search"
                   placeholder="Buscar usuarios..."
                   value={searchUsersSearch}
                   onChange={(e) => setSearchUsersTerm(e.target.value)}
-                  className="border-start-0"
+                  className="shadow-none px-4"
+                  style={{
+                    fontSize: 15,
+                    paddingLeft: "2.5rem",
+                  }}
                 />
-              </InputGroup>
-            </Col>
-            <Col md={3}>
+                <Search
+                  className="text-muted position-absolute"
+                  size={18}
+                  style={{
+                    left: "0.75rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                  }}
+                />
+              </div>
+              <button
+                data-table-delete-selected
+                className="btn btn-danger d-none"
+              >
+                Delete
+              </button>
+            </div>
+
+            <div className="d-flex align-items-center gap-2">
               <Form.Select
                 value={searchRolesSearch}
                 onChange={(e) => setSearchRolesTerm(e.target.value)}
+                style={{ minWidth: "150px" }}
+                size="sm"
               >
                 <option value="">Todos los roles</option>
                 {roles.map((role) => (
@@ -201,51 +167,41 @@ const UsersPage: React.FC = () => {
                   </option>
                 ))}
               </Form.Select>
-            </Col>
-            <Col md={3}>
+
               <Form.Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
+                style={{ minWidth: "140px" }}
+                size="sm"
               >
                 <option value="">Todos los estados</option>
                 <option value="true">Activo</option>
                 <option value="false">Inactivo</option>
               </Form.Select>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
 
-      <Card className="shadow-sm">
-        <Card.Body className="p-0">
-          <div className="table-responsive">
-            <Table className="table-hover mb-0">
-              <thead className="">
+              <Button
+                variant="primary"
+                className="d-flex align-items-center gap-2 text-nowrap px-3"
+                onClick={handleAddUser}
+              >
+                <Plus size={18} />
+                Agregar Usuario
+              </Button>
+            </div>
+          </div>
+
+          <div className="table-responsive shadow-sm">
+            <Table className="table table-custom table-centered table-select table-hover w-100 mb-0">
+              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
-                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
-                    #
-                  </th>
-                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
-                    Usuario
-                  </th>
-                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
-                    Rol
-                  </th>
-                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
-                    Nombre Completo
-                  </th>
-                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
-                    Departamento
-                  </th>
-                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
-                    Fecha Creación
-                  </th>
-                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small text-center">
-                    Estatus
-                  </th>
-                  <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small text-center">
-                    Acciones
-                  </th>
+                  <th>#</th>
+                  <th>USUARIO</th>
+                  <th>ROL</th>
+                  <th className="text-nowrap">NOMBRE COMPLETO</th>
+                  <th>DEPARTAMENTO</th>
+                  <th className="text-nowrap">FECHA CREACIÓN</th>
+                  <th>ESTATUS</th>
+                  <th>ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
@@ -268,46 +224,53 @@ const UsersPage: React.FC = () => {
                 ) : (
                   users.map((user, index) => (
                     <tr key={user._id}>
-                      <td className="py-2 px-3 align-middle">
+                      <td>
                         <span className="text-muted fw-medium">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </span>
                       </td>
-                      <td className="py-2 px-3 align-middle">
+                      <td>
                         <div className="d-flex align-items-center">
-                          <div
-                            className="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2"
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              minWidth: "32px",
-                            }}
-                          >
-                            <span className="text-white fw-bold small">
-                              {user.username.charAt(0).toUpperCase()}
-                            </span>
+                          <div className="avatar-md d-flex align-items-center justify-content-center me-2">
+                            {user.profile.image ? (
+                              <Image
+                                src={user.profile.image || ""}
+                                alt={user.username}
+                                className="img-fluid rounded-circle"
+                                width={40}
+                                height={40}
+                                style={{
+                                  objectFit: "cover",
+                                }}
+                              />
+                            ) : (
+                              <div
+                                className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                style={{ width: "30px", height: "30px" }}
+                              >
+                                {user.username.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </div>
-                          <span className="fw-medium text-dark">
-                            {user.username}
-                          </span>
+                          <span className="fw-medium">{user.username}</span>
                         </div>
                       </td>
-                      <td className="py-2 px-3 align-middle">
+                      <td>
                         <Badge bg="primary" className="px-2 py-1">
                           {user.role?.name || "Sin rol"}
                         </Badge>
                       </td>
-                      <td className="py-2 px-3 align-middle">
+                      <td>
                         <span className="text-dark">
                           {user.profile.nombreCompleto || user.profile.nombre}
                         </span>
                       </td>
-                      <td className="py-2 px-3 align-middle">
+                      <td>
                         <span className="text-muted">
                           {user.department || "No especificado"}
                         </span>
                       </td>
-                      <td className="py-2 px-3 align-middle">
+                      <td>
                         <span className="text-muted">
                           {new Date(user.createdAt).toLocaleDateString(
                             "es-ES",
@@ -319,10 +282,18 @@ const UsersPage: React.FC = () => {
                           )}
                         </span>
                       </td>
-                      <td className="py-2 px-3 align-middle text-center">
-                        <StatusBadge status={user.profile.estatus} />
+                      <td>
+                        <span
+                          className={`badge fs-6 ${
+                            user.profile.estatus
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
+                        >
+                          {user.profile.estatus ? "Activo" : "Inactivo"}
+                        </span>
                       </td>
-                      <td className="py-2 px-3 align-middle text-center">
+                      <td>
                         <Actions
                           user={user}
                           onEdit={handleEditUser}
@@ -334,79 +305,63 @@ const UsersPage: React.FC = () => {
                 )}
               </tbody>
             </Table>
-          </div>
 
-          {pagination.pages > 1 && (
-            <div className="d-flex justify-content-between align-items-center py-2 px-3 border-top bg-light">
-              <span className="text-muted small">
+            {/* Footer con paginación */}
+            <div className="d-flex justify-content-between align-items-center p-3 border-top">
+              <span className="text-muted">
                 Mostrando {users.length} de {pagination.total} usuarios
               </span>
-              <nav>
-                <ul className="pagination pagination-sm mb-0">
-                  <li
-                    className={`page-item ${
-                      pagination.page === 1 ? "disabled" : ""
-                    }`}
-                  >
-                    <button
-                      className="page-link"
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page === 1}
-                    >
-                      Anterior
-                    </button>
-                  </li>
-
-                  {Array.from(
-                    { length: Math.min(5, pagination.pages) },
-                    (_, i) => {
-                      const pageNum = i + 1;
-                      return (
-                        <li
-                          key={pageNum}
-                          className={`page-item ${
-                            pagination.page === pageNum ? "active" : ""
-                          }`}
-                        >
-                          <button
-                            className="page-link"
-                            onClick={() => handlePageChange(pageNum)}
-                          >
-                            {pageNum}
-                          </button>
-                        </li>
-                      );
-                    }
-                  )}
-
-                  <li
-                    className={`page-item ${
-                      pagination.page === pagination.pages ? "disabled" : ""
-                    }`}
-                  >
-                    <button
-                      className="page-link"
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page === pagination.pages}
-                    >
-                      Siguiente
-                    </button>
-                  </li>
-                </ul>
-              </nav>
+              <div className="d-flex gap-1">
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  disabled={pagination.page === 1}
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                >
+                  Anterior
+                </Button>
+                {Array.from(
+                  { length: Math.min(5, pagination.pages) },
+                  (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          pagination.page === pageNum
+                            ? "primary"
+                            : "outline-secondary"
+                        }
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  }
+                )}
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  disabled={pagination.page === pagination.pages}
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                >
+                  Siguiente
+                </Button>
+              </div>
             </div>
-          )}
-        </Card.Body>
-      </Card>
+          </div>
 
-      <CreateUserModal
-        isOpen={showCreateModal}
-        onClose={handleCloseModal}
-        editingUserId={editingUserId}
-        users={users}
-        roles={roles}
-      />
-    </Container>
+          <CreateUserModal
+            isOpen={showCreateModal}
+            onClose={handleCloseModal}
+            editingUserId={editingUserId}
+            users={users}
+            roles={roles}
+          />
+        </div>
+      </div>
+    </div>
   );
 };
 

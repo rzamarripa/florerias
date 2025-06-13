@@ -3,8 +3,8 @@ import UsersPage from "@/features/admin/modules/users/UsersPage";
 
 export default function page() {
   return (
-    <div>
-      <PageBreadcrumb title={"Gestion"} subtitle={"Usuarios"} />
+    <div className="container-fluid">
+      <PageBreadcrumb title="Usuarios" subtitle="Gestión" section="Admin" />
       <UsersPage />
     </div>
   );
