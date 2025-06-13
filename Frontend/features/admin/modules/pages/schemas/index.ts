@@ -23,3 +23,23 @@ export interface ModuleRow {
   nombre: string;
   description: string;
 }
+
+// Schema para validación
+export const updatePageSchema = z.object({
+  name: z.string().min(1, 'El nombre es requerido'),
+  path: z.string().min(1, 'La ruta es requerida'),
+  description: z.string().optional()
+});
+
+export interface UpdatePageFormData {
+  name: string;
+  path: string;
+  description: string;
+}
+
+export interface ModuleRow {
+  id: string;
+  nombre: string;
+  description: string;
+  isExisting?: boolean; // Para distinguir entre módulos existentes y nuevos
+}

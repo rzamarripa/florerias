@@ -227,12 +227,15 @@
   background-color: #1ab394;
   border-color: #1ab394;
   color: white;
+  font-size: medium;
   font-weight: 600;
+  padding: 0.5rem 6rem;
 }
 
 .newPageBtn:hover {
-  background-color: #148f7a;
+  background-color: #1e927f;
   border-color: #148f7a;
+  color: white;
 }
 
 .iconContainer {

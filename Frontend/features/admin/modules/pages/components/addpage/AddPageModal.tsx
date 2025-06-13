@@ -5,26 +5,9 @@ import { z } from 'zod';
 import { pagesService, CreatePageData } from '../../services/pages';
 import { modulesService, CreateModuleData } from '../../services/modules';
 import styles from './addpage.module.css';
+import { CreatePageFormData, createPageSchema, ModuleRow } from '../../schemas';
 
-// Schema de validación con Zod
-const createPageSchema = z.object({
-  name: z.string()
-    .min(1, 'El nombre de la página es requerido')
-    .min(3, 'El nombre debe tener al menos 3 caracteres')
-    .max(50, 'El nombre no puede exceder 50 caracteres'),
-  path: z.string()
-    .min(1, 'La ruta de la página es requerida')
-    .regex(/^\//, 'La ruta debe comenzar con /')
-    .regex(/^[\/\w-]+$/, 'La ruta solo puede contener letras, números, guiones y barras'),
-  description: z.string().optional(),
-  modules: z.array(z.object({
-    moduleId: z.string(),
-    nombre: z.string().optional(),
-    description: z.string().optional()
-  })).optional()
-});
 
-type CreatePageFormData = z.infer<typeof createPageSchema>;
 
 interface CreatePageModalProps {
   show: boolean;
@@ -32,11 +15,6 @@ interface CreatePageModalProps {
   onPageCreated: () => void;
 }
 
-interface ModuleRow {
-  id: string;
-  nombre: string;
-  description: string;
-}
 
 const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageCreated }) => {
   const [formData, setFormData] = useState<CreatePageFormData>({
@@ -128,14 +106,13 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
 
       const createdPageId = pageResponse.data._id;
 
-      // 2. Crear los módulos que referencian a la página recién creada
       if (modules.length > 0) {
         const moduleIds: string[] = [];
         
-        for (const module of modules) {
+        for (const mod of modules) {
           const moduleData: CreateModuleData = {
-            name: module.nombre,
-            description: module.description,
+            name: mod.nombre,
+            description: mod.description,
             page: createdPageId
           };
 
@@ -146,7 +123,6 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({ show, onHide, onPageC
           }
         }
 
-        // 3. Actualizar la página para incluir los módulos (si es necesario)
         // Esto depende de si tu backend maneja automáticamente la relación
         // Por ahora lo omito ya que el Module ya tiene referencia a Page
       }

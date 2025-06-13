@@ -1,36 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit, FileText, Loader2 } from 'lucide-react';
-import styles from './pages.module.css';
-import { pagesService, Page } from './services/pages';
-import CreatePageModal from './components/addpage/AddPageModal';
+import React, { useState, useEffect } from "react";
+import { Search, Plus, Edit, FileText, Loader2, Trash } from "lucide-react";
+import styles from "./pages.module.css";
+import { pagesService, Page } from "./services/pages";
+import CreatePageModal from "./components/addpage/AddPageModal";
+import EditPageModal from "./components/editPage/EditPagesModal"; 
 
 const PaginasTable: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('todos');
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedType, setSelectedType] = useState<string>("todos");
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  
+  const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
 
   const fetchPages = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await pagesService.getAllPages({
         page: 1,
-        limit: 100, // Obtener todas las páginas
+        limit: 100,
         ...(searchTerm && { name: searchTerm }),
-        ...(selectedType === 'activos' && { status: 'true' }),
-        ...(selectedType === 'inactivos' && { status: 'false' })
+        ...(selectedType === "activos" && { status: "true" }),
+        ...(selectedType === "inactivos" && { status: "false" }),
       });
 
       if (response.success && response.data) {
         setPages(response.data);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar las páginas');
-      console.error('Error fetching pages:', err);
+      setError(
+        err instanceof Error ? err.message : "Error al cargar las páginas"
+      );
+      console.error("Error fetching pages:", err);
     } finally {
       setLoading(false);
     }
@@ -38,22 +44,16 @@ const PaginasTable: React.FC = () => {
 
   useEffect(() => {
     fetchPages();
-  }, []);
-
-  // Refetch cuando cambie el término de búsqueda
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchPages();
-    }, 500);
-    return () => clearTimeout(timeoutId);
   }, [searchTerm, selectedType]);
 
   const filteredPaginas: Page[] = pages.filter((pagina: Page) => {
-    const matchesSearch: boolean = pagina.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pagina.path.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType: boolean = selectedType === 'todos' || 
-                               (selectedType === 'activos' && pagina.status) ||
-                               (selectedType === 'inactivos' && !pagina.status);
+    const matchesSearch: boolean =
+      pagina.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pagina.path.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType: boolean =
+      selectedType === "todos" ||
+      (selectedType === "activos" && pagina.status) ||
+      (selectedType === "inactivos" && !pagina.status);
     return matchesSearch && matchesType;
   });
 
@@ -69,27 +69,45 @@ const PaginasTable: React.FC = () => {
     setShowCreateModal(true);
   };
 
-  const handleEditClick = (paginaId: string): void => {
-    // Lógica para editar página
-    console.log(`Editar página ${paginaId}`);
-  };
-
   const handleCloseModal = (): void => {
     setShowCreateModal(false);
   };
 
   const handlePageCreated = (): void => {
-    fetchPages(); // Recargar la lista de páginas
+    fetchPages();
+  };
+
+  // Funciones para el modal de edición
+  const handleEditPageClick = (pageId: string): void => {
+    setSelectedPageId(pageId);
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = (): void => {
+    setShowEditModal(false);
+    setSelectedPageId(null);
+  };
+
+  const handlePageUpdated = (): void => {
+    fetchPages();
   };
 
   const clearError = (): void => {
     setError(null);
   };
+  
+  const handleDeletePage = async (id: string) => {
+    const response = await pagesService.deletePage(id)
+    if(response.success){
+      fetchPages()
+    }
+    console.log(response)
+  }
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-4 px-0">
       {error && (
-        <div className={`alert alert-danger alert-dismissible fade show mb-4`}>
+        <div className={`alert alert-danger alert-dismissible fade show mb-4 mx-4`}>
           <strong>Error:</strong> {error}
           <button
             type="button"
@@ -100,37 +118,43 @@ const PaginasTable: React.FC = () => {
         </div>
       )}
 
-      <div className="row h-100">
-        <div className="col">
-          <div className={`card shadow-sm border-0 h-100 d-flex flex-column ${styles.card}`}>
-            <div className={`card-header bg-white border-0 pt-4 pb-3 ${styles.cardHeader}`}>
-              <div className="row align-items-center">
-                <div className="col">
-                  <div className="d-flex align-items-center">
-                    <div className={`rounded-circle d-flex align-items-center justify-content-center me-3 ${styles.iconCircle}`}>
-                      <FileText size={24} />
-                    </div>
-                    <div>
-                      <h2 className={`mb-1 ${styles.fwBold} text-dark`}>
-                        Páginas 
-                        <span className={`badge ms-2 ${styles.countBadge}`}>
-                          {filteredPaginas.length}
-                        </span>
-                      </h2>
-                      <p className={`${styles.textMuted} mb-0`}>Lista de páginas del sistema</p>
-                    </div>
+      <div className="row h-100 mx-0">
+        <div className="col px-0">
+          <div
+            className={`card shadow-sm border-0 h-100 d-flex flex-column ${styles.card}`}
+          >
+            <div
+              className={`card-header bg-white border-0 pt-4 pb-3 px-4 ${styles.cardHeader}`}
+            >
+              <div className="d-flex align-items-center justify-content-between w-100">
+                <div className="d-flex align-items-center">
+                  <div
+                    className={`rounded-circle d-flex align-items-center justify-content-center me-3 ${styles.iconCircle}`}
+                  >
+                    <FileText size={24} />
+                  </div>
+                  <div>
+                    <h2 className={`mb-1 ${styles.fwBold} text-dark`}>
+                      Páginas
+                      <span className={`badge ms-2 ${styles.countBadge}`}>
+                        {filteredPaginas.length}
+                      </span>
+                    </h2>
+                    <p className={`${styles.textMuted} mb-0`}>
+                      Lista de páginas del sistema
+                    </p>
                   </div>
                 </div>
-                <div className="col-auto">
-                  <button
-                    className={`btn btn-sm px-3 ${styles.fwSemibold} ${styles.newPageBtn}`}
-                    onClick={handleNewPageClick}
-                    type="button"
-                  >
-                    <Plus size={16} className="me-2" />
-                    Nueva Página
-                  </button>
-                </div>
+                
+                <button
+                  className={`btn btn-sm px-3 ${styles.fwSemibold} ${styles.newPageBtn}`}
+                  style={{ marginRight: '-1rem' }}
+                  onClick={handleNewPageClick}
+                  type="button"
+                >
+                  <Plus size={16} className="me-2" />
+                  Nueva Página
+                </button>
               </div>
             </div>
 
@@ -139,7 +163,9 @@ const PaginasTable: React.FC = () => {
               <div className={`row mb-4 ${styles.stickyTop} bg-white py-2`}>
                 <div className="col-md-4">
                   <div className="input-group">
-                    <span className={`input-group-text bg-light border-end-0 ${styles.inputGroupText}`}>
+                    <span
+                      className={`input-group-text bg-light border-end-0 ${styles.inputGroupText}`}
+                    >
                       <Search size={16} className={styles.textMuted} />
                     </span>
                     <input
@@ -169,12 +195,36 @@ const PaginasTable: React.FC = () => {
                 <table className={`table table-hover mb-0 ${styles.table}`}>
                   <thead className={`${styles.stickyTop} bg-white`}>
                     <tr className={styles.borderBottom2}>
-                      <th className={`${styles.fwSemibold} ${styles.textMuted} py-3`}>#</th>
-                      <th className={`${styles.fwSemibold} ${styles.textMuted} py-3`}>Página</th>
-                      <th className={`${styles.fwSemibold} ${styles.textMuted} py-3`}>Ruta</th>
-                      <th className={`${styles.fwSemibold} ${styles.textMuted} py-3`}>Estado</th>
-                      <th className={`${styles.fwSemibold} ${styles.textMuted} py-3`}>Fecha Creación</th>
-                      <th className={`${styles.fwSemibold} ${styles.textMuted} py-3`}>Acciones</th>
+                      <th
+                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
+                      >
+                        #
+                      </th>
+                      <th
+                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
+                      >
+                        Página
+                      </th>
+                      <th
+                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
+                      >
+                        Ruta
+                      </th>
+                      <th
+                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
+                      >
+                        Estado
+                      </th>
+                      <th
+                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
+                      >
+                        Fecha Creación
+                      </th>
+                      <th
+                        className={`${styles.fwSemibold} ${styles.textMuted} py-3`}
+                      >
+                        Acciones
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -182,8 +232,14 @@ const PaginasTable: React.FC = () => {
                       <tr>
                         <td colSpan={6} className="text-center py-5">
                           <div className="d-flex flex-column align-items-center">
-                            <Loader2 size={32} className={`${styles.textMuted} mb-2`} style={{ animation: 'spin 1s linear infinite' }} />
-                            <p className={styles.textMuted}>Cargando páginas...</p>
+                            <Loader2
+                              size={32}
+                              className={`${styles.textMuted} mb-2`}
+                              style={{ animation: "spin 1s linear infinite" }}
+                            />
+                            <p className={styles.textMuted}>
+                              Cargando páginas...
+                            </p>
                           </div>
                         </td>
                       </tr>
@@ -192,43 +248,74 @@ const PaginasTable: React.FC = () => {
                         return (
                           <tr key={pagina._id} className="border-bottom">
                             <td className="py-3 align-middle">
-                              <span className={`${styles.textMuted} ${styles.fwMedium}`}>{index + 1}</span>
+                              <span
+                                className={`${styles.textMuted} ${styles.fwMedium}`}
+                              >
+                                {index + 1}
+                              </span>
                             </td>
                             <td className="py-3 align-middle">
                               <div>
-                                <div className={`${styles.fwSemibold} text-dark mb-0`}>{pagina.name}</div>
+                                <div
+                                  className={`${styles.fwSemibold} text-dark mb-0`}
+                                >
+                                  {pagina.name}
+                                </div>
                                 {pagina.description && (
-                                  <small className={styles.textMuted}>{pagina.description}</small>
+                                  <small className={styles.textMuted}>
+                                    {pagina.description}
+                                  </small>
                                 )}
                               </div>
                             </td>
                             <td className="py-3 align-middle">
-                              <code className={`${styles.textMuted} px-2 py-1 rounded ${styles.codeTag} ${styles.codeBackground}`}>
+                              <code
+                                className={`${styles.textMuted} px-2 py-1 rounded ${styles.codeTag} ${styles.codeBackground}`}
+                              >
                                 {pagina.path}
                               </code>
                             </td>
                             <td className="py-3 align-middle">
-                              <span className={`badge ${pagina.status ? 'bg-success' : 'bg-secondary'}`}>
-                                {pagina.status ? 'Activo' : 'Inactivo'}
+                              <span
+                                className={`badge ${
+                                  pagina.status ? "bg-success" : "bg-secondary"
+                                }`}
+                              >
+                                {pagina.status ? "Activo" : "Inactivo"}
                               </span>
                             </td>
                             <td className="py-3 align-middle">
                               <span className={styles.textMuted}>
-                                {new Date(pagina.createdAt).toLocaleDateString('es-ES', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
+                                {new Date(pagina.createdAt).toLocaleDateString(
+                                  "es-ES",
+                                  {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  }
+                                )}
                               </span>
                             </td>
                             <td className="py-3 align-middle">
-                              <button 
-                                className={`btn btn-sm me-2 ${styles.btnOutlinePrimary}`}
-                                onClick={() => handleEditClick(pagina._id)}
-                                type="button"
-                              >
-                                <Edit size={14} />
-                              </button>
+                              <div className="d-flex justify-content-start align-items-center">
+                                <Edit
+                                  onClick={() => handleEditPageClick(pagina._id)}
+                                  style={{
+                                    fontSize: "1.3rem",
+                                    marginRight: "2rem",
+                                    cursor: "pointer",
+                                  }}
+                                  className="text-success"
+                                />
+                                <Trash
+                                  onClick={() => handleDeletePage(pagina._id)}
+                                  style={{
+                                    fontSize: "1.3rem",
+                                    cursor: "pointer",
+                                  }}
+                                  className="text-danger trash-icon"
+                                />
+                              </div>
                             </td>
                           </tr>
                         );
@@ -241,12 +328,13 @@ const PaginasTable: React.FC = () => {
               {!loading && filteredPaginas.length === 0 && (
                 <div className={styles.emptyState}>
                   <FileText size={48} className={`${styles.textMuted} mb-3`} />
-                  <h5 className={styles.textMuted}>No se encontraron páginas</h5>
+                  <h5 className={styles.textMuted}>
+                    No se encontraron páginas
+                  </h5>
                   <p className={styles.textMuted}>
-                    {searchTerm || selectedType !== 'todos' 
-                      ? 'Intenta cambiar los filtros de búsqueda'
-                      : 'No hay páginas disponibles en el sistema'
-                    }
+                    {searchTerm || selectedType !== "todos"
+                      ? "Intenta cambiar los filtros de búsqueda"
+                      : "No hay páginas disponibles en el sistema"}
                   </p>
                 </div>
               )}
@@ -260,6 +348,14 @@ const PaginasTable: React.FC = () => {
         show={showCreateModal}
         onHide={handleCloseModal}
         onPageCreated={handlePageCreated}
+      />
+
+      {/* Modal para editar página */}
+      <EditPageModal
+        show={showEditModal}
+        onHide={handleCloseEditModal}
+        onPageUpdated={handlePageUpdated}
+        pageId={selectedPageId}
       />
     </div>
   );
