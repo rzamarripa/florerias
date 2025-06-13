@@ -219,7 +219,7 @@ const UsersPage: React.FC = () => {
         <Card.Body className="p-0">
           <div className="table-responsive">
             <Table className="table-hover mb-0">
-              <thead className="table-light">
+              <thead className="">
                 <tr>
                   <th className="border-0 py-2 px-3 fw-semibold text-uppercase text-muted small">
                     #
