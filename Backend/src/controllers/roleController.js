@@ -39,32 +39,13 @@ const createRole = async (req, res) => {
 
 const getAllRoles = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const filters = {};
-    if (req.query.name) {
-      filters.name = { $regex: req.query.name, $options: "i" };
-    }
-
-    const roles = await Role.find(filters)
-      .select("name description estatus createdAt")
-      .skip(skip)
-      .limit(limit)
+    const roles = await Role.find()
+      .select("name description estatus modules createdAt")
       .sort({ createdAt: -1 });
-
-    const total = await Role.countDocuments(filters);
 
     res.status(200).json({
       success: true,
       count: roles.length,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
       data: roles,
     });
   } catch (error) {
