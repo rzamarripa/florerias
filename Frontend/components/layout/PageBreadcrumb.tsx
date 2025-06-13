@@ -1,33 +1,36 @@
-import Link from 'next/link'
-import { BreadcrumbItem } from 'react-bootstrap'
-import { TbChevronRight } from 'react-icons/tb'
+import { TbChevronRight } from "react-icons/tb";
 
 type PageBreadcrumbProps = {
-  title: string
-  subtitle?: string
-}
+  title: string;
+  subtitle?: string;
+  section?: string;
+};
 
-const PageBreadcrumb = ({ title, subtitle }: PageBreadcrumbProps) => {
+const PageBreadcrumb = ({ title, subtitle, section }: PageBreadcrumbProps) => {
   return (
-    <div className="page-title-head d-flex align-items-center">
-      <div className="flex-grow-1">
-        <h4 className="fs-sm text-uppercase fw-bold m-0">{title}</h4>
+    <div className="page-title-head d-flex justify-content-between align-items-center">
+      <div>
+        <h1 className="fs-sm text-uppercase fw-bold m-0">
+          {title.toUpperCase()}
+        </h1>
       </div>
-      <div className="text-end">
-        <div className="breadcrumb m-0 py-0 d-flex align-items-center gap-1"> 
-          <BreadcrumbItem linkAs={Link} href="">Inspinia</BreadcrumbItem> <TbChevronRight />
-          {subtitle && (
-            <>
-            <BreadcrumbItem linkAs={Link} href="">
-              {subtitle}
-            </BreadcrumbItem>  <TbChevronRight  />
-            </>
-          )}
-          <BreadcrumbItem active>{title}</BreadcrumbItem>
-        </div>
+      <div className="d-flex align-items-center gap-2 text-muted">
+        {section && (
+          <>
+            <span>{section}</span>
+            <TbChevronRight size={16} />
+          </>
+        )}
+        {subtitle && (
+          <>
+            <span>{subtitle}</span>
+            <TbChevronRight size={16} />
+          </>
+        )}
+        <span className="text-secondary">{title}</span>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default PageBreadcrumb
+export default PageBreadcrumb;

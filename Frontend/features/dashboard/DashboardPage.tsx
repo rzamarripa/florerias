@@ -5,32 +5,11 @@ import { Badge, Button, Card, Col, Container, Row } from "react-bootstrap";
 import { HiCheckCircle, HiCog, HiDocumentText, HiUsers } from "react-icons/hi2";
 
 const DashboardPage = () => {
-  const { user, logout } = useUserSessionStore();
+  const { user } = useUserSessionStore();
 
   return (
     <div className="min-vh-100 bg-light py-4">
       <Container fluid className="px-4">
-        <Card className="shadow-sm mb-4">
-          <Card.Body>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <h1 className="h3 fw-bold text-dark mb-0">
-                  ¡Bienvenido, {user?.username}!
-                </h1>
-              </div>
-              <div>
-                <Button
-                  variant="danger"
-                  onClick={() => logout()}
-                  className="px-4"
-                >
-                  Cerrar Sesión
-                </Button>
-              </div>
-            </div>
-          </Card.Body>
-        </Card>
-
         <Row className="g-4">
           <Col lg={8}>
             <Card className="shadow-sm">

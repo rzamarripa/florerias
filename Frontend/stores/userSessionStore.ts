@@ -14,7 +14,6 @@ interface UserSessionActions {
   setToken: (token: string | null) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
-  updateUserProfile: (profileData: Partial<User["profile"]>) => void;
   clearUser: () => void;
 }
 
@@ -33,7 +32,7 @@ export const useUserSessionStore = create<UserSessionStore>()(
     (set, get) => ({
       user: null,
       token: null,
-      isLoading: false,
+      isLoading: true,
       isAuthenticated: false,
 
       getUserProfile: () => {
@@ -65,21 +64,6 @@ export const useUserSessionStore = create<UserSessionStore>()(
         set({ isLoading: loading });
       },
 
-      updateUserProfile: (profileData: Partial<User["profile"]>) => {
-        const { user } = get();
-        if (user) {
-          set({
-            user: {
-              ...user,
-              profile: {
-                ...user.profile,
-                ...profileData,
-              },
-            },
-          });
-        }
-      },
-
       logout: () => {
         set({
           user: null,
@@ -100,6 +84,12 @@ export const useUserSessionStore = create<UserSessionStore>()(
     }),
     {
       name: "user-session",
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isLoading = false;
+          state.isAuthenticated = !!state.token;
+        }
+      },
     }
   )
 );

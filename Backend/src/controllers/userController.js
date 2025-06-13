@@ -20,9 +20,10 @@ const registerUser = async (req, res) => {
         message: "User already exists with this username",
       });
     }
-
+    console.log('role: ', role)
     if (role) {
       const roleExists = await Role.findById(role);
+      console.log(roleExists)
       if (!roleExists) {
         return res.status(400).json({
           success: false,

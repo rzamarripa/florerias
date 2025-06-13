@@ -1,17 +1,16 @@
-type CurrencyType = '₹' | '$' | '€'
+type CurrencyType = "₹" | "$" | "€";
 
-export const currency: CurrencyType = '$'
+export const currency: CurrencyType = "$";
 
-export const currentYear = new Date().getFullYear()
+export const currentYear = new Date().getFullYear();
 
-export const appName = 'Inspinia'
-export const appTitle = 'INSPINIA - Responsive Bootstrap 5 Admin Dashboard'
-export const appDescription: string = 'Inspinia is the #1 best-selling admin dashboard template on WrapBootstrap. Perfect for building CRM, CMS, project management tools, and custom web apps with clean UI, responsive design, and powerful features.'
+export const appName = "Caprepa";
+export const appTitle = "Caprepa - Sitio Administrativo";
+export const appDescription: string =
+  "Caprepa es un sitio administrativo para gestionar usuarios, roles, permisos y más.";
 
+export const author: string = "Caprepa";
+export const authorWebsite: string = "https://webapplayers.com/";
+export const authorContact: string = "";
 
-export const author: string = 'WebAppLayers'
-export const authorWebsite: string = 'https://webapplayers.com/'
-export const authorContact: string = ''
-
-
-export const basePath: string = ''
+export const basePath: string = "";
