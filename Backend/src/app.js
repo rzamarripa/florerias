@@ -15,13 +15,12 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-app.use(generalLimiter);
-
 app.use(
   cors({
     origin: "*",
   })
 );
+app.use(generalLimiter);
 
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));

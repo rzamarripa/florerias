@@ -2,7 +2,7 @@ import { Role } from "../models/Roles.js";
 
 const createRole = async (req, res) => {
   try {
-    const { name, description, modules } = req.body;
+    const { name, modules } = req.body;
 
     const roleExists = await Role.findOne({ name: name });
     if (roleExists) {
@@ -14,7 +14,7 @@ const createRole = async (req, res) => {
 
     const role = await Role.create({
       name,
-      description,
+      description: "",
       modules: modules || [],
     });
 

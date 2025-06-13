@@ -12,6 +12,14 @@ export const rolesService = {
     return response;
   },
 
+  createRole: async (roleData: { name: string; modules: string[] }) => {
+    const response = await apiCall<Role>("/roles", {
+      method: "POST",
+      body: JSON.stringify(roleData),
+    });
+    return response;
+  },
+
   updateRole: async (roleId: string, modules: string[]) => {
     const response = await apiCall<Role>(`/roles/${roleId}`, {
       method: "PUT",

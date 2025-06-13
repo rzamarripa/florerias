@@ -4,7 +4,6 @@
 import { FileText, Settings, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Badge,
   Button,
   Card,
@@ -13,6 +12,8 @@ import {
   ListGroup,
   Row,
 } from "react-bootstrap";
+import { toast } from "react-toastify";
+import CreateRoleModal from "./components/CreateRolModal";
 import { rolesService } from "./services/roles";
 import { Module, Page, Role, SelectedModules } from "./types";
 
@@ -26,8 +27,6 @@ const RolesPage: React.FC = () => {
   const [originalRoleModules, setOriginalRoleModules] = useState<{
     [roleId: string]: string[];
   }>({});
-  const [error, setError] = useState<string>("");
-  const [successMessage, setSuccessMessage] = useState<string>("");
 
   useEffect(() => {
     loadInitialData();
@@ -36,7 +35,6 @@ const RolesPage: React.FC = () => {
   const loadInitialData = async (): Promise<void> => {
     try {
       setLoading(true);
-      setError("");
 
       const [rolesResponse, pagesResponse] = await Promise.all([
         rolesService.getAllRoles(),
@@ -73,7 +71,7 @@ const RolesPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Error loading initial data:", error);
-      setError("Error al cargar los datos iniciales");
+      toast.error("Error al cargar los datos iniciales");
     } finally {
       setLoading(false);
     }
@@ -82,16 +80,11 @@ const RolesPage: React.FC = () => {
   const handleRoleSelect = (role: Role): void => {
     setSelectedRole(role);
     setIsEditing(false);
-    setError("");
-    setSuccessMessage("");
 
     const roleModules = originalRoleModules[role._id] || [];
     const newSelectedModules: SelectedModules = {};
 
     pages.forEach((page) => {
-      console.log(
-        `  - Processing page: ${page.name} with ${page.modules.length} modules`
-      );
       page.modules.forEach((module) => {
         const isSelected = roleModules.includes(module._id);
         newSelectedModules[module._id] = isSelected;
@@ -103,13 +96,10 @@ const RolesPage: React.FC = () => {
 
   const handleEdit = (): void => {
     setIsEditing(true);
-    setError("");
-    setSuccessMessage("");
   };
 
   const handleCancel = (): void => {
     setIsEditing(false);
-    setError("");
     if (selectedRole) {
       handleRoleSelect(selectedRole);
     }
@@ -127,7 +117,6 @@ const RolesPage: React.FC = () => {
 
     try {
       setLoading(true);
-      setError("");
 
       const selectedModuleIds = Object.entries(selectedModules)
         .filter(([_, isSelected]) => isSelected)
@@ -158,15 +147,13 @@ const RolesPage: React.FC = () => {
         );
 
         setIsEditing(false);
-        setSuccessMessage("Módulos actualizados correctamente");
-
-        setTimeout(() => setSuccessMessage(""), 3000);
+        toast.success("Módulos actualizados correctamente");
       } else {
-        setError(response.message || "Error al actualizar los módulos");
+        toast.error(response.message || "Error al actualizar los módulos");
       }
     } catch (error) {
       console.error("Error updating role modules:", error);
-      setError("Error al actualizar los módulos del rol");
+      toast.error("Error al actualizar los módulos del rol");
     } finally {
       setLoading(false);
     }
@@ -193,33 +180,9 @@ const RolesPage: React.FC = () => {
 
   return (
     <Container fluid className="p-4 min-vh-100">
-      {error && (
-        <Row className="mb-3">
-          <Col>
-            <Alert variant="danger" dismissible onClose={() => setError("")}>
-              {error}
-            </Alert>
-          </Col>
-        </Row>
-      )}
-
-      {successMessage && (
-        <Row className="mb-3">
-          <Col>
-            <Alert
-              variant="success"
-              dismissible
-              onClose={() => setSuccessMessage("")}
-            >
-              {successMessage}
-            </Alert>
-          </Col>
-        </Row>
-      )}
-
       <Row className="mb-3">
         <Col>
-          <Button variant="primary">Nuevo</Button>
+          <CreateRoleModal pages={pages} reloadData={loadInitialData} />
         </Col>
       </Row>
 
@@ -325,14 +288,14 @@ const RolesPage: React.FC = () => {
                     {pages.map((page: Page) => (
                       <div
                         key={page._id}
-                        className="mb-4 border rounded overflow-hidden"
+                        className="mb-2 border rounded overflow-hidden"
                       >
                         <div
-                          className="bg-light p-3 border-bottom"
-                          style={{ fontSize: "14px", color: "#495057" }}
+                          className="bg-light px-3 py-2 border-bottom"
+                          style={{ fontSize: "13px", color: "#495057" }}
                         >
                           <div className="d-flex align-items-center">
-                            <FileText size={16} />
+                            <FileText size={14} />
                             <strong className="ms-2">{page.name}</strong>
                             {getStatusIndicator(page)}
                           </div>
@@ -341,7 +304,7 @@ const RolesPage: React.FC = () => {
                         {page.modules.map((module: Module) => (
                           <div
                             key={module._id}
-                            className="p-3 border-bottom"
+                            className="px-3 py-2 border-bottom"
                             style={{
                               transition: "background-color 0.2s ease",
                             }}
@@ -352,7 +315,7 @@ const RolesPage: React.FC = () => {
                                 className="mb-0 flex-grow-1 text-dark"
                                 style={{
                                   cursor: isEditing ? "pointer" : "default",
-                                  fontSize: "14px",
+                                  fontSize: "13px",
                                 }}
                               >
                                 {module.name}
@@ -376,8 +339,11 @@ const RolesPage: React.FC = () => {
                         ))}
 
                         {page.modules.length === 0 && (
-                          <div className="p-4 text-center">
-                            <span className="text-muted fst-italic">
+                          <div className="px-3 py-3 text-center">
+                            <span
+                              className="text-muted fst-italic"
+                              style={{ fontSize: "12px" }}
+                            >
                               Sin módulos disponibles
                             </span>
                           </div>
