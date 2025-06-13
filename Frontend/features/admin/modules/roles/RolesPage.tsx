@@ -4,12 +4,12 @@
 import { FileText, Settings, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Badge,
   Button,
   Card,
   Col,
   Container,
-  Form,
   ListGroup,
   Row,
 } from "react-bootstrap";
@@ -27,6 +27,8 @@ const RolesPage: React.FC = () => {
   const [originalRoleModules, setOriginalRoleModules] = useState<{
     [roleId: string]: string[];
   }>({});
+  const [error, setError] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
 
   useEffect(() => {
     loadInitialData();
@@ -35,30 +37,44 @@ const RolesPage: React.FC = () => {
   const loadInitialData = async (): Promise<void> => {
     try {
       setLoading(true);
+      setError("");
 
-      // Solo 2 fetch necesarios: roles y páginas (páginas ya incluyen todos los módulos)
       const [rolesResponse, pagesResponse] = await Promise.all([
-        rolesService.getAllRoles(), // Roles con módulos asignados
-        rolesService.getPages(), // Páginas con todos los módulos disponibles
+        rolesService.getAllRoles(),
+        rolesService.getPages(),
       ]);
 
-      // Procesar roles y crear mapa de módulos asignados por rol
       if (rolesResponse.success && rolesResponse.data) {
         setRoles(rolesResponse.data);
 
         const roleModulesMap: { [roleId: string]: string[] } = {};
         rolesResponse.data.forEach((role: Role) => {
-          roleModulesMap[role._id] = role.modules.map((module) => module._id);
+          roleModulesMap[role._id] = role.modules.map((module: any) =>
+            typeof module === "string" ? module : module._id
+          );
         });
         setOriginalRoleModules(roleModulesMap);
       }
 
-      // Establecer páginas (cada página ya incluye su array completo de módulos)
       if (pagesResponse.success && pagesResponse.data) {
         setPages(pagesResponse.data);
+
+        if (selectedRole && pagesResponse.data.length > 0) {
+          const roleModules = originalRoleModules[selectedRole._id] || [];
+          const newSelectedModules: SelectedModules = {};
+
+          pagesResponse.data.forEach((page) => {
+            page.modules.forEach((module) => {
+              newSelectedModules[module._id] = roleModules.includes(module._id);
+            });
+          });
+
+          setSelectedModules(newSelectedModules);
+        }
       }
     } catch (error) {
       console.error("Error loading initial data:", error);
+      setError("Error al cargar los datos iniciales");
     } finally {
       setLoading(false);
     }
@@ -67,15 +83,19 @@ const RolesPage: React.FC = () => {
   const handleRoleSelect = (role: Role): void => {
     setSelectedRole(role);
     setIsEditing(false);
+    setError("");
+    setSuccessMessage("");
 
-    // Actualizar checkboxes basándose en los módulos del rol seleccionado
     const roleModules = originalRoleModules[role._id] || [];
     const newSelectedModules: SelectedModules = {};
 
-    // Iterar sobre todas las páginas y módulos para establecer el estado
     pages.forEach((page) => {
+      console.log(
+        `  - Processing page: ${page.name} with ${page.modules.length} modules`
+      );
       page.modules.forEach((module) => {
-        newSelectedModules[module._id] = roleModules.includes(module._id);
+        const isSelected = roleModules.includes(module._id);
+        newSelectedModules[module._id] = isSelected;
       });
     });
 
@@ -84,11 +104,13 @@ const RolesPage: React.FC = () => {
 
   const handleEdit = (): void => {
     setIsEditing(true);
+    setError("");
+    setSuccessMessage("");
   };
 
   const handleCancel = (): void => {
     setIsEditing(false);
-    // Restaurar estado original
+    setError("");
     if (selectedRole) {
       handleRoleSelect(selectedRole);
     }
@@ -106,32 +128,46 @@ const RolesPage: React.FC = () => {
 
     try {
       setLoading(true);
+      setError("");
 
       const selectedModuleIds = Object.entries(selectedModules)
         .filter(([_, isSelected]) => isSelected)
         .map(([moduleId, _]) => moduleId);
 
-      setOriginalRoleModules((prev) => ({
-        ...prev,
-        [selectedRole._id]: selectedModuleIds,
-      }));
-
-      setRoles((prev) =>
-        prev.map((role) =>
-          role._id === selectedRole._id
-            ? {
-                ...role,
-                modules: selectedModuleIds.map((id) => ({ _id: id } as Module)),
-              }
-            : role
-        )
+      const response = await rolesService.updateRole(
+        selectedRole._id,
+        selectedModuleIds
       );
 
-      setIsEditing(false);
+      if (response.success) {
+        setOriginalRoleModules((prev) => ({
+          ...prev,
+          [selectedRole._id]: selectedModuleIds,
+        }));
 
-      console.log("Módulos a actualizar:", selectedModuleIds);
+        setRoles((prev) =>
+          prev.map((role) =>
+            role._id === selectedRole._id
+              ? {
+                  ...role,
+                  modules: selectedModuleIds.map(
+                    (id) => ({ _id: id } as Module)
+                  ),
+                }
+              : role
+          )
+        );
+
+        setIsEditing(false);
+        setSuccessMessage("Módulos actualizados correctamente");
+
+        setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        setError(response.message || "Error al actualizar los módulos");
+      }
     } catch (error) {
       console.error("Error updating role modules:", error);
+      setError("Error al actualizar los módulos del rol");
     } finally {
       setLoading(false);
     }
@@ -172,6 +208,30 @@ const RolesPage: React.FC = () => {
           </p>
         </Col>
       </Row>
+
+      {error && (
+        <Row className="mb-3">
+          <Col>
+            <Alert variant="danger" dismissible onClose={() => setError("")}>
+              {error}
+            </Alert>
+          </Col>
+        </Row>
+      )}
+
+      {successMessage && (
+        <Row className="mb-3">
+          <Col>
+            <Alert
+              variant="success"
+              dismissible
+              onClose={() => setSuccessMessage("")}
+            >
+              {successMessage}
+            </Alert>
+          </Col>
+        </Row>
+      )}
 
       <Row className="mb-3">
         <Col>
@@ -235,6 +295,7 @@ const RolesPage: React.FC = () => {
                         variant="outline-secondary"
                         size="sm"
                         onClick={handleCancel}
+                        disabled={loading}
                       >
                         Cancelar
                       </Button>
@@ -277,7 +338,7 @@ const RolesPage: React.FC = () => {
                               >
                                 {module.name}
                               </label>
-                              <Form.Check
+                              <input
                                 type="checkbox"
                                 id={module._id}
                                 checked={selectedModules[module._id] || false}
@@ -288,7 +349,8 @@ const RolesPage: React.FC = () => {
                                   )
                                 }
                                 disabled={!isEditing}
-                                className="mb-0"
+                                className="form-check-input"
+                                style={{ margin: 0 }}
                               />
                             </div>
                           </div>
