@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import { Badge, Button, Form, Table } from "react-bootstrap";
 import { Role, rolesService } from "../roles/services/role";
 import { Actions } from "./components/Actions";
-import CreateUserModal from "./components/CreateUserModal/UserModal";
+import CreateUserModal from "./components/UserModal";
 import { usersService, type User } from "./services/users";
 
 const UsersPage: React.FC = () => {
