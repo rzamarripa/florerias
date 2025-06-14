@@ -1,11 +1,11 @@
 "use client";
-import { LayoutProvider } from "@/context/useLayoutContext";
+
 import { ChildrenType } from "@/types";
 import { ToastContainer } from "react-toastify";
 
 const AppWrapper = ({ children }: ChildrenType) => {
   return (
-    <LayoutProvider>
+    <div>
       {children}
       <ToastContainer
         position="top-right"
@@ -15,7 +15,7 @@ const AppWrapper = ({ children }: ChildrenType) => {
         pauseOnFocusLoss
         pauseOnHover
       />
-    </LayoutProvider>
+    </div>
   );
 };
 
