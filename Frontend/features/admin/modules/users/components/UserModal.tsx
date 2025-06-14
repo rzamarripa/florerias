@@ -23,9 +23,9 @@ import {
 import styles from "./users.module.css";
 
 interface UsersModalProps {
-  user?: User; // Usuario a editar (undefined para crear)
+  user?: User;
   roles: Role[];
-  onSuccess?: () => void; // Callback para refrescar datos después de crear/actualizar
+  onSuccess?: () => void;
 }
 
 const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
@@ -92,7 +92,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           department: user.department || "",
           role: user.role?._id || "",
         });
-        // Si el usuario tiene imagen, mostrar preview
         if (user.profile?.image) {
           setImagePreview(user.profile.image);
         }
