@@ -9,15 +9,11 @@ const AppWrapper = ({ children }: ChildrenType) => {
       {children}
       <ToastContainer
         position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
+        autoClose={2000}
+        hideProgressBar
         closeOnClick
-        rtl={false}
         pauseOnFocusLoss
-        draggable
         pauseOnHover
-        theme="light"
       />
     </LayoutProvider>
   );

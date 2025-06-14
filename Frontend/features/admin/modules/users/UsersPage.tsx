@@ -142,7 +142,6 @@ const UsersPage: React.FC = () => {
                 value={searchRolesSearch}
                 onChange={(e) => setSearchRolesTerm(e.target.value)}
                 style={{ minWidth: "150px" }}
-                size="sm"
               >
                 <option value="">Todos los roles</option>
                 {roles.map((role) => (
@@ -154,10 +153,8 @@ const UsersPage: React.FC = () => {
 
               <Form.Select
                 value={statusFilter}
-                className=" px-2"
                 onChange={(e) => setStatusFilter(e.target.value)}
                 style={{ minWidth: "150px" }}
-                size="sm"
               >
                 <option value="">Todos los estados</option>
                 <option value="true">Activo</option>
@@ -166,7 +163,7 @@ const UsersPage: React.FC = () => {
 
               <UserModal
                 roles={roles}
-                onSuccess={() => fetchUsers(pagination.page, false)} // No loading para crear/editar
+                onSuccess={() => fetchUsers(pagination.page, false)}
               />
             </div>
           </div>

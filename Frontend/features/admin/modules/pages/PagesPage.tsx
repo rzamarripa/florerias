@@ -170,7 +170,6 @@ const PaginasTable: React.FC = () => {
                 value={selectedType}
                 onChange={handleTypeChange}
                 style={{ minWidth: "150px" }}
-                size="sm"
               >
                 <option value="todos">Todos los estados</option>
                 <option value="activos">Páginas activas</option>
@@ -253,12 +252,12 @@ const PaginasTable: React.FC = () => {
                         </span>
                       </td>
                       <td className="text-center">
-                        <span className="text-muted">
+                        <span>
                           {new Date(pagina.createdAt).toLocaleDateString(
                             "es-ES",
                             {
                               year: "numeric",
-                              month: "short",
+                              month: "long",
                               day: "numeric",
                             }
                           )}
