@@ -292,9 +292,7 @@ const removeModuleFromPage = async (req, res) => {
       });
     }
 
-    console.log(page);
-
-    // CORRECCIÓN: m es directamente un ObjectId, no un objeto con moduleId
+    // Verificar si el módulo está asociado a la página
     const moduleExists = page.modules.some(
       (m) => m.toString() === moduleId.toString()
     );
@@ -308,8 +306,12 @@ const removeModuleFromPage = async (req, res) => {
       });
     }
 
-    console.log('holaaaaaaa');
+    // Remover el módulo de la página
     await page.removeModule(moduleId);
+
+    // Cambiar el status del módulo a false
+    await Module.findByIdAndUpdate(moduleId, { status: false });
+
     await page.populate("modules", "name description status");
 
     res.status(200).json({

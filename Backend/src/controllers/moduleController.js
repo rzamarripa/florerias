@@ -139,7 +139,10 @@ const getModulesByPage = async (req, res) => {
       });
     }
 
-    const modules = await Module.find({ page: pageId })
+    const modules = await Module.find({
+      page: pageId,
+      status: true
+    })
       .populate("page", "name description path status")
       .sort({ createdAt: -1 });
 
@@ -156,7 +159,6 @@ const getModulesByPage = async (req, res) => {
     });
   }
 };
-
 const getModulesByRole = async (req, res) => {
   try {
     const { roleId } = req.params;
@@ -174,6 +176,7 @@ const getModulesByRole = async (req, res) => {
       match: { status: true },
       populate: {
         path: "page",
+        match: { status: true },
         select: "name description path status createdAt updatedAt",
       },
     });

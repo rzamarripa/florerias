@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, Button, Col, Form, Modal, Row } from "react-bootstrap";
 import { FieldErrors, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
+import { toast } from "react-toastify";
 import { Role } from "../../roles/services/role";
 import {
   CreateUserFormData,
@@ -137,15 +138,17 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
-        setError("Por favor selecciona un archivo JPG o PNG válido");
+        const errorMsg = "Por favor selecciona un archivo JPG o PNG válido";
+        setError(errorMsg);
+        toast.error(errorMsg);
         return;
       }
 
       const isValidDimensions = await validateImageDimensions(file);
       if (!isValidDimensions) {
-        setError(
-          "La imagen debe tener exactamente 150x150 píxeles de resolución"
-        );
+        const errorMsg = "La imagen debe tener exactamente 150x150 píxeles de resolución";
+        setError(errorMsg);
+        toast.error(errorMsg);
         const fileInput = document.getElementById(
           "imageInput"
         ) as HTMLInputElement;
@@ -200,6 +203,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         };
 
         await usersService.updateUser(user._id, updateData, selectedImage);
+        toast.success(`Usuario ${data.username} actualizado correctamente`);
       } else {
         const createData = data as CreateUserFormData;
         const newUserData: CreateUserData = {
@@ -215,12 +219,20 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         };
 
         await usersService.createUser(newUserData, selectedImage);
+        toast.success(`Usuario ${createData.username} creado correctamente`);
       }
 
       handleClose();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+      setError(errorMessage);
+
+      if (isEditing) {
+        toast.error(`Error al actualizar el usuario: ${errorMessage}`);
+      } else {
+        toast.error(`Error al crear el usuario: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -286,17 +298,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         </Modal.Header>
 
         <Modal.Body className="px-4 py-2">
-          {error && (
-            <Alert
-              variant="danger"
-              dismissible
-              onClose={clearError}
-              className="mb-3 py-2"
-            >
-              <strong>Error:</strong> {error}
-            </Alert>
-          )}
-
           <Form onSubmit={handleSubmit(onSubmit)}>
             <Row className="g-3">
               <Col xs={12}>
@@ -550,10 +551,10 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         <Modal.Footer className="border-0 pt-2 pb-3">
           <Button
             onClick={handleClose}
+            className={`fw-medium px-4 btn-light`}
             disabled={loading}
-            className={`px-3 py-1 ${styles.btnGrayLite}`}
           >
-            Cancelar
+            Cerrar
           </Button>
           <Button
             variant="primary"

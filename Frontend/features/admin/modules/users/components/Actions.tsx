@@ -2,14 +2,14 @@ import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
 import { Role } from "../../roles/services/role";
 import UserModal from "./UserModal";
-import UserViewModal from "./UserViewModal"; // Importamos el modal autocontenido
+import UserViewModal from "./UserViewModal";
 import { User } from "../services/users";
 
 interface ActionsProps {
   user: User;
   roles: Role[];
   onToggleStatus: (user: User) => Promise<void>;
-  onUserUpdated?: () => void; // Callback para refrescar la lista después de actualizar
+  onUserUpdated?: () => void;
 }
 
 export const Actions = ({
@@ -19,16 +19,17 @@ export const Actions = ({
   onUserUpdated
 }: ActionsProps) => (
   <div className="d-flex justify-content-center gap-1">
-    {/* Reemplazamos el botón "Ver usuario" por el modal autocontenido */}
+    {/* Modal de visualización de usuario */}
     <UserViewModal user={user} />
 
-    {/* Modal de edición - ahora simplificado */}
+    {/* Modal de edición */}
     <UserModal
       user={user}
       roles={roles}
       onSuccess={onUserUpdated}
     />
 
+    {/* Botón de activar/desactivar usuario */}
     {user.profile.estatus ? (
       <button
         className="btn btn-light btn-icon btn-sm rounded-circle"

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, Button, Form, Table } from "react-bootstrap";
 import { BsCheck2, BsPencil } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
+import { toast } from "react-toastify";
 import CreatePageModal from "./components/AddPageModal";
 import EditPageModal from "./components/EditPagesModal";
 import { Page, pagesService } from "./services/pages";
@@ -36,9 +37,9 @@ const PaginasTable: React.FC = () => {
         setPages(response.data);
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al cargar las páginas"
-      );
+      const errorMessage = err instanceof Error ? err.message : "Error al cargar las páginas";
+      setError(errorMessage);
+      toast.error("Error al cargar las páginas");
       console.error("Error fetching pages:", err);
     } finally {
       if (showLoading) {
@@ -48,7 +49,7 @@ const PaginasTable: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchPages(true); //
+    fetchPages(true);
   }, [searchTerm, selectedType]);
 
   const filteredPaginas: Page[] = pages.filter((pagina: Page) => {
@@ -78,9 +79,8 @@ const PaginasTable: React.FC = () => {
     setShowCreateModal(false);
   };
 
-  // No mostrar loading para crear páginas
   const handlePageCreated = (): void => {
-    fetchPages(false); // showLoading = false para operaciones CRUD
+    fetchPages(false);
   };
 
   const handleEditPageClick = (pageId: string): void => {
@@ -94,7 +94,7 @@ const PaginasTable: React.FC = () => {
   };
 
   const handlePageUpdated = (): void => {
-    fetchPages(false); //
+    fetchPages(false);
   };
 
   const clearError = (): void => {
@@ -102,20 +102,39 @@ const PaginasTable: React.FC = () => {
   };
 
   const handleTooglePage = async (id: string) => {
-    const currentPage = pages.find((page) => page._id === id);
-    console.log(currentPage?.status);
-    if (currentPage?.status) {
-      const response = await pagesService.deletePage(id);
-      if (response.success) {
-        fetchPages(false);
+    try {
+      const currentPage = pages.find((page) => page._id === id);
+
+      if (!currentPage) {
+        toast.error("Página no encontrada");
         return;
       }
-      return;
-    }
-    const response = await pagesService.activatePage(id);
-    if (response.success) {
-      console.log(currentPage?.status);
-      fetchPages(false);
+
+      if (currentPage.status) {
+        const response = await pagesService.deletePage(id);
+        if (response.success) {
+          toast.success(`Página "${currentPage.name}" desactivada correctamente`);
+          fetchPages(false);
+        } else {
+          throw new Error(response.message || "Error al desactivar la página");
+        }
+      } else {
+        const response = await pagesService.activatePage(id);
+        if (response.success) {
+          toast.success(`Página "${currentPage.name}" activada correctamente`);
+          fetchPages(false);
+        } else {
+          throw new Error(response.message || "Error al activar la página");
+        }
+      }
+    } catch (err) {
+      const currentPage = pages.find((page) => page._id === id);
+      const pageName = currentPage?.name || "la página";
+      const action = currentPage?.status ? "desactivar" : "activar";
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+
+      console.error("Error toggling page status:", err);
+      toast.error(`Error al ${action} ${pageName}: ${errorMessage}`);
     }
   };
 
@@ -242,11 +261,10 @@ const PaginasTable: React.FC = () => {
                       </td>
                       <td className="text-center">
                         <span
-                          className={`badge fs-6 ${
-                            pagina.status
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
+                          className={`badge fs-6 ${pagina.status
+                            ? "bg-success bg-opacity-10 text-success"
+                            : "bg-danger bg-opacity-10 text-danger"
+                            }`}
                         >
                           {pagina.status ? "Activo" : "Inactivo"}
                         </span>
@@ -274,7 +292,7 @@ const PaginasTable: React.FC = () => {
                           </button>
                           <button
                             className="btn btn-light btn-icon btn-sm rounded-circle"
-                            title="Eliminar página"
+                            title={isPageActive(pagina._id) ? "Desactivar página" : "Activar página"}
                             onClick={() => handleTooglePage(pagina._id)}
                           >
                             {isPageActive(pagina._id) ? (

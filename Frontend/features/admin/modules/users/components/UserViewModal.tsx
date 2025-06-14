@@ -43,7 +43,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
                 style={{ maxHeight: "80vh" }}
             >
                 <Modal.Header closeButton className="border-bottom-0 pb-1">
-                    <Modal.Title className="text-dark fw-bold fs-6">
+                    <Modal.Title className="text-dark fs-5 modal-title h4">
                         Información del Usuario
                     </Modal.Title>
                 </Modal.Header>

@@ -16,6 +16,7 @@ import { toast } from "react-toastify";
 import CreateRoleModal from "./components/CreateRolModal";
 import { rolesService } from "./services/roles";
 import { Module, Page, Role, SelectedModules } from "./types";
+import { BsPencil } from "react-icons/bs";
 
 const RolesPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -137,11 +138,11 @@ const RolesPage: React.FC = () => {
           prev.map((role) =>
             role._id === selectedRole._id
               ? {
-                  ...role,
-                  modules: selectedModuleIds.map(
-                    (id) => ({ _id: id } as Module)
-                  ),
-                }
+                ...role,
+                modules: selectedModuleIds.map(
+                  (id) => ({ _id: id } as Module)
+                ),
+              }
               : role
           )
         );
@@ -212,9 +213,12 @@ const RolesPage: React.FC = () => {
                         <Settings size={16} className="me-2" />
                         <span>{role.name}</span>
                       </div>
-                      <Badge bg="secondary" pill>
-                        {getModuleCountForRole(role._id)}
-                      </Badge>
+                      <div className=" d-flex align-items-between gap-2">
+                        <Badge bg="secondary" pill>
+                          {getModuleCountForRole(role._id)}
+                        </Badge>
+                        <BsPencil size={12} />
+                      </div>
                     </div>
                   </ListGroup.Item>
                 ))}

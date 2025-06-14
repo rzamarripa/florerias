@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Badge, Button, Form, Table } from "react-bootstrap";
+import { toast } from "react-toastify";
 import { Role, rolesService } from "../roles/services/role";
 import { Actions } from "./components/Actions";
 import UserModal from "./components/UserModal";
@@ -41,6 +42,7 @@ const UsersPage: React.FC = () => {
       }
     } catch (err) {
       console.error("Error fetching roles:", err);
+      toast.error("Error al cargar los roles");
     }
   };
 
@@ -69,6 +71,7 @@ const UsersPage: React.FC = () => {
       }
     } catch (err) {
       console.error("Error fetching users:", err);
+      toast.error("Error al cargar los usuarios");
     } finally {
       if (showLoading) {
         setLoading(false);
@@ -95,12 +98,16 @@ const UsersPage: React.FC = () => {
     try {
       if (user.profile.estatus) {
         await usersService.deleteUser(user._id);
+        toast.success(`Usuario ${user.username} desactivado correctamente`);
       } else {
         await usersService.activateUser(user._id);
+        toast.success(`Usuario ${user.username} activado correctamente`);
       }
       fetchUsers(pagination.page, false);
     } catch (err) {
       console.error("Error toggling user status:", err);
+      const action = user.profile.estatus ? "desactivar" : "activar";
+      toast.error(`Error al ${action} el usuario ${user.username}`);
     }
   };
 
@@ -244,7 +251,7 @@ const UsersPage: React.FC = () => {
                               </div>
                             ) : (
                               <div
-                                className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                                className="badge fs-6 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center fw-bold"
                                 style={{
                                   width: "40px",
                                   height: "40px",
@@ -260,7 +267,7 @@ const UsersPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="text-center">
-                        <Badge bg="primary" className="px-2 py-1">
+                        <Badge className="badge fs-6 bg-success bg-opacity-10 text-success px-2 py-1">
                           {user.role?.name || "Sin rol"}
                         </Badge>
                       </td>
@@ -288,11 +295,10 @@ const UsersPage: React.FC = () => {
                       </td>
                       <td className="text-center">
                         <span
-                          className={`badge fs-6 ${
-                            user.profile.estatus
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
+                          className={`badge fs-6 ${user.profile.estatus
+                            ? "bg-success bg-opacity-10 text-success"
+                            : "bg-danger bg-opacity-10 text-danger"
+                            }`}
                         >
                           {user.profile.estatus ? "Activo" : "Inactivo"}
                         </span>
@@ -304,7 +310,7 @@ const UsersPage: React.FC = () => {
                           onToggleStatus={handleToggleUserStatus}
                           onUserUpdated={() =>
                             fetchUsers(pagination.page, false)
-                          } // No loading para actualizar
+                          }
                         />
                       </td>
                     </tr>

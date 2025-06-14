@@ -10,6 +10,7 @@ import {
   Row,
   Table,
 } from "react-bootstrap";
+import { toast } from "react-toastify";
 import { z } from "zod";
 import { CreateModuleData, Module, modulesService } from "../services/modules";
 import { pagesService, UpdatePageData } from "../services/pages";
@@ -82,6 +83,7 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
   const loadPageData = async () => {
     if (!pageId) {
       console.error("ERROR: No pageId provided to loadPageData");
+      toast.error("Error: ID de página faltante");
       return;
     }
 
@@ -135,11 +137,11 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
       }
     } catch (error) {
       console.error("❌ ERROR cargando datos de página:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
       setErrors({
-        general:
-          "Error al cargar los datos de la página: " +
-          (error instanceof Error ? error.message : "Error desconocido"),
+        general: `Error al cargar los datos de la página: ${errorMessage}`,
       });
+      toast.error(`Error al cargar los datos de la página: ${errorMessage}`);
     } finally {
       setLoadingPage(false);
     }
@@ -177,33 +179,52 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
       if (errors.general) {
         setErrors((prev) => ({ ...prev, general: "" }));
       }
+
+      // Toast de confirmación
+      toast.success(`Módulo "${newModule.nombre}" agregado a la lista`);
     }
   };
 
   const handleRemoveNewModule = (id: string) => {
+    const moduleToRemove = newModules.find(m => m.id === id);
     setNewModules((prev) => prev.filter((module) => module.id !== id));
+
+    if (moduleToRemove) {
+      toast.success(`Módulo "${moduleToRemove.nombre}" eliminado de la lista`);
+    }
   };
 
   const handleRemoveExistingModule = async (moduleId: string) => {
     if (!pageId) {
-      setErrors({ general: "Error: ID de página faltante" });
+      const errorMsg = "Error: ID de página faltante";
+      setErrors({ general: errorMsg });
+      toast.error(errorMsg);
       return;
     }
 
     if (!moduleId) {
-      setErrors({ general: "Error: ID de módulo faltante" });
+      const errorMsg = "Error: ID de módulo faltante";
+      setErrors({ general: errorMsg });
+      toast.error(errorMsg);
       return;
     }
 
     if (typeof pageId !== "string" || pageId.trim() === "") {
-      setErrors({ general: "Error: ID de página inválido" });
+      const errorMsg = "Error: ID de página inválido";
+      setErrors({ general: errorMsg });
+      toast.error(errorMsg);
       return;
     }
 
     if (typeof moduleId !== "string" || moduleId.trim() === "") {
-      setErrors({ general: "Error: ID de módulo inválido" });
+      const errorMsg = "Error: ID de módulo inválido";
+      setErrors({ general: errorMsg });
+      toast.error(errorMsg);
       return;
     }
+
+    const moduleToDelete = existingModules.find(m => m.id === moduleId);
+    const moduleName = moduleToDelete?.nombre || "el módulo";
 
     try {
       console.log('id del modulo: ', moduleId)
@@ -223,6 +244,9 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
         if (errors.general) {
           setErrors((prev) => ({ ...prev, general: "" }));
         }
+
+        // Toast de éxito
+        toast.success(`Módulo "${moduleName}" eliminado correctamente`);
       } else {
         throw new Error(
           response.message || "Error al eliminar el módulo de la base de datos"
@@ -235,6 +259,7 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
           : "Error desconocido al eliminar el módulo";
 
       setErrors({ general: `Error al eliminar el módulo: ${errorMessage}` });
+      toast.error(`Error al eliminar el módulo "${moduleName}": ${errorMessage}`);
     } finally {
       setDeletingModules((prev) => {
         const newSet = new Set(prev);
@@ -267,6 +292,11 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
     e.preventDefault();
 
     if (!validateForm() || !pageId) {
+      if (!pageId) {
+        toast.error("Error: ID de página faltante");
+      } else {
+        toast.error("Por favor corrige los errores en el formulario");
+      }
       return;
     }
 
@@ -282,21 +312,50 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
       const pageResponse = await pagesService.updatePage(pageId, pageData);
 
       if (!pageResponse.success) {
-        throw new Error("Error al actualizar la página");
+        throw new Error(pageResponse.message || "Error al actualizar la página");
       }
 
-      if (newModules.length > 0) {
-        for (const mod of newModules) {
-          const moduleData: CreateModuleData = {
-            name: mod.nombre,
-            description: mod.description,
-            page: pageId,
-          };
+      // Toast de éxito para la página actualizada
+      toast.success(`Página "${formData.name}" actualizada correctamente`);
 
-          await modulesService.createModule(moduleData);
+      // Crear nuevos módulos si existen
+      if (newModules.length > 0) {
+        let modulesCreated = 0;
+        let modulesFailed = 0;
+
+        for (const mod of newModules) {
+          try {
+            const moduleData: CreateModuleData = {
+              name: mod.nombre,
+              description: mod.description,
+              page: pageId,
+            };
+
+            const moduleResponse = await modulesService.createModule(moduleData);
+
+            if (moduleResponse.success) {
+              modulesCreated++;
+            } else {
+              modulesFailed++;
+              console.error(`Error creando módulo ${mod.nombre}:`, moduleResponse.message);
+            }
+          } catch (moduleError) {
+            modulesFailed++;
+            console.error(`Error creando módulo ${mod.nombre}:`, moduleError);
+          }
+        }
+
+        // Toast de resumen de módulos creados
+        if (modulesCreated > 0) {
+          toast.success(`${modulesCreated} módulo(s) nuevo(s) creado(s) correctamente`);
+        }
+
+        if (modulesFailed > 0) {
+          toast.warning(`${modulesFailed} módulo(s) no pudieron ser creados`);
         }
       }
 
+      // Limpiar formulario
       setFormData({ name: "", path: "", description: "" });
       setExistingModules([]);
       setNewModules([]);
@@ -307,12 +366,11 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
       onHide();
     } catch (error) {
       console.error("Error updating page:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error al actualizar la página";
       setErrors({
-        general:
-          error instanceof Error
-            ? error.message
-            : "Error al actualizar la página",
+        general: errorMessage,
       });
+      toast.error(`Error al actualizar la página: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -487,7 +545,7 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
                         <th className="fw-semibold small">
                           Descripción del módulo
                         </th>
-                        <th className="fw-semibold small">Acciones</th>
+                        <th className="fw-semibold small align-middle text-center">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -521,27 +579,18 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
                               <td className="align-middle small">
                                 {module.description || "Sin descripción"}
                               </td>
-                              <td className="align-middle">
-                                <Button
-                                  variant="outline-danger"
-                                  size="sm"
+                              <td className="align-middle text-center">
+                                <button
+                                  className="btn btn-light btn-icon btn-sm rounded-circle"
+                                  title={module.isExisting ? "Eliminar módulo de la base de datos" : "Eliminar módulo de la lista"}
                                   onClick={() => {
-                                    console.log("=== CLICK ELIMINAR ===");
-                                    console.log("Módulo completo:", module);
-                                    console.log("ID del módulo:", module.id);
-                                    console.log(
-                                      "Es existente:",
-                                      module.isExisting
-                                    );
-
                                     if (module.isExisting) {
                                       handleRemoveExistingModule(module.id);
                                     } else {
                                       handleRemoveNewModule(module.id);
                                     }
                                   }}
-                                  disabled={deletingModules.has(module.id)}
-                                  title={`Eliminar módulo: ${module.nombre} (ID: ${module.id})`}
+                                  disabled={deletingModules.has(module.id) || loading}
                                 >
                                   {deletingModules.has(module.id) ? (
                                     <div
@@ -553,9 +602,9 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
                                       </span>
                                     </div>
                                   ) : (
-                                    <Trash2 size={14} />
+                                    <Trash2 size={16} />
                                   )}
-                                </Button>
+                                </button>
                               </td>
                             </tr>
                           );
@@ -574,6 +623,7 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
         <Button
           onClick={handleClose}
           className={`fw-medium px-4 btn-light`}
+          disabled={loading}
         >
           Cerrar
         </Button>
