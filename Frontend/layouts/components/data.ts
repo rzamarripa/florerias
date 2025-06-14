@@ -151,8 +151,8 @@ export const menuItems: MenuItemType[] = [
     label: "Gestión",
     icon: TbAlertHexagon,
     children: [
-      { key: "rols", label: "Roles", url: "/gestion/roles" },
-      { key: "pages", label: "Paginas", url: "/gestion/pages" },
+      { key: "roles", label: "Roles", url: "/gestion/roles" },
+      { key: "pages", label: "Páginas", url: "/gestion/pages" },
       { key: "users", label: "Usuarios", url: "/gestion/users" },
     ],
   },

@@ -13,6 +13,7 @@ import {
 import { z } from "zod";
 import { CreateModuleData, Module, modulesService } from "../services/modules";
 import { pagesService, UpdatePageData } from "../services/pages";
+import styles from './pages.module.css'
 
 const updatePageSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -205,7 +206,7 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
     }
 
     try {
-      console.log('id del modulo: ',moduleId)
+      console.log('id del modulo: ', moduleId)
       setDeletingModules((prev) => new Set(prev).add(moduleId));
 
       const response = await pagesService.removeModuleFromPage(
@@ -525,13 +526,13 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
                                   variant="outline-danger"
                                   size="sm"
                                   onClick={() => {
-                                    console.log("=== CLICK ELIMINAR ==="); 
-                                    console.log("Módulo completo:", module); 
-                                    console.log("ID del módulo:", module.id); 
+                                    console.log("=== CLICK ELIMINAR ===");
+                                    console.log("Módulo completo:", module);
+                                    console.log("ID del módulo:", module.id);
                                     console.log(
                                       "Es existente:",
                                       module.isExisting
-                                    ); 
+                                    );
 
                                     if (module.isExisting) {
                                       handleRemoveExistingModule(module.id);
@@ -571,9 +572,8 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
 
       <Modal.Footer className="border-0">
         <Button
-          variant="secondary"
           onClick={handleClose}
-          className="fw-medium px-4"
+          className={`fw-medium px-4 ${styles.btnGrayLite}`}
         >
           Cerrar
         </Button>

@@ -1,8 +1,9 @@
-import { BsCheck2, BsEye } from "react-icons/bs";
+import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
 import { Role } from "../../roles/services/role";
-import { type User } from "../services/users";
 import UserModal from "./UserModal";
+import UserViewModal from "./UserViewModal"; // Importamos el modal autocontenido
+import { User } from "../services/users";
 
 interface ActionsProps {
   user: User;
@@ -11,26 +12,20 @@ interface ActionsProps {
   onUserUpdated?: () => void; // Callback para refrescar la lista después de actualizar
 }
 
-export const Actions = ({ 
-  user, 
-  roles, 
-  onToggleStatus, 
-  onUserUpdated 
+export const Actions = ({
+  user,
+  roles,
+  onToggleStatus,
+  onUserUpdated
 }: ActionsProps) => (
   <div className="d-flex justify-content-center gap-1">
-    <button
-      className="btn btn-light btn-icon btn-sm rounded-circle"
-      title="Ver usuario"
-      onClick={(e) => e.preventDefault()}
-      tabIndex={0}
-    >
-      <BsEye size={16} />
-    </button>
+    {/* Reemplazamos el botón "Ver usuario" por el modal autocontenido */}
+    <UserViewModal user={user} />
 
     {/* Modal de edición - ahora simplificado */}
-    <UserModal 
-      user={user} 
-      roles={roles} 
+    <UserModal
+      user={user}
+      roles={roles}
       onSuccess={onUserUpdated}
     />
 
