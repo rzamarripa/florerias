@@ -17,11 +17,6 @@ const UserProfile = () => {
     logout();
   };
 
-  const truncateName = (name: string, maxLength: number = 15) => {
-    if (name.length <= maxLength) return name;
-    return name.substring(0, maxLength) + "...";
-  };
-
   return (
     <div className="topbar-item nav-user">
       <Dropdown align="end">
@@ -63,14 +58,7 @@ const UserProfile = () => {
               {user?.username.charAt(0).toUpperCase() || "U"}
             </div>
           )}
-          <div className="d-lg-flex align-items-center gap-1 d-none">
-            <h5 className="my-0">
-              {user?.profile?.nombreCompleto
-                ? truncateName(user.profile.nombreCompleto)
-                : "Usuario"}
-            </h5>
-            <TbChevronDown className="align-middle" />
-          </div>
+          <TbChevronDown className="align-middle" />
         </DropdownToggle>
         <DropdownMenu className="dropdown-menu-end">
           <div className="dropdown-header noti-title">
