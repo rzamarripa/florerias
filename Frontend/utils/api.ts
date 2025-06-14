@@ -24,12 +24,10 @@ const getAuthHeaders = (isFormData: boolean = false) => {
   const token = getTokenFromSessionStore();
   const headers: Record<string, string> = {};
 
-  // Solo agregar Content-Type si NO es FormData
   if (!isFormData) {
     headers["Content-Type"] = "application/json";
   }
 
-  // Agregar token si existe
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -41,15 +39,12 @@ export const apiCall = async <T>(
   url: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> => {
-  // Determinar si el body es FormData
   const isFormData = options.body instanceof FormData;
 
   const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${url}`, {
     headers: {
       ...getAuthHeaders(isFormData),
-      // Mantener headers adicionales que puedan venir en options
       ...(!isFormData && options.headers),
-      // Si es FormData, omitir los headers de options para evitar conflictos
       ...(isFormData &&
         Object.fromEntries(
           Object.entries(options.headers || {}).filter(

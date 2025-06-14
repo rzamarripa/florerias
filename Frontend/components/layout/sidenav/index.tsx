@@ -3,12 +3,12 @@ import logoDark from "@/assets/images/logo-black.png";
 import logoSm from "@/assets/images/logo-sm.png";
 import logo from "@/assets/images/logo.png";
 import { useLayoutContext } from "@/context/useLayoutContext";
-import AppMenu from "@/layouts/components/sidenav/components/AppMenu";
-import UserProfile from "@/layouts/components/sidenav/components/UserProfile";
 import Image from "next/image";
 import Link from "next/link";
 import { TbMenu4, TbX } from "react-icons/tb";
 import SimpleBar from "simplebar-react";
+import AppMenu from "./components/AppMenu";
+import UserProfile from "./components/UserProfile";
 
 const Sidenav = () => {
   const { sidenav, hideBackdrop, changeSideNavSize } = useLayoutContext();
