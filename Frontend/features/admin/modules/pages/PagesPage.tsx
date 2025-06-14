@@ -1,11 +1,11 @@
 import { FileText, Plus, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Alert, Button, Form, Table } from "react-bootstrap";
+import { BsCheck2, BsPencil } from "react-icons/bs";
+import { FiTrash2 } from "react-icons/fi";
 import CreatePageModal from "./components/AddPageModal";
 import EditPageModal from "./components/EditPagesModal";
 import { Page, pagesService } from "./services/pages";
-import { BsCheck2, BsPencil } from "react-icons/bs";
-import { FiTrash2 } from "react-icons/fi";
 
 const PaginasTable: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -48,7 +48,7 @@ const PaginasTable: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchPages(true); // 
+    fetchPages(true); //
   }, [searchTerm, selectedType]);
 
   const filteredPaginas: Page[] = pages.filter((pagina: Page) => {
@@ -94,7 +94,7 @@ const PaginasTable: React.FC = () => {
   };
 
   const handlePageUpdated = (): void => {
-    fetchPages(false); // 
+    fetchPages(false); //
   };
 
   const clearError = (): void => {
@@ -102,27 +102,26 @@ const PaginasTable: React.FC = () => {
   };
 
   const handleTooglePage = async (id: string) => {
-    const currentPage = pages.find(page => page._id === id)
-    console.log(currentPage?.status)
+    const currentPage = pages.find((page) => page._id === id);
+    console.log(currentPage?.status);
     if (currentPage?.status) {
       const response = await pagesService.deletePage(id);
       if (response.success) {
-        currentPage.status
         fetchPages(false);
-        return
+        return;
       }
-      return
+      return;
     }
-    const response = await pagesService.activatePage(id)
+    const response = await pagesService.activatePage(id);
     if (response.success) {
-      console.log(currentPage?.status)
+      console.log(currentPage?.status);
       fetchPages(false);
     }
   };
 
   const isPageActive = (id: string) => {
-    return pages.find(page => page._id === id)?.status
-  }
+    return pages.find((page) => page._id === id)?.status;
+  };
 
   return (
     <div className="row">
@@ -243,10 +242,11 @@ const PaginasTable: React.FC = () => {
                       </td>
                       <td className="text-center">
                         <span
-                          className={`badge fs-6 ${pagina.status
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                            }`}
+                          className={`badge fs-6 ${
+                            pagina.status
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
                         >
                           {pagina.status ? "Activo" : "Inactivo"}
                         </span>
@@ -277,7 +277,11 @@ const PaginasTable: React.FC = () => {
                             title="Eliminar página"
                             onClick={() => handleTooglePage(pagina._id)}
                           >
-                            {isPageActive(pagina._id) ? <FiTrash2 size={16} /> : <BsCheck2 size={16} />}
+                            {isPageActive(pagina._id) ? (
+                              <FiTrash2 size={16} />
+                            ) : (
+                              <BsCheck2 size={16} />
+                            )}
                           </button>
                         </div>
                       </td>
