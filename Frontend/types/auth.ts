@@ -6,6 +6,7 @@ export interface User {
     nombre: string;
     nombreCompleto: string;
     path: string;
+    image?: string;
   };
   role?: Role;
   createdAt: string;

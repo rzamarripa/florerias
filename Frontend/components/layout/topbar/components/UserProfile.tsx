@@ -8,7 +8,6 @@ import {
 } from "react-bootstrap";
 import { TbChevronDown, TbLogout } from "react-icons/tb";
 
-import user2 from "@/assets/images/users/user-2.jpg";
 import { useUserSessionStore } from "@/stores";
 
 const UserProfile = () => {
@@ -30,13 +29,40 @@ const UserProfile = () => {
           as={"a"}
           className="topbar-link dropdown-toggle drop-arrow-none px-2"
         >
-          <Image
-            src={user2.src}
-            width="32"
-            height="32"
-            className="rounded-circle me-lg-2 d-flex"
-            alt="user-image"
-          />
+          {typeof user?.profile?.image === "string" ? (
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: "2px solid #e9ecef",
+                position: "relative",
+              }}
+            >
+              <Image
+                src={user.profile.image}
+                alt={user.username}
+                fill
+                style={{
+                  objectFit: "cover",
+                }}
+                sizes="40px"
+              />
+            </div>
+          ) : (
+            <div
+              className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                fontSize: "16px",
+              }}
+            >
+              {user?.username.charAt(0).toUpperCase() || "U"}
+            </div>
+          )}
           <div className="d-lg-flex align-items-center gap-1 d-none">
             <h5 className="my-0">
               {user?.profile?.nombreCompleto

@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import user2 from "@/assets/images/users/user-2.jpg";
 import { useUserSessionStore } from "@/stores";
 import Image from "next/image";
 
@@ -12,13 +11,40 @@ const UserProfile = () => {
       <div className="d-flex justify-content-between align-items-center">
         <div>
           <Link href="/" className="link-reset">
-            <Image
-              src={user2.src}
-              alt="user-image"
-              width="36"
-              height="36"
-              className="rounded-circle mb-2 avatar-md"
-            />
+            {typeof user?.profile?.image === "string" ? (
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "2px solid #e9ecef",
+                  position: "relative",
+                }}
+              >
+                <Image
+                  src={user.profile.image}
+                  alt={user.username}
+                  fill
+                  style={{
+                    objectFit: "cover",
+                  }}
+                  sizes="40px"
+                />
+              </div>
+            ) : (
+              <div
+                className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  fontSize: "16px",
+                }}
+              >
+                {user?.username.charAt(0).toUpperCase() || "U"}
+              </div>
+            )}
             <span className="sidenav-user-name fw-bold">
               {user?.profile.nombreCompleto}
             </span>
