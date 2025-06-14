@@ -1,79 +1,16 @@
 import { type MenuItemType } from "@/types/layout";
-import { type IconType } from "react-icons";
 import {
   TbAlertHexagon,
-  TbBellRinging,
   TbBoxAlignTop,
-  TbCreditCard,
   TbFiles,
-  TbHeadset,
   TbLayout,
   TbLayoutDashboard,
   TbLayoutSidebar,
-  TbLock,
   TbLockAccess,
-  TbLogout2,
   TbRocket,
-  TbSettings2,
   TbShieldLock,
-  TbUserCircle,
   TbUserHexagon,
 } from "react-icons/tb";
-
-type UserDropdownItemType = {
-  label?: string;
-  icon?: IconType;
-  url?: string;
-  isDivider?: boolean;
-  isHeader?: boolean;
-  class?: string;
-};
-
-export const userDropdownItems: UserDropdownItemType[] = [
-  {
-    label: "Welcome back!",
-    isHeader: true,
-  },
-  {
-    label: "Profile",
-    icon: TbUserCircle,
-    url: "pages-profile.html",
-  },
-  {
-    label: "Notifications",
-    icon: TbBellRinging,
-    url: "#",
-  },
-  {
-    label: "Balance: $985.25",
-    icon: TbCreditCard,
-    url: "#",
-  },
-  {
-    label: "Account Settings",
-    icon: TbSettings2,
-    url: "#",
-  },
-  {
-    label: "Support Center",
-    icon: TbHeadset,
-    url: "#",
-  },
-  {
-    isDivider: true,
-  },
-  {
-    label: "Lock Screen",
-    icon: TbLock,
-    url: "auth-lock-screen.html",
-  },
-  {
-    label: "Log Out",
-    icon: TbLogout2,
-    url: "#",
-    class: "text-danger fw-semibold",
-  },
-];
 
 export const menuItems: MenuItemType[] = [
   { key: "menu", label: "Menu", isTitle: true },
@@ -147,16 +84,6 @@ export const menuItems: MenuItemType[] = [
     ],
   },
   {
-    key: "gestion",
-    label: "Gestión",
-    icon: TbAlertHexagon,
-    children: [
-      { key: "roles", label: "Roles", url: "/gestion/roles" },
-      { key: "pages", label: "Páginas", url: "/gestion/paginas" },
-      { key: "users", label: "Usuarios", url: "/gestion/usuarios" },
-    ],
-  },
-  {
     key: "paquetes",
     label: "Paquetes",
     icon: TbAlertHexagon,
@@ -193,6 +120,16 @@ export const menuItems: MenuItemType[] = [
         label: "Historial de Presupuestos",
         url: "/presupuestos/historialPresupuestos",
       },
+    ],
+  },
+  {
+    key: "gestion",
+    label: "Gestión",
+    icon: TbAlertHexagon,
+    children: [
+      { key: "roles", label: "Roles", url: "/gestion/roles" },
+      { key: "pages", label: "Páginas", url: "/gestion/paginas" },
+      { key: "users", label: "Usuarios", url: "/gestion/usuarios" },
     ],
   },
 ];

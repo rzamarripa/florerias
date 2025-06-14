@@ -5,8 +5,8 @@ import React, { useEffect, useState } from "react";
 import { Badge, Button, Form, Table } from "react-bootstrap";
 import { Role, rolesService } from "../roles/services/role";
 import { Actions } from "./components/Actions";
-import { usersService, type User } from "./services/users";
 import UserModal from "./components/UserModal";
+import { usersService, type User } from "./services/users";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -44,7 +44,10 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  const fetchUsers = async (page: number = pagination.page, showLoading: boolean = false) => {
+  const fetchUsers = async (
+    page: number = pagination.page,
+    showLoading: boolean = false
+  ) => {
     try {
       if (showLoading) {
         setLoading(true);
@@ -246,7 +249,7 @@ const UsersPage: React.FC = () => {
                                   width: "40px",
                                   height: "40px",
                                   borderRadius: "50%",
-                                  fontSize: "16px"
+                                  fontSize: "16px",
                                 }}
                               >
                                 {user.username.charAt(0).toUpperCase()}
@@ -285,10 +288,11 @@ const UsersPage: React.FC = () => {
                       </td>
                       <td className="text-center">
                         <span
-                          className={`badge fs-6 ${user.profile.estatus
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                            }`}
+                          className={`badge fs-6 ${
+                            user.profile.estatus
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
                         >
                           {user.profile.estatus ? "Activo" : "Inactivo"}
                         </span>
@@ -298,7 +302,9 @@ const UsersPage: React.FC = () => {
                           user={user}
                           roles={roles}
                           onToggleStatus={handleToggleUserStatus}
-                          onUserUpdated={() => fetchUsers(pagination.page, false)} // No loading para actualizar
+                          onUserUpdated={() =>
+                            fetchUsers(pagination.page, false)
+                          } // No loading para actualizar
                         />
                       </td>
                     </tr>
@@ -307,7 +313,6 @@ const UsersPage: React.FC = () => {
               </tbody>
             </Table>
 
-            {/* Footer con paginación */}
             <div className="d-flex justify-content-between align-items-center p-3 border-top">
               <span className="text-muted">
                 Mostrando {users.length} de {pagination.total} registros

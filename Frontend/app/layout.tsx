@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 const RootLayout = ({ children }: ChildrenType) => {
   return (
-    <html lang="en" className={`${roboto.variable} ${openSans.variable}`}>
+    <html lang="es" className={`${roboto.variable} ${openSans.variable}`}>
       <body>
         <AppWrapper>{children}</AppWrapper>
       </body>
