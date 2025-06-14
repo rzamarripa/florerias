@@ -1,15 +1,10 @@
 import { env } from "@/config/env";
 
-export interface ApiResponse<T = any> {
-  success: boolean;
+export interface ApiResponse<T> {
+  data: T;
   message: string;
-  data?: T;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
+  success: boolean;
+  [key: string]: any;
 }
 
 const getTokenFromSessionStore = () => {
@@ -28,47 +23,48 @@ const getTokenFromSessionStore = () => {
 const getAuthHeaders = (isFormData: boolean = false) => {
   const token = getTokenFromSessionStore();
   const headers: Record<string, string> = {};
-  
+
   // Solo agregar Content-Type si NO es FormData
   if (!isFormData) {
     headers["Content-Type"] = "application/json";
   }
-  
+
   // Agregar token si existe
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  
+
   return headers;
 };
 
 export const apiCall = async <T>(
   url: string,
   options: RequestInit = {}
-): Promise<T> => {
+): Promise<ApiResponse<T>> => {
   // Determinar si el body es FormData
   const isFormData = options.body instanceof FormData;
-  
+
   const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${url}`, {
     headers: {
       ...getAuthHeaders(isFormData),
       // Mantener headers adicionales que puedan venir en options
       ...(!isFormData && options.headers),
       // Si es FormData, omitir los headers de options para evitar conflictos
-      ...(isFormData && Object.fromEntries(
-        Object.entries(options.headers || {}).filter(
-          ([key]) => key.toLowerCase() !== 'content-type'
-        )
-      )),
+      ...(isFormData &&
+        Object.fromEntries(
+          Object.entries(options.headers || {}).filter(
+            ([key]) => key.toLowerCase() !== "content-type"
+          )
+        )),
     },
     ...options,
   });
 
   const data = await response.json();
-  
+
   if (!response.ok) {
     throw new Error(data.message || "Error en la operación");
   }
-  
+
   return data;
 };
