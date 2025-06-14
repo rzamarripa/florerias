@@ -1,11 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Plus, Upload, X } from "lucide-react";
+import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Alert, Button, Col, Form, Modal, Row } from "react-bootstrap";
 import { FieldErrors, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { Role } from "../../roles/services/role";
-import styles from './users.module.css'
 import {
   CreateUserFormData,
   createUserSchema,
@@ -20,6 +20,7 @@ import {
   type UpdateUserData,
   type User,
 } from "../services/users";
+import styles from "./users.module.css";
 
 interface UsersModalProps {
   user?: User; // Usuario a editar (undefined para crear)
@@ -112,15 +113,15 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     }
   }, [isOpen, isEditing, user, reset]);
 
-  // Función para validar dimensiones de imagen
   const validateImageDimensions = (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
-      const img = new Image();
+      const img = new window.Image();
       const url = URL.createObjectURL(file);
 
       img.onload = () => {
-        URL.revokeObjectURL(url); // Liberar memoria
-        const isValidSize = img.naturalWidth === 150 && img.naturalHeight === 150;
+        URL.revokeObjectURL(url);
+        const isValidSize =
+          img.naturalWidth === 150 && img.naturalHeight === 150;
         resolve(isValidSize);
       };
 
@@ -136,27 +137,27 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validar tipo de archivo (solo JPG y PNG)
       if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
-        setError('Por favor selecciona un archivo JPG o PNG válido');
+        setError("Por favor selecciona un archivo JPG o PNG válido");
         return;
       }
 
-      // Validar dimensiones exactas de 150x150 píxeles
       const isValidDimensions = await validateImageDimensions(file);
       if (!isValidDimensions) {
-        setError('La imagen debe tener exactamente 150x150 píxeles de resolución');
-        // Limpiar el input
-        const fileInput = document.getElementById('imageInput') as HTMLInputElement;
+        setError(
+          "La imagen debe tener exactamente 150x150 píxeles de resolución"
+        );
+        const fileInput = document.getElementById(
+          "imageInput"
+        ) as HTMLInputElement;
         if (fileInput) {
-          fileInput.value = '';
+          fileInput.value = "";
         }
         return;
       }
 
       setSelectedImage(file);
 
-      // Crear preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target?.result as string);
@@ -169,10 +170,9 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const removeImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
-    // Reset file input
-    const fileInput = document.getElementById('imageInput') as HTMLInputElement;
+    const fileInput = document.getElementById("imageInput") as HTMLInputElement;
     if (fileInput) {
-      fileInput.value = '';
+      fileInput.value = "";
     }
   };
 
@@ -219,7 +219,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
       }
 
       handleClose();
-      onSuccess?.(); // Callback para refrescar datos
+      onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
@@ -300,29 +300,36 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
           <Form onSubmit={handleSubmit(onSubmit)}>
             <Row className="g-3">
-              {/* Sección de imagen */}
               <Col xs={12}>
                 <Form.Group>
-                  <Form.Label className="text-dark mb-1 small">
+                  <Form.Label className="text-dark mb-1">
                     Imagen de Perfil:
                   </Form.Label>
                   <div className="d-flex flex-column align-items-center gap-2">
                     {imagePreview ? (
-                      <div className="position-relative">
-                        <img
+                      <div
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "50%",
+                          overflow: "hidden",
+                          border: "2px solid #e9ecef",
+                          position: "relative",
+                        }}
+                      >
+                        <Image
                           src={imagePreview}
-                          alt="Preview"
-                          className="rounded-circle"
+                          alt={`imagen de perfil de ${form.getValues(
+                            "profile.nombreCompleto"
+                          )}`}
+                          fill
                           style={{
-                            width: "100px",
-                            height: "100px",
                             objectFit: "cover",
-                            border: "2px solid #dee2e6"
                           }}
+                          sizes="40px"
                         />
                         <Button
                           variant="danger"
-                          size="sm"
                           className="position-absolute top-0 end-0 rounded-circle p-1"
                           onClick={removeImage}
                           disabled={loading}
@@ -337,7 +344,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                         style={{
                           width: "100px",
                           height: "100px",
-                          border: "2px dashed #dee2e6 !important"
+                          border: "2px dashed #dee2e6 !important",
                         }}
                       >
                         <Upload size={30} className="text-muted" />
@@ -355,17 +362,17 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                       />
                       <Button
                         variant="outline-primary"
-                        size="sm"
-                        onClick={() => document.getElementById('imageInput')?.click()}
+                        onClick={() =>
+                          document.getElementById("imageInput")?.click()
+                        }
                         disabled={loading}
                         className="px-2 py-1"
                       >
-                        {imagePreview ? 'Cambiar' : 'Seleccionar'}
+                        {imagePreview ? "Cambiar" : "Seleccionar"}
                       </Button>
                       {imagePreview && (
                         <Button
                           variant="outline-secondary"
-                          size="sm"
                           onClick={removeImage}
                           disabled={loading}
                           className="px-2 py-1"
@@ -374,8 +381,12 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                         </Button>
                       )}
                     </div>
-                    <small className="text-muted text-center" style={{ fontSize: "0.75rem", lineHeight: "1.2" }}>
-                      <strong>Requisitos:</strong> 150x150px • JPG/PNG únicamente
+                    <small
+                      className="text-muted text-center"
+                      style={{ fontSize: "0.75rem", lineHeight: "1.2" }}
+                    >
+                      <strong>Requisitos:</strong> 150x150px • JPG/PNG
+                      únicamente
                     </small>
                   </div>
                 </Form.Group>
@@ -383,7 +394,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="text-dark mb-1 small">
+                  <Form.Label className="text-dark mb-1">
                     Nombre de Usuario:
                   </Form.Label>
                   <Form.Control
@@ -392,7 +403,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                     {...register("username")}
                     disabled={loading}
                     isInvalid={!!errors.username}
-                    size="sm"
                   />
                   <Form.Control.Feedback type="invalid">
                     {errors.username?.message}
@@ -402,7 +412,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="text-dark mb-1 small">
+                  <Form.Label className="text-dark mb-1">
                     Nombre Completo:
                   </Form.Label>
                   <Form.Control
@@ -411,7 +421,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                     {...register("profile.nombreCompleto")}
                     disabled={loading}
                     isInvalid={!!errors.profile?.nombreCompleto}
-                    size="sm"
                   />
                   <Form.Control.Feedback type="invalid">
                     {errors.profile?.nombreCompleto?.message}
@@ -423,7 +432,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                 <>
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="text-dark mb-1 small">
+                      <Form.Label className="text-dark mb-1">
                         Contraseña:
                       </Form.Label>
                       <div className="position-relative">
@@ -435,7 +444,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                           isInvalid={
                             isCreateFormErrors(errors) && !!errors.password
                           }
-                          size="sm"
                         />
                         <Button
                           variant="link"
@@ -460,7 +468,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="text-dark mb-1 small">
+                      <Form.Label className="text-dark mb-1">
                         Confirmar Contraseña:
                       </Form.Label>
                       <div className="position-relative">
@@ -475,7 +483,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                             isCreateFormErrors(errors) &&
                             !!errors.confirmPassword
                           }
-                          size="sm"
                         />
                         <Button
                           variant="link"
@@ -504,12 +511,11 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="text-dark mb-1 small">Rol:</Form.Label>
+                  <Form.Label className="text-dark mb-1">Rol:</Form.Label>
                   <Form.Select
                     {...register("role")}
                     disabled={loading}
                     isInvalid={!!errors.role}
-                    size="sm"
                   >
                     <option value="">Selecciona un rol</option>
                     {roles.map((role) => (
@@ -526,14 +532,10 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="text-dark mb-1 small">
+                  <Form.Label className="text-dark mb-1">
                     Departamento:
                   </Form.Label>
-                  <Form.Select
-                    {...register("department")}
-                    disabled={loading}
-                    size="sm"
-                  >
+                  <Form.Select {...register("department")} disabled={loading}>
                     {departments.map((dept) => (
                       <option key={dept.value} value={dept.value}>
                         {dept.label}
@@ -551,7 +553,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
             onClick={handleClose}
             disabled={loading}
             className={`px-3 py-1 ${styles.btnGrayLite}`}
-            size="sm"
           >
             Cancelar
           </Button>
@@ -560,7 +561,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
             onClick={handleSubmit(onSubmit)}
             disabled={loading}
             className="px-3 py-1"
-            size="sm"
           >
             {loading ? (
               <>
@@ -573,41 +573,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           </Button>
         </Modal.Footer>
       </Modal>
-
-      {/* Estilos para modal de altura limitada */}
-      <style jsx>{`
-        :global(.modal-90vh) {
-          height: 90vh;
-          display: flex;
-          align-items: center;
-        }
-        :global(.modal-90vh .modal-dialog) {
-          height: 90vh;
-          margin: 0 auto;
-          display: flex;
-          align-items: center;
-        }
-        :global(.modal-90vh .modal-content) {
-          height: 90vh;
-          max-height: 90vh;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-        }
-        :global(.modal-90vh .modal-body) {
-          flex: 1;
-          overflow-y: auto;
-          padding: 0.5rem 1.5rem;
-        }
-        :global(.modal-90vh .modal-header) {
-          flex-shrink: 0;
-          padding: 0.75rem 1.5rem 0.5rem;
-        }
-        :global(.modal-90vh .modal-footer) {
-          flex-shrink: 0;
-          padding: 0.5rem 1.5rem 0.75rem;
-        }
-      `}</style>
     </>
   );
 };
