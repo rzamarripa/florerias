@@ -1,8 +1,8 @@
 "use client";
 
 import React, { Fragment } from "react";
-import Sidenav from "../../layouts/components/sidenav";
-import Topbar from "../../layouts/components/topbar";
+import Sidenav from "./sidenav";
+import Topbar from "./topbar";
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   return (

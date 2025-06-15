@@ -34,11 +34,11 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "components/layout/MainLayout.tsx",
-    "app/(admin)/layout.tsx",
-    "app/(admin)/(apps)/(dashboards)/dashboard/charts.tsx",
-    "app/(admin)/(apps)/(dashboards)/dashboard/data.tsx",
-    "app/(admin)/(apps)/(dashboards)/dashboard/page.tsx",
-    "app/(auth)/auth/sign-in/page.tsx"
+    "app/(admin-site)/(protected)/layout.tsx",
+    "app/(admin-site)/(apps)/(dashboards)/dashboard/charts.tsx",
+    "app/(admin-site)/(apps)/(dashboards)/dashboard/data.tsx",
+    "app/(admin-site)/(apps)/(dashboards)/dashboard/page.tsx",
+    "app/(admin-site)/(auth)/iniciar-sesion/page.tsx"
   ],
   "exclude": [
     "node_modules"

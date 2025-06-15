@@ -1,6 +1,9 @@
-import { Edit, FileText, Plus, Search, Trash } from "lucide-react";
+import { FileText, Plus, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Alert, Button, Form, Table } from "react-bootstrap";
+import { BsCheck2, BsPencil } from "react-icons/bs";
+import { FiTrash2 } from "react-icons/fi";
+import { toast } from "react-toastify";
 import CreatePageModal from "./components/AddPageModal";
 import EditPageModal from "./components/EditPagesModal";
 import { Page, pagesService } from "./services/pages";
@@ -15,9 +18,11 @@ const PaginasTable: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
 
-  const fetchPages = async () => {
+  const fetchPages = async (showLoading: boolean = false) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       setError(null);
 
       const response = await pagesService.getAllPages({
@@ -32,17 +37,19 @@ const PaginasTable: React.FC = () => {
         setPages(response.data);
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error al cargar las páginas"
-      );
+      const errorMessage = err instanceof Error ? err.message : "Error al cargar las páginas";
+      setError(errorMessage);
+      toast.error("Error al cargar las páginas");
       console.error("Error fetching pages:", err);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchPages();
+    fetchPages(true);
   }, [searchTerm, selectedType]);
 
   const filteredPaginas: Page[] = pages.filter((pagina: Page) => {
@@ -73,7 +80,7 @@ const PaginasTable: React.FC = () => {
   };
 
   const handlePageCreated = (): void => {
-    fetchPages();
+    fetchPages(false);
   };
 
   const handleEditPageClick = (pageId: string): void => {
@@ -87,19 +94,52 @@ const PaginasTable: React.FC = () => {
   };
 
   const handlePageUpdated = (): void => {
-    fetchPages();
+    fetchPages(false);
   };
 
   const clearError = (): void => {
     setError(null);
   };
 
-  const handleDeletePage = async (id: string) => {
-    const response = await pagesService.deletePage(id);
-    if (response.success) {
-      fetchPages();
+  const handleTooglePage = async (id: string) => {
+    try {
+      const currentPage = pages.find((page) => page._id === id);
+
+      if (!currentPage) {
+        toast.error("Página no encontrada");
+        return;
+      }
+
+      if (currentPage.status) {
+        const response = await pagesService.deletePage(id);
+        if (response.success) {
+          toast.success(`Página "${currentPage.name}" desactivada correctamente`);
+          fetchPages(false);
+        } else {
+          throw new Error(response.message || "Error al desactivar la página");
+        }
+      } else {
+        const response = await pagesService.activatePage(id);
+        if (response.success) {
+          toast.success(`Página "${currentPage.name}" activada correctamente`);
+          fetchPages(false);
+        } else {
+          throw new Error(response.message || "Error al activar la página");
+        }
+      }
+    } catch (err) {
+      const currentPage = pages.find((page) => page._id === id);
+      const pageName = currentPage?.name || "la página";
+      const action = currentPage?.status ? "desactivar" : "activar";
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+
+      console.error("Error toggling page status:", err);
+      toast.error(`Error al ${action} ${pageName}: ${errorMessage}`);
     }
-    console.log(response);
+  };
+
+  const isPageActive = (id: string) => {
+    return pages.find((page) => page._id === id)?.status;
   };
 
   return (
@@ -148,7 +188,6 @@ const PaginasTable: React.FC = () => {
                 value={selectedType}
                 onChange={handleTypeChange}
                 style={{ minWidth: "150px" }}
-                size="sm"
               >
                 <option value="todos">Todos los estados</option>
                 <option value="activos">Páginas activas</option>
@@ -170,12 +209,12 @@ const PaginasTable: React.FC = () => {
             <Table className="table table-custom table-centered table-select table-hover w-100 mb-0">
               <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
-                  <th>#</th>
-                  <th>PÁGINA</th>
-                  <th>RUTA</th>
-                  <th>ESTADO</th>
-                  <th className="text-nowrap">FECHA CREACIÓN</th>
-                  <th>ACCIONES</th>
+                  <th className="text-center">#</th>
+                  <th className="text-center">PÁGINA</th>
+                  <th className="text-center">RUTA</th>
+                  <th className="text-center">ESTADO</th>
+                  <th className="text-center text-nowrap">FECHA CREACIÓN</th>
+                  <th className="text-center">ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,12 +237,12 @@ const PaginasTable: React.FC = () => {
                 ) : (
                   filteredPaginas.map((pagina: Page, index: number) => (
                     <tr key={pagina._id}>
-                      <td>
+                      <td className="text-center">
                         <span className="text-muted fw-medium">
                           {index + 1}
                         </span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <div className="d-flex flex-column">
                           <span className="fw-medium text-dark">
                             {pagina.name}
@@ -215,49 +254,52 @@ const PaginasTable: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <code className="bg-light text-muted px-2 py-1 rounded small">
                           {pagina.path}
                         </code>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <span
-                          className={`badge fs-6 ${
-                            pagina.status
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
+                          className={`badge fs-6 ${pagina.status
+                            ? "bg-success bg-opacity-10 text-success"
+                            : "bg-danger bg-opacity-10 text-danger"
+                            }`}
                         >
                           {pagina.status ? "Activo" : "Inactivo"}
                         </span>
                       </td>
-                      <td>
-                        <span className="text-muted">
+                      <td className="text-center">
+                        <span>
                           {new Date(pagina.createdAt).toLocaleDateString(
                             "es-ES",
                             {
                               year: "numeric",
-                              month: "short",
+                              month: "long",
                               day: "numeric",
                             }
                           )}
                         </span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <div className="d-flex justify-content-center gap-1">
                           <button
                             className="btn btn-light btn-icon btn-sm rounded-circle"
                             title="Editar página"
                             onClick={() => handleEditPageClick(pagina._id)}
                           >
-                            <Edit size={16} />
+                            <BsPencil size={16} />
                           </button>
                           <button
                             className="btn btn-light btn-icon btn-sm rounded-circle"
-                            title="Eliminar página"
-                            onClick={() => handleDeletePage(pagina._id)}
+                            title={isPageActive(pagina._id) ? "Desactivar página" : "Activar página"}
+                            onClick={() => handleTooglePage(pagina._id)}
                           >
-                            <Trash size={16} />
+                            {isPageActive(pagina._id) ? (
+                              <FiTrash2 size={16} />
+                            ) : (
+                              <BsCheck2 size={16} />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -281,7 +323,7 @@ const PaginasTable: React.FC = () => {
 
             <div className="d-flex justify-content-between align-items-center p-3 border-top">
               <span className="text-muted">
-                Mostrando {filteredPaginas.length} páginas
+                Mostrando {filteredPaginas.length} registros
               </span>
             </div>
           </div>

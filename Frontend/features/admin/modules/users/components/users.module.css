@@ -1,0 +1,12 @@
+.btnGrayLite {
+    background-color: #f5f5f5;
+    color: #363333;
+    border-color: #b4b4b4;
+}
+
+.btnGrayLite:hover {
+    background-color: #e2e2e2;
+    border-color: #a0a0a0;
+    color: #363333;
+    cursor: pointer;
+}

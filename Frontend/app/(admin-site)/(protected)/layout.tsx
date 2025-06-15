@@ -25,7 +25,7 @@ export default function RootLayout({
 
   useEffect(() => {
     if (isInitialized && !isLoading && !isAuthenticated) {
-      router.push("/auth/sign-in");
+      router.push("/iniciar-sesion");
     }
   }, [isInitialized, isAuthenticated, isLoading, router]);
 

@@ -1,25 +1,21 @@
 "use client";
-import { LayoutProvider } from "@/context/useLayoutContext";
+
 import { ChildrenType } from "@/types";
 import { ToastContainer } from "react-toastify";
 
 const AppWrapper = ({ children }: ChildrenType) => {
   return (
-    <LayoutProvider>
+    <div>
       {children}
       <ToastContainer
         position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
+        autoClose={2000}
+        hideProgressBar
         closeOnClick
-        rtl={false}
         pauseOnFocusLoss
-        draggable
         pauseOnHover
-        theme="light"
       />
-    </LayoutProvider>
+    </div>
   );
 };
 

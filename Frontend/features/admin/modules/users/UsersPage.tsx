@@ -1,13 +1,13 @@
 "use client";
-
 import { Search } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Badge, Button, Form, Table } from "react-bootstrap";
+import { toast } from "react-toastify";
 import { Role, rolesService } from "../roles/services/role";
 import { Actions } from "./components/Actions";
-import { usersService, type User } from "./services/users";
 import UserModal from "./components/UserModal";
+import { usersService, type User } from "./services/users";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -42,12 +42,18 @@ const UsersPage: React.FC = () => {
       }
     } catch (err) {
       console.error("Error fetching roles:", err);
+      toast.error("Error al cargar los roles");
     }
   };
 
-  const fetchUsers = async (page: number = pagination.page) => {
+  const fetchUsers = async (
+    page: number = pagination.page,
+    showLoading: boolean = false
+  ) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
 
       const data = await usersService.getAllUsers({
         page,
@@ -55,8 +61,6 @@ const UsersPage: React.FC = () => {
         ...(searchUsersSearch && { username: searchUsersSearch }),
         ...(statusFilter && { estatus: statusFilter }),
       });
-
-      console.log(data)
 
       if (data.data) {
         setUsers(data.data);
@@ -67,13 +71,16 @@ const UsersPage: React.FC = () => {
       }
     } catch (err) {
       console.error("Error fetching users:", err);
+      toast.error("Error al cargar los usuarios");
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchUsers(1);
+    fetchUsers(1, true);
   }, [searchUsersSearch, statusFilter]);
 
   useEffect(() => {
@@ -84,19 +91,23 @@ const UsersPage: React.FC = () => {
   }, [searchRolesSearch]);
 
   const handlePageChange = (page: number): void => {
-    fetchUsers(page);
+    fetchUsers(page, true);
   };
 
   const handleToggleUserStatus = async (user: User): Promise<void> => {
     try {
       if (user.profile.estatus) {
         await usersService.deleteUser(user._id);
+        toast.success(`Usuario ${user.username} desactivado correctamente`);
       } else {
         await usersService.activateUser(user._id);
+        toast.success(`Usuario ${user.username} activado correctamente`);
       }
-      fetchUsers(pagination.page);
+      fetchUsers(pagination.page, false);
     } catch (err) {
       console.error("Error toggling user status:", err);
+      const action = user.profile.estatus ? "desactivar" : "activar";
+      toast.error(`Error al ${action} el usuario ${user.username}`);
     }
   };
 
@@ -141,7 +152,6 @@ const UsersPage: React.FC = () => {
                 value={searchRolesSearch}
                 onChange={(e) => setSearchRolesTerm(e.target.value)}
                 style={{ minWidth: "150px" }}
-                size="sm"
               >
                 <option value="">Todos los roles</option>
                 {roles.map((role) => (
@@ -154,8 +164,7 @@ const UsersPage: React.FC = () => {
               <Form.Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ minWidth: "140px" }}
-                size="sm"
+                style={{ minWidth: "150px" }}
               >
                 <option value="">Todos los estados</option>
                 <option value="true">Activo</option>
@@ -164,7 +173,7 @@ const UsersPage: React.FC = () => {
 
               <UserModal
                 roles={roles}
-                onSuccess={() => fetchUsers(pagination.page)}
+                onSuccess={() => fetchUsers(pagination.page, false)}
               />
             </div>
           </div>
@@ -173,14 +182,14 @@ const UsersPage: React.FC = () => {
             <Table className="table table-custom table-centered table-select table-hover w-100 mb-0">
               <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
-                  <th>#</th>
-                  <th>USUARIO</th>
-                  <th>ROL</th>
-                  <th className="text-nowrap">NOMBRE COMPLETO</th>
-                  <th>DEPARTAMENTO</th>
-                  <th className="text-nowrap">FECHA CREACIÓN</th>
-                  <th>ESTATUS</th>
-                  <th>ACCIONES</th>
+                  <th className="text-center">#</th>
+                  <th className="text-center">USUARIO</th>
+                  <th className="text-center">ROL</th>
+                  <th className="text-center text-nowrap">NOMBRE COMPLETO</th>
+                  <th className="text-center">DEPARTAMENTO</th>
+                  <th className="text-center text-nowrap">FECHA CREACIÓN</th>
+                  <th className="text-center">ESTATUS</th>
+                  <th className="text-center">ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,29 +212,52 @@ const UsersPage: React.FC = () => {
                 ) : (
                   users.map((user, index) => (
                     <tr key={user._id}>
-                      <td>
+                      <td className="text-center">
                         <span className="text-muted fw-medium">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <div className="d-flex align-items-center">
-                          <div className="avatar-md d-flex align-items-center justify-content-center me-2">
+                          <div
+                            className="d-flex align-items-center justify-content-center me-2"
+                            style={{
+                              width: "45px",
+                              height: "45px",
+                              minWidth: "45px",
+                              minHeight: "45px",
+                            }}
+                          >
                             {user.profile.image ? (
-                              <Image
-                                src={user.profile.image || ""}
-                                alt={user.username}
-                                className="img-fluid rounded-circle"
-                                width={40}
-                                height={40}
+                              <div
                                 style={{
-                                  objectFit: "cover",
+                                  width: "40px",
+                                  height: "40px",
+                                  borderRadius: "50%",
+                                  overflow: "hidden",
+                                  border: "2px solid #e9ecef",
+                                  position: "relative",
                                 }}
-                              />
+                              >
+                                <Image
+                                  src={user.profile.image}
+                                  alt={user.username}
+                                  fill
+                                  style={{
+                                    objectFit: "cover",
+                                  }}
+                                  sizes="40px"
+                                />
+                              </div>
                             ) : (
                               <div
-                                className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
-                                style={{ width: "30px", height: "30px" }}
+                                className="badge fs-6 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center fw-bold"
+                                style={{
+                                  width: "40px",
+                                  height: "40px",
+                                  borderRadius: "50%",
+                                  fontSize: "16px",
+                                }}
                               >
                                 {user.username.charAt(0).toUpperCase()}
                               </div>
@@ -234,22 +266,22 @@ const UsersPage: React.FC = () => {
                           <span className="fw-medium">{user.username}</span>
                         </div>
                       </td>
-                      <td>
-                        <Badge bg="primary" className="px-2 py-1">
+                      <td className="text-center">
+                        <Badge className="badge fs-6 bg-success bg-opacity-10 text-success px-2 py-1">
                           {user.role?.name || "Sin rol"}
                         </Badge>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <span className="text-dark">
                           {user.profile.nombreCompleto || user.profile.nombre}
                         </span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <span className="text-muted">
                           {user.department || "No especificado"}
                         </span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <span className="text-muted">
                           {new Date(user.createdAt).toLocaleDateString(
                             "es-ES",
@@ -261,23 +293,24 @@ const UsersPage: React.FC = () => {
                           )}
                         </span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <span
-                          className={`badge fs-6 ${
-                            user.profile.estatus
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
+                          className={`badge fs-6 ${user.profile.estatus
+                            ? "bg-success bg-opacity-10 text-success"
+                            : "bg-danger bg-opacity-10 text-danger"
+                            }`}
                         >
                           {user.profile.estatus ? "Activo" : "Inactivo"}
                         </span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <Actions
                           user={user}
                           roles={roles}
                           onToggleStatus={handleToggleUserStatus}
-                          onUserUpdated={() => fetchUsers(pagination.page)}
+                          onUserUpdated={() =>
+                            fetchUsers(pagination.page, false)
+                          }
                         />
                       </td>
                     </tr>
@@ -286,10 +319,9 @@ const UsersPage: React.FC = () => {
               </tbody>
             </Table>
 
-            {/* Footer con paginación */}
             <div className="d-flex justify-content-between align-items-center p-3 border-top">
               <span className="text-muted">
-                Mostrando {users.length} de {pagination.total} usuarios
+                Mostrando {users.length} de {pagination.total} registros
               </span>
               <div className="d-flex gap-1">
                 <Button

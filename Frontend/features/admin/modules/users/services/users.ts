@@ -83,15 +83,18 @@ export interface CreateUserResponseData {
   data: User;
 }
 
-const createFormData = (userData: CreateUserData | UpdateUserData, image?: File | null) => {
+const createFormData = (
+  userData: CreateUserData | UpdateUserData,
+  image?: File | null
+) => {
   const formData = new FormData();
-  
-  formData.append('userData', JSON.stringify(userData));
-  
+
+  formData.append("userData", JSON.stringify(userData));
+
   if (image) {
-    formData.append('image', image);
+    formData.append("image", image);
   }
-  
+
   return formData;
 };
 
@@ -111,56 +114,78 @@ export const usersService = {
       ...(username && { username }),
       ...(estatus && { estatus }),
     });
-    const response = await apiCall<GetUsersResponseData>(`/users?${searchParams}`);
-    return response; 
+    const response = await apiCall<User[]>(`/users?${searchParams}`);
+    return response;
   },
 
   createUser: async (userData: CreateUserData, image?: File | null) => {
     if (image && image instanceof File) {
       const formData = createFormData(userData, image);
-      const response = await apiCall<CreateUserResponseData>("/users/register", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await apiCall<CreateUserResponseData>(
+        "/users/register",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
       return response.data!;
     } else {
-      const response = await apiCall<CreateUserResponseData>("/users/register", {
-        method: "POST",
-        body: JSON.stringify(userData),
-      });
+      const response = await apiCall<CreateUserResponseData>(
+        "/users/register",
+        {
+          method: "POST",
+          body: JSON.stringify(userData),
+        }
+      );
       return response.data!;
     }
   },
 
-  updateUser: async (userId: string, userData: UpdateUserData, image?: File | null) => {
+  updateUser: async (
+    userId: string,
+    userData: UpdateUserData,
+    image?: File | null
+  ) => {
     if (image && image instanceof File) {
       const formData = createFormData(userData, image);
-      const response = await apiCall<CreateUserResponseData>(`/users/${userId}`, {
-        method: "PUT",
-        body: formData,
-      });
+      const response = await apiCall<CreateUserResponseData>(
+        `/users/${userId}`,
+        {
+          method: "PUT",
+          body: formData,
+        }
+      );
       return response.data!;
     } else {
-      const response = await apiCall<CreateUserResponseData>(`/users/${userId}`, {
-        method: "PUT",
-        body: JSON.stringify(userData),
-      });
+      const response = await apiCall<CreateUserResponseData>(
+        `/users/${userId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(userData),
+        }
+      );
       return response.data!;
     }
   },
 
   activateUser: async (userId: string) => {
-    const response = await apiCall<CreateUserResponseData>(`/users/${userId}/activate`, {
-      method: "PUT",
-    });
+    const response = await apiCall<CreateUserResponseData>(
+      `/users/${userId}/activate`,
+      {
+        method: "PUT",
+      }
+    );
     return response.data!;
   },
 
   assignRole: async (userId: string, roleId: string) => {
-    const response = await apiCall<CreateUserResponseData>(`/users/${userId}/role`, {
-      method: "PUT",
-      body: JSON.stringify({ role: roleId }),
-    });
+    const response = await apiCall<CreateUserResponseData>(
+      `/users/${userId}/role`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ role: roleId }),
+      }
+    );
     return response.data!;
   },
 

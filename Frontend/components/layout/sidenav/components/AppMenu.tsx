@@ -2,8 +2,8 @@
 
 import { useLayoutContext } from "@/context/useLayoutContext";
 import { scrollToElement } from "@/helpers/layout";
-import { menuItems } from "@/layouts/components/data";
 import { MenuItemType } from "@/types/layout";
+import { menuItems } from "@/config/constants";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
