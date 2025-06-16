@@ -9,10 +9,10 @@ import errorHandler from "./middleware/errorHandler.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 
 import router from "./routes/index.js";
-import { RazonSocial } from "./models/RazonSocial.js";
+import { Company } from "./models/Company.js";
 
 connectDB();
-RazonSocial.seedIfEmpty();
+Company.seedIfEmpty();
 
 const app = express();
 const PORT = process.env.PORT || 3005;

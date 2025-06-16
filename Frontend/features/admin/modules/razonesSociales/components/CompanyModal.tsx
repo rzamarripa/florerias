@@ -1,47 +1,47 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
 import { useForm } from "react-hook-form";
-import { RazonSocial } from "../services/razonesSociales";
+import { Company } from "../services/companies";
 
-interface RazonSocialModalProps {
-  razon?: RazonSocial;
+interface CompanyModalProps {
+  company?: Company;
   show: boolean;
   onClose: () => void;
-  onSave: (data: { nombreComercial: string; razonSocial: string; direccion: string; estatus: boolean }) => Promise<void>;
+  onSave: (data: { tradeName: string; legalName: string; address: string; isActive: boolean }) => Promise<void>;
 }
 
-const RazonSocialModal: React.FC<RazonSocialModalProps> = ({ razon, show, onClose, onSave }) => {
+const CompanyModal: React.FC<CompanyModalProps> = ({ company, show, onClose, onSave }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<{
-    nombreComercial: string;
-    razonSocial: string;
-    direccion: string;
-    estatus: boolean;
+    tradeName: string;
+    legalName: string;
+    address: string;
+    isActive: boolean;
   }>({
     defaultValues: {
-      nombreComercial: razon?.nombreComercial || "",
-      razonSocial: razon?.razonSocial || "",
-      direccion: razon?.direccion || "",
-      estatus: razon?.estatus ?? true,
+      tradeName: company?.tradeName || "",
+      legalName: company?.legalName || "",
+      address: company?.address || "",
+      isActive: company?.isActive ?? true,
     },
   });
 
   useEffect(() => {
-    if (show && razon) {
+    if (show && company) {
       reset({
-        nombreComercial: razon.nombreComercial,
-        razonSocial: razon.razonSocial,
-        direccion: razon.direccion,
-        estatus: razon.estatus,
+        tradeName: company.tradeName,
+        legalName: company.legalName,
+        address: company.address,
+        isActive: company.isActive,
       });
     } else if (show) {
-      reset({ nombreComercial: "", razonSocial: "", direccion: "", estatus: true });
+      reset({ tradeName: "", legalName: "", address: "", isActive: true });
     }
-  }, [show, razon, reset]);
+  }, [show, company, reset]);
 
-  const onSubmit = async (data: { nombreComercial: string; razonSocial: string; direccion: string; estatus: boolean }) => {
+  const onSubmit = async (data: { tradeName: string; legalName: string; address: string; isActive: boolean }) => {
     setLoading(true);
     setError(null);
     try {
@@ -57,24 +57,24 @@ const RazonSocialModal: React.FC<RazonSocialModalProps> = ({ razon, show, onClos
   return (
     <Modal show={show} onHide={onClose}>
       <Modal.Header closeButton>
-        <Modal.Title>{razon ? "Editar razón social" : "Agregar razón social"}</Modal.Title>
+        <Modal.Title>{company ? "Editar razón social" : "Agregar razón social"}</Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit(onSubmit)}>
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
           <Form.Group className="mb-3">
             <Form.Label>Nombre comercial</Form.Label>
-            <Form.Control {...register("nombreComercial", { required: true })} isInvalid={!!errors.nombreComercial} />
+            <Form.Control {...register("tradeName", { required: true })} isInvalid={!!errors.tradeName} />
             <Form.Control.Feedback type="invalid">Requerido</Form.Control.Feedback>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Razón social</Form.Label>
-            <Form.Control {...register("razonSocial", { required: true })} isInvalid={!!errors.razonSocial} />
+            <Form.Control {...register("legalName", { required: true })} isInvalid={!!errors.legalName} />
             <Form.Control.Feedback type="invalid">Requerido</Form.Control.Feedback>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Dirección</Form.Label>
-            <Form.Control {...register("direccion", { required: true })} isInvalid={!!errors.direccion} />
+            <Form.Control {...register("address", { required: true })} isInvalid={!!errors.address} />
             <Form.Control.Feedback type="invalid">Requerido</Form.Control.Feedback>
           </Form.Group>
           <Form.Group className="mb-3">
@@ -82,16 +82,16 @@ const RazonSocialModal: React.FC<RazonSocialModalProps> = ({ razon, show, onClos
             <Form.Check
               type="switch"
               label={"Activo"}
-              {...register("estatus")}
+              {...register("isActive")}
             />
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>
+          <Button className={`fw-medium px-4 btn-light`} onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
           <Button variant="primary" type="submit" disabled={loading}>
-            {razon ? "Guardar cambios" : "Agregar"}
+            {company ? "Guardar cambios" : "Agregar"}
           </Button>
         </Modal.Footer>
       </Form>
@@ -99,4 +99,4 @@ const RazonSocialModal: React.FC<RazonSocialModalProps> = ({ razon, show, onClos
   );
 };
 
-export default RazonSocialModal; 
+export default CompanyModal;

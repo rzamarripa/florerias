@@ -1,17 +1,17 @@
 import { BsCheck2, BsPencil } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
-import { RazonSocial } from "../services/razonesSociales";
-import RazonSocialModal from "./RazonSocialModal";
+import { Company } from "../services/companies";
+import CompanyModal from "./CompanyModal";
 import React from "react";
 
 interface ActionsProps {
-  razon: RazonSocial;
-  onToggleStatus: (razon: RazonSocial) => Promise<void>;
-  onRazonUpdated?: () => void;
+  company: Company;
+  onToggleStatus: (company: Company) => Promise<void>;
+  onCompanyUpdated?: () => void;
   onEdit: (data: any) => Promise<void>;
 }
 
-export const Actions = ({ razon, onToggleStatus, onRazonUpdated, onEdit }: ActionsProps) => {
+export const Actions = ({ company, onToggleStatus, onCompanyUpdated, onEdit }: ActionsProps) => {
   const [showEdit, setShowEdit] = React.useState(false);
   return (
     <div className="d-flex justify-content-center gap-1">
@@ -23,23 +23,23 @@ export const Actions = ({ razon, onToggleStatus, onRazonUpdated, onEdit }: Actio
       >
         <BsPencil size={16} />
       </button>
-      <RazonSocialModal
-        razon={razon}
+      <CompanyModal
+        company={company}
         show={showEdit}
         onClose={() => setShowEdit(false)}
         onSave={async (data) => {
-          await onEdit({ ...razon, ...data });
+          await onEdit({ ...company, ...data });
           setShowEdit(false);
-          onRazonUpdated?.();
+          onCompanyUpdated?.();
         }}
       />
-      {razon.estatus ? (
+      {company.isActive ? (
         <button
           className="btn btn-light btn-icon btn-sm rounded-circle"
           title="Desactivar razón social"
           onClick={(e) => {
             e.preventDefault();
-            onToggleStatus({ ...razon, estatus: false });
+            onToggleStatus(company);
           }}
           tabIndex={0}
         >
@@ -51,7 +51,7 @@ export const Actions = ({ razon, onToggleStatus, onRazonUpdated, onEdit }: Actio
           title="Activar razón social"
           onClick={(e) => {
             e.preventDefault();
-            onToggleStatus({ ...razon, estatus: true });
+            onToggleStatus(company);
           }}
           tabIndex={0}
         >
@@ -60,4 +60,4 @@ export const Actions = ({ razon, onToggleStatus, onRazonUpdated, onEdit }: Actio
       )}
     </div>
   );
-}; 
+};

@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { Table, Form, Button } from "react-bootstrap";
-import { razonesSocialesService, RazonSocial } from "./services/razonesSociales";
-import RazonSocialModal from "./components/RazonSocialModal";
+import { companiesService, Company } from "./services/companies";
+import CompanyModal from "./components/CompanyModal";
 import { Actions } from "./components/Actions";
 import { Search } from "lucide-react";
 
-const RazonesSocialesPage: React.FC = () => {
-  const [razones, setRazones] = useState<RazonSocial[]>([]);
+const CompaniesPage: React.FC = () => {
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [pagination, setPagination] = useState({
@@ -20,58 +20,59 @@ const RazonesSocialesPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
 
-  const fetchRazones = async (page: number = pagination.page) => {
+  const fetchCompanies = async (page: number = pagination.page) => {
     try {
-      const response = await razonesSocialesService.getAll({
+      const response = await companiesService.getAll({
         page,
         limit: pagination.limit,
         ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter && { estatus: statusFilter }),
+        ...(statusFilter && { isActive: statusFilter }),
       });
 
       if (response.data) {
-        setRazones(response.data);
+        setCompanies(response.data);
       }
 
       if (response.pagination) {
         setPagination(response.pagination);
       }
     } catch (err) {
-      console.error("Error fetching razones sociales:", err);
+      console.error("Error fetching companies:", err);
     }
   };
 
-  const handleEdit = async (data: RazonSocial) => {
-    await razonesSocialesService.update(data._id, {
-      nombreComercial: data.nombreComercial,
-      razonSocial: data.razonSocial,
-      direccion: data.direccion,
-      estatus: data.estatus,
+  const handleEdit = async (data: Company) => {
+    await companiesService.update(data._id, {
+      tradeName: data.tradeName,
+      legalName: data.legalName,
+      address: data.address,
+      isActive: data.isActive,
     });
-    fetchRazones();
+    fetchCompanies();
   };
 
-  const handleCreate = async (data: { nombreComercial: string; razonSocial: string; direccion: string; estatus: boolean }) => {
-    await razonesSocialesService.create({ ...data, estatus: data.estatus ?? true });
-    fetchRazones();
+  const handleCreate = async (data: { tradeName: string; legalName: string; address: string; isActive: boolean }) => {
+    await companiesService.create({ ...data, isActive: data.isActive ?? true });
+    fetchCompanies();
   };
 
-  const handleToggleStatus = async (razon: RazonSocial) => {
-    await razonesSocialesService.update(razon._id, {
-      nombreComercial: razon.nombreComercial,
-      razonSocial: razon.razonSocial,
-      direccion: razon.direccion,
-      estatus: razon.estatus,
-    });
-    fetchRazones();
+  const handleToggleStatus = async (company: Company) => {
+    if (company.isActive) {
+      // Si está activa, desactivar
+      await companiesService.delete(company._id);
+    } else {
+      // Si está inactiva, activar
+      await companiesService.activate(company._id);
+    }
+    fetchCompanies();
   };
 
   useEffect(() => {
-    fetchRazones(1);
+    fetchCompanies(1);
   }, [searchTerm, statusFilter]);
 
   const handlePageChange = (page: number) => {
-    fetchRazones(page);
+    fetchCompanies(page);
   };
 
   return (
@@ -83,7 +84,7 @@ const RazonesSocialesPage: React.FC = () => {
               <div className="position-relative" style={{ maxWidth: 400 }}>
                 <Form.Control
                   type="search"
-                  placeholder="Buscar razones sociales..."
+                  placeholder="Buscar empresas..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="shadow-none px-4"
@@ -95,12 +96,11 @@ const RazonesSocialesPage: React.FC = () => {
                   style={{ left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
                 />
               </div>
-              
             </div>
             <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
               Nuevo
             </Button>
-            <RazonSocialModal
+            <CompanyModal
               show={showCreate}
               onClose={() => setShowCreate(false)}
               onSave={async (data) => {
@@ -114,8 +114,8 @@ const RazonesSocialesPage: React.FC = () => {
               <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
                   <th>#</th>
-                  <th>Nombre comercial</th>
-                  <th>Razón social</th>
+                  <th>Nombre Comercial</th>
+                  <th>Razón Social</th>
                   <th>Dirección</th>
                   <th>Estatus</th>
                   <th className="text-center">Acciones</th>
@@ -124,42 +124,39 @@ const RazonesSocialesPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-4">
+                    <td colSpan={6} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
                         <div className="spinner-border text-primary mb-2" role="status">
                           <span className="visually-hidden">Cargando...</span>
                         </div>
-                        <p className="text-muted mb-0 small">Cargando razones sociales...</p>
+                        <p className="text-muted mb-0 small">Cargando empresas...</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  razones.map((razon, idx) => (
-                    <tr key={razon._id}>
+                  companies.map((company, idx) => (
+                    <tr key={company._id}>
                       <td>{idx + 1}</td>
-                      <td>{razon.nombreComercial}</td>
-                      <td>{razon.razonSocial}</td>
-                      <td>{razon.direccion}</td>
+                      <td>{company.tradeName}</td>
+                      <td>{company.legalName}</td>
+                      <td>{company.address}</td>
                       <td>
                         <span
-                          className={`badge fs-6 ${
-                            razon.estatus
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
+                          className={`badge fs-6 ${company.isActive
+                            ? "bg-success bg-opacity-10 text-success"
+                            : "bg-danger bg-opacity-10 text-danger"
+                            }`}
                         >
-                          {razon.estatus ? "Activo" : "Inactivo"}
+                          {company.isActive ? "Activo" : "Inactivo"}
                         </span>
                       </td>
                       <td>
-                        
                         <Actions
-                          razon={razon}
+                          company={company}
                           onToggleStatus={handleToggleStatus}
-                          onRazonUpdated={fetchRazones}
+                          onCompanyUpdated={fetchCompanies}
                           onEdit={handleEdit}
                         />
-                      
                       </td>
                     </tr>
                   ))
@@ -169,7 +166,7 @@ const RazonesSocialesPage: React.FC = () => {
           </div>
           <div className="d-flex justify-content-between align-items-center p-3 border-top">
             <span className="text-muted">
-              Mostrando {razones.length} de {pagination.total} registros
+              Mostrando {companies.length} de {pagination.total} registros
             </span>
             <div className="d-flex gap-1">
               <Button
@@ -216,4 +213,4 @@ const RazonesSocialesPage: React.FC = () => {
   );
 };
 
-export default RazonesSocialesPage; 
+export default CompaniesPage;
