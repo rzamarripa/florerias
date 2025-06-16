@@ -22,7 +22,7 @@ export const menuItems: MenuItemType[] = [
       {
         key: "marcas",
         label: "Marcas",
-        url: "/catalogos/marcas",
+        url: "/catalogos/brand",
       },
       {
         key: "sucursales",
