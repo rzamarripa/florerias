@@ -10,16 +10,13 @@ import {
   getModulesByRole,
   updateModule,
 } from "../controllers/moduleController.js";
-import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router();
-
-router.use(protect);
 
 router
   .route("/")
   .get(getAllModules)
-  .post(authorize(["SuperAdmin", "Admin"]), createModule);
+  .post(createModule);
 
 router.get("/role/:roleId", getModulesByRole);
 router.get("/page/:pageId", getModulesByPage);
@@ -27,15 +24,11 @@ router.get("/page/:pageId", getModulesByPage);
 router
   .route("/:id")
   .get(getModuleById)
-  .put(authorize(["SuperAdmin", "Admin"]), updateModule)
-  .delete(authorize(["SuperAdmin", "Admin"]), deleteModule);
+  .put(updateModule)
+  .delete(deleteModule);
 
-router.put("/:id/activate", authorize(["SuperAdmin", "Admin"]), activateModule);
+router.put("/:id/activate", activateModule);
 
-router.delete(
-  "/:id/permanent",
-  authorize(["SuperAdmin"]),
-  deleteModulePermanently
-);
+router.delete("/:id/permanent",deleteModulePermanently);
 
 export default router;

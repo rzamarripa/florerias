@@ -11,7 +11,7 @@ const roleSchema = new Schema({
   modules: [
     {
       type: Schema.Types.ObjectId,
-      ref: "Module",
+      ref: "ac_modules", 
     },
   ],
   estatus: {
@@ -32,7 +32,6 @@ roleSchema.methods.getModulesByPage = async function () {
       select: "name path",
     },
   });
-
   const modulesByPage = {};
   this.modules.forEach((module) => {
     const pageId = module.page._id.toString();
@@ -44,10 +43,8 @@ roleSchema.methods.getModulesByPage = async function () {
     }
     modulesByPage[pageId].modules.push(module);
   });
-
   return modulesByPage;
 };
 
-const Role = mongoose.model("Role", roleSchema);
-
+const Role = mongoose.model("ac_roles", roleSchema); 
 export { Role };

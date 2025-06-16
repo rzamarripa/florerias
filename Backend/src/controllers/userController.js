@@ -125,7 +125,7 @@ const loginUser = async (req, res) => {
         message: "Please provide username and password",
       });
     }
-
+    console.log("user: ", username, password)
     const user = await User.findOne({ username })
       .select("+password")
       .populate({
@@ -138,6 +138,7 @@ const loginUser = async (req, res) => {
           },
         },
       });
+      console.log("user", user)
 
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({

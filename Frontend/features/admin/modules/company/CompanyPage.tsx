@@ -17,16 +17,17 @@ const CompaniesPage: React.FC = () => {
     total: 0,
     pages: 0,
   });
-  const [statusFilter, setStatusFilter] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
 
-  const fetchCompanies = async (page: number = pagination.page) => {
+  const fetchCompanies = async (isCreating: boolean, page: number = pagination.page) => {
     try {
+      if(isCreating){
+        setLoading(true)
+      }
       const response = await companiesService.getAll({
         page,
         limit: pagination.limit,
         ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter && { isActive: statusFilter }),
       });
 
       if (response.data) {
@@ -38,41 +39,26 @@ const CompaniesPage: React.FC = () => {
       }
     } catch (err) {
       console.error("Error fetching companies:", err);
+    } finally {
+      setLoading(false)
     }
   };
-
-  const handleEdit = async (data: Company) => {
-    await companiesService.update(data._id, {
-      tradeName: data.tradeName,
-      legalName: data.legalName,
-      address: data.address,
-      isActive: data.isActive,
-    });
-    fetchCompanies();
-  };
-
-  const handleCreate = async (data: { tradeName: string; legalName: string; address: string; isActive: boolean }) => {
-    await companiesService.create({ ...data, isActive: data.isActive ?? true });
-    fetchCompanies();
-  };
-
+  
   const handleToggleStatus = async (company: Company) => {
     if (company.isActive) {
-      // Si está activa, desactivar
       await companiesService.delete(company._id);
     } else {
-      // Si está inactiva, activar
       await companiesService.activate(company._id);
     }
-    fetchCompanies();
+    fetchCompanies(false);
   };
 
   useEffect(() => {
-    fetchCompanies(1);
-  }, [searchTerm, statusFilter]);
+    fetchCompanies(true, 1);
+  }, [searchTerm]);
 
   const handlePageChange = (page: number) => {
-    fetchCompanies(page);
+    fetchCompanies(true, page);
   };
 
   return (
@@ -103,10 +89,7 @@ const CompaniesPage: React.FC = () => {
             <CompanyModal
               show={showCreate}
               onClose={() => setShowCreate(false)}
-              onSave={async (data) => {
-                await handleCreate(data);
-                setShowCreate(false);
-              }}
+              reloadData={fetchCompanies}
             />
           </div>
           <div className="table-responsive shadow-sm">
@@ -114,8 +97,9 @@ const CompaniesPage: React.FC = () => {
               <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
                   <th>#</th>
-                  <th>Nombre Comercial</th>
-                  <th>Razón Social</th>
+                  <th>Nombre</th>
+                  <th>Representante Legal</th> 
+                  <th>RFC</th>
                   <th>Dirección</th>
                   <th>Estatus</th>
                   <th className="text-center">Acciones</th>
@@ -124,7 +108,7 @@ const CompaniesPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-4">
+                    <td colSpan={7} className="text-center py-4"> 
                       <div className="d-flex flex-column align-items-center">
                         <div className="spinner-border text-primary mb-2" role="status">
                           <span className="visually-hidden">Cargando...</span>
@@ -137,8 +121,9 @@ const CompaniesPage: React.FC = () => {
                   companies.map((company, idx) => (
                     <tr key={company._id}>
                       <td>{idx + 1}</td>
-                      <td>{company.tradeName}</td>
-                      <td>{company.legalName}</td>
+                      <td>{company.name}</td>
+                      <td>{company.legalRepresentative}</td>
+                      <td>{company.rfc}</td> 
                       <td>{company.address}</td>
                       <td>
                         <span
@@ -154,8 +139,7 @@ const CompaniesPage: React.FC = () => {
                         <Actions
                           company={company}
                           onToggleStatus={handleToggleStatus}
-                          onCompanyUpdated={fetchCompanies}
-                          onEdit={handleEdit}
+                          reloadData={fetchCompanies}
                         />
                       </td>
                     </tr>
@@ -213,4 +197,4 @@ const CompaniesPage: React.FC = () => {
   );
 };
 
-export default CompaniesPage;
+export default CompaniesPage

@@ -2,13 +2,17 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const companySchema = new Schema({
-  tradeName: {
+  name: {
     type: String,
     required: true,
   },
-  legalName: {
+  legalRepresentative: {
     type: String,
     required: true,
+  },
+  rfc: {
+    type: String,
+    required: true
   },
   address: {
     type: String,
@@ -29,19 +33,21 @@ companySchema.statics.seedIfEmpty = async function () {
   if (count === 0) {
     await this.create([
       {
-        tradeName: "Example Corp",
-        legalName: "Example Corporation Inc.",
-        address: "123 Main Street, City, Country"
+        name: "Example Corp",
+        legalRepresentative: "Example Corporation Inc.",
+        address: "123 Main Street, City, Country",
+        rfc: "23dqse23de"
       },
       {
-        tradeName: "XYZ Trading Co.",
-        legalName: "XYZ Trading Company LLC",
-        address: "456 Business Ave, City, Country"
-      },
+        name: "Walmart",
+        legalRepresentative: "Walmart corp.",
+        address: "mexico 68",
+        rfc: "h378egh23euiqwh"
+      }
     ]);
   }
 };
 
-const Company = mongoose.model("Company", companySchema);
+const Company = mongoose.model("cc_company", companySchema);
 
 export { Company };

@@ -1,9 +1,9 @@
 import { apiCall } from "@/utils/api";
-
 export interface Company {
   _id: string;
-  tradeName: string;
-  legalName: string;
+  name: string; 
+  legalRepresentative: string; 
+  rfc: string; 
   address: string;
   isActive: boolean;
   createdAt: string;
@@ -38,11 +38,12 @@ export const companiesService = {
       ...(search && { search }),
       ...(isActive && { isActive }),
     });
-    return await apiCall<GetCompaniesResponse>(
+    return await apiCall<Company[]>(
       `/companies?${searchParams}`
     );
   },
-  create: async (data: Omit<Company, "_id" | "createdAt">) => {
+
+  create: async (data: Omit<Company, "_id" | "createdAt" | "isActive">) => {
     return await apiCall<{ success: boolean; data: Company }>(
       "/companies",
       {
@@ -51,7 +52,8 @@ export const companiesService = {
       }
     );
   },
-  update: async (id: string, data: Omit<Company, "_id" | "createdAt">) => {
+
+  update: async (id: string, data: Omit<Company, "_id" | "createdAt" | "isActive">) => {
     return await apiCall<{ success: boolean; data: Company }>(
       `/companies/${id}`,
       {
@@ -60,6 +62,7 @@ export const companiesService = {
       }
     );
   },
+
   activate: async (id: string) => {
     return await apiCall<{ success: boolean; data: Company }>(
       `/companies/${id}/active`,
@@ -68,6 +71,7 @@ export const companiesService = {
       }
     );
   },
+
   delete: async (id: string) => {
     return await apiCall<{ success: boolean }>(`/companies/${id}/delete`, {
       method: "DELETE",

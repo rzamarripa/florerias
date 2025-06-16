@@ -14,7 +14,7 @@ const moduleSchema = new Schema(
     },
     page: {
       type: Schema.Types.ObjectId,
-      ref: "Page",
+      ref: "ac_pages", // ✅ CAMBIO: Era "Page", ahora "ac_pages"
       required: [true, "Page reference is required"],
     },
     status: {
@@ -49,7 +49,7 @@ moduleSchema.pre("findOneAndUpdate", function (next) {
 
 moduleSchema.methods.getPublicInfo = function () {
   return {
-    _id: this._id,
+    _id: this._id, // ✅ CAMBIO: Era *id, ahora _id (corrección de sintaxis)
     name: this.name,
     description: this.description,
     page: this.page,
@@ -59,6 +59,5 @@ moduleSchema.methods.getPublicInfo = function () {
   };
 };
 
-const Module = mongoose.model("Module", moduleSchema);
-
+const Module = mongoose.model("ac_modules", moduleSchema);
 export { Module };

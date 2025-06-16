@@ -6,12 +6,13 @@ export const getAllCompanies = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
-    const filters = {};
 
+    const filters = {};
     if (search) {
       filters.$or = [
-        { tradeName: { $regex: search, $options: "i" } },
-        { legalName: { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: "i" } }, 
+        { legalRepresentative: { $regex: search, $options: "i" } }, 
+        { rfc: { $regex: search, $options: "i" } }, 
         { address: { $regex: search, $options: "i" } },
       ];
     }
@@ -39,13 +40,21 @@ export const getAllCompanies = async (req, res) => {
 
 export const createCompany = async (req, res) => {
   try {
-    const { tradeName, legalName, address, isActive } = req.body;
+    const { name, legalRepresentative, rfc, address, isActive } = req.body; 
+
     const newCompany = await Company.create({
-      tradeName,
-      legalName,
-      address
+      name, 
+      legalRepresentative, 
+      rfc, 
+      address,
+      isActive
     });
-    res.status(201).json({ success: true, data: newCompany, message: "Razon social creada con exito" });
+
+    res.status(201).json({ 
+      success: true, 
+      data: newCompany, 
+      message: "Razon social creada con exito" 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -55,9 +64,9 @@ export const updateCompany = async (req, res) => {
   try {
     console.log("updateCompany", req.body);
     const { id } = req.params;
-    const { tradeName, legalName, address, isActive } = req.body;
-    const updateData = { tradeName, legalName, address };
+    const { name, legalRepresentative, rfc, address, isActive } = req.body; 
 
+    const updateData = { name, legalRepresentative, rfc, address }; 
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const updatedCompany = await Company.findByIdAndUpdate(id, updateData, {
@@ -70,7 +79,11 @@ export const updateCompany = async (req, res) => {
         message: "No encontrada"
       });
 
-    res.json({ success: true, data: updatedCompany, message: "Razon social actualizada con exito" });
+    res.json({ 
+      success: true, 
+      data: updatedCompany, 
+      message: "Razon social actualizada con exito" 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

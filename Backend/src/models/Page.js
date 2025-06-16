@@ -22,7 +22,7 @@ const pageSchema = new Schema(
     modules: [
       {
         type: Schema.Types.ObjectId,
-        ref: "Module",
+        ref: "ac_modules", // ✅ CAMBIO: Era "Module", ahora "ac_modules"
       },
     ],
     status: {
@@ -53,7 +53,6 @@ pageSchema.pre("findOneAndUpdate", function (next) {
   next();
 });
 
-// Método para obtener módulos activos
 pageSchema.methods.getActiveModules = async function () {
   await this.populate({
     path: "modules",
@@ -62,7 +61,6 @@ pageSchema.methods.getActiveModules = async function () {
   return this.modules;
 };
 
-// Método para agregar módulo
 pageSchema.methods.addModule = function (moduleId) {
   if (!this.modules.includes(moduleId)) {
     this.modules.push(moduleId);
@@ -70,7 +68,6 @@ pageSchema.methods.addModule = function (moduleId) {
   return this.save();
 };
 
-// Método para remover módulo
 pageSchema.methods.removeModule = function (moduleId) {
   this.modules = this.modules.filter(
     (id) => id.toString() !== moduleId.toString()
@@ -78,6 +75,5 @@ pageSchema.methods.removeModule = function (moduleId) {
   return this.save();
 };
 
-const Page = mongoose.model("Page", pageSchema);
-
+const Page = mongoose.model("ac_pages", pageSchema);
 export { Page };
