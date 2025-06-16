@@ -62,7 +62,6 @@ const getAllModules = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Filtros opcionales
     const filters = {};
     if (req.query.status !== undefined) {
       filters.status = req.query.status === "true";
@@ -141,7 +140,7 @@ const getModulesByPage = async (req, res) => {
 
     const modules = await Module.find({
       page: pageId,
-      status: true
+      status: true,
     })
       .populate("page", "name description path status")
       .sort({ createdAt: -1 });
@@ -252,7 +251,6 @@ const updateModule = async (req, res) => {
     if (description !== undefined) updateData.description = description?.trim();
 
     if (page) {
-      // Verificar que la nueva página exista
       const pageExists = await Page.findById(page);
       if (!pageExists) {
         return res.status(404).json({
@@ -261,7 +259,6 @@ const updateModule = async (req, res) => {
         });
       }
 
-      // Verificar que no exista otro módulo con el mismo nombre en la nueva página
       const existingModule = await Module.findOne({
         name: name || req.body.name,
         page: page,
@@ -318,7 +315,6 @@ const deleteModule = async (req, res) => {
       });
     }
 
-    // También remover el módulo de todas las páginas que lo tengan asociado
     await Page.updateMany(
       { "modules.moduleId": req.params.id },
       { $pull: { modules: { moduleId: req.params.id } } }
@@ -376,13 +372,11 @@ const deleteModulePermanently = async (req, res) => {
       });
     }
 
-    // Remover el módulo de todas las páginas que lo tengan asociado
     await Page.updateMany(
       { "modules.moduleId": req.params.id },
       { $pull: { modules: { moduleId: req.params.id } } }
     );
 
-    // Eliminar el módulo permanentemente
     await Module.findByIdAndDelete(req.params.id);
 
     res.status(200).json({

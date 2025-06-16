@@ -1,0 +1,166 @@
+import { Brand } from "../models/Brand.js";
+import { RsCompanyBrand } from "../models/RsCompanyBrand.js";
+
+export const getAllBrands = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || "";
+
+    const filters = {};
+    if (search) {
+      filters.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const total = await Brand.countDocuments(filters);
+    const brands = await Brand.find(filters)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: brands,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const createBrand = async (req, res) => {
+  try {
+    const { name, category, description, isActive, rsCompanies } = req.body;
+    let logoData = {};
+
+    if (req.file) {
+      logoData = {
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+      };
+    }
+
+    const newBrand = await Brand.create({
+      logo: logoData,
+      name,
+      category,
+      description,
+      isActive,
+    });
+
+    if (rsCompanies && rsCompanies.length > 0) {
+      const relations = rsCompanies.map((companyId) => ({
+        brandId: newBrand._id,
+        companyId: companyId,
+      }));
+      await RsCompanyBrand.insertMany(relations);
+    }
+
+    res.status(201).json({
+      success: true,
+      data: newBrand,
+      message: "Marca creada con exito",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateBrand = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, description, isActive, rsCompanies } = req.body;
+
+    const updateData = { name, category, description };
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    if (req.file) {
+      updateData.logo = {
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+      };
+    }
+
+    const updatedBrand = await Brand.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
+    if (!updatedBrand)
+      return res.status(404).json({
+        success: false,
+        message: "No encontrada",
+      });
+
+    if (rsCompanies !== undefined) {
+      await RsCompanyBrand.deleteMany({ brandId: id });
+
+      if (rsCompanies.length > 0) {
+        const relations = rsCompanies.map((companyId) => ({
+          brandId: id,
+          companyId: companyId,
+        }));
+        await RsCompanyBrand.insertMany(relations);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: updatedBrand,
+      message: "Marca actualizada con exito",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteBrand = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedBrand = await Brand.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!deletedBrand)
+      return res.status(404).json({
+        success: false,
+        message: "No encontrada",
+      });
+
+    res.json({ success: true, message: "Marca dada de baja con exito" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const activeBrand = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const activatedBrand = await Brand.findByIdAndUpdate(
+      id,
+      { isActive: true },
+      { new: true }
+    );
+
+    if (!activatedBrand)
+      return res.status(404).json({
+        success: false,
+        message: "No encontrada",
+      });
+
+    res.json({ success: true, message: "Marca activada con exito" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

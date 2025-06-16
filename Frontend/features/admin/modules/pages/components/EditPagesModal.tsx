@@ -92,7 +92,6 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
         const page = pageResponse.data;
         console.log("✅ Datos de página cargados correctamente:", page);
 
-        // Actualizar formulario con datos de la página
         setValue("name", page.name);
         setValue("path", page.path);
         setValue("description", page.description || "");

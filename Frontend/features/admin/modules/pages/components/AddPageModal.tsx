@@ -77,7 +77,6 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
       setModules((prev) => [...prev, newModule]);
       setCurrentModule({ nombre: "", description: "" });
 
-      // Toast opcional para confirmar que se agregó el módulo a la lista
       toast.success(`Módulo "${newModule.nombre}" agregado a la lista`);
     }
   };
@@ -136,10 +135,8 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
       const createdPageId = pageResponse.data._id;
       const createdPageName = pageResponse.data.name;
 
-      // Toast de éxito para la página creada
       toast.success(`Página "${createdPageName}" creada correctamente`);
 
-      // Crear módulos si existen
       if (modules.length > 0) {
         const moduleIds: string[] = [];
         let modulesCreated = 0;
@@ -173,7 +170,6 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
           }
         }
 
-        // Toast de resumen de módulos creados
         if (modulesCreated > 0) {
           toast.success(`${modulesCreated} módulo(s) creado(s) correctamente`);
         }
@@ -183,7 +179,6 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
         }
       }
 
-      // Limpiar formulario
       setFormData({ name: "", path: "", description: "" });
       setModules([]);
       setCurrentModule({ nombre: "", description: "" });

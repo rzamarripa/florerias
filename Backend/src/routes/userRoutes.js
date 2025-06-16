@@ -9,25 +9,22 @@ import {
   loginUser,
   registerUser,
   updateUser,
-  upload,
 } from "../controllers/userController.js";
+import { uploadSingle } from "../middleware/multerUpload.js";
 
 const router = express.Router();
 
-router.post("/register", upload.single('image'), registerUser);
+router.get("/", getAllUsers);
+router.get("/:id", getUserById);
+
+router.post("/register", uploadSingle("image"), registerUser);
 router.post("/login", loginUser);
 
-
-router.route("/").get(getAllUsers);
-
-router
-  .route("/:id")
-  .get(getUserById)
-  .put(upload.single('image'), updateUser)
-  .delete(deleteUser);
-
+router.put("/:id", uploadSingle("image"), updateUser);
 router.put("/:id/password", changePassword);
 router.put("/:id/activate", activateUser);
-router.put("/:id/role",  assignRoles);
+router.put("/:id/role", assignRoles);
+
+router.delete("/:id", deleteUser);
 
 export default router;

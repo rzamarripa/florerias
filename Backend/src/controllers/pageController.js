@@ -5,7 +5,6 @@ const createPage = async (req, res) => {
   try {
     const { name, description, path, modules } = req.body;
 
-    // Verificar si la página ya existe
     const pageExists = await Page.findOne({
       $or: [{ name: name.trim() }, { path: path.trim() }],
     });
@@ -17,7 +16,6 @@ const createPage = async (req, res) => {
       });
     }
 
-    // Validar módulos si se proporcionan
     let validatedModules = [];
     if (modules && modules.length > 0) {
       for (const moduleData of modules) {
@@ -43,7 +41,6 @@ const createPage = async (req, res) => {
       modules: validatedModules,
     });
 
-    // Popular la respuesta con información completa de módulos
     await page.populate("modules.moduleId", "name description status");
 
     res.status(201).json({
@@ -160,7 +157,7 @@ const updatePage = async (req, res) => {
 
 const deletePage = async (req, res) => {
   try {
-    console.log(req.params.id)
+    console.log(req.params.id);
     const page = await Page.findByIdAndUpdate(
       req.params.id,
       { status: false },
@@ -189,7 +186,7 @@ const deletePage = async (req, res) => {
 
 const activatePage = async (req, res) => {
   try {
-    console.log('desde activar paginaa.', req.params.id)
+    console.log("desde activar paginaa.", req.params.id);
     const page = await Page.findByIdAndUpdate(
       req.params.id,
       { status: true },
@@ -226,7 +223,6 @@ const addModuleToPage = async (req, res) => {
       });
     }
 
-    // Verificar que el módulo exista
     const module = await Module.findById(moduleId);
     if (!module) {
       return res.status(404).json({
@@ -243,7 +239,6 @@ const addModuleToPage = async (req, res) => {
       });
     }
 
-    // Verificar si el módulo ya está asociado a la página
     const moduleExists = page.modules.some(
       (m) => m.moduleId.toString() === moduleId.toString()
     );
@@ -255,7 +250,6 @@ const addModuleToPage = async (req, res) => {
       });
     }
 
-    // Agregar el módulo
     const moduleData = {
       moduleId,
       nombre: nombre || module.name,
@@ -281,8 +275,8 @@ const addModuleToPage = async (req, res) => {
 const removeModuleFromPage = async (req, res) => {
   try {
     const { moduleId } = req.params;
-    console.log('moduleId: ', moduleId);
-    console.log('pageId: ', req.params.id);
+    console.log("moduleId: ", moduleId);
+    console.log("pageId: ", req.params.id);
 
     const page = await Page.findById(req.params.id);
     if (!page) {
@@ -292,12 +286,11 @@ const removeModuleFromPage = async (req, res) => {
       });
     }
 
-    // Verificar si el módulo está asociado a la página
     const moduleExists = page.modules.some(
       (m) => m.toString() === moduleId.toString()
     );
 
-    console.log('modulo existente', moduleExists);
+    console.log("modulo existente", moduleExists);
 
     if (!moduleExists) {
       return res.status(404).json({
@@ -306,12 +299,8 @@ const removeModuleFromPage = async (req, res) => {
       });
     }
 
-    // Remover el módulo de la página
     await page.removeModule(moduleId);
-
-    // Cambiar el status del módulo a false
     await Module.findByIdAndUpdate(moduleId, { status: false });
-
     await page.populate("modules", "name description status");
 
     res.status(200).json({
