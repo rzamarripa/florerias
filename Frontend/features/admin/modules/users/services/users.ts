@@ -1,87 +1,11 @@
 import { apiCall } from "@/utils/api";
-
-export interface User {
-  _id: string;
-  username: string;
-  department?: string;
-  profile: {
-    nombre: string;
-    nombreCompleto: string;
-    path: string;
-    estatus: boolean;
-    image?: string;
-  };
-  role?: {
-    _id: string;
-    name: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateUserData {
-  username: string;
-  password: string;
-  department?: string;
-  profile: {
-    nombre: string;
-    nombreCompleto: string;
-    estatus?: boolean;
-  };
-  role?: string;
-}
-
-export interface UpdateUserData {
-  username?: string;
-  department?: string;
-  profile?: Partial<{
-    nombre: string;
-    nombreCompleto: string;
-    estatus: boolean;
-  }>;
-  role?: string;
-}
-
-export interface CreateUserData {
-  username: string;
-  password: string;
-  department?: string;
-  profile: {
-    nombre: string;
-    nombreCompleto: string;
-    estatus?: boolean;
-  };
-  role?: string;
-}
-
-export interface UpdateUserData {
-  username?: string;
-  department?: string;
-  profile?: Partial<{
-    nombre: string;
-    nombreCompleto: string;
-    estatus: boolean;
-  }>;
-  role?: string;
-}
-
-export interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  pages: number;
-}
-
-export interface GetUsersResponseData {
-  success: boolean;
-  count: number;
-  pagination: PaginationInfo;
-  data: User[];
-}
-
-export interface CreateUserResponseData {
-  data: User;
-}
+import {
+  CreateUserData,
+  CreateUserResponseData,
+  Role,
+  UpdateUserData,
+  User,
+} from "../types";
 
 const createFormData = (
   userData: CreateUserData | UpdateUserData,
@@ -116,6 +40,18 @@ export const usersService = {
     });
     const response = await apiCall<User[]>(`/users?${searchParams}`);
     return response;
+  },
+
+  getAllRoles: async (
+    params: { page?: number; limit?: number; name?: string } = {}
+  ) => {
+    const { page = 1, limit = 10, name } = params;
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...(name && { name }),
+    });
+    return await apiCall<Role[]>(`/roles?${searchParams}`);
   },
 
   createUser: async (userData: CreateUserData, image?: File | null) => {

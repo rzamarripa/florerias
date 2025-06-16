@@ -1,9 +1,8 @@
 import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
-import { Role } from "../../roles/services/role";
+import { Role, User } from "../types";
 import UserModal from "./UserModal";
 import UserViewModal from "./UserViewModal";
-import { User } from "../services/users";
 
 interface ActionsProps {
   user: User;
@@ -16,20 +15,13 @@ export const Actions = ({
   user,
   roles,
   onToggleStatus,
-  onUserUpdated
+  onUserUpdated,
 }: ActionsProps) => (
   <div className="d-flex justify-content-center gap-1">
-    {/* Modal de visualización de usuario */}
     <UserViewModal user={user} />
 
-    {/* Modal de edición */}
-    <UserModal
-      user={user}
-      roles={roles}
-      onSuccess={onUserUpdated}
-    />
+    <UserModal user={user} roles={roles} onSuccess={onUserUpdated} />
 
-    {/* Botón de activar/desactivar usuario */}
     {user.profile.estatus ? (
       <button
         className="btn btn-light btn-icon btn-sm rounded-circle"

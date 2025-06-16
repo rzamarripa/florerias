@@ -1,19 +1,20 @@
 "use client";
+
 import { Search } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Badge, Button, Form, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
-import { Role, rolesService } from "../roles/services/role";
+import { Role } from "../roles/types";
 import { Actions } from "./components/Actions";
 import UserModal from "./components/UserModal";
-import { usersService, type User } from "./services/users";
+import { usersService } from "./services/users";
+import { User } from "./types";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-
   const [searchUsersSearch, setSearchUsersTerm] = useState<string>("");
   const [searchRolesSearch, setSearchRolesTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -27,7 +28,7 @@ const UsersPage: React.FC = () => {
 
   const fetchRoles = async (page: number = pagination.page) => {
     try {
-      const response = await rolesService.getAllRoles({
+      const response = await usersService.getAllRoles({
         page,
         limit: pagination.limit,
         ...(searchRolesSearch && { username: searchRolesSearch }),
@@ -295,10 +296,11 @@ const UsersPage: React.FC = () => {
                       </td>
                       <td className="text-center">
                         <span
-                          className={`badge fs-6 ${user.profile.estatus
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                            }`}
+                          className={`badge fs-6 ${
+                            user.profile.estatus
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
                         >
                           {user.profile.estatus ? "Activo" : "Inactivo"}
                         </span>

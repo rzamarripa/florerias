@@ -37,7 +37,8 @@ const PaginasTable: React.FC = () => {
         setPages(response.data);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al cargar las páginas";
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al cargar las páginas";
       setError(errorMessage);
       toast.error("Error al cargar las páginas");
       console.error("Error fetching pages:", err);
@@ -113,7 +114,9 @@ const PaginasTable: React.FC = () => {
       if (currentPage.status) {
         const response = await pagesService.deletePage(id);
         if (response.success) {
-          toast.success(`Página "${currentPage.name}" desactivada correctamente`);
+          toast.success(
+            `Página "${currentPage.name}" desactivada correctamente`
+          );
           fetchPages(false);
         } else {
           throw new Error(response.message || "Error al desactivar la página");
@@ -131,7 +134,8 @@ const PaginasTable: React.FC = () => {
       const currentPage = pages.find((page) => page._id === id);
       const pageName = currentPage?.name || "la página";
       const action = currentPage?.status ? "desactivar" : "activar";
-      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+      const errorMessage =
+        err instanceof Error ? err.message : "Error desconocido";
 
       console.error("Error toggling page status:", err);
       toast.error(`Error al ${action} ${pageName}: ${errorMessage}`);
@@ -261,10 +265,11 @@ const PaginasTable: React.FC = () => {
                       </td>
                       <td className="text-center">
                         <span
-                          className={`badge fs-6 ${pagina.status
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                            }`}
+                          className={`badge fs-6 ${
+                            pagina.status
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
                         >
                           {pagina.status ? "Activo" : "Inactivo"}
                         </span>
@@ -292,7 +297,11 @@ const PaginasTable: React.FC = () => {
                           </button>
                           <button
                             className="btn btn-light btn-icon btn-sm rounded-circle"
-                            title={isPageActive(pagina._id) ? "Desactivar página" : "Activar página"}
+                            title={
+                              isPageActive(pagina._id)
+                                ? "Desactivar página"
+                                : "Activar página"
+                            }
                             onClick={() => handleTooglePage(pagina._id)}
                           >
                             {isPageActive(pagina._id) ? (

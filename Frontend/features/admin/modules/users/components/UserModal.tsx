@@ -2,11 +2,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Plus, Upload, X } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
-import { Alert, Button, Col, Form, Modal, Row } from "react-bootstrap";
+import { Button, Col, Form, Modal, Row } from "react-bootstrap";
 import { FieldErrors, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
-import { Role } from "../../roles/services/role";
+import { Role } from "../../roles/types";
 import {
   CreateUserFormData,
   createUserSchema,
@@ -15,13 +15,8 @@ import {
   UpdateUserFormData,
   updateUserSchema,
 } from "../schemas/updateUserSchema";
-import {
-  usersService,
-  type CreateUserData,
-  type UpdateUserData,
-  type User,
-} from "../services/users";
-import styles from "./users.module.css";
+import { usersService } from "../services/users";
+import type { User } from "../types";
 
 interface UsersModalProps {
   user?: User;
@@ -32,7 +27,6 @@ interface UsersModalProps {
 const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -139,15 +133,14 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     if (file) {
       if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
         const errorMsg = "Por favor selecciona un archivo JPG o PNG válido";
-        setError(errorMsg);
         toast.error(errorMsg);
         return;
       }
 
       const isValidDimensions = await validateImageDimensions(file);
       if (!isValidDimensions) {
-        const errorMsg = "La imagen debe tener exactamente 150x150 píxeles de resolución";
-        setError(errorMsg);
+        const errorMsg =
+          "La imagen debe tener exactamente 150x150 píxeles de resolución";
         toast.error(errorMsg);
         const fileInput = document.getElementById(
           "imageInput"
@@ -165,7 +158,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
-      setError(null);
     }
   };
 
@@ -188,10 +180,9 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const onSubmit = async (data: CreateUserFormData | UpdateUserFormData) => {
     try {
       setLoading(true);
-      setError(null);
 
       if (isEditing && user) {
-        const updateData: UpdateUserData = {
+        const updateData = {
           username: data.username,
           department: data.department,
           profile: {
@@ -206,7 +197,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         toast.success(`Usuario ${data.username} actualizado correctamente`);
       } else {
         const createData = data as CreateUserFormData;
-        const newUserData: CreateUserData = {
+        const newUserData = {
           username: createData.username,
           password: createData.password,
           department: createData.department,
@@ -225,8 +216,8 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
       handleClose();
       onSuccess?.();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
-      setError(errorMessage);
+      const errorMessage =
+        err instanceof Error ? err.message : "Error desconocido";
 
       if (isEditing) {
         toast.error(`Error al actualizar el usuario: ${errorMessage}`);
@@ -240,7 +231,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
   const handleClose = () => {
     reset();
-    setError(null);
     setLoading(false);
     setShowPassword(false);
     setShowConfirmPassword(false);
@@ -251,10 +241,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
   const handleOpen = () => {
     setIsOpen(true);
-  };
-
-  const clearError = () => {
-    setError(null);
   };
 
   return (

@@ -83,7 +83,7 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
   };
 
   const handleRemoveModule = (id: string) => {
-    const moduleToRemove = modules.find(m => m.id === id);
+    const moduleToRemove = modules.find((m) => m.id === id);
     setModules((prev) => prev.filter((module) => module.id !== id));
 
     if (moduleToRemove) {
@@ -153,14 +153,19 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
               page: createdPageId,
             };
 
-            const moduleResponse = await modulesService.createModule(moduleData);
+            const moduleResponse = await modulesService.createModule(
+              moduleData
+            );
 
             if (moduleResponse.success && moduleResponse.data) {
               moduleIds.push(moduleResponse.data._id);
               modulesCreated++;
             } else {
               modulesFailed++;
-              console.error(`Error creando módulo ${mod.nombre}:`, moduleResponse.message);
+              console.error(
+                `Error creando módulo ${mod.nombre}:`,
+                moduleResponse.message
+              );
             }
           } catch (moduleError) {
             modulesFailed++;
@@ -188,7 +193,8 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
       onHide();
     } catch (error) {
       console.error("Error creating page:", error);
-      const errorMessage = error instanceof Error ? error.message : "Error al crear la página";
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al crear la página";
       setErrors({
         general: errorMessage,
       });
@@ -350,9 +356,15 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
                   <thead>
                     <tr>
                       <th className="fw-semibold small text-center">ID</th>
-                      <th className="fw-semibold small text-center">Nombre del módulo</th>
-                      <th className="fw-semibold small text-center">Descripción del módulo</th>
-                      <th className="fw-semibold small text-center">Acciones</th>
+                      <th className="fw-semibold small text-center">
+                        Nombre del módulo
+                      </th>
+                      <th className="fw-semibold small text-center">
+                        Descripción del módulo
+                      </th>
+                      <th className="fw-semibold small text-center">
+                        Acciones
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
