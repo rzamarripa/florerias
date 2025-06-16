@@ -22,7 +22,7 @@ const pageSchema = new Schema(
     modules: [
       {
         type: Schema.Types.ObjectId,
-        ref: "ac_modules", // ✅ CAMBIO: Era "Module", ahora "ac_modules"
+        ref: "ac_modules",
       },
     ],
     status: {
@@ -75,5 +75,5 @@ pageSchema.methods.removeModule = function (moduleId) {
   return this.save();
 };
 
-const Page = mongoose.model("ac_pages", pageSchema);
+const Page = mongoose.model("ac_page", pageSchema);
 export { Page };

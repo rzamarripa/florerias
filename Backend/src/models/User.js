@@ -32,7 +32,7 @@ const userSchema = new Schema(
     },
     role: {
       type: Schema.Types.ObjectId,
-      ref: "ac_roles", 
+      ref: "ac_roles",
       required: true,
     },
     updatedAt: {
@@ -67,14 +67,16 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 userSchema.methods.getPublicProfile = function () {
   const profile = { ...this.profile };
- 
+
   if (profile.image && profile.image.data) {
-    const base64Image = `data:${profile.image.contentType};base64,${profile.image.data.toString('base64')}`;
+    const base64Image = `data:${
+      profile.image.contentType
+    };base64,${profile.image.data.toString("base64")}`;
     profile.image = base64Image;
   }
- 
+
   return {
-    _id: this._id, 
+    _id: this._id,
     username: this.username,
     profile: profile,
     role: this.role,
@@ -82,16 +84,18 @@ userSchema.methods.getPublicProfile = function () {
   };
 };
 
-userSchema.methods.toJSON = function() {
+userSchema.methods.toJSON = function () {
   const user = this.toObject();
- 
+
   if (user.profile && user.profile.image && user.profile.image.data) {
-    const base64Image = `data:${user.profile.image.contentType};base64,${user.profile.image.data.toString('base64')}`;
+    const base64Image = `data:${
+      user.profile.image.contentType
+    };base64,${user.profile.image.data.toString("base64")}`;
     user.profile.image = base64Image;
   }
- 
+
   return user;
 };
 
-const User = mongoose.model("ac_users", userSchema); 
+const User = mongoose.model("cs_user", userSchema);
 export { User };

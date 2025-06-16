@@ -11,7 +11,7 @@ const roleSchema = new Schema({
   modules: [
     {
       type: Schema.Types.ObjectId,
-      ref: "ac_modules", 
+      ref: "ac_modules",
     },
   ],
   estatus: {
@@ -46,5 +46,5 @@ roleSchema.methods.getModulesByPage = async function () {
   return modulesByPage;
 };
 
-const Role = mongoose.model("ac_roles", roleSchema); 
+const Role = mongoose.model("ac_role", roleSchema);
 export { Role };
