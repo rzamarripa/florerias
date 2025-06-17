@@ -70,7 +70,7 @@ const BrandPage: React.FC = () => {
   const handlePageChange = (page: number) => {
     fetchBrands(true, page);
   };
-  console.log(brands);
+
   return (
     <div className="row">
       <div className="col-12">
