@@ -115,14 +115,9 @@ const BrandModal: React.FC<BrandModalProps> = ({
   useEffect(() => {
     if (show) {
       if (brand) {
-        const categoryValue =
-          typeof brand.categoryId === "object" && brand.categoryId
-            ? brand.categoryId._id
-            : brand.categoryId || "";
-
         reset({
           logo: undefined,
-          category: categoryValue,
+          category: "", // Se establecerá después cuando se carguen las categorías
           name: brand.name,
           description: brand.description || "",
         });
@@ -149,6 +144,20 @@ const BrandModal: React.FC<BrandModalProps> = ({
       loadAllCategories();
     }
   }, [show, brand, reset]);
+
+  // Nuevo useEffect para establecer la categoría cuando se cargan las opciones
+  useEffect(() => {
+    if (brand && categoryOptions.length > 0) {
+      const categoryValue =
+        typeof brand.categoryId === "object" && brand.categoryId
+          ? brand.categoryId._id
+          : brand.categoryId || "";
+
+      if (categoryValue) {
+        setValue("category", categoryValue);
+      }
+    }
+  }, [brand, categoryOptions, setValue]);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
