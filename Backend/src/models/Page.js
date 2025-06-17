@@ -22,7 +22,7 @@ const pageSchema = new Schema(
     modules: [
       {
         type: Schema.Types.ObjectId,
-        ref: "ac_modules",
+        ref: "ac_module",
       },
     ],
     status: {
@@ -55,7 +55,7 @@ pageSchema.pre("findOneAndUpdate", function (next) {
 
 pageSchema.methods.getActiveModules = async function () {
   await this.populate({
-    path: "modules",
+    path: "ac_module",
     match: { status: true },
   });
   return this.modules;

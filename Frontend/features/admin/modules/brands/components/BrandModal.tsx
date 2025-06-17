@@ -4,21 +4,24 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { X } from "lucide-react";
-import { Brand } from "../types";
+import { brandsService, Brand } from "../services/brands";
 import { BrandFormData, brandSchema } from "../schemas/BrandSchema";
+import Image from "next/image";
 
 interface BrandModalProps {
   brand?: Brand;
   show: boolean;
   onClose: () => void;
   reloadData: (isCreating: boolean, page?: number) => Promise<void>;
-  editingBrand?: string
+  editingBrand?: string;
 }
 
 const BrandModal: React.FC<BrandModalProps> = ({ brand, show, onClose, reloadData, editingBrand }) => {
   const [loading, setLoading] = useState(false);
   const [razonesSociales, setRazonesSociales] = useState<string[]>([]);
   const [newRazonSocial, setNewRazonSocial] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>("");
 
   const { 
     register, 
@@ -42,15 +45,18 @@ const BrandModal: React.FC<BrandModalProps> = ({ brand, show, onClose, reloadDat
   useEffect(() => {
     if (show && brand) {
       reset({
-        logo: brand.logo,
-        categoria: brand.categoria,
-        nombre: brand.nombre,
-        razonesSociales: brand.razonesSociales,
-        descripcion: brand.descripcion,
+        logo: brand.logo || "",
+        categoria: brand.category || "",
+        nombre: brand.name,
+        razonesSociales: brand.razonesSociales || "",
+        descripcion: brand.description || "",
         isActive: brand.isActive,
       });
       if (brand.razonesSociales) {
         setRazonesSociales(brand.razonesSociales.split(',').map(rs => rs.trim()));
+      }
+      if (brand.logo) {
+        setLogoPreview(brand.logo);
       }
     } else if (show) {
       reset({
@@ -62,6 +68,8 @@ const BrandModal: React.FC<BrandModalProps> = ({ brand, show, onClose, reloadDat
         isActive: true,
       });
       setRazonesSociales([]);
+      setLogoFile(null);
+      setLogoPreview("");
     }
   }, [show, brand, reset]);
 
@@ -87,14 +95,54 @@ const BrandModal: React.FC<BrandModalProps> = ({ brand, show, onClose, reloadDat
     }
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setLogoPreview(result);
+        setValue("logo", result); 
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const onSubmit = async (data: BrandFormData) => {
     console.log('Datos del formulario:', data);
     setLoading(true);
     try {
+      const apiData = {
+        name: data.nombre,
+        category: data.categoria,
+        description: data.descripcion,
+        isActive: data.isActive,
+        rsCompanies: [],
+        ...(logoFile && { logo: logoFile })
+      };
+
+      if (editingBrand) {
+        const res = await brandsService.update(editingBrand, apiData);
+        if (!res.success) {
+          throw new Error(res.message || 'No se pudo actualizar la marca');
+        }
+        toast.success(res.message);
+      } else {
+        const res = await brandsService.create(apiData);
+        if (!res.success) {
+          throw new Error(res.message || 'No se pudo crear la marca');
+        }
+        toast.success(res.message);
+      }
+      
+      await reloadData(false);
+      onClose();
         
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Algo ocurrió mal" 
-      toast.error(errorMessage)
+      const errorMessage = error instanceof Error ? error.message : "Algo ocurrió mal";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -112,13 +160,23 @@ const BrandModal: React.FC<BrandModalProps> = ({ brand, show, onClose, reloadDat
         <Modal.Body>
 
           <Form.Group className="mb-3">
-            <Form.Label>Logo <span className="text-danger">*</span></Form.Label>
+            <Form.Label>Logo</Form.Label>
             <Form.Control 
-              type="text"
-              {...register("logo")}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoChange}
               isInvalid={!!errors.logo}
-              placeholder="Input del la imagen (como en usuarios)"
             />
+            {logoPreview && (
+              <div className="mt-2">
+                <Image 
+                  src={logoPreview} 
+                  alt="Preview" 
+                  style={{ width: "80px", height: "80px", objectFit: "cover" }}
+                  className="rounded border"
+                />
+              </div>
+            )}
             <Form.Control.Feedback type="invalid">
               {errors.logo?.message}
             </Form.Control.Feedback>
@@ -130,7 +188,7 @@ const BrandModal: React.FC<BrandModalProps> = ({ brand, show, onClose, reloadDat
               {...register("categoria")}
               isInvalid={!!errors.categoria}
             >
-              <option value="">Categoría</option>
+              <option value="">Seleccionar categoría</option>
               <option value="tecnologia">Tecnología</option>
               <option value="alimentaria">Alimentaria</option>
               <option value="textil">Textil</option>
@@ -210,7 +268,7 @@ const BrandModal: React.FC<BrandModalProps> = ({ brand, show, onClose, reloadDat
               rows={3}
               {...register("descripcion")}
               isInvalid={!!errors.descripcion}
-              placeholder="Comentario"
+              placeholder="Descripción de la marca"
             />
             <Form.Control.Feedback type="invalid">
               {errors.descripcion?.message}

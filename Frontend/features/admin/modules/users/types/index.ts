@@ -1,18 +1,26 @@
+
+
+export interface Role {
+  _id: string;
+  name: string;
+  description?: string;
+  modules?: any[]; 
+}
+
+export interface UserProfile {
+  name: string;      
+  fullName: string;   
+  path?: string;
+  estatus: boolean;
+  image?: string
+}
+
 export interface User {
   _id: string;
   username: string;
+  profile: UserProfile;
   department?: string;
-  profile: {
-    nombre: string;
-    nombreCompleto: string;
-    path: string;
-    estatus: boolean;
-    image?: string;
-  };
-  role?: {
-    _id: string;
-    name: string;
-  };
+  role?: Role;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,54 +30,52 @@ export interface CreateUserData {
   password: string;
   department?: string;
   profile: {
-    nombre: string;
-    nombreCompleto: string;
-    estatus?: boolean;
+    name: string;        
+    fullName: string;    
+    estatus: boolean;
   };
   role?: string;
 }
 
 export interface UpdateUserData {
-  username?: string;
+  username: string;
   department?: string;
-  profile?: Partial<{
-    nombre: string;
-    nombreCompleto: string;
+  profile: {
+    name: string;        
+    fullName: string;    
     estatus: boolean;
-  }>;
-  role?: string;
-}
-
-export interface UpdateUserData {
-  username?: string;
-  department?: string;
-  profile?: Partial<{
-    nombre: string;
-    nombreCompleto: string;
-    estatus: boolean;
-  }>;
+  };
   role?: string;
 }
 
 export interface CreateUserResponseData {
-  data: User;
+  success: boolean;
+  message: string;
+  data: {
+    user: User;
+  };
 }
 
-export interface Role {
-  estatus: boolean;
-  _id: string;
-  name: string;
-  description: string;
-  modules: Module[];
-  createdAt: string;
+export interface GetUsersResponse {
+  success: boolean;
+  count: number
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+  data: User[];
 }
 
-export interface Module {
-  _id: string;
-  name: string;
-  description: string;
-  status: boolean;
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
+export interface GetRolesResponse {
+  success: boolean;
+  count: number;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+  data: Role[];
 }

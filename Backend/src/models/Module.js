@@ -14,7 +14,7 @@ const moduleSchema = new Schema(
     },
     page: {
       type: Schema.Types.ObjectId,
-      ref: "ac_pages",
+      ref: "ac_page",
       required: [true, "Page reference is required"],
     },
     status: {

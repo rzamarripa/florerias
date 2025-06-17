@@ -84,9 +84,9 @@ const getRoleById = async (req, res) => {
 const getRoleModules = async (req, res) => {
   try {
     const role = await Role.findById(req.params.id).populate({
-      path: "modules",
+      path: "ac_module",
       populate: {
-        path: "page",
+        path: "ac_page",
         select: "name path",
       },
     });

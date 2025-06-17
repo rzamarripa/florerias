@@ -15,8 +15,14 @@ const userSchema = new Schema(
     },
     department: String,
     profile: {
-      nombre: String,
-      nombreCompleto: String,
+      name: {
+        type: String,
+        required: true
+      },
+      fullName: {
+        type: String,
+        required: true
+      },
       path: {
         type: String,
         default: "",
@@ -27,12 +33,12 @@ const userSchema = new Schema(
       },
       image: {
         data: Buffer,
-        contentType: String,
+        contentType: String
       },
     },
     role: {
       type: Schema.Types.ObjectId,
-      ref: "ac_roles",
+      ref: "ac_role",
       required: true,
     },
     updatedAt: {

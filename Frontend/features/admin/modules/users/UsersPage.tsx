@@ -274,7 +274,7 @@ const UsersPage: React.FC = () => {
                       </td>
                       <td className="text-center">
                         <span className="text-dark">
-                          {user.profile.nombreCompleto || user.profile.nombre}
+                          {user.profile.fullName || user.profile.name}
                         </span>
                       </td>
                       <td className="text-center">

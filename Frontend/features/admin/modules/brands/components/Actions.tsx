@@ -1,17 +1,18 @@
 import { BsCheck2, BsPencil } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
+import BrandModal from "./BrandModal";
 import React, { useState } from "react";
-import { Brand } from "../types";
+import { Brand } from "../services/brands";
 
 interface ActionsProps {
   brand: Brand;
   onToggleStatus: (brand: Brand) => Promise<void>;
-  reloadData: (isCreating: boolean, page?: number) => Promise<void>
+  reloadData: (isCreating: boolean, page?: number) => Promise<void>;
 }
 
 export const Actions = ({ brand, onToggleStatus, reloadData }: ActionsProps) => {
   const [showEdit, setShowEdit] = React.useState(false);
-  const [editingBrand] = useState<string>(brand._id)
+  const [editingBrand] = useState<string>(brand._id);
  
   return (
     <div className="d-flex justify-content-center gap-1">
@@ -23,7 +24,13 @@ export const Actions = ({ brand, onToggleStatus, reloadData }: ActionsProps) => 
       >
         <BsPencil size={16} />
       </button>
-      {/**AQUI VA EL MODAL */}
+      <BrandModal
+        brand={brand}
+        show={showEdit}
+        onClose={() => setShowEdit(false)}
+        editingBrand={editingBrand}
+        reloadData={reloadData}
+      />
       {brand.isActive ? (
         <button
           className="btn btn-light btn-icon btn-sm rounded-circle"

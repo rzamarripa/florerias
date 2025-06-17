@@ -11,7 +11,7 @@ const roleSchema = new Schema({
   modules: [
     {
       type: Schema.Types.ObjectId,
-      ref: "ac_modules",
+      ref: "ac_module",
     },
   ],
   estatus: {
@@ -26,9 +26,9 @@ const roleSchema = new Schema({
 
 roleSchema.methods.getModulesByPage = async function () {
   await this.populate({
-    path: "modules",
+    path: "ac_module",
     populate: {
-      path: "page",
+      path: "ac_page",
       select: "name path",
     },
   });

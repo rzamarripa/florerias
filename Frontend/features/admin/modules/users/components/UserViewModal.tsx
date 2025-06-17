@@ -79,8 +79,8 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
 
             <h5 className="text-dark mb-1 fw-bold">{user.username}</h5>
             <p className="text-muted mb-2 small">
-              {user.profile.nombreCompleto ||
-                user.profile.nombre ||
+              {user.profile.fullName ||
+                user.profile.name ||
                 "Sin nombre completo"}
             </p>
 

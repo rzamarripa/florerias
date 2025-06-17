@@ -3,18 +3,11 @@ import { Eye, EyeOff, Plus, Upload, X } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Button, Col, Form, Modal, Row } from "react-bootstrap";
-import { FieldErrors, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
 import { Role } from "../../roles/types";
-import {
-  CreateUserFormData,
-  createUserSchema,
-} from "../schemas/createUserSchema";
-import {
-  UpdateUserFormData,
-  updateUserSchema,
-} from "../schemas/updateUserSchema";
+import { UserFormData, userFormSchema } from "../schemas/userSchema"; // ✅ Esquema unificado
 import { usersService } from "../services/users";
 import type { User } from "../types";
 
@@ -34,14 +27,16 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
   const isEditing = Boolean(user);
 
-  const form = useForm<CreateUserFormData | UpdateUserFormData>({
-    resolver: zodResolver(isEditing ? updateUserSchema : createUserSchema),
+  // ✅ Usar siempre el mismo esquema y tipo
+  const form = useForm<UserFormData>({
+    resolver: zodResolver(userFormSchema),
     defaultValues: {
       username: "",
-      ...(isEditing ? {} : { password: "", confirmPassword: "" }),
+      password: "", // ✅ Siempre presente, pero se valida condicionalmente
+      confirmPassword: "", // ✅ Siempre presente, pero se valida condicionalmente
       profile: {
-        nombre: "",
-        nombreCompleto: "",
+        name: "",
+        fullName: "",
         estatus: true,
       },
       department: "",
@@ -55,12 +50,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     formState: { errors },
     reset,
   } = form;
-
-  const isCreateFormErrors = (
-    errors: any
-  ): errors is FieldErrors<CreateUserFormData> => {
-    return !isEditing;
-  };
 
   const departments = [
     { value: "", label: "Seleccionar departamento" },
@@ -79,9 +68,11 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
       if (isEditing && user) {
         reset({
           username: user.username || "",
+          password: "", 
+          confirmPassword: "", 
           profile: {
-            nombre: user.profile?.nombre || "",
-            nombreCompleto: user.profile?.nombreCompleto || "",
+            name: user.profile?.name || "",
+            fullName: user.profile?.fullName || "",
             estatus: user.profile?.estatus ?? true,
           },
           department: user.department || "",
@@ -93,11 +84,11 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
       } else {
         reset({
           username: "",
-          password: "",
-          confirmPassword: "",
+          password: "", 
+          confirmPassword: "", 
           profile: {
-            nombre: "",
-            nombreCompleto: "",
+            name: "",
+            fullName: "",
             estatus: true,
           },
           department: "",
@@ -177,7 +168,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     return givenNames;
   };
 
-  const onSubmit = async (data: CreateUserFormData | UpdateUserFormData) => {
+  const onSubmit = async (data: UserFormData) => {
     try {
       setLoading(true);
 
@@ -186,8 +177,8 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           username: data.username,
           department: data.department,
           profile: {
-            nombre: getFirstName(data.profile.nombreCompleto),
-            nombreCompleto: data.profile.nombreCompleto,
+            name: getFirstName(data.profile.name),
+            fullName: data.profile.fullName,
             estatus: data.profile.estatus,
           },
           role: data.role,
@@ -196,21 +187,20 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         await usersService.updateUser(user._id, updateData, selectedImage);
         toast.success(`Usuario ${data.username} actualizado correctamente`);
       } else {
-        const createData = data as CreateUserFormData;
         const newUserData = {
-          username: createData.username,
-          password: createData.password,
-          department: createData.department,
+          username: data.username,
+          password: data.password!, 
+          department: data.department,
           profile: {
-            nombre: getFirstName(createData.profile.nombreCompleto) || "",
-            nombreCompleto: createData.profile.nombreCompleto,
-            estatus: createData.profile.estatus,
+            name: getFirstName(data.profile.name) || "",
+            fullName: data.profile.fullName,
+            estatus: data.profile.estatus,
           },
-          role: createData.role,
+          role: data.role,
         };
 
         await usersService.createUser(newUserData, selectedImage);
-        toast.success(`Usuario ${createData.username} creado correctamente`);
+        toast.success(`Usuario ${data.username} creado correctamente`);
       }
 
       handleClose();
@@ -283,8 +273,8 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           </Modal.Title>
         </Modal.Header>
 
-        <Modal.Body className="px-4 py-2">
-          <Form onSubmit={handleSubmit(onSubmit)}>
+        <Form onSubmit={handleSubmit(onSubmit)}>
+          <Modal.Body className="px-4 py-2">
             <Row className="g-3">
               <Col xs={12}>
                 <Form.Group>
@@ -306,7 +296,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                         <Image
                           src={imagePreview}
                           alt={`imagen de perfil de ${form.getValues(
-                            "profile.nombreCompleto"
+                            "profile.fullName"
                           )}`}
                           fill
                           style={{
@@ -320,6 +310,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                           onClick={removeImage}
                           disabled={loading}
                           style={{ width: "24px", height: "24px" }}
+                          type="button"
                         >
                           <X size={12} />
                         </Button>
@@ -353,6 +344,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                         }
                         disabled={loading}
                         className="px-2 py-1"
+                        type="button"
                       >
                         {imagePreview ? "Cambiar" : "Seleccionar"}
                       </Button>
@@ -362,6 +354,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                           onClick={removeImage}
                           disabled={loading}
                           className="px-2 py-1"
+                          type="button"
                         >
                           Quitar
                         </Button>
@@ -404,12 +397,12 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                   <Form.Control
                     type="text"
                     placeholder="Ingresa el nombre completo"
-                    {...register("profile.nombreCompleto")}
+                    {...register("profile.fullName")}
                     disabled={loading}
-                    isInvalid={!!errors.profile?.nombreCompleto}
+                    isInvalid={!!errors.profile?.fullName}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.profile?.nombreCompleto?.message}
+                    {errors.profile?.fullName?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </Col>
@@ -425,11 +418,9 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                         <Form.Control
                           type={showPassword ? "text" : "password"}
                           placeholder="Ingresa la contraseña"
-                          {...register("password" as keyof CreateUserFormData)}
+                          {...register("password")}
                           disabled={loading}
-                          isInvalid={
-                            isCreateFormErrors(errors) && !!errors.password
-                          }
+                          isInvalid={!!errors.password}
                         />
                         <Button
                           variant="link"
@@ -437,6 +428,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                           onClick={() => setShowPassword(!showPassword)}
                           disabled={loading}
                           style={{ marginRight: "6px" }}
+                          type="button"
                         >
                           {showPassword ? (
                             <EyeOff size={14} />
@@ -445,8 +437,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                           )}
                         </Button>
                         <Form.Control.Feedback type="invalid">
-                          {isCreateFormErrors(errors) &&
-                            errors.password?.message}
+                          {errors.password?.message}
                         </Form.Control.Feedback>
                       </div>
                     </Form.Group>
@@ -461,14 +452,9 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                         <Form.Control
                           type={showConfirmPassword ? "text" : "password"}
                           placeholder="Confirma la contraseña"
-                          {...register(
-                            "confirmPassword" as keyof CreateUserFormData
-                          )}
+                          {...register("confirmPassword")}
                           disabled={loading}
-                          isInvalid={
-                            isCreateFormErrors(errors) &&
-                            !!errors.confirmPassword
-                          }
+                          isInvalid={!!errors.confirmPassword}
                         />
                         <Button
                           variant="link"
@@ -478,6 +464,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                           }
                           disabled={loading}
                           style={{ marginRight: "6px" }}
+                          type="button"
                         >
                           {showConfirmPassword ? (
                             <EyeOff size={14} />
@@ -486,8 +473,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                           )}
                         </Button>
                         <Form.Control.Feedback type="invalid">
-                          {isCreateFormErrors(errors) &&
-                            errors.confirmPassword?.message}
+                          {errors.confirmPassword?.message}
                         </Form.Control.Feedback>
                       </div>
                     </Form.Group>
@@ -531,33 +517,34 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                 </Form.Group>
               </Col>
             </Row>
-          </Form>
-        </Modal.Body>
+          </Modal.Body>
 
-        <Modal.Footer className="border-0 pt-2 pb-3">
-          <Button
-            onClick={handleClose}
-            className={`fw-medium px-4 btn-light`}
-            disabled={loading}
-          >
-            Cerrar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit(onSubmit)}
-            disabled={loading}
-            className="px-3 py-1"
-          >
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-1" />
-                {isEditing ? "Actualizando..." : "Guardando..."}
-              </>
-            ) : (
-              <>{isEditing ? "Actualizar" : "Guardar"}</>
-            )}
-          </Button>
-        </Modal.Footer>
+          <Modal.Footer className="border-0 pt-2 pb-3">
+            <Button
+              type="button"
+              onClick={handleClose}
+              className="fw-medium px-4 btn-light"
+              disabled={loading}
+            >
+              Cerrar
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={loading}
+              className="px-3 py-1"
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-1" />
+                  {isEditing ? "Actualizando..." : "Guardando..."}
+                </>
+              ) : (
+                <>{isEditing ? "Actualizar" : "Guardar"}</>
+              )}
+            </Button>
+          </Modal.Footer>
+        </Form>
       </Modal>
     </>
   );

@@ -5,6 +5,7 @@ import pageRoutes from "./pageRoutes.js";
 import roleRoutes from "./roleRoutes.js";
 import userRoutes from "./userRoutes.js";
 import companyRoutes from "./companyRoutes.js"
+import brandRoutes from "./brandRoutes.js"
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.use("/roles", roleRoutes);
 router.use("/pages", pageRoutes);
 router.use("/modules", moduleRoutes);
 router.use("/companies", companyRoutes);
+router.use("/brands", brandRoutes);
 
 export default router;

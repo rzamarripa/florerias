@@ -12,13 +12,10 @@ const createFormData = (
   image?: File | null
 ) => {
   const formData = new FormData();
-
   formData.append("userData", JSON.stringify(userData));
-
   if (image) {
     formData.append("image", image);
   }
-
   return formData;
 };
 
@@ -116,7 +113,7 @@ export const usersService = {
 
   assignRole: async (userId: string, roleId: string) => {
     const response = await apiCall<CreateUserResponseData>(
-      `/users/${userId}/role`,
+      `/users/${userId}/assign-role`,
       {
         method: "PUT",
         body: JSON.stringify({ role: roleId }),
@@ -130,7 +127,7 @@ export const usersService = {
     currentPassword: string,
     newPassword: string
   ) => {
-    const response = await apiCall(`/users/${userId}/password`, {
+    const response = await apiCall(`/users/${userId}/change-password`, {
       method: "PUT",
       body: JSON.stringify({ currentPassword, newPassword }),
     });

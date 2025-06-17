@@ -4,11 +4,9 @@ import React, { useEffect, useState } from "react";
 import { Table, Form, Button } from "react-bootstrap";
 import BrandModal from "./components/BrandModal";
 import { Search } from "lucide-react";
-import { Brand } from "./types";
+import { brandsService, Brand } from "./services/brands";
 import Image from "next/image";
 import { Actions } from "./components/Actions";
-
-
 
 const BrandPage: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -24,20 +22,41 @@ const BrandPage: React.FC = () => {
 
   const fetchBrands = async (isCreating: boolean, page: number = pagination.page) => {
     try {
-        setLoading(true)
-        console.log(page)
+      if (isCreating) {
+        setLoading(true);
+      }
+      
+      const response = await brandsService.getAll({
+        page,
+        limit: pagination.limit,
+        ...(searchTerm && { search: searchTerm }),
+      });
+
+      if (response.data) {
+        setBrands(response.data);
+      }
+
+      if (response.pagination) {
+        setPagination(response.pagination);
+      }
     } catch (err) {
       console.error("Error fetching brands:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
   
   const handleToggleStatus = async (brand: Brand) => {
-    if (brand.isActive) {
-    } else {
+    try {
+      if (brand.isActive) {
+        await brandsService.delete(brand._id);
+      } else {
+        await brandsService.activate(brand._id);
+      }
+      fetchBrands(false);
+    } catch (error) {
+      console.error("Error toggling brand status:", error);
     }
-    fetchBrands(false);
   };
 
   useEffect(() => {
@@ -108,14 +127,16 @@ const BrandPage: React.FC = () => {
                 ) : (
                   brands.map((brand, idx) => (
                     <tr key={brand._id}>
-                      <td>{idx + 1}</td>
+                      <td>{(pagination.page - 1) * pagination.limit + idx + 1}</td>
                       <td>
                         {brand.logo ? (
                           <Image 
                             src={brand.logo} 
-                            alt={brand.nombre}
+                            alt={brand.name}
+                            width={40}
+                            height={40}
                             className="rounded"
-                            style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                            style={{ objectFit: "cover" }}
                           />
                         ) : (
                           <div 
@@ -126,16 +147,16 @@ const BrandPage: React.FC = () => {
                           </div>
                         )}
                       </td>
-                      <td>{brand.categoria}</td>
-                      <td>{brand.nombre}</td>
-                      <td>{brand.razonesSociales}</td>
+                      <td>{brand.category || "-"}</td>
+                      <td>{brand.name}</td>
+                      <td>{brand.razonesSociales || "-"}</td>
                       <td>
                         <span 
                           className="text-truncate d-inline-block" 
                           style={{ maxWidth: "200px" }}
-                          title={brand.descripcion}
+                          title={brand.description}
                         >
-                          {brand.descripcion}
+                          {brand.description || "-"}
                         </span>
                       </td>
                       <td>

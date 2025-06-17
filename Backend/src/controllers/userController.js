@@ -19,6 +19,7 @@ export const registerUser = async (req, res) => {
     }
 
     const { username, password, department, profile, role } = userData;
+    console.log(profile)
 
     const userExists = await User.findOne({ username });
     if (userExists) {
@@ -43,8 +44,8 @@ export const registerUser = async (req, res) => {
       password,
       department,
       profile: {
-        nombre: profile?.nombre || "",
-        nombreCompleto: profile?.nombreCompleto || "",
+        name: profile?.name || "",
+        fullName: profile?.fullName || "",
         path: profile?.path || "",
         estatus: profile?.estatus !== undefined ? profile.estatus : true,
       },
@@ -96,11 +97,11 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ username })
       .select("+password")
       .populate({
-        path: "role",
+        path: "ac_role",
         populate: {
-          path: "modules",
+          path: "ac_module",
           populate: {
-            path: "page",
+            path: "ac_page",
             select: "name path",
           },
         },
@@ -168,8 +169,8 @@ export const getAllUsers = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-
     const filters = {};
+    
     if (req.query.estatus !== undefined) {
       filters["profile.estatus"] = req.query.estatus === "true";
     }
@@ -178,23 +179,38 @@ export const getAllUsers = async (req, res) => {
     }
 
     const users = await User.find(filters)
-      .populate("role", "name description")
+      .populate("role", "name description") // Corregido: usar "role" en lugar de "ac_role"
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
 
     const total = await User.countDocuments(filters);
 
+    // Transformar los datos para retornar role como objeto con name e id
+    const transformedUsers = users.map(user => {
+      const userObj = user.toObject();
+      
+      // Transformar el role para incluir name e id
+      if (userObj.role) {
+        userObj.role = {
+          id: userObj.role._id,
+          name: userObj.role.name
+        };
+      }
+      
+      return userObj;
+    });
+
     res.status(200).json({
       success: true,
-      count: users.length,
+      count: transformedUsers.length,
       pagination: {
         page,
         limit,
         total,
         pages: Math.ceil(total / limit),
       },
-      data: users,
+      data: transformedUsers,
     });
   } catch (error) {
     res.status(500).json({
@@ -207,7 +223,7 @@ export const getAllUsers = async (req, res) => {
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).populate(
-      "role",
+      "ac_role",
       "name description"
     );
 
@@ -249,8 +265,8 @@ export const updateUser = async (req, res) => {
 
     if (profile) {
       updateData.profile = {
-        nombre: profile.nombre,
-        nombreCompleto: profile.nombreCompleto,
+        name: profile.name,
+        fullName: profile.fullName,
         path: profile.path,
         estatus: profile.estatus,
       };
@@ -285,7 +301,7 @@ export const updateUser = async (req, res) => {
     const user = await User.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
-    }).populate("role", "name description");
+    }).populate("ac_role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -314,7 +330,7 @@ export const deleteUser = async (req, res) => {
       req.params.id,
       { "profile.estatus": false },
       { new: true }
-    ).populate("role", "name description");
+    ).populate("ac_role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -342,7 +358,7 @@ export const activateUser = async (req, res) => {
       req.params.id,
       { "profile.estatus": true },
       { new: true }
-    ).populate("role", "name description");
+    ).populate("ac_role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -430,7 +446,7 @@ export const assignRoles = async (req, res) => {
       req.params.id,
       { role },
       { new: true }
-    ).populate("role", "name description");
+    ).populate("ac_role", "name description");
 
     if (!user) {
       return res.status(404).json({

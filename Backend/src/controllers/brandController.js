@@ -1,5 +1,5 @@
 import { Brand } from "../models/Brand.js";
-import { RsCompanyBrand } from "../models/RsCompanyBrand.js";
+import { RsCompanyBrand } from "../models/CompanyBrands.js";
 
 export const getAllBrands = async (req, res) => {
   try {
