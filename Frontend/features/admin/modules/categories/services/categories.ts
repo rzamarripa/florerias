@@ -15,6 +15,6 @@ export const categoryService = {
       limit: limit.toString(),
       ...(search && { search }),
     });
-    return await apiCall<Category[]>(`/brands?${searchParams}`);
+    return await apiCall<Category[]>(`/categories?${searchParams}`);
   },
 };
