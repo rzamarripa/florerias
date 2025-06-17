@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import brandRoutes from "./brandRoutes.js";
+import categoryRoutes from "./categoryRoutes.js";
 import companyRoutes from "./companyRoutes.js";
 import moduleRoutes from "./moduleRoutes.js";
 import pageRoutes from "./pageRoutes.js";
@@ -15,5 +16,6 @@ router.use("/pages", pageRoutes);
 router.use("/modules", moduleRoutes);
 router.use("/companies", companyRoutes);
 router.use("/brands", brandRoutes);
+router.use("/categories", categoryRoutes);
 
 export default router;

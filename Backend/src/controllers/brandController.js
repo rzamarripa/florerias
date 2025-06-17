@@ -12,13 +12,16 @@ export const getAllBrands = async (req, res) => {
     if (search) {
       filters.$or = [
         { name: { $regex: search, $options: "i" } },
-        { category: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
       ];
     }
 
     const total = await Brand.countDocuments(filters);
     const brands = await Brand.find(filters)
+      .populate({
+        path: "categoryId",
+        select: "name description",
+      })
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -54,7 +57,7 @@ export const getAllBrands = async (req, res) => {
 
 export const createBrand = async (req, res) => {
   try {
-    const { name, category, description } = req.body;
+    const { name, categoryId, description } = req.body;
 
     // Parsear rsCompanies si viene como string JSON
     let rsCompanies = [];
@@ -80,7 +83,7 @@ export const createBrand = async (req, res) => {
     const newBrand = await Brand.create({
       logo: logoData,
       name,
-      category,
+      categoryId,
       description,
       isActive: true, // Por defecto true para nuevas marcas
     });
@@ -93,9 +96,15 @@ export const createBrand = async (req, res) => {
       await RsCompanyBrand.insertMany(relations);
     }
 
+    // Populate la categoría antes de enviar la respuesta
+    const populatedBrand = await Brand.findById(newBrand._id).populate({
+      path: "categoryId",
+      select: "name description",
+    });
+
     res.status(201).json({
       success: true,
-      data: newBrand,
+      data: populatedBrand,
       message: "Marca creada con éxito",
     });
   } catch (error) {
@@ -106,7 +115,7 @@ export const createBrand = async (req, res) => {
 export const updateBrand = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, description } = req.body;
+    const { name, categoryId, description } = req.body;
 
     // Parsear rsCompanies si viene como string JSON
     let rsCompanies;
@@ -121,7 +130,7 @@ export const updateBrand = async (req, res) => {
       }
     }
 
-    const updateData = { name, category, description };
+    const updateData = { name, categoryId, description };
 
     if (req.file) {
       updateData.logo = {
@@ -132,6 +141,9 @@ export const updateBrand = async (req, res) => {
 
     const updatedBrand = await Brand.findByIdAndUpdate(id, updateData, {
       new: true,
+    }).populate({
+      path: "categoryId",
+      select: "name description",
     });
 
     if (!updatedBrand)

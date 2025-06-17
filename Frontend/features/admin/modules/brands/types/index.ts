@@ -1,7 +1,13 @@
 export interface Brand {
   _id: string;
   logo?: LogoData;
-  category?: string;
+  categoryId?:
+    | {
+        _id: string;
+        name: string;
+        description?: string;
+      }
+    | string; // Puede ser string (ID) o objeto populated
   name: string;
   description?: string;
   isActive: boolean;
@@ -23,4 +29,12 @@ export interface LogoData {
   _id: string;
   contentType: string;
   data: string;
+}
+
+export interface Category {
+  _id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
 }

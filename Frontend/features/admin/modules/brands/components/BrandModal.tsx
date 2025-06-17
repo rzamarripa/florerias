@@ -32,6 +32,9 @@ const BrandModal: React.FC<BrandModalProps> = ({
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
 
+  const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -81,12 +84,45 @@ const BrandModal: React.FC<BrandModalProps> = ({
     }
   };
 
+  const loadAllCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const response = await brandsService.getAllCategories();
+
+      if (!response.success) {
+        throw new Error(response.message || "Error al cargar las categorías");
+      }
+
+      const allCategories: SelectOption[] = response.data.map((category) => ({
+        value: category._id,
+        label: category.name,
+      }));
+
+      setCategoryOptions(allCategories);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Error al cargar las categorías";
+      toast.error(errorMessage);
+      setCategoryOptions([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
   useEffect(() => {
     if (show) {
       if (brand) {
+        const categoryValue =
+          typeof brand.categoryId === "object" && brand.categoryId
+            ? brand.categoryId._id
+            : brand.categoryId || "";
+
         reset({
           logo: undefined,
-          category: brand.category || "",
+          category: categoryValue,
           name: brand.name,
           description: brand.description || "",
         });
@@ -110,6 +146,7 @@ const BrandModal: React.FC<BrandModalProps> = ({
       }
 
       loadAllCompanies();
+      loadAllCategories();
     }
   }, [show, brand, reset]);
 
@@ -216,14 +253,18 @@ const BrandModal: React.FC<BrandModalProps> = ({
             <Form.Select
               {...register("category")}
               isInvalid={!!errors.category}
+              disabled={loadingCategories}
             >
-              <option value="">Seleccionar categoría</option>
-              <option value="technology">Tecnología</option>
-              <option value="food">Alimentos</option>
-              <option value="textile">Textil</option>
-              <option value="automotive">Automotriz</option>
-              <option value="pharmaceutical">Farmacéutica</option>
-              <option value="construction">Construcción</option>
+              <option value="">
+                {loadingCategories
+                  ? "Cargando categorías..."
+                  : "Seleccionar categoría"}
+              </option>
+              {categoryOptions.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
+              ))}
             </Form.Select>
             <Form.Control.Feedback type="invalid">
               {errors.category?.message}

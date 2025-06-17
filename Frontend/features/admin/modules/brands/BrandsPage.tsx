@@ -70,7 +70,7 @@ const BrandPage: React.FC = () => {
   const handlePageChange = (page: number) => {
     fetchBrands(true, page);
   };
-
+  console.log(brands);
   return (
     <div className="row">
       <div className="col-12">
@@ -166,7 +166,11 @@ const BrandPage: React.FC = () => {
                           </div>
                         )}
                       </td>
-                      <td>{brand.category || "-"}</td>
+                      <td>
+                        {typeof brand.categoryId === "object"
+                          ? brand.categoryId.name
+                          : "-"}
+                      </td>
                       <td>{brand.name}</td>
                       <td>{brand.companies?.length + " Razones sociales"}</td>
                       <td>

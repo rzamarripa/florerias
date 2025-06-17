@@ -1,5 +1,5 @@
 import { apiCall } from "@/utils/api";
-import { Brand, Company } from "../types";
+import { Brand, Category, Company } from "../types";
 
 export interface CreateBrandData {
   name: string;
@@ -38,14 +38,16 @@ export const brandsService = {
     return apiCall<Company[]>("/companies/all");
   },
 
+  getAllCategories: async () => {
+    return apiCall<Category[]>("/categories/all");
+  },
+
   create: async (data: CreateBrandData) => {
     const formData = new FormData();
 
     formData.append("name", data.name);
-    if (data.category) formData.append("category", data.category);
-
+    if (data.category) formData.append("categoryId", data.category);
     if (data.description) formData.append("description", data.description);
-
     if (data.rsCompanies && data.rsCompanies.length > 0) {
       formData.append("rsCompanies", JSON.stringify(data.rsCompanies));
     }
@@ -67,7 +69,7 @@ export const brandsService = {
     const formData = new FormData();
 
     if (data.name) formData.append("name", data.name);
-    if (data.category) formData.append("category", data.category);
+    if (data.category) formData.append("categoryId", data.category);
     if (data.description) formData.append("description", data.description);
 
     if (data.rsCompanies !== undefined) {
