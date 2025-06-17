@@ -168,7 +168,7 @@ const BrandPage: React.FC = () => {
                       </td>
                       <td>{brand.category || "-"}</td>
                       <td>{brand.name}</td>
-                      <td>{brand.companies?.length + "Razones sociales"}</td>
+                      <td>{brand.companies?.length + " Razones sociales"}</td>
                       <td>
                         <span
                           className="text-truncate d-inline-block"
