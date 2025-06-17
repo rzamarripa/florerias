@@ -1,11 +1,11 @@
 import { Router } from "express";
 
+import brandRoutes from "./brandRoutes.js";
+import companyRoutes from "./companyRoutes.js";
 import moduleRoutes from "./moduleRoutes.js";
 import pageRoutes from "./pageRoutes.js";
 import roleRoutes from "./roleRoutes.js";
 import userRoutes from "./userRoutes.js";
-import companyRoutes from "./companyRoutes.js"
-import brandRoutes from "./brandRoutes.js"
 
 const router = Router();
 

@@ -23,9 +23,23 @@ export const getAllBrands = async (req, res) => {
       .limit(limit)
       .sort({ createdAt: -1 });
 
+    const brandsWithCompanies = await Promise.all(
+      brands.map(async (brand) => {
+        const brandObj = brand.toObject();
+
+        const relations = await RsCompanyBrand.find({ brandId: brand._id });
+
+        brandObj.companies = relations.map((relation) =>
+          relation.companyId.toString()
+        );
+
+        return brandObj;
+      })
+    );
+
     res.status(200).json({
       success: true,
-      data: brands,
+      data: brandsWithCompanies,
       pagination: {
         page,
         limit,
@@ -40,9 +54,22 @@ export const getAllBrands = async (req, res) => {
 
 export const createBrand = async (req, res) => {
   try {
-    const { name, category, description, isActive, rsCompanies } = req.body;
-    let logoData = {};
+    const { name, category, description } = req.body;
 
+    // Parsear rsCompanies si viene como string JSON
+    let rsCompanies = [];
+    if (req.body.rsCompanies) {
+      try {
+        rsCompanies = JSON.parse(req.body.rsCompanies);
+      } catch (e) {
+        // Si no es JSON válido, asumir que es un array
+        rsCompanies = Array.isArray(req.body.rsCompanies)
+          ? req.body.rsCompanies
+          : [req.body.rsCompanies];
+      }
+    }
+
+    let logoData = {};
     if (req.file) {
       logoData = {
         data: req.file.buffer,
@@ -55,7 +82,7 @@ export const createBrand = async (req, res) => {
       name,
       category,
       description,
-      isActive,
+      isActive: true, // Por defecto true para nuevas marcas
     });
 
     if (rsCompanies && rsCompanies.length > 0) {
@@ -69,7 +96,7 @@ export const createBrand = async (req, res) => {
     res.status(201).json({
       success: true,
       data: newBrand,
-      message: "Marca creada con exito",
+      message: "Marca creada con éxito",
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -79,10 +106,22 @@ export const createBrand = async (req, res) => {
 export const updateBrand = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, description, isActive, rsCompanies } = req.body;
+    const { name, category, description } = req.body;
+
+    // Parsear rsCompanies si viene como string JSON
+    let rsCompanies;
+    if (req.body.rsCompanies !== undefined) {
+      try {
+        rsCompanies = JSON.parse(req.body.rsCompanies);
+      } catch (e) {
+        // Si no es JSON válido, asumir que es un array
+        rsCompanies = Array.isArray(req.body.rsCompanies)
+          ? req.body.rsCompanies
+          : [req.body.rsCompanies];
+      }
+    }
 
     const updateData = { name, category, description };
-    if (isActive !== undefined) updateData.isActive = isActive;
 
     if (req.file) {
       updateData.logo = {
@@ -98,9 +137,10 @@ export const updateBrand = async (req, res) => {
     if (!updatedBrand)
       return res.status(404).json({
         success: false,
-        message: "No encontrada",
+        message: "Marca no encontrada",
       });
 
+    // Solo actualizar relaciones si rsCompanies está definido
     if (rsCompanies !== undefined) {
       await RsCompanyBrand.deleteMany({ brandId: id });
 
@@ -116,7 +156,7 @@ export const updateBrand = async (req, res) => {
     res.json({
       success: true,
       data: updatedBrand,
-      message: "Marca actualizada con exito",
+      message: "Marca actualizada con éxito",
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -135,10 +175,10 @@ export const deleteBrand = async (req, res) => {
     if (!deletedBrand)
       return res.status(404).json({
         success: false,
-        message: "No encontrada",
+        message: "Marca no encontrada",
       });
 
-    res.json({ success: true, message: "Marca dada de baja con exito" });
+    res.json({ success: true, message: "Marca dada de baja con éxito" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -156,10 +196,10 @@ export const activeBrand = async (req, res) => {
     if (!activatedBrand)
       return res.status(404).json({
         success: false,
-        message: "No encontrada",
+        message: "Marca no encontrada",
       });
 
-    res.json({ success: true, message: "Marca activada con exito" });
+    res.json({ success: true, message: "Marca activada con éxito" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

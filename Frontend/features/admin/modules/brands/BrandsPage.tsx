@@ -1,12 +1,13 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
-import React, { useEffect, useState } from "react";
-import { Table, Form, Button } from "react-bootstrap";
-import BrandModal from "./components/BrandModal";
+
 import { Search } from "lucide-react";
-import { brandsService, Brand } from "./services/brands";
 import Image from "next/image";
+import React, { useEffect, useState } from "react";
+import { Button, Form, Table } from "react-bootstrap";
 import { Actions } from "./components/Actions";
+import BrandModal from "./components/BrandModal";
+import { brandsService } from "./services/brands";
+import { Brand } from "./types";
 
 const BrandPage: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -20,12 +21,15 @@ const BrandPage: React.FC = () => {
   });
   const [showCreate, setShowCreate] = useState(false);
 
-  const fetchBrands = async (isCreating: boolean, page: number = pagination.page) => {
+  const fetchBrands = async (
+    isCreating: boolean,
+    page: number = pagination.page
+  ) => {
     try {
       if (isCreating) {
         setLoading(true);
       }
-      
+
       const response = await brandsService.getAll({
         page,
         limit: pagination.limit,
@@ -45,7 +49,7 @@ const BrandPage: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   const handleToggleStatus = async (brand: Brand) => {
     try {
       if (brand.isActive) {
@@ -85,17 +89,25 @@ const BrandPage: React.FC = () => {
                 <Search
                   className="text-muted position-absolute"
                   size={18}
-                  style={{ left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
+                  style={{
+                    left: "0.75rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                  }}
                 />
               </div>
             </div>
-            <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowCreate(true)}
+            >
               Nuevo
             </Button>
             <BrandModal
-                show={showCreate}
-                onClose={() => setShowCreate(false)}
-                reloadData={fetchBrands}
+              show={showCreate}
+              onClose={() => setShowCreate(false)}
+              reloadData={fetchBrands}
             />
           </div>
           <div className="table-responsive shadow-sm">
@@ -115,23 +127,30 @@ const BrandPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-4"> 
+                    <td colSpan={8} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
-                        <div className="spinner-border text-primary mb-2" role="status">
+                        <div
+                          className="spinner-border text-primary mb-2"
+                          role="status"
+                        >
                           <span className="visually-hidden">Cargando...</span>
                         </div>
-                        <p className="text-muted mb-0 small">Cargando marcas...</p>
+                        <p className="text-muted mb-0 small">
+                          Cargando marcas...
+                        </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   brands.map((brand, idx) => (
                     <tr key={brand._id}>
-                      <td>{(pagination.page - 1) * pagination.limit + idx + 1}</td>
+                      <td>
+                        {(pagination.page - 1) * pagination.limit + idx + 1}
+                      </td>
                       <td>
                         {brand.logo ? (
-                          <Image 
-                            src={brand.logo} 
+                          <Image
+                            src={`data:${brand.logo.contentType};base64,${brand.logo.data}`}
                             alt={brand.name}
                             width={40}
                             height={40}
@@ -139,7 +158,7 @@ const BrandPage: React.FC = () => {
                             style={{ objectFit: "cover" }}
                           />
                         ) : (
-                          <div 
+                          <div
                             className="bg-light rounded d-flex align-items-center justify-content-center"
                             style={{ width: "40px", height: "40px" }}
                           >
@@ -149,10 +168,10 @@ const BrandPage: React.FC = () => {
                       </td>
                       <td>{brand.category || "-"}</td>
                       <td>{brand.name}</td>
-                      <td>{brand.razonesSociales || "-"}</td>
+                      <td>{brand.companies?.length + "Razones sociales"}</td>
                       <td>
-                        <span 
-                          className="text-truncate d-inline-block" 
+                        <span
+                          className="text-truncate d-inline-block"
                           style={{ maxWidth: "200px" }}
                           title={brand.description}
                         >
@@ -161,10 +180,11 @@ const BrandPage: React.FC = () => {
                       </td>
                       <td>
                         <span
-                          className={`badge fs-6 ${brand.isActive
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                            }`}
+                          className={`badge fs-6 ${
+                            brand.isActive
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
                         >
                           {brand.isActive ? "Activo" : "Inactivo"}
                         </span>
@@ -195,26 +215,23 @@ const BrandPage: React.FC = () => {
               >
                 Anterior
               </Button>
-              {Array.from(
-                { length: Math.min(5, pagination.pages) },
-                (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={
-                        pagination.page === pageNum
-                          ? "primary"
-                          : "outline-secondary"
-                      }
-                      size="sm"
-                      onClick={() => handlePageChange(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                }
-              )}
+              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={
+                      pagination.page === pageNum
+                        ? "primary"
+                        : "outline-secondary"
+                    }
+                    size="sm"
+                    onClick={() => handlePageChange(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
               <Button
                 variant="outline-secondary"
                 size="sm"

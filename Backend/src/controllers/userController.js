@@ -19,7 +19,7 @@ export const registerUser = async (req, res) => {
     }
 
     const { username, password, department, profile, role } = userData;
-    console.log(profile)
+    console.log(profile);
 
     const userExists = await User.findOne({ username });
     if (userExists) {
@@ -170,7 +170,7 @@ export const getAllUsers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const filters = {};
-    
+
     if (req.query.estatus !== undefined) {
       filters["profile.estatus"] = req.query.estatus === "true";
     }
@@ -179,25 +179,23 @@ export const getAllUsers = async (req, res) => {
     }
 
     const users = await User.find(filters)
-      .populate("role", "name description") // Corregido: usar "role" en lugar de "ac_role"
+      .populate("role", "name description")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
 
     const total = await User.countDocuments(filters);
 
-    // Transformar los datos para retornar role como objeto con name e id
-    const transformedUsers = users.map(user => {
+    const transformedUsers = users.map((user) => {
       const userObj = user.toObject();
-      
-      // Transformar el role para incluir name e id
+
       if (userObj.role) {
         userObj.role = {
           id: userObj.role._id,
-          name: userObj.role.name
+          name: userObj.role.name,
         };
       }
-      
+
       return userObj;
     });
 

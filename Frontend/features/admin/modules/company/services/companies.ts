@@ -1,13 +1,5 @@
 import { apiCall } from "@/utils/api";
-export interface Company {
-  _id: string;
-  name: string; 
-  legalRepresentative: string; 
-  rfc: string; 
-  address: string;
-  isActive: boolean;
-  createdAt: string;
-}
+import { Company } from "../types";
 
 export interface PaginationInfo {
   page: number;
@@ -38,22 +30,20 @@ export const companiesService = {
       ...(search && { search }),
       ...(isActive && { isActive }),
     });
-    return await apiCall<Company[]>(
-      `/companies?${searchParams}`
-    );
+    return await apiCall<Company[]>(`/companies?${searchParams}`);
   },
 
   create: async (data: Omit<Company, "_id" | "createdAt" | "isActive">) => {
-    return await apiCall<{ success: boolean; data: Company }>(
-      "/companies",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
+    return await apiCall<{ success: boolean; data: Company }>("/companies", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
-  update: async (id: string, data: Omit<Company, "_id" | "createdAt" | "isActive">) => {
+  update: async (
+    id: string,
+    data: Omit<Company, "_id" | "createdAt" | "isActive">
+  ) => {
     return await apiCall<{ success: boolean; data: Company }>(
       `/companies/${id}`,
       {

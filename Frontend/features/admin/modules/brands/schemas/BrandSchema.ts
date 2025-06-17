@@ -1,12 +1,10 @@
 import { z } from "zod";
 
 export const brandSchema = z.object({
-  logo: z.string().optional(),
-  categoria: z.string().optional(),
-  nombre: z.string().min(1, "El nombre es requerido"),
-  razonesSociales: z.string().min(1, "Debe agregar al menos una razón social"),
-  descripcion: z.string().optional(),
-  isActive: z.boolean().default(true),
+  logo: z.instanceof(File).optional(),
+  category: z.string().optional(),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
 });
 
 export type BrandFormData = z.infer<typeof brandSchema>;
