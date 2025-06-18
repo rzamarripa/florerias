@@ -8,6 +8,10 @@ const categorySchema = new Schema({
     unique: true,
     trim: true,
   },
+  description: {
+    type: String,
+    required: true
+  },
   isActive: {
     type: Boolean,
     default: true,

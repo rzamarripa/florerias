@@ -1,13 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
 import { toast } from "react-toastify";
-import { Category } from "../types";
+import { Spinner } from "react-bootstrap";
+import { categoryService } from "../services/categories";
 import CategoryModal from "./CategoryModal";
 
+interface CategoryLegacy {
+  _id: string;
+  nombre: string;
+  status: boolean;
+  createdAt: string;
+  updatedAt: string;
+  description?: string;
+}
 
 interface CategoryActionsProps {
-  categoria: Category;
+  categoria: CategoryLegacy;
   onCategoriaSaved?: () => void;
 }
 
@@ -15,23 +24,56 @@ const CategoryActions: React.FC<CategoryActionsProps> = ({
   categoria,
   onCategoriaSaved,
 }) => {
+  const [isToggling, setIsToggling] = useState<boolean>(false);
+
   const handleToggleCategoria = async (id: string, currentStatus: boolean) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500)); 
+      setIsToggling(true);
 
-      const action = currentStatus ? 'desactivada' : 'activada';
-      
-      console.log(`Toggle categoria status for ID: ${id}, from ${currentStatus} to ${!currentStatus}`);
-      
-      toast.success(`Categoría "${categoria.nombre}" ${action} correctamente`);
-      
-      onCategoriaSaved?.();
-    } catch (error) {
-      const action = currentStatus ? 'desactivar' : 'activar';
-      const errorMessage = `Error al ${action} la categoría "${categoria.nombre}"`;
+      const response = await categoryService.toggleStatus(id, currentStatus);
+
+      if (response.success) {
+        const action = currentStatus ? 'desactivada' : 'activada';
+        toast.success(`Categoría "${categoria.nombre}" ${action} correctamente`);
+        onCategoriaSaved?.();
+      } else {
+        const errorMessage = response.message || `Error al ${currentStatus ? 'desactivar' : 'activar'} la categoría`;
+        toast.error(errorMessage);
+      }
+    } catch (error: any) {
+      console.error("Error toggling category:", error);
+
+      let errorMessage = `Error al ${currentStatus ? 'desactivar' : 'activar'} la categoría "${categoria.nombre}"`;
+
+      if (error.response?.status === 400) {
+        errorMessage = error.response.data?.message || errorMessage;
+      } else if (error.response?.status === 404) {
+        errorMessage = "Categoría no encontrada";
+      } else if (error.response?.status >= 500) {
+        errorMessage = "Error interno del servidor. Intenta nuevamente.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast.error(errorMessage);
-      console.error(`Error ${action} categoria:`, error);
+    } finally {
+      setIsToggling(false);
     }
+  };
+
+  const getToggleButtonTitle = () => {
+    if (isToggling) {
+      return categoria.status ? "Desactivando..." : "Activando...";
+    }
+    return categoria.status ? "Desactivar categoría" : "Activar categoría";
+  };
+
+  const getToggleButtonClass = () => {
+    let baseClass = "btn btn-light btn-icon btn-sm rounded-circle";
+    if (isToggling) {
+      baseClass += " disabled";
+    }
+    return baseClass;
   };
 
   return (
@@ -41,17 +83,20 @@ const CategoryActions: React.FC<CategoryActionsProps> = ({
         editingCategoria={categoria}
         onCategoriaSaved={onCategoriaSaved}
       />
-      
+
       <button
-        className="btn btn-light btn-icon btn-sm rounded-circle"
-        title={
-          categoria.status
-            ? "Desactivar categoría"
-            : "Activar categoría"
-        }
+        className={getToggleButtonClass()}
+        title={getToggleButtonTitle()}
         onClick={() => handleToggleCategoria(categoria._id, categoria.status)}
+        disabled={isToggling}
       >
-        {categoria.status ? (
+        {isToggling ? (
+          <Spinner
+            animation="border"
+            size="sm"
+            style={{ width: "16px", height: "16px" }}
+          />
+        ) : categoria.status ? (
           <FiTrash2 size={16} />
         ) : (
           <BsCheck2 size={16} />

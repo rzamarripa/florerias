@@ -5,18 +5,26 @@ import { Button, Form, Modal } from "react-bootstrap";
 import { BsPencil } from "react-icons/bs";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-import { CategoryFormData, categorySchema } from "../schemas/categorySchema";
+import { categorySchema, CategoryFormData } from "../schemas/categorySchema";
+import { categoryService } from "../services/categories";
 
-interface Categoria extends CategoryFormData {
+interface CategoryLegacy {
   _id: string;
+  nombre: string;
+  status: boolean;
   createdAt: string;
   updatedAt: string;
+  description?: string;
+}
+
+interface ExtendedCategoryFormData extends CategoryFormData {
+  status?: boolean;
 }
 
 interface CategoryModalProps {
   mode: "create" | "edit";
   onCategoriaSaved?: () => void;
-  editingCategoria?: Categoria | null;
+  editingCategoria?: CategoryLegacy | null;
   buttonProps?: {
     variant?: string;
     size?: "sm" | "lg";
@@ -40,25 +48,25 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     reset,
     setValue,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<CategoryFormData>({
+  } = useForm<ExtendedCategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
-      nombre: "",
-      status: true,
+      name: "",
+      description: "",
     },
     mode: "onChange",
   });
 
-  // Cargar datos cuando está editando
   useEffect(() => {
     if (showModal) {
       if (isEditing && editingCategoria) {
-        // Cargar datos para edición
-        setValue("nombre", editingCategoria.nombre);
-        setValue("status", editingCategoria.status);
+        setValue("name", editingCategoria.nombre);
+        setValue("description", editingCategoria.description || "");
       } else {
-        // Resetear para creación
-        reset();
+        reset({
+          name: "",
+          description: "",
+        });
       }
     }
   }, [showModal, isEditing, editingCategoria, setValue, reset]);
@@ -72,25 +80,45 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     reset();
   };
 
-  const onSubmit = async (data: CategoryFormData) => {
+  const onSubmit = async (data: ExtendedCategoryFormData) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      const categoryData: CategoryFormData = {
+        name: data.name.trim(),
+        description: data.description?.trim() || undefined,
+      };
 
+      let response;
       if (isEditing && editingCategoria) {
-        console.log("Updating categoria:", { ...editingCategoria, ...data });
-        toast.success("Categoría actualizada exitosamente");
+        response = await categoryService.update(editingCategoria._id, categoryData);
       } else {
-        console.log("Creating categoria:", data);
-        toast.success("Categoría creada exitosamente");
+        response = await categoryService.create(categoryData);
       }
 
-      onCategoriaSaved?.();
-      handleCloseModal();
-    } catch (error) {
-      const action = isEditing ? 'actualizar' : 'crear';
-      const errorMessage = `Error al ${action} la categoría`;
+      if (response.success) {
+        const action = isEditing ? "actualizada" : "creada";
+        toast.success(`Categoría "${categoryData.name}" ${action} exitosamente`);
+        onCategoriaSaved?.();
+        handleCloseModal();
+      } else {
+        const errorMessage = response.message || `Error al ${isEditing ? 'actualizar' : 'crear'} la categoría`;
+        toast.error(errorMessage);
+      }
+    } catch (error: any) {
+      console.error("Error in category operation:", error);
+
+      let errorMessage = `Error al ${isEditing ? 'actualizar' : 'crear'} la categoría`;
+
+      if (error.response?.status === 400) {
+        errorMessage = error.response.data?.message || "Ya existe una categoría con ese nombre";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Categoría no encontrada";
+      } else if (error.response?.status >= 500) {
+        errorMessage = "Error interno del servidor. Intenta nuevamente.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast.error(errorMessage);
-      console.error(`Error ${action} categoria:`, error);
     }
   };
 
@@ -126,11 +154,12 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
         className={finalButtonProps.className}
         title={finalButtonProps.title}
         onClick={handleOpenModal}
+        disabled={isEditing && !editingCategoria}
       >
         {finalButtonProps.children}
       </Button>
 
-      <Modal show={showModal} onHide={handleCloseModal} size="md" centered>
+      <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton>
           <Modal.Title>
             {isEditing ? "Editar Categoría" : "Nueva Categoría"}
@@ -144,40 +173,60 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
                 Nombre <span className="text-danger">*</span>
               </Form.Label>
               <Controller
-                name="nombre"
+                name="name"
                 control={control}
                 render={({ field }) => (
                   <Form.Control
                     type="text"
                     placeholder="Nombre de la categoría"
-                    isInvalid={!!errors.nombre}
+                    isInvalid={!!errors.name}
                     {...field}
                   />
                 )}
               />
               <Form.Control.Feedback type="invalid">
-                {errors.nombre?.message}
+                {errors.name?.message}
               </Form.Control.Feedback>
               <Form.Text className="text-muted">
                 Ejemplo: Electrónicos, Ropa, Hogar & Jardín, etc.
               </Form.Text>
             </Form.Group>
 
-            <div className="bg-light p-3 rounded">
-              <small className="text-muted">
-                <strong>Nota:</strong> La categoría será creada como activa por defecto. 
-                Puedes cambiar su estado desde la tabla principal.
-              </small>
-            </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Descripción</Form.Label>
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    placeholder="Descripción de la categoría (opcional)"
+                    isInvalid={!!errors.description}
+                    {...field}
+                  />
+                )}
+              />
+              <Form.Control.Feedback type="invalid">
+                {errors.description?.message}
+              </Form.Control.Feedback>
+              <Form.Text className="text-muted">
+                Máximo 200 caracteres
+              </Form.Text>
+            </Form.Group>
           </Modal.Body>
 
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal} disabled={isSubmitting}>
+            <Button
+              variant="secondary"
+              onClick={handleCloseModal}
+              disabled={isSubmitting}
+            >
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              variant="primary" 
+            <Button
+              type="submit"
+              variant="primary"
               disabled={isSubmitting || !isValid}
             >
               {isSubmitting ? (

@@ -75,6 +75,21 @@ export const menuItems: MenuItemType[] = [
         label: "Conceptos de Gastos",
         url: "/catalogos/conceptosDeGastos",
       },
+      {
+        key: "pais",
+        label: "Paises",
+        url: "/catalogos/paises",
+      },
+      {
+        key: "estado",
+        label: "Estado",
+        url: "/catalogos/estados",
+      },
+      {
+        key: "municipio",
+        label: "Municipios",
+        url: "/catalogos/municipios",
+      }
     ],
   },
   {
