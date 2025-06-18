@@ -22,7 +22,8 @@ export const getAllCountries = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
 
-    const filters = { isActive: true };
+    const filters = {};
+
     if (search) {
       filters.$or = [{ name: { $regex: search, $options: "i" } }];
     }
@@ -31,7 +32,7 @@ export const getAllCountries = async (req, res) => {
     const countries = await Country.find(filters)
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ name: 1 });
 
     res.status(200).json({
       success: true,

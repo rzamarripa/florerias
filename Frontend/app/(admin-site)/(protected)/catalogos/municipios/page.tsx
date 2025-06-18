@@ -1,11 +1,11 @@
 import PageBreadcrumb from "@/components/layout/PageBreadcrumb";
-import MunicipalityPage from "@/features/admin/modules/municipalitys/MunicipalityPage";
+import MunicipalityPage from "@/features/admin/modules/municipalities/MunicipalityPage";
 
-export default function Page() {
-    return (
-        <div className="container-fluid">
-            <PageBreadcrumb title="Razones Sociales" subtitle="Catálogos" section="Admin" />
-            <MunicipalityPage />
-        </div>
-    );
-} 
+export default function MunicipiosPage() {
+  return (
+    <div className="container-fluid">
+      <PageBreadcrumb title="Municipios" subtitle="Catálogos" section="Admin" />
+      <MunicipalityPage />
+    </div>
+  );
+}
