@@ -77,6 +77,14 @@ stateSchema.statics.seedIfEmpty = async function () {
   }
 };
 
+stateSchema.index(
+  { name: 1, countryId: 1 },
+  {
+    unique: true,
+    collation: { locale: "es", strength: 2 },
+  }
+);
+
 const State = mongoose.model("cc_state", stateSchema);
 
 export { State };

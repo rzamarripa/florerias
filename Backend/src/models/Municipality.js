@@ -85,6 +85,14 @@ municipalitySchema.statics.seedIfEmpty = async function () {
   }
 };
 
+municipalitySchema.index(
+  { name: 1, stateId: 1 },
+  {
+    unique: true,
+    collation: { locale: "es", strength: 2 },
+  }
+);
+
 const Municipality = mongoose.model("cc_municipality", municipalitySchema);
 
 export { Municipality };

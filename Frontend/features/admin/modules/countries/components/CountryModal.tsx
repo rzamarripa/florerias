@@ -5,11 +5,7 @@ import { Button, Form, Modal } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
-import {
-  AVAILABLE_COUNTRIES,
-  CountryFormData,
-  countrySchema,
-} from "../schemas/countrySchemas";
+import { CountryFormData, countrySchema } from "../schemas/countrySchema";
 import { countriesService } from "../services/countries";
 
 interface Country {
@@ -110,9 +106,12 @@ const CountryModal: React.FC<CountryModalProps> = ({
         isEditing ? "actualizar" : "crear"
       } el país`;
 
-      if (error.response?.status === 400) {
+      if (
+        error.response?.status === 400 &&
+        error.response.data?.message?.toLowerCase().includes("already exists")
+      ) {
         errorMessage =
-          error.response.data?.message || "Ya existe este país en el sistema";
+          "Ya existe un país con ese nombre (sin importar acentos o mayúsculas).";
       } else if (error.response?.status === 404) {
         errorMessage = "País no encontrado";
       } else if (error.response?.status >= 500) {
@@ -177,21 +176,19 @@ const CountryModal: React.FC<CountryModalProps> = ({
                 name="name"
                 control={control}
                 render={({ field }) => (
-                  <Form.Select {...field} isInvalid={!!errors.name}>
-                    <option value="">Seleccionar país...</option>
-                    {AVAILABLE_COUNTRIES.map((country) => (
-                      <option key={country} value={country}>
-                        {country}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  <Form.Control
+                    type="text"
+                    placeholder="Nombre del país"
+                    isInvalid={!!errors.name}
+                    {...field}
+                  />
                 )}
               />
               <Form.Control.Feedback type="invalid">
                 {errors.name?.message}
               </Form.Control.Feedback>
               <Form.Text className="text-muted">
-                Selecciona el país que deseas agregar al sistema
+                Escribe el nombre del país que deseas agregar al sistema
               </Form.Text>
             </Form.Group>
           </Modal.Body>
