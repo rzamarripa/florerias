@@ -7,6 +7,8 @@ export const getAll = async (req, res) => {
       .select("_id name")
       .sort({ name: 1 });
 
+    console.log(categories)
+
     res.status(200).json({
       success: true,
       data: categories,
@@ -22,8 +24,10 @@ export const getAllCategories = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
+    const isActive = req.query.isActive;
 
     const filters = {};
+
     if (search) {
       filters.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -31,11 +35,19 @@ export const getAllCategories = async (req, res) => {
       ];
     }
 
+    if (isActive !== undefined && isActive !== "") {
+      filters.isActive = isActive === "true";
+    }
+
+    console.log("Filters applied:", filters);
+
     const total = await Category.countDocuments(filters);
     const categories = await Category.find(filters)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
+
+    console.log(`Found ${categories.length} categories with filters:`, filters);
 
     res.status(200).json({
       success: true,
