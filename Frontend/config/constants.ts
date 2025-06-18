@@ -71,9 +71,14 @@ export const menuItems: MenuItemType[] = [
         url: "/catalogos/bancos",
       },
       {
-        key: "conceptosdegastos",
+        key: "categorias-de-gastos",
+        label: "Categorías de Gastos",
+        url: "/catalogos/categorias-de-gastos",
+      },
+      {
+        key: "conceptos-de-gastos",
         label: "Conceptos de Gastos",
-        url: "/catalogos/conceptosDeGastos",
+        url: "/catalogos/conceptos-de-gastos",
       },
       {
         key: "pais",
@@ -89,7 +94,7 @@ export const menuItems: MenuItemType[] = [
         key: "municipio",
         label: "Municipios",
         url: "/catalogos/municipios",
-      }
+      },
     ],
   },
   {

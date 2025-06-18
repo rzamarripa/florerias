@@ -4,15 +4,17 @@ import { FileText, Search } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
-import CategoryActions from "./components/Actions";
-import CategoryModal from "./components/CategoryModal";
-import { CategorySearchParams, categoryService } from "./services/categories";
-import { Category } from "./types/index";
+import ExpenseConceptCategoryModal from "./components/ExpenseConceptCategoryModal";
+import {
+  ExpenseConceptCategorySearchParams,
+  expenseConceptCategoryService,
+} from "./services/expenseConceptCategories";
+import { ExpenseConceptCategory } from "./types";
 
-const CategoriesPage: React.FC = () => {
+const ExpenseConceptCategoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("todos");
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<ExpenseConceptCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
     null
@@ -25,12 +27,15 @@ const CategoriesPage: React.FC = () => {
   });
 
   const loadCategories = useCallback(
-    async (isInitial: boolean, params?: Partial<CategorySearchParams>) => {
+    async (
+      isInitial: boolean,
+      params?: Partial<ExpenseConceptCategorySearchParams>
+    ) => {
       try {
         if (isInitial) {
           setLoading(true);
         }
-        const searchParams: CategorySearchParams = {
+        const searchParams: ExpenseConceptCategorySearchParams = {
           page: params?.page || pagination.page,
           limit: params?.limit || pagination.limit,
           search: searchTerm.trim() || undefined,
@@ -43,8 +48,9 @@ const CategoriesPage: React.FC = () => {
           ...params,
         };
 
-        const response = await categoryService.getAll(searchParams);
-        console.log(response);
+        const response = await expenseConceptCategoryService.getAll(
+          searchParams
+        );
         if (response.success) {
           setCategories(response.data);
           if (response.pagination) {
@@ -109,11 +115,9 @@ const CategoriesPage: React.FC = () => {
 
   const mappedCategories = categories.map((cat) => ({
     _id: cat._id,
-    nombre: cat.name,
-    status: cat.isActive,
+    name: cat.name,
+    isActive: cat.isActive,
     createdAt: cat.createdAt,
-    updatedAt: cat.updatedAt || cat.createdAt,
-    description: cat.description,
   }));
 
   const renderPagination = () => {
@@ -208,7 +212,7 @@ const CategoriesPage: React.FC = () => {
                   <option value="inactivos">Categorías inactivas</option>
                 </Form.Select>
 
-                <CategoryModal
+                <ExpenseConceptCategoryModal
                   mode="create"
                   onCategoriaSaved={handleCategorySaved}
                 />
@@ -228,7 +232,6 @@ const CategoriesPage: React.FC = () => {
                       <tr>
                         <th className="text-center">#</th>
                         <th className="text-center">NOMBRE</th>
-                        <th className="text-center">DESCRIPCIÓN</th>
                         <th className="text-center">ESTADO</th>
                         <th className="text-center">FECHA CREACIÓN</th>
                         <th className="text-center">ACCIONES</th>
@@ -247,24 +250,19 @@ const CategoriesPage: React.FC = () => {
                           <td className="text-center">
                             <div className="d-flex justify-content-center align-items-center">
                               <span className="fw-medium text-dark">
-                                {categoria.nombre}
+                                {categoria.name}
                               </span>
                             </div>
                           </td>
                           <td className="text-center">
-                            <span className="text-muted">
-                              {categoria.description || "-"}
-                            </span>
-                          </td>
-                          <td className="text-center">
                             <span
                               className={`badge fs-6 ${
-                                categoria.status
+                                categoria.isActive
                                   ? "bg-success bg-opacity-10 text-success"
                                   : "bg-danger bg-opacity-10 text-danger"
                               }`}
                             >
-                              {categoria.status ? "Activo" : "Inactivo"}
+                              {categoria.isActive ? "Activo" : "Inactivo"}
                             </span>
                           </td>
                           <td className="text-center">
@@ -275,9 +273,11 @@ const CategoriesPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="text-center">
-                            <CategoryActions
-                              categoria={categoria}
+                            <ExpenseConceptCategoryModal
+                              mode="edit"
+                              editingCategoria={categoria}
                               onCategoriaSaved={handleCategorySaved}
+                              buttonProps={{}}
                             />
                           </td>
                         </tr>
@@ -331,4 +331,4 @@ const CategoriesPage: React.FC = () => {
   );
 };
 
-export default CategoriesPage;
+export default ExpenseConceptCategoryPage;
