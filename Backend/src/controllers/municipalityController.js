@@ -1,7 +1,6 @@
 import { Municipality } from "../models/Municipality.js";
 import { State } from "../models/State.js";
 
-// Para selects - sin paginación
 export const getAll = async (req, res) => {
   try {
     const municipalities = await Municipality.find({ isActive: true })
@@ -25,7 +24,6 @@ export const getAll = async (req, res) => {
   }
 };
 
-// Para tablas - con paginación y filtros
 export const getAllMunicipalities = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -33,7 +31,7 @@ export const getAllMunicipalities = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
 
-    const filters = { isActive: true };
+    const filters = {};
     if (search) {
       filters.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -53,7 +51,7 @@ export const getAllMunicipalities = async (req, res) => {
       })
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ name: 1 });
 
     res.status(200).json({
       success: true,
@@ -101,12 +99,10 @@ export const getById = async (req, res) => {
   }
 };
 
-// Para select en cascada - obtener municipios por estado
 export const getByStateId = async (req, res) => {
   try {
     const { stateId } = req.params;
 
-    // Verificar que el estado existe
     const state = await State.findOne({ _id: stateId, isActive: true });
     if (!state) {
       return res.status(404).json({
@@ -132,7 +128,6 @@ export const createMunicipality = async (req, res) => {
   try {
     const { name, stateId, postalCodes } = req.body;
 
-    // Verificar que el estado existe
     const state = await State.findOne({ _id: stateId, isActive: true });
     if (!state) {
       return res.status(400).json({
@@ -179,7 +174,6 @@ export const updateMunicipality = async (req, res) => {
     const { id } = req.params;
     const { name, stateId, postalCodes } = req.body;
 
-    // Verificar que el estado existe
     const state = await State.findOne({ _id: stateId, isActive: true });
     if (!state) {
       return res.status(400).json({
@@ -233,7 +227,7 @@ export const deleteMunicipality = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // TODO: Check if municipality has related branches
+    // TODO: Check if municipality has related branches (branches)
     // const relatedBranches = await Branch.countDocuments({
     //   municipalityId: id,
     //   isActive: true,

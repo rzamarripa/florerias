@@ -1,5 +1,5 @@
 import PageBreadcrumb from "@/components/layout/PageBreadcrumb";
-import BranchPage from "@/features/admin/modules/branch/BranchPage";
+import BranchPage from "@/features/admin/modules/branches/BranchPage";
 
 export default function Page() {
   return (
@@ -8,4 +8,4 @@ export default function Page() {
       <BranchPage />
     </div>
   );
-} 
+}

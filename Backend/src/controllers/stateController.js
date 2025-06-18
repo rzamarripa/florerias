@@ -1,7 +1,6 @@
 import { Country } from "../models/Country.js";
 import { State } from "../models/State.js";
 
-// Para selects - sin paginación
 export const getAll = async (req, res) => {
   try {
     const states = await State.find({ isActive: true })
@@ -18,7 +17,6 @@ export const getAll = async (req, res) => {
   }
 };
 
-// Para tablas - con paginación y filtros
 export const getAllStates = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -26,7 +24,7 @@ export const getAllStates = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
 
-    const filters = { isActive: true };
+    const filters = {};
     if (search) {
       filters.$or = [{ name: { $regex: search, $options: "i" } }];
     }
@@ -36,7 +34,7 @@ export const getAllStates = async (req, res) => {
       .populate("countryId", "_id name")
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ name: 1 });
 
     res.status(200).json({
       success: true,
@@ -77,12 +75,10 @@ export const getById = async (req, res) => {
   }
 };
 
-// Para select en cascada - obtener estados por país
 export const getByCountryId = async (req, res) => {
   try {
     const { countryId } = req.params;
 
-    // Verificar que el país existe
     const country = await Country.findOne({ _id: countryId, isActive: true });
     if (!country) {
       return res.status(404).json({
@@ -108,7 +104,6 @@ export const createState = async (req, res) => {
   try {
     const { name, countryId } = req.body;
 
-    // Verificar que el país existe
     const country = await Country.findOne({ _id: countryId, isActive: true });
     if (!country) {
       return res.status(400).json({
@@ -147,7 +142,6 @@ export const updateState = async (req, res) => {
     const { id } = req.params;
     const { name, countryId } = req.body;
 
-    // Verificar que el país existe
     const country = await Country.findOne({ _id: countryId, isActive: true });
     if (!country) {
       return res.status(400).json({
@@ -193,7 +187,7 @@ export const deleteState = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // TODO: Check if state has related municipalities
+    // TODO: Check if state has related municipalities (municipalities)
     // const relatedMunicipalities = await Municipality.countDocuments({
     //   stateId: id,
     //   isActive: true,
