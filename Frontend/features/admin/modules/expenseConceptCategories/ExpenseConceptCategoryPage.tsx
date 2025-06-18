@@ -4,6 +4,7 @@ import { FileText, Search } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
+import ExpenseConceptCategoryActions from "./components/ExpenseConceptCategoryActions";
 import ExpenseConceptCategoryModal from "./components/ExpenseConceptCategoryModal";
 import {
   ExpenseConceptCategorySearchParams,
@@ -273,11 +274,9 @@ const ExpenseConceptCategoryPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="text-center">
-                            <ExpenseConceptCategoryModal
-                              mode="edit"
-                              editingCategoria={categoria}
+                            <ExpenseConceptCategoryActions
+                              categoria={categoria}
                               onCategoriaSaved={handleCategorySaved}
-                              buttonProps={{}}
                             />
                           </td>
                         </tr>
