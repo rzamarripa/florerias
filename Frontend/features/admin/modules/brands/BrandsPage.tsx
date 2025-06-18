@@ -167,7 +167,7 @@ const BrandPage: React.FC = () => {
                         )}
                       </td>
                       <td>
-                        {typeof brand.categoryId === "object"
+                        {brand.categoryId && (typeof brand.categoryId === "object")
                           ? brand.categoryId.name
                           : "-"}
                       </td>

@@ -10,8 +10,7 @@ import { StateActionsProps } from "../types";
 
 const stateService = {
     toggleStatus: async (id: string, currentStatus: boolean) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return { success: true, message: "Estado actualizado correctamente" };
+        console.log(id, currentStatus);
     }
 };
 
@@ -23,18 +22,7 @@ const StateActions: React.FC<StateActionsProps> = ({
 
     const handleToggleState = async (id: string, currentStatus: boolean) => {
         try {
-            setIsToggling(true);
-
-            const response = await stateService.toggleStatus(id, currentStatus);
-
-            if (response.success) {
-                const action = currentStatus ? 'desactivado' : 'activado';
-                toast.success(`Estado "${state.name}" ${action} correctamente`);
-                onStateSaved?.();
-            } else {
-                const errorMessage = response.message || `Error al ${currentStatus ? 'desactivar' : 'activar'} el estado`;
-                toast.error(errorMessage);
-            }
+            
         } catch (error: any) {
             console.error("Error toggling state:", error);
 

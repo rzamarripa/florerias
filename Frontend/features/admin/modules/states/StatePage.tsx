@@ -40,8 +40,7 @@ const stateService = {
     },
 
     toggleStatus: async (id: string, currentStatus: boolean) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return { success: true };
+        console.log(id, currentStatus);
     }
 };
 

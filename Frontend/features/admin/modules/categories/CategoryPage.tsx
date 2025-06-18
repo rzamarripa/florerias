@@ -1,8 +1,8 @@
 "use client";
 
-import { FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
-import { Form, Table, Spinner, Button, Pagination } from "react-bootstrap";
+import { Form, Table, Spinner, Pagination } from "react-bootstrap";
 import { toast } from "react-toastify";
 import CategoryActions from "./components/Actions";
 import CategoryModal from "./components/CategoryModal";
