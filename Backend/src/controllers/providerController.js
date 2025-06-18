@@ -5,16 +5,29 @@ import { Municipality } from "../models/Municipality.js";
 
 export const getAll = async (req, res) => {
   try {
-    const providers = await Provider.find({ isActive: true })
-      .select("_id commercialName businessName contactName countryId stateId municipalityId address phone email description")
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await Provider.countDocuments({});
+    const providers = await Provider.find({})
+      .select("_id commercialName businessName contactName countryId stateId municipalityId address phone email description isActive createdAt updatedAt")
       .populate("countryId", "_id name")
       .populate("stateId", "_id name")
       .populate("municipalityId", "_id name")
-      .sort({ commercialName: 1 });
+      .sort({ commercialName: 1 })
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
       success: true,
       data: providers,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -28,7 +41,7 @@ export const getAllProviders = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
 
-    const filters = { isActive: true };
+    const filters = {};
     if (search) {
       filters.$or = [
         { commercialName: { $regex: search, $options: "i" } },
@@ -38,6 +51,8 @@ export const getAllProviders = async (req, res) => {
         { description: { $regex: search, $options: "i" } },
       ];
     }
+    if (req.query.status === "true") filters.isActive = true;
+    if (req.query.status === "false") filters.isActive = false;
 
     const total = await Provider.countDocuments(filters);
     const providers = await Provider.find(filters)
@@ -204,6 +219,38 @@ export const activateProvider = async (req, res) => {
       return res.status(404).json({ success: false, message: "Proveedor no encontrado" });
     }
     res.json({ success: true, message: "Proveedor activado con éxito" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getStatesByCountryId = async (req, res) => {
+  try {
+    const { countryId } = req.params;
+    const country = await Country.findOne({ _id: countryId, isActive: true });
+    if (!country) {
+      return res.status(404).json({ success: false, message: "Country not found" });
+    }
+    const states = await State.find({ countryId, isActive: true })
+      .select("_id name")
+      .sort({ name: 1 });
+    res.status(200).json({ success: true, data: states });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getMunicipalitiesByStateId = async (req, res) => {
+  try {
+    const { stateId } = req.params;
+    const state = await State.findOne({ _id: stateId, isActive: true });
+    if (!state) {
+      return res.status(404).json({ success: false, message: "State not found" });
+    }
+    const municipalities = await Municipality.find({ stateId, isActive: true })
+      .select("_id name")
+      .sort({ name: 1 });
+    res.status(200).json({ success: true, data: municipalities });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

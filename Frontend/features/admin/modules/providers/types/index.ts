@@ -1,25 +1,35 @@
-import { ProveedorFormData } from "../schemas/providerSchema";
+// import { ProveedorFormData } from "../schemas/providerSchema";
 
-export interface Proveedor extends ProveedorFormData {
+export interface Provider {
   _id: string;
+  commercialName: string;
+  businessName: string;
+  contactName: string;
+  countryId: string | { _id: string; name: string };
+  stateId: string | { _id: string; name: string };
+  municipalityId: string | { _id: string; name: string };
+  address: string;
+  phone: string;
+  email: string;
+  description?: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export type CreateProveedorRequest = ProveedorFormData;
+export type CreateProviderRequest = Omit<Provider, '_id' | 'createdAt' | 'updatedAt'>;
 
-export interface UpdateProveedorRequest extends Partial<CreateProveedorRequest> {
+export interface UpdateProviderRequest extends Partial<CreateProviderRequest> {
   _id: string;
 }
 
-export interface GetProveedoresParams {
+export interface GetProvidersParams {
   page?: number;
   limit?: number;
-  nombreComercial?: string;
-  razonSocial?: string;
-  nombreContacto?: string;
-  status?: string;
-  ciudad?: string;
+  commercialName?: string;
+  businessName?: string;
+  contactName?: string;
+  isActive?: boolean | string;
 }
 
 export interface ApiResponse<T> {

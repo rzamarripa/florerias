@@ -6,6 +6,8 @@ import {
   updateProvider,
   deleteProvider,
   activateProvider,
+  getStatesByCountryId,
+  getMunicipalitiesByStateId,
 } from "../controllers/providerController.js";
 
 const router = express.Router();
@@ -21,5 +23,9 @@ router.put("/:id", updateProvider);
 router.delete("/:id", deleteProvider);
 
 router.patch("/activate/:id", activateProvider);
+
+router.get("/states/by-country/:countryId", getStatesByCountryId);
+
+router.get("/municipalities/by-state/:stateId", getMunicipalitiesByStateId);
 
 export default router; 

@@ -2,19 +2,19 @@
 import { z } from "zod";
 
 export const proveedorSchema = z.object({
-  nombreComercial: z
+  commercialName: z
     .string()
     .min(1, "El nombre comercial es requerido")
     .max(100, "El nombre comercial no puede exceder 100 caracteres")
     .trim(),
   
-  razonSocial: z
+  businessName: z
     .string()
     .min(1, "La razón social es requerida")
     .max(150, "La razón social no puede exceder 150 caracteres")
     .trim(),
   
-  nombreContacto: z
+  contactName: z
     .string()
     .min(1, "El nombre de contacto es requerido")
     .min(2, "El nombre de contacto debe tener al menos 2 caracteres")
@@ -22,32 +22,26 @@ export const proveedorSchema = z.object({
     .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "El nombre solo puede contener letras y espacios")
     .trim(),
   
-  pais: z
+  countryId: z
     .string()
-    .min(1, "El país es requerido")
-    .max(50, "El país no puede exceder 50 caracteres")
-    .trim(),
+    .min(1, "El país es requerido"),
   
-  estado: z
+  stateId: z
     .string()
-    .min(1, "El estado es requerido")
-    .max(50, "El estado no puede exceder 50 caracteres")
-    .trim(),
+    .min(1, "El estado es requerido"),
   
-  ciudad: z
+  municipalityId: z
     .string()
-    .min(1, "La ciudad es requerida")
-    .max(50, "La ciudad no puede exceder 50 caracteres")
-    .trim(),
+    .min(1, "El municipio es requerido"),
   
-  direccion: z
+  address: z
     .string()
     .min(1, "La dirección es requerida")
     .min(10, "La dirección debe ser más específica (mínimo 10 caracteres)")
     .max(200, "La dirección no puede exceder 200 caracteres")
     .trim(),
   
-  telefono: z
+  phone: z
     .string()
     .min(1, "El teléfono es requerido")
     .min(10, "El teléfono debe tener al menos 10 dígitos")
@@ -55,7 +49,7 @@ export const proveedorSchema = z.object({
     .regex(/^[\d\s\-\+\(\)]*$/, "El teléfono solo puede contener números, espacios, guiones, paréntesis y el signo +")
     .trim(),
   
-  correo: z
+  email: z
     .string()
     .min(1, "El correo es requerido")
     .email("Debe ser un correo electrónico válido")
@@ -63,13 +57,11 @@ export const proveedorSchema = z.object({
     .toLowerCase()
     .trim(),
   
-  descripcion: z
+  description: z
     .string()
-    .max(500, "La descripción no puede exceder 500 caracteres")
-    .optional()
-    .transform(val => val?.trim() || ""),
+    .max(500, "La descripción no puede exceder 500 caracteres"),
   
-  status: z.boolean().default(true)
+  isActive: z.boolean(),
 });
 
 export const updateProveedorSchema = proveedorSchema.partial().extend({

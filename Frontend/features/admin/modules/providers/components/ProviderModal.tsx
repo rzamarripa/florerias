@@ -6,17 +6,19 @@ import { BsPencil } from "react-icons/bs";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { proveedorSchema, ProveedorFormData } from "../schemas/providerSchema";
+import { Provider } from "../types";
+import {
+  getAllCountries,
+  getStatesByCountry,
+  getMunicipalitiesByState,
+  createProvider,
+  updateProvider,
+} from "../services/providers";
 
-interface Proveedor extends ProveedorFormData {
-  _id: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ProveedorModalButtonProps {
+interface ProviderModalButtonProps {
   mode: "create" | "edit";
   onProveedorSaved?: () => void;
-  editingProveedor?: Proveedor | null;
+  editingProveedor?: Provider | null;
   buttonProps?: {
     variant?: string;
     size?: "sm" | "lg";
@@ -25,7 +27,7 @@ interface ProveedorModalButtonProps {
   };
 }
 
-const ProviderModal: React.FC<ProveedorModalButtonProps> = ({
+const ProviderModal: React.FC<ProviderModalButtonProps> = ({
   mode,
   onProveedorSaved,
   editingProveedor = null,
@@ -33,6 +35,14 @@ const ProviderModal: React.FC<ProveedorModalButtonProps> = ({
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const isEditing = mode === "edit";
+
+  // Estados para selects dependientes
+  const [countries, setCountries] = useState<{ _id: string; name: string }[]>([]);
+  const [states, setStates] = useState<{ _id: string; name: string }[]>([]);
+  const [municipalities, setMunicipalities] = useState<{ _id: string; name: string }[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingMunicipalities, setLoadingMunicipalities] = useState(false);
 
   const {
     control,
@@ -44,62 +54,99 @@ const ProviderModal: React.FC<ProveedorModalButtonProps> = ({
   } = useForm<ProveedorFormData>({
     resolver: zodResolver(proveedorSchema),
     defaultValues: {
-      nombreComercial: "",
-      razonSocial: "",
-      nombreContacto: "",
-      pais: "",
-      estado: "",
-      ciudad: "",
-      direccion: "",
-      telefono: "",
-      correo: "",
-      descripcion: "",
-      status: true,
+      commercialName: "",
+      businessName: "",
+      contactName: "",
+      countryId: "",
+      stateId: "",
+      municipalityId: "",
+      address: "",
+      phone: "",
+      email: "",
+      description: "",
+      isActive: true,
     },
     mode: "onChange",
   });
 
-  // Observar cambios en país y estado para resetear campos dependientes
-  const paisSeleccionado = watch("pais");
-  const estadoSeleccionado = watch("estado");
+  const countrySelected = watch("countryId");
+  const stateSelected = watch("stateId");
+
+  // Cargar países al abrir modal
+  useEffect(() => {
+    if (showModal) {
+      setLoadingCountries(true);
+      getAllCountries()
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setCountries(res.data);
+          } else {
+            setCountries([]);
+          }
+        })
+        .catch(() => setCountries([]))
+        .finally(() => setLoadingCountries(false));
+    }
+  }, [showModal]);
+
+  // Cargar estados cuando cambia país
+  useEffect(() => {
+    if (countrySelected) {
+      setLoadingStates(true);
+      getStatesByCountry(countrySelected)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setStates(res.data);
+          } else {
+            setStates([]);
+          }
+        })
+        .catch(() => setStates([]))
+        .finally(() => setLoadingStates(false));
+      setValue("stateId", "");
+      setValue("municipalityId", "");
+      setMunicipalities([]);
+    }
+  }, [countrySelected, setValue]);
+
+  // Cargar municipios cuando cambia estado
+  useEffect(() => {
+    if (stateSelected) {
+      setLoadingMunicipalities(true);
+      getMunicipalitiesByState(stateSelected)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setMunicipalities(res.data);
+          } else {
+            setMunicipalities([]);
+          }
+        })
+        .catch(() => setMunicipalities([]))
+        .finally(() => setLoadingMunicipalities(false));
+      setValue("municipalityId", "");
+    }
+  }, [stateSelected, setValue]);
 
   // Cargar datos cuando está editando
   useEffect(() => {
     if (showModal) {
       if (isEditing && editingProveedor) {
-        // Cargar datos para edición
-        setValue("nombreComercial", editingProveedor.nombreComercial);
-        setValue("razonSocial", editingProveedor.razonSocial);
-        setValue("nombreContacto", editingProveedor.nombreContacto);
-        setValue("pais", editingProveedor.pais);
-        setValue("estado", editingProveedor.estado);
-        setValue("ciudad", editingProveedor.ciudad);
-        setValue("direccion", editingProveedor.direccion);
-        setValue("telefono", editingProveedor.telefono);
-        setValue("correo", editingProveedor.correo);
-        setValue("descripcion", editingProveedor.descripcion || "");
-        setValue("status", editingProveedor.status);
+        setValue("commercialName", editingProveedor.commercialName);
+        setValue("businessName", editingProveedor.businessName);
+        setValue("contactName", editingProveedor.contactName);
+        setValue("countryId", typeof editingProveedor.countryId === "object" ? editingProveedor.countryId._id : editingProveedor.countryId);
+        setValue("stateId", typeof editingProveedor.stateId === "object" ? editingProveedor.stateId._id : editingProveedor.stateId);
+        setValue("municipalityId", typeof editingProveedor.municipalityId === "object" ? editingProveedor.municipalityId._id : editingProveedor.municipalityId);
+        setValue("address", editingProveedor.address);
+        setValue("phone", editingProveedor.phone);
+        setValue("email", editingProveedor.email);
+        setValue("description", editingProveedor.description || "");
+        setValue("isActive", editingProveedor.isActive);
       } else {
-        // Resetear para creación
         reset();
       }
     }
   }, [showModal, isEditing, editingProveedor, setValue, reset]);
-
-  // Resetear estado y ciudad cuando cambia el país
-  useEffect(() => {
-    if (paisSeleccionado) {
-      setValue("estado", "");
-      setValue("ciudad", "");
-    }
-  }, [paisSeleccionado, setValue]);
-
-  // Resetear ciudad cuando cambia el estado
-  useEffect(() => {
-    if (estadoSeleccionado) {
-      setValue("ciudad", "");
-    }
-  }, [estadoSeleccionado, setValue]);
 
   const handleOpenModal = () => {
     setShowModal(true);
@@ -108,25 +155,31 @@ const ProviderModal: React.FC<ProveedorModalButtonProps> = ({
   const handleCloseModal = () => {
     setShowModal(false);
     reset();
+    setStates([]);
+    setMunicipalities([]);
   };
 
   const onSubmit = async (data: ProveedorFormData) => {
     try {
-      // Mock de operación (sin servicios reales)
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simular delay
-
       if (isEditing && editingProveedor) {
-        // Mock actualizar proveedor
-        console.log("Updating proveedor:", { ...editingProveedor, ...data });
-        toast.success("Proveedor actualizado exitosamente");
+        const res = await updateProvider(editingProveedor._id, data);
+        if (res.success) {
+          toast.success("Proveedor actualizado exitosamente");
+          onProveedorSaved?.();
+          handleCloseModal();
+        } else {
+          toast.error(res.message || "Error al actualizar proveedor");
+        }
       } else {
-        // Mock crear proveedor
-        console.log("Creating proveedor:", data);
-        toast.success("Proveedor creado exitosamente");
+        const res = await createProvider(data);
+        if (res.success) {
+          toast.success("Proveedor creado exitosamente");
+          onProveedorSaved?.();
+          handleCloseModal();
+        } else {
+          toast.error(res.message || "Error al crear proveedor");
+        }
       }
-
-      onProveedorSaved?.();
-      handleCloseModal();
     } catch (error) {
       const action = isEditing ? 'actualizar' : 'crear';
       const errorMessage = `Error al ${action} el proveedor`;
@@ -135,408 +188,232 @@ const ProviderModal: React.FC<ProveedorModalButtonProps> = ({
     }
   };
 
-  // Opciones para los select (en una aplicación real, estos vendrían de APIs)
-  const nombresComerciales = [
-    "MaSoft",
-    "TechCorp",
-    "SoftSolutions",
-    "DataPro",
-    "InfoSystems",
-  ];
-
-  const razonesSociales = [
-    "Servicios Informáticos SA de CV",
-    "Tecnología Avanzada S.A.",
-    "Soluciones Digitales S. de R.L.",
-    "Sistemas Integrados S.A.P.I.",
-    "Desarrollo de Software S.A.",
-  ];
-
-  const paises = [
-    "México",
-    "Estados Unidos",
-    "Canadá",
-    "España",
-    "Colombia",
-  ];
-
-  const estadosPorPais: { [key: string]: string[] } = {
-    México: [
-      "Jalisco",
-      "Ciudad de México",
-      "Nuevo León",
-      "Estado de México",
-      "Puebla",
-      "Guanajuato",
-    ],
-    "Estados Unidos": [
-      "California",
-      "Texas", 
-      "Florida",
-      "New York",
-      "Illinois",
-    ],
-    Canadá: [
-      "Ontario",
-      "Quebec",
-      "British Columbia",
-      "Alberta",
-    ],
-    España: [
-      "Madrid",
-      "Barcelona",
-      "Valencia",
-      "Sevilla",
-    ],
-    Colombia: [
-      "Bogotá",
-      "Antioquia",
-      "Valle del Cauca",
-      "Atlántico",
-    ],
-  };
-
-  const ciudadesPorEstado: { [key: string]: string[] } = {
-    Jalisco: ["Guadalajara", "Zapopan", "Tlaquepaque", "Tonalá", "Puerto Vallarta"],
-    "Ciudad de México": ["Benito Juárez", "Miguel Hidalgo", "Cuauhtémoc", "Coyoacán"],
-    "Nuevo León": ["Monterrey", "San Pedro Garza García", "Guadalupe", "Apodaca"],
-    California: ["Los Angeles", "San Francisco", "San Diego", "Sacramento"],
-    Texas: ["Houston", "Dallas", "Austin", "San Antonio"],
-    Ontario: ["Toronto", "Ottawa", "Hamilton", "London"],
-    Madrid: ["Madrid", "Alcalá de Henares", "Móstoles", "Fuenlabrada"],
-    Bogotá: ["Bogotá", "Soacha", "Zipaquirá", "Facatativá"],
-  };
-
-  // Configuración por defecto del botón según el modo
-  const defaultButtonProps = {
-    create: {
-      variant: "primary",
-      className: "d-flex align-items-center gap-2 text-nowrap px-3",
-      title: "Nuevo Proveedor",
-      children: (
-        <>
-          <Plus size={18} />
-          Nuevo Proveedor
-        </>
-      )
-    },
-    edit: {
-      variant: "light",
-      size: "sm" as const,
-      className: "btn-icon rounded-circle",
-      title: "Editar proveedor",
-      children: <BsPencil size={16} />
-    }
-  };
-
-  const currentButtonConfig = defaultButtonProps[mode];
-  const finalButtonProps = { ...currentButtonConfig, ...buttonProps };
-
   return (
     <>
-      {/* Botón que abre el modal */}
-      <Button
-        variant={finalButtonProps.variant}
-        size={finalButtonProps.size}
-        className={finalButtonProps.className}
-        title={finalButtonProps.title}
-        onClick={handleOpenModal}
-      >
-        {finalButtonProps.children}
-      </Button>
-
-      {/* Modal */}
+      {mode === "create" ? (
+        <Button onClick={handleOpenModal} {...buttonProps}>
+          <Plus size={18} className="me-1" /> Nuevo proveedor
+        </Button>
+      ) : (
+        <Button variant="outline-primary" size="sm" onClick={handleOpenModal} {...buttonProps}>
+          <BsPencil size={16} />
+        </Button>
+      )}
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>
-            {isEditing ? "Editar Proveedor" : "Nuevo Proveedor"}
-          </Modal.Title>
+          <Modal.Title>{isEditing ? "Editar proveedor" : "Nuevo proveedor"}</Modal.Title>
         </Modal.Header>
-
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Modal.Body>
-            <div className="row">
+        <Modal.Body>
+          <Form onSubmit={handleSubmit(onSubmit)}>
+            <div className="row g-3">
               <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    Nombre comercial <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Controller
-                    name="nombreComercial"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Select
-                        {...field}
-                        isInvalid={!!errors.nombreComercial}
-                      >
-                        <option value="">Seleccionar nombre comercial</option>
-                        {nombresComerciales.map((nombre) => (
-                          <option key={nombre} value={nombre}>
-                            {nombre}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.nombreComercial?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
+                <Controller
+                  name="commercialName"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Nombre comercial *</Form.Label>
+                      <Form.Control {...field} isInvalid={!!errors.commercialName} />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.commercialName?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
               </div>
-
               <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    Razón social <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Controller
-                    name="razonSocial"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Select
-                        {...field}
-                        isInvalid={!!errors.razonSocial}
-                      >
-                        <option value="">Seleccionar razón social</option>
-                        {razonesSociales.map((razon) => (
-                          <option key={razon} value={razon}>
-                            {razon}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.razonSocial?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
+                <Controller
+                  name="businessName"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Razón social *</Form.Label>
+                      <Form.Control {...field} isInvalid={!!errors.businessName} />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.businessName?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
               </div>
-            </div>
-
-            <Form.Group className="mb-3">
-              <Form.Label>
-                Nombre contacto <span className="text-danger">*</span>
-              </Form.Label>
-              <Controller
-                name="nombreContacto"
-                control={control}
-                render={({ field }) => (
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre del contacto principal"
-                    isInvalid={!!errors.nombreContacto}
-                    {...field}
-                  />
-                )}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.nombreContacto?.message}
-              </Form.Control.Feedback>
-            </Form.Group>
-
-            <div className="row">
-              <div className="col-md-4">
-                <Form.Group className="mb-3">
-                  <Form.Label>País</Form.Label>
-                  <Controller
-                    name="pais"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Select
-                        {...field}
-                        isInvalid={!!errors.pais}
-                      >
-                        <option value="">Seleccionar país</option>
-                        {paises.map((pais) => (
-                          <option key={pais} value={pais}>
-                            {pais}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.pais?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </div>
-
-              <div className="col-md-4">
-                <Form.Group className="mb-3">
-                  <Form.Label>Estado</Form.Label>
-                  <Controller
-                    name="estado"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Select
-                        {...field}
-                        isInvalid={!!errors.estado}
-                        disabled={!paisSeleccionado}
-                      >
-                        <option value="">
-                          {paisSeleccionado ? "Seleccionar estado" : "Primero selecciona un país"}
-                        </option>
-                        {(estadosPorPais[paisSeleccionado] || []).map((estado) => (
-                          <option key={estado} value={estado}>
-                            {estado}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.estado?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </div>
-
-              <div className="col-md-4">
-                <Form.Group className="mb-3">
-                  <Form.Label>Ciudad</Form.Label>
-                  <Controller
-                    name="ciudad"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Select
-                        {...field}
-                        isInvalid={!!errors.ciudad}
-                        disabled={!estadoSeleccionado}
-                      >
-                        <option value="">
-                          {estadoSeleccionado ? "Seleccionar ciudad" : "Primero selecciona un estado"}
-                        </option>
-                        {(ciudadesPorEstado[estadoSeleccionado] || []).map((ciudad) => (
-                          <option key={ciudad} value={ciudad}>
-                            {ciudad}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.ciudad?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </div>
-            </div>
-
-            <Form.Group className="mb-3">
-              <Form.Label>
-                Dirección <span className="text-danger">*</span>
-              </Form.Label>
-              <Controller
-                name="direccion"
-                control={control}
-                render={({ field }) => (
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    placeholder="Dirección completa del proveedor"
-                    isInvalid={!!errors.direccion}
-                    {...field}
-                  />
-                )}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.direccion?.message}
-              </Form.Control.Feedback>
-            </Form.Group>
-
-            <div className="row">
               <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    Teléfono <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Controller
-                    name="telefono"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Control
-                        type="tel"
-                        placeholder="Número de teléfono"
-                        isInvalid={!!errors.telefono}
-                        {...field}
+                <Controller
+                  name="contactName"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Nombre contacto *</Form.Label>
+                      <Form.Control {...field} isInvalid={!!errors.contactName} />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.contactName?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="countryId"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>País *</Form.Label>
+                      <Form.Select {...field} isInvalid={!!errors.countryId} disabled={loadingCountries}>
+                        <option value="">Selecciona un país</option>
+                        {loadingCountries ? (
+                          <option>Cargando...</option>
+                        ) : (
+                          countries.map((c) => (
+                            <option key={c._id} value={c._id}>{c.name}</option>
+                          ))
+                        )}
+                      </Form.Select>
+                      <Form.Control.Feedback type="invalid">
+                        {errors.countryId?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="stateId"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Estado *</Form.Label>
+                      <Form.Select {...field} isInvalid={!!errors.stateId} disabled={loadingStates || !countrySelected}>
+                        <option value="">Selecciona un estado</option>
+                        {loadingStates ? (
+                          <option>Cargando...</option>
+                        ) : (
+                          states.map((s) => (
+                            <option key={s._id} value={s._id}>{s.name}</option>
+                          ))
+                        )}
+                      </Form.Select>
+                      <Form.Control.Feedback type="invalid">
+                        {errors.stateId?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="municipalityId"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Municipio *</Form.Label>
+                      <Form.Select {...field} isInvalid={!!errors.municipalityId} disabled={loadingMunicipalities || !stateSelected}>
+                        <option value="">Selecciona un municipio</option>
+                        {loadingMunicipalities ? (
+                          <option>Cargando...</option>
+                        ) : (
+                          municipalities.map((m) => (
+                            <option key={m._id} value={m._id}>{m.name}</option>
+                          ))
+                        )}
+                      </Form.Select>
+                      <Form.Control.Feedback type="invalid">
+                        {errors.municipalityId?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-12">
+                <Controller
+                  name="address"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Dirección *</Form.Label>
+                      <Form.Control {...field} isInvalid={!!errors.address} />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.address?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="phone"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Teléfono *</Form.Label>
+                      <Form.Control {...field} isInvalid={!!errors.phone} />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.phone?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="email"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Correo *</Form.Label>
+                      <Form.Control {...field} isInvalid={!!errors.email} />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.email?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-12">
+                <Controller
+                  name="description"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Descripción</Form.Label>
+                      <Form.Control as="textarea" rows={2} {...field} isInvalid={!!errors.description} />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.description?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-12">
+                <Controller
+                  name="isActive"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group className="form-check">
+                      <Form.Check
+                        type="checkbox"
+                        label="Proveedor activo"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        isInvalid={!!errors.isActive}
                       />
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.telefono?.message}
-                  </Form.Control.Feedback>
-                  <Form.Text className="text-muted">
-                    Ejemplo: +52 33 1234 5678
-                  </Form.Text>
-                </Form.Group>
-              </div>
-
-              <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    Correo <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Controller
-                    name="correo"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Control
-                        type="email"
-                        placeholder="correo@ejemplo.com"
-                        isInvalid={!!errors.correo}
-                        {...field}
-                      />
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.correo?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
+                      <Form.Control.Feedback type="invalid">
+                        {errors.isActive?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
               </div>
             </div>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Descripción</Form.Label>
-              <Controller
-                name="descripcion"
-                control={control}
-                render={({ field }) => (
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    placeholder="Comentario opcional sobre el proveedor"
-                    isInvalid={!!errors.descripcion}
-                    {...field}
-                  />
-                )}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.descripcion?.message}
-              </Form.Control.Feedback>
-            </Form.Group>
-          </Modal.Body>
-
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              variant="primary" 
-            >
-              {isSubmitting ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                    aria-hidden="true"
-                  ></span>
-                  {isEditing ? "Actualizando..." : "Guardando..."}
-                </>
-              ) : (
-                isEditing ? "Actualizar" : "Guardar"
-              )}
-            </Button>
-          </Modal.Footer>
-        </Form>
+            <div className="d-flex justify-content-end mt-4">
+              <Button variant="secondary" onClick={handleCloseModal} className="me-2">
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary" disabled={isSubmitting || !isValid}>
+                {isSubmitting ? "Guardando..." : isEditing ? "Actualizar" : "Crear"}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
       </Modal>
     </>
   );
