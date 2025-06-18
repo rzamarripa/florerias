@@ -1,11 +1,17 @@
 import { Branch } from "../models/Branch.js";
 import { Brand } from "../models/Brand.js";
+import { Country } from "../models/Country.js";
+import { Municipality } from "../models/Municipality.js";
+import { State } from "../models/State.js";
 
 export const getAll = async (req, res) => {
   try {
     const branches = await Branch.find({ isActive: true })
-      .select("_id name businessName city state")
+      .select("_id name businessName countryId stateId municipalityId")
       .populate("brandId", "_id name")
+      .populate("countryId", "_id name")
+      .populate("stateId", "_id name")
+      .populate("municipalityId", "_id name")
       .sort({ name: 1 });
 
     res.status(200).json({
@@ -24,13 +30,11 @@ export const getAllBranches = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
 
-    const filters = {};
+    const filters = { isActive: true };
     if (search) {
       filters.$or = [
         { name: { $regex: search, $options: "i" } },
         { businessName: { $regex: search, $options: "i" } },
-        { city: { $regex: search, $options: "i" } },
-        { state: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
       ];
@@ -39,6 +43,9 @@ export const getAllBranches = async (req, res) => {
     const total = await Branch.countDocuments(filters);
     const branches = await Branch.find(filters)
       .populate("brandId", "_id name")
+      .populate("countryId", "_id name")
+      .populate("stateId", "_id name")
+      .populate("municipalityId", "_id name")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -64,10 +71,11 @@ export const createBranch = async (req, res) => {
       businessName,
       brandId,
       name,
-      country,
-      state,
-      city,
+      countryId,
+      stateId,
+      municipalityId,
       address,
+      postalCode,
       phone,
       email,
       description,
@@ -81,21 +89,61 @@ export const createBranch = async (req, res) => {
       });
     }
 
+    const country = await Country.findOne({ _id: countryId, isActive: true });
+    if (!country) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected country does not exist or is not active",
+      });
+    }
+
+    const state = await State.findOne({
+      _id: stateId,
+      countryId,
+      isActive: true,
+    });
+    if (!state) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Selected state does not exist or does not belong to the selected country",
+      });
+    }
+
+    const municipality = await Municipality.findOne({
+      _id: municipalityId,
+      stateId,
+      isActive: true,
+    });
+    if (!municipality) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Selected municipality does not exist or does not belong to the selected state",
+      });
+    }
+
     const newBranch = await Branch.create({
       businessName,
       brandId,
       name,
-      country,
-      state,
-      city,
+      countryId,
+      stateId,
+      municipalityId,
       address,
+      postalCode,
       phone,
       email,
       description,
       isActive: true,
     });
 
-    await newBranch.populate("brandId", "_id name");
+    await newBranch.populate([
+      { path: "brandId", select: "_id name" },
+      { path: "countryId", select: "_id name" },
+      { path: "stateId", select: "_id name" },
+      { path: "municipalityId", select: "_id name" },
+    ]);
 
     res.status(201).json({
       success: true,
@@ -121,10 +169,11 @@ export const updateBranch = async (req, res) => {
       businessName,
       brandId,
       name,
-      country,
-      state,
-      city,
+      countryId,
+      stateId,
+      municipalityId,
       address,
+      postalCode,
       phone,
       email,
       description,
@@ -138,22 +187,62 @@ export const updateBranch = async (req, res) => {
       });
     }
 
+    const country = await Country.findOne({ _id: countryId, isActive: true });
+    if (!country) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected country does not exist or is not active",
+      });
+    }
+
+    const state = await State.findOne({
+      _id: stateId,
+      countryId,
+      isActive: true,
+    });
+    if (!state) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Selected state does not exist or does not belong to the selected country",
+      });
+    }
+
+    const municipality = await Municipality.findOne({
+      _id: municipalityId,
+      stateId,
+      isActive: true,
+    });
+    if (!municipality) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Selected municipality does not exist or does not belong to the selected state",
+      });
+    }
+
     const updatedBranch = await Branch.findByIdAndUpdate(
       id,
       {
         businessName,
         brandId,
         name,
-        country,
-        state,
-        city,
+        countryId,
+        stateId,
+        municipalityId,
         address,
+        postalCode,
         phone,
         email,
         description,
       },
       { new: true }
-    ).populate("brandId", "_id name");
+    ).populate([
+      { path: "brandId", select: "_id name" },
+      { path: "countryId", select: "_id name" },
+      { path: "stateId", select: "_id name" },
+      { path: "municipalityId", select: "_id name" },
+    ]);
 
     if (!updatedBranch) {
       return res.status(404).json({
@@ -182,19 +271,6 @@ export const updateBranch = async (req, res) => {
 export const deleteBranch = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // TODO: Check if branch has relationships with other models
-    // Example: products, employees, sales, etc.
-    // const relatedCount = await SomeModel.countDocuments({
-    //   branchId: id,
-    //   isActive: true,
-    // });
-    // if (relatedCount > 0) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: `Cannot delete branch because it has ${relatedCount} associated record(s)`,
-    //   });
-    // }
 
     const deletedBranch = await Branch.findByIdAndUpdate(
       id,

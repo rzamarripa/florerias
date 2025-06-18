@@ -8,11 +8,9 @@ import connectDB from "./config/db.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 
-import { Company } from "./models/Company.js";
 import router from "./routes/index.js";
 
 connectDB();
-Company.seedIfEmpty();
 
 const app = express();
 const PORT = process.env.PORT || 3005;

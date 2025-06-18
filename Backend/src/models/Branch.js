@@ -17,23 +17,20 @@ const branchSchema = new Schema({
     required: true,
     trim: true,
   },
-  // TODO: In the future change to relationship with Country model
-  country: {
-    type: String,
+  countryId: {
+    type: Schema.Types.ObjectId,
+    ref: "cc_country",
     required: true,
-    trim: true,
   },
-  // TODO: In the future change to relationship with State model
-  state: {
-    type: String,
+  stateId: {
+    type: Schema.Types.ObjectId,
+    ref: "cc_state",
     required: true,
-    trim: true,
   },
-  // TODO: In the future change to relationship with City model
-  city: {
-    type: String,
+  municipalityId: {
+    type: Schema.Types.ObjectId,
+    ref: "cc_municipality",
     required: true,
-    trim: true,
   },
   address: {
     type: String,
