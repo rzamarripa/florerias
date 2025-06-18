@@ -11,6 +11,7 @@ import pageRoutes from "./pageRoutes.js";
 import roleRoutes from "./roleRoutes.js";
 import stateRoutes from "./stateRoutes.js";
 import userRoutes from "./userRoutes.js";
+import providerRoutes from "./providerRoutes.js";
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use("/categories", categoryRoutes);
 router.use("/countries", countryRoutes);
 router.use("/states", stateRoutes);
 router.use("/municipalities", municipalityRoutes);
+router.use("/providers", providerRoutes);
 
 export default router;
