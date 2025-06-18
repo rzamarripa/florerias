@@ -22,17 +22,6 @@ interface StateModalProps {
     };
 }
 
-const stateService = {
-    create: async (data: StateFormData) => {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return { success: true, message: "Estado creado exitosamente" };
-    },
-
-    update: async (id: string, data: StateFormData) => {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return { success: true, message: "Estado actualizado exitosamente" };
-    }
-};
 
 const StateModal: React.FC<StateModalProps> = ({
     mode,
@@ -83,27 +72,7 @@ const StateModal: React.FC<StateModalProps> = ({
 
     const onSubmit = async (data: StateFormData) => {
         try {
-            const stateData: StateFormData = {
-                name: data.name.trim(),
-                country: data.country.trim(),
-            };
-
-            let response;
-            if (isEditing && editingState) {
-                response = await stateService.update(editingState._id, stateData);
-            } else {
-                response = await stateService.create(stateData);
-            }
-
-            if (response.success) {
-                const action = isEditing ? "actualizado" : "creado";
-                toast.success(`Estado "${stateData.name}" ${action} exitosamente`);
-                onStateSaved?.();
-                handleCloseModal();
-            } else {
-                const errorMessage = response.message || `Error al ${isEditing ? 'actualizar' : 'crear'} el estado`;
-                toast.error(errorMessage);
-            }
+            console.log(data);
         } catch (error: any) {
             console.error("Error in state operation:", error);
 
