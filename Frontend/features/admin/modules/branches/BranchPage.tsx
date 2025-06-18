@@ -1,81 +1,60 @@
-"use client"
+"use client";
+
 import { FileText, Search } from "lucide-react";
-import React, { useState } from "react";
-import {  Form, Table } from "react-bootstrap";
+import React, { useEffect, useState } from "react";
+import { Form, Table } from "react-bootstrap";
 import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
+import { toast } from "react-toastify";
 import BranchModal from "./components/BranchModal";
-import { Sucursal } from "./types";
+import { branchService } from "./services/branch";
+import { Branch } from "./types";
 
-
-const SucursalesTable: React.FC = () => {
+const BranchPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("todos");
-
-  // Datos mock para demostración (sin servicios)
-  const [sucursales] = useState<Sucursal[]>([
-    {
-      _id: "1",
-      nombre: "Sucursal Centro",
-      razonSocial: "Razón social SA de CV",
-      marca: "Marca Principal",
-      pais: "México",
-      estado: "Jalisco",
-      ciudad: "Guadalajara",
-      direccion: "Av. Vallarta 1234, Col. Americana",
-      telefono: "+52 33 1234 5678",
-      correo: "centro@empresa.com",
-      descripcion: "Sucursal principal en el centro de la ciudad",
-      status: true,
-      createdAt: "2024-01-15T10:30:00Z",
-      updatedAt: "2024-01-15T10:30:00Z"
-    },
-    {
-      _id: "2",
-      nombre: "Sucursal Norte",
-      razonSocial: "Empresa Nacional S.A.",
-      marca: "Marca Secundaria",
-      pais: "México",
-      estado: "Jalisco",
-      ciudad: "Zapopan",
-      direccion: "Av. López Mateos 5678, Col. Providencia",
-      telefono: "+52 33 9876 5432",
-      correo: "norte@empresa.com",
-      descripcion: "Sucursal en zona norte",
-      status: false,
-      createdAt: "2024-02-10T14:20:00Z",
-      updatedAt: "2024-02-10T14:20:00Z"
-    },
-    {
-      _id: "3",
-      nombre: "Sucursal Sur",
-      razonSocial: "Corporativo Internacional S. de R.L.",
-      marca: "Marca Premium",
-      pais: "México",
-      estado: "Jalisco",
-      ciudad: "Tlaquepaque",
-      direccion: "Carretera a Chapala 9012, Col. Mirasol",
-      telefono: "+52 33 5555 1111",
-      correo: "sur@empresa.com",
-      descripcion: "",
-      status: true,
-      createdAt: "2024-03-05T09:15:00Z",
-      updatedAt: "2024-03-05T09:15:00Z"
-    }
-  ]);
-
-  const filteredSucursales: Sucursal[] = sucursales.filter((sucursal: Sucursal) => {
-    const matchesSearch: boolean =
-      sucursal.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sucursal.razonSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sucursal.ciudad.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sucursal.correo.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType: boolean =
-      selectedType === "todos" ||
-      (selectedType === "activos" && sucursal.status) ||
-      (selectedType === "inactivos" && !sucursal.status);
-    return matchesSearch && matchesType;
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
   });
+
+  const fetchBranches = async (
+    isInitialLoad: boolean = false,
+    page: number = pagination.page
+  ) => {
+    try {
+      if (isInitialLoad) {
+        setLoading(true);
+      }
+      const res = await branchService.getAll({
+        page,
+        limit: pagination.limit,
+        ...(searchTerm && { search: searchTerm }),
+      });
+      if (res.data) {
+        setBranches(res.data);
+      }
+      if (res.pagination) {
+        setPagination(res.pagination);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error al cargar las sucursales");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBranches(true, 1);
+  }, [searchTerm]);
+
+  const handlePageChange = (page: number) => {
+    fetchBranches(true, page);
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
@@ -85,17 +64,50 @@ const SucursalesTable: React.FC = () => {
     setSelectedType(e.target.value);
   };
 
-  const handleToggleSucursal = async (id: string) => {
-    console.log(`Toggle sucursal status for ID: ${id}`);
+  const handleToggleSucursal = async (branch: Branch) => {
+    try {
+      if (branch.isActive) {
+        await branchService.delete(branch._id);
+        toast.success(`Sucursal "${branch.name}" desactivada correctamente`);
+      } else {
+        await branchService.activate(branch._id);
+        toast.success(`Sucursal "${branch.name}" activada correctamente`);
+      }
+      fetchBranches(false);
+    } catch (error: any) {
+      const action = branch.isActive ? "desactivar" : "activar";
+      toast.error(
+        `Error al ${action} la sucursal "${branch.name}": ${error.message}`
+      );
+    }
   };
 
   const isSucursalActive = (id: string) => {
-    return sucursales.find((sucursal) => sucursal._id === id)?.status;
+    return branches.find((branch) => branch._id === id)?.isActive;
   };
 
   const handleSucursalSaved = () => {
-    console.log("Sucursal saved, would refresh data here");
+    fetchBranches(false);
   };
+
+  const filteredBranches: Branch[] = branches.filter((branch: Branch) => {
+    const matchesSearch: boolean =
+      branch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (typeof branch.companyId === "object" &&
+        branch.companyId.name
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase())) ||
+      (typeof branch.municipalityId === "object" &&
+        branch.municipalityId.name
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase())) ||
+      branch.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType: boolean =
+      selectedType === "todos" ||
+      (selectedType === "activos" && branch.isActive) ||
+      (selectedType === "inactivos" && !branch.isActive);
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="row">
@@ -161,117 +173,142 @@ const SucursalesTable: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredSucursales.map((sucursal: Sucursal, index: number) => (
-                  <tr key={sucursal._id}>
-                    <td className="text-center">
-                      <span className="text-muted fw-medium">
-                        {index + 1}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <div className="d-flex flex-column">
-                        <span className="fw-medium text-dark">
-                          {sucursal.nombre}
-                        </span>
-                        {sucursal.descripcion && (
-                          <small className="text-muted">
-                            {sucursal.descripcion}
-                          </small>
-                        )}
-                      </div>
-                    </td>
-                    <td className="text-center">
-                      <span className="text-dark">
-                        {sucursal.razonSocial}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <span className="badge bg-primary bg-opacity-10 text-primary">
-                        {sucursal.marca}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <div className="d-flex flex-column">
-                        <span className="fw-medium text-dark">
-                          {sucursal.ciudad}, {sucursal.estado}
-                        </span>
-                        <small className="text-muted">
-                          {sucursal.pais}
-                        </small>
-                        {sucursal.direccion && (
-                          <small className="text-muted">
-                            {sucursal.direccion.length > 30 
-                              ? `${sucursal.direccion.substring(0, 30)}...` 
-                              : sucursal.direccion}
-                          </small>
-                        )}
-                      </div>
-                    </td>
-                    <td className="text-center">
-                      <div className="d-flex flex-column">
-                        <span className="text-dark">
-                          {sucursal.telefono}
-                        </span>
-                        <small className="text-muted">
-                          {sucursal.correo}
-                        </small>
-                      </div>
-                    </td>
-                    <td className="text-center">
-                      <span
-                        className={`badge fs-6 ${
-                          sucursal.status
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                        }`}
-                      >
-                        {sucursal.status ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <span>
-                        {new Date(sucursal.createdAt).toLocaleDateString(
-                          "es-ES",
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <div className="d-flex justify-content-center gap-1">
-                        {/* Botón autocontenido para editar sucursal */}
-                        <BranchModal
-                          mode="edit"
-                          editingSucursal={sucursal}
-                          onSucursalSaved={handleSucursalSaved}
-                        />
-                        
-                        <button
-                          className="btn btn-light btn-icon btn-sm rounded-circle"
-                          title={
-                            isSucursalActive(sucursal._id)
-                              ? "Desactivar sucursal"
-                              : "Activar sucursal"
-                          }
-                          onClick={() => handleToggleSucursal(sucursal._id)}
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-4">
+                      <div className="d-flex flex-column align-items-center">
+                        <div
+                          className="spinner-border text-primary mb-2"
+                          role="status"
                         >
-                          {isSucursalActive(sucursal._id) ? (
-                            <FiTrash2 size={16} />
-                          ) : (
-                            <BsCheck2 size={16} />
-                          )}
-                        </button>
+                          <span className="visually-hidden">Cargando...</span>
+                        </div>
+                        <p className="text-muted mb-0 small">
+                          Cargando sucursales...
+                        </p>
                       </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredBranches.map((branch: Branch, index: number) => (
+                    <tr key={branch._id}>
+                      <td className="text-center">
+                        <span className="text-muted fw-medium">
+                          {index + 1}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <div className="d-flex flex-column">
+                          <span className="fw-medium text-dark">
+                            {branch.name}
+                          </span>
+                          {branch.description && (
+                            <small className="text-muted">
+                              {branch.description}
+                            </small>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-center">
+                        <span className="text-dark">
+                          {typeof branch.companyId === "object"
+                            ? branch.companyId.name
+                            : ""}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <span className="badge bg-primary bg-opacity-10 text-primary">
+                          {typeof branch.brandId === "object"
+                            ? branch.brandId.name
+                            : ""}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <div className="d-flex flex-column">
+                          <span className="fw-medium text-dark">
+                            {typeof branch.municipalityId === "object"
+                              ? branch.municipalityId.name
+                              : ""}
+                            ,{" "}
+                            {typeof branch.stateId === "object"
+                              ? branch.stateId.name
+                              : ""}
+                          </span>
+                          <small className="text-muted">
+                            {typeof branch.countryId === "object"
+                              ? branch.countryId.name
+                              : ""}
+                          </small>
+                          {branch.address && (
+                            <small className="text-muted">
+                              {branch.address.length > 30
+                                ? `${branch.address.substring(0, 30)}...`
+                                : branch.address}
+                            </small>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-center">
+                        <div className="d-flex flex-column">
+                          <span className="text-dark">{branch.phone}</span>
+                          <small className="text-muted">{branch.email}</small>
+                        </div>
+                      </td>
+                      <td className="text-center">
+                        <span
+                          className={`badge fs-6 ${
+                            branch.isActive
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
+                        >
+                          {branch.isActive ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <span>
+                          {new Date(branch.createdAt).toLocaleDateString(
+                            "es-ES",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <div className="d-flex justify-content-center gap-1">
+                          <BranchModal
+                            mode="edit"
+                            editingSucursal={branch as any}
+                            onSucursalSaved={handleSucursalSaved}
+                          />
+
+                          <button
+                            className="btn btn-light btn-icon btn-sm rounded-circle"
+                            title={
+                              isSucursalActive(branch._id)
+                                ? "Desactivar sucursal"
+                                : "Activar sucursal"
+                            }
+                            onClick={() => handleToggleSucursal(branch)}
+                          >
+                            {isSucursalActive(branch._id) ? (
+                              <FiTrash2 size={16} />
+                            ) : (
+                              <BsCheck2 size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </Table>
 
-            {filteredSucursales.length === 0 && (
+            {!loading && filteredBranches.length === 0 && (
               <div className="text-center py-5">
                 <FileText size={48} className="text-muted mb-3" />
                 <h5 className="text-muted">No se encontraron sucursales</h5>
@@ -285,8 +322,43 @@ const SucursalesTable: React.FC = () => {
 
             <div className="d-flex justify-content-between align-items-center p-3 border-top">
               <span className="text-muted">
-                Mostrando {filteredSucursales.length} registros
+                Mostrando {branches.length} de {pagination.total} registros
               </span>
+              <div className="d-flex gap-1">
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  disabled={pagination.page === 1}
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                >
+                  Anterior
+                </button>
+                {Array.from(
+                  { length: Math.min(5, pagination.pages) },
+                  (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        className={`btn btn-sm ${
+                          pagination.page === pageNum
+                            ? "btn-primary"
+                            : "btn-outline-secondary"
+                        }`}
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  }
+                )}
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  disabled={pagination.page === pagination.pages}
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -295,4 +367,4 @@ const SucursalesTable: React.FC = () => {
   );
 };
 
-export default SucursalesTable;
+export default BranchPage;

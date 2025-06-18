@@ -2,16 +2,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
-import { BsPencil } from "react-icons/bs";
 import { Controller, useForm } from "react-hook-form";
+import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
 import { SucursalFormData, sucursalSchema } from "../schemas/BranchSchema";
-import { Sucursal } from "../types";
+import { branchService } from "../services/branch";
+import { Brand, brandsService } from "../services/brands";
+import { companiesService, Company } from "../services/companies";
+import { countriesService, Country } from "../services/countries";
+import {
+  municipalitiesService,
+  Municipality,
+} from "../services/municipalities";
+import { State, statesService } from "../services/states";
+import { Branch } from "../types";
 
 interface BranchModal {
   mode: "create" | "edit";
   onSucursalSaved?: () => void;
-  editingSucursal?: Sucursal | null;
+  editingSucursal?: Branch | null;
   buttonProps?: {
     variant?: string;
     size?: "sm" | "lg";
@@ -40,7 +49,7 @@ const BranchModal: React.FC<BranchModal> = ({
     resolver: zodResolver(sucursalSchema),
     defaultValues: {
       nombre: "",
-      razonSocial: "",
+      companyId: "",
       marca: "",
       pais: "",
       estado: "",
@@ -53,25 +62,58 @@ const BranchModal: React.FC<BranchModal> = ({
     mode: "onChange",
   });
 
-  // Observar cambios en país y estado para resetear campos dependientes
   const paisSeleccionado = watch("pais");
   const estadoSeleccionado = watch("estado");
 
-  // Cargar datos cuando está editando
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [states, setStates] = useState<State[]>([]);
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [loadingBrands, setLoadingBrands] = useState(false);
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingMunicipalities, setLoadingMunicipalities] = useState(false);
+
   useEffect(() => {
     if (showModal) {
       if (isEditing && editingSucursal) {
-        // Cargar datos para edición
-        setValue("nombre", editingSucursal.nombre);
-        setValue("razonSocial", editingSucursal.razonSocial);
-        setValue("marca", editingSucursal.marca);
-        setValue("pais", editingSucursal.pais);
-        setValue("estado", editingSucursal.estado);
-        setValue("ciudad", editingSucursal.ciudad);
-        setValue("direccion", editingSucursal.direccion);
-        setValue("telefono", editingSucursal.telefono);
-        setValue("correo", editingSucursal.correo);
-        setValue("descripcion", editingSucursal.descripcion || "");
+        setValue("nombre", editingSucursal.name);
+        setValue(
+          "companyId",
+          typeof editingSucursal.companyId === "object"
+            ? editingSucursal.companyId._id
+            : editingSucursal.companyId
+        );
+        setValue(
+          "marca",
+          typeof editingSucursal.brandId === "object"
+            ? editingSucursal.brandId._id
+            : editingSucursal.brandId
+        );
+        setValue(
+          "pais",
+          typeof editingSucursal.countryId === "object"
+            ? editingSucursal.countryId._id
+            : editingSucursal.countryId
+        );
+        setValue(
+          "estado",
+          typeof editingSucursal.stateId === "object"
+            ? editingSucursal.stateId._id
+            : editingSucursal.stateId
+        );
+        setValue(
+          "ciudad",
+          typeof editingSucursal.municipalityId === "object"
+            ? editingSucursal.municipalityId._id
+            : editingSucursal.municipalityId
+        );
+        setValue("direccion", editingSucursal.address);
+        setValue("telefono", editingSucursal.phone);
+        setValue("correo", editingSucursal.email);
+        setValue("descripcion", editingSucursal.description || "");
       } else {
         reset();
       }
@@ -91,6 +133,50 @@ const BranchModal: React.FC<BranchModal> = ({
     }
   }, [estadoSeleccionado, setValue]);
 
+  useEffect(() => {
+    if (showModal) {
+      setLoadingCompanies(true);
+      setLoadingBrands(true);
+      setLoadingCountries(true);
+      companiesService
+        .getAll()
+        .then((res) => setCompanies(res.data || []))
+        .finally(() => setLoadingCompanies(false));
+      brandsService
+        .getAll()
+        .then((res) => setBrands(res.data || []))
+        .finally(() => setLoadingBrands(false));
+      countriesService
+        .getAll()
+        .then((res) => setCountries(res.data || []))
+        .finally(() => setLoadingCountries(false));
+    }
+  }, [showModal]);
+
+  useEffect(() => {
+    if (paisSeleccionado) {
+      setLoadingStates(true);
+      statesService
+        .getByCountry(paisSeleccionado)
+        .then((res) => setStates(res.data || []))
+        .finally(() => setLoadingStates(false));
+    } else {
+      setStates([]);
+    }
+  }, [paisSeleccionado]);
+
+  useEffect(() => {
+    if (estadoSeleccionado) {
+      setLoadingMunicipalities(true);
+      municipalitiesService
+        .getByState(estadoSeleccionado)
+        .then((res) => setMunicipalities(res.data || []))
+        .finally(() => setLoadingMunicipalities(false));
+    } else {
+      setMunicipalities([]);
+    }
+  }, [estadoSeleccionado]);
+
   const handleOpenModal = () => {
     setShowModal(true);
   };
@@ -102,89 +188,40 @@ const BranchModal: React.FC<BranchModal> = ({
 
   const onSubmit = async (data: SucursalFormData) => {
     try {
-        console.log(data)
+      const payload = {
+        companyId: data.companyId,
+        brandId: data.marca,
+        name: data.nombre,
+        countryId: data.pais,
+        stateId: data.estado,
+        municipalityId: data.ciudad,
+        address: data.direccion,
+        phone: data.telefono,
+        email: data.correo,
+        description: data.descripcion,
+      };
       if (isEditing && editingSucursal) {
-
+        await branchService.update(editingSucursal._id, {
+          ...payload,
+          _id: editingSucursal._id,
+        });
+        toast.success("Sucursal actualizada correctamente");
       } else {
-
+        await branchService.create(payload);
+        toast.success("Sucursal creada correctamente");
       }
-    } catch (error) {
-      const action = isEditing ? 'actualizar' : 'crear';
-      const errorMessage =
-        error instanceof Error ? error.message : `Error al ${action} la sucursal`;
-      toast.error(errorMessage);
-      console.error(`Error ${action} sucursal:`, error);
+      setShowModal(false);
+      reset();
+      if (onSucursalSaved) onSucursalSaved();
+    } catch (error: any) {
+      toast.error(error.message || "Error al guardar la sucursal");
     }
   };
 
-  const razonesSociales = [
-    "Razón social SA de CV",
-    "Empresa Nacional S.A.",
-    "Corporativo Internacional S. de R.L.",
-    "Grupo Empresarial México S.A.P.I.",
-  ];
-
-  const marcas = [
-    "Marca Principal",
-    "Marca Secundaria", 
-    "Marca Premium",
-    "Marca Económica",
-  ];
-
-  const paises = [
-    "México",
-    "Estados Unidos",
-    "Canadá",
-    "España",
-    "Colombia",
-  ];
-
-  const estadosPorPais: { [key: string]: string[] } = {
-    México: [
-      "Jalisco",
-      "Ciudad de México",
-      "Nuevo León",
-      "Estado de México",
-      "Puebla",
-      "Guanajuato",
-    ],
-    "Estados Unidos": [
-      "California",
-      "Texas", 
-      "Florida",
-      "New York",
-      "Illinois",
-    ],
-    Canadá: [
-      "Ontario",
-      "Quebec",
-      "British Columbia",
-      "Alberta",
-    ],
-    España: [
-      "Madrid",
-      "Barcelona",
-      "Valencia",
-      "Sevilla",
-    ],
-    Colombia: [
-      "Bogotá",
-      "Antioquia",
-      "Valle del Cauca",
-      "Atlántico",
-    ],
-  };
-
-  const ciudadesPorEstado: { [key: string]: string[] } = {
-    Jalisco: ["Guadalajara", "Zapopan", "Tlaquepaque", "Tonalá", "Puerto Vallarta"],
-    "Ciudad de México": ["Benito Juárez", "Miguel Hidalgo", "Cuauhtémoc", "Coyoacán"],
-    "Nuevo León": ["Monterrey", "San Pedro Garza García", "Guadalupe", "Apodaca"],
-    California: ["Los Angeles", "San Francisco", "San Diego", "Sacramento"],
-    Texas: ["Houston", "Dallas", "Austin", "San Antonio"],
-    Ontario: ["Toronto", "Ottawa", "Hamilton", "London"],
-    Madrid: ["Madrid", "Alcalá de Henares", "Móstoles", "Fuenlabrada"],
-    Bogotá: ["Bogotá", "Soacha", "Zipaquirá", "Facatativá"],
-  };
+  // const filteredBrands: Brand[] = brands.filter((brand) => {
+  //   if (!watch("companyId")) return true;
+  //   return brand.companies?.includes(watch("companyId"));
+  // });
 
   const defaultButtonProps = {
     create: {
@@ -196,15 +233,15 @@ const BranchModal: React.FC<BranchModal> = ({
           <Plus size={18} />
           Nueva Sucursal
         </>
-      )
+      ),
     },
     edit: {
       variant: "light",
       size: "sm" as const,
       className: "btn-icon rounded-circle",
       title: "Editar sucursal",
-      children: <BsPencil size={16} />
-    }
+      children: <BsPencil size={16} />,
+    },
   };
 
   const currentButtonConfig = defaultButtonProps[mode];
@@ -222,7 +259,6 @@ const BranchModal: React.FC<BranchModal> = ({
         {finalButtonProps.children}
       </Button>
 
-      {/* Modal */}
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -239,24 +275,25 @@ const BranchModal: React.FC<BranchModal> = ({
                     Razón Social <span className="text-danger">*</span>
                   </Form.Label>
                   <Controller
-                    name="razonSocial"
+                    name="companyId"
                     control={control}
                     render={({ field }) => (
                       <Form.Select
                         {...field}
-                        isInvalid={!!errors.razonSocial}
+                        isInvalid={!!errors.companyId}
+                        disabled={loadingCompanies}
                       >
                         <option value="">Seleccionar razón social</option>
-                        {razonesSociales.map((razon) => (
-                          <option key={razon} value={razon}>
-                            {razon}
+                        {companies.map((company) => (
+                          <option key={company._id} value={company._id}>
+                            {company.name}
                           </option>
                         ))}
                       </Form.Select>
                     )}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.razonSocial?.message}
+                    {errors.companyId?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </div>
@@ -273,11 +310,12 @@ const BranchModal: React.FC<BranchModal> = ({
                       <Form.Select
                         {...field}
                         isInvalid={!!errors.marca}
+                        disabled={loadingBrands}
                       >
                         <option value="">Seleccionar marca</option>
-                        {marcas.map((marca) => (
-                          <option key={marca} value={marca}>
-                            {marca}
+                        {brands.map((brand) => (
+                          <option key={brand._id} value={brand._id}>
+                            {brand.name}
                           </option>
                         ))}
                       </Form.Select>
@@ -324,11 +362,12 @@ const BranchModal: React.FC<BranchModal> = ({
                       <Form.Select
                         {...field}
                         isInvalid={!!errors.pais}
+                        disabled={loadingCountries}
                       >
                         <option value="">Seleccionar país</option>
-                        {paises.map((pais) => (
-                          <option key={pais} value={pais}>
-                            {pais}
+                        {countries.map((country) => (
+                          <option key={country._id} value={country._id}>
+                            {country.name}
                           </option>
                         ))}
                       </Form.Select>
@@ -352,14 +391,16 @@ const BranchModal: React.FC<BranchModal> = ({
                       <Form.Select
                         {...field}
                         isInvalid={!!errors.estado}
-                        disabled={!paisSeleccionado}
+                        disabled={loadingStates || !paisSeleccionado}
                       >
                         <option value="">
-                          {paisSeleccionado ? "Seleccionar estado" : "Primero selecciona un país"}
+                          {paisSeleccionado
+                            ? "Seleccionar estado"
+                            : "Primero selecciona un país"}
                         </option>
-                        {(estadosPorPais[paisSeleccionado] || []).map((estado) => (
-                          <option key={estado} value={estado}>
-                            {estado}
+                        {states.map((state) => (
+                          <option key={state._id} value={state._id}>
+                            {state.name}
                           </option>
                         ))}
                       </Form.Select>
@@ -383,14 +424,19 @@ const BranchModal: React.FC<BranchModal> = ({
                       <Form.Select
                         {...field}
                         isInvalid={!!errors.ciudad}
-                        disabled={!estadoSeleccionado}
+                        disabled={loadingMunicipalities || !estadoSeleccionado}
                       >
                         <option value="">
-                          {estadoSeleccionado ? "Seleccionar ciudad" : "Primero selecciona un estado"}
+                          {estadoSeleccionado
+                            ? "Seleccionar ciudad"
+                            : "Primero selecciona un estado"}
                         </option>
-                        {(ciudadesPorEstado[estadoSeleccionado] || []).map((ciudad) => (
-                          <option key={ciudad} value={ciudad}>
-                            {ciudad}
+                        {municipalities.map((municipality) => (
+                          <option
+                            key={municipality._id}
+                            value={municipality._id}
+                          >
+                            {municipality.name}
                           </option>
                         ))}
                       </Form.Select>
@@ -498,12 +544,16 @@ const BranchModal: React.FC<BranchModal> = ({
           </Modal.Body>
 
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal} disabled={isSubmitting}>
+            <Button
+              variant="secondary"
+              onClick={handleCloseModal}
+              disabled={isSubmitting}
+            >
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              variant="primary" 
+            <Button
+              type="submit"
+              variant="primary"
               disabled={isSubmitting || !isValid}
             >
               {isSubmitting ? (
@@ -515,8 +565,10 @@ const BranchModal: React.FC<BranchModal> = ({
                   ></span>
                   {isEditing ? "Actualizando..." : "Guardando..."}
                 </>
+              ) : isEditing ? (
+                "Actualizar"
               ) : (
-                isEditing ? "Actualizar" : "Guardar"
+                "Guardar"
               )}
             </Button>
           </Modal.Footer>

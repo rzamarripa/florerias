@@ -1,24 +1,49 @@
-// types/sucursal.ts
-import { SucursalFormData } from "../schemas/BranchSchema";
-
-export interface Sucursal extends SucursalFormData {
+export interface Branch {
   _id: string;
+  companyId: { _id: string; name: string } | string;
+  brandId: { _id: string; name: string } | string;
+  name: string;
+  countryId: { _id: string; name: string } | string;
+  stateId: { _id: string; name: string } | string;
+  municipalityId: { _id: string; name: string } | string;
+  address: string;
+  phone: string;
+  email: string;
+  description?: string;
+  isActive: boolean;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
-export type CreateSucursalRequest = SucursalFormData;
+export type CreateBranchRequest = Omit<
+  Branch,
+  | "_id"
+  | "createdAt"
+  | "updatedAt"
+  | "isActive"
+  | "companyId"
+  | "brandId"
+  | "countryId"
+  | "stateId"
+  | "municipalityId"
+> & {
+  companyId: string;
+  brandId: string;
+  countryId: string;
+  stateId: string;
+  municipalityId: string;
+};
 
-export interface UpdateSucursalRequest extends Partial<CreateSucursalRequest> {
+export type UpdateBranchRequest = Partial<CreateBranchRequest> & {
   _id: string;
-}
+};
 
 export interface GetSucursalesParams {
   page?: number;
   limit?: number;
   name?: string;
   status?: string;
-  razonSocial?: string;
+  companyId?: string;
   ciudad?: string;
 }
 

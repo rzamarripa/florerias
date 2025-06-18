@@ -1,5 +1,6 @@
 import { Branch } from "../models/Branch.js";
 import { Brand } from "../models/Brand.js";
+import { Company } from "../models/Company.js";
 import { Country } from "../models/Country.js";
 import { Municipality } from "../models/Municipality.js";
 import { State } from "../models/State.js";
@@ -7,7 +8,8 @@ import { State } from "../models/State.js";
 export const getAll = async (req, res) => {
   try {
     const branches = await Branch.find({ isActive: true })
-      .select("_id name businessName countryId stateId municipalityId")
+      .select("_id name companyId countryId stateId municipalityId")
+      .populate("companyId", "_id name")
       .populate("brandId", "_id name")
       .populate("countryId", "_id name")
       .populate("stateId", "_id name")
@@ -42,6 +44,7 @@ export const getAllBranches = async (req, res) => {
 
     const total = await Branch.countDocuments(filters);
     const branches = await Branch.find(filters)
+      .populate("companyId", "_id name")
       .populate("brandId", "_id name")
       .populate("countryId", "_id name")
       .populate("stateId", "_id name")
@@ -68,7 +71,7 @@ export const getAllBranches = async (req, res) => {
 export const createBranch = async (req, res) => {
   try {
     const {
-      businessName,
+      companyId,
       brandId,
       name,
       countryId,
@@ -80,6 +83,14 @@ export const createBranch = async (req, res) => {
       email,
       description,
     } = req.body;
+
+    const company = await Company.findOne({ _id: companyId, isActive: true });
+    if (!company) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected company does not exist or is not active",
+      });
+    }
 
     const brand = await Brand.findOne({ _id: brandId, isActive: true });
     if (!brand) {
@@ -124,7 +135,7 @@ export const createBranch = async (req, res) => {
     }
 
     const newBranch = await Branch.create({
-      businessName,
+      companyId,
       brandId,
       name,
       countryId,
@@ -139,6 +150,7 @@ export const createBranch = async (req, res) => {
     });
 
     await newBranch.populate([
+      { path: "companyId", select: "_id name" },
       { path: "brandId", select: "_id name" },
       { path: "countryId", select: "_id name" },
       { path: "stateId", select: "_id name" },
@@ -166,7 +178,7 @@ export const updateBranch = async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      businessName,
+      companyId,
       brandId,
       name,
       countryId,
@@ -178,6 +190,14 @@ export const updateBranch = async (req, res) => {
       email,
       description,
     } = req.body;
+
+    const company = await Company.findOne({ _id: companyId, isActive: true });
+    if (!company) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected company does not exist or is not active",
+      });
+    }
 
     const brand = await Brand.findOne({ _id: brandId, isActive: true });
     if (!brand) {
@@ -224,7 +244,7 @@ export const updateBranch = async (req, res) => {
     const updatedBranch = await Branch.findByIdAndUpdate(
       id,
       {
-        businessName,
+        companyId,
         brandId,
         name,
         countryId,
@@ -238,6 +258,7 @@ export const updateBranch = async (req, res) => {
       },
       { new: true }
     ).populate([
+      { path: "companyId", select: "_id name" },
       { path: "brandId", select: "_id name" },
       { path: "countryId", select: "_id name" },
       { path: "stateId", select: "_id name" },
