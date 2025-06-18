@@ -6,39 +6,8 @@ import { Form, Table, Spinner, Pagination } from "react-bootstrap";
 import { toast } from "react-toastify";
 import MunicipalityActions from "./components/Actions";
 import MunicipalityModal from "./components/MunicipalityModal";
+import { getAll, deleteMunicipality, activateMunicipality, getAllActives } from "./services/municipalities";
 import { Municipality, MunicipalitySearchParams } from "./types";
-
-
-
-const municipalityService = {
-    getAll: async (params: MunicipalitySearchParams) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const mockData: Municipality[] = [
-            { _id: "1", name: "Culiacán", state: "Sinaloa", country: "México", isActive: true, createdAt: "2025-06-17T10:00:00Z" },
-            { _id: "2", name: "Los Angeles", state: "California", country: "Estados Unidos", isActive: true, createdAt: "2025-06-17T10:00:00Z" },
-            { _id: "3", name: "Toronto", state: "Ontario", country: "Canadá", isActive: false, createdAt: "2025-06-17T10:00:00Z" },
-            { _id: "4", name: "Guadalajara", state: "Jalisco", country: "México", isActive: true, createdAt: "2025-06-17T10:00:00Z" },
-            { _id: "5", name: "Mazatlán", state: "Sinaloa", country: "México", isActive: true, createdAt: "2025-06-17T10:00:00Z" },
-        ];
-
-        return {
-            success: true,
-            data: mockData,
-            pagination: {
-                page: params.page || 1,
-                limit: params.limit || 10,
-                total: mockData.length,
-                pages: Math.ceil(mockData.length / (params.limit || 10))
-            }
-        };
-    },
-
-    toggleStatus: async (id: string, currentStatus: boolean) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return { success: true };
-    }
-};
 
 const MunicipalityPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -53,40 +22,49 @@ const MunicipalityPage: React.FC = () => {
         pages: 0,
     });
 
-    const loadMunicipalities = useCallback(async (isInitial: boolean, params?: Partial<MunicipalitySearchParams>) => {
-        try {
-            if (isInitial) {
-                setLoading(true);
-            }
-            const searchParams: MunicipalitySearchParams = {
-                page: params?.page || pagination.page,
-                limit: params?.limit || pagination.limit,
-                search: searchTerm.trim() || undefined,
-                isActive: selectedType === "todos" ? undefined :
-                    selectedType === "activos" ? "true" : "false",
-                ...params,
-            };
-
-            const response = await municipalityService.getAll(searchParams);
-
-            if (response.success) {
-                setMunicipalities(response.data);
-                if (response.pagination) {
-                    setPagination(response.pagination);
+    const loadMunicipalities = useCallback(
+        async (params?: Partial<MunicipalitySearchParams>, isInitial: boolean = false) => {
+            try {
+                if (isInitial) setLoading(true);
+                const searchParams: MunicipalitySearchParams = {
+                    page: params?.page || pagination.page,
+                    limit: params?.limit || pagination.limit,
+                    search: searchTerm.trim() || undefined,
+                    isActive:
+                        selectedType === "todos"
+                            ? undefined
+                            : selectedType === "activos"
+                            ? "true"
+                            : "false",
+                    ...params,
+                };
+                const response = await getAll(searchParams);
+                if (response.success) {
+                    setMunicipalities(response.data);
+                    if (response.pagination) setPagination(response.pagination);
+                } else {
+                    toast.error(response.message || "Error al cargar los municipios");
                 }
-            } else {
-                toast.error("Error al cargar los municipios");
+            } catch (error: any) {
+                toast.error(error.message || "Error al cargar los municipios");
+                console.error("Error loading municipalities:", error);
+            } finally {
+                setLoading(false);
             }
-        } catch (error: any) {
-            toast.error(error.message || "Error al cargar los municipios");
-            console.error("Error loading municipalities:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [pagination.page, pagination.limit, searchTerm, selectedType]);
+        }, [pagination.page, pagination.limit, searchTerm, selectedType]);
 
     useEffect(() => {
-        loadMunicipalities(true);
+        const fetchInitial = async () => {
+            setLoading(true);
+            const response = await getAllActives();
+            if (response.success) {
+                setMunicipalities(response.data);
+            } else {
+                toast.error(response.message || "Error al cargar los municipios");
+            }
+            setLoading(false);
+        };
+        fetchInitial();
     }, []);
 
     useEffect(() => {
@@ -95,7 +73,7 @@ const MunicipalityPage: React.FC = () => {
         }
 
         const timeout = setTimeout(() => {
-            loadMunicipalities(false, { page: 1 });
+            loadMunicipalities({ page: 1 }, true);
         }, searchTerm ? 500 : 0);
 
         setSearchTimeout(timeout);
@@ -114,16 +92,29 @@ const MunicipalityPage: React.FC = () => {
     };
 
     const handlePageChange = (newPage: number) => {
-        loadMunicipalities(false, { page: newPage });
+        loadMunicipalities({ page: newPage }, false);
     };
 
     const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newLimit = parseInt(e.target.value);
-        loadMunicipalities(false, { page: 1, limit: newLimit });
+        loadMunicipalities({ page: 1, limit: newLimit }, false);
     };
 
     const handleMunicipalitySaved = () => {
-        loadMunicipalities(false);
+        loadMunicipalities({ page: pagination.page, limit: pagination.limit }, false);
+    };
+
+    const handleToggleStatus = async (id: string, isActive: boolean) => {
+        try {
+            if (isActive) {
+                await deleteMunicipality(id);
+            } else {
+                await activateMunicipality(id);
+            }
+            loadMunicipalities({ page: pagination.page, limit: pagination.limit }, false);
+        } catch (error: any) {
+            toast.error(error.message || "Error al cambiar el estado del municipio");
+        }
     };
 
     const renderPagination = () => {
@@ -259,14 +250,14 @@ const MunicipalityPage: React.FC = () => {
                                                     <td className="text-center">
                                                         <div className="d-flex justify-content-center align-items-center">
                                                             <span className="fw-medium text-dark">
-                                                                {municipality.country}
+                                                                {municipality.stateId.countryId.name}
                                                             </span>
                                                         </div>
                                                     </td>
                                                     <td className="text-center">
                                                         <div className="d-flex justify-content-center align-items-center">
                                                             <span className="fw-medium text-dark">
-                                                                {municipality.state}
+                                                                {municipality.stateId.name}
                                                             </span>
                                                         </div>
                                                     </td>
@@ -291,6 +282,7 @@ const MunicipalityPage: React.FC = () => {
                                                         <MunicipalityActions
                                                             municipality={municipality}
                                                             onMunicipalitySaved={handleMunicipalitySaved}
+                                                            onToggleStatus={handleToggleStatus}
                                                         />
                                                     </td>
                                                 </tr>

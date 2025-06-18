@@ -5,8 +5,9 @@ import { Button, Form, Modal } from "react-bootstrap";
 import { BsPencil } from "react-icons/bs";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-import { stateSchema, StateFormData, AVAILABLE_COUNTRIES } from "../schemas/stateSchema";
-import { State } from "../types";
+import { stateSchema, StateFormData } from "../schemas/stateSchema";
+import { State, Country } from "../types";
+import { getAllCountries, createState, updateState } from "../services/states";
 
 
 
@@ -31,6 +32,7 @@ const StateModal: React.FC<StateModalProps> = ({
 }) => {
     const [showModal, setShowModal] = useState<boolean>(false);
     const isEditing = mode === "edit";
+    const [countries, setCountries] = useState<Country[]>([]);
 
     const {
         control,
@@ -42,7 +44,7 @@ const StateModal: React.FC<StateModalProps> = ({
         resolver: zodResolver(stateSchema),
         defaultValues: {
             name: "",
-            country: "",
+            countryId: "",
         },
         mode: "onChange",
     });
@@ -51,13 +53,16 @@ const StateModal: React.FC<StateModalProps> = ({
         if (showModal) {
             if (isEditing && editingState) {
                 setValue("name", editingState.name);
-                setValue("country", editingState.country);
+                setValue("countryId", editingState.countryId?._id || "");
             } else {
                 reset({
                     name: "",
-                    country: "",
+                    countryId: "",
                 });
             }
+            getAllCountries().then((data) => {
+                setCountries(data.data);
+            });
         }
     }, [showModal, isEditing, editingState, setValue, reset]);
 
@@ -72,12 +77,22 @@ const StateModal: React.FC<StateModalProps> = ({
 
     const onSubmit = async (data: StateFormData) => {
         try {
-            console.log(data);
+            let response;
+            if (isEditing && editingState) {
+                response = await updateState(editingState._id, data);
+            } else {
+                response = await createState(data);
+            }
+            if (response.success) {
+                toast.success(response.message || (isEditing ? "Estado actualizado" : "Estado creado"));
+                if (onStateSaved) onStateSaved();
+                setShowModal(false);
+            } else {
+                toast.error(response.message || "Error en la operación");
+            }
         } catch (error: any) {
             console.error("Error in state operation:", error);
-
             let errorMessage = `Error al ${isEditing ? 'actualizar' : 'crear'} el estado`;
-
             if (error.response?.status === 400) {
                 errorMessage = error.response.data?.message || "Ya existe este estado en el sistema";
             } else if (error.response?.status === 404) {
@@ -87,7 +102,6 @@ const StateModal: React.FC<StateModalProps> = ({
             } else if (error.message) {
                 errorMessage = error.message;
             }
-
             toast.error(errorMessage);
         }
     };
@@ -167,24 +181,24 @@ const StateModal: React.FC<StateModalProps> = ({
                                 País <span className="text-danger">*</span>
                             </Form.Label>
                             <Controller
-                                name="country"
+                                name="countryId"
                                 control={control}
                                 render={({ field }) => (
                                     <Form.Select
                                         {...field}
-                                        isInvalid={!!errors.country}
+                                        isInvalid={!!errors.countryId}
                                     >
                                         <option value="">Seleccionar país...</option>
-                                        {AVAILABLE_COUNTRIES.map((country) => (
-                                            <option key={country} value={country}>
-                                                {country}
+                                        {countries.map((country) => (
+                                            <option key={country._id} value={country._id}>
+                                                {country.name}
                                             </option>
                                         ))}
                                     </Form.Select>
                                 )}
                             />
                             <Form.Control.Feedback type="invalid">
-                                {errors.country?.message}
+                                {errors.countryId?.message}
                             </Form.Control.Feedback>
                             <Form.Text className="text-muted">
                                 Selecciona el país al que pertenece este estado

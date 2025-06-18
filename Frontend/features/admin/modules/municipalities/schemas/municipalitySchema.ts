@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// Lista de países válidos para validación
 const VALID_COUNTRIES = [
     "Afganistán", "Albania", "Alemania", "Andorra", "Angola", "Argentina", "Armenia", "Australia",
     "Austria", "Azerbaiyán", "Bahamas", "Bangladés", "Barbados", "Bélgica", "Belice", "Benín",
@@ -30,7 +29,6 @@ const VALID_COUNTRIES = [
     "Zambia", "Zimbabue"
 ] as const;
 
-// Lista de estados válidos para validación (ejemplo con algunos estados)
 const VALID_STATES = [
     "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas", "Chihuahua",
     "Coahuila", "Colima", "Durango", "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "México",
@@ -55,20 +53,10 @@ export const municipalitySchema = z.object({
         .min(2, "El nombre del municipio debe tener al menos 2 caracteres")
         .max(100, "El nombre del municipio no puede exceder los 100 caracteres")
         .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s.-]+$/, "El nombre del municipio solo puede contener letras, espacios, puntos y guiones"),
-    state: z
+    stateId: z
         .string()
-        .min(1, "El estado es requerido")
-        .refine(
-            (value) => VALID_STATES.includes(value as any),
-            "Por favor selecciona un estado válido de la lista"
-        ),
-    country: z
-        .string()
-        .min(1, "El país es requerido")
-        .refine(
-            (value) => VALID_COUNTRIES.includes(value as any),
-            "Por favor selecciona un país válido de la lista"
-        ),
+        .min(1, "El estado es requerido"),
+    postalCodes: z.array(z.string()).optional(),
 });
 
 export type MunicipalityFormData = z.infer<typeof municipalitySchema>;

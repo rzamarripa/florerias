@@ -7,42 +7,7 @@ import { toast } from "react-toastify";
 import StateActions from "./components/Actions";
 import StateModal from "./components/StateModal";
 import { State } from "./types";
-
-
-interface StateSearchParams {
-    page?: number;
-    limit?: number;
-    search?: string;
-    isActive?: string;
-}
-
-const stateService = {
-    getAll: async (params: StateSearchParams) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const mockData: State[] = [
-            { _id: "1", name: "Sinaloa", country: "México", isActive: true, createdAt: "2025-06-17T10:00:00Z" },
-            { _id: "2", name: "California", country: "Estados Unidos", isActive: true, createdAt: "2025-06-17T10:00:00Z" },
-            { _id: "3", name: "Ontario", country: "Canadá", isActive: false, createdAt: "2025-06-17T10:00:00Z" },
-            { _id: "4", name: "Jalisco", country: "México", isActive: true, createdAt: "2025-06-17T10:00:00Z" },
-        ];
-
-        return {
-            success: true,
-            data: mockData,
-            pagination: {
-                page: params.page || 1,
-                limit: params.limit || 10,
-                total: mockData.length,
-                pages: Math.ceil(mockData.length / (params.limit || 10))
-            }
-        };
-    },
-
-    toggleStatus: async (id: string, currentStatus: boolean) => {
-        console.log(id, currentStatus);
-    }
-};
+import { getAll } from "./services/states";
 
 const StatesPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -50,44 +15,27 @@ const StatesPage: React.FC = () => {
     const [states, setStates] = useState<State[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-    const [pagination, setPagination] = useState({
-        page: 1,
-        limit: 10,
-        total: 0,
-        pages: 0,
-    });
+    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
 
-    const loadStates = useCallback(async (isInitial: boolean, params?: Partial<StateSearchParams>) => {
+    const loadStates = useCallback(async (isInitial: boolean = false, params?: { page?: number; limit?: number }) => {
         try {
-            if (isInitial) {
-                setLoading(true);
-            }
-            const searchParams: StateSearchParams = {
-                page: params?.page || pagination.page,
-                limit: params?.limit || pagination.limit,
-                search: searchTerm.trim() || undefined,
-                isActive: selectedType === "todos" ? undefined :
-                    selectedType === "activos" ? "true" : "false",
-                ...params,
-            };
-
-            const response = await stateService.getAll(searchParams);
-
+            if (isInitial) setLoading(true);
+            const page = params?.page || pagination.page;
+            const limit = params?.limit || pagination.limit;
+            const response = await getAll({ page, limit });
             if (response.success) {
                 setStates(response.data);
-                if (response.pagination) {
-                    setPagination(response.pagination);
-                }
+                if (response.pagination) setPagination(response.pagination);
             } else {
-                toast.error("Error al cargar los estados");
+                toast.error(response.message || "Error al cargar los estados");
             }
         } catch (error: any) {
             toast.error(error.message || "Error al cargar los estados");
             console.error("Error loading states:", error);
         } finally {
-            setLoading(false);
+            if (isInitial) setLoading(false);
         }
-    }, [pagination.page, pagination.limit, searchTerm, selectedType]);
+    }, [pagination.page, pagination.limit]);
 
     useEffect(() => {
         loadStates(true);
@@ -99,7 +47,7 @@ const StatesPage: React.FC = () => {
         }
 
         const timeout = setTimeout(() => {
-            loadStates(false, { page: 1 });
+            loadStates();
         }, searchTerm ? 500 : 0);
 
         setSearchTimeout(timeout);
@@ -118,69 +66,18 @@ const StatesPage: React.FC = () => {
     };
 
     const handlePageChange = (newPage: number) => {
+        setPagination((prev) => ({ ...prev, page: newPage }));
         loadStates(false, { page: newPage });
     };
 
     const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newLimit = parseInt(e.target.value);
+        setPagination((prev) => ({ ...prev, page: 1, limit: newLimit }));
         loadStates(false, { page: 1, limit: newLimit });
     };
 
     const handleStateSaved = () => {
-        loadStates(false);
-    };
-
-    const renderPagination = () => {
-        if (pagination.pages <= 1) return null;
-
-        const items = [];
-        const currentPage = pagination.page;
-        const totalPages = pagination.pages;
-
-        items.push(
-            <Pagination.Prev
-                key="prev"
-                disabled={currentPage === 1}
-                onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-            />
-        );
-
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, currentPage + 2);
-
-        if (endPage - startPage < 4) {
-            if (startPage === 1) {
-                endPage = Math.min(totalPages, startPage + 4);
-            } else {
-                startPage = Math.max(1, endPage - 4);
-            }
-        }
-
-        for (let page = startPage; page <= endPage; page++) {
-            items.push(
-                <Pagination.Item
-                    key={page}
-                    active={page === currentPage}
-                    onClick={() => handlePageChange(page)}
-                >
-                    {page}
-                </Pagination.Item>
-            );
-        }
-
-        items.push(
-            <Pagination.Next
-                key="next"
-                disabled={currentPage === totalPages}
-                onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-            />
-        );
-
-        return (
-            <Pagination className="mb-0">
-                {items}
-            </Pagination>
-        );
+        loadStates(false, { page: pagination.page, limit: pagination.limit });
     };
 
     return (
@@ -256,13 +153,13 @@ const StatesPage: React.FC = () => {
                                                 <tr key={state._id}>
                                                     <td className="text-center">
                                                         <span className="text-muted fw-medium">
-                                                            {(pagination.page - 1) * pagination.limit + index + 1}
+                                                            {index + 1}
                                                         </span>
                                                     </td>
                                                     <td className="text-center">
                                                         <div className="d-flex justify-content-center align-items-center">
                                                             <span className="fw-medium text-dark">
-                                                                {state.country}
+                                                                {state.countryId?.name || "-"}
                                                             </span>
                                                         </div>
                                                     </td>
@@ -307,28 +204,45 @@ const StatesPage: React.FC = () => {
                                     )}
                                 </>
                             )}
+                        </div>
 
-                            <div className="d-flex justify-content-between align-items-center p-3 border-top">
-                                <div className="d-flex align-items-center gap-2">
-                                    <span className="text-muted">
-                                        Mostrando {states.length} de {pagination.total} registros
-                                    </span>
-                                    <Form.Select
-                                        size="sm"
-                                        value={pagination.limit}
-                                        onChange={handleLimitChange}
-                                        style={{ width: "auto" }}
-                                        disabled={loading}
-                                    >
-                                        <option value={5}>5 por página</option>
-                                        <option value={10}>10 por página</option>
-                                        <option value={25}>25 por página</option>
-                                        <option value={50}>50 por página</option>
-                                    </Form.Select>
-                                </div>
-
-                                {renderPagination()}
+                        <div className="d-flex justify-content-between align-items-center p-3 border-top">
+                            <div className="d-flex align-items-center gap-2">
+                                <span className="text-muted">
+                                    Mostrando {states.length} de {pagination.total} registros
+                                </span>
+                                <Form.Select
+                                    size="sm"
+                                    value={pagination.limit}
+                                    onChange={handleLimitChange}
+                                    style={{ width: "auto" }}
+                                    disabled={loading}
+                                >
+                                    <option value={5}>5 por página</option>
+                                    <option value={10}>10 por página</option>
+                                    <option value={25}>25 por página</option>
+                                    <option value={50}>50 por página</option>
+                                </Form.Select>
                             </div>
+                            <Pagination className="mb-0">
+                                <Pagination.Prev
+                                    disabled={pagination.page === 1}
+                                    onClick={() => handlePageChange(pagination.page - 1)}
+                                />
+                                {Array.from({ length: pagination.pages }, (_, i) => (
+                                    <Pagination.Item
+                                        key={i + 1}
+                                        active={pagination.page === i + 1}
+                                        onClick={() => handlePageChange(i + 1)}
+                                    >
+                                        {i + 1}
+                                    </Pagination.Item>
+                                ))}
+                                <Pagination.Next
+                                    disabled={pagination.page === pagination.pages}
+                                    onClick={() => handlePageChange(pagination.page + 1)}
+                                />
+                            </Pagination>
                         </div>
                     </div>
                 </div>

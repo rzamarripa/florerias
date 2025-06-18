@@ -36,13 +36,9 @@ export const stateSchema = z.object({
         .min(2, "El nombre del estado debe tener al menos 2 caracteres")
         .max(100, "El nombre del estado no puede exceder los 100 caracteres")
         .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, "El nombre del estado solo puede contener letras y espacios"),
-    country: z
+    countryId: z
         .string()
-        .min(1, "El país es requerido")
-        .refine(
-            (value) => VALID_COUNTRIES.includes(value as any),
-            "Por favor selecciona un país válido de la lista"
-        ),
+        .min(1, "El país es requerido"),
 });
 
 export type StateFormData = z.infer<typeof stateSchema>;

@@ -5,14 +5,9 @@ import { toast } from "react-toastify";
 import { Spinner } from "react-bootstrap";
 import StateModal from "./StateModal";
 import { StateActionsProps } from "../types";
+import { deleteState, activateState } from "../services/states";
 
 
-
-const stateService = {
-    toggleStatus: async (id: string, currentStatus: boolean) => {
-        console.log(id, currentStatus);
-    }
-};
 
 const StateActions: React.FC<StateActionsProps> = ({
     state,
@@ -21,8 +16,14 @@ const StateActions: React.FC<StateActionsProps> = ({
     const [isToggling, setIsToggling] = useState<boolean>(false);
 
     const handleToggleState = async (id: string, currentStatus: boolean) => {
+        setIsToggling(true);
         try {
-            
+            if (currentStatus) {
+                await deleteState(id);
+            } else {
+                await activateState(id);
+            }
+            if (onStateSaved) onStateSaved();
         } catch (error: any) {
             console.error("Error toggling state:", error);
 

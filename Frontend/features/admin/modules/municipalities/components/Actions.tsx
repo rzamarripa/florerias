@@ -1,72 +1,28 @@
 import React, { useState } from "react";
 import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
-import { toast } from "react-toastify";
 import { Spinner } from "react-bootstrap";
 import MunicipalityModal from "./MunicipalityModal";
-
-interface Municipality {
-    _id: string;
-    name: string;
-    state: string;
-    country: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt?: string;
-}
+import { Municipality } from "../types";
 
 interface MunicipalityActionsProps {
     municipality: Municipality;
     onMunicipalitySaved?: () => void;
+    onToggleStatus: (id: string, isActive: boolean) => void;
 }
 
-// Mock service - replace with actual service
-const municipalityService = {
-    toggleStatus: async (id: string, currentStatus: boolean) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return { success: true, message: "Estado actualizado correctamente" };
-    }
-};
 
 const MunicipalityActions: React.FC<MunicipalityActionsProps> = ({
     municipality,
     onMunicipalitySaved,
+    onToggleStatus,
 }) => {
     const [isToggling, setIsToggling] = useState<boolean>(false);
 
-    const handleToggleMunicipality = async (id: string, currentStatus: boolean) => {
-        try {
-            setIsToggling(true);
-
-            const response = await municipalityService.toggleStatus(id, currentStatus);
-
-            if (response.success) {
-                const action = currentStatus ? 'desactivado' : 'activado';
-                toast.success(`Municipio "${municipality.name}" ${action} correctamente`);
-                onMunicipalitySaved?.();
-            } else {
-                const errorMessage = response.message || `Error al ${currentStatus ? 'desactivar' : 'activar'} el municipio`;
-                toast.error(errorMessage);
-            }
-        } catch (error: any) {
-            console.error("Error toggling municipality:", error);
-
-            let errorMessage = `Error al ${currentStatus ? 'desactivar' : 'activar'} el municipio "${municipality.name}"`;
-
-            if (error.response?.status === 400) {
-                errorMessage = error.response.data?.message || errorMessage;
-            } else if (error.response?.status === 404) {
-                errorMessage = "Municipio no encontrado";
-            } else if (error.response?.status >= 500) {
-                errorMessage = "Error interno del servidor. Intenta nuevamente.";
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-
-            toast.error(errorMessage);
-        } finally {
-            setIsToggling(false);
-        }
+    const handleToggle = async () => {
+        setIsToggling(true);
+        await onToggleStatus(municipality._id, municipality.isActive);
+        setIsToggling(false);
     };
 
     const getToggleButtonTitle = () => {
@@ -95,7 +51,7 @@ const MunicipalityActions: React.FC<MunicipalityActionsProps> = ({
             <button
                 className={getToggleButtonClass()}
                 title={getToggleButtonTitle()}
-                onClick={() => handleToggleMunicipality(municipality._id, municipality.isActive)}
+                onClick={handleToggle}
                 disabled={isToggling}
             >
                 {isToggling ? (

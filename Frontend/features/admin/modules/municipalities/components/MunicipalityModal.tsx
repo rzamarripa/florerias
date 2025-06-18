@@ -5,17 +5,9 @@ import { Button, Form, Modal } from "react-bootstrap";
 import { BsPencil } from "react-icons/bs";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-import { municipalitySchema, MunicipalityFormData, AVAILABLE_COUNTRIES, AVAILABLE_STATES } from "../schemas/municipalitySchema";
-
-interface Municipality {
-    _id: string;
-    name: string;
-    state: string;
-    country: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt?: string;
-}
+import { municipalitySchema, MunicipalityFormData } from "../schemas/municipalitySchema";
+import { Municipality } from "../types";
+import { createMunicipality, updateMunicipality } from "../services/municipalities";
 
 interface MunicipalityModalProps {
     mode: "create" | "edit";
@@ -28,19 +20,6 @@ interface MunicipalityModalProps {
         title?: string;
     };
 }
-
-// Mock service - replace with actual service
-const municipalityService = {
-    create: async (data: MunicipalityFormData) => {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return { success: true, message: "Municipio creado exitosamente" };
-    },
-
-    update: async (id: string, data: MunicipalityFormData) => {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return { success: true, message: "Municipio actualizado exitosamente" };
-    }
-};
 
 const MunicipalityModal: React.FC<MunicipalityModalProps> = ({
     mode,
@@ -61,8 +40,8 @@ const MunicipalityModal: React.FC<MunicipalityModalProps> = ({
         resolver: zodResolver(municipalitySchema),
         defaultValues: {
             name: "",
-            state: "",
-            country: "",
+            stateId: "",
+            postalCodes: [],
         },
         mode: "onChange",
     });
@@ -70,14 +49,14 @@ const MunicipalityModal: React.FC<MunicipalityModalProps> = ({
     useEffect(() => {
         if (showModal) {
             if (isEditing && editingMunicipality) {
-                setValue("name", editingMunicipality.name);
-                setValue("state", editingMunicipality.state);
-                setValue("country", editingMunicipality.country);
+                setValue("name", editingMunicipality.name ?? "");
+                setValue("stateId", editingMunicipality.stateId?._id ?? "");
+                setValue("postalCodes", editingMunicipality.postalCodes ?? []);
             } else {
                 reset({
                     name: "",
-                    state: "",
-                    country: "",
+                    stateId: "",
+                    postalCodes: [],
                 });
             }
         }
@@ -94,22 +73,15 @@ const MunicipalityModal: React.FC<MunicipalityModalProps> = ({
 
     const onSubmit = async (data: MunicipalityFormData) => {
         try {
-            const municipalityData: MunicipalityFormData = {
-                name: data.name.trim(),
-                state: data.state.trim(),
-                country: data.country.trim(),
-            };
-
             let response;
             if (isEditing && editingMunicipality) {
-                response = await municipalityService.update(editingMunicipality._id, municipalityData);
+                response = await updateMunicipality(editingMunicipality._id, data);
             } else {
-                response = await municipalityService.create(municipalityData);
+                response = await createMunicipality(data);
             }
-
             if (response.success) {
                 const action = isEditing ? "actualizado" : "creado";
-                toast.success(`Municipio "${municipalityData.name}" ${action} exitosamente`);
+                toast.success(`Municipio "${data.name}" ${action} exitosamente`);
                 onMunicipalitySaved?.();
                 handleCloseModal();
             } else {
@@ -210,56 +182,22 @@ const MunicipalityModal: React.FC<MunicipalityModalProps> = ({
                                 Estado <span className="text-danger">*</span>
                             </Form.Label>
                             <Controller
-                                name="state"
+                                name="stateId"
                                 control={control}
                                 render={({ field }) => (
                                     <Form.Select
                                         {...field}
-                                        isInvalid={!!errors.state}
+                                        isInvalid={!!errors.stateId}
                                     >
                                         <option value="">Seleccionar estado...</option>
-                                        {AVAILABLE_STATES.map((state) => (
-                                            <option key={state} value={state}>
-                                                {state}
-                                            </option>
-                                        ))}
                                     </Form.Select>
                                 )}
                             />
                             <Form.Control.Feedback type="invalid">
-                                {errors.state?.message}
+                                {errors.stateId?.message}
                             </Form.Control.Feedback>
                             <Form.Text className="text-muted">
                                 Selecciona el estado al que pertenece este municipio
-                            </Form.Text>
-                        </Form.Group>
-
-                        <Form.Group className="mb-3">
-                            <Form.Label>
-                                País <span className="text-danger">*</span>
-                            </Form.Label>
-                            <Controller
-                                name="country"
-                                control={control}
-                                render={({ field }) => (
-                                    <Form.Select
-                                        {...field}
-                                        isInvalid={!!errors.country}
-                                    >
-                                        <option value="">Seleccionar país...</option>
-                                        {AVAILABLE_COUNTRIES.map((country) => (
-                                            <option key={country} value={country}>
-                                                {country}
-                                            </option>
-                                        ))}
-                                    </Form.Select>
-                                )}
-                            />
-                            <Form.Control.Feedback type="invalid">
-                                {errors.country?.message}
-                            </Form.Control.Feedback>
-                            <Form.Text className="text-muted">
-                                Selecciona el país al que pertenece este municipio
                             </Form.Text>
                         </Form.Group>
                     </Modal.Body>
