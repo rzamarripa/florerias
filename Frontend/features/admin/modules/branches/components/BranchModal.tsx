@@ -5,22 +5,22 @@ import { Button, Form, Modal } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
-import { SucursalFormData, sucursalSchema } from "../schemas/BranchSchema";
+import { BranchFormData, branchSchema } from "../schemas/BranchSchema";
 import { branchService } from "../services/branch";
 import { Brand, brandsService } from "../services/brands";
-import { companiesService, Company } from "../services/companies";
-import { countriesService, Country } from "../services/countries";
+import { Company, companiesService } from "../services/companies";
+import { Country, countriesService } from "../services/countries";
 import {
-  municipalitiesService,
   Municipality,
+  municipalitiesService,
 } from "../services/municipalities";
 import { State, statesService } from "../services/states";
 import { Branch } from "../types";
 
-interface BranchModal {
+interface BranchModalProps {
   mode: "create" | "edit";
-  onSucursalSaved?: () => void;
-  editingSucursal?: Branch | null;
+  onBranchSaved?: () => void;
+  editingBranch?: Branch | null;
   buttonProps?: {
     variant?: string;
     size?: "sm" | "lg";
@@ -29,10 +29,10 @@ interface BranchModal {
   };
 }
 
-const BranchModal: React.FC<BranchModal> = ({
+const BranchModal: React.FC<BranchModalProps> = ({
   mode,
-  onSucursalSaved,
-  editingSucursal = null,
+  onBranchSaved,
+  editingBranch = null,
   buttonProps = {},
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -45,25 +45,25 @@ const BranchModal: React.FC<BranchModal> = ({
     setValue,
     watch,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<SucursalFormData>({
-    resolver: zodResolver(sucursalSchema),
+  } = useForm<BranchFormData>({
+    resolver: zodResolver(branchSchema),
     defaultValues: {
-      nombre: "",
+      name: "",
       companyId: "",
-      marca: "",
-      pais: "",
-      estado: "",
-      ciudad: "",
-      direccion: "",
-      telefono: "",
-      correo: "",
-      descripcion: "",
+      brandId: "",
+      countryId: "",
+      stateId: "",
+      municipalityId: "",
+      address: "",
+      phone: "",
+      email: "",
+      description: "",
     },
     mode: "onChange",
   });
 
-  const paisSeleccionado = watch("pais");
-  const estadoSeleccionado = watch("estado");
+  const selectedCountry = watch("countryId");
+  const selectedState = watch("stateId");
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -78,60 +78,60 @@ const BranchModal: React.FC<BranchModal> = ({
 
   useEffect(() => {
     if (showModal) {
-      if (isEditing && editingSucursal) {
-        setValue("nombre", editingSucursal.name);
+      if (isEditing && editingBranch) {
+        setValue("name", editingBranch.name);
         setValue(
           "companyId",
-          typeof editingSucursal.companyId === "object"
-            ? editingSucursal.companyId._id
-            : editingSucursal.companyId
+          typeof editingBranch.companyId === "object"
+            ? editingBranch.companyId._id
+            : editingBranch.companyId
         );
         setValue(
-          "marca",
-          typeof editingSucursal.brandId === "object"
-            ? editingSucursal.brandId._id
-            : editingSucursal.brandId
+          "brandId",
+          typeof editingBranch.brandId === "object"
+            ? editingBranch.brandId._id
+            : editingBranch.brandId
         );
         setValue(
-          "pais",
-          typeof editingSucursal.countryId === "object"
-            ? editingSucursal.countryId._id
-            : editingSucursal.countryId
+          "countryId",
+          typeof editingBranch.countryId === "object"
+            ? editingBranch.countryId._id
+            : editingBranch.countryId
         );
         setValue(
-          "estado",
-          typeof editingSucursal.stateId === "object"
-            ? editingSucursal.stateId._id
-            : editingSucursal.stateId
+          "stateId",
+          typeof editingBranch.stateId === "object"
+            ? editingBranch.stateId._id
+            : editingBranch.stateId
         );
         setValue(
-          "ciudad",
-          typeof editingSucursal.municipalityId === "object"
-            ? editingSucursal.municipalityId._id
-            : editingSucursal.municipalityId
+          "municipalityId",
+          typeof editingBranch.municipalityId === "object"
+            ? editingBranch.municipalityId._id
+            : editingBranch.municipalityId
         );
-        setValue("direccion", editingSucursal.address);
-        setValue("telefono", editingSucursal.phone);
-        setValue("correo", editingSucursal.email);
-        setValue("descripcion", editingSucursal.description || "");
+        setValue("address", editingBranch.address);
+        setValue("phone", editingBranch.phone);
+        setValue("email", editingBranch.email);
+        setValue("description", editingBranch.description || "");
       } else {
         reset();
       }
     }
-  }, [showModal, isEditing, editingSucursal, setValue, reset]);
+  }, [showModal, isEditing, editingBranch, setValue, reset]);
 
   useEffect(() => {
-    if (paisSeleccionado) {
-      setValue("estado", "");
-      setValue("ciudad", "");
+    if (selectedCountry) {
+      setValue("stateId", "");
+      setValue("municipalityId", "");
     }
-  }, [paisSeleccionado, setValue]);
+  }, [selectedCountry, setValue]);
 
   useEffect(() => {
-    if (estadoSeleccionado) {
-      setValue("ciudad", "");
+    if (selectedState) {
+      setValue("municipalityId", "");
     }
-  }, [estadoSeleccionado, setValue]);
+  }, [selectedState, setValue]);
 
   useEffect(() => {
     if (showModal) {
@@ -154,28 +154,28 @@ const BranchModal: React.FC<BranchModal> = ({
   }, [showModal]);
 
   useEffect(() => {
-    if (paisSeleccionado) {
+    if (selectedCountry) {
       setLoadingStates(true);
       statesService
-        .getByCountry(paisSeleccionado)
+        .getByCountry(selectedCountry)
         .then((res) => setStates(res.data || []))
         .finally(() => setLoadingStates(false));
     } else {
       setStates([]);
     }
-  }, [paisSeleccionado]);
+  }, [selectedCountry]);
 
   useEffect(() => {
-    if (estadoSeleccionado) {
+    if (selectedState) {
       setLoadingMunicipalities(true);
       municipalitiesService
-        .getByState(estadoSeleccionado)
+        .getByState(selectedState)
         .then((res) => setMunicipalities(res.data || []))
         .finally(() => setLoadingMunicipalities(false));
     } else {
       setMunicipalities([]);
     }
-  }, [estadoSeleccionado]);
+  }, [selectedState]);
 
   const handleOpenModal = () => {
     setShowModal(true);
@@ -186,42 +186,25 @@ const BranchModal: React.FC<BranchModal> = ({
     reset();
   };
 
-  const onSubmit = async (data: SucursalFormData) => {
+  const onSubmit = async (data: BranchFormData) => {
     try {
-      const payload = {
-        companyId: data.companyId,
-        brandId: data.marca,
-        name: data.nombre,
-        countryId: data.pais,
-        stateId: data.estado,
-        municipalityId: data.ciudad,
-        address: data.direccion,
-        phone: data.telefono,
-        email: data.correo,
-        description: data.descripcion,
-      };
-      if (isEditing && editingSucursal) {
-        await branchService.update(editingSucursal._id, {
-          ...payload,
-          _id: editingSucursal._id,
+      if (isEditing && editingBranch) {
+        await branchService.update(editingBranch._id, {
+          ...data,
+          _id: editingBranch._id,
         });
         toast.success("Sucursal actualizada correctamente");
       } else {
-        await branchService.create(payload);
+        await branchService.create(data);
         toast.success("Sucursal creada correctamente");
       }
       setShowModal(false);
       reset();
-      if (onSucursalSaved) onSucursalSaved();
+      if (onBranchSaved) onBranchSaved();
     } catch (error: any) {
       toast.error(error.message || "Error al guardar la sucursal");
     }
   };
-
-  // const filteredBrands: Brand[] = brands.filter((brand) => {
-  //   if (!watch("companyId")) return true;
-  //   return brand.companies?.includes(watch("companyId"));
-  // });
 
   const defaultButtonProps = {
     create: {
@@ -304,12 +287,12 @@ const BranchModal: React.FC<BranchModal> = ({
                     Marca <span className="text-danger">*</span>
                   </Form.Label>
                   <Controller
-                    name="marca"
+                    name="brandId"
                     control={control}
                     render={({ field }) => (
                       <Form.Select
                         {...field}
-                        isInvalid={!!errors.marca}
+                        isInvalid={!!errors.brandId}
                         disabled={loadingBrands}
                       >
                         <option value="">Seleccionar marca</option>
@@ -322,7 +305,7 @@ const BranchModal: React.FC<BranchModal> = ({
                     )}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.marca?.message}
+                    {errors.brandId?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </div>
@@ -333,19 +316,19 @@ const BranchModal: React.FC<BranchModal> = ({
                 Nombre <span className="text-danger">*</span>
               </Form.Label>
               <Controller
-                name="nombre"
+                name="name"
                 control={control}
                 render={({ field }) => (
                   <Form.Control
                     type="text"
                     placeholder="Nombre de la Sucursal"
-                    isInvalid={!!errors.nombre}
+                    isInvalid={!!errors.name}
                     {...field}
                   />
                 )}
               />
               <Form.Control.Feedback type="invalid">
-                {errors.nombre?.message}
+                {errors.name?.message}
               </Form.Control.Feedback>
             </Form.Group>
 
@@ -356,12 +339,12 @@ const BranchModal: React.FC<BranchModal> = ({
                     País <span className="text-danger">*</span>
                   </Form.Label>
                   <Controller
-                    name="pais"
+                    name="countryId"
                     control={control}
                     render={({ field }) => (
                       <Form.Select
                         {...field}
-                        isInvalid={!!errors.pais}
+                        isInvalid={!!errors.countryId}
                         disabled={loadingCountries}
                       >
                         <option value="">Seleccionar país</option>
@@ -374,7 +357,7 @@ const BranchModal: React.FC<BranchModal> = ({
                     )}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.pais?.message}
+                    {errors.countryId?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </div>
@@ -385,16 +368,16 @@ const BranchModal: React.FC<BranchModal> = ({
                     Estado <span className="text-danger">*</span>
                   </Form.Label>
                   <Controller
-                    name="estado"
+                    name="stateId"
                     control={control}
                     render={({ field }) => (
                       <Form.Select
                         {...field}
-                        isInvalid={!!errors.estado}
-                        disabled={loadingStates || !paisSeleccionado}
+                        isInvalid={!!errors.stateId}
+                        disabled={loadingStates || !selectedCountry}
                       >
                         <option value="">
-                          {paisSeleccionado
+                          {selectedCountry
                             ? "Seleccionar estado"
                             : "Primero selecciona un país"}
                         </option>
@@ -407,7 +390,7 @@ const BranchModal: React.FC<BranchModal> = ({
                     )}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.estado?.message}
+                    {errors.stateId?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </div>
@@ -418,16 +401,16 @@ const BranchModal: React.FC<BranchModal> = ({
                     Ciudad <span className="text-danger">*</span>
                   </Form.Label>
                   <Controller
-                    name="ciudad"
+                    name="municipalityId"
                     control={control}
                     render={({ field }) => (
                       <Form.Select
                         {...field}
-                        isInvalid={!!errors.ciudad}
-                        disabled={loadingMunicipalities || !estadoSeleccionado}
+                        isInvalid={!!errors.municipalityId}
+                        disabled={loadingMunicipalities || !selectedState}
                       >
                         <option value="">
-                          {estadoSeleccionado
+                          {selectedState
                             ? "Seleccionar ciudad"
                             : "Primero selecciona un estado"}
                         </option>
@@ -443,7 +426,7 @@ const BranchModal: React.FC<BranchModal> = ({
                     )}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.ciudad?.message}
+                    {errors.municipalityId?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </div>
@@ -454,20 +437,20 @@ const BranchModal: React.FC<BranchModal> = ({
                 Dirección <span className="text-danger">*</span>
               </Form.Label>
               <Controller
-                name="direccion"
+                name="address"
                 control={control}
                 render={({ field }) => (
                   <Form.Control
                     as="textarea"
                     rows={3}
                     placeholder="Dirección completa de la sucursal"
-                    isInvalid={!!errors.direccion}
+                    isInvalid={!!errors.address}
                     {...field}
                   />
                 )}
               />
               <Form.Control.Feedback type="invalid">
-                {errors.direccion?.message}
+                {errors.address?.message}
               </Form.Control.Feedback>
             </Form.Group>
 
@@ -478,19 +461,19 @@ const BranchModal: React.FC<BranchModal> = ({
                     Teléfono <span className="text-danger">*</span>
                   </Form.Label>
                   <Controller
-                    name="telefono"
+                    name="phone"
                     control={control}
                     render={({ field }) => (
                       <Form.Control
                         type="tel"
                         placeholder="Número de teléfono"
-                        isInvalid={!!errors.telefono}
+                        isInvalid={!!errors.phone}
                         {...field}
                       />
                     )}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.telefono?.message}
+                    {errors.phone?.message}
                   </Form.Control.Feedback>
                   <Form.Text className="text-muted">
                     Ejemplo: +52 33 1234 5678
@@ -504,19 +487,19 @@ const BranchModal: React.FC<BranchModal> = ({
                     Correo <span className="text-danger">*</span>
                   </Form.Label>
                   <Controller
-                    name="correo"
+                    name="email"
                     control={control}
                     render={({ field }) => (
                       <Form.Control
                         type="email"
                         placeholder="correo@ejemplo.com"
-                        isInvalid={!!errors.correo}
+                        isInvalid={!!errors.email}
                         {...field}
                       />
                     )}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.correo?.message}
+                    {errors.email?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </div>
@@ -525,20 +508,20 @@ const BranchModal: React.FC<BranchModal> = ({
             <Form.Group className="mb-3">
               <Form.Label>Descripción</Form.Label>
               <Controller
-                name="descripcion"
+                name="description"
                 control={control}
                 render={({ field }) => (
                   <Form.Control
                     as="textarea"
                     rows={3}
                     placeholder="Descripción opcional de la sucursal"
-                    isInvalid={!!errors.descripcion}
+                    isInvalid={!!errors.description}
                     {...field}
                   />
                 )}
               />
               <Form.Control.Feedback type="invalid">
-                {errors.descripcion?.message}
+                {errors.description?.message}
               </Form.Control.Feedback>
             </Form.Group>
           </Modal.Body>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const sucursalSchema = z.object({
-  nombre: z
+export const branchSchema = z.object({
+  name: z
     .string()
     .min(1, "El nombre es requerido")
     .min(2, "El nombre debe tener al menos 2 caracteres")
@@ -14,38 +14,38 @@ export const sucursalSchema = z.object({
     .max(150, "La razón social no puede exceder 150 caracteres")
     .trim(),
 
-  marca: z
+  brandId: z
     .string()
     .min(1, "La marca es requerida")
     .max(50, "La marca no puede exceder 50 caracteres")
     .trim(),
 
-  pais: z
+  countryId: z
     .string()
     .min(1, "El país es requerido")
     .max(50, "El país no puede exceder 50 caracteres")
     .trim(),
 
-  estado: z
+  stateId: z
     .string()
     .min(1, "El estado es requerido")
     .max(50, "El estado no puede exceder 50 caracteres")
     .trim(),
 
-  ciudad: z
+  municipalityId: z
     .string()
     .min(1, "La ciudad es requerida")
     .max(50, "La ciudad no puede exceder 50 caracteres")
     .trim(),
 
-  direccion: z
+  address: z
     .string()
     .min(1, "La dirección es requerida")
     .min(10, "La dirección debe ser más específica (mínimo 10 caracteres)")
     .max(200, "La dirección no puede exceder 200 caracteres")
     .trim(),
 
-  telefono: z
+  phone: z
     .string()
     .min(1, "El teléfono es requerido")
     .min(10, "El teléfono debe tener al menos 10 dígitos")
@@ -56,7 +56,7 @@ export const sucursalSchema = z.object({
     )
     .trim(),
 
-  correo: z
+  email: z
     .string()
     .min(1, "El correo es requerido")
     .email("Debe ser un correo electrónico válido")
@@ -64,7 +64,7 @@ export const sucursalSchema = z.object({
     .toLowerCase()
     .trim(),
 
-  descripcion: z
+  description: z
     .string()
     .max(500, "La descripción no puede exceder 500 caracteres")
     .default("")
@@ -72,9 +72,9 @@ export const sucursalSchema = z.object({
     .optional(),
 });
 
-export const updateSucursalSchema = sucursalSchema.partial().extend({
+export const updateBranchSchema = branchSchema.partial().extend({
   _id: z.string().min(1, "ID es requerido"),
 });
 
-export type SucursalFormData = z.infer<typeof sucursalSchema>;
-export type UpdateSucursalFormData = z.infer<typeof updateSucursalSchema>;
+export type BranchFormData = z.infer<typeof branchSchema>;
+export type UpdateBranchFormData = z.infer<typeof updateBranchSchema>;

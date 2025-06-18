@@ -64,7 +64,7 @@ const BranchPage: React.FC = () => {
     setSelectedType(e.target.value);
   };
 
-  const handleToggleSucursal = async (branch: Branch) => {
+  const handleToggleBranch = async (branch: Branch) => {
     try {
       if (branch.isActive) {
         await branchService.delete(branch._id);
@@ -82,11 +82,11 @@ const BranchPage: React.FC = () => {
     }
   };
 
-  const isSucursalActive = (id: string) => {
+  const isBranchActive = (id: string) => {
     return branches.find((branch) => branch._id === id)?.isActive;
   };
 
-  const handleSucursalSaved = () => {
+  const handleBranchSaved = () => {
     fetchBranches(false);
   };
 
@@ -150,10 +150,7 @@ const BranchPage: React.FC = () => {
                 <option value="inactivos">Sucursales inactivas</option>
               </Form.Select>
 
-              <BranchModal
-                mode="create"
-                onSucursalSaved={handleSucursalSaved}
-              />
+              <BranchModal mode="create" onBranchSaved={handleBranchSaved} />
             </div>
           </div>
 
@@ -281,20 +278,20 @@ const BranchPage: React.FC = () => {
                         <div className="d-flex justify-content-center gap-1">
                           <BranchModal
                             mode="edit"
-                            editingSucursal={branch as any}
-                            onSucursalSaved={handleSucursalSaved}
+                            editingBranch={branch}
+                            onBranchSaved={handleBranchSaved}
                           />
 
                           <button
                             className="btn btn-light btn-icon btn-sm rounded-circle"
                             title={
-                              isSucursalActive(branch._id)
+                              isBranchActive(branch._id)
                                 ? "Desactivar sucursal"
                                 : "Activar sucursal"
                             }
-                            onClick={() => handleToggleSucursal(branch)}
+                            onClick={() => handleToggleBranch(branch)}
                           >
-                            {isSucursalActive(branch._id) ? (
+                            {isBranchActive(branch._id) ? (
                               <FiTrash2 size={16} />
                             ) : (
                               <BsCheck2 size={16} />
