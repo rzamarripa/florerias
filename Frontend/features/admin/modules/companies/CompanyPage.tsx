@@ -62,20 +62,44 @@ const CompaniesPage: React.FC = () => {
   };
 
   const fetchBankAccountsCount = async (companyIds: string[]) => {
-    const counts: Record<string, number> = {};
-    for (const id of companyIds) {
-      const res = await bankAccountsService.getAll({ company: id, limit: 1 });
-      const total =
-        res &&
-        typeof res === "object" &&
-        "pagination" in res &&
-        res.pagination &&
-        typeof res.pagination.total === "number"
-          ? res.pagination.total
-          : 0;
-      counts[id] = total;
+    try {
+      const counts: Record<string, number> = {};
+
+      const promises = companyIds.map(async (id) => {
+        try {
+          const res = await bankAccountsService.getActiveCount({ company: id });
+
+          const count =
+            res &&
+            typeof res === "object" &&
+            "data" in res &&
+            res.data &&
+            typeof res.data === "object" &&
+            "count" in res.data &&
+            typeof (res.data as any).count === "number"
+              ? (res.data as any).count
+              : 0;
+
+          return { id, total: count };
+        } catch (error) {
+          console.error(
+            `Error fetching bank accounts count for company ${id}:`,
+            error
+          );
+          return { id, total: 0 };
+        }
+      });
+
+      const results = await Promise.all(promises);
+
+      results.forEach(({ id, total }) => {
+        counts[id] = total;
+      });
+
+      setBankAccountsCount(counts);
+    } catch (error) {
+      console.error("Error fetching bank accounts count:", error);
     }
-    setBankAccountsCount(counts);
   };
 
   useEffect(() => {

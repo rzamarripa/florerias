@@ -1,57 +1,56 @@
-import { apiCall } from "../../../../../utils/api";
+import { apiCall } from "@/utils/api";
+import { Bank } from "../types";
 
 export const banksService = {
   getAll: async (params: any) => {
     try {
-      // Construir query string
       const query = new URLSearchParams(params).toString();
-      const response = await apiCall(`/banks?${query}`);
+      const response = await apiCall<Bank[]>(`/banks?${query}`);
       return response;
     } catch (error: any) {
-      return { success: false, message: error.message };
+      return { success: false, message: error.message, data: [] };
     }
   },
   create: async (data: any) => {
     try {
-      const response = await apiCall("/banks", {
+      const response = await apiCall<Bank>("/banks", {
         method: "POST",
         body: JSON.stringify(data),
       });
       return response;
     } catch (error: any) {
-      return { success: false, message: error.message };
+      return { success: false, message: error.message, data: [] };
     }
   },
   update: async (id: string, data: any) => {
     try {
-      const response = await apiCall(`/banks/${id}`, {
+      const response = await apiCall<Bank>(`/banks/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
       });
       return response;
     } catch (error: any) {
-      return { success: false, message: error.message };
+      return { success: false, message: error.message, data: [] };
     }
   },
   delete: async (id: string) => {
     try {
-      const response = await apiCall(`/banks/${id}`, {
+      const response = await apiCall<Bank>(`/banks/${id}`, {
         method: "DELETE",
       });
       return response;
     } catch (error: any) {
-      return { success: false, message: error.message };
+      return { success: false, message: error.message, data: [] };
     }
   },
   activate: async (id: string) => {
     try {
-      const response = await apiCall(`/banks/${id}/active`, {
+      const response = await apiCall<Bank>(`/banks/${id}/active`, {
         method: "PUT",
       });
       return response;
     } catch (error: any) {
-      return { success: false, message: error.message };
+      return { success: false, message: error.message, data: [] };
     }
   },
-  // Aquí puedes agregar más métodos (crear, actualizar, eliminar, etc.)
 };

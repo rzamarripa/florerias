@@ -7,6 +7,7 @@ export const getAllBankAccounts = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
     const filters = {};
+
     if (search) {
       filters.$or = [
         { accountNumber: { $regex: search, $options: "i" } },
@@ -17,6 +18,7 @@ export const getAllBankAccounts = async (req, res) => {
     if (req.query.company) {
       filters.company = req.query.company;
     }
+
     const total = await BankAccount.countDocuments(filters);
     const bankAccounts = await BankAccount.find(filters)
       .populate("company", "name")
@@ -143,6 +145,26 @@ export const activateBankAccount = async (req, res) => {
         .json({ success: false, message: "Bank account not found" });
     }
     res.json({ success: true, message: "Bank account activated successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getActiveBankAccountsCount = async (req, res) => {
+  try {
+    const { company } = req.query;
+    const filters = { isActive: true };
+
+    if (company) {
+      filters.company = company;
+    }
+
+    const count = await BankAccount.countDocuments(filters);
+
+    res.status(200).json({
+      success: true,
+      data: { count },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -1,25 +1,14 @@
 "use client";
 
 import { FileText, Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
 import BankAccountActions from "./components/Actions";
 import BankAccountModal from "./components/BankAccountModal";
 import { bankAccountsService } from "./services/bankAccounts";
-import { useRouter, useSearchParams } from "next/navigation";
-
-interface BankAccount {
-  _id: string;
-  company: { _id: string; name: string };
-  bank: { _id: string; name: string };
-  accountNumber: string;
-  clabe: string;
-  branch?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
+import { BankAccount } from "./types";
 
 const BankAccountsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -33,7 +22,8 @@ const BankAccountsPage: React.FC = () => {
   });
   const searchParams = useSearchParams();
   const companyIdFromQuery = searchParams.get("company") || "";
-  const [companyFilter, setCompanyFilter] = useState<string>(companyIdFromQuery);
+  const [companyFilter, setCompanyFilter] =
+    useState<string>(companyIdFromQuery);
 
   const loadBankAccounts = useCallback(
     async (isInitial: boolean, page: number = pagination.page) => {
@@ -57,7 +47,9 @@ const BankAccountsPage: React.FC = () => {
             setPagination((response as any).pagination);
           }
         } else {
-          toast.error(response?.message || "Error al cargar las cuentas bancarias");
+          toast.error(
+            response?.message || "Error al cargar las cuentas bancarias"
+          );
         }
       } catch (error: any) {
         toast.error(error.message || "Error al cargar las cuentas bancarias");
@@ -110,11 +102,18 @@ const BankAccountsPage: React.FC = () => {
                   <Search
                     className="text-muted position-absolute"
                     size={18}
-                    style={{ left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
+                    style={{
+                      left: "0.75rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
                   />
                 </div>
               </div>
-              <BankAccountModal mode="create" onBankAccountSaved={handleBankAccountSaved} />
+              <BankAccountModal
+                mode="create"
+                onBankAccountSaved={handleBankAccountSaved}
+              />
             </div>
             <div className="table-responsive shadow-sm">
               {loading ? (
@@ -130,14 +129,30 @@ const BankAccountsPage: React.FC = () => {
                   >
                     <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                       <tr>
-                        <th className="text-center" style={{ width: "5%" }}>#</th>
-                        <th className="text-center" style={{ width: "20%" }}>Razón Social</th>
-                        <th className="text-center" style={{ width: "15%" }}>Banco</th>
-                        <th className="text-center" style={{ width: "15%" }}>Número de cuenta</th>
-                        <th className="text-center" style={{ width: "15%" }}>Clabe</th>
-                        <th className="text-center" style={{ width: "15%" }}>Sucursal</th>
-                        <th className="text-center" style={{ width: "10%" }}>Estado</th>
-                        <th className="text-center" style={{ width: "10%" }}>Acciones</th>
+                        <th className="text-center" style={{ width: "5%" }}>
+                          #
+                        </th>
+                        <th className="text-center" style={{ width: "20%" }}>
+                          Razón Social
+                        </th>
+                        <th className="text-center" style={{ width: "15%" }}>
+                          Banco
+                        </th>
+                        <th className="text-center" style={{ width: "15%" }}>
+                          Número de cuenta
+                        </th>
+                        <th className="text-center" style={{ width: "15%" }}>
+                          Clabe
+                        </th>
+                        <th className="text-center" style={{ width: "15%" }}>
+                          Sucursal
+                        </th>
+                        <th className="text-center" style={{ width: "10%" }}>
+                          Estado
+                        </th>
+                        <th className="text-center" style={{ width: "10%" }}>
+                          Acciones
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -145,12 +160,18 @@ const BankAccountsPage: React.FC = () => {
                         <tr key={account._id}>
                           <td className="text-center">
                             <span className="text-muted fw-medium">
-                              {(pagination.page - 1) * pagination.limit + index + 1}
+                              {(pagination.page - 1) * pagination.limit +
+                                index +
+                                1}
                             </span>
                           </td>
-                          <td className="text-center">{account.company?.name}</td>
+                          <td className="text-center">
+                            {account.company?.name}
+                          </td>
                           <td className="text-center">{account.bank?.name}</td>
-                          <td className="text-center">{account.accountNumber}</td>
+                          <td className="text-center">
+                            {account.accountNumber}
+                          </td>
                           <td className="text-center">{account.clabe}</td>
                           <td className="text-center">{account.branch}</td>
                           <td className="text-center">
@@ -165,7 +186,10 @@ const BankAccountsPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="text-center">
-                            <BankAccountActions bankAccount={account} onBankAccountSaved={handleBankAccountSaved} />
+                            <BankAccountActions
+                              bankAccount={account}
+                              onBankAccountSaved={handleBankAccountSaved}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -174,7 +198,9 @@ const BankAccountsPage: React.FC = () => {
                   {bankAccounts.length === 0 && (
                     <div className="text-center py-5">
                       <FileText size={48} className="text-muted mb-3" />
-                      <h5 className="text-muted">No se encontraron cuentas bancarias</h5>
+                      <h5 className="text-muted">
+                        No se encontraron cuentas bancarias
+                      </h5>
                       <p className="text-muted">
                         {searchTerm
                           ? "Intenta cambiar los filtros de búsqueda"
@@ -186,7 +212,8 @@ const BankAccountsPage: React.FC = () => {
               )}
               <div className="d-flex justify-content-between align-items-center p-3 border-top">
                 <span className="text-muted">
-                  Mostrando {bankAccounts.length} de {pagination.total} registros
+                  Mostrando {bankAccounts.length} de {pagination.total}{" "}
+                  registros
                 </span>
                 <div className="d-flex gap-1">
                   <Button
@@ -200,7 +227,10 @@ const BankAccountsPage: React.FC = () => {
                   <Button
                     variant="outline-secondary"
                     size="sm"
-                    disabled={pagination.page === pagination.pages || pagination.pages === 0}
+                    disabled={
+                      pagination.page === pagination.pages ||
+                      pagination.pages === 0
+                    }
                     onClick={() => handlePageChange(pagination.page + 1)}
                   >
                     Siguiente
@@ -215,4 +245,4 @@ const BankAccountsPage: React.FC = () => {
   );
 };
 
-export default BankAccountsPage; 
+export default BankAccountsPage;
