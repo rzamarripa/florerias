@@ -2,10 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { Table, Form, Button } from "react-bootstrap";
-import { companiesService, Company } from "./services/companies";
+import { companiesService } from "./services/companies";
+import { Company } from "./types";
 import CompanyModal from "./components/CompanyModal";
 import { Actions } from "./components/Actions";
 import { Search } from "lucide-react";
+import { bankAccountsService } from "../bankAccounts/services/bankAccounts";
+import Link from "next/link";
 
 const CompaniesPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -18,6 +21,7 @@ const CompaniesPage: React.FC = () => {
     pages: 0,
   });
   const [showCreate, setShowCreate] = useState(false);
+  const [bankAccountsCount, setBankAccountsCount] = useState<Record<string, number>>({});
 
   const fetchCompanies = async (isCreating: boolean, page: number = pagination.page) => {
     try {
@@ -53,9 +57,25 @@ const CompaniesPage: React.FC = () => {
     fetchCompanies(false);
   };
 
+  const fetchBankAccountsCount = async (companyIds: string[]) => {
+    const counts: Record<string, number> = {};
+    for (const id of companyIds) {
+      const res = await bankAccountsService.getAll({ company: id, limit: 1 });
+      const total = (res && typeof res === 'object' && 'pagination' in res && res.pagination && typeof res.pagination.total === 'number') ? res.pagination.total : 0;
+      counts[id] = total;
+    }
+    setBankAccountsCount(counts);
+  };
+
   useEffect(() => {
     fetchCompanies(true, 1);
   }, [searchTerm]);
+
+  useEffect(() => {
+    if (companies.length > 0) {
+      fetchBankAccountsCount(companies.map(c => c._id));
+    }
+  }, [companies]);
 
   const handlePageChange = (page: number) => {
     fetchCompanies(true, page);
@@ -101,6 +121,7 @@ const CompaniesPage: React.FC = () => {
                   <th>Representante Legal</th> 
                   <th>RFC</th>
                   <th>Dirección</th>
+                  <th>Cuentas Bancarias</th>
                   <th>Estatus</th>
                   <th className="text-center">Acciones</th>
                 </tr>
@@ -126,6 +147,13 @@ const CompaniesPage: React.FC = () => {
                       <td>{company.rfc}</td> 
                       <td>{company.address}</td>
                       <td>
+                        <Link href={{ pathname: "/catalogos/cuentas-bancarias", query: { company: company._id } }} legacyBehavior>
+                          <a style={{ textDecoration: 'underline', cursor: 'pointer' }}>
+                            {bankAccountsCount[company._id] ?? '0'} Cuentas
+                          </a>
+                        </Link>
+                      </td>
+                      <td>
                         <span
                           className={`badge fs-6 ${company.isActive
                             ? "bg-success bg-opacity-10 text-success"
@@ -137,6 +165,7 @@ const CompaniesPage: React.FC = () => {
                       </td>
                       <td>
                         <Actions
+                          bankAccountsCount={bankAccountsCount}
                           company={company}
                           onToggleStatus={handleToggleStatus}
                           reloadData={fetchCompanies}

@@ -13,6 +13,8 @@ import providerRoutes from "./providerRoutes.js";
 import roleRoutes from "./roleRoutes.js";
 import stateRoutes from "./stateRoutes.js";
 import userRoutes from "./userRoutes.js";
+import bankRoutes from "./bankRoutes.js";
+import bankAccountRoutes from "./bankAccountRoutes.js";
 
 const router = Router();
 
@@ -29,5 +31,7 @@ router.use("/states", stateRoutes);
 router.use("/municipalities", municipalityRoutes);
 router.use("/expense-concept-categories", expenseConceptCategoryRoutes);
 router.use("/providers", providerRoutes);
+router.use("/banks", bankRoutes);
+router.use("/bank-accounts", bankAccountRoutes);
 
 export default router;

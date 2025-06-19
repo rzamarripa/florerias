@@ -79,7 +79,7 @@ export const menuItems: MenuItemType[] = [
         key: "conceptos-de-gastos",
         label: "Conceptos de Gastos",
         url: "/catalogos/conceptos-de-gastos",
-      }
+      },
     ],
   },
   {
