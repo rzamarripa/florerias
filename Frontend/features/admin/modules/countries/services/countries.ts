@@ -55,4 +55,12 @@ export const countriesService = {
       method: "DELETE",
     });
   },
+
+  toggleStatus: async (id: string, currentStatus: boolean) => {
+    if (currentStatus) {
+      return await countriesService.delete(id);
+    } else {
+      return await countriesService.activate(id);
+    }
+  },
 };
