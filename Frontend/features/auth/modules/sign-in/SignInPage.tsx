@@ -63,9 +63,20 @@ const SignInPage = () => {
       });
 
       if (response.success && response.data) {
+        console.debug("Login exitoso, guardando datos:", {
+          user: response.data.user,
+          token: response.data.token ? "Presente" : "Ausente",
+          role: response.data.role,
+          allowedModules: response.data.allowedModules,
+        });
+
         setUser(response.data.user, response.data.token);
         setUserRole(response.data.role);
         setAllowedModules(response.data.allowedModules);
+
+        // Verificar que el token se guardó correctamente
+        const storedToken = useUserSessionStore.getState().token;
+        console.debug("Token almacenado en el store:", storedToken ? "Presente" : "Ausente");
 
         router.push("/dashboard");
       } else {

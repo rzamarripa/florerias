@@ -1,30 +1,39 @@
-import { apiCall } from "@/utils/api";
+import { apiCall, ApiResponse } from "@/utils/api";
 import { Page, Role } from "../types";
 
 export const rolesService = {
-  getAllRoles: async () => {
-    const response = await apiCall<Role[]>("/roles");
-    return response;
+  getAll: async (): Promise<ApiResponse<Role[]>> => {
+    return await apiCall<Role[]>("/roles");
   },
 
-  getPages: async () => {
-    const response = await apiCall<Page[]>(`/pages`);
-    return response;
+  getById: async (id: string): Promise<ApiResponse<Role>> => {
+    return await apiCall<Role>(`/roles/${id}`);
   },
 
-  createRole: async (roleData: { name: string; modules: string[] }) => {
-    const response = await apiCall<Role[]>("/roles", {
+  create: async (data: Partial<Role>): Promise<ApiResponse<Role>> => {
+    return await apiCall<Role>("/roles", {
       method: "POST",
-      body: JSON.stringify(roleData),
+      data,
     });
-    return response;
   },
 
-  updateRole: async (roleId: string, modules: string[]) => {
-    const response = await apiCall<Role>(`/roles/${roleId}`, {
+  update: async (
+    id: string,
+    data: Partial<Role>
+  ): Promise<ApiResponse<Role>> => {
+    return await apiCall<Role>(`/roles/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ modules }),
+      data,
     });
-    return response;
+  },
+
+  delete: async (id: string): Promise<ApiResponse<void>> => {
+    return await apiCall<void>(`/roles/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  getPages: async (): Promise<ApiResponse<Page[]>> => {
+    return await apiCall<Page[]>("/pages");
   },
 };

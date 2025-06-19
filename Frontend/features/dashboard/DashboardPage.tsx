@@ -1,11 +1,30 @@
 "use client";
 
 import { useUserSessionStore } from "@/stores";
-import { Badge, Button, Card, Col, Container, Row } from "react-bootstrap";
+import { Badge, Button, Card, Col, Container, Row, Table, Spinner, Alert } from "react-bootstrap";
 import { HiCheckCircle, HiCog, HiDocumentText, HiUsers } from "react-icons/hi2";
+import { useEffect, useState } from "react";
+import { importLogService } from "./services/importLogService";
 
 const DashboardPage = () => {
   const { user } = useUserSessionStore();
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    importLogService.getAccountsStatusToday()
+      .then((data) => {
+        if (data.success) setAccounts(data.data as any[]);
+        else setError("Error al cargar cuentas");
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Error al cargar cuentas");
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div className="min-vh-100 bg-light py-4">
@@ -162,6 +181,50 @@ const DashboardPage = () => {
                 </Button>
               </Col>
             </Row>
+          </Card.Body>
+        </Card>
+
+        <Card className="shadow-sm mt-4">
+          <Card.Body>
+            <h2 className="h5 fw-semibold text-dark mb-4">
+              Estatus de importación de cuentas bancarias (hoy)
+            </h2>
+            {loading ? (
+              <div className="text-center my-4">
+                <Spinner animation="border" />
+              </div>
+            ) : error ? (
+              <Alert variant="danger">{error}</Alert>
+            ) : (
+              <Table striped bordered hover responsive size="sm">
+                <thead>
+                  <tr>
+                    <th>Razón Social</th>
+                    <th>Banco</th>
+                    <th>Cuenta</th>
+                    <th>CLABE</th>
+                    <th>Importada hoy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accounts.map((acc) => (
+                    <tr key={acc._id}>
+                      <td>{acc.company?.name}</td>
+                      <td>{acc.bank?.name}</td>
+                      <td>{acc.accountNumber}</td>
+                      <td>{acc.clabe}</td>
+                      <td className="text-center">
+                        {acc.importedToday ? (
+                          <Badge bg="success">Sí</Badge>
+                        ) : (
+                          <Badge bg="danger">No</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
           </Card.Body>
         </Card>
       </Container>

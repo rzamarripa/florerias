@@ -38,7 +38,7 @@ const RolesPage: React.FC = () => {
       setLoading(true);
 
       const [rolesResponse, pagesResponse] = await Promise.all([
-        rolesService.getAllRoles(),
+        rolesService.getAll(),
         rolesService.getPages(),
       ]);
 
@@ -123,9 +123,9 @@ const RolesPage: React.FC = () => {
         .filter(([_, isSelected]) => isSelected)
         .map(([moduleId, _]) => moduleId);
 
-      const response = await rolesService.updateRole(
+      const response = await rolesService.update(
         selectedRole._id,
-        selectedModuleIds
+        { modules: selectedModuleIds.map(id => ({ _id: id } as Module)) }
       );
 
       if (response.success) {

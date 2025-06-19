@@ -129,6 +129,21 @@ export const menuItems: MenuItemType[] = [
       { key: "roles", label: "Roles", url: "/gestion/roles" },
       { key: "pages", label: "Páginas", url: "/gestion/paginas" },
       { key: "users", label: "Usuarios", url: "/gestion/usuarios" },
+      { key: "visibility", label: "Visibilidad", url: "/gestion/visibilidad" },
     ],
   },
+  {
+    key: "herramientas-title",
+    label: "Herramientas",
+    isTitle: true,
+  },
+  {
+    key: "importar-movimientos-bancarios",
+    label: "Importar Movimientos Bancarios",
+    icon: TbAlertHexagon,
+    url: "/herramientas/importar-movimientos-bancarios",
+  },
 ];
+
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";

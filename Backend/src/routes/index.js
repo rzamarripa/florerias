@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express from "express";
 
 import branchRoutes from "./branchRoutes.js";
 import brandRoutes from "./brandRoutes.js";
@@ -15,8 +15,11 @@ import stateRoutes from "./stateRoutes.js";
 import userRoutes from "./userRoutes.js";
 import bankRoutes from "./bankRoutes.js";
 import bankAccountRoutes from "./bankAccountRoutes.js";
+import bankMovementRoutes from "./bankMovementRoutes.js";
+import logImportBankMovementsRoutes from "./logImportBankMovementsRoutes.js";
+import roleVisibilityRoutes from "./roleVisibilityRoutes.js";
 
-const router = Router();
+const router = express.Router();
 
 router.use("/users", userRoutes);
 router.use("/roles", roleRoutes);
@@ -33,5 +36,8 @@ router.use("/expense-concept-categories", expenseConceptCategoryRoutes);
 router.use("/providers", providerRoutes);
 router.use("/banks", bankRoutes);
 router.use("/bank-accounts", bankAccountRoutes);
+router.use("/bank-movements", bankMovementRoutes);
+router.use("/log-import-bank-movements", logImportBankMovementsRoutes);
+router.use("/role-visibility", roleVisibilityRoutes);
 
 export default router;
