@@ -182,13 +182,7 @@ const BankMovementsImportPage: React.FC = () => {
                   <option key={b._id} value={b._id}>{b.accountNumber} ({b.bank?.name})</option>
                 ))}
               </Form.Select>
-              {selectedBankAccount && (
-                <div className="mt-2">
-                  <span className="badge bg-info text-dark">
-                    Banco: {bankAccounts.find(b => b._id === selectedBankAccount)?.bank?.name || ""}
-                  </span>
-                </div>
-              )}
+              
             </Form.Group>
           </div>
         </div>

@@ -100,9 +100,9 @@ export const loginUser = async (req, res) => {
       .populate({
         path: "role",
         populate: {
-          path: "ac_module",
+          path: "modules",
           populate: {
-            path: "ac_page",
+            path: "page",
             select: "name path",
           },
         },

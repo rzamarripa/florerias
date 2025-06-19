@@ -26,7 +26,7 @@ export const menuItems: MenuItemType[] = [
       },
       {
         key: "categorias",
-        label: "Categorias",
+        label: "Categorías",
         url: "/catalogos/categories",
       },
       {
