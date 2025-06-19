@@ -3,7 +3,7 @@ import { State, Country } from '../types';
 import { StateFormData } from '../schemas/stateSchema';
 
 export const getAllFiltereds = async (): Promise<ApiResponse<State[]>> => {
-  return apiCall<State[]>(`/states/all`);
+  return await apiCall<State[]>(`/states/all`);
 };
 
 export const getAll = async (params?: { page?: number; limit?: number; search?: string; isActive?: string; }): Promise<ApiResponse<State[]>> => {
