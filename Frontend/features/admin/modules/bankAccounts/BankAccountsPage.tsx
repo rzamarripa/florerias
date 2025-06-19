@@ -1,7 +1,7 @@
 "use client";
 
-import { FileText, Search } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { ArrowLeft, FileText, Search } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -21,6 +21,7 @@ const BankAccountsPage: React.FC = () => {
     pages: 0,
   });
   const searchParams = useSearchParams();
+  const router = useRouter();
   const companyIdFromQuery = searchParams.get("company") || "";
   const [companyFilter, setCompanyFilter] =
     useState<string>(companyIdFromQuery);
@@ -83,8 +84,24 @@ const BankAccountsPage: React.FC = () => {
     loadBankAccounts(false);
   };
 
+  const handleGoBack = () => {
+    router.push("/catalogos/razones-sociales");
+  };
+
   return (
     <div className="container-fluid">
+      {companyFilter && (
+        <div className="mb-1">
+          <Button
+            variant="link"
+            className="d-flex align-items-center gap-1 px-0 text-primary text-decoration-none"
+            onClick={handleGoBack}
+          >
+            <ArrowLeft size={16} className="text-primary" />
+            Atrás
+          </Button>
+        </div>
+      )}
       <div className="row">
         <div className="col-12">
           <div className="card">
