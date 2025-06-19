@@ -6,7 +6,7 @@ import { Form, Table, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
 import StateModal from "./components/StateModal";
 import { State } from "./types";
-import { getAll } from "./services/states";
+import { getAll, toggleStatus } from "./services/states";
 import { FiTrash2 } from "react-icons/fi";
 import { BsCheck2 } from "react-icons/bs";
 
@@ -16,6 +16,7 @@ const StatesPage: React.FC = () => {
     const [states, setStates] = useState<State[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [togglingStates, setTogglingStates] = useState<Set<string>>(new Set());
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 15,
@@ -28,7 +29,19 @@ const StatesPage: React.FC = () => {
             if (isInitial) setLoading(true);
             const page = params?.page || pagination.page;
             const limit = params?.limit || pagination.limit;
-            const response = await getAll({ page, limit });
+            const searchParams: any = { page, limit };
+
+            if (selectedType === "activos") {
+                searchParams.isActive = true;
+            } else if (selectedType === "inactivos") {
+                searchParams.isActive = false;
+            }
+
+            if (searchTerm) {
+                searchParams.search = searchTerm.trim();
+            }
+
+            const response = await getAll(searchParams);
             if (response.success) {
                 setStates(response.data);
                 if (response.pagination) setPagination(response.pagination);
@@ -41,7 +54,7 @@ const StatesPage: React.FC = () => {
         } finally {
             if (isInitial) setLoading(false);
         }
-    }, [pagination.page, pagination.limit]);
+    }, [pagination.page, pagination.limit, searchTerm, selectedType]);
 
     useEffect(() => {
         loadStates(true);
@@ -53,7 +66,7 @@ const StatesPage: React.FC = () => {
         }
 
         const timeout = setTimeout(() => {
-            loadStates();
+            loadStates(false, { page: 1 });
         }, searchTerm ? 500 : 0);
 
         setSearchTimeout(timeout);
@@ -79,9 +92,49 @@ const StatesPage: React.FC = () => {
         loadStates(false, { page: pagination.page, limit: pagination.limit });
     };
 
-    const handleToggleState = (state: State) => {
-        // Implement the logic to toggle the state
-        console.log("Toggling state:", state);
+    const handleToggleState = async (state: State) => {
+        setTogglingStates(prev => new Set(prev).add(state._id));
+        
+        try {
+            const response = await toggleStatus(state._id, state.isActive);
+            if (response.success) {
+                const action = state.isActive ? 'desactivado' : 'activado';
+                toast.success(`Estado "${state.name}" ${action} exitosamente`);
+                
+                // Actualizar el estado local inmediatamente
+                setStates(prevStates => 
+                    prevStates.map(s => 
+                        s._id === state._id 
+                            ? { ...s, isActive: !s.isActive }
+                            : s
+                    )
+                );
+            } else {
+                throw new Error(response.message || `Error al ${state.isActive ? 'desactivar' : 'activar'} el estado`);
+            }
+        } catch (error: any) {
+            console.error("Error toggling state:", error);
+
+            let errorMessage = `Error al ${state.isActive ? 'desactivar' : 'activar'} el estado "${state.name}"`;
+
+            if (error.response?.status === 400) {
+                errorMessage = error.response.data?.message || errorMessage;
+            } else if (error.response?.status === 404) {
+                errorMessage = "Estado no encontrado";
+            } else if (error.response?.status >= 500) {
+                errorMessage = "Error interno del servidor. Intenta nuevamente.";
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            toast.error(errorMessage);
+        } finally {
+            setTogglingStates(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(state._id);
+                return newSet;
+            });
+        }
     };
 
     return (
@@ -206,8 +259,15 @@ const StatesPage: React.FC = () => {
                                                                         : "Activar estado"
                                                                 }
                                                                 onClick={() => handleToggleState(state)}
+                                                                disabled={togglingStates.has(state._id)}
                                                             >
-                                                                {state.isActive ? (
+                                                                {togglingStates.has(state._id) ? (
+                                                                    <Spinner
+                                                                        animation="border"
+                                                                        size="sm"
+                                                                        style={{ width: "16px", height: "16px" }}
+                                                                    />
+                                                                ) : state.isActive ? (
                                                                     <FiTrash2 size={16} />
                                                                 ) : (
                                                                     <BsCheck2 size={16} />

@@ -48,4 +48,12 @@ export const activateState = async (id: string): Promise<ApiResponse<null>> => {
 
 export const getAllCountries = async (): Promise<ApiResponse<Country[]>> => {
   return apiCall<Country[]>(`/countries/all`);
+};
+
+export const toggleStatus = async (id: string, currentStatus: boolean): Promise<ApiResponse<null>> => {
+  if (currentStatus) {
+    return await deleteState(id);
+  } else {
+    return await activateState(id);
+  }
 }; 
