@@ -1,25 +1,21 @@
 "use client";
 
 import { Search } from "lucide-react";
-import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { Role } from "../roles/types";
+import UserActions from "./components/Actions";
 import UserModal from "./components/UserModal";
 import { usersService } from "./services/users";
 import { User } from "./types";
-import { FiTrash2 } from "react-icons/fi";
-import { BsCheck2 } from "react-icons/bs";
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [searchUsersSearch, setSearchUsersTerm] = useState<string>("");
-  const [searchRolesSearch, setSearchRolesTerm] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
@@ -27,91 +23,72 @@ const UsersPage: React.FC = () => {
     pages: 0,
   });
 
-  const fetchRoles = async (page: number = pagination.page) => {
+  const loadRoles = async () => {
     try {
-      const response = await usersService.getAllRoles({
+      const response = await usersService.getAllRoles({ limit: 100 });
+      if (response.data) {
+        setRoles(response.data);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error al cargar los roles");
+      console.error("Error loading roles:", error);
+    }
+  };
+
+  const loadUsers = async (
+    isInitial: boolean,
+    page: number = pagination.page
+  ) => {
+    try {
+      if (isInitial) {
+        setLoading(true);
+      }
+      const response = await usersService.getAllUsers({
         page,
         limit: pagination.limit,
-        ...(searchRolesSearch && { username: searchRolesSearch }),
+        ...(searchTerm && { username: searchTerm }),
+        ...(statusFilter && { estatus: statusFilter }),
       });
 
       if (response.data) {
-        setRoles(response.data);
+        setUsers(response.data);
       }
 
       if (response.pagination) {
         setPagination(response.pagination);
       }
-    } catch (err) {
-      console.error("Error fetching roles:", err);
-      toast.error("Error al cargar los roles");
-    }
-  };
-
-  const fetchUsers = async (
-    page: number = pagination.page,
-    showLoading: boolean = false
-  ) => {
-    try {
-      if (showLoading) {
-        setLoading(true);
-      }
-
-      const data = await usersService.getAllUsers({
-        page,
-        limit: pagination.limit,
-        ...(searchUsersSearch && { username: searchUsersSearch }),
-        ...(statusFilter && { estatus: statusFilter }),
-      });
-      console.log(data.data)
-
-      if (data.data) {
-        setUsers(data.data);
-      }
-
-      if (data.pagination) {
-        setPagination(data.pagination);
-      }
-    } catch (err) {
-      console.error("Error fetching users:", err);
-      toast.error("Error al cargar los usuarios");
+    } catch (error: any) {
+      toast.error(error.message || "Error al cargar los usuarios");
+      console.error("Error loading users:", error);
     } finally {
-      if (showLoading) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUsers(1, true);
-  }, [searchUsersSearch, statusFilter]);
+    loadRoles();
+  }, []);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchRoles(1);
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  }, [searchRolesSearch]);
+    loadUsers(true, 1);
+  }, [searchTerm, statusFilter]);
 
-  const handlePageChange = (page: number): void => {
-    fetchUsers(page, true);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    setSearchTerm(e.target.value);
   };
 
-  const handleToggleUserStatus = async (user: User): Promise<void> => {
-    try {
-      if (user.profile.estatus) {
-        await usersService.deleteUser(user._id);
-        toast.success(`Usuario ${user.username} desactivado correctamente`);
-      } else {
-        await usersService.activateUser(user._id);
-        toast.success(`Usuario ${user.username} activado correctamente`);
-      }
-      fetchUsers(pagination.page, false);
-    } catch (err) {
-      console.error("Error toggling user status:", err);
-      const action = user.profile.estatus ? "desactivar" : "activar";
-      toast.error(`Error al ${action} el usuario ${user.username}`);
-    }
+  const handleStatusFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ): void => {
+    setStatusFilter(e.target.value);
+  };
+
+  const handlePageChange = (page: number) => {
+    loadUsers(true, page);
+  };
+
+  const handleUserSaved = () => {
+    loadUsers(false);
   };
 
   return (
@@ -124,13 +101,10 @@ const UsersPage: React.FC = () => {
                 <Form.Control
                   type="search"
                   placeholder="Buscar usuarios..."
-                  value={searchUsersSearch}
-                  onChange={(e) => setSearchUsersTerm(e.target.value)}
+                  value={searchTerm}
+                  onChange={handleSearchChange}
                   className="shadow-none px-4"
-                  style={{
-                    fontSize: 15,
-                    paddingLeft: "2.5rem",
-                  }}
+                  style={{ fontSize: 15, paddingLeft: "2.5rem" }}
                 />
                 <Search
                   className="text-muted position-absolute"
@@ -142,197 +116,125 @@ const UsersPage: React.FC = () => {
                   }}
                 />
               </div>
-              <button
-                data-table-delete-selected
-                className="btn btn-danger d-none"
-              >
-                Delete
-              </button>
-            </div>
-
-            <div className="d-flex align-items-center gap-2">
-              <Form.Select
-                value={searchRolesSearch}
-                onChange={(e) => setSearchRolesTerm(e.target.value)}
-                style={{ minWidth: "150px" }}
-              >
-                <option value="">Todos los roles</option>
-                {roles.map((role) => (
-                  <option key={role._id} value={role._id}>
-                    {role.name}
-                  </option>
-                ))}
-              </Form.Select>
-
               <Form.Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ minWidth: "150px" }}
+                onChange={handleStatusFilterChange}
+                className="shadow-none"
+                style={{ maxWidth: 150 }}
               >
-                <option value="">Todos los estados</option>
-                <option value="true">Activo</option>
-                <option value="false">Inactivo</option>
+                <option value="">Todos</option>
+                <option value="true">Activos</option>
+                <option value="false">Inactivos</option>
               </Form.Select>
-
-              <UserModal
-                roles={roles}
-                onSuccess={() => fetchUsers(pagination.page, false)}
-              />
             </div>
+            <UserModal roles={roles} onSuccess={handleUserSaved} />
           </div>
-
           <div className="table-responsive shadow-sm">
-            <Table className="table table-custom table-centered table-select table-hover w-100 mb-0">
+            <Table className="table table-custom table-centered table-hover w-100 mb-0">
               <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
-                  <th className="text-center">#</th>
+                  <th>#</th>
+                  <th>Usuario</th>
                   <th>Nombre</th>
-                  <th>Correo</th>
+                  <th>Departamento</th>
                   <th>Rol</th>
-                  <th className="text-center">Estatus</th>
-                  <th className="text-center text-nowrap">Fecha creación</th>
+                  <th>Estado</th>
                   <th className="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-4">
+                    <td colSpan={7} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
                         <div
-                          className="spinner-border text-primary"
+                          className="spinner-border text-primary mb-2"
                           role="status"
-                        />
-                        <span className="mt-2">Cargando usuarios...</span>
+                        >
+                          <span className="visually-hidden">Cargando...</span>
+                        </div>
+                        <p className="text-muted mb-0 small">
+                          Cargando usuarios...
+                        </p>
                       </div>
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-4">
-                      No hay usuarios registrados
                     </td>
                   </tr>
                 ) : (
                   users.map((user, index) => (
                     <tr key={user._id}>
-                      <td className="text-center">{index + 1}</td>
                       <td>
-                        <div className="d-flex align-items-center gap-2">
-                          {user?.profile?.image?.data ? (
-                            <div
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "50%",
-                                overflow: "hidden",
-                                border: "2px solid #e9ecef",
-                                position: "relative",
-                              }}
-                            >
-                              <Image
-                                src={`data:${user.profile.image.contentType};base64,${user.profile.image.data}`}
-                                alt={user.username}
-                                fill
-                                style={{
-                                  objectFit: "cover",
-                                }}
-                                sizes="32px"
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "50%",
-                                fontSize: "14px",
-                              }}
-                            >
-                              {user.profile?.name?.charAt(0).toUpperCase() || user.username.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div className="fw-medium">{user.profile?.name || user.username}</div>
-                            <div className="text-muted small">{user.profile?.fullName}</div>
-                          </div>
-                        </div>
+                        {(pagination.page - 1) * pagination.limit + index + 1}
                       </td>
                       <td>{user.username}</td>
-                      <td>{typeof user.role === 'object' ? user.role.name : 'Sin rol'}</td>
-                      <td className="text-center">
+                      <td>{user.profile.fullName}</td>
+                      <td>{user.department || "-"}</td>
+                      <td>
+                        {typeof user.role === "object"
+                          ? user.role.name
+                          : user.role || "-"}
+                      </td>
+                      <td>
                         <span
-                          className={`badge ${
-                            user.profile?.estatus
-                              ? "bg-success-subtle text-success"
-                              : "bg-danger-subtle text-danger"
+                          className={`badge fs-6 ${
+                            user.profile.estatus
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
                           }`}
                         >
-                          {user.profile?.estatus ? "Activo" : "Inactivo"}
+                          {user.profile.estatus ? "Activo" : "Inactivo"}
                         </span>
                       </td>
-                      <td className="text-center">
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="text-center">
-                        <div className="d-flex justify-content-center gap-1">
-                          <UserModal
-                            user={user}
-                            roles={roles}
-                            onSuccess={() => fetchUsers(pagination.page, false)}
-                          />
-                          <button
-                            className="btn btn-light btn-icon btn-sm rounded-circle"
-                            onClick={() => handleToggleUserStatus(user)}
-                            title={
-                              user.profile?.estatus
-                                ? "Desactivar usuario"
-                                : "Activar usuario"
-                            }
-                          >
-                            {user.profile?.estatus ? (
-                              <FiTrash2 size={16} />
-                            ) : (
-                              <BsCheck2 size={16} />
-                            )}
-                          </button>
-                        </div>
+                      <td>
+                        <UserActions
+                          user={user}
+                          roles={roles}
+                          onUserSaved={handleUserSaved}
+                        />
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </Table>
-
-            <div className="d-flex justify-content-between align-items-center p-3 border-top">
-              <span className="text-muted">
-                Mostrando {users.length} de {pagination.total} registros
-              </span>
-              <div className="d-flex gap-1">
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  disabled={pagination.page === 1}
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                >
-                  {pagination.page}
-                </Button>
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  disabled={pagination.page === pagination.pages}
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                >
-                  Siguiente
-                </Button>
-              </div>
+          </div>
+          <div className="d-flex justify-content-between align-items-center p-3 border-top">
+            <span className="text-muted">
+              Mostrando {users.length} de {pagination.total} registros
+            </span>
+            <div className="d-flex gap-1">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                disabled={pagination.page === 1}
+                onClick={() => handlePageChange(pagination.page - 1)}
+              >
+                Anterior
+              </Button>
+              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={
+                      pagination.page === pageNum
+                        ? "primary"
+                        : "outline-secondary"
+                    }
+                    size="sm"
+                    onClick={() => handlePageChange(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                disabled={pagination.page === pagination.pages}
+                onClick={() => handlePageChange(pagination.page + 1)}
+              >
+                Siguiente
+              </Button>
             </div>
           </div>
         </div>

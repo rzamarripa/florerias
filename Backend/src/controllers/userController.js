@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Role } from "../models/Roles.js";
-import { RsUserProvider } from "../models/UserProviders.js";
 import { User } from "../models/User.js";
+import { RsUserProvider } from "../models/UserProviders.js";
 
 export const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -470,6 +470,10 @@ export const assignRoles = async (req, res) => {
 export const getUserProviders = async (req, res) => {
   try {
     const { userId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -478,10 +482,20 @@ export const getUserProviders = async (req, res) => {
       });
     }
 
-    const userProviders = await RsUserProvider.getProvidersByUser(userId);
+    const total = await RsUserProvider.countDocuments({ userId });
+    const userProviders = await RsUserProvider.getProvidersByUser(userId)
+      .skip(skip)
+      .limit(limit);
+
     res.status(200).json({
       success: true,
       data: userProviders,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     res.status(500).json({
