@@ -1,36 +1,22 @@
-import { BsCheck2, BsPencil } from "react-icons/bs";
+import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
+import { Brand } from "../types";
 import BrandModal from "./BrandModal";
-import React, { useState } from "react";
-import { Brand } from "../services/brands";
 
 interface ActionsProps {
   brand: Brand;
   onToggleStatus: (brand: Brand) => Promise<void>;
-  reloadData: (isCreating: boolean, page?: number) => Promise<void>;
+  onBrandSaved: () => void;
 }
 
-export const Actions = ({ brand, onToggleStatus, reloadData }: ActionsProps) => {
-  const [showEdit, setShowEdit] = React.useState(false);
-  const [editingBrand] = useState<string>(brand._id);
- 
+export const Actions = ({
+  brand,
+  onToggleStatus,
+  onBrandSaved,
+}: ActionsProps) => {
   return (
     <div className="d-flex justify-content-center gap-1">
-      <button
-        className="btn btn-light btn-icon btn-sm rounded-circle"
-        title="Editar marca"
-        onClick={() => setShowEdit(true)}
-        tabIndex={0}
-      >
-        <BsPencil size={16} />
-      </button>
-      <BrandModal
-        brand={brand}
-        show={showEdit}
-        onClose={() => setShowEdit(false)}
-        editingBrand={editingBrand}
-        reloadData={reloadData}
-      />
+      <BrandModal brand={brand} mode="edit" onBrandSaved={onBrandSaved} />
       {brand.isActive ? (
         <button
           className="btn btn-light btn-icon btn-sm rounded-circle"

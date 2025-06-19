@@ -1,10 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
-import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
+import { getModalButtonStyles } from "../../../../../utils/modalButtonStyles";
 import { CountryFormData, countrySchema } from "../schemas/countrySchema";
 import { countriesService } from "../services/countries";
 
@@ -124,27 +123,7 @@ const CountryModal: React.FC<CountryModalProps> = ({
     }
   };
 
-  const defaultButtonProps = {
-    create: {
-      variant: "primary",
-      className: "d-flex align-items-center gap-2 text-nowrap px-3",
-      title: "Nuevo País",
-      children: (
-        <>
-          <Plus size={18} />
-          Nuevo País
-        </>
-      ),
-    },
-    edit: {
-      variant: "light",
-      size: "sm" as const,
-      className: "btn-icon rounded-circle",
-      title: "Editar país",
-      children: <BsPencil size={16} />,
-    },
-  };
-
+  const defaultButtonProps = getModalButtonStyles("País");
   const currentButtonConfig = defaultButtonProps[mode];
   const finalButtonProps = { ...currentButtonConfig, ...buttonProps };
 
