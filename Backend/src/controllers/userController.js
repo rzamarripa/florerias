@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Role } from "../models/Roles.js";
+import { RsUserProvider } from "../models/RsUserProvider.js";
 import { User } from "../models/User.js";
 
 export const generateToken = (id) => {
@@ -457,6 +458,96 @@ export const assignRoles = async (req, res) => {
       success: true,
       message: "Role assigned successfully",
       data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getUserProviders = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const userProviders = await RsUserProvider.getProvidersByUser(userId);
+    res.status(200).json({
+      success: true,
+      data: userProviders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const assignProviders = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { providerIds } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Remove all existing relations for this user
+    await RsUserProvider.deleteMany({ userId });
+
+    // Create new relations
+    const relations = await Promise.all(
+      providerIds.map((providerId) =>
+        RsUserProvider.createRelation(userId, providerId)
+      )
+    );
+
+    const populatedRelations = await RsUserProvider.find({
+      _id: { $in: relations.map((r) => r._id) },
+    }).populate("providerId");
+
+    res.status(200).json({
+      success: true,
+      message: "Providers assigned successfully",
+      data: populatedRelations,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const removeProvider = async (req, res) => {
+  try {
+    const { userId, providerId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await RsUserProvider.removeRelation(userId, providerId);
+
+    res.status(200).json({
+      success: true,
+      message: "Provider removed successfully",
     });
   } catch (error) {
     res.status(500).json({

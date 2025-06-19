@@ -143,7 +143,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
         .then((res) => setCompanies(res.data || []))
         .finally(() => setLoadingCompanies(false));
       brandsService
-        .getAll()
+        .getAllForSelects()
         .then((res) => setBrands(res.data || []))
         .finally(() => setLoadingBrands(false));
       countriesService
