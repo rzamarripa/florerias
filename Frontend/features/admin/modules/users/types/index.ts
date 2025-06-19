@@ -21,7 +21,12 @@ export interface User {
     fullName: string;
     path?: string;
     estatus: boolean;
-    image?: string;
+    image?:
+      | undefined
+      | {
+          data: string;
+          contentType: string;
+        };
   };
   role?: Role;
   createdAt: string;

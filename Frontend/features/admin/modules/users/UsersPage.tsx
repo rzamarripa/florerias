@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -165,7 +166,54 @@ const UsersPage: React.FC = () => {
                       <td>
                         {(pagination.page - 1) * pagination.limit + index + 1}
                       </td>
-                      <td>{user.username}</td>
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          {user?.profile?.image?.data ? (
+                            <div
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "50%",
+                                overflow: "hidden",
+                                border: "2px solid #e9ecef",
+                                position: "relative",
+                              }}
+                            >
+                              <Image
+                                src={`data:${user.profile.image.contentType};base64,${user.profile.image.data}`}
+                                alt={user.username}
+                                fill
+                                style={{
+                                  objectFit: "cover",
+                                }}
+                                sizes="32px"
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "50%",
+                                fontSize: "14px",
+                              }}
+                            >
+                              {user.profile?.name?.charAt(0).toUpperCase() ||
+                                user.username.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="fw-medium">
+                              {user.profile?.name || user.username}
+                            </div>
+                            <div className="text-muted small">
+                              {user.profile?.fullName}
+                            </div>
+                          </div>
+                        </div>
+                                   
+                      </td>
                       <td>{user.profile.fullName}</td>
                       <td>{user.department || "-"}</td>
                       <td>

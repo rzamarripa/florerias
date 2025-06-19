@@ -16,12 +16,14 @@ interface UserProvidersModalProps {
     className?: string;
     title?: string;
   };
+  children?: React.ReactNode;
 }
 
 const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
   user,
   onProvidersSaved,
   buttonProps = {},
+  children,
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -139,7 +141,7 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
         title={buttonProps.title || "Asignar proveedores"}
         onClick={handleOpenModal}
       >
-        📦
+        {children || <Plus size={16} />}
       </button>
 
       <Modal

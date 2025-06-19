@@ -1,8 +1,8 @@
+import { PackageSearch, Store } from "lucide-react";
 import React, { useState } from "react";
 import { Spinner } from "react-bootstrap";
 import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
-import { GiHandTruck } from "react-icons/gi";
 import { toast } from "react-toastify";
 import { Role } from "../../roles/types";
 import { usersService } from "../services/users";
@@ -106,14 +106,16 @@ const UserActions: React.FC<UserActionsProps> = ({
           className: "btn-icon rounded-circle",
           title: "Asignar proveedores",
         }}
-      />
+      >
+        <Store size={16} />
+      </UserProvidersModal>
 
       <button
         className="btn btn-light btn-icon btn-sm rounded-circle"
         title="Ver proveedores asignados"
         onClick={() => setShowProvidersList(true)}
       >
-        <GiHandTruck size={16} />
+        <PackageSearch size={16} />
       </button>
 
       <UserProvidersList
