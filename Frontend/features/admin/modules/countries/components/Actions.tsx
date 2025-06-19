@@ -25,35 +25,21 @@ const CountryActions: React.FC<CountryActionsProps> = ({
 }) => {
   const [isToggling, setIsToggling] = useState<boolean>(false);
 
-  const handleToggleCountry = async (id: string, currentStatus: boolean) => {
+  const handleToggleCountry = async () => {
+    setIsToggling(true);
     try {
-      setIsToggling(true);
-
-      let response;
-      if (currentStatus) {
-        // Si está activo, desactivar (delete)
-        response = await countriesService.delete(id);
-      } else {
-        // Si está inactivo, activar
-        response = await countriesService.activate(id);
-      }
-
+      const response = await countriesService.toggleStatus(country._id, country.isActive);
       if (response.success) {
-        const action = currentStatus ? "desactivado" : "activado";
-        toast.success(`País "${country.name}" ${action} correctamente`);
-        onCountrySaved?.();
+        const action = country.isActive ? 'desactivado' : 'activado';
+        toast.success(`País "${country.name}" ${action} exitosamente`);
+        if (onCountrySaved) onCountrySaved();
       } else {
-        const errorMessage =
-          response.message ||
-          `Error al ${currentStatus ? "desactivar" : "activar"} el país`;
-        toast.error(errorMessage);
+        throw new Error(response.message || `Error al ${country.isActive ? 'desactivar' : 'activar'} el país`);
       }
     } catch (error: any) {
       console.error("Error toggling country:", error);
 
-      let errorMessage = `Error al ${
-        currentStatus ? "desactivar" : "activar"
-      } el país "${country.name}"`;
+      let errorMessage = `Error al ${country.isActive ? 'desactivar' : 'activar'} el país "${country.name}"`;
 
       if (error.response?.status === 400) {
         errorMessage = error.response.data?.message || errorMessage;
@@ -71,21 +57,6 @@ const CountryActions: React.FC<CountryActionsProps> = ({
     }
   };
 
-  const getToggleButtonTitle = () => {
-    if (isToggling) {
-      return country.isActive ? "Desactivando..." : "Activando...";
-    }
-    return country.isActive ? "Desactivar país" : "Activar país";
-  };
-
-  const getToggleButtonClass = () => {
-    let baseClass = "btn btn-light btn-icon btn-sm rounded-circle";
-    if (isToggling) {
-      baseClass += " disabled";
-    }
-    return baseClass;
-  };
-
   return (
     <div className="d-flex justify-content-center gap-1">
       <CountryModal
@@ -95,9 +66,9 @@ const CountryActions: React.FC<CountryActionsProps> = ({
       />
 
       <button
-        className={getToggleButtonClass()}
-        title={getToggleButtonTitle()}
-        onClick={() => handleToggleCountry(country._id, country.isActive)}
+        className="btn btn-light btn-icon btn-sm rounded-circle"
+        title={country.isActive ? "Desactivar país" : "Activar país"}
+        onClick={handleToggleCountry}
         disabled={isToggling}
       >
         {isToggling ? (
