@@ -15,7 +15,7 @@ const BanksPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 15,
     total: 0,
     pages: 0,
   });
@@ -112,11 +112,11 @@ const BanksPage: React.FC = () => {
                   >
                     <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                       <tr>
-                        <th className="text-center" style={{ width: "10%" }}>
+                        <th style={{ width: "10%" }}>
                           #
                         </th>
-                        <th className="text-center" style={{ width: "50%" }}>
-                          BANCO
+                        <th style={{ width: "50%" }}>
+                          NOMBRE
                         </th>
                         <th className="text-center" style={{ width: "20%" }}>
                           ESTADO
@@ -129,19 +129,17 @@ const BanksPage: React.FC = () => {
                     <tbody>
                       {banks.map((bank, index) => (
                         <tr key={bank._id}>
-                          <td className="text-center">
+                          <td>
                             <span className="text-muted fw-medium">
                               {(pagination.page - 1) * pagination.limit +
                                 index +
                                 1}
                             </span>
                           </td>
-                          <td className="text-center">
-                            <div className="d-flex justify-content-center align-items-center">
-                              <span className="fw-medium text-dark">
-                                {bank.name}
-                              </span>
-                            </div>
+                          <td>
+                            <span className="fw-medium text-dark">
+                              {bank.name}
+                            </span>
                           </td>
                           <td className="text-center">
                             <span
@@ -192,6 +190,23 @@ const BanksPage: React.FC = () => {
                   >
                     Anterior
                   </Button>
+                  {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          pagination.page === pageNum
+                            ? "primary"
+                            : "outline-secondary"
+                        }
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
                   <Button
                     variant="outline-secondary"
                     size="sm"
