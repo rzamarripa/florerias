@@ -32,7 +32,7 @@ export const getAllBranches = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
 
-    const filters = { isActive: true };
+    const filters = {};
     if (search) {
       filters.$or = [
         { name: { $regex: search, $options: "i" } },
