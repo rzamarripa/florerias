@@ -1,26 +1,17 @@
+import { getModalButtonStyles } from "@/utils/modalButtonStyles";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
-import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
-import { BankAccountFormData, bankAccountSchema } from "../schemas/bankAccountSchema";
-import { bankAccountsService } from "../services/bankAccounts";
 import { banksService } from "../../banks/services/banks";
 import { companiesService } from "../../companies/services/companies";
-
-interface BankAccount {
-  _id: string;
-  company: { _id: string; name: string };
-  bank: { _id: string; name: string };
-  accountNumber: string;
-  clabe: string;
-  branch?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
+import {
+  BankAccountFormData,
+  bankAccountSchema,
+} from "../schemas/bankAccountSchema";
+import { bankAccountsService } from "../services/bankAccounts";
+import { BankAccount } from "../types";
 
 interface BankAccountModalProps {
   mode: "create" | "edit";
@@ -48,9 +39,12 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [banks, setBanks] = useState<{ _id: string; name: string }[]>([]);
-  const [companies, setCompanies] = useState<{ _id: string; name: string }[]>([]);
+  const [companies, setCompanies] = useState<{ _id: string; name: string }[]>(
+    []
+  );
   const isEditing = mode === "edit";
-  const isControlled = typeof show === "boolean" && typeof onClose === "function";
+  const isControlled =
+    typeof show === "boolean" && typeof onClose === "function";
   const modalVisible = isControlled ? show : showModal;
 
   const {
@@ -95,15 +89,21 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
         });
       }
     }
-  }, [modalVisible, isEditing, editingBankAccount, setValue, reset, defaultCompanyId]);
+  }, [
+    modalVisible,
+    isEditing,
+    editingBankAccount,
+    setValue,
+    reset,
+    defaultCompanyId,
+  ]);
 
   const handleOpenModal = () => {
-    if (isControlled) {
-      // No hacer nada, el padre controla la visibilidad
-    } else {
+    if (!isControlled) {
       setShowModal(true);
     }
   };
+
   const handleCloseModal = () => {
     if (isControlled && onClose) {
       onClose();
@@ -124,7 +124,10 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
       };
       let response;
       if (isEditing && editingBankAccount) {
-        response = await bankAccountsService.update(editingBankAccount._id, payload);
+        response = await bankAccountsService.update(
+          editingBankAccount._id,
+          payload
+        );
       } else {
         response = await bankAccountsService.create(payload);
       }
@@ -141,8 +144,13 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
       }
     } catch (error: any) {
       console.error("Error in bank account operation:", error);
-      let errorMessage = `Error al ${isEditing ? "actualizar" : "crear"} la cuenta bancaria`;
-      if (error.response?.status === 400 && error.response.data?.message?.toLowerCase().includes("already exists")) {
+      let errorMessage = `Error al ${
+        isEditing ? "actualizar" : "crear"
+      } la cuenta bancaria`;
+      if (
+        error.response?.status === 400 &&
+        error.response.data?.message?.toLowerCase().includes("already exists")
+      ) {
         errorMessage = "Ya existe una cuenta bancaria con esos datos.";
       } else if (error.response?.status === 404) {
         errorMessage = "Cuenta bancaria no encontrada";
@@ -155,27 +163,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
     }
   };
 
-  const defaultButtonProps = {
-    create: {
-      variant: "primary",
-      className: "d-flex align-items-center gap-2 text-nowrap px-3",
-      title: "Nueva Cuenta Bancaria",
-      children: (
-        <>
-          <Plus size={18} />
-          Nueva Cuenta Bancaria
-        </>
-      ),
-    },
-    edit: {
-      variant: "light",
-      size: "sm" as const,
-      className: "btn-icon rounded-circle",
-      title: "Editar cuenta bancaria",
-      children: <BsPencil size={16} />,
-    },
-  };
-
+  const defaultButtonProps = getModalButtonStyles("Cuenta Bancaria");
   const currentButtonConfig = defaultButtonProps[mode];
   const finalButtonProps = { ...currentButtonConfig, ...buttonProps };
 
@@ -195,12 +183,16 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
       )}
       <Modal show={modalVisible} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>{isEditing ? "Editar Cuenta Bancaria" : "Nueva Cuenta Bancaria"}</Modal.Title>
+          <Modal.Title>
+            {isEditing ? "Editar Cuenta Bancaria" : "Nueva Cuenta Bancaria"}
+          </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Modal.Body>
             <Form.Group className="mb-3">
-              <Form.Label>Razón Social <span className="text-danger">*</span></Form.Label>
+              <Form.Label>
+                Razón Social <span className="text-danger">*</span>
+              </Form.Label>
               <Controller
                 name="company"
                 control={control}
@@ -208,7 +200,9 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
                   <Form.Select {...field} isInvalid={!!errors.company}>
                     <option value="">Selecciona una razón social</option>
                     {companies.map((c) => (
-                      <option key={c._id} value={c._id}>{c.name}</option>
+                      <option key={c._id} value={c._id}>
+                        {c.name}
+                      </option>
                     ))}
                   </Form.Select>
                 )}
@@ -218,7 +212,9 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
               </Form.Control.Feedback>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Banco <span className="text-danger">*</span></Form.Label>
+              <Form.Label>
+                Banco <span className="text-danger">*</span>
+              </Form.Label>
               <Controller
                 name="bank"
                 control={control}
@@ -226,7 +222,9 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
                   <Form.Select {...field} isInvalid={!!errors.bank}>
                     <option value="">Selecciona un banco</option>
                     {banks.map((b) => (
-                      <option key={b._id} value={b._id}>{b.name}</option>
+                      <option key={b._id} value={b._id}>
+                        {b.name}
+                      </option>
                     ))}
                   </Form.Select>
                 )}
@@ -236,7 +234,9 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
               </Form.Control.Feedback>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Número de cuenta <span className="text-danger">*</span></Form.Label>
+              <Form.Label>
+                Número de cuenta <span className="text-danger">*</span>
+              </Form.Label>
               <Controller
                 name="accountNumber"
                 control={control}
@@ -254,7 +254,9 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
               </Form.Control.Feedback>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Clabe interbancaria <span className="text-danger">*</span></Form.Label>
+              <Form.Label>
+                Clabe interbancaria <span className="text-danger">*</span>
+              </Form.Label>
               <Controller
                 name="clabe"
                 control={control}
@@ -291,16 +293,33 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal} disabled={isSubmitting}>
+            <Button
+              variant="light"
+              onClick={handleCloseModal}
+              disabled={isSubmitting}
+              className="fw-medium px-4"
+            >
               Cancelar
             </Button>
-            <Button type="submit" variant="primary" disabled={isSubmitting || !isValid}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting || !isValid}
+            >
               {isSubmitting ? (
                 <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  <span
+                    className="spinner-border spinner-border-sm me-2"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
                   {isEditing ? "Actualizando..." : "Guardando..."}
                 </>
-              ) : isEditing ? "Actualizar" : "Guardar"}
+              ) : isEditing ? (
+                "Actualizar"
+              ) : (
+                "Guardar"
+              )}
             </Button>
           </Modal.Footer>
         </Form>
@@ -309,4 +328,4 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
   );
 };
 
-export default BankAccountModal; 
+export default BankAccountModal;

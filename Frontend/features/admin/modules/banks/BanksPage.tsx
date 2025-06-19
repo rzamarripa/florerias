@@ -7,14 +7,7 @@ import { toast } from "react-toastify";
 import BankActions from "./components/Actions";
 import BankModal from "./components/BankModal";
 import { banksService } from "./services/banks";
-
-interface Bank {
-  _id: string;
-  name: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
+import { Bank } from "./types";
 
 const BanksPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -22,7 +15,7 @@ const BanksPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 15,
     total: 0,
     pages: 0,
   });
@@ -40,12 +33,8 @@ const BanksPage: React.FC = () => {
           ...(searchTerm && { search: searchTerm }),
         });
 
-        if (
-          response &&
-          response.success &&
-          Array.isArray((response as any).data)
-        ) {
-          setBanks((response as any).data);
+        if (response && response.success) {
+          setBanks(response.data);
           if ((response as any).pagination) {
             setPagination((response as any).pagination);
           }
@@ -97,7 +86,11 @@ const BanksPage: React.FC = () => {
                   <Search
                     className="text-muted position-absolute"
                     size={18}
-                    style={{ left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
+                    style={{
+                      left: "0.75rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
                   />
                 </div>
               </div>
@@ -119,11 +112,11 @@ const BanksPage: React.FC = () => {
                   >
                     <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                       <tr>
-                        <th className="text-center" style={{ width: "10%" }}>
+                        <th style={{ width: "10%" }}>
                           #
                         </th>
-                        <th className="text-center" style={{ width: "50%" }}>
-                          BANCO
+                        <th style={{ width: "50%" }}>
+                          NOMBRE
                         </th>
                         <th className="text-center" style={{ width: "20%" }}>
                           ESTADO
@@ -136,15 +129,17 @@ const BanksPage: React.FC = () => {
                     <tbody>
                       {banks.map((bank, index) => (
                         <tr key={bank._id}>
-                          <td className="text-center">
+                          <td>
                             <span className="text-muted fw-medium">
-                              {(pagination.page - 1) * pagination.limit + index + 1}
+                              {(pagination.page - 1) * pagination.limit +
+                                index +
+                                1}
                             </span>
                           </td>
-                          <td className="text-center">
-                            <div className="d-flex justify-content-center align-items-center">
-                              <span className="fw-medium text-dark">{bank.name}</span>
-                            </div>
+                          <td>
+                            <span className="fw-medium text-dark">
+                              {bank.name}
+                            </span>
                           </td>
                           <td className="text-center">
                             <span
@@ -158,7 +153,10 @@ const BanksPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="text-center">
-                            <BankActions bank={bank} onBankSaved={handleBankSaved} />
+                            <BankActions
+                              bank={bank}
+                              onBankSaved={handleBankSaved}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -192,10 +190,30 @@ const BanksPage: React.FC = () => {
                   >
                     Anterior
                   </Button>
+                  {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          pagination.page === pageNum
+                            ? "primary"
+                            : "outline-secondary"
+                        }
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
                   <Button
                     variant="outline-secondary"
                     size="sm"
-                    disabled={pagination.page === pagination.pages || pagination.pages === 0}
+                    disabled={
+                      pagination.page === pagination.pages ||
+                      pagination.pages === 0
+                    }
                     onClick={() => handlePageChange(pagination.page + 1)}
                   >
                     Siguiente
@@ -210,4 +228,4 @@ const BanksPage: React.FC = () => {
   );
 };
 
-export default BanksPage; 
+export default BanksPage;

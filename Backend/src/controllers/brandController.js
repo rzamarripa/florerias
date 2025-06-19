@@ -1,6 +1,21 @@
 import { Brand } from "../models/Brand.js";
 import { RsCompanyBrand } from "../models/CompanyBrands.js";
 
+export const getAll = async (req, res) => {
+  try {
+    const brands = await Brand.find({ isActive: true })
+      .select("_id name")
+      .sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: brands,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getAllBrands = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;

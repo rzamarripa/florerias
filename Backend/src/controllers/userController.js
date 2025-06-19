@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Role } from "../models/Roles.js";
 import { User } from "../models/User.js";
+import { RsUserProvider } from "../models/UserProviders.js";
 
 export const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -97,7 +98,7 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ username })
       .select("+password")
       .populate({
-        path: "ac_role",
+        path: "role",
         populate: {
           path: "ac_module",
           populate: {
@@ -191,7 +192,7 @@ export const getAllUsers = async (req, res) => {
 
       if (userObj.role) {
         userObj.role = {
-          id: userObj.role._id,
+          _id: userObj.role._id,
           name: userObj.role.name,
         };
       }
@@ -221,7 +222,7 @@ export const getAllUsers = async (req, res) => {
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).populate(
-      "ac_role",
+      "role",
       "name description"
     );
 
@@ -299,7 +300,7 @@ export const updateUser = async (req, res) => {
     const user = await User.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
-    }).populate("ac_role", "name description");
+    }).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -328,7 +329,7 @@ export const deleteUser = async (req, res) => {
       req.params.id,
       { "profile.estatus": false },
       { new: true }
-    ).populate("ac_role", "name description");
+    ).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -356,7 +357,7 @@ export const activateUser = async (req, res) => {
       req.params.id,
       { "profile.estatus": true },
       { new: true }
-    ).populate("ac_role", "name description");
+    ).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -444,7 +445,7 @@ export const assignRoles = async (req, res) => {
       req.params.id,
       { role },
       { new: true }
-    ).populate("ac_role", "name description");
+    ).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -457,6 +458,108 @@ export const assignRoles = async (req, res) => {
       success: true,
       message: "Role assigned successfully",
       data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getUserProviders = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const total = await RsUserProvider.countDocuments({ userId });
+    const userProviders = await RsUserProvider.getProvidersByUser(userId)
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      data: userProviders,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const assignProviders = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { providerIds } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await RsUserProvider.deleteMany({ userId });
+
+    const relations = await Promise.all(
+      providerIds.map((providerId) =>
+        RsUserProvider.createRelation(userId, providerId)
+      )
+    );
+
+    const populatedRelations = await RsUserProvider.find({
+      _id: { $in: relations.map((r) => r._id) },
+    }).populate("providerId");
+
+    res.status(200).json({
+      success: true,
+      message: "Providers assigned successfully",
+      data: populatedRelations,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const removeProvider = async (req, res) => {
+  try {
+    const { userId, providerId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await RsUserProvider.removeRelation(userId, providerId);
+
+    res.status(200).json({
+      success: true,
+      message: "Provider removed successfully",
     });
   } catch (error) {
     res.status(500).json({

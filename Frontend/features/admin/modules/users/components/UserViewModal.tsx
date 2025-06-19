@@ -1,6 +1,6 @@
 import Image from "next/image";
 import React, { useState } from "react";
-import { Badge, Modal } from "react-bootstrap";
+import { Badge, Modal, Button } from "react-bootstrap";
 import { BsEye } from "react-icons/bs";
 import { User } from "../types";
 
@@ -49,7 +49,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
         <Modal.Body className="pt-1 pb-2" style={{ maxHeight: "60vh" }}>
           <div className="text-center mb-3">
             <div className="d-flex justify-content-center mb-2">
-              {user.profile.image ? (
+              {typeof user?.profile?.image === "string" ? (
                 <Image
                   src={user.profile.image}
                   alt={user.username}
@@ -89,7 +89,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
               className="px-2 py-1 small mb-3"
               style={{ borderRadius: "15px" }}
             >
-              {user.role?.name || "Sin rol"}
+              {typeof user.role === 'object' ? user.role.name : user.role || "Sin rol"}
             </Badge>
           </div>
 
@@ -233,13 +233,14 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
         </Modal.Body>
 
         <Modal.Footer className="border-top-0 pt-1 pb-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-outline-secondary btn-sm px-3"
+            variant="light"
+            className="fw-medium px-4"
             onClick={handleClose}
           >
-            Cerrar
-          </button>
+            Cancelar
+          </Button>
         </Modal.Footer>
       </Modal>
     </>

@@ -1,9 +1,8 @@
+import { getModalButtonStyles } from "@/utils/modalButtonStyles";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
-import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
 import {
   ExpenseConceptCategoryFormData,
@@ -118,27 +117,7 @@ const ExpenseConceptCategoryModal: React.FC<
     }
   };
 
-  const defaultButtonProps = {
-    create: {
-      variant: "primary",
-      className: "d-flex align-items-center gap-2 text-nowrap px-3",
-      title: "Nueva Categoría",
-      children: (
-        <>
-          <Plus size={18} />
-          Nueva Categoría
-        </>
-      ),
-    },
-    edit: {
-      variant: "light",
-      size: "sm" as const,
-      className: "btn-icon rounded-circle",
-      title: "Editar categoría",
-      children: <BsPencil size={16} />,
-    },
-  };
-
+  const defaultButtonProps = getModalButtonStyles("Categoría");
   const currentButtonConfig = defaultButtonProps[mode];
   const finalButtonProps = { ...currentButtonConfig, ...buttonProps };
 
@@ -191,9 +170,10 @@ const ExpenseConceptCategoryModal: React.FC<
 
           <Modal.Footer>
             <Button
-              variant="secondary"
+              variant="light"
               onClick={handleCloseModal}
               disabled={isSubmitting}
+              className="fw-medium px-4"
             >
               Cancelar
             </Button>

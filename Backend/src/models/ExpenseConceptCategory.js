@@ -19,7 +19,7 @@ const expenseConceptCategorySchema = new Schema({
 });
 
 const ExpenseConceptCategory = mongoose.model(
-  "expense_concept_category",
+  "cc_expense_concept_category",
   expenseConceptCategorySchema
 );
 

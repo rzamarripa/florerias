@@ -1,7 +1,7 @@
 // schemas/proveedorSchema.ts
 import { z } from "zod";
 
-export const proveedorSchema = z.object({
+export const providerSchema = z.object({
   commercialName: z
     .string()
     .min(1, "El nombre comercial es requerido")
@@ -24,15 +24,18 @@ export const proveedorSchema = z.object({
   
   countryId: z
     .string()
-    .min(1, "El país es requerido"),
+    .min(24, "ID de país inválido")
+    .max(24, "ID de país inválido"),
   
   stateId: z
     .string()
-    .min(1, "El estado es requerido"),
+    .min(24, "ID de estado inválido")
+    .max(24, "ID de estado inválido"),
   
   municipalityId: z
     .string()
-    .min(1, "El municipio es requerido"),
+    .min(24, "ID de municipio inválido")
+    .max(24, "ID de municipio inválido"),
   
   address: z
     .string()
@@ -59,14 +62,17 @@ export const proveedorSchema = z.object({
   
   description: z
     .string()
-    .max(500, "La descripción no puede exceder 500 caracteres"),
+    .max(500, "La descripción no puede exceder 500 caracteres")
+    .optional()
+    .nullable()
+    .transform(val => val === null ? undefined : val),
   
-  isActive: z.boolean(),
+  isActive: z.boolean().default(true),
 });
 
-export const updateProveedorSchema = proveedorSchema.partial().extend({
-  _id: z.string().min(1, "ID es requerido")
+export const updateProviderSchema = providerSchema.partial().extend({
+  _id: z.string().min(24, "ID inválido").max(24, "ID inválido")
 });
 
-export type ProveedorFormData = z.infer<typeof proveedorSchema>;
-export type UpdateProveedorFormData = z.infer<typeof updateProveedorSchema>;
+export type ProviderFormData = z.infer<typeof providerSchema>;
+export type UpdateProviderFormData = z.infer<typeof updateProviderSchema>;

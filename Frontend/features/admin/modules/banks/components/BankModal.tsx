@@ -1,20 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
-import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
+import { getModalButtonStyles } from "../../../../../utils/modalButtonStyles";
 import { BankFormData, bankSchema } from "../schemas/bankSchema";
 import { banksService } from "../services/banks";
-
-interface Bank {
-  _id: string;
-  name: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
+import { Bank } from "../types";
 
 interface BankModalProps {
   mode: "create" | "edit";
@@ -80,10 +72,7 @@ const BankModal: React.FC<BankModalProps> = ({
 
       let response;
       if (isEditing && editingBank) {
-        response = await banksService.update(
-          editingBank._id,
-          bankData
-        );
+        response = await banksService.update(editingBank._id, bankData);
       } else {
         response = await banksService.create(bankData);
       }
@@ -101,7 +90,9 @@ const BankModal: React.FC<BankModalProps> = ({
       }
     } catch (error: any) {
       console.error("Error in bank operation:", error);
-      let errorMessage = `Error al ${isEditing ? "actualizar" : "crear"} el banco`;
+      let errorMessage = `Error al ${
+        isEditing ? "actualizar" : "crear"
+      } el banco`;
       if (
         error.response?.status === 400 &&
         error.response.data?.message?.toLowerCase().includes("already exists")
@@ -119,27 +110,7 @@ const BankModal: React.FC<BankModalProps> = ({
     }
   };
 
-  const defaultButtonProps = {
-    create: {
-      variant: "primary",
-      className: "d-flex align-items-center gap-2 text-nowrap px-3",
-      title: "Nuevo Banco",
-      children: (
-        <>
-          <Plus size={18} />
-          Nuevo Banco
-        </>
-      ),
-    },
-    edit: {
-      variant: "light",
-      size: "sm" as const,
-      className: "btn-icon rounded-circle",
-      title: "Editar banco",
-      children: <BsPencil size={16} />,
-    },
-  };
-
+  const defaultButtonProps = getModalButtonStyles("Banco");
   const currentButtonConfig = defaultButtonProps[mode];
   const finalButtonProps = { ...currentButtonConfig, ...buttonProps };
 
@@ -158,7 +129,9 @@ const BankModal: React.FC<BankModalProps> = ({
 
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>{isEditing ? "Editar Banco" : "Nuevo Banco"}</Modal.Title>
+          <Modal.Title>
+            {isEditing ? "Editar Banco" : "Nuevo Banco"}
+          </Modal.Title>
         </Modal.Header>
 
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -190,9 +163,10 @@ const BankModal: React.FC<BankModalProps> = ({
 
           <Modal.Footer>
             <Button
-              variant="secondary"
+              variant="light"
               onClick={handleCloseModal}
               disabled={isSubmitting}
+              className="fw-medium px-4"
             >
               Cancelar
             </Button>
@@ -223,4 +197,4 @@ const BankModal: React.FC<BankModalProps> = ({
   );
 };
 
-export default BankModal; 
+export default BankModal;

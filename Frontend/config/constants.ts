@@ -17,7 +17,7 @@ export const menuItems: MenuItemType[] = [
       {
         key: "razonesSociales",
         label: "Razones Sociales",
-        url: "/catalogos/companies",
+        url: "/catalogos/razones-sociales",
       },
       {
         key: "marcas",

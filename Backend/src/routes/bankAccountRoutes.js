@@ -1,16 +1,18 @@
 import express from "express";
 import {
+  activateBankAccount,
+  createBankAccount,
+  deleteBankAccount,
+  getActiveBankAccountsCount,
   getAllBankAccounts,
   getBankAccountById,
-  createBankAccount,
   updateBankAccount,
-  deleteBankAccount,
-  activateBankAccount,
 } from "../controllers/bankAccountController.js";
 
 const router = express.Router();
 
 router.get("/", getAllBankAccounts);
+router.get("/count/active", getActiveBankAccountsCount);
 router.get("/:id", getBankAccountById);
 router.post("/", createBankAccount);
 router.put("/:id", updateBankAccount);

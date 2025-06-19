@@ -1,9 +1,10 @@
 import { apiCall } from "@/utils/api";
+import { ApiResponse, Provider, CreateProviderRequest, GetProvidersParams, Location } from "../types";
 
 const API_BASE = "/providers";
 const API_COUNTRIES = "/countries";
 
-export async function getProviders(params?: { page?: number; limit?: number; search?: string; status?: string }) {
+export async function getProviders(params?: GetProvidersParams): Promise<ApiResponse<Provider[]>> {
   let url = `${API_BASE}`;
   if (params) {
     const query = new URLSearchParams();
@@ -15,40 +16,40 @@ export async function getProviders(params?: { page?: number; limit?: number; sea
   return apiCall(url);
 }
 
-export async function getAllProviders() {
+export async function getAllProviders(): Promise<ApiResponse<Provider[]>> {
   return apiCall(`${API_BASE}/all`);
 }
 
-export async function createProvider(data: any) {
+export async function createProvider(data: CreateProviderRequest): Promise<ApiResponse<Provider>> {
   return apiCall(`${API_BASE}`, {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export async function updateProvider(id: string, data: any) {
+export async function updateProvider(id: string, data: Partial<CreateProviderRequest>): Promise<ApiResponse<Provider>> {
   return apiCall(`${API_BASE}/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
 }
 
-export async function deleteProvider(id: string) {
+export async function deleteProvider(id: string): Promise<ApiResponse<void>> {
   return apiCall(`${API_BASE}/${id}`, { method: "DELETE" });
 }
 
-export async function activateProvider(id: string) {
+export async function activateProvider(id: string): Promise<ApiResponse<Provider>> {
   return apiCall(`${API_BASE}/activate/${id}`, { method: "PATCH" });
 }
 
-export async function getStatesByCountry(countryId: string) {
+export async function getAllCountries(): Promise<ApiResponse<Location[]>> {
+  return apiCall(API_COUNTRIES);
+}
+
+export async function getStatesByCountry(countryId: string): Promise<ApiResponse<Location[]>> {
   return apiCall(`${API_BASE}/states/by-country/${countryId}`);
 }
 
-export async function getMunicipalitiesByState(stateId: string) {
+export async function getMunicipalitiesByState(stateId: string): Promise<ApiResponse<Location[]>> {
   return apiCall(`${API_BASE}/municipalities/by-state/${stateId}`);
-}
-
-export async function getAllCountries() {
-  return apiCall(`${API_COUNTRIES}/all`);
 } 

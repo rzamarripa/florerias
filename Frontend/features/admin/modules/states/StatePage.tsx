@@ -2,12 +2,13 @@
 
 import { FileText, Search } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
-import { Form, Table, Spinner, Pagination } from "react-bootstrap";
+import { Form, Table, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
-import StateActions from "./components/Actions";
 import StateModal from "./components/StateModal";
 import { State } from "./types";
 import { getAll } from "./services/states";
+import { FiTrash2 } from "react-icons/fi";
+import { BsCheck2 } from "react-icons/bs";
 
 const StatesPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -15,7 +16,12 @@ const StatesPage: React.FC = () => {
     const [states, setStates] = useState<State[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 15,
+        total: 0,
+        pages: 0,
+    });
 
     const loadStates = useCallback(async (isInitial: boolean = false, params?: { page?: number; limit?: number }) => {
         try {
@@ -66,18 +72,16 @@ const StatesPage: React.FC = () => {
     };
 
     const handlePageChange = (newPage: number) => {
-        setPagination((prev) => ({ ...prev, page: newPage }));
-        loadStates(false, { page: newPage });
-    };
-
-    const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newLimit = parseInt(e.target.value);
-        setPagination((prev) => ({ ...prev, page: 1, limit: newLimit }));
-        loadStates(false, { page: 1, limit: newLimit });
+        loadStates(false, { page: newPage, limit: pagination.limit });
     };
 
     const handleStateSaved = () => {
         loadStates(false, { page: pagination.page, limit: pagination.limit });
+    };
+
+    const handleToggleState = (state: State) => {
+        // Implement the logic to toggle the state
+        console.log("Toggling state:", state);
     };
 
     return (
@@ -132,117 +136,118 @@ const StatesPage: React.FC = () => {
 
                         <div className="table-responsive shadow-sm">
                             {loading ? (
-                                <div className="d-flex justify-content-center align-items-center py-5">
+                                <div className="text-center my-5">
                                     <Spinner animation="border" variant="primary" />
-                                    <span className="ms-2">Cargando estados...</span>
+                                </div>
+                            ) : states.length === 0 ? (
+                                <div className="text-center my-5">
+                                    <FileText size={48} className="text-muted mb-2" />
+                                    <p className="text-muted">No hay estados registrados</p>
                                 </div>
                             ) : (
                                 <>
-                                    <Table className="table table-custom table-centered table-select table-hover w-100 mb-0" style={{ tableLayout: "fixed" }}>
+                                    <Table className="table table-custom table-centered table-select table-hover w-100 mb-0">
                                         <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                                             <tr>
-                                                <th className="text-center" style={{ width: "8%" }}>#</th>
-                                                <th className="text-center" style={{ width: "25%" }}>PAÍS</th>
-                                                <th className="text-center" style={{ width: "35%" }}>ESTADO</th>
-                                                <th className="text-center" style={{ width: "15%" }}>STATUS</th>
-                                                <th className="text-center" style={{ width: "17%" }}>ACCIONES</th>
+                                                <th className="text-center">#</th>
+                                                <th>Nombre</th>
+                                                <th>País</th>
+                                                <th className="text-center">Estatus</th>
+                                                <th className="text-center text-nowrap">Fecha creación</th>
+                                                <th className="text-center">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {states.map((state, index) => (
                                                 <tr key={state._id}>
                                                     <td className="text-center">
-                                                        <span className="text-muted fw-medium">
-                                                            {index + 1}
+                                                        <span className="text-muted">
+                                                            {(pagination.page - 1) * pagination.limit + index + 1}
                                                         </span>
                                                     </td>
-                                                    <td className="text-center">
-                                                        <div className="d-flex justify-content-center align-items-center">
-                                                            <span className="fw-medium text-dark">
-                                                                {state.countryId?.name || "-"}
-                                                            </span>
-                                                        </div>
+                                                    <td>
+                                                        <span className="fw-medium">{state.name}</span>
                                                     </td>
-                                                    <td className="text-center">
-                                                        <div className="d-flex justify-content-center align-items-center">
-                                                            <span className="fw-medium text-dark">
-                                                                {state.name}
-                                                            </span>
-                                                        </div>
+                                                    <td>
+                                                        <span>{state.countryId?.name || "-"}</span>
                                                     </td>
                                                     <td className="text-center">
                                                         <span
-                                                            className={`badge fs-6 ${state.isActive
-                                                                ? "bg-success bg-opacity-10 text-success"
-                                                                : "bg-danger bg-opacity-10 text-danger"
-                                                                }`}
+                                                            className={`badge fs-6 ${
+                                                                state.isActive
+                                                                    ? "bg-success bg-opacity-10 text-success"
+                                                                    : "bg-danger bg-opacity-10 text-danger"
+                                                            }`}
                                                         >
                                                             {state.isActive ? "Activo" : "Inactivo"}
                                                         </span>
                                                     </td>
                                                     <td className="text-center">
-                                                        <StateActions
-                                                            state={state}
-                                                            onStateSaved={handleStateSaved}
-                                                        />
+                                                        <span>
+                                                            {new Date(state.createdAt).toLocaleDateString("es-ES", {
+                                                                year: "numeric",
+                                                                month: "long",
+                                                                day: "numeric",
+                                                            })}
+                                                        </span>
+                                                    </td>
+                                                    <td className="text-center">
+                                                        <div className="d-flex justify-content-center gap-1">
+                                                            <StateModal
+                                                                mode="edit"
+                                                                editingState={state}
+                                                                onStateSaved={handleStateSaved}
+                                                            />
+                                                            <button
+                                                                className="btn btn-light btn-icon btn-sm rounded-circle"
+                                                                title={
+                                                                    state.isActive
+                                                                        ? "Desactivar estado"
+                                                                        : "Activar estado"
+                                                                }
+                                                                onClick={() => handleToggleState(state)}
+                                                            >
+                                                                {state.isActive ? (
+                                                                    <FiTrash2 size={16} />
+                                                                ) : (
+                                                                    <BsCheck2 size={16} />
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </Table>
 
-                                    {states.length === 0 && (
-                                        <div className="text-center py-5">
-                                            <FileText size={48} className="text-muted mb-3" />
-                                            <h5 className="text-muted">No se encontraron estados</h5>
-                                            <p className="text-muted">
-                                                {searchTerm || selectedType !== "todos"
-                                                    ? "Intenta cambiar los filtros de búsqueda"
-                                                    : "No hay estados disponibles en el sistema"}
-                                            </p>
+                                    <div className="d-flex justify-content-between align-items-center p-3 border-top">
+                                        <span className="text-muted">
+                                            Mostrando {states.length} de {pagination.total} registros
+                                        </span>
+                                        <div className="d-flex gap-1">
+                                            <button
+                                                className="btn btn-outline-secondary btn-sm"
+                                                disabled={pagination.page === 1}
+                                                onClick={() => handlePageChange(pagination.page - 1)}
+                                            >
+                                                Anterior
+                                            </button>
+                                            <button
+                                                className="btn btn-sm btn-primary"
+                                            >
+                                                {pagination.page}
+                                            </button>
+                                            <button
+                                                className="btn btn-outline-secondary btn-sm"
+                                                disabled={pagination.page === pagination.pages}
+                                                onClick={() => handlePageChange(pagination.page + 1)}
+                                            >
+                                                Siguiente
+                                            </button>
                                         </div>
-                                    )}
+                                    </div>
                                 </>
                             )}
-                        </div>
-
-                        <div className="d-flex justify-content-between align-items-center p-3 border-top">
-                            <div className="d-flex align-items-center gap-2">
-                                <span className="text-muted">
-                                    Mostrando {states.length} de {pagination.total} registros
-                                </span>
-                                <Form.Select
-                                    size="sm"
-                                    value={pagination.limit}
-                                    onChange={handleLimitChange}
-                                    style={{ width: "auto" }}
-                                    disabled={loading}
-                                >
-                                    <option value={5}>5 por página</option>
-                                    <option value={10}>10 por página</option>
-                                    <option value={25}>25 por página</option>
-                                    <option value={50}>50 por página</option>
-                                </Form.Select>
-                            </div>
-                            <Pagination className="mb-0">
-                                <Pagination.Prev
-                                    disabled={pagination.page === 1}
-                                    onClick={() => handlePageChange(pagination.page - 1)}
-                                />
-                                {Array.from({ length: pagination.pages }, (_, i) => (
-                                    <Pagination.Item
-                                        key={i + 1}
-                                        active={pagination.page === i + 1}
-                                        onClick={() => handlePageChange(i + 1)}
-                                    >
-                                        {i + 1}
-                                    </Pagination.Item>
-                                ))}
-                                <Pagination.Next
-                                    disabled={pagination.page === pagination.pages}
-                                    onClick={() => handlePageChange(pagination.page + 1)}
-                                />
-                            </Pagination>
                         </div>
                     </div>
                 </div>

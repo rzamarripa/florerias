@@ -2,12 +2,13 @@
 
 import { FileText, Search } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
-import { Form, Table, Spinner, Pagination } from "react-bootstrap";
+import { Form, Table, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
-import MunicipalityActions from "./components/Actions";
 import MunicipalityModal from "./components/MunicipalityModal";
 import { getAll, deleteMunicipality, activateMunicipality, getAllActives } from "./services/municipalities";
 import { Municipality, MunicipalitySearchParams } from "./types";
+import { FiTrash2 } from "react-icons/fi";
+import { BsCheck2 } from "react-icons/bs";
 
 const MunicipalityPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -17,7 +18,7 @@ const MunicipalityPage: React.FC = () => {
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
     const [pagination, setPagination] = useState({
         page: 1,
-        limit: 10,
+        limit: 15,
         total: 0,
         pages: 0,
     });
@@ -92,12 +93,7 @@ const MunicipalityPage: React.FC = () => {
     };
 
     const handlePageChange = (newPage: number) => {
-        loadMunicipalities({ page: newPage }, false);
-    };
-
-    const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newLimit = parseInt(e.target.value);
-        loadMunicipalities({ page: 1, limit: newLimit }, false);
+        loadMunicipalities({ page: newPage, limit: pagination.limit }, false);
     };
 
     const handleMunicipalitySaved = () => {
@@ -115,59 +111,6 @@ const MunicipalityPage: React.FC = () => {
         } catch (error: any) {
             toast.error(error.message || "Error al cambiar el estado del municipio");
         }
-    };
-
-    const renderPagination = () => {
-        if (pagination.pages <= 1) return null;
-
-        const items = [];
-        const currentPage = pagination.page;
-        const totalPages = pagination.pages;
-
-        items.push(
-            <Pagination.Prev
-                key="prev"
-                disabled={currentPage === 1}
-                onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-            />
-        );
-
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, currentPage + 2);
-
-        if (endPage - startPage < 4) {
-            if (startPage === 1) {
-                endPage = Math.min(totalPages, startPage + 4);
-            } else {
-                startPage = Math.max(1, endPage - 4);
-            }
-        }
-
-        for (let page = startPage; page <= endPage; page++) {
-            items.push(
-                <Pagination.Item
-                    key={page}
-                    active={page === currentPage}
-                    onClick={() => handlePageChange(page)}
-                >
-                    {page}
-                </Pagination.Item>
-            );
-        }
-
-        items.push(
-            <Pagination.Next
-                key="next"
-                disabled={currentPage === totalPages}
-                onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-            />
-        );
-
-        return (
-            <Pagination className="mb-0">
-                {items}
-            </Pagination>
-        );
     };
 
     return (
@@ -222,51 +165,44 @@ const MunicipalityPage: React.FC = () => {
 
                         <div className="table-responsive shadow-sm">
                             {loading ? (
-                                <div className="d-flex justify-content-center align-items-center py-5">
+                                <div className="text-center my-5">
                                     <Spinner animation="border" variant="primary" />
-                                    <span className="ms-2">Cargando municipios...</span>
+                                </div>
+                            ) : municipalities.length === 0 ? (
+                                <div className="text-center my-5">
+                                    <FileText size={48} className="text-muted mb-2" />
+                                    <p className="text-muted">No hay municipios registrados</p>
                                 </div>
                             ) : (
                                 <>
-                                    <Table className="table table-custom table-centered table-select table-hover w-100 mb-0" style={{ tableLayout: "fixed" }}>
+                                    <Table className="table table-custom table-centered table-select table-hover w-100 mb-0">
                                         <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                                             <tr>
-                                                <th className="text-center" style={{ width: "8%" }}>#</th>
-                                                <th className="text-center" style={{ width: "20%" }}>PAÍS</th>
-                                                <th className="text-center" style={{ width: "20%" }}>ESTADO</th>
-                                                <th className="text-center" style={{ width: "25%" }}>MUNICIPIO</th>
-                                                <th className="text-center" style={{ width: "12%" }}>STATUS</th>
-                                                <th className="text-center" style={{ width: "15%" }}>ACCIONES</th>
+                                                <th className="text-center">#</th>
+                                                <th>Nombre</th>
+                                                <th>Estado</th>
+                                                <th>País</th>
+                                                <th className="text-center">Estatus</th>
+                                                <th className="text-center text-nowrap">Fecha creación</th>
+                                                <th className="text-center">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {municipalities.map((municipality, index) => (
                                                 <tr key={municipality._id}>
                                                     <td className="text-center">
-                                                        <span className="text-muted fw-medium">
+                                                        <span className="text-muted">
                                                             {(pagination.page - 1) * pagination.limit + index + 1}
                                                         </span>
                                                     </td>
-                                                    <td className="text-center">
-                                                        <div className="d-flex justify-content-center align-items-center">
-                                                            <span className="fw-medium text-dark">
-                                                                {municipality.stateId.countryId.name}
-                                                            </span>
-                                                        </div>
+                                                    <td>
+                                                        <span className="fw-medium">{municipality.name}</span>
                                                     </td>
-                                                    <td className="text-center">
-                                                        <div className="d-flex justify-content-center align-items-center">
-                                                            <span className="fw-medium text-dark">
-                                                                {municipality.stateId.name}
-                                                            </span>
-                                                        </div>
+                                                    <td>
+                                                        <span>{municipality.stateId?.name || "-"}</span>
                                                     </td>
-                                                    <td className="text-center">
-                                                        <div className="d-flex justify-content-center align-items-center">
-                                                            <span className="fw-medium text-dark">
-                                                                {municipality.name}
-                                                            </span>
-                                                        </div>
+                                                    <td>
+                                                        <span>{municipality.stateId?.countryId?.name || "-"}</span>
                                                     </td>
                                                     <td className="text-center">
                                                         <span
@@ -279,52 +215,71 @@ const MunicipalityPage: React.FC = () => {
                                                         </span>
                                                     </td>
                                                     <td className="text-center">
-                                                        <MunicipalityActions
-                                                            municipality={municipality}
-                                                            onMunicipalitySaved={handleMunicipalitySaved}
-                                                            onToggleStatus={handleToggleStatus}
-                                                        />
+                                                        <span>
+                                                            {new Date(municipality.createdAt).toLocaleDateString("es-ES", {
+                                                                year: "numeric",
+                                                                month: "long",
+                                                                day: "numeric",
+                                                            })}
+                                                        </span>
+                                                    </td>
+                                                    <td className="text-center">
+                                                        <div className="d-flex justify-content-center gap-1">
+                                                            <MunicipalityModal
+                                                                mode="edit"
+                                                                editingMunicipality={municipality}
+                                                                onMunicipalitySaved={handleMunicipalitySaved}
+                                                            />
+                                                            <button
+                                                                className="btn btn-light btn-icon btn-sm rounded-circle"
+                                                                title={
+                                                                    municipality.isActive
+                                                                        ? "Desactivar municipio"
+                                                                        : "Activar municipio"
+                                                                }
+                                                                onClick={() => handleToggleStatus(municipality._id, municipality.isActive)}
+                                                            >
+                                                                {municipality.isActive ? (
+                                                                    <FiTrash2 size={16} />
+                                                                ) : (
+                                                                    <BsCheck2 size={16} />
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </Table>
 
-                                    {municipalities.length === 0 && (
-                                        <div className="text-center py-5">
-                                            <FileText size={48} className="text-muted mb-3" />
-                                            <h5 className="text-muted">No se encontraron municipios</h5>
-                                            <p className="text-muted">
-                                                {searchTerm || selectedType !== "todos"
-                                                    ? "Intenta cambiar los filtros de búsqueda"
-                                                    : "No hay municipios disponibles en el sistema"}
-                                            </p>
+                                    <div className="d-flex justify-content-between align-items-center p-3 border-top">
+                                        <span className="text-muted">
+                                            Mostrando {municipalities.length} de {pagination.total} registros
+                                        </span>
+                                        <div className="d-flex gap-1">
+                                            <button
+                                                className="btn btn-outline-secondary btn-sm"
+                                                disabled={pagination.page === 1}
+                                                onClick={() => handlePageChange(pagination.page - 1)}
+                                            >
+                                                Anterior
+                                            </button>
+                                            <button
+                                                className="btn btn-sm btn-primary"
+                                            >
+                                                {pagination.page}
+                                            </button>
+                                            <button
+                                                className="btn btn-outline-secondary btn-sm"
+                                                disabled={pagination.page === pagination.pages}
+                                                onClick={() => handlePageChange(pagination.page + 1)}
+                                            >
+                                                Siguiente
+                                            </button>
                                         </div>
-                                    )}
+                                    </div>
                                 </>
                             )}
-
-                            <div className="d-flex justify-content-between align-items-center p-3 border-top">
-                                <div className="d-flex align-items-center gap-2">
-                                    <span className="text-muted">
-                                        Mostrando {municipalities.length} de {pagination.total} registros
-                                    </span>
-                                    <Form.Select
-                                        size="sm"
-                                        value={pagination.limit}
-                                        onChange={handleLimitChange}
-                                        style={{ width: "auto" }}
-                                        disabled={loading}
-                                    >
-                                        <option value={5}>5 por página</option>
-                                        <option value={10}>10 por página</option>
-                                        <option value={25}>25 por página</option>
-                                        <option value={50}>50 por página</option>
-                                    </Form.Select>
-                                </div>
-
-                                {renderPagination()}
-                            </div>
                         </div>
                     </div>
                 </div>

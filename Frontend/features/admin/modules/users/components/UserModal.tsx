@@ -3,11 +3,11 @@ import { Eye, EyeOff, Plus, Upload, X } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Button, Col, Form, Modal, Row } from "react-bootstrap";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
 import { Role } from "../../roles/types";
-import { UserFormData, userFormSchema } from "../schemas/userSchema"; // ✅ Esquema unificado
+import { UserFormData, userFormSchema } from "../schemas/userSchema"; 
 import { usersService } from "../services/users";
 import type { User } from "../types";
 
@@ -27,13 +27,12 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
 
   const isEditing = Boolean(user);
 
-  // ✅ Usar siempre el mismo esquema y tipo
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
       username: "",
-      password: "", // ✅ Siempre presente, pero se valida condicionalmente
-      confirmPassword: "", // ✅ Siempre presente, pero se valida condicionalmente
+      password: "", 
+      confirmPassword: "", 
       profile: {
         name: "",
         fullName: "",
@@ -47,8 +46,10 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     reset,
+    setValue
   } = form;
 
   const departments = [
@@ -66,19 +67,25 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   useEffect(() => {
     if (isOpen) {
       if (isEditing && user) {
-        reset({
-          username: user.username || "",
-          password: "", 
-          confirmPassword: "", 
-          profile: {
-            name: user.profile?.name || "",
-            fullName: user.profile?.fullName || "",
-            estatus: user.profile?.estatus ?? true,
-          },
-          department: user.department || "",
-          role: user.role?._id || "",
-        });
-        if (user.profile?.image) {
+        let roleValue = "";
+        if (user.role) {
+          if (typeof user.role === 'object') {
+            roleValue = user.role._id;
+          } else {
+            roleValue = user.role;
+          }
+        }
+
+        setValue("username", user.username || "");
+        setValue("password", "");
+        setValue("confirmPassword", "");
+        setValue("profile.name", user.profile?.name || "");
+        setValue("profile.fullName", user.profile?.fullName || "");
+        setValue("profile.estatus", user.profile?.estatus ?? true);
+        setValue("department", user.department || "");
+        setValue("role", roleValue);
+        
+        if (typeof user?.profile?.image === "string") {
           setImagePreview(user.profile.image);
         }
       } else {
@@ -94,48 +101,27 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           department: "",
           role: "",
         });
+        setImagePreview(null);
       }
     }
-  }, [isOpen, isEditing, user, reset]);
-
-  const validateImageDimensions = (file: File): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const img = new window.Image();
-      const url = URL.createObjectURL(file);
-
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const isValidSize =
-          img.naturalWidth === 150 && img.naturalHeight === 150;
-        resolve(isValidSize);
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(false);
-      };
-
-      img.src = url;
-    });
-  };
+  }, [isOpen, isEditing, user, reset, setValue]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
-        const errorMsg = "Por favor selecciona un archivo JPG o PNG válido";
-        toast.error(errorMsg);
+        toast.error("Por favor selecciona un archivo JPG o PNG válido");
+        const fileInput = document.getElementById("imageInput") as HTMLInputElement;
+        if (fileInput) {
+          fileInput.value = "";
+        }
         return;
       }
 
-      const isValidDimensions = await validateImageDimensions(file);
-      if (!isValidDimensions) {
-        const errorMsg =
-          "La imagen debe tener exactamente 150x150 píxeles de resolución";
-        toast.error(errorMsg);
-        const fileInput = document.getElementById(
-          "imageInput"
-        ) as HTMLInputElement;
+      const maxSize = 1048576;
+      if (file.size > maxSize) {
+        toast.error("El tamaño de la imagen no debe exceder 1MB");
+        const fileInput = document.getElementById("imageInput") as HTMLInputElement;
         if (fileInput) {
           fileInput.value = "";
         }
@@ -179,7 +165,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           profile: {
             name: getFirstName(data.profile.name),
             fullName: data.profile.fullName,
-            estatus: data.profile.estatus,
+            estatus: data.profile.estatus ?? true,
           },
           role: data.role,
         };
@@ -194,7 +180,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           profile: {
             name: getFirstName(data.profile.name) || "",
             fullName: data.profile.fullName,
-            estatus: data.profile.estatus,
+            estatus: data.profile.estatus ?? true,
           },
           role: data.role,
         };
@@ -279,52 +265,65 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
               <Col xs={12}>
                 <Form.Group>
                   <Form.Label className="text-dark mb-1">
-                    Imagen de Perfil:
+                    Imagen de Perfil
                   </Form.Label>
                   <div className="d-flex flex-column align-items-center gap-2">
                     {imagePreview ? (
-                      <div
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "50%",
-                          overflow: "hidden",
-                          border: "2px solid #e9ecef",
-                          position: "relative",
-                        }}
-                      >
-                        <Image
-                          src={imagePreview}
-                          alt={`imagen de perfil de ${form.getValues(
-                            "profile.fullName"
-                          )}`}
-                          fill
+                      <div className="d-flex flex-column align-items-center position-relative">
+                        <div
                           style={{
-                            objectFit: "cover",
+                            width: "120px",
+                            height: "120px",
+                            borderRadius: "50%",
+                            overflow: "hidden",
+                            border: "2px solid #e9ecef",
                           }}
-                          sizes="40px"
-                        />
+                        >
+                          <Image
+                            src={imagePreview}
+                            alt={`imagen de perfil de ${form.getValues(
+                              "profile.fullName"
+                            )}`}
+                            fill
+                            style={{
+                              objectFit: "cover",
+                            }}
+                            sizes="120px"
+                          />
+                        </div>
                         <Button
-                          variant="danger"
-                          className="position-absolute top-0 end-0 rounded-circle p-1"
+                          variant="link"
+                          className="position-absolute text-danger p-0"
                           onClick={removeImage}
                           disabled={loading}
-                          style={{ width: "24px", height: "24px" }}
+                          style={{ 
+                            top: "-10px", 
+                            right: "-10px",
+                            width: "24px",
+                            height: "24px",
+                            borderRadius: "50%",
+                            backgroundColor: "white",
+                            border: "1px solid #dc3545",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
                           type="button"
                         >
-                          <X size={12} />
+                          <X size={14} />
                         </Button>
                       </div>
                     ) : (
                       <div
-                        className="d-flex align-items-center justify-content-center rounded-circle bg-light border"
+                        className="d-flex align-items-center justify-content-center bg-light border"
                         style={{
-                          width: "100px",
-                          height: "100px",
+                          width: "120px",
+                          height: "120px",
+                          borderRadius: "50%",
                           border: "2px dashed #dee2e6 !important",
                         }}
                       >
-                        <Upload size={30} className="text-muted" />
+                        <Upload size={40} className="text-muted" />
                       </div>
                     )}
 
@@ -364,8 +363,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                       className="text-muted text-center"
                       style={{ fontSize: "0.75rem", lineHeight: "1.2" }}
                     >
-                      <strong>Requisitos:</strong> 150x150px • JPG/PNG
-                      únicamente
+                      <strong>Requisitos:</strong> Máximo 1MB • JPG/PNG únicamente
                     </small>
                   </div>
                 </Form.Group>
@@ -484,18 +482,24 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="text-dark mb-1">Rol:</Form.Label>
-                  <Form.Select
-                    {...register("role")}
-                    disabled={loading}
-                    isInvalid={!!errors.role}
-                  >
-                    <option value="">Selecciona un rol</option>
-                    {roles.map((role) => (
-                      <option key={role._id} value={role._id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  <Controller
+                    name="role"
+                    control={control}
+                    render={({ field }) => (
+                      <Form.Select
+                        {...field}
+                        disabled={loading}
+                        isInvalid={!!errors.role}
+                      >
+                        <option value="">Selecciona un rol</option>
+                        {roles.map((role) => (
+                          <option key={role._id} value={role._id}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    )}
+                  />
                   <Form.Control.Feedback type="invalid">
                     {errors.role?.message}
                   </Form.Control.Feedback>
@@ -522,11 +526,12 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           <Modal.Footer className="border-0 pt-2 pb-3">
             <Button
               type="button"
+              variant="light"
               onClick={handleClose}
-              className="fw-medium px-4 btn-light"
+              className="fw-medium px-4"
               disabled={loading}
             >
-              Cerrar
+              Cancelar
             </Button>
             <Button
               type="submit"

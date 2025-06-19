@@ -10,16 +10,15 @@ import { brandsService } from "./services/brands";
 import { Brand } from "./types";
 
 const BrandPage: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState("");
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
     pages: 0,
   });
-  const [showCreate, setShowCreate] = useState(false);
 
   const fetchBrands = async (
     isCreating: boolean,
@@ -29,7 +28,6 @@ const BrandPage: React.FC = () => {
       if (isCreating) {
         setLoading(true);
       }
-
       const response = await brandsService.getAll({
         page,
         limit: pagination.limit,
@@ -51,16 +49,12 @@ const BrandPage: React.FC = () => {
   };
 
   const handleToggleStatus = async (brand: Brand) => {
-    try {
-      if (brand.isActive) {
-        await brandsService.delete(brand._id);
-      } else {
-        await brandsService.activate(brand._id);
-      }
-      fetchBrands(false);
-    } catch (error) {
-      console.error("Error toggling brand status:", error);
+    if (brand.isActive) {
+      await brandsService.delete(brand._id);
+    } else {
+      await brandsService.activate(brand._id);
     }
+    fetchBrands(false);
   };
 
   useEffect(() => {
@@ -69,6 +63,10 @@ const BrandPage: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     fetchBrands(true, page);
+  };
+
+  const handleBrandSaved = () => {
+    fetchBrands(false);
   };
 
   return (
@@ -97,18 +95,7 @@ const BrandPage: React.FC = () => {
                 />
               </div>
             </div>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setShowCreate(true)}
-            >
-              Nuevo
-            </Button>
-            <BrandModal
-              show={showCreate}
-              onClose={() => setShowCreate(false)}
-              reloadData={fetchBrands}
-            />
+            <BrandModal onBrandSaved={handleBrandSaved} />
           </div>
           <div className="table-responsive shadow-sm">
             <Table className="table table-custom table-centered table-hover w-100 mb-0">
@@ -142,10 +129,12 @@ const BrandPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  brands.map((brand, idx) => (
+                  brands.map((brand, index) => (
                     <tr key={brand._id}>
-                      <td>
-                        {(pagination.page - 1) * pagination.limit + idx + 1}
+                      <td className="text-center">
+                        <span className="text-muted">
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </span>
                       </td>
                       <td>
                         {brand.logo ? (
@@ -167,7 +156,8 @@ const BrandPage: React.FC = () => {
                         )}
                       </td>
                       <td>
-                        {brand.categoryId && (typeof brand.categoryId === "object")
+                        {brand.categoryId &&
+                        typeof brand.categoryId === "object"
                           ? brand.categoryId.name
                           : "-"}
                       </td>
@@ -197,7 +187,7 @@ const BrandPage: React.FC = () => {
                         <Actions
                           brand={brand}
                           onToggleStatus={handleToggleStatus}
-                          reloadData={fetchBrands}
+                          onBrandSaved={handleBrandSaved}
                         />
                       </td>
                     </tr>

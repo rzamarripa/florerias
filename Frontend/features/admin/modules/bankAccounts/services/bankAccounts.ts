@@ -10,6 +10,15 @@ export const bankAccountsService = {
       return { success: false, message: error.message };
     }
   },
+  getActiveCount: async (params: any) => {
+    try {
+      const query = new URLSearchParams(params).toString();
+      const response = await apiCall(`/bank-accounts/count/active?${query}`);
+      return response;
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  },
   create: async (data: any) => {
     try {
       const response = await apiCall("/bank-accounts", {

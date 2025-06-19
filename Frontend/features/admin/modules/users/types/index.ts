@@ -1,28 +1,75 @@
-
-
-export interface Role {
-  _id: string;
-  name: string;
-  description?: string;
-  modules?: any[]; 
-}
+import type { Role } from "../../roles/types";
+export type { Role } from "../../roles/types";
 
 export interface UserProfile {
-  name: string;      
-  fullName: string;   
+  name: string;
+  fullName: string;
   path?: string;
   estatus: boolean;
-  image?: string
+  image?: {
+    data: string;
+    contentType: string;
+  };
 }
 
 export interface User {
   _id: string;
   username: string;
-  profile: UserProfile;
   department?: string;
+  profile: {
+    name: string;
+    fullName: string;
+    path?: string;
+    estatus: boolean;
+    image?:
+      | undefined
+      | {
+          data: string;
+          contentType: string;
+        };
+  };
   role?: Role;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Provider {
+  _id: string;
+  commercialName: string;
+  businessName: string;
+  contactName: string;
+  countryId: {
+    _id: string;
+    name: string;
+  };
+  stateId: {
+    _id: string;
+    name: string;
+  };
+  municipalityId: {
+    _id: string;
+    name: string;
+  };
+  address: string;
+  phone: string;
+  email: string;
+  description: string;
+  isActive: boolean;
+  createdAt: string;
   updatedAt: string;
+}
+
+export interface UserProvider {
+  _id: string;
+  userId: string;
+  providerId: {
+    _id: string;
+    commercialName: string;
+    businessName: string;
+    contactName: string;
+    isActive: boolean;
+  };
+  createdAt: string;
 }
 
 export interface CreateUserData {
@@ -30,35 +77,33 @@ export interface CreateUserData {
   password: string;
   department?: string;
   profile: {
-    name: string;        
-    fullName: string;    
-    estatus: boolean;
+    name: string;
+    fullName: string;
+    path?: string;
+    estatus?: boolean;
   };
   role?: string;
 }
 
 export interface UpdateUserData {
-  username: string;
+  username?: string;
   department?: string;
-  profile: {
-    name: string;        
-    fullName: string;    
-    estatus: boolean;
+  profile?: {
+    name: string;
+    fullName: string;
+    path?: string;
+    estatus?: boolean;
   };
   role?: string;
 }
 
 export interface CreateUserResponseData {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-  };
+  user: User;
 }
 
 export interface GetUsersResponse {
   success: boolean;
-  count: number
+  count: number;
   pagination: {
     page: number;
     limit: number;

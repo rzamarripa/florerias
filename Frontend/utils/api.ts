@@ -5,6 +5,12 @@ export interface ApiResponse<T> {
   data: T;
   message: string;
   success: boolean;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
   [key: string]: any;
 }
 

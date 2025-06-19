@@ -10,7 +10,7 @@ export interface Brand {
 }
 
 export const brandsService = {
-  getAll: async () => {
-    return await apiCall<Brand[]>("/brands?isActive=true");
+  getAllForSelects: async () => {
+    return await apiCall<Brand[]>("/brands/all");
   },
 };

@@ -204,9 +204,10 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
 
           <Modal.Footer>
             <Button
-              variant="outline-secondary"
+              variant="light"
               onClick={handleClose}
               disabled={loading}
+              className="fw-medium px-4"
             >
               Cancelar
             </Button>

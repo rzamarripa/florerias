@@ -5,6 +5,7 @@ import {
   Role,
   UpdateUserData,
   User,
+  UserProvider,
 } from "../types";
 
 const createFormData = (
@@ -61,7 +62,7 @@ export const usersService = {
           body: formData,
         }
       );
-      return response.data!;
+      return response;
     } else {
       const response = await apiCall<CreateUserResponseData>(
         "/users/register",
@@ -70,7 +71,7 @@ export const usersService = {
           body: JSON.stringify(userData),
         }
       );
-      return response.data!;
+      return response;
     }
   },
 
@@ -88,7 +89,7 @@ export const usersService = {
           body: formData,
         }
       );
-      return response.data!;
+      return response;
     } else {
       const response = await apiCall<CreateUserResponseData>(
         `/users/${userId}`,
@@ -97,7 +98,7 @@ export const usersService = {
           body: JSON.stringify(userData),
         }
       );
-      return response.data!;
+      return response;
     }
   },
 
@@ -108,7 +109,7 @@ export const usersService = {
         method: "PUT",
       }
     );
-    return response.data!;
+    return response;
   },
 
   assignRole: async (userId: string, roleId: string) => {
@@ -119,7 +120,7 @@ export const usersService = {
         body: JSON.stringify({ role: roleId }),
       }
     );
-    return response.data!;
+    return response;
   },
 
   changePassword: async (
@@ -127,7 +128,7 @@ export const usersService = {
     currentPassword: string,
     newPassword: string
   ) => {
-    const response = await apiCall(`/users/${userId}/change-password`, {
+    const response = await apiCall<void>(`/users/${userId}/change-password`, {
       method: "PUT",
       body: JSON.stringify({ currentPassword, newPassword }),
     });
@@ -138,6 +139,54 @@ export const usersService = {
     const response = await apiCall<CreateUserResponseData>(`/users/${userId}`, {
       method: "DELETE",
     });
-    return response.data!;
+    return response;
+  },
+
+  getUserProviders: async (
+    userId: string,
+    params: { page?: number; limit?: number } = {}
+  ) => {
+    try {
+      const { page = 1, limit = 10 } = params;
+      const searchParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      const response = await apiCall<UserProvider[]>(
+        `/users/${userId}/providers?${searchParams}`
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false, message: error.message, data: [] };
+    }
+  },
+
+  assignProviders: async (userId: string, providerIds: string[]) => {
+    try {
+      const response = await apiCall<UserProvider[]>(
+        `/users/${userId}/providers`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ providerIds }),
+        }
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false, message: error.message, data: [] };
+    }
+  },
+
+  removeProvider: async (userId: string, providerId: string) => {
+    try {
+      const response = await apiCall<void>(
+        `/users/${userId}/providers/${providerId}`,
+        {
+          method: "DELETE",
+        }
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false, message: error.message, data: [] };
+    }
   },
 };

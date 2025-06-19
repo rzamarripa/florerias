@@ -1,14 +1,14 @@
 "use client";
 
+import { Search } from "lucide-react";
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { Table, Form, Button } from "react-bootstrap";
+import { Button, Form, Table } from "react-bootstrap";
+import { bankAccountsService } from "../bankAccounts/services/bankAccounts";
+import { Actions } from "./components/Actions";
+import CompanyModal from "./components/CompanyModal";
 import { companiesService } from "./services/companies";
 import { Company } from "./types";
-import CompanyModal from "./components/CompanyModal";
-import { Actions } from "./components/Actions";
-import { Search } from "lucide-react";
-import { bankAccountsService } from "../bankAccounts/services/bankAccounts";
-import Link from "next/link";
 
 const CompaniesPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -20,13 +20,17 @@ const CompaniesPage: React.FC = () => {
     total: 0,
     pages: 0,
   });
-  const [showCreate, setShowCreate] = useState(false);
-  const [bankAccountsCount, setBankAccountsCount] = useState<Record<string, number>>({});
+  const [bankAccountsCount, setBankAccountsCount] = useState<
+    Record<string, number>
+  >({});
 
-  const fetchCompanies = async (isCreating: boolean, page: number = pagination.page) => {
+  const fetchCompanies = async (
+    isCreating: boolean,
+    page: number = pagination.page
+  ) => {
     try {
-      if(isCreating){
-        setLoading(true)
+      if (isCreating) {
+        setLoading(true);
       }
       const response = await companiesService.getAll({
         page,
@@ -44,10 +48,10 @@ const CompaniesPage: React.FC = () => {
     } catch (err) {
       console.error("Error fetching companies:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
-  
+
   const handleToggleStatus = async (company: Company) => {
     if (company.isActive) {
       await companiesService.delete(company._id);
@@ -58,13 +62,44 @@ const CompaniesPage: React.FC = () => {
   };
 
   const fetchBankAccountsCount = async (companyIds: string[]) => {
-    const counts: Record<string, number> = {};
-    for (const id of companyIds) {
-      const res = await bankAccountsService.getAll({ company: id, limit: 1 });
-      const total = (res && typeof res === 'object' && 'pagination' in res && res.pagination && typeof res.pagination.total === 'number') ? res.pagination.total : 0;
-      counts[id] = total;
+    try {
+      const counts: Record<string, number> = {};
+
+      const promises = companyIds.map(async (id) => {
+        try {
+          const res = await bankAccountsService.getActiveCount({ company: id });
+
+          const count =
+            res &&
+            typeof res === "object" &&
+            "data" in res &&
+            res.data &&
+            typeof res.data === "object" &&
+            "count" in res.data &&
+            typeof (res.data as any).count === "number"
+              ? (res.data as any).count
+              : 0;
+
+          return { id, total: count };
+        } catch (error) {
+          console.error(
+            `Error fetching bank accounts count for company ${id}:`,
+            error
+          );
+          return { id, total: 0 };
+        }
+      });
+
+      const results = await Promise.all(promises);
+
+      results.forEach(({ id, total }) => {
+        counts[id] = total;
+      });
+
+      setBankAccountsCount(counts);
+    } catch (error) {
+      console.error("Error fetching bank accounts count:", error);
     }
-    setBankAccountsCount(counts);
   };
 
   useEffect(() => {
@@ -73,12 +108,16 @@ const CompaniesPage: React.FC = () => {
 
   useEffect(() => {
     if (companies.length > 0) {
-      fetchBankAccountsCount(companies.map(c => c._id));
+      fetchBankAccountsCount(companies.map((c) => c._id));
     }
   }, [companies]);
 
   const handlePageChange = (page: number) => {
     fetchCompanies(true, page);
+  };
+
+  const handleCompanySaved = () => {
+    fetchCompanies(false);
   };
 
   return (
@@ -99,18 +138,15 @@ const CompaniesPage: React.FC = () => {
                 <Search
                   className="text-muted position-absolute"
                   size={18}
-                  style={{ left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
+                  style={{
+                    left: "0.75rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                  }}
                 />
               </div>
             </div>
-            <Button variant="primary" size="sm" onClick={() => setShowCreate(true)}>
-              Nuevo
-            </Button>
-            <CompanyModal
-              show={showCreate}
-              onClose={() => setShowCreate(false)}
-              reloadData={fetchCompanies}
-            />
+            <CompanyModal onCompanySaved={handleCompanySaved} />
           </div>
           <div className="table-responsive shadow-sm">
             <Table className="table table-custom table-centered table-hover w-100 mb-0">
@@ -118,7 +154,7 @@ const CompaniesPage: React.FC = () => {
                 <tr>
                   <th>#</th>
                   <th>Nombre</th>
-                  <th>Representante Legal</th> 
+                  <th>Representante Legal</th>
                   <th>RFC</th>
                   <th>Dirección</th>
                   <th>Cuentas Bancarias</th>
@@ -129,12 +165,17 @@ const CompaniesPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-4"> 
+                    <td colSpan={7} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
-                        <div className="spinner-border text-primary mb-2" role="status">
+                        <div
+                          className="spinner-border text-primary mb-2"
+                          role="status"
+                        >
                           <span className="visually-hidden">Cargando...</span>
                         </div>
-                        <p className="text-muted mb-0 small">Cargando empresas...</p>
+                        <p className="text-muted mb-0 small">
+                          Cargando empresas...
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -144,28 +185,36 @@ const CompaniesPage: React.FC = () => {
                       <td>{idx + 1}</td>
                       <td>{company.name}</td>
                       <td>{company.legalRepresentative}</td>
-                      <td>{company.rfc}</td> 
+                      <td>{company.rfc}</td>
                       <td>{company.address}</td>
                       <td>
-                        <Link href={{ pathname: "/catalogos/cuentas-bancarias", query: { company: company._id } }} legacyBehavior>
-                          <a style={{ textDecoration: 'underline', cursor: 'pointer' }}>
-                            {bankAccountsCount[company._id] ?? '0'} Cuentas
-                          </a>
+                        <Link
+                          href={{
+                            pathname:
+                              "/catalogos/razones-sociales/cuentas-bancarias",
+                            query: { company: company._id },
+                          }}
+                          style={{
+                            textDecoration: "underline",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {bankAccountsCount[company._id] ?? "0"} Cuentas
                         </Link>
                       </td>
                       <td>
                         <span
-                          className={`badge fs-6 ${company.isActive
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                            }`}
+                          className={`badge fs-6 ${
+                            company.isActive
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
                         >
                           {company.isActive ? "Activo" : "Inactivo"}
                         </span>
                       </td>
                       <td>
                         <Actions
-                          bankAccountsCount={bankAccountsCount}
                           company={company}
                           onToggleStatus={handleToggleStatus}
                           reloadData={fetchCompanies}
@@ -190,26 +239,23 @@ const CompaniesPage: React.FC = () => {
               >
                 Anterior
               </Button>
-              {Array.from(
-                { length: Math.min(5, pagination.pages) },
-                (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={
-                        pagination.page === pageNum
-                          ? "primary"
-                          : "outline-secondary"
-                      }
-                      size="sm"
-                      onClick={() => handlePageChange(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                }
-              )}
+              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={
+                      pagination.page === pageNum
+                        ? "primary"
+                        : "outline-secondary"
+                    }
+                    size="sm"
+                    onClick={() => handlePageChange(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
               <Button
                 variant="outline-secondary"
                 size="sm"
@@ -226,4 +272,4 @@ const CompaniesPage: React.FC = () => {
   );
 };
 
-export default CompaniesPage
+export default CompaniesPage;

@@ -1,11 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
-import { BsPencil } from "react-icons/bs";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-import { categorySchema, CategoryFormData } from "../schemas/categorySchema";
+import { getModalButtonStyles } from "../../../../../utils/modalButtonStyles";
+import { CategoryFormData, categorySchema } from "../schemas/categorySchema";
 import { categoryService } from "../services/categories";
 
 interface CategoryLegacy {
@@ -89,27 +88,38 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
 
       let response;
       if (isEditing && editingCategoria) {
-        response = await categoryService.update(editingCategoria._id, categoryData);
+        response = await categoryService.update(
+          editingCategoria._id,
+          categoryData
+        );
       } else {
         response = await categoryService.create(categoryData);
       }
 
       if (response.success) {
         const action = isEditing ? "actualizada" : "creada";
-        toast.success(`Categoría "${categoryData.name}" ${action} exitosamente`);
+        toast.success(
+          `Categoría "${categoryData.name}" ${action} exitosamente`
+        );
         onCategoriaSaved?.();
         handleCloseModal();
       } else {
-        const errorMessage = response.message || `Error al ${isEditing ? 'actualizar' : 'crear'} la categoría`;
+        const errorMessage =
+          response.message ||
+          `Error al ${isEditing ? "actualizar" : "crear"} la categoría`;
         toast.error(errorMessage);
       }
     } catch (error: any) {
       console.error("Error in category operation:", error);
 
-      let errorMessage = `Error al ${isEditing ? 'actualizar' : 'crear'} la categoría`;
+      let errorMessage = `Error al ${
+        isEditing ? "actualizar" : "crear"
+      } la categoría`;
 
       if (error.response?.status === 400) {
-        errorMessage = error.response.data?.message || "Ya existe una categoría con ese nombre";
+        errorMessage =
+          error.response.data?.message ||
+          "Ya existe una categoría con ese nombre";
       } else if (error.response?.status === 404) {
         errorMessage = "Categoría no encontrada";
       } else if (error.response?.status >= 500) {
@@ -122,27 +132,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     }
   };
 
-  const defaultButtonProps = {
-    create: {
-      variant: "primary",
-      className: "d-flex align-items-center gap-2 text-nowrap px-3",
-      title: "Nueva Categoría",
-      children: (
-        <>
-          <Plus size={18} />
-          Nueva Categoría
-        </>
-      )
-    },
-    edit: {
-      variant: "light",
-      size: "sm" as const,
-      className: "btn-icon rounded-circle",
-      title: "Editar categoría",
-      children: <BsPencil size={16} />
-    }
-  };
-
+  const defaultButtonProps = getModalButtonStyles("Categoría");
   const currentButtonConfig = defaultButtonProps[mode];
   const finalButtonProps = { ...currentButtonConfig, ...buttonProps };
 
@@ -218,9 +208,10 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
 
           <Modal.Footer>
             <Button
-              variant="secondary"
+              variant="light"
               onClick={handleCloseModal}
               disabled={isSubmitting}
+              className="fw-medium px-4"
             >
               Cancelar
             </Button>
@@ -238,8 +229,10 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
                   ></span>
                   {isEditing ? "Actualizando..." : "Guardando..."}
                 </>
+              ) : isEditing ? (
+                "Actualizar"
               ) : (
-                isEditing ? "Actualizar" : "Guardar"
+                "Guardar"
               )}
             </Button>
           </Modal.Footer>
