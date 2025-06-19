@@ -25,19 +25,19 @@ export const menuItems: MenuItemType[] = [
         url: "/catalogos/brand",
       },
       {
-        key: "categorias",
-        label: "Categorias",
-        url: "/catalogos/categories",
+        key: "unidades-de-negocio",
+        label: "Unidades de Negocio",
+        url: "/catalogos/unidades-de-negocio",
       },
       {
         key: "sucursales",
         label: "Sucursales",
-        url: "/catalogos/branches",
+        url: "/catalogos/sucursales",
       },
       {
         key: "rutas",
         label: "Rutas",
-        url: "/catalogos/routes",
+        url: "/catalogos/rutas",
       },
 
       {
