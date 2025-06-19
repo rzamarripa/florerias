@@ -259,7 +259,12 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
           </Modal.Body>
 
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal}>
+            <Button
+              variant="light"
+              onClick={handleCloseModal}
+              disabled={isSubmitting}
+              className="fw-medium px-4"
+            >
               Cancelar
             </Button>
             <Button
@@ -277,7 +282,7 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
                   {isEditing ? "Actualizando..." : "Creando..."}
                 </>
               ) : (
-                <>{isEditing ? "Actualizar" : "Crear"}</>
+                <>{isEditing ? "Actualizar" : "Guardar"}</>
               )}
             </Button>
           </Modal.Footer>
