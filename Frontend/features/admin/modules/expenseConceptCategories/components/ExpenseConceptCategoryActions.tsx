@@ -18,27 +18,25 @@ const ExpenseConceptCategoryActions: React.FC<Props> = ({
 }) => {
   const [isToggling, setIsToggling] = useState<boolean>(false);
 
-  const handleToggleCategoria = async (id: string, currentStatus: boolean) => {
+  const handleToggleCategoria = async () => {
+    setIsToggling(true);
     try {
-      setIsToggling(true);
       const response = await expenseConceptCategoryService.toggleStatus(
-        id,
-        currentStatus
+        categoria._id,
+        categoria.isActive
       );
       if (response.success) {
-        const action = currentStatus ? "desactivada" : "activada";
-        toast.success(`Categoría "${categoria.name}" ${action} correctamente`);
-        onCategoriaSaved();
+        const action = categoria.isActive ? 'desactivada' : 'activada';
+        toast.success(`Categoría "${categoria.name}" ${action} exitosamente`);
+        if (onCategoriaSaved) onCategoriaSaved();
       } else {
-        const errorMessage =
-          response.message ||
-          `Error al ${currentStatus ? "desactivar" : "activar"} la categoría`;
-        toast.error(errorMessage);
+        throw new Error(response.message || `Error al ${categoria.isActive ? 'desactivar' : 'activar'} la categoría`);
       }
     } catch (error: any) {
-      let errorMessage = `Error al ${
-        categoria.isActive ? "desactivar" : "activar"
-      } la categoría "${categoria.name}"`;
+      console.error("Error toggling category:", error);
+
+      let errorMessage = `Error al ${categoria.isActive ? 'desactivar' : 'activar'} la categoría "${categoria.name}"`;
+
       if (error.response?.status === 400) {
         errorMessage = error.response.data?.message || errorMessage;
       } else if (error.response?.status === 404) {
@@ -48,25 +46,11 @@ const ExpenseConceptCategoryActions: React.FC<Props> = ({
       } else if (error.message) {
         errorMessage = error.message;
       }
+
       toast.error(errorMessage);
     } finally {
       setIsToggling(false);
     }
-  };
-
-  const getToggleButtonTitle = () => {
-    if (isToggling) {
-      return categoria.isActive ? "Desactivando..." : "Activando...";
-    }
-    return categoria.isActive ? "Desactivar categoría" : "Activar categoría";
-  };
-
-  const getToggleButtonClass = () => {
-    let baseClass = "btn btn-light btn-icon btn-sm rounded-circle";
-    if (isToggling) {
-      baseClass += " disabled";
-    }
-    return baseClass;
   };
 
   return (
@@ -77,9 +61,9 @@ const ExpenseConceptCategoryActions: React.FC<Props> = ({
         onCategoriaSaved={onCategoriaSaved}
       />
       <button
-        className={getToggleButtonClass()}
-        title={getToggleButtonTitle()}
-        onClick={() => handleToggleCategoria(categoria._id, categoria.isActive)}
+        className="btn btn-light btn-icon btn-sm rounded-circle"
+        title={categoria.isActive ? "Desactivar categoría" : "Activar categoría"}
+        onClick={handleToggleCategoria}
         disabled={isToggling}
       >
         {isToggling ? (

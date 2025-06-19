@@ -5,9 +5,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
 import CountryModal from "./components/CountryModal";
+import CountryActions from "./components/Actions";
 import { countriesService } from "./services/countries";
-import { FiTrash2 } from "react-icons/fi";
-import { BsCheck2 } from "react-icons/bs";
 
 interface Country {
   _id: string;
@@ -19,8 +18,10 @@ interface Country {
 
 const CountryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedType, setSelectedType] = useState<string>("todos");
   const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
@@ -29,17 +30,24 @@ const CountryPage: React.FC = () => {
   });
 
   const loadCountries = useCallback(
-    async (isInitial: boolean, page: number = pagination.page) => {
+    async (isInitial: boolean = false, params?: { page?: number; limit?: number }) => {
       try {
-        if (isInitial) {
-          setLoading(true);
+        if (isInitial) setLoading(true);
+        const page = params?.page || pagination.page;
+        const limit = params?.limit || pagination.limit;
+        const searchParams: any = { page, limit };
+
+        if (selectedType === "activos") {
+          searchParams.isActive = "true";
+        } else if (selectedType === "inactivos") {
+          searchParams.isActive = "false";
         }
 
-        const response = await countriesService.getAll({
-          page,
-          limit: pagination.limit,
-          ...(searchTerm && { search: searchTerm }),
-        });
+        if (searchTerm) {
+          searchParams.search = searchTerm.trim();
+        }
+
+        const response = await countriesService.getAll(searchParams);
 
         if (response && response.success && Array.isArray(response.data)) {
           setCountries(response.data);
@@ -53,31 +61,46 @@ const CountryPage: React.FC = () => {
         toast.error(error.message || "Error al cargar los países");
         console.error("Error loading countries:", error);
       } finally {
-        setLoading(false);
+        if (isInitial) setLoading(false);
       }
     },
-    [pagination.limit, searchTerm]
+    [pagination.page, pagination.limit, searchTerm, selectedType]
   );
 
   useEffect(() => {
-    loadCountries(true, 1);
-  }, [searchTerm]);
+    loadCountries(true);
+  }, []);
+
+  useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      loadCountries(false, { page: 1 });
+    }, searchTerm ? 500 : 0);
+
+    setSearchTimeout(timeout);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [searchTerm, selectedType]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
   };
 
+  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+    setSelectedType(e.target.value);
+  };
+
   const handlePageChange = (newPage: number) => {
-    loadCountries(true, newPage);
+    loadCountries(false, { page: newPage, limit: pagination.limit });
   };
 
   const handleCountrySaved = () => {
-    loadCountries(false);
-  };
-
-  const handleToggleCountry = (country: Country) => {
-    // Implement the logic to toggle the country's active status
-    console.log("Toggling country:", country._id, country.name);
+    loadCountries(false, { page: pagination.page, limit: pagination.limit });
   };
 
   return (
@@ -111,7 +134,20 @@ const CountryPage: React.FC = () => {
                 </div>
               </div>
 
-              <CountryModal mode="create" onCountrySaved={handleCountrySaved} />
+              <div className="d-flex align-items-center gap-2">
+                <Form.Select
+                  value={selectedType}
+                  onChange={handleTypeChange}
+                  style={{ minWidth: "150px" }}
+                  disabled={loading}
+                >
+                  <option value="todos">Todos los países</option>
+                  <option value="activos">Países activos</option>
+                  <option value="inactivos">Países inactivos</option>
+                </Form.Select>
+
+                <CountryModal mode="create" onCountrySaved={handleCountrySaved} />
+              </div>
             </div>
 
             <div className="table-responsive shadow-sm">
@@ -168,28 +204,10 @@ const CountryPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="text-center">
-                            <div className="d-flex justify-content-center gap-1">
-                              <CountryModal
-                                mode="edit"
-                                editingCountry={country}
-                                onCountrySaved={handleCountrySaved}
-                              />
-                              <button
-                                className="btn btn-light btn-icon btn-sm rounded-circle"
-                                title={
-                                  country.isActive
-                                    ? "Desactivar país"
-                                    : "Activar país"
-                                }
-                                onClick={() => handleToggleCountry(country)}
-                              >
-                                {country.isActive ? (
-                                  <FiTrash2 size={16} />
-                                ) : (
-                                  <BsCheck2 size={16} />
-                                )}
-                              </button>
-                            </div>
+                            <CountryActions
+                              country={country}
+                              onCountrySaved={handleCountrySaved}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -208,9 +226,7 @@ const CountryPage: React.FC = () => {
                       >
                         Anterior
                       </button>
-                      <button
-                        className="btn btn-sm btn-primary"
-                      >
+                      <button className="btn btn-sm btn-primary">
                         {pagination.page}
                       </button>
                       <button
