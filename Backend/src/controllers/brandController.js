@@ -231,3 +231,26 @@ export const activeBrand = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getBrandsByCompany = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    const relations = await RsCompanyBrand.find({ companyId }).populate({
+      path: "brandId",
+      select: "_id name",
+      match: { isActive: true },
+    });
+
+    const brands = relations
+      .filter((rel) => rel.brandId) // Filter out any null brandIds (from inactive brands)
+      .map((rel) => rel.brandId);
+
+    res.status(200).json({
+      success: true,
+      data: brands,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -8,11 +8,11 @@ import { toast } from "react-toastify";
 import { BranchFormData, branchSchema } from "../schemas/BranchSchema";
 import { branchService } from "../services/branch";
 import { Brand, brandsService } from "../services/brands";
-import { Company, companiesService } from "../services/companies";
-import { Country, countriesService } from "../services/countries";
+import { companiesService, Company } from "../services/companies";
+import { countriesService, Country } from "../services/countries";
 import {
-  Municipality,
   municipalitiesService,
+  Municipality,
 } from "../services/municipalities";
 import { State, statesService } from "../services/states";
 import { Branch } from "../types";
@@ -62,6 +62,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
     mode: "onChange",
   });
 
+  const selectedCompany = watch("companyId");
   const selectedCountry = watch("countryId");
   const selectedState = watch("stateId");
 
@@ -79,22 +80,17 @@ const BranchModal: React.FC<BranchModalProps> = ({
   useEffect(() => {
     if (showModal) {
       setLoadingCompanies(true);
-      setLoadingBrands(true);
       setLoadingCountries(true);
 
-      Promise.all([
-        companiesService.getAll(),
-        brandsService.getAllForSelects(),
-        countriesService.getAll()
-      ]).then(([companiesRes, brandsRes, countriesRes]) => {
-        setCompanies(companiesRes.data || []);
-        setBrands(brandsRes.data || []);
-        setCountries(countriesRes.data || []);
-      }).finally(() => {
-        setLoadingCompanies(false);
-        setLoadingBrands(false);
-        setLoadingCountries(false);
-      });
+      Promise.all([companiesService.getAll(), countriesService.getAll()])
+        .then(([companiesRes, countriesRes]) => {
+          setCompanies(companiesRes.data || []);
+          setCountries(countriesRes.data || []);
+        })
+        .finally(() => {
+          setLoadingCompanies(false);
+          setLoadingCountries(false);
+        });
 
       if (isEditing && editingBranch) {
         setValue("name", editingBranch.name);
@@ -133,13 +129,30 @@ const BranchModal: React.FC<BranchModalProps> = ({
         setValue("email", editingBranch.email);
         setValue("description", editingBranch.description || "");
 
+        // Cargar marcas de la compañía seleccionada
+        const companyId =
+          typeof editingBranch.companyId === "object"
+            ? editingBranch.companyId._id
+            : editingBranch.companyId;
+
+        setLoadingBrands(true);
+        brandsService
+          .getByCompany(companyId)
+          .then((res) => {
+            if (res.success && Array.isArray(res.data)) {
+              setBrands(res.data);
+            }
+          })
+          .finally(() => setLoadingBrands(false));
+
         // Cargar estados del país seleccionado
         setLoadingStates(true);
-        statesService.getByCountry(
-          typeof editingBranch.countryId === "object"
-            ? editingBranch.countryId._id
-            : editingBranch.countryId
-        )
+        statesService
+          .getByCountry(
+            typeof editingBranch.countryId === "object"
+              ? editingBranch.countryId._id
+              : editingBranch.countryId
+          )
           .then((res) => {
             if (res.success && Array.isArray(res.data)) {
               setStates(res.data);
@@ -149,11 +162,12 @@ const BranchModal: React.FC<BranchModalProps> = ({
 
         // Cargar municipios del estado seleccionado
         setLoadingMunicipalities(true);
-        municipalitiesService.getByState(
-          typeof editingBranch.stateId === "object"
-            ? editingBranch.stateId._id
-            : editingBranch.stateId
-        )
+        municipalitiesService
+          .getByState(
+            typeof editingBranch.stateId === "object"
+              ? editingBranch.stateId._id
+              : editingBranch.stateId
+          )
           .then((res) => {
             if (res.success && Array.isArray(res.data)) {
               setMunicipalities(res.data);
@@ -167,13 +181,35 @@ const BranchModal: React.FC<BranchModalProps> = ({
   }, [showModal, isEditing, editingBranch, setValue, reset]);
 
   useEffect(() => {
+    if (selectedCompany && !isEditing) {
+      setLoadingBrands(true);
+      setBrands([]);
+      setValue("brandId", "");
+
+      brandsService
+        .getByCompany(selectedCompany)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setBrands(res.data);
+          }
+        })
+        .catch((error) => {
+          console.error("Error loading brands:", error);
+          toast.error("Error al cargar las marcas");
+        })
+        .finally(() => setLoadingBrands(false));
+    }
+  }, [selectedCompany, setValue, isEditing]);
+
+  useEffect(() => {
     if (selectedCountry && !isEditing) {
       setLoadingStates(true);
       setStates([]);
       setValue("stateId", "");
       setValue("municipalityId", "");
-      
-      statesService.getByCountry(selectedCountry)
+
+      statesService
+        .getByCountry(selectedCountry)
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
             setStates(res.data);
@@ -192,8 +228,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
       setLoadingMunicipalities(true);
       setMunicipalities([]);
       setValue("municipalityId", "");
-      
-      municipalitiesService.getByState(selectedState)
+
+      municipalitiesService
+        .getByState(selectedState)
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
             setMunicipalities(res.data);
@@ -323,9 +360,13 @@ const BranchModal: React.FC<BranchModalProps> = ({
                       <Form.Select
                         {...field}
                         isInvalid={!!errors.brandId}
-                        disabled={loadingBrands}
+                        disabled={loadingBrands || !selectedCompany}
                       >
-                        <option value="">Seleccionar marca</option>
+                        <option value="">
+                          {selectedCompany
+                            ? "Seleccionar marca"
+                            : "Primero selecciona una razón social"}
+                        </option>
                         {brands.map((brand) => (
                           <option key={brand._id} value={brand._id}>
                             {brand.name}

@@ -1,4 +1,5 @@
 import { type MenuItemType } from "@/types/layout";
+import { Inbox, PackageOpen, CircleDollarSign, Cog } from "lucide-react";
 import { TbAlertHexagon, TbLayoutDashboard } from "react-icons/tb";
 
 export const menuItems: MenuItemType[] = [
@@ -12,7 +13,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "catalogos",
     label: "Catálogos",
-    icon: TbAlertHexagon,
+    icon: Inbox,
     children: [
       {
         key: "razonesSociales",
@@ -25,19 +26,19 @@ export const menuItems: MenuItemType[] = [
         url: "/catalogos/brand",
       },
       {
-        key: "categorias",
-        label: "Categorías",
-        url: "/catalogos/categories",
+        key: "unidades-de-negocio",
+        label: "Unidades de Negocio",
+        url: "/catalogos/unidades-de-negocio",
       },
       {
         key: "sucursales",
         label: "Sucursales",
-        url: "/catalogos/branches",
+        url: "/catalogos/sucursales",
       },
       {
         key: "rutas",
         label: "Rutas",
-        url: "/catalogos/routes",
+        url: "/catalogos/rutas",
       },
 
       {
@@ -85,7 +86,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "paquetes",
     label: "Paquetes",
-    icon: TbAlertHexagon,
+    icon: PackageOpen,
     children: [
       {
         key: "solicitarPaquete",
@@ -107,7 +108,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "presupuestos",
     label: "Presupuestos",
-    icon: TbAlertHexagon,
+    icon: CircleDollarSign,
     children: [
       {
         key: "asignarPresupuesto",
@@ -124,7 +125,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "gestion",
     label: "Gestión",
-    icon: TbAlertHexagon,
+    icon: Cog,
     children: [
       { key: "roles", label: "Roles", url: "/gestion/roles" },
       { key: "pages", label: "Páginas", url: "/gestion/paginas" },

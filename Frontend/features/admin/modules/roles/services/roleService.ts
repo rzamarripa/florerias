@@ -2,7 +2,7 @@ import { apiCall, ApiResponse } from "@/utils/api";
 
 export const roleService = {
   getAll: async () => {
-    return await apiCall("/roles");
+    return await apiCall<any>("/roles");
   },
 
   getById: async (id: string) => {
@@ -10,16 +10,16 @@ export const roleService = {
   },
 
   create: async (data: any) => {
-    return await apiCall("/roles", {
+    return await apiCall<any>("/roles", {
       method: "POST",
-      data,
+      body: data,
     });
   },
 
   update: async (id: string, data: any) => {
-    return await apiCall(`/roles/${id}`, {
+    return await apiCall<any>(`/roles/${id}`, {
       method: "PUT",
-      data,
+      body: data,
     });
   },
 
