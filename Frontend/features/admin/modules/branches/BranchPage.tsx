@@ -162,7 +162,6 @@ const BranchPage: React.FC = () => {
                   <th className="text-center">NOMBRE</th>
                   <th className="text-center">RAZÓN SOCIAL</th>
                   <th className="text-center">MARCA</th>
-                  <th className="text-center">UBICACIÓN</th>
                   <th className="text-center">CONTACTO</th>
                   <th className="text-center">ESTADO</th>
                   <th className="text-center text-nowrap">FECHA CREACIÓN</th>
@@ -214,36 +213,11 @@ const BranchPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="text-center">
-                        <span className="badge bg-primary bg-opacity-10 text-primary">
+                        <span className="text-dark">
                           {typeof branch.brandId === "object"
                             ? branch.brandId.name
                             : ""}
                         </span>
-                      </td>
-                      <td className="text-center">
-                        <div className="d-flex flex-column">
-                          <span className="fw-medium text-dark">
-                            {typeof branch.municipalityId === "object"
-                              ? branch.municipalityId.name
-                              : ""}
-                            ,{" "}
-                            {typeof branch.stateId === "object"
-                              ? branch.stateId.name
-                              : ""}
-                          </span>
-                          <small className="text-muted">
-                            {typeof branch.countryId === "object"
-                              ? branch.countryId.name
-                              : ""}
-                          </small>
-                          {branch.address && (
-                            <small className="text-muted">
-                              {branch.address.length > 30
-                                ? `${branch.address.substring(0, 30)}...`
-                                : branch.address}
-                            </small>
-                          )}
-                        </div>
                       </td>
                       <td className="text-center">
                         <div className="d-flex flex-column">
