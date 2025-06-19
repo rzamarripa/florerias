@@ -7,8 +7,7 @@ import { toast } from "react-toastify";
 import StateModal from "./components/StateModal";
 import { State } from "./types";
 import { getAll } from "./services/states";
-import { FiTrash2 } from "react-icons/fi";
-import { BsCheck2 } from "react-icons/bs";
+import StateActions from "./components/Actions";
 
 const StatesPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -28,7 +27,19 @@ const StatesPage: React.FC = () => {
             if (isInitial) setLoading(true);
             const page = params?.page || pagination.page;
             const limit = params?.limit || pagination.limit;
-            const response = await getAll({ page, limit });
+            const searchParams: any = { page, limit };
+
+            if (selectedType === "activos") {
+                searchParams.isActive = "true";
+            } else if (selectedType === "inactivos") {
+                searchParams.isActive = "false";
+            }
+
+            if (searchTerm) {
+                searchParams.search = searchTerm;
+            }
+
+            const response = await getAll(searchParams);
             if (response.success) {
                 setStates(response.data);
                 if (response.pagination) setPagination(response.pagination);
@@ -41,7 +52,7 @@ const StatesPage: React.FC = () => {
         } finally {
             if (isInitial) setLoading(false);
         }
-    }, [pagination.page, pagination.limit]);
+    }, [pagination.page, pagination.limit, searchTerm, selectedType]);
 
     useEffect(() => {
         loadStates(true);
@@ -53,7 +64,7 @@ const StatesPage: React.FC = () => {
         }
 
         const timeout = setTimeout(() => {
-            loadStates();
+            loadStates(false, { page: 1 });
         }, searchTerm ? 500 : 0);
 
         setSearchTimeout(timeout);
@@ -77,11 +88,6 @@ const StatesPage: React.FC = () => {
 
     const handleStateSaved = () => {
         loadStates(false, { page: pagination.page, limit: pagination.limit });
-    };
-
-    const handleToggleState = (state: State) => {
-        // Implement the logic to toggle the state
-        console.log("Toggling state:", state);
     };
 
     return (
@@ -192,28 +198,10 @@ const StatesPage: React.FC = () => {
                                                         </span>
                                                     </td>
                                                     <td className="text-center">
-                                                        <div className="d-flex justify-content-center gap-1">
-                                                            <StateModal
-                                                                mode="edit"
-                                                                editingState={state}
-                                                                onStateSaved={handleStateSaved}
-                                                            />
-                                                            <button
-                                                                className="btn btn-light btn-icon btn-sm rounded-circle"
-                                                                title={
-                                                                    state.isActive
-                                                                        ? "Desactivar estado"
-                                                                        : "Activar estado"
-                                                                }
-                                                                onClick={() => handleToggleState(state)}
-                                                            >
-                                                                {state.isActive ? (
-                                                                    <FiTrash2 size={16} />
-                                                                ) : (
-                                                                    <BsCheck2 size={16} />
-                                                                )}
-                                                            </button>
-                                                        </div>
+                                                        <StateActions
+                                                            state={state}
+                                                            onStateSaved={handleStateSaved}
+                                                        />
                                                     </td>
                                                 </tr>
                                             ))}

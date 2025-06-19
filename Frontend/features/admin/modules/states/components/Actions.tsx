@@ -5,9 +5,7 @@ import { toast } from "react-toastify";
 import { Spinner } from "react-bootstrap";
 import StateModal from "./StateModal";
 import { StateActionsProps } from "../types";
-import { deleteState, activateState } from "../services/states";
-
-
+import { toggleStatus } from "../services/states";
 
 const StateActions: React.FC<StateActionsProps> = ({
     state,
@@ -15,19 +13,21 @@ const StateActions: React.FC<StateActionsProps> = ({
 }) => {
     const [isToggling, setIsToggling] = useState<boolean>(false);
 
-    const handleToggleState = async (id: string, currentStatus: boolean) => {
+    const handleToggleState = async () => {
         setIsToggling(true);
         try {
-            if (currentStatus) {
-                await deleteState(id);
+            const response = await toggleStatus(state._id, state.isActive);
+            if (response.success) {
+                const action = state.isActive ? 'desactivado' : 'activado';
+                toast.success(`Estado "${state.name}" ${action} exitosamente`);
+                if (onStateSaved) onStateSaved();
             } else {
-                await activateState(id);
+                throw new Error(response.message || `Error al ${state.isActive ? 'desactivar' : 'activar'} el estado`);
             }
-            if (onStateSaved) onStateSaved();
         } catch (error: any) {
             console.error("Error toggling state:", error);
 
-            let errorMessage = `Error al ${currentStatus ? 'desactivar' : 'activar'} el estado "${state.name}"`;
+            let errorMessage = `Error al ${state.isActive ? 'desactivar' : 'activar'} el estado "${state.name}"`;
 
             if (error.response?.status === 400) {
                 errorMessage = error.response.data?.message || errorMessage;
@@ -45,21 +45,6 @@ const StateActions: React.FC<StateActionsProps> = ({
         }
     };
 
-    const getToggleButtonTitle = () => {
-        if (isToggling) {
-            return state.isActive ? "Desactivando..." : "Activando...";
-        }
-        return state.isActive ? "Desactivar estado" : "Activar estado";
-    };
-
-    const getToggleButtonClass = () => {
-        let baseClass = "btn btn-light btn-icon btn-sm rounded-circle";
-        if (isToggling) {
-            baseClass += " disabled";
-        }
-        return baseClass;
-    };
-
     return (
         <div className="d-flex justify-content-center gap-1">
             <StateModal
@@ -69,9 +54,9 @@ const StateActions: React.FC<StateActionsProps> = ({
             />
 
             <button
-                className={getToggleButtonClass()}
-                title={getToggleButtonTitle()}
-                onClick={() => handleToggleState(state._id, state.isActive)}
+                className="btn btn-light btn-icon btn-sm rounded-circle"
+                title={state.isActive ? "Desactivar estado" : "Activar estado"}
+                onClick={handleToggleState}
                 disabled={isToggling}
             >
                 {isToggling ? (
