@@ -398,11 +398,12 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
 
       <Modal.Footer className="border-0">
         <Button
+          variant="light"
           onClick={handleClose}
-          className={`fw-medium px-4 btn-light`}
+          className="fw-medium px-4"
           disabled={loading}
         >
-          Cerrar
+          Cancelar
         </Button>
         <Button
           variant="primary"

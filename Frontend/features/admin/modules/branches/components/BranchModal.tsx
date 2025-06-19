@@ -78,6 +78,24 @@ const BranchModal: React.FC<BranchModalProps> = ({
 
   useEffect(() => {
     if (showModal) {
+      setLoadingCompanies(true);
+      setLoadingBrands(true);
+      setLoadingCountries(true);
+
+      Promise.all([
+        companiesService.getAll(),
+        brandsService.getAllForSelects(),
+        countriesService.getAll()
+      ]).then(([companiesRes, brandsRes, countriesRes]) => {
+        setCompanies(companiesRes.data || []);
+        setBrands(brandsRes.data || []);
+        setCountries(countriesRes.data || []);
+      }).finally(() => {
+        setLoadingCompanies(false);
+        setLoadingBrands(false);
+        setLoadingCountries(false);
+      });
+
       if (isEditing && editingBranch) {
         setValue("name", editingBranch.name);
         setValue(
@@ -114,6 +132,34 @@ const BranchModal: React.FC<BranchModalProps> = ({
         setValue("phone", editingBranch.phone);
         setValue("email", editingBranch.email);
         setValue("description", editingBranch.description || "");
+
+        // Cargar estados del país seleccionado
+        setLoadingStates(true);
+        statesService.getByCountry(
+          typeof editingBranch.countryId === "object"
+            ? editingBranch.countryId._id
+            : editingBranch.countryId
+        )
+          .then((res) => {
+            if (res.success && Array.isArray(res.data)) {
+              setStates(res.data);
+            }
+          })
+          .finally(() => setLoadingStates(false));
+
+        // Cargar municipios del estado seleccionado
+        setLoadingMunicipalities(true);
+        municipalitiesService.getByState(
+          typeof editingBranch.stateId === "object"
+            ? editingBranch.stateId._id
+            : editingBranch.stateId
+        )
+          .then((res) => {
+            if (res.success && Array.isArray(res.data)) {
+              setMunicipalities(res.data);
+            }
+          })
+          .finally(() => setLoadingMunicipalities(false));
       } else {
         reset();
       }
@@ -121,61 +167,45 @@ const BranchModal: React.FC<BranchModalProps> = ({
   }, [showModal, isEditing, editingBranch, setValue, reset]);
 
   useEffect(() => {
-    if (selectedCountry) {
+    if (selectedCountry && !isEditing) {
+      setLoadingStates(true);
+      setStates([]);
       setValue("stateId", "");
       setValue("municipalityId", "");
-    }
-  }, [selectedCountry, setValue]);
-
-  useEffect(() => {
-    if (selectedState) {
-      setValue("municipalityId", "");
-    }
-  }, [selectedState, setValue]);
-
-  useEffect(() => {
-    if (showModal) {
-      setLoadingCompanies(true);
-      setLoadingBrands(true);
-      setLoadingCountries(true);
-      companiesService
-        .getAll()
-        .then((res) => setCompanies(res.data || []))
-        .finally(() => setLoadingCompanies(false));
-      brandsService
-        .getAllForSelects()
-        .then((res) => setBrands(res.data || []))
-        .finally(() => setLoadingBrands(false));
-      countriesService
-        .getAll()
-        .then((res) => setCountries(res.data || []))
-        .finally(() => setLoadingCountries(false));
-    }
-  }, [showModal]);
-
-  useEffect(() => {
-    if (selectedCountry) {
-      setLoadingStates(true);
-      statesService
-        .getByCountry(selectedCountry)
-        .then((res) => setStates(res.data || []))
+      
+      statesService.getByCountry(selectedCountry)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setStates(res.data);
+          }
+        })
+        .catch((error) => {
+          console.error("Error loading states:", error);
+          toast.error("Error al cargar los estados");
+        })
         .finally(() => setLoadingStates(false));
-    } else {
-      setStates([]);
     }
-  }, [selectedCountry]);
+  }, [selectedCountry, setValue, isEditing]);
 
   useEffect(() => {
-    if (selectedState) {
+    if (selectedState && !isEditing) {
       setLoadingMunicipalities(true);
-      municipalitiesService
-        .getByState(selectedState)
-        .then((res) => setMunicipalities(res.data || []))
-        .finally(() => setLoadingMunicipalities(false));
-    } else {
       setMunicipalities([]);
+      setValue("municipalityId", "");
+      
+      municipalitiesService.getByState(selectedState)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setMunicipalities(res.data);
+          }
+        })
+        .catch((error) => {
+          console.error("Error loading municipalities:", error);
+          toast.error("Error al cargar los municipios");
+        })
+        .finally(() => setLoadingMunicipalities(false));
     }
-  }, [selectedState]);
+  }, [selectedState, setValue, isEditing]);
 
   const handleOpenModal = () => {
     setShowModal(true);
@@ -528,9 +558,10 @@ const BranchModal: React.FC<BranchModalProps> = ({
 
           <Modal.Footer>
             <Button
-              variant="secondary"
+              variant="light"
               onClick={handleCloseModal}
               disabled={isSubmitting}
+              className="fw-medium px-4"
             >
               Cancelar
             </Button>

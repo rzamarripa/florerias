@@ -2,12 +2,13 @@
 
 import { FileText, Search } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { Button, Form, Spinner, Table } from "react-bootstrap";
+import { Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
-import CategoryActions from "./components/Actions";
 import CategoryModal from "./components/CategoryModal";
 import { CategorySearchParams, categoryService } from "./services/categories";
 import { Category } from "./types/index";
+import { FiTrash2 } from "react-icons/fi";
+import { BsCheck2 } from "react-icons/bs";
 
 const CategoriesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -19,7 +20,7 @@ const CategoriesPage: React.FC = () => {
   );
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 15,
     total: 0,
     pages: 0,
   });
@@ -98,13 +99,13 @@ const CategoriesPage: React.FC = () => {
     loadCategories(false, { page: newPage });
   };
 
-  const handleLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newLimit = parseInt(e.target.value);
-    loadCategories(false, { page: 1, limit: newLimit });
-  };
-
   const handleCategorySaved = () => {
     loadCategories(false);
+  };
+
+  const handleToggleCategory = (category: any) => {
+    // Implement the logic to toggle the category's active status
+    console.log("Toggling category:", category);
   };
 
   const mappedCategories = categories.map((cat) => ({
@@ -115,55 +116,6 @@ const CategoriesPage: React.FC = () => {
     updatedAt: cat.updatedAt || cat.createdAt,
     description: cat.description,
   }));
-
-  const renderPagination = () => {
-    if (pagination.pages <= 1) return null;
-
-    const { page, pages } = pagination;
-    const pageButtons = [];
-    const maxButtons = 5;
-    let startPage = Math.max(1, page - Math.floor(maxButtons / 2));
-    let endPage = startPage + maxButtons - 1;
-    if (endPage > pages) {
-      endPage = pages;
-      startPage = Math.max(1, endPage - maxButtons + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pageButtons.push(
-        <Button
-          key={i}
-          variant={page === i ? "primary" : "outline-secondary"}
-          size="sm"
-          onClick={() => handlePageChange(i)}
-        >
-          {i}
-        </Button>
-      );
-    }
-
-    return (
-      <div className="d-flex gap-1">
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          disabled={page === 1}
-          onClick={() => handlePageChange(page - 1)}
-        >
-          Anterior
-        </Button>
-        {pageButtons}
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          disabled={page === pages}
-          onClick={() => handlePageChange(page + 1)}
-        >
-          Siguiente
-        </Button>
-      </div>
-    );
-  };
 
   return (
     <div className="container-fluid">
@@ -217,9 +169,13 @@ const CategoriesPage: React.FC = () => {
 
             <div className="table-responsive shadow-sm">
               {loading ? (
-                <div className="d-flex justify-content-center align-items-center py-5">
+                <div className="text-center my-5">
                   <Spinner animation="border" variant="primary" />
-                  <span className="ms-2">Cargando categorías...</span>
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center my-5">
+                  <FileText size={48} className="text-muted mb-2" />
+                  <p className="text-muted">No hay categorías registradas</p>
                 </div>
               ) : (
                 <>
@@ -227,102 +183,104 @@ const CategoriesPage: React.FC = () => {
                     <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                       <tr>
                         <th className="text-center">#</th>
-                        <th className="text-center">NOMBRE</th>
-                        <th className="text-center">DESCRIPCIÓN</th>
-                        <th className="text-center">ESTADO</th>
-                        <th className="text-center">FECHA CREACIÓN</th>
-                        <th className="text-center">ACCIONES</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th className="text-center">Estatus</th>
+                        <th className="text-center text-nowrap">Fecha creación</th>
+                        <th className="text-center">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {mappedCategories.map((categoria, index) => (
-                        <tr key={categoria._id}>
-                          <td className="text-center">
-                            <span className="text-muted fw-medium">
-                              {(pagination.page - 1) * pagination.limit +
-                                index +
-                                1}
-                            </span>
-                          </td>
-                          <td className="text-center">
-                            <div className="d-flex justify-content-center align-items-center">
-                              <span className="fw-medium text-dark">
-                                {categoria.nombre}
-                              </span>
-                            </div>
-                          </td>
+                      {mappedCategories.map((category, index) => (
+                        <tr key={category._id}>
                           <td className="text-center">
                             <span className="text-muted">
-                              {categoria.description || "-"}
+                              {(pagination.page - 1) * pagination.limit + index + 1}
                             </span>
+                          </td>
+                          <td>
+                            <span className="fw-medium">{category.nombre}</span>
+                          </td>
+                          <td>
+                            <span>{category.description || "-"}</span>
                           </td>
                           <td className="text-center">
                             <span
                               className={`badge fs-6 ${
-                                categoria.status
+                                category.status
                                   ? "bg-success bg-opacity-10 text-success"
                                   : "bg-danger bg-opacity-10 text-danger"
                               }`}
                             >
-                              {categoria.status ? "Activo" : "Inactivo"}
+                              {category.status ? "Activo" : "Inactivo"}
                             </span>
                           </td>
                           <td className="text-center">
-                            <span className="text-muted">
-                              {new Date(categoria.createdAt).toLocaleDateString(
-                                "es-ES"
-                              )}
+                            <span>
+                              {new Date(category.createdAt).toLocaleDateString("es-ES", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
                             </span>
                           </td>
                           <td className="text-center">
-                            <CategoryActions
-                              categoria={categoria}
-                              onCategoriaSaved={handleCategorySaved}
-                            />
+                            <div className="d-flex justify-content-center gap-1">
+                              <CategoryModal
+                                mode="edit"
+                                editingCategoria={category}
+                                onCategoriaSaved={handleCategorySaved}
+                              />
+                              <button
+                                className="btn btn-light btn-icon btn-sm rounded-circle"
+                                title={
+                                  category.status
+                                    ? "Desactivar categoría"
+                                    : "Activar categoría"
+                                }
+                                onClick={() => handleToggleCategory(category)}
+                              >
+                                {category.status ? (
+                                  <FiTrash2 size={16} />
+                                ) : (
+                                  <BsCheck2 size={16} />
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </Table>
 
-                  {mappedCategories.length === 0 && (
-                    <div className="text-center py-5">
-                      <FileText size={48} className="text-muted mb-3" />
-                      <h5 className="text-muted">
-                        No se encontraron categorías
-                      </h5>
-                      <p className="text-muted">
-                        {searchTerm || selectedType !== "todos"
-                          ? "Intenta cambiar los filtros de búsqueda"
-                          : "No hay categorías disponibles en el sistema"}
-                      </p>
+                  <div className="d-flex justify-content-between align-items-center p-3 border-top">
+                    <span className="text-muted">
+                      Mostrando {categories.length} de {pagination.total} registros
+                    </span>
+                    <div className="d-flex gap-1">
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={pagination.page === 1}
+                        onClick={() => handlePageChange(pagination.page - 1)}
+                      >
+                        Anterior
+                      </button>
+                      <button
+                        className="btn btn-sm btn-primary"
+                      >
+                        {pagination.page}
+                      </button>
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={pagination.page === pagination.pages}
+                        onClick={() => handlePageChange(pagination.page + 1)}
+                      >
+                        Siguiente
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </>
               )}
-
-              <div className="d-flex justify-content-between align-items-center p-3 border-top">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="text-muted">
-                    Mostrando {mappedCategories.length} de {pagination.total}{" "}
-                    registros
-                  </span>
-                  <Form.Select
-                    size="sm"
-                    value={pagination.limit}
-                    onChange={handleLimitChange}
-                    style={{ width: "auto" }}
-                    disabled={loading}
-                  >
-                    <option value={5}>5 por página</option>
-                    <option value={10}>10 por página</option>
-                    <option value={25}>25 por página</option>
-                    <option value={50}>50 por página</option>
-                  </Form.Select>
-                </div>
-
-                {renderPagination()}
-              </div>
             </div>
           </div>
         </div>

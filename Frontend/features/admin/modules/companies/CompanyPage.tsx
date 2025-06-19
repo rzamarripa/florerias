@@ -62,44 +62,20 @@ const CompaniesPage: React.FC = () => {
   };
 
   const fetchBankAccountsCount = async (companyIds: string[]) => {
-    try {
-      const counts: Record<string, number> = {};
-
-      const promises = companyIds.map(async (id) => {
-        try {
-          const res = await bankAccountsService.getActiveCount({ company: id });
-
-          const count =
-            res &&
-            typeof res === "object" &&
-            "data" in res &&
-            res.data &&
-            typeof res.data === "object" &&
-            "count" in res.data &&
-            typeof (res.data as any).count === "number"
-              ? (res.data as any).count
-              : 0;
-
-          return { id, total: count };
-        } catch (error) {
-          console.error(
-            `Error fetching bank accounts count for company ${id}:`,
-            error
-          );
-          return { id, total: 0 };
-        }
-      });
-
-      const results = await Promise.all(promises);
-
-      results.forEach(({ id, total }) => {
-        counts[id] = total;
-      });
-
-      setBankAccountsCount(counts);
-    } catch (error) {
-      console.error("Error fetching bank accounts count:", error);
+    const counts: Record<string, number> = {};
+    for (const id of companyIds) {
+      const res = await bankAccountsService.getAll({ company: id, limit: 1 });
+      const total =
+        res &&
+        typeof res === "object" &&
+        "pagination" in res &&
+        res.pagination &&
+        typeof res.pagination.total === "number"
+          ? res.pagination.total
+          : 0;
+      counts[id] = total;
     }
+    setBankAccountsCount(counts);
   };
 
   useEffect(() => {
@@ -180,9 +156,13 @@ const CompaniesPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  companies.map((company, idx) => (
+                  companies.map((company, index) => (
                     <tr key={company._id}>
-                      <td>{idx + 1}</td>
+                      <td className="text-center">
+                        <span className="text-muted">
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </span>
+                      </td>
                       <td>{company.name}</td>
                       <td>{company.legalRepresentative}</td>
                       <td>{company.rfc}</td>

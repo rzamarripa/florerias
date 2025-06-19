@@ -6,6 +6,8 @@ import {
   getAll,
   getAllBranches,
   updateBranch,
+  getStatesByCountryId,
+  getMunicipalitiesByStateId,
 } from "../controllers/branchController.js";
 
 const router = express.Router();
@@ -16,5 +18,8 @@ router.post("/", createBranch);
 router.put("/:id", updateBranch);
 router.delete("/:id", deleteBranch);
 router.put("/:id/active", activeBranch);
+
+router.get("/states/by-country/:countryId", getStatesByCountryId);
+router.get("/municipalities/by-state/:stateId", getMunicipalitiesByStateId);
 
 export default router;

@@ -355,7 +355,7 @@ const BrandModal: React.FC<BrandModalProps> = ({
               disabled={loading}
               className="fw-medium px-4"
             >
-              Cerrar
+              Cancelar
             </Button>
             <Button variant="primary" type="submit" disabled={loading}>
               {loading

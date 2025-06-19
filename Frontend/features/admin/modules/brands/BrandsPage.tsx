@@ -129,10 +129,12 @@ const BrandPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  brands.map((brand, idx) => (
+                  brands.map((brand, index) => (
                     <tr key={brand._id}>
-                      <td>
-                        {(pagination.page - 1) * pagination.limit + idx + 1}
+                      <td className="text-center">
+                        <span className="text-muted">
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </span>
                       </td>
                       <td>
                         {brand.logo ? (

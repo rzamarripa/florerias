@@ -1,26 +1,24 @@
-
-
-export interface Role {
-  _id: string;
-  name: string;
-  description?: string;
-  modules?: any[]; 
-}
+import type { Role } from "../../roles/types";
+export type { Role } from "../../roles/types";
 
 export interface UserProfile {
-  name: string;      
-  fullName: string;   
+  name: string;
+  fullName: string;
   path?: string;
   estatus: boolean;
-  image?: string
+  image?: {
+    data: string;
+    contentType: string;
+  };
 }
 
 export interface User {
   _id: string;
   username: string;
-  profile: UserProfile;
+  password?: string;
   department?: string;
-  role?: Role;
+  profile: UserProfile;
+  role: Role | string;
   createdAt: string;
   updatedAt: string;
 }

@@ -294,9 +294,10 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
           </Modal.Body>
           <Modal.Footer>
             <Button
-              variant="secondary"
+              variant="light"
               onClick={handleCloseModal}
               disabled={isSubmitting}
+              className="fw-medium px-4"
             >
               Cancelar
             </Button>

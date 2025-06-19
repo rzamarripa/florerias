@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Role } from "../models/Roles.js";
-import { RsUserProvider } from "../models/RsUserProvider.js";
+import { RsUserProvider } from "../models/UserProviders.js";
 import { User } from "../models/User.js";
 
 export const generateToken = (id) => {
@@ -98,7 +98,7 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ username })
       .select("+password")
       .populate({
-        path: "ac_role",
+        path: "role",
         populate: {
           path: "ac_module",
           populate: {
@@ -192,7 +192,7 @@ export const getAllUsers = async (req, res) => {
 
       if (userObj.role) {
         userObj.role = {
-          id: userObj.role._id,
+          _id: userObj.role._id,
           name: userObj.role.name,
         };
       }
@@ -222,7 +222,7 @@ export const getAllUsers = async (req, res) => {
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).populate(
-      "ac_role",
+      "role",
       "name description"
     );
 
@@ -300,7 +300,7 @@ export const updateUser = async (req, res) => {
     const user = await User.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
-    }).populate("ac_role", "name description");
+    }).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -329,7 +329,7 @@ export const deleteUser = async (req, res) => {
       req.params.id,
       { "profile.estatus": false },
       { new: true }
-    ).populate("ac_role", "name description");
+    ).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -357,7 +357,7 @@ export const activateUser = async (req, res) => {
       req.params.id,
       { "profile.estatus": true },
       { new: true }
-    ).populate("ac_role", "name description");
+    ).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -445,7 +445,7 @@ export const assignRoles = async (req, res) => {
       req.params.id,
       { role },
       { new: true }
-    ).populate("ac_role", "name description");
+    ).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -504,10 +504,8 @@ export const assignProviders = async (req, res) => {
       });
     }
 
-    // Remove all existing relations for this user
     await RsUserProvider.deleteMany({ userId });
 
-    // Create new relations
     const relations = await Promise.all(
       providerIds.map((providerId) =>
         RsUserProvider.createRelation(userId, providerId)

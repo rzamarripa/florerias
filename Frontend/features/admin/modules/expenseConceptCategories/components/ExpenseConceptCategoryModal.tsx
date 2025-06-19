@@ -170,9 +170,10 @@ const ExpenseConceptCategoryModal: React.FC<
 
           <Modal.Footer>
             <Button
-              variant="secondary"
+              variant="light"
               onClick={handleCloseModal}
               disabled={isSubmitting}
+              className="fw-medium px-4"
             >
               Cancelar
             </Button>

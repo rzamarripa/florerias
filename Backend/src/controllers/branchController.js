@@ -334,3 +334,35 @@ export const activeBranch = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getStatesByCountryId = async (req, res) => {
+  try {
+    const { countryId } = req.params;
+    const country = await Country.findOne({ _id: countryId, isActive: true });
+    if (!country) {
+      return res.status(404).json({ success: false, message: "Country not found" });
+    }
+    const states = await State.find({ countryId, isActive: true })
+      .select("_id name")
+      .sort({ name: 1 });
+    res.status(200).json({ success: true, data: states });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getMunicipalitiesByStateId = async (req, res) => {
+  try {
+    const { stateId } = req.params;
+    const state = await State.findOne({ _id: stateId, isActive: true });
+    if (!state) {
+      return res.status(404).json({ success: false, message: "State not found" });
+    }
+    const municipalities = await Municipality.find({ stateId, isActive: true })
+      .select("_id name")
+      .sort({ name: 1 });
+    res.status(200).json({ success: true, data: municipalities });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

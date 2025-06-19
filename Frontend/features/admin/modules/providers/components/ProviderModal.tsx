@@ -1,23 +1,23 @@
-import { getModalButtonStyles } from "@/utils/modalButtonStyles";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-import { ProveedorFormData, proveedorSchema } from "../schemas/providerSchema";
+import { getModalButtonStyles } from "../../../../../utils/modalButtonStyles";
+import { providerSchema, ProviderFormData } from "../schemas/providerSchema";
+import { Provider, Location } from "../types";
 import {
-  createProvider,
   getAllCountries,
-  getMunicipalitiesByState,
   getStatesByCountry,
+  getMunicipalitiesByState,
+  createProvider,
   updateProvider,
 } from "../services/providers";
-import { Provider } from "../types";
 
-interface ProviderModalButtonProps {
+interface ProviderModalProps {
   mode: "create" | "edit";
-  onProveedorSaved?: () => void;
-  editingProveedor?: Provider | null;
+  onProviderSaved?: () => void;
+  editingProvider?: Provider | null;
   buttonProps?: {
     variant?: string;
     size?: "sm" | "lg";
@@ -26,23 +26,18 @@ interface ProviderModalButtonProps {
   };
 }
 
-const ProviderModal: React.FC<ProviderModalButtonProps> = ({
+const ProviderModal: React.FC<ProviderModalProps> = ({
   mode,
-  onProveedorSaved,
-  editingProveedor = null,
+  onProviderSaved,
+  editingProvider = null,
   buttonProps = {},
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const isEditing = mode === "edit";
 
-  // Estados para selects dependientes
-  const [countries, setCountries] = useState<{ _id: string; name: string }[]>(
-    []
-  );
-  const [states, setStates] = useState<{ _id: string; name: string }[]>([]);
-  const [municipalities, setMunicipalities] = useState<
-    { _id: string; name: string }[]
-  >([]);
+  const [countries, setCountries] = useState<Location[]>([]);
+  const [states, setStates] = useState<Location[]>([]);
+  const [municipalities, setMunicipalities] = useState<Location[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(false);
@@ -53,9 +48,9 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
     reset,
     setValue,
     watch,
-    formState: { errors, isSubmitting, isValid },
-  } = useForm<ProveedorFormData>({
-    resolver: zodResolver(proveedorSchema),
+    formState: { errors, isSubmitting },
+  } = useForm<ProviderFormData>({
+    resolver: zodResolver(providerSchema) as any,
     defaultValues: {
       commercialName: "",
       businessName: "",
@@ -75,7 +70,6 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
   const countrySelected = watch("countryId");
   const stateSelected = watch("stateId");
 
-  // Cargar países al abrir modal
   useEffect(() => {
     if (showModal) {
       setLoadingCountries(true);
@@ -83,88 +77,80 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
             setCountries(res.data);
-          } else {
-            setCountries([]);
           }
         })
-        .catch(() => setCountries([]))
         .finally(() => setLoadingCountries(false));
-    }
-  }, [showModal]);
 
-  // Cargar estados cuando cambia país
-  useEffect(() => {
-    if (countrySelected) {
-      setLoadingStates(true);
-      getStatesByCountry(countrySelected)
-        .then((res) => {
-          if (res.success && Array.isArray(res.data)) {
-            setStates(res.data);
-          } else {
-            setStates([]);
-          }
-        })
-        .catch(() => setStates([]))
-        .finally(() => setLoadingStates(false));
-      setValue("stateId", "");
-      setValue("municipalityId", "");
-      setMunicipalities([]);
-    }
-  }, [countrySelected, setValue]);
+      if (isEditing && editingProvider) {
+        setValue("commercialName", editingProvider.commercialName);
+        setValue("businessName", editingProvider.businessName);
+        setValue("contactName", editingProvider.contactName);
+        setValue("countryId", editingProvider.countryId._id);
+        setValue("stateId", editingProvider.stateId._id);
+        setValue("municipalityId", editingProvider.municipalityId._id);
+        setValue("address", editingProvider.address);
+        setValue("phone", editingProvider.phone);
+        setValue("email", editingProvider.email);
+        setValue("description", editingProvider.description || "");
+        setValue("isActive", editingProvider.isActive);
 
-  // Cargar municipios cuando cambia estado
-  useEffect(() => {
-    if (stateSelected) {
-      setLoadingMunicipalities(true);
-      getMunicipalitiesByState(stateSelected)
-        .then((res) => {
-          if (res.success && Array.isArray(res.data)) {
-            setMunicipalities(res.data);
-          } else {
-            setMunicipalities([]);
-          }
-        })
-        .catch(() => setMunicipalities([]))
-        .finally(() => setLoadingMunicipalities(false));
-      setValue("municipalityId", "");
-    }
-  }, [stateSelected, setValue]);
+        // Cargar estados del país seleccionado
+        setLoadingStates(true);
+        getStatesByCountry(editingProvider.countryId._id)
+          .then((res) => {
+            if (res.success && Array.isArray(res.data)) {
+              setStates(res.data);
+            }
+          })
+          .finally(() => setLoadingStates(false));
 
-  // Cargar datos cuando está editando
-  useEffect(() => {
-    if (showModal) {
-      if (isEditing && editingProveedor) {
-        setValue("commercialName", editingProveedor.commercialName);
-        setValue("businessName", editingProveedor.businessName);
-        setValue("contactName", editingProveedor.contactName);
-        setValue(
-          "countryId",
-          typeof editingProveedor.countryId === "object"
-            ? editingProveedor.countryId._id
-            : editingProveedor.countryId
-        );
-        setValue(
-          "stateId",
-          typeof editingProveedor.stateId === "object"
-            ? editingProveedor.stateId._id
-            : editingProveedor.stateId
-        );
-        setValue(
-          "municipalityId",
-          typeof editingProveedor.municipalityId === "object"
-            ? editingProveedor.municipalityId._id
-            : editingProveedor.municipalityId
-        );
-        setValue("address", editingProveedor.address);
-        setValue("phone", editingProveedor.phone);
-        setValue("email", editingProveedor.email);
-        setValue("description", editingProveedor.description || "");
-        setValue("isActive", editingProveedor.isActive);
+        // Cargar municipios del estado seleccionado
+        setLoadingMunicipalities(true);
+        getMunicipalitiesByState(editingProvider.stateId._id)
+          .then((res) => {
+            if (res.success && Array.isArray(res.data)) {
+              setMunicipalities(res.data);
+            }
+          })
+          .finally(() => setLoadingMunicipalities(false));
       } else {
         reset();
       }
     }
-  }, [showModal, isEditing, editingProveedor, setValue, reset]);
+  }, [showModal, isEditing, editingProvider, setValue, reset]);
+
+  useEffect(() => {
+    if (countrySelected && !isEditing) {
+      setLoadingStates(true);
+      setStates([]);
+      setValue("stateId", "");
+      setValue("municipalityId", "");
+      
+      getStatesByCountry(countrySelected)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setStates(res.data);
+          }
+        })
+        .finally(() => setLoadingStates(false));
+    }
+  }, [countrySelected, setValue, isEditing]);
+
+  useEffect(() => {
+    if (stateSelected && !isEditing) {
+      setLoadingMunicipalities(true);
+      setMunicipalities([]);
+      setValue("municipalityId", "");
+      
+      getMunicipalitiesByState(stateSelected)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setMunicipalities(res.data);
+          }
+        })
+        .finally(() => setLoadingMunicipalities(false));
+    }
+  }, [stateSelected, setValue, isEditing]);
 
   const handleOpenModal = () => {
     setShowModal(true);
@@ -173,17 +159,15 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
   const handleCloseModal = () => {
     setShowModal(false);
     reset();
-    setStates([]);
-    setMunicipalities([]);
   };
 
-  const onSubmit = async (data: ProveedorFormData) => {
+  const onSubmit = handleSubmit(async (data) => {
     try {
-      if (isEditing && editingProveedor) {
-        const res = await updateProvider(editingProveedor._id, data);
+      if (isEditing && editingProvider) {
+        const res = await updateProvider(editingProvider._id, data);
         if (res.success) {
           toast.success("Proveedor actualizado exitosamente");
-          onProveedorSaved?.();
+          onProviderSaved?.();
           handleCloseModal();
         } else {
           toast.error(res.message || "Error al actualizar proveedor");
@@ -192,22 +176,21 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
         const res = await createProvider(data);
         if (res.success) {
           toast.success("Proveedor creado exitosamente");
-          onProveedorSaved?.();
+          onProviderSaved?.();
           handleCloseModal();
         } else {
           toast.error(res.message || "Error al crear proveedor");
         }
       }
     } catch (error) {
-      const action = isEditing ? "actualizar" : "crear";
-      const errorMessage = `Error al ${action} el proveedor`;
-      toast.error(errorMessage);
+      const action = isEditing ? 'actualizar' : 'crear';
+      toast.error(`Error al ${action} el proveedor`);
       console.error(`Error ${action} proveedor:`, error);
     }
-  };
+  });
 
-  const defaultButtonProps = getModalButtonStyles("Proveedor");
-  const currentButtonConfig = defaultButtonProps[mode];
+  const buttonStyles = getModalButtonStyles("Proveedor");
+  const currentButtonConfig = buttonStyles[mode];
   const finalButtonProps = { ...currentButtonConfig, ...buttonProps };
 
   return (
@@ -218,18 +201,15 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
         className={finalButtonProps.className}
         title={finalButtonProps.title}
         onClick={handleOpenModal}
-        disabled={isEditing && !editingProveedor}
       >
         {finalButtonProps.children}
       </Button>
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>
-            {isEditing ? "Editar proveedor" : "Nuevo proveedor"}
-          </Modal.Title>
+          <Modal.Title>{isEditing ? "Editar proveedor" : "Nuevo proveedor"}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form onSubmit={handleSubmit(onSubmit)}>
+          <Form onSubmit={onSubmit}>
             <div className="row g-3">
               <div className="col-md-6">
                 <Controller
@@ -238,10 +218,7 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Nombre comercial *</Form.Label>
-                      <Form.Control
-                        {...field}
-                        isInvalid={!!errors.commercialName}
-                      />
+                      <Form.Control {...field} isInvalid={!!errors.commercialName} />
                       <Form.Control.Feedback type="invalid">
                         {errors.commercialName?.message}
                       </Form.Control.Feedback>
@@ -256,10 +233,7 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Razón social *</Form.Label>
-                      <Form.Control
-                        {...field}
-                        isInvalid={!!errors.businessName}
-                      />
+                      <Form.Control {...field} isInvalid={!!errors.businessName} />
                       <Form.Control.Feedback type="invalid">
                         {errors.businessName?.message}
                       </Form.Control.Feedback>
@@ -267,17 +241,14 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                   )}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-12">
                 <Controller
                   name="contactName"
                   control={control}
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Nombre contacto *</Form.Label>
-                      <Form.Control
-                        {...field}
-                        isInvalid={!!errors.contactName}
-                      />
+                      <Form.Control {...field} isInvalid={!!errors.contactName} />
                       <Form.Control.Feedback type="invalid">
                         {errors.contactName?.message}
                       </Form.Control.Feedback>
@@ -285,7 +256,7 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                   )}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-4">
                 <Controller
                   name="countryId"
                   control={control}
@@ -297,16 +268,12 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                         isInvalid={!!errors.countryId}
                         disabled={loadingCountries}
                       >
-                        <option value="">Selecciona un país</option>
-                        {loadingCountries ? (
-                          <option>Cargando...</option>
-                        ) : (
-                          countries.map((c) => (
-                            <option key={c._id} value={c._id}>
-                              {c.name}
-                            </option>
-                          ))
-                        )}
+                        <option value="">Seleccionar país</option>
+                        {countries.map((country) => (
+                          <option key={country._id} value={country._id}>
+                            {country.name}
+                          </option>
+                        ))}
                       </Form.Select>
                       <Form.Control.Feedback type="invalid">
                         {errors.countryId?.message}
@@ -315,7 +282,7 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                   )}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-4">
                 <Controller
                   name="stateId"
                   control={control}
@@ -327,16 +294,12 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                         isInvalid={!!errors.stateId}
                         disabled={loadingStates || !countrySelected}
                       >
-                        <option value="">Selecciona un estado</option>
-                        {loadingStates ? (
-                          <option>Cargando...</option>
-                        ) : (
-                          states.map((s) => (
-                            <option key={s._id} value={s._id}>
-                              {s.name}
-                            </option>
-                          ))
-                        )}
+                        <option value="">Seleccionar estado</option>
+                        {states.map((state) => (
+                          <option key={state._id} value={state._id}>
+                            {state.name}
+                          </option>
+                        ))}
                       </Form.Select>
                       <Form.Control.Feedback type="invalid">
                         {errors.stateId?.message}
@@ -345,28 +308,24 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                   )}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-4">
                 <Controller
                   name="municipalityId"
                   control={control}
                   render={({ field }) => (
                     <Form.Group>
-                      <Form.Label>Municipio *</Form.Label>
+                      <Form.Label>Ciudad *</Form.Label>
                       <Form.Select
                         {...field}
                         isInvalid={!!errors.municipalityId}
                         disabled={loadingMunicipalities || !stateSelected}
                       >
-                        <option value="">Selecciona un municipio</option>
-                        {loadingMunicipalities ? (
-                          <option>Cargando...</option>
-                        ) : (
-                          municipalities.map((m) => (
-                            <option key={m._id} value={m._id}>
-                              {m.name}
-                            </option>
-                          ))
-                        )}
+                        <option value="">Seleccionar ciudad</option>
+                        {municipalities.map((municipality) => (
+                          <option key={municipality._id} value={municipality._id}>
+                            {municipality.name}
+                          </option>
+                        ))}
                       </Form.Select>
                       <Form.Control.Feedback type="invalid">
                         {errors.municipalityId?.message}
@@ -375,7 +334,7 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                   )}
                 />
               </div>
-              <div className="col-md-12">
+              <div className="col-12">
                 <Controller
                   name="address"
                   control={control}
@@ -420,19 +379,14 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                   )}
                 />
               </div>
-              <div className="col-md-12">
+              <div className="col-12">
                 <Controller
                   name="description"
                   control={control}
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Descripción</Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        rows={2}
-                        {...field}
-                        isInvalid={!!errors.description}
-                      />
+                      <Form.Control as="textarea" rows={2} {...field} isInvalid={!!errors.description} />
                       <Form.Control.Feedback type="invalid">
                         {errors.description?.message}
                       </Form.Control.Feedback>
@@ -461,28 +415,31 @@ const ProviderModal: React.FC<ProviderModalButtonProps> = ({
                 />
               </div>
             </div>
-            <div className="d-flex justify-content-end mt-4">
-              <Button
-                variant="secondary"
-                onClick={handleCloseModal}
-                className="me-2"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={isSubmitting || !isValid}
-              >
-                {isSubmitting
-                  ? "Guardando..."
-                  : isEditing
-                  ? "Actualizar"
-                  : "Crear"}
-              </Button>
-            </div>
           </Form>
         </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            variant="light" 
+            onClick={handleCloseModal}
+            className="fw-medium px-4"
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={onSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Guardando...
+              </>
+            ) : (
+              "Guardar"
+            )}
+          </Button>
+        </Modal.Footer>
       </Modal>
     </>
   );

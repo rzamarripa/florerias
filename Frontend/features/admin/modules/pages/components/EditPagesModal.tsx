@@ -551,11 +551,12 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
       <Modal.Footer className="border-0">
         <Button
           type="button"
+          variant="light"
           onClick={handleClose}
-          className="fw-medium px-4 btn-light"
+          className="fw-medium px-4"
           disabled={isSubmitting}
         >
-          Cerrar
+          Cancelar
         </Button>
         <Button
           type="button"

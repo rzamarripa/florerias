@@ -1,5 +1,7 @@
 import { apiCall } from "@/utils/api";
 
+const API_BASE = "/branches";
+
 export interface Municipality {
   _id: string;
   name: string;
@@ -10,6 +12,6 @@ export interface Municipality {
 
 export const municipalitiesService = {
   getByState: async (stateId: string) => {
-    return await apiCall<Municipality[]>(`/municipalities/state/${stateId}`);
+    return await apiCall<Municipality[]>(`${API_BASE}/municipalities/by-state/${stateId}`);
   },
 };

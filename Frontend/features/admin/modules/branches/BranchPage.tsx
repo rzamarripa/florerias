@@ -159,11 +159,11 @@ const BranchPage: React.FC = () => {
               <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
                   <th className="text-center">#</th>
-                  <th className="text-center">NOMBRE</th>
-                  <th className="text-center">RAZÓN SOCIAL</th>
-                  <th className="text-center">MARCA</th>
-                  <th className="text-center">CONTACTO</th>
-                  <th className="text-center">ESTADO</th>
+                  <th>NOMBRE</th>
+                  <th>RAZÓN SOCIAL</th>
+                  <th>MARCA</th>
+                  <th>CONTACTO</th>
+                  <th className="text-center">ESTATUS</th>
                   <th className="text-center text-nowrap">FECHA CREACIÓN</th>
                   <th className="text-center">ACCIONES</th>
                 </tr>
@@ -193,7 +193,7 @@ const BranchPage: React.FC = () => {
                           {index + 1}
                         </span>
                       </td>
-                      <td className="text-center">
+                      <td>
                         <div className="d-flex flex-column">
                           <span className="fw-medium text-dark">
                             {branch.name}
@@ -205,21 +205,21 @@ const BranchPage: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td className="text-center">
+                      <td>
                         <span className="text-dark">
                           {typeof branch.companyId === "object"
                             ? branch.companyId.name
                             : ""}
                         </span>
                       </td>
-                      <td className="text-center">
+                      <td>
                         <span className="text-dark">
                           {typeof branch.brandId === "object"
                             ? branch.brandId.name
                             : ""}
                         </span>
                       </td>
-                      <td className="text-center">
+                      <td>
                         <div className="d-flex flex-column">
                           <span className="text-dark">{branch.phone}</span>
                           <small className="text-muted">{branch.email}</small>
