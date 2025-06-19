@@ -5,13 +5,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import {  Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
 import ExpenseConceptCategoryModal from "./components/ExpenseConceptCategoryModal";
+import ExpenseConceptCategoryActions from "./components/ExpenseConceptCategoryActions";
 import {
   ExpenseConceptCategorySearchParams,
   expenseConceptCategoryService,
 } from "./services/expenseConceptCategories";
 import { ExpenseConceptCategory } from "./types";
-import { FiTrash2 } from "react-icons/fi";
-import { BsCheck2 } from "react-icons/bs";
 
 const ExpenseConceptCategoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -30,16 +29,16 @@ const ExpenseConceptCategoryPage: React.FC = () => {
 
   const loadCategories = useCallback(
     async (
-      isInitial: boolean,
+      isInitial: boolean = false,
       params?: Partial<ExpenseConceptCategorySearchParams>
     ) => {
       try {
-        if (isInitial) {
-          setLoading(true);
-        }
+        if (isInitial) setLoading(true);
+        const page = params?.page || pagination.page;
+        const limit = params?.limit || pagination.limit;
         const searchParams: ExpenseConceptCategorySearchParams = {
-          page: params?.page || pagination.page,
-          limit: params?.limit || pagination.limit,
+          page,
+          limit,
           search: searchTerm.trim() || undefined,
           isActive:
             selectedType === "todos"
@@ -65,7 +64,7 @@ const ExpenseConceptCategoryPage: React.FC = () => {
         toast.error(error.message || "Error al cargar las categorías");
         console.error("Error loading categories:", error);
       } finally {
-        setLoading(false);
+        if (isInitial) setLoading(false);
       }
     },
     [pagination.page, pagination.limit, searchTerm, selectedType]
@@ -95,7 +94,7 @@ const ExpenseConceptCategoryPage: React.FC = () => {
   }, [searchTerm, selectedType]);
 
   const handlePageChange = (newPage: number) => {
-    loadCategories(false, { page: newPage });
+    loadCategories(false, { page: newPage, limit: pagination.limit });
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,20 +106,8 @@ const ExpenseConceptCategoryPage: React.FC = () => {
   };
 
   const handleCategorySaved = () => {
-    loadCategories(false);
+    loadCategories(false, { page: pagination.page, limit: pagination.limit });
   };
-
-  const handleToggleCategory = (category: ExpenseConceptCategory) => {
-    // Implement the logic to toggle the category's active status
-    console.log("Toggling category:", category);
-  };
-
-  const mappedCategories = categories.map((cat) => ({
-    _id: cat._id,
-    name: cat.name,
-    isActive: cat.isActive,
-    createdAt: cat.createdAt,
-  }));
 
   return (
     <div className="container-fluid">
@@ -160,7 +147,7 @@ const ExpenseConceptCategoryPage: React.FC = () => {
                   style={{ minWidth: "150px" }}
                   disabled={loading}
                 >
-                  <option value="todos">Todos los estados</option>
+                  <option value="todos">Todas las categorías</option>
                   <option value="activos">Categorías activas</option>
                   <option value="inactivos">Categorías inactivas</option>
                 </Form.Select>
@@ -195,7 +182,7 @@ const ExpenseConceptCategoryPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {mappedCategories.map((category, index) => (
+                      {categories.map((category, index) => (
                         <tr key={category._id}>
                           <td className="text-center">
                             <span className="text-muted">
@@ -226,28 +213,10 @@ const ExpenseConceptCategoryPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="text-center">
-                            <div className="d-flex justify-content-center gap-1">
-                              <ExpenseConceptCategoryModal
-                                mode="edit"
-                                editingCategoria={category}
-                                onCategoriaSaved={handleCategorySaved}
-                              />
-                              <button
-                                className="btn btn-light btn-icon btn-sm rounded-circle"
-                                title={
-                                  category.isActive
-                                    ? "Desactivar categoría"
-                                    : "Activar categoría"
-                                }
-                                onClick={() => handleToggleCategory(category)}
-                              >
-                                {category.isActive ? (
-                                  <FiTrash2 size={16} />
-                                ) : (
-                                  <BsCheck2 size={16} />
-                                )}
-                              </button>
-                            </div>
+                            <ExpenseConceptCategoryActions
+                              categoria={category}
+                              onCategoriaSaved={handleCategorySaved}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -266,9 +235,7 @@ const ExpenseConceptCategoryPage: React.FC = () => {
                       >
                         Anterior
                       </button>
-                      <button
-                        className="btn btn-sm btn-primary"
-                      >
+                      <button className="btn btn-sm btn-primary">
                         {pagination.page}
                       </button>
                       <button
