@@ -13,6 +13,8 @@ import {
   updateMunicipality,
 } from "../services/municipalities";
 import { Municipality } from "../types";
+import { getAllFiltereds as getAllStates } from "../../states/services/states";
+import { State } from "../../states/types";
 
 interface MunicipalityModalProps {
   mode: "create" | "edit";
@@ -33,6 +35,8 @@ const MunicipalityModal: React.FC<MunicipalityModalProps> = ({
   buttonProps = {},
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [states, setStates] = useState<State[]>([]);
+  const [loadingStates, setLoadingStates] = useState<boolean>(false);
   const isEditing = mode === "edit";
 
   const {
@@ -51,8 +55,29 @@ const MunicipalityModal: React.FC<MunicipalityModalProps> = ({
     mode: "onChange",
   });
 
+  const loadStates = async () => {
+    try {
+      setLoadingStates(true);
+      const response = await getAllStates();
+      console.log('Estados cargados:', response);
+      if (response.success && Array.isArray(response.data)) {
+        setStates(response.data);
+        console.log('Estados establecidos:', response.data);
+      } else {
+        console.error('Respuesta inesperada:', response);
+        toast.error("Error al cargar los estados");
+      }
+    } catch (error: any) {
+      toast.error("Error al cargar los estados");
+      console.error("Error loading states:", error);
+    } finally {
+      setLoadingStates(false);
+    }
+  };
+
   useEffect(() => {
     if (showModal) {
+      loadStates();
       if (isEditing && editingMunicipality) {
         setValue("name", editingMunicipality.name ?? "");
         setValue("stateId", editingMunicipality.stateId?._id ?? "");
@@ -176,8 +201,13 @@ const MunicipalityModal: React.FC<MunicipalityModalProps> = ({
                 name="stateId"
                 control={control}
                 render={({ field }) => (
-                  <Form.Select {...field} isInvalid={!!errors.stateId}>
+                  <Form.Select {...field} isInvalid={!!errors.stateId} disabled={loadingStates}>
                     <option value="">Seleccionar estado...</option>
+                    {states.map((state) => (
+                      <option key={state._id} value={state._id}>
+                        {state.name}
+                      </option>
+                    ))}
                   </Form.Select>
                 )}
               />
