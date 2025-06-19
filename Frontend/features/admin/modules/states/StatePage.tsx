@@ -6,8 +6,9 @@ import { Form, Table, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
 import StateModal from "./components/StateModal";
 import { State } from "./types";
-import { getAll } from "./services/states";
-import StateActions from "./components/Actions";
+import { getAll, toggleStatus } from "./services/states";
+import { FiTrash2 } from "react-icons/fi";
+import { BsCheck2 } from "react-icons/bs";
 
 const StatesPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -15,6 +16,7 @@ const StatesPage: React.FC = () => {
     const [states, setStates] = useState<State[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [togglingStates, setTogglingStates] = useState<Set<string>>(new Set());
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 15,
@@ -30,13 +32,13 @@ const StatesPage: React.FC = () => {
             const searchParams: any = { page, limit };
 
             if (selectedType === "activos") {
-                searchParams.isActive = "true";
+                searchParams.isActive = true;
             } else if (selectedType === "inactivos") {
-                searchParams.isActive = "false";
+                searchParams.isActive = false;
             }
 
             if (searchTerm) {
-                searchParams.search = searchTerm;
+                searchParams.search = searchTerm.trim();
             }
 
             const response = await getAll(searchParams);
@@ -88,6 +90,51 @@ const StatesPage: React.FC = () => {
 
     const handleStateSaved = () => {
         loadStates(false, { page: pagination.page, limit: pagination.limit });
+    };
+
+    const handleToggleState = async (state: State) => {
+        setTogglingStates(prev => new Set(prev).add(state._id));
+        
+        try {
+            const response = await toggleStatus(state._id, state.isActive);
+            if (response.success) {
+                const action = state.isActive ? 'desactivado' : 'activado';
+                toast.success(`Estado "${state.name}" ${action} exitosamente`);
+                
+                // Actualizar el estado local inmediatamente
+                setStates(prevStates => 
+                    prevStates.map(s => 
+                        s._id === state._id 
+                            ? { ...s, isActive: !s.isActive }
+                            : s
+                    )
+                );
+            } else {
+                throw new Error(response.message || `Error al ${state.isActive ? 'desactivar' : 'activar'} el estado`);
+            }
+        } catch (error: any) {
+            console.error("Error toggling state:", error);
+
+            let errorMessage = `Error al ${state.isActive ? 'desactivar' : 'activar'} el estado "${state.name}"`;
+
+            if (error.response?.status === 400) {
+                errorMessage = error.response.data?.message || errorMessage;
+            } else if (error.response?.status === 404) {
+                errorMessage = "Estado no encontrado";
+            } else if (error.response?.status >= 500) {
+                errorMessage = "Error interno del servidor. Intenta nuevamente.";
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            toast.error(errorMessage);
+        } finally {
+            setTogglingStates(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(state._id);
+                return newSet;
+            });
+        }
     };
 
     return (
@@ -198,10 +245,35 @@ const StatesPage: React.FC = () => {
                                                         </span>
                                                     </td>
                                                     <td className="text-center">
-                                                        <StateActions
-                                                            state={state}
-                                                            onStateSaved={handleStateSaved}
-                                                        />
+                                                        <div className="d-flex justify-content-center gap-1">
+                                                            <StateModal
+                                                                mode="edit"
+                                                                editingState={state}
+                                                                onStateSaved={handleStateSaved}
+                                                            />
+                                                            <button
+                                                                className="btn btn-light btn-icon btn-sm rounded-circle"
+                                                                title={
+                                                                    state.isActive
+                                                                        ? "Desactivar estado"
+                                                                        : "Activar estado"
+                                                                }
+                                                                onClick={() => handleToggleState(state)}
+                                                                disabled={togglingStates.has(state._id)}
+                                                            >
+                                                                {togglingStates.has(state._id) ? (
+                                                                    <Spinner
+                                                                        animation="border"
+                                                                        size="sm"
+                                                                        style={{ width: "16px", height: "16px" }}
+                                                                    />
+                                                                ) : state.isActive ? (
+                                                                    <FiTrash2 size={16} />
+                                                                ) : (
+                                                                    <BsCheck2 size={16} />
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
