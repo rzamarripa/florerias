@@ -105,7 +105,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
                 </span>
                 <div className="d-flex gap-1">
                     <button
-                        className="btn btn-outline-secondary btn-sm"
+                        className="btn btn-outline-primary btn-sm"
                         disabled={pagination.page === 1}
                         onClick={() => onPageChange(pagination.page - 1)}
                     >
@@ -113,12 +113,11 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
                     </button>
                     <button
                         className="btn btn-primary btn-sm"
-                        disabled
                     >
                         {pagination.page}
                     </button>
                     <button
-                        className="btn btn-outline-secondary btn-sm"
+                        className="btn btn-outline-primary btn-sm"
                         disabled={pagination.page === pagination.pages}
                         onClick={() => onPageChange(pagination.page + 1)}
                     >

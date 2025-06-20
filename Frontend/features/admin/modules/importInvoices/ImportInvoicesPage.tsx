@@ -49,11 +49,13 @@ const ImportInvoicesPage: React.FC = () => {
     fetchCompanies();
   }, []);
 
-  const fetchDataForCompany = useCallback(async (taxId: string, page: number = 1) => {
+  const fetchDataForCompany = useCallback(async (taxId: string, page: number = 1, isPageChange: boolean = false) => {
     if (!taxId) return;
     
-    setLoadingSummary(true);
-    setLoadingInvoices(true);
+    if (!isPageChange) {
+      setLoadingSummary(true);
+      setLoadingInvoices(true);
+    }
 
     try {
       const [summaryRes, invoicesRes] = await Promise.all([
@@ -79,8 +81,10 @@ const ImportInvoicesPage: React.FC = () => {
       console.error('Error fetching data:', error);
       toast.error('Ocurrió un error al obtener los datos.');
     } finally {
-      setLoadingSummary(false);
-      setLoadingInvoices(false);
+      if (!isPageChange) {
+        setLoadingSummary(false);
+        setLoadingInvoices(false);
+      }
     }
   }, []);
 
@@ -96,7 +100,7 @@ const ImportInvoicesPage: React.FC = () => {
   }, [selectedCompany, fetchDataForCompany]);
   
   const handlePageChange = (page: number) => {
-    if (selectedCompany) fetchDataForCompany(selectedCompany, page);
+    if (selectedCompany) fetchDataForCompany(selectedCompany, page, true);
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
