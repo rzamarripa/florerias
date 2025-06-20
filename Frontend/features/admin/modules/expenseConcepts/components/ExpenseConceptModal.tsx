@@ -52,7 +52,7 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
   const loadCategories = async () => {
     try {
       setLoadingCategories(true);
-      const response = await expenseConceptCategoryService.getAll({ isActive: "true" });
+      const response = await expenseConceptCategoryService.getAllActive();
       if (response.success) {
         setCategories(response.data);
       } else {

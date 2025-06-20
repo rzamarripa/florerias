@@ -25,6 +25,12 @@ export const expenseConceptCategoryService = {
     );
   },
 
+  getAllActive: async () => {
+    return await apiCall<ExpenseConceptCategory[]>(
+      `/expense-concept-categories/all`
+    );
+  },
+
   create: async (data: ExpenseConceptCategoryFormData) => {
     return await apiCall<ExpenseConceptCategory[]>(
       "/expense-concept-categories",
