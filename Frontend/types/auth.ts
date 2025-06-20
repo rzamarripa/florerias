@@ -5,6 +5,7 @@ export interface User {
     estatus: boolean;
     nombre: string;
     nombreCompleto: string;
+    fullName: string;
     path: string;
     image?: string;
   };

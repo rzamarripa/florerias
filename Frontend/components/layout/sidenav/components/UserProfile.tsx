@@ -46,7 +46,7 @@ const UserProfile = () => {
               </div>
             )}
             <span className="sidenav-user-name fw-bold">
-              {user?.profile.nombreCompleto}
+              {user?.profile.fullName}
             </span>
             <span className="fs-12 fw-semibold" data-lang="user-role">
               {user?.role?.name || "Rol desconocido"}

@@ -63,7 +63,7 @@ const UserProfile = () => {
         <DropdownMenu className="dropdown-menu-end">
           <div className="dropdown-header noti-title">
             <h6 className="text-overflow m-0">
-              {user?.profile?.nombreCompleto || "Usuario"}
+              {user?.profile?.fullName || "Usuario"}
             </h6>
             <p className="text-muted mb-0 fs-12">
               {user?.role?.name || "Rol desconocido"}
