@@ -19,4 +19,4 @@ export const expenseConceptSchema = z.object({
     .trim(),
 });
 
-export type ExpenseConceptFormData = z.infer<typeof expenseConceptSchema>; 
+export type ExpenseConceptFormData = z.infer<typeof expenseConceptSchema>;

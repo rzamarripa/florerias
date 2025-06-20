@@ -33,7 +33,7 @@ export const getAllExpenseConceptCategories = async (req, res) => {
     const categories = await ExpenseConceptCategory.find(filters)
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ name: 1 });
     res.status(200).json({
       success: true,
       data: categories,
