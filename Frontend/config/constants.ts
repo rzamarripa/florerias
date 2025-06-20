@@ -1,5 +1,4 @@
 import { type MenuItemType } from "@/types/layout";
-import { Inbox, PackageOpen, CircleDollarSign, Cog } from "lucide-react";
 import { TbAlertHexagon, TbLayoutDashboard } from "react-icons/tb";
 
 export const menuItems: MenuItemType[] = [
@@ -13,7 +12,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "catalogos",
     label: "Catálogos",
-    icon: Inbox,
+    icon: TbAlertHexagon,
     children: [
       {
         key: "razonesSociales",
@@ -86,7 +85,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "paquetes",
     label: "Paquetes",
-    icon: PackageOpen,
+    icon: TbAlertHexagon,
     children: [
       {
         key: "solicitarPaquete",
@@ -108,7 +107,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "presupuestos",
     label: "Presupuestos",
-    icon: CircleDollarSign,
+    icon: TbAlertHexagon,
     children: [
       {
         key: "asignarPresupuesto",
@@ -125,26 +124,19 @@ export const menuItems: MenuItemType[] = [
   {
     key: "gestion",
     label: "Gestión",
-    icon: Cog,
+    icon: TbAlertHexagon,
     children: [
       { key: "roles", label: "Roles", url: "/gestion/roles" },
       { key: "pages", label: "Páginas", url: "/gestion/paginas" },
       { key: "users", label: "Usuarios", url: "/gestion/usuarios" },
-      { key: "visibility", label: "Visibilidad", url: "/gestion/visibilidad" },
     ],
   },
   {
-    key: "herramientas-title",
-    label: "Herramientas",
-    isTitle: true,
-  },
-  {
-    key: "importar-movimientos-bancarios",
-    label: "Importar Movimientos Bancarios",
+    key: "modulos",
+    label: "Módulos",
     icon: TbAlertHexagon,
-    url: "/herramientas/importar-movimientos-bancarios",
+    children: [
+      { key: "importar-metadatos", label: "Importar Metadatos", url: "/modulos/importar-metadatos" }
+    ],
   },
 ];
-
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";

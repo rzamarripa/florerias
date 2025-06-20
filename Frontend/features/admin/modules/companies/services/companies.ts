@@ -33,6 +33,10 @@ export const companiesService = {
     return await apiCall<Company[]>(`/companies?${searchParams}`);
   },
 
+  getAllActive: async () => {
+    return await apiCall<Company[]>('/companies/all');
+  },
+
   create: async (data: Omit<Company, "_id" | "createdAt" | "isActive">) => {
     return await apiCall<{ success: boolean; data: Company }>("/companies", {
       method: "POST",
