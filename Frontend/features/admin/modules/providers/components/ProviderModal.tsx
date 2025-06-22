@@ -54,6 +54,7 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
     defaultValues: {
       commercialName: "",
       businessName: "",
+      rfc: "",
       contactName: "",
       countryId: "",
       stateId: "",
@@ -84,6 +85,7 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
       if (isEditing && editingProvider) {
         setValue("commercialName", editingProvider.commercialName);
         setValue("businessName", editingProvider.businessName);
+        setValue("rfc", editingProvider.rfc);
         setValue("contactName", editingProvider.contactName);
         setValue("countryId", editingProvider.countryId._id);
         setValue("stateId", editingProvider.stateId._id);
@@ -125,7 +127,7 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
       setStates([]);
       setValue("stateId", "");
       setValue("municipalityId", "");
-      
+
       getStatesByCountry(countrySelected)
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
@@ -141,7 +143,7 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
       setLoadingMunicipalities(true);
       setMunicipalities([]);
       setValue("municipalityId", "");
-      
+
       getMunicipalitiesByState(stateSelected)
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
@@ -236,6 +238,26 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                       <Form.Control {...field} isInvalid={!!errors.businessName} />
                       <Form.Control.Feedback type="invalid">
                         {errors.businessName?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="rfc"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>RFC *</Form.Label>
+                      <Form.Control
+                        {...field}
+                        isInvalid={!!errors.rfc}
+                        placeholder="Ej: ABC123456789"
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.rfc?.message}
                       </Form.Control.Feedback>
                     </Form.Group>
                   )}
@@ -418,8 +440,8 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button 
-            variant="light" 
+          <Button
+            variant="light"
             onClick={handleCloseModal}
             className="fw-medium px-4"
           >

@@ -11,7 +11,7 @@ export const getAll = async (req, res) => {
 
     const total = await Provider.countDocuments({});
     const providers = await Provider.find({})
-      .select("_id commercialName businessName contactName countryId stateId municipalityId address phone email description isActive createdAt updatedAt")
+      .select("_id commercialName businessName rfc contactName countryId stateId municipalityId address phone email description isActive createdAt updatedAt")
       .populate("countryId", "_id name")
       .populate("stateId", "_id name")
       .populate("municipalityId", "_id name")
@@ -46,6 +46,7 @@ export const getAllProviders = async (req, res) => {
       filters.$or = [
         { commercialName: { $regex: search, $options: "i" } },
         { businessName: { $regex: search, $options: "i" } },
+        { rfc: { $regex: search, $options: "i" } },
         { contactName: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
@@ -83,6 +84,7 @@ export const createProvider = async (req, res) => {
     const {
       commercialName,
       businessName,
+      rfc,
       contactName,
       countryId,
       stateId,
@@ -110,6 +112,7 @@ export const createProvider = async (req, res) => {
     const newProvider = await Provider.create({
       commercialName,
       businessName,
+      rfc,
       contactName,
       countryId,
       stateId,
@@ -137,6 +140,7 @@ export const updateProvider = async (req, res) => {
     const {
       commercialName,
       businessName,
+      rfc,
       contactName,
       countryId,
       stateId,
@@ -164,6 +168,7 @@ export const updateProvider = async (req, res) => {
     const updateData = {
       commercialName,
       businessName,
+      rfc,
       contactName,
       countryId,
       stateId,

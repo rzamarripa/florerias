@@ -19,14 +19,21 @@ export const registerUser = async (req, res) => {
       userData = req.body;
     }
 
-    const { username, password, department, profile, role } = userData;
+    const { username, email, phone, password, department, profile, role } = userData;
     console.log(profile);
 
-    const userExists = await User.findOne({ username });
+    const userExists = await User.findOne({
+      $or: [
+        { username },
+        { email }
+      ]
+    });
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: "User already exists with this username",
+        message: userExists.username === username
+          ? "User already exists with this username"
+          : "User already exists with this email",
       });
     }
 
@@ -42,10 +49,13 @@ export const registerUser = async (req, res) => {
 
     const newUserData = {
       username,
+      email,
+      phone,
       password,
       department,
       profile: {
         name: profile?.name || "",
+        lastName: profile?.lastName || "",
         fullName: profile?.fullName || "",
         path: profile?.path || "",
         estatus: profile?.estatus !== undefined ? profile.estatus : true,
@@ -69,6 +79,8 @@ export const registerUser = async (req, res) => {
         user: {
           _id: user._id,
           username: user.username,
+          email: user.email,
+          phone: user.phone,
           profile: user.profile,
           role: user.role,
           createdAt: user.createdAt,
@@ -255,16 +267,19 @@ export const updateUser = async (req, res) => {
       userData = req.body;
     }
 
-    const { username, department, profile, role } = userData;
+    const { username, email, phone, department, profile, role } = userData;
 
     const updateData = {};
 
     if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (phone) updateData.phone = phone;
     if (department) updateData.department = department;
 
     if (profile) {
       updateData.profile = {
         name: profile.name,
+        lastName: profile.lastName,
         fullName: profile.fullName,
         path: profile.path,
         estatus: profile.estatus,
@@ -295,6 +310,26 @@ export const updateUser = async (req, res) => {
         });
       }
       updateData.role = role;
+    }
+
+    // Verificar si el email o username ya existe en otro usuario
+    if (email || username) {
+      const existingUser = await User.findOne({
+        $or: [
+          ...(email ? [{ email }] : []),
+          ...(username ? [{ username }] : [])
+        ],
+        _id: { $ne: req.params.id }
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: existingUser.email === email
+            ? "Email already exists"
+            : "Username already exists",
+        });
+      }
     }
 
     const user = await User.findByIdAndUpdate(req.params.id, updateData, {

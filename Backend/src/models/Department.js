@@ -2,11 +2,6 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const departmentSchema = new Schema({
-  brandId: {
-    type: Schema.Types.ObjectId,
-    ref: "cc_brand",
-    required: true,
-  },
   name: {
     type: String,
     required: true,
@@ -26,7 +21,7 @@ const departmentSchema = new Schema({
   },
 });
 
-departmentSchema.index({ name: 1, brandId: 1 }, { unique: true });
+departmentSchema.index({ name: 1 }, { unique: true });
 
 departmentSchema.pre("save", function (next) {
   this.updatedAt = new Date();

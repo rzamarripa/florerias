@@ -3,8 +3,7 @@ import { Department } from "../models/Department.js";
 export const getAll = async (req, res) => {
   try {
     const departments = await Department.find({ isActive: true })
-      .select("_id name brandId")
-      .populate("brandId", "name")
+      .select("_id name")
       .sort({ name: 1 });
 
     res.status(200).json({
@@ -22,19 +21,14 @@ export const getAllDepartments = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
-    const brandId = req.query.brandId || "";
 
     const filters = {};
     if (search) {
       filters.name = { $regex: search, $options: "i" };
     }
-    if (brandId) {
-      filters.brandId = brandId;
-    }
 
     const total = await Department.countDocuments(filters);
     const departments = await Department.find(filters)
-      .populate("brandId", "name")
       .skip(skip)
       .limit(limit)
       .sort({ name: 1 });
@@ -58,8 +52,7 @@ export const getById = async (req, res) => {
   try {
     const { id } = req.params;
     const department = await Department.findOne({ _id: id, isActive: true })
-      .select("_id name brandId")
-      .populate("brandId", "name");
+      .select("_id name");
 
     if (!department) {
       return res.status(404).json({
@@ -75,27 +68,22 @@ export const getById = async (req, res) => {
 
 export const createDepartment = async (req, res) => {
   try {
-    const { name, brandId } = req.body;
+    const { name } = req.body;
     const newDepartment = await Department.create({
       name: name.trim(),
-      brandId,
       isActive: true,
     });
 
-    const populatedDepartment = await Department.findById(
-      newDepartment._id
-    ).populate("brandId", "name");
-
     res.status(201).json({
       success: true,
-      data: populatedDepartment,
+      data: newDepartment,
       message: "Department created successfully",
     });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "A department with that name already exists for this brand",
+        message: "A department with that name already exists",
       });
     }
     res.status(500).json({ success: false, message: error.message });
@@ -105,12 +93,12 @@ export const createDepartment = async (req, res) => {
 export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, brandId } = req.body;
+    const { name } = req.body;
     const updatedDepartment = await Department.findByIdAndUpdate(
       id,
-      { name: name.trim(), brandId },
+      { name: name.trim() },
       { new: true }
-    ).populate("brandId", "name");
+    );
 
     if (!updatedDepartment) {
       return res.status(404).json({
@@ -127,7 +115,7 @@ export const updateDepartment = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "A department with that name already exists for this brand",
+        message: "A department with that name already exists",
       });
     }
     res.status(500).json({ success: false, message: error.message });

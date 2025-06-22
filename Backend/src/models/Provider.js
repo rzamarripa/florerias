@@ -12,6 +12,12 @@ const providerSchema = new Schema({
     required: true,
     trim: true,
   },
+  rfc: {
+    type: String,
+    required: true,
+    trim: true,
+    uppercase: true,
+  },
   contactName: {
     type: String,
     required: true,

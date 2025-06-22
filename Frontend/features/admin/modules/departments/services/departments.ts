@@ -10,18 +10,17 @@ import {
 
 export const departmentService = {
   getActive: async () => {
-    return await apiCall<{ success: boolean; data: Pick<Department, '_id' | 'name' | 'brandId'>[] }>(
+    return await apiCall<{ success: boolean; data: Pick<Department, '_id' | 'name'>[] }>(
       "/departments/all"
     );
   },
 
   getAll: async (params: DepartmentSearchParams = {}) => {
-    const { page = 1, limit = 15, search, brandId } = params;
+    const { page = 1, limit = 15, search } = params;
     const searchParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       ...(search && { search }),
-      ...(brandId && { brandId }),
     });
     return await apiCall<DepartmentListResponse>(`/departments?${searchParams}`);
   },

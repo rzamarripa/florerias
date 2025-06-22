@@ -1,104 +1,117 @@
 import mongoose from 'mongoose';
 
 const ImportedInvoicesSchema = new mongoose.Schema({
-  fiscalFolioId: {
+  // UUID del folio fiscal (identificador único del CFDI)
+  folioFiscalId: {
     type: String,
     required: true,
     unique: true,
     trim: true,
     uppercase: true,
-    match: [/^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i, 'Invalid UUID format'],
+    match: [/^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i, 'Formato de UUID inválido'],
     index: true
   },
 
-  issuerTaxId: {
+  // RFC del emisor de la factura
+  rfcEmisor: {
     type: String,
     required: true,
     trim: true,
     uppercase: true,
-    match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Invalid RFC format'],
+    match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Formato de RFC inválido'],
   },
 
-  issuerName: {
+  // Razón social o nombre del emisor
+  nombreEmisor: {
     type: String,
     required: true,
     trim: true,
     maxLength: 254
   },
 
-  company: {
+  // Referencia a la empresa en el sistema
+  razonSocial: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'cc_company',
     required: true,
     index: true
   },
 
-  receiverTaxId: {
+  // RFC del receptor de la factura
+  rfcReceptor: {
     type: String,
     required: true,
     trim: true,
     uppercase: true,
-    match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Invalid RFC format'],
+    match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Formato de RFC inválido'],
   },
 
-  receiverName: {
+  // Razón social o nombre del receptor
+  nombreReceptor: {
     type: String,
     required: true,
     trim: true,
     maxLength: 254
   },
 
-  certificationProviderId: {
+  // RFC del Proveedor Autorizado de Certificación (PAC)
+  rfcProveedorCertificacion: {
     type: String,
     required: true,
     trim: true,
     uppercase: true,
-    match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Invalid PAC RFC format']
+    match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Formato de RFC del PAC inválido']
   },
 
-  issuanceDate: {
+  // Fecha de emisión del comprobante
+  fechaEmision: {
     type: Date,
     required: true,
     index: true
   },
 
-  taxAuthorityCertificationDate: {
+  // Fecha de timbrado/certificación por el SAT
+  fechaCertificacionSAT: {
     type: Date,
     required: true,
     index: true
   },
 
-  cancellationDate: {
+  // Fecha de cancelación del comprobante
+  fechaCancelacion: {
     type: Date,
     default: null,
     index: true
   },
 
-  amount: {
+  // Importe total del comprobante
+  importe: {
     type: mongoose.Schema.Types.Decimal128,
     required: true,
     min: 0,
-    get: function(value) {
+    get: function (value) {
       return value ? parseFloat(value.toString()) : 0;
     }
   },
 
-  voucherType: {
+  // Tipo de comprobante fiscal
+  tipoComprobante: {
     type: String,
     required: true,
     enum: {
       values: ['I', 'E', 'P'],
-      message: 'Voucher type must be I (Income), E (Expense), or P (Payment)'
+      message: 'El tipo de comprobante debe ser I (Ingreso), E (Egreso), o P (Pago)'
     },
     index: true
   },
 
-  status: {
+  // Estatus del comprobante
+  estatus: {
     type: Number,
     required: true,
     enum: {
       values: [0, 1],
-      message: 'Status must be 0 (Cancelled) or 1 (Active)'
+      message: 'El estatus debe ser 0 (Cancelado) o 1 (Vigente)'
     },
     default: 1,
     index: true
@@ -106,132 +119,104 @@ const ImportedInvoicesSchema = new mongoose.Schema({
 }, {
   timestamps: true,
   collection: 'cc_imported_invoices',
-  
+
   toJSON: {
     virtuals: true,
-    transform: function(doc, ret) {
-      if (ret.amount && typeof ret.amount.toString === 'function') {
-        ret.amount = parseFloat(ret.amount.toString());
+    transform: function (doc, ret) {
+      if (ret.importe && typeof ret.importe.toString === 'function') {
+        ret.importe = parseFloat(ret.importe.toString());
       }
       return ret;
     }
   }
 });
 
-// Indexes for query optimization
-// 1. Ensures each invoice is unique and speeds up the upsert process.
-// The `unique: true` option on fiscalFolioId already creates this index.
+ImportedInvoicesSchema.index({ rfcReceptor: 1, estatus: 1, fechaEmision: -1 });
 
-// 2. Optimizes fetching and sorting invoices for a specific company, 
-// which is the main view in the frontend. Also helps with counting totals.
-ImportedInvoicesSchema.index({ receiverTaxId: 1, status: 1, issuanceDate: -1 });
+ImportedInvoicesSchema.index({ rfcReceptor: 1, nombreEmisor: 1 });
 
-// 3. Optimizes counting unique providers for the summary cards.
-ImportedInvoicesSchema.index({ receiverTaxId: 1, issuerName: 1 });
-
-ImportedInvoicesSchema.virtual('voucherTypeDescription').get(function() {
-  const types = {
-    'I': 'Income',
-    'E': 'Expense', 
-    'P': 'Payment'
+ImportedInvoicesSchema.virtual('descripcionTipoComprobante').get(function () {
+  const tipos = {
+    'I': 'Ingreso',
+    'E': 'Egreso',
+    'P': 'Pago'
   };
-  return types[this.voucherType] || 'Unknown';
+  return tipos[this.tipoComprobante] || 'Desconocido';
 });
 
-ImportedInvoicesSchema.virtual('statusDescription').get(function() {
-  return this.status === 1 ? 'Active' : 'Cancelled';
+ImportedInvoicesSchema.virtual('descripcionEstatus').get(function () {
+  return this.estatus === 1 ? 'Vigente' : 'Cancelado';
 });
 
-ImportedInvoicesSchema.virtual('isCancelled').get(function() {
-  return this.status === 0;
+ImportedInvoicesSchema.virtual('estaCancelado').get(function () {
+  return this.estatus === 0;
 });
 
-ImportedInvoicesSchema.virtual('isActive').get(function() {
-  return this.status === 1;
+ImportedInvoicesSchema.virtual('estaVigente').get(function () {
+  return this.estatus === 1;
 });
 
-ImportedInvoicesSchema.methods.cancel = function(cancellationDate = new Date()) {
-  this.status = 0;
-  this.cancellationDate = cancellationDate;
+// Métodos de instancia
+ImportedInvoicesSchema.methods.cancelar = function (fechaCancelacion = new Date()) {
+  this.estatus = 0;
+  this.fechaCancelacion = fechaCancelacion;
   return this.save();
 };
 
-ImportedInvoicesSchema.methods.reactivate = function() {
-  this.status = 1;
-  this.cancellationDate = null;
+ImportedInvoicesSchema.methods.reactivar = function () {
+  this.estatus = 1;
+  this.fechaCancelacion = null;
   return this.save();
 };
 
-ImportedInvoicesSchema.statics.findByTaxId = function(taxId, isIssuer = true) {
-  const field = isIssuer ? 'issuerTaxId' : 'receiverTaxId';
-  return this.find({ [field]: taxId.toUpperCase() });
+// Métodos estáticos
+ImportedInvoicesSchema.statics.buscarPorRFC = function (rfc, esEmisor = true) {
+  const campo = esEmisor ? 'rfcEmisor' : 'rfcReceptor';
+  return this.find({ [campo]: rfc.toUpperCase() });
 };
 
-ImportedInvoicesSchema.statics.findByDateRange = function(startDate, endDate) {
+ImportedInvoicesSchema.statics.buscarPorRangoFechas = function (fechaInicio, fechaFin) {
   return this.find({
-    issuanceDate: {
-      $gte: startDate,
-      $lte: endDate
+    fechaEmision: {
+      $gte: fechaInicio,
+      $lte: fechaFin
     }
   });
 };
 
-ImportedInvoicesSchema.statics.getSummary = async function(receiverTaxId) {
-  if (!receiverTaxId) {
-    throw new Error('receiverTaxId is required to get a summary.');
+ImportedInvoicesSchema.statics.obtenerResumen = async function (rfcReceptor) {
+  if (!rfcReceptor) {
+    throw new Error('El RFC del receptor es requerido para obtener el resumen.');
   }
 
-  const matchQuery = { receiverTaxId: receiverTaxId.toUpperCase() };
+  const consultaFiltro = { rfcReceptor: rfcReceptor.toUpperCase() };
 
-  const totalPromise = this.countDocuments(matchQuery);
-  const cancelledPromise = this.countDocuments({ ...matchQuery, status: 0 });
-  const uniqueProvidersPromise = this.distinct('issuerName', matchQuery);
+  const promesaTotal = this.countDocuments(consultaFiltro);
+  const promesaCanceladas = this.countDocuments({ ...consultaFiltro, estatus: 0 });
+  const promesaProveedoresUnicos = this.distinct('nombreEmisor', consultaFiltro);
 
-  const [totalInvoices, cancelledInvoices, uniqueProviders] = await Promise.all([
-    totalPromise,
-    cancelledPromise,
-    uniqueProvidersPromise
+  const [totalFacturas, facturasCanceladas, proveedoresUnicos] = await Promise.all([
+    promesaTotal,
+    promesaCanceladas,
+    promesaProveedoresUnicos
   ]);
 
   return {
-    totalInvoices,
-    cancelledInvoices,
-    uniqueProviders: uniqueProviders.length,
+    totalFacturas,
+    facturasCanceladas,
+    proveedoresUnicos: proveedoresUnicos.length,
   };
 };
 
-ImportedInvoicesSchema.statics.getTotalByVoucherType = function(voucherType, taxId = null) {
-  const match = { voucherType, status: 1 };
-  if (taxId) {
-    match.$or = [
-      { issuerTaxId: taxId.toUpperCase() },
-      { receiverTaxId: taxId.toUpperCase() }
-    ];
+ImportedInvoicesSchema.pre('save', function (next) {
+  if (this.estatus === 0 && !this.fechaCancelacion) {
+    this.fechaCancelacion = new Date();
   }
 
-  return this.aggregate([
-    { $match: match },
-    {
-      $group: {
-        _id: null,
-        totalAmount: { 
-          $sum: { $toDouble: '$amount' }
-        },
-        count: { $sum: 1 }
-      }
-    }
-  ]);
-};
+  if (this.estatus === 1 && this.fechaCancelacion) {
+    this.fechaCancelacion = null;
+  }
 
-ImportedInvoicesSchema.pre('save', function(next) {
-  if (this.status === 0 && !this.cancellationDate) {
-    this.cancellationDate = new Date();
-  }
-  
-  if (this.status === 1 && this.cancellationDate) {
-    this.cancellationDate = null;
-  }
-  
   next();
 });
 

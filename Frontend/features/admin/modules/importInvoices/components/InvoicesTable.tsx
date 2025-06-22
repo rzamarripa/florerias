@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Spinner, Table } from 'react-bootstrap';
-import { FileText } from 'lucide-react';
+import { FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ImportedInvoice, Pagination } from '../types';
 
 interface InvoicesTableProps {
@@ -8,9 +8,10 @@ interface InvoicesTableProps {
   pagination: Pagination | null;
   loading: boolean;
   onPageChange: (page: number) => void;
+  isPreview?: boolean;
 }
 
-const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loading, onPageChange }) => {
+const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loading, onPageChange, isPreview = false }) => {
   if (loading) {
     return (
       <div className="text-center my-5">
@@ -31,26 +32,54 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
       </Card>
     );
   }
-  
+
   const formatCurrency = (value: number | any) => {
     const numberValue = Number(value);
     if (isNaN(numberValue)) {
-        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(0);
+      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(0);
     }
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
     }).format(numberValue);
   };
-  
+
   const formatDate = (dateString?: string | null) => {
-     if (!dateString) return '-';
-     return new Date(dateString).toLocaleDateString('es-MX', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-     });
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
   }
+
+  // Función para generar los números de página a mostrar
+  const getPageNumbers = () => {
+    const { page, pages } = pagination;
+    const delta = 2; // Número de páginas a mostrar antes y después de la página actual
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
+      range.push(i);
+    }
+
+    if (page - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (page + delta < pages - 1) {
+      rangeWithDots.push('...', pages);
+    } else if (pages > 1) {
+      rangeWithDots.push(pages);
+    }
+
+    return rangeWithDots;
+  };
 
   return (
     <Card>
@@ -59,11 +88,12 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
           <thead className="bg-light align-middle bg-opacity-25 thead-sm">
             <tr>
               <th className="text-center">#</th>
-              <th>UUID</th>
               <th>Proveedor</th>
-              <th className="text-end">Importe</th>
-              <th className="text-center">Estatus</th>
+              <th>RFC Emisor</th>
               <th>Fecha Emisión</th>
+              <th className="text-center">Estatus</th>
+              <th>Fecha Cancelación</th>
+              <th className="text-end">Importe</th>
             </tr>
           </thead>
           <tbody>
@@ -75,56 +105,72 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
                   </span>
                 </td>
                 <td>
-                  <span className="font-monospace text-muted">{invoice.fiscalFolioId}</span>
+                  <span className="fw-medium">{invoice.nombreEmisor}</span>
                 </td>
                 <td>
-                  <span className="fw-medium">{invoice.issuerName}</span>
+                  <span className="font-monospace text-muted">{invoice.rfcEmisor}</span>
                 </td>
-                <td className="text-end fw-medium">{formatCurrency(Number(invoice.amount))}</td>
+                <td className="text-muted">{formatDate(invoice.fechaEmision)}</td>
                 <td className="text-center">
-                    <span
-                        className={`badge fs-6 ${
-                        invoice.status === 1
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                        }`}
-                    >
-                        {invoice.status === 1 ? "Activa" : "Cancelada"}
-                    </span>
+                  <span
+                    className={`badge fs-6 ${invoice.estatus === 1
+                      ? "bg-success bg-opacity-10 text-success"
+                      : "bg-danger bg-opacity-10 text-danger"
+                      }`}
+                  >
+                    {invoice.estatus === 1 ? "Vigente" : "Cancelado"}
+                  </span>
                 </td>
-                <td className="text-muted">{formatDate(invoice.issuanceDate)}</td>
+                <td className="text-muted">{formatDate(invoice.fechaCancelacion)}</td>
+                <td className="text-end fw-medium">{formatCurrency(Number(invoice.importe))}</td>
               </tr>
             ))}
           </tbody>
         </Table>
 
         {pagination && pagination.pages > 1 && (
-            <div className="d-flex justify-content-between align-items-center p-3 border-top">
-                <span className="text-muted">
-                    Mostrando {invoices.length} de {pagination.total} registros
-                </span>
-                <div className="d-flex gap-1">
+          <div className="d-flex justify-content-between align-items-center p-3 border-top">
+            <span className="text-muted">
+              Mostrando {invoices.length} de {pagination.total} registros
+            </span>
+            <div className="d-flex gap-1 align-items-center">
+              <button
+                className="btn btn-outline-primary btn-sm d-flex align-items-center"
+                disabled={pagination.page === 1}
+                onClick={() => onPageChange(pagination.page - 1)}
+              >
+                <ChevronLeft size={16} />
+                Anterior
+              </button>
+
+              {getPageNumbers().map((pageNum, index) => (
+                <React.Fragment key={index}>
+                  {pageNum === '...' ? (
+                    <span className="px-2 text-muted">...</span>
+                  ) : (
                     <button
-                        className="btn btn-outline-primary btn-sm"
-                        disabled={pagination.page === 1}
-                        onClick={() => onPageChange(pagination.page - 1)}
+                      className={`btn btn-sm ${pageNum === pagination.page
+                        ? 'btn-primary'
+                        : 'btn-outline-primary'
+                        }`}
+                      onClick={() => onPageChange(pageNum as number)}
                     >
-                        Anterior
+                      {pageNum}
                     </button>
-                    <button
-                        className="btn btn-primary btn-sm"
-                    >
-                        {pagination.page}
-                    </button>
-                    <button
-                        className="btn btn-outline-primary btn-sm"
-                        disabled={pagination.page === pagination.pages}
-                        onClick={() => onPageChange(pagination.page + 1)}
-                    >
-                        Siguiente
-                    </button>
-                </div>
+                  )}
+                </React.Fragment>
+              ))}
+
+              <button
+                className="btn btn-outline-primary btn-sm d-flex align-items-center"
+                disabled={pagination.page === pagination.pages}
+                onClick={() => onPageChange(pagination.page + 1)}
+              >
+                Siguiente
+                <ChevronRight size={16} />
+              </button>
             </div>
+          </div>
         )}
       </div>
     </Card>

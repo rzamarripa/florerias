@@ -3,6 +3,7 @@ import { Button, Modal, Pagination, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { usersService } from "../services/users";
 import { User, UserProvider } from "../types";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface UserProvidersListProps {
   user: User;
@@ -76,6 +77,34 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
     setPagination({ ...pagination, page: newPage });
   };
 
+  // Función para generar los números de página a mostrar
+  const getPageNumbers = () => {
+    const { page, pages } = pagination;
+    const delta = 2; // Número de páginas a mostrar antes y después de la página actual
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
+      range.push(i);
+    }
+
+    if (page - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (page + delta < pages - 1) {
+      rangeWithDots.push('...', pages);
+    } else if (pages > 1) {
+      rangeWithDots.push(pages);
+    }
+
+    return rangeWithDots;
+  };
+
   return (
     <Modal show={show} onHide={onClose} size="lg" centered>
       <Modal.Header closeButton className="border-0 pb-2 pt-3">
@@ -122,11 +151,10 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
                       <td>{userProvider.providerId.contactName}</td>
                       <td>
                         <span
-                          className={`badge fs-6 ${
-                            userProvider.providerId.isActive
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
+                          className={`badge fs-6 ${userProvider.providerId.isActive
+                            ? "bg-success bg-opacity-10 text-success"
+                            : "bg-danger bg-opacity-10 text-danger"
+                            }`}
                         >
                           {userProvider.providerId.isActive
                             ? "Activo"
@@ -152,47 +180,71 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
 
             {pagination.pages > 1 && (
               <div className="d-flex justify-content-center mt-3">
-                <Pagination>
-                  <Pagination.First
+                <div className="d-flex gap-1 align-items-center">
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    disabled={pagination.page === 1}
                     onClick={() => handlePageChange(1)}
+                    className="d-flex align-items-center"
+                  >
+                    <ChevronLeft size={16} />
+                    Primera
+                  </Button>
+
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
                     disabled={pagination.page === 1}
-                  />
-                  <Pagination.Prev
                     onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={pagination.page === 1}
-                  />
+                    className="d-flex align-items-center"
+                  >
+                    <ChevronLeft size={16} />
+                    Anterior
+                  </Button>
 
-                  {Array.from(
-                    { length: Math.min(5, pagination.pages) },
-                    (_, i) => {
-                      const pageNum =
-                        Math.max(
-                          1,
-                          Math.min(pagination.pages - 4, pagination.page - 2)
-                        ) + i;
-                      if (pageNum > pagination.pages) return null;
-
-                      return (
-                        <Pagination.Item
-                          key={pageNum}
-                          active={pageNum === pagination.page}
-                          onClick={() => handlePageChange(pageNum)}
+                  {getPageNumbers().map((pageNum, index) => (
+                    <React.Fragment key={index}>
+                      {pageNum === '...' ? (
+                        <span className="px-2 text-muted">...</span>
+                      ) : (
+                        <Button
+                          variant={
+                            pageNum === pagination.page
+                              ? "primary"
+                              : "outline-secondary"
+                          }
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum as number)}
                         >
                           {pageNum}
-                        </Pagination.Item>
-                      );
-                    }
-                  )}
+                        </Button>
+                      )}
+                    </React.Fragment>
+                  ))}
 
-                  <Pagination.Next
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    disabled={pagination.page === pagination.pages}
                     onClick={() => handlePageChange(pagination.page + 1)}
+                    className="d-flex align-items-center"
+                  >
+                    Siguiente
+                    <ChevronRight size={16} />
+                  </Button>
+
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
                     disabled={pagination.page === pagination.pages}
-                  />
-                  <Pagination.Last
                     onClick={() => handlePageChange(pagination.pages)}
-                    disabled={pagination.page === pagination.pages}
-                  />
-                </Pagination>
+                    className="d-flex align-items-center"
+                  >
+                    Última
+                    <ChevronRight size={16} />
+                  </Button>
+                </div>
               </div>
             )}
 

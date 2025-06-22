@@ -6,8 +6,6 @@ import { toast } from "react-toastify";
 import { Department, DepartmentFormData } from "../types";
 import { departmentSchema } from "../schemas/departmentSchema";
 import { createDepartment, updateDepartment } from "../services/departments";
-import { brandsService } from "../../brands/services/brands";
-import { Brand } from "../../brands/types";
 import { getModalButtonStyles } from "@/utils/modalButtonStyles";
 
 interface DepartmentModalProps {
@@ -29,8 +27,6 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
   buttonProps = {},
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loadingBrands, setLoadingBrands] = useState<boolean>(false);
   const isEditing = mode === "edit";
 
   const {
@@ -42,39 +38,18 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
     resolver: zodResolver(departmentSchema),
     defaultValues: {
       name: "",
-      brandId: "",
     },
   });
 
-  const loadBrands = async () => {
-    try {
-      setLoadingBrands(true);
-      const response = await brandsService.getAll();
-      if (response.success) {
-        setBrands(response.data.filter(brand => brand.isActive));
-      } else {
-        toast.error("Error al cargar las marcas");
-      }
-    } catch (error: any) {
-      toast.error("Error al cargar las marcas");
-      console.error("Error loading brands:", error);
-    } finally {
-      setLoadingBrands(false);
-    }
-  };
-
   useEffect(() => {
     if (showModal) {
-      loadBrands();
       if (isEditing && editingDepartment) {
         reset({
           name: editingDepartment.name,
-          brandId: editingDepartment.brandId._id,
         });
       } else {
         reset({
           name: "",
-          brandId: "",
         });
       }
     }
@@ -95,7 +70,7 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
       } else {
         toast.error(
           response.message ||
-            `Error al ${isEditing ? "actualizar" : "crear"} el departamento`
+          `Error al ${isEditing ? "actualizar" : "crear"} el departamento`
         );
       }
     } catch (error: any) {
@@ -135,33 +110,6 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
         </Modal.Header>
         <form onSubmit={handleSubmit(onSubmit)}>
           <Modal.Body>
-            <div className="mb-3">
-              <Form.Label>Marca</Form.Label>
-              <Controller
-                name="brandId"
-                control={control}
-                render={({ field }) => (
-                  <Form.Select
-                    {...field}
-                    isInvalid={!!errors.brandId}
-                    disabled={loadingBrands}
-                  >
-                    <option value="">Seleccionar marca</option>
-                    {brands.map((brand) => (
-                      <option key={brand._id} value={brand._id}>
-                        {brand.name}
-                      </option>
-                    ))}
-                  </Form.Select>
-                )}
-              />
-              {errors.brandId && (
-                <Form.Control.Feedback type="invalid">
-                  {errors.brandId.message}
-                </Form.Control.Feedback>
-              )}
-            </div>
-
             <div className="mb-3">
               <Form.Label>Nombre</Form.Label>
               <Controller

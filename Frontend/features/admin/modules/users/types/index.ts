@@ -3,6 +3,7 @@ export type { Role } from "../../roles/types";
 
 export interface UserProfile {
   name: string;
+  lastName: string;
   fullName: string;
   path?: string;
   estatus: boolean;
@@ -15,18 +16,21 @@ export interface UserProfile {
 export interface User {
   _id: string;
   username: string;
+  email: string;
+  phone: string;
   department?: string;
   profile: {
     name: string;
+    lastName: string;
     fullName: string;
     path?: string;
     estatus: boolean;
     image?:
-      | undefined
-      | {
-          data: string;
-          contentType: string;
-        };
+    | undefined
+    | {
+      data: string;
+      contentType: string;
+    };
   };
   role?: Role;
   createdAt: string;
@@ -74,10 +78,13 @@ export interface UserProvider {
 
 export interface CreateUserData {
   username: string;
+  email: string;
+  phone: string;
   password: string;
   department?: string;
   profile: {
     name: string;
+    lastName: string;
     fullName: string;
     path?: string;
     estatus?: boolean;
@@ -87,9 +94,12 @@ export interface CreateUserData {
 
 export interface UpdateUserData {
   username?: string;
+  email?: string;
+  phone?: string;
   department?: string;
   profile?: {
     name: string;
+    lastName: string;
     fullName: string;
     path?: string;
     estatus?: boolean;

@@ -28,28 +28,28 @@ export const importedInvoicesService = {
   getInvoices: async (params: {
     page?: number;
     limit?: number;
-    receiverTaxId: string;
-    status?: '0' | '1';
+    rfcReceptor: string;
+    estatus?: '0' | '1';
     sortBy?: string;
     order?: 'asc' | 'desc';
   }): Promise<GetInvoicesResponse> => {
     try {
-      const { page = 1, limit = 15, receiverTaxId, status, sortBy = 'issuanceDate', order = 'desc' } = params;
+      const { page = 1, limit = 15, rfcReceptor, estatus, sortBy = 'fechaEmision', order = 'desc' } = params;
       const searchParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        receiverTaxId,
+        rfcReceptor,
         sortBy,
         order,
-        ...(status && { status }),
+        ...(estatus && { estatus }),
       });
-      
+
       const response = await apiCall<ImportedInvoice[]>(`/imported-invoices?${searchParams}`);
       return response as GetInvoicesResponse;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: [],
         pagination: { total: 0, page: 1, pages: 0, limit: 15 }
       };
@@ -57,15 +57,15 @@ export const importedInvoicesService = {
   },
 
   // Obtener resumen de facturas para una razón social
-  getSummary: async (receiverTaxId: string): Promise<GetSummaryResponse> => {
+  getSummary: async (rfcReceptor: string): Promise<GetSummaryResponse> => {
     try {
-      const response = await apiCall<SummaryData>(`/imported-invoices/summary?receiverTaxId=${receiverTaxId}`);
+      const response = await apiCall<SummaryData>(`/imported-invoices/summary?rfcReceptor=${rfcReceptor}`);
       return response as GetSummaryResponse;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
-        data: { totalInvoices: 0, cancelledInvoices: 0, uniqueProviders: 0 }
+      return {
+        success: false,
+        message: error.message,
+        data: { totalFacturas: 0, facturasCanceladas: 0, proveedoresUnicos: 0 }
       };
     }
   },
@@ -79,9 +79,9 @@ export const importedInvoicesService = {
       });
       return response as BulkUpsertResponse;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: { inserted: 0, updated: 0 }
       };
     }
@@ -93,9 +93,9 @@ export const importedInvoicesService = {
       const response = await apiCall<ImportedInvoice>(`/imported-invoices/${id}`);
       return response;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: null
       };
     }
@@ -103,50 +103,50 @@ export const importedInvoicesService = {
 
   // Buscar facturas por filtros avanzados
   search: async (params: {
-    receiverTaxId: string;
+    rfcReceptor: string;
     page?: number;
     limit?: number;
     search?: string;
-    status?: '0' | '1';
-    voucherType?: 'I' | 'E' | 'P';
+    estatus?: '0' | '1';
+    tipoComprobante?: 'I' | 'E' | 'P';
     startDate?: string;
     endDate?: string;
     minAmount?: number;
     maxAmount?: number;
   }): Promise<GetInvoicesResponse> => {
     try {
-      const { 
-        page = 1, 
-        limit = 15, 
-        receiverTaxId, 
-        search, 
-        status, 
-        voucherType, 
-        startDate, 
-        endDate, 
-        minAmount, 
-        maxAmount 
+      const {
+        page = 1,
+        limit = 15,
+        rfcReceptor,
+        search,
+        estatus,
+        tipoComprobante,
+        startDate,
+        endDate,
+        minAmount,
+        maxAmount
       } = params;
-      
+
       const searchParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        receiverTaxId,
+        rfcReceptor,
         ...(search && { search }),
-        ...(status && { status }),
-        ...(voucherType && { voucherType }),
+        ...(estatus && { estatus }),
+        ...(tipoComprobante && { tipoComprobante }),
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
         ...(minAmount && { minAmount: minAmount.toString() }),
         ...(maxAmount && { maxAmount: maxAmount.toString() }),
       });
-      
+
       const response = await apiCall<ImportedInvoice[]>(`/imported-invoices/search?${searchParams}`);
       return response as GetInvoicesResponse;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: [],
         pagination: { total: 0, page: 1, pages: 0, limit: 15 }
       };
@@ -155,64 +155,64 @@ export const importedInvoicesService = {
 
   // Exportar facturas a diferentes formatos
   export: async (params: {
-    receiverTaxId: string;
+    rfcReceptor: string;
     format: 'csv' | 'xlsx' | 'pdf';
     filters?: {
-      status?: '0' | '1';
-      voucherType?: 'I' | 'E' | 'P';
+      estatus?: '0' | '1';
+      tipoComprobante?: 'I' | 'E' | 'P';
       startDate?: string;
       endDate?: string;
     };
   }): Promise<{ success: boolean; data: Blob | null; message?: string }> => {
     try {
-      const { receiverTaxId, format, filters = {} } = params;
+      const { rfcReceptor, format, filters = {} } = params;
       const searchParams = new URLSearchParams({
-        receiverTaxId,
+        rfcReceptor,
         format,
         ...filters,
       });
-      
+
       const response = await fetch(`/api/v1/imported-invoices/export?${searchParams}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Error al exportar las facturas');
       }
-      
+
       const blob = await response.blob();
       return { success: true, data: blob };
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: null
       };
     }
   },
 
   // Obtener estadísticas avanzadas
-  getStatistics: async (receiverTaxId: string, period: 'month' | 'quarter' | 'year' = 'month'): Promise<{
+  getStatistics: async (rfcReceptor: string, period: 'month' | 'quarter' | 'year' = 'month'): Promise<{
     success: boolean;
     data: {
-      totalAmount: number;
-      averageAmount: number;
-      topProviders: Array<{ name: string; count: number; amount: number }>;
-      voucherTypeDistribution: Array<{ type: string; count: number; amount: number }>;
-      monthlyTrend: Array<{ month: string; count: number; amount: number }>;
+      importeTotal: number;
+      importePromedio: number;
+      topProviders: Array<{ name: string; count: number; importe: number }>;
+      tipoComprobanteDistribution: Array<{ type: string; count: number; importe: number }>;
+      monthlyTrend: Array<{ month: string; count: number; importe: number }>;
     } | null;
     message?: string;
   }> => {
     try {
-      const response = await apiCall<any>(`/imported-invoices/statistics?receiverTaxId=${receiverTaxId}&period=${period}`);
+      const response = await apiCall<any>(`/imported-invoices/statistics?rfcReceptor=${rfcReceptor}&period=${period}`);
       return response;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: null
       };
     }
@@ -235,9 +235,9 @@ export const importedInvoicesService = {
       });
       return response;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: null
       };
     }
@@ -256,9 +256,9 @@ export const importedInvoicesService = {
       });
       return response;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: { deleted: 0, failed: invoiceIds.length }
       };
     }
@@ -267,8 +267,8 @@ export const importedInvoicesService = {
   // Actualizar estatus de facturas en lote
   bulkUpdateStatus: async (params: {
     invoiceIds: string[];
-    status: 0 | 1;
-    cancellationDate?: string;
+    estatus: 0 | 1;
+    fechaCancelacion?: string;
   }): Promise<{
     success: boolean;
     message: string;
@@ -281,9 +281,9 @@ export const importedInvoicesService = {
       });
       return response;
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.message, 
+      return {
+        success: false,
+        message: error.message,
         data: { updated: 0, failed: params.invoiceIds.length }
       };
     }

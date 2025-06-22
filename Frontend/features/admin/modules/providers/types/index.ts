@@ -9,6 +9,7 @@ export interface Provider {
   _id: string;
   commercialName: string;
   businessName: string;
+  rfc: string;
   contactName: string;
   countryId: Location;
   stateId: Location;
@@ -25,6 +26,7 @@ export interface Provider {
 export type CreateProviderRequest = {
   commercialName: string;
   businessName: string;
+  rfc: string;
   contactName: string;
   countryId: string;
   stateId: string;

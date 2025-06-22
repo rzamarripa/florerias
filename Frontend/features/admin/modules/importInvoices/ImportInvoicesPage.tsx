@@ -17,17 +17,20 @@ import InvoicesTable from './components/InvoicesTable';
 const ImportInvoicesPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('');
-  
+
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [invoices, setInvoices] = useState<ImportedInvoice[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [parsedData, setParsedData] = useState<RawInvoiceData[]>([]);
-  
+  const [previewPage, setPreviewPage] = useState(1);
+  const PREVIEW_PAGE_SIZE = 15;
+
   const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreview, setIsPreview] = useState(false);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -49,18 +52,17 @@ const ImportInvoicesPage: React.FC = () => {
     fetchCompanies();
   }, []);
 
-  const fetchDataForCompany = useCallback(async (taxId: string, page: number = 1, isPageChange: boolean = false) => {
-    if (!taxId) return;
-    
-    if (!isPageChange) {
-      setLoadingSummary(true);
-      setLoadingInvoices(true);
-    }
+  const fetchDataForCompany = useCallback(async (rfcReceptor: string, page: number = 1) => {
+    if (!rfcReceptor) return;
+
+    setIsPreview(false);
+    setLoadingSummary(true);
+    setLoadingInvoices(true);
 
     try {
       const [summaryRes, invoicesRes] = await Promise.all([
-        importedInvoicesService.getSummary(taxId),
-        importedInvoicesService.getInvoices({ receiverTaxId: taxId, page })
+        importedInvoicesService.getSummary(rfcReceptor),
+        importedInvoicesService.getInvoices({ rfcReceptor, page })
       ]);
 
       if (summaryRes.success) setSummary(summaryRes.data);
@@ -81,10 +83,8 @@ const ImportInvoicesPage: React.FC = () => {
       console.error('Error fetching data:', error);
       toast.error('Ocurrió un error al obtener los datos.');
     } finally {
-      if (!isPageChange) {
-        setLoadingSummary(false);
-        setLoadingInvoices(false);
-      }
+      setLoadingSummary(false);
+      setLoadingInvoices(false);
     }
   }, []);
 
@@ -96,19 +96,82 @@ const ImportInvoicesPage: React.FC = () => {
       setInvoices([]);
       setPagination(null);
       setParsedData([]);
+      setIsPreview(false);
+      setPreviewPage(1);
     }
   }, [selectedCompany, fetchDataForCompany]);
-  
+
   const handlePageChange = (page: number) => {
-    if (selectedCompany) fetchDataForCompany(selectedCompany, page, true);
+    if (isPreview) {
+      setPreviewPage(page);
+    } else if (selectedCompany) {
+      fetchDataForCompany(selectedCompany, page);
+    }
   };
+
+  const showPreview = (data: RawInvoiceData[], page: number = 1) => {
+    // 1. Calculate Summary for preview (once)
+    if (page === 1) {
+      const summaryPreview: SummaryData = {
+        totalFacturas: data.length,
+        facturasCanceladas: data.filter(d => d.Estatus === '0').length,
+        proveedoresUnicos: [...new Set(data.map(d => d.NombreEmisor))].length
+      };
+      setSummary(summaryPreview);
+    }
+
+    // 2. Transform raw data to ImportedInvoice format for table preview
+    const invoicesPreview: ImportedInvoice[] = data.map((d, index) => ({
+      _id: `preview-${index}`,
+      folioFiscalId: d.Uuid,
+      rfcEmisor: d.RfcEmisor,
+      nombreEmisor: d.NombreEmisor,
+      rfcReceptor: d.RfcReceptor,
+      nombreReceptor: d.NombreReceptor,
+      importe: parseFloat(String(d.Monto).replace(/[^0-9.-]+/g, "")) || 0,
+      estatus: d.Estatus === '1' ? 1 : 0,
+      fechaEmision: d.FechaEmision,
+      tipoComprobante: d.EfectoComprobante,
+      // Default values for fields not in raw data
+      empresa: { _id: '', name: '', rfc: '' },
+      rfcProveedorCertificacion: d.RfcPac,
+      fechaCertificacionSAT: d.FechaCertificacionSat,
+      fechaCancelacion: d.FechaCancelacion || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+
+    // 3. Paginate the preview data
+    const startIndex = (page - 1) * PREVIEW_PAGE_SIZE;
+    const endIndex = startIndex + PREVIEW_PAGE_SIZE;
+    const paginatedInvoices = invoicesPreview.slice(startIndex, endIndex);
+    setInvoices(paginatedInvoices);
+
+    // 4. Set pagination for preview
+    setPagination({
+      total: data.length,
+      page: page,
+      pages: Math.ceil(data.length / PREVIEW_PAGE_SIZE),
+      limit: PREVIEW_PAGE_SIZE,
+    });
+
+    setIsPreview(true);
+    setLoadingInvoices(false);
+    setLoadingSummary(false);
+  };
+
+  useEffect(() => {
+    if (isPreview) {
+      showPreview(parsedData, previewPage);
+    }
+  }, [previewPage, isPreview, parsedData]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (!selectedCompany) {
       toast.warn('Por favor, seleccione una Razón Social antes de subir un archivo.');
       return;
     }
-    
+
     const file = acceptedFiles[0];
     if (!file || (file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed')) {
       toast.error('Por favor, suba un archivo ZIP válido.');
@@ -116,6 +179,8 @@ const ImportInvoicesPage: React.FC = () => {
     }
 
     setIsUploading(true);
+    setLoadingInvoices(true);
+    setLoadingSummary(true);
     toast.info('Procesando archivo ZIP...');
 
     new JSZip().loadAsync(file)
@@ -132,20 +197,19 @@ const ImportInvoicesPage: React.FC = () => {
         const header = headerLine.split('~');
         const requiredHeaders = ['Uuid', 'RfcEmisor', 'NombreEmisor', 'RfcReceptor'];
         if (!requiredHeaders.every(h => header.includes(h))) {
-            throw new Error('El encabezado del archivo no es válido.');
+          throw new Error('El encabezado del archivo no es válido.');
         }
 
         const data: RawInvoiceData[] = lines.map((line: string) => {
           const values = line.split('~');
           const row: any = {};
           header.forEach((key, index) => {
-            // Map the text file headers to our RawInvoiceData interface keys
             const keyMap: { [key: string]: keyof RawInvoiceData } = {
-                'Uuid': 'Uuid', 'RfcEmisor': 'RfcEmisor', 'NombreEmisor': 'NombreEmisor',
-                'RfcReceptor': 'RfcReceptor', 'NombreReceptor': 'NombreReceptor', 'RfcPac': 'RfcPac',
-                'FechaEmision': 'FechaEmision', 'FechaCertificacionSat': 'FechaCertificacionSat',
-                'Monto': 'Monto', 'EfectoComprobante': 'EfectoComprobante',
-                'Estatus': 'Estatus', 'FechaCancelacion': 'FechaCancelacion'
+              'Uuid': 'Uuid', 'RfcEmisor': 'RfcEmisor', 'NombreEmisor': 'NombreEmisor',
+              'RfcReceptor': 'RfcReceptor', 'NombreReceptor': 'NombreReceptor', 'RfcPac': 'RfcPac',
+              'FechaEmision': 'FechaEmision', 'FechaCertificacionSat': 'FechaCertificacionSat',
+              'Monto': 'Monto', 'EfectoComprobante': 'EfectoComprobante',
+              'Estatus': 'Estatus', 'FechaCancelacion': 'FechaCancelacion'
             };
             const mappedKey = keyMap[key];
             if (mappedKey) {
@@ -154,29 +218,28 @@ const ImportInvoicesPage: React.FC = () => {
           });
           return row;
         });
-        
-        // Ensure all invoices in the file belong to the selected company
+
         const allInvoicesMatch = data.every(
           (invoice) => invoice.RfcReceptor.toUpperCase() === selectedCompany.toUpperCase()
         );
 
         if (!allInvoicesMatch) {
-          toast.error(
-            `No todas las facturas en el archivo pertenecen a la Razón Social seleccionada (${selectedCompany}). Verifique el archivo.`
-          );
-          setParsedData([]);
-          return;
+          throw new Error(`No todas las facturas en el archivo pertenecen a la Razón Social seleccionada (${selectedCompany}).`);
         }
 
         setParsedData(data);
-        toast.success(`${data.length} facturas cargadas desde el archivo. Haga clic en "Guardar" para importarlas.`);
+        setPreviewPage(1);
+        showPreview(data, 1);
+        toast.success(`${data.length} facturas cargadas en vista previa. Haga clic en "Guardar" para importarlas.`);
       })
       .catch((err: any) => {
         toast.error(`Error al procesar el archivo: ${err.message}`);
         setParsedData([]);
+        // If an error occurs, revert to the data from the DB
+        if (selectedCompany) fetchDataForCompany(selectedCompany);
       })
       .finally(() => setIsUploading(false));
-  }, [selectedCompany]);
+  }, [selectedCompany, fetchDataForCompany]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -197,6 +260,7 @@ const ImportInvoicesPage: React.FC = () => {
       if (response.success) {
         toast.success(response.message || 'Facturas importadas con éxito.');
         setParsedData([]);
+        setPreviewPage(1);
         if (selectedCompany) fetchDataForCompany(selectedCompany);
       } else {
         toast.error(response.message || 'Ocurrió un error al guardar las facturas.');
@@ -210,7 +274,7 @@ const ImportInvoicesPage: React.FC = () => {
 
   return (
     <div className="container-fluid">
-      
+
       <Card>
         <Card.Body>
           <Row className="g-3">
@@ -234,17 +298,17 @@ const ImportInvoicesPage: React.FC = () => {
               <div {...getRootProps({ className: `dropzone text-center p-4 border-2 border-dashed ${isDragActive ? 'border-primary' : 'border-secondary'} ${!selectedCompany ? 'bg-light' : 'cursor-pointer'}` })}>
                 <input {...getInputProps()} />
                 <CloudUpload size={32} className="text-muted" />
-                { isUploading ? (
-                    <p className="mt-2 mb-0">Procesando archivo...</p>
+                {isUploading ? (
+                  <p className="mt-2 mb-0">Procesando archivo...</p>
                 ) : (
-                    <p className="mt-2 mb-0">
-                      { selectedCompany ? 'Arrastre un archivo ZIP o haga clic para seleccionar' : 'Seleccione una Razón Social para activar' }
-                    </p>
+                  <p className="mt-2 mb-0">
+                    {selectedCompany ? 'Arrastre un archivo ZIP o haga clic para seleccionar' : 'Seleccione una Razón Social para activar'}
+                  </p>
                 )}
               </div>
             </Col>
           </Row>
-          
+
           {parsedData.length > 0 && (
             <div className="text-center mt-3">
               <Button onClick={handleSave} disabled={isSaving}>
@@ -255,13 +319,13 @@ const ImportInvoicesPage: React.FC = () => {
           )}
         </Card.Body>
       </Card>
-      
+
       <div className="mt-4">
         <SummaryCards summary={summary} loading={loadingSummary} />
       </div>
 
       <div className="mt-4">
-        <InvoicesTable invoices={invoices} pagination={pagination} loading={loadingInvoices} onPageChange={handlePageChange} />
+        <InvoicesTable invoices={invoices} pagination={pagination} loading={loadingInvoices} onPageChange={handlePageChange} isPreview={isPreview} />
       </div>
     </div>
   );

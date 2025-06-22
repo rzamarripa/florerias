@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Table } from "react-bootstrap";
@@ -67,6 +67,34 @@ const BrandPage: React.FC = () => {
 
   const handleBrandSaved = () => {
     fetchBrands(false);
+  };
+
+  // Función para generar los números de página a mostrar
+  const getPageNumbers = () => {
+    const { page, pages } = pagination;
+    const delta = 2; // Número de páginas a mostrar antes y después de la página actual
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
+      range.push(i);
+    }
+
+    if (page - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (page + delta < pages - 1) {
+      rangeWithDots.push('...', pages);
+    } else if (pages > 1) {
+      rangeWithDots.push(pages);
+    }
+
+    return rangeWithDots;
   };
 
   return (
@@ -157,7 +185,7 @@ const BrandPage: React.FC = () => {
                       </td>
                       <td>
                         {brand.categoryId &&
-                        typeof brand.categoryId === "object"
+                          typeof brand.categoryId === "object"
                           ? brand.categoryId.name
                           : "-"}
                       </td>
@@ -174,11 +202,10 @@ const BrandPage: React.FC = () => {
                       </td>
                       <td>
                         <span
-                          className={`badge fs-6 ${
-                            brand.isActive
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
+                          className={`badge fs-6 ${brand.isActive
+                            ? "bg-success bg-opacity-10 text-success"
+                            : "bg-danger bg-opacity-10 text-danger"
+                            }`}
                         >
                           {brand.isActive ? "Activo" : "Inactivo"}
                         </span>
@@ -200,39 +227,47 @@ const BrandPage: React.FC = () => {
             <span className="text-muted">
               Mostrando {brands.length} de {pagination.total} registros
             </span>
-            <div className="d-flex gap-1">
+            <div className="d-flex gap-1 align-items-center">
               <Button
                 variant="outline-secondary"
                 size="sm"
                 disabled={pagination.page === 1}
                 onClick={() => handlePageChange(pagination.page - 1)}
+                className="d-flex align-items-center"
               >
+                <ChevronLeft size={16} />
                 Anterior
               </Button>
-              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={
-                      pagination.page === pageNum
-                        ? "primary"
-                        : "outline-secondary"
-                    }
-                    size="sm"
-                    onClick={() => handlePageChange(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
+
+              {getPageNumbers().map((pageNum, index) => (
+                <React.Fragment key={index}>
+                  {pageNum === '...' ? (
+                    <span className="px-2 text-muted">...</span>
+                  ) : (
+                    <Button
+                      variant={
+                        pageNum === pagination.page
+                          ? "primary"
+                          : "outline-secondary"
+                      }
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum as number)}
+                    >
+                      {pageNum}
+                    </Button>
+                  )}
+                </React.Fragment>
+              ))}
+
               <Button
                 variant="outline-secondary"
                 size="sm"
                 disabled={pagination.page === pagination.pages}
                 onClick={() => handlePageChange(pagination.page + 1)}
+                className="d-flex align-items-center"
               >
                 Siguiente
+                <ChevronRight size={16} />
               </Button>
             </div>
           </div>

@@ -9,6 +9,15 @@ const userSchema = new Schema(
       required: true,
       unique: true,
     },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+    },
     password: {
       type: String,
       required: true,
@@ -16,6 +25,10 @@ const userSchema = new Schema(
     department: String,
     profile: {
       name: {
+        type: String,
+        required: true
+      },
+      lastName: {
         type: String,
         required: true
       },
@@ -75,15 +88,16 @@ userSchema.methods.getPublicProfile = function () {
   const profile = { ...this.profile };
 
   if (profile.image && profile.image.data) {
-    const base64Image = `data:${
-      profile.image.contentType
-    };base64,${profile.image.data.toString("base64")}`;
+    const base64Image = `data:${profile.image.contentType
+      };base64,${profile.image.data.toString("base64")}`;
     profile.image = base64Image;
   }
 
   return {
     _id: this._id,
     username: this.username,
+    email: this.email,
+    phone: this.phone,
     profile: profile,
     role: this.role,
     createdAt: this.createdAt,
@@ -94,9 +108,8 @@ userSchema.methods.toJSON = function () {
   const user = this.toObject();
 
   if (user.profile && user.profile.image && user.profile.image.data) {
-    const base64Image = `data:${
-      user.profile.image.contentType
-    };base64,${user.profile.image.data.toString("base64")}`;
+    const base64Image = `data:${user.profile.image.contentType
+      };base64,${user.profile.image.data.toString("base64")}`;
     user.profile.image = base64Image;
   }
 

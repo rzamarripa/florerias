@@ -7,7 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
 import { Role } from "../../roles/types";
-import { UserFormData, userFormSchema } from "../schemas/userSchema"; 
+import { UserFormData, userFormSchema } from "../schemas/userSchema";
 import { usersService } from "../services/users";
 import type { User } from "../types";
 
@@ -24,6 +24,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [removedExistingImage, setRemovedExistingImage] = useState<boolean>(false);
 
   const isEditing = Boolean(user);
 
@@ -31,10 +32,13 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     resolver: zodResolver(userFormSchema),
     defaultValues: {
       username: "",
-      password: "", 
-      confirmPassword: "", 
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
       profile: {
         name: "",
+        lastName: "",
         fullName: "",
         estatus: true,
       },
@@ -64,9 +68,26 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     { value: "VENTAS", label: "Ventas" },
   ];
 
+  // Función para obtener la URL de la imagen del usuario
+  const getUserImageUrl = (user: User): string | null => {
+    if (user?.profile?.image?.data) {
+      const imageUrl = `data:${user.profile.image.contentType};base64,${user.profile.image.data}`;
+      console.log('User image URL generated:', imageUrl.substring(0, 50) + '...');
+      return imageUrl;
+    }
+    console.log('No user image data found');
+    return null;
+  };
+
   useEffect(() => {
     if (isOpen) {
       if (isEditing && user) {
+        console.log('Opening modal in edit mode for user:', user.username);
+        console.log('User profile image:', user.profile?.image);
+
+        // Resetear el estado de imagen removida
+        setRemovedExistingImage(false);
+
         let roleValue = "";
         if (user.role) {
           if (typeof user.role === 'object') {
@@ -77,24 +98,38 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         }
 
         setValue("username", user.username || "");
+        setValue("email", user.email || "");
+        setValue("phone", user.phone || "");
         setValue("password", "");
         setValue("confirmPassword", "");
         setValue("profile.name", user.profile?.name || "");
+        setValue("profile.lastName", user.profile?.lastName || "");
         setValue("profile.fullName", user.profile?.fullName || "");
         setValue("profile.estatus", user.profile?.estatus ?? true);
         setValue("department", user.department || "");
         setValue("role", roleValue);
-        
-        if (typeof user?.profile?.image === "string") {
-          setImagePreview(user.profile.image);
+
+        // Configurar la imagen del usuario para edición
+        const userImageUrl = getUserImageUrl(user);
+        if (userImageUrl) {
+          console.log('Setting image preview for user');
+          setImagePreview(userImageUrl);
+        } else {
+          console.log('No image to set for user');
+          setImagePreview(null);
         }
       } else {
+        console.log('Opening modal in create mode');
+        setRemovedExistingImage(false);
         reset({
           username: "",
-          password: "", 
-          confirmPassword: "", 
+          email: "",
+          phone: "",
+          password: "",
+          confirmPassword: "",
           profile: {
             name: "",
+            lastName: "",
             fullName: "",
             estatus: true,
           },
@@ -105,6 +140,19 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
       }
     }
   }, [isOpen, isEditing, user, reset, setValue]);
+
+  // Efecto para actualizar automáticamente el fullName cuando cambien name o lastName
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'profile.name' || name === 'profile.lastName') {
+        const name = form.getValues('profile.name') || '';
+        const lastName = form.getValues('profile.lastName') || '';
+        const fullName = getFullName(name, lastName);
+        form.setValue('profile.fullName', fullName);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -141,6 +189,10 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const removeImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
+    // Si estamos en modo edición y había una imagen existente, marcamos que se quitó
+    if (isEditing && user?.profile?.image?.data) {
+      setRemovedExistingImage(true);
+    }
     const fileInput = document.getElementById("imageInput") as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
@@ -154,6 +206,10 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     return givenNames;
   };
 
+  const getFullName = (name: string, lastName: string) => {
+    return `${name} ${lastName}`.trim();
+  };
+
   const onSubmit = async (data: UserFormData) => {
     try {
       setLoading(true);
@@ -161,25 +217,34 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
       if (isEditing && user) {
         const updateData = {
           username: data.username,
+          email: data.email,
+          phone: data.phone,
           department: data.department,
           profile: {
-            name: getFirstName(data.profile.name),
-            fullName: data.profile.fullName,
+            name: data.profile.name,
+            lastName: data.profile.lastName,
+            fullName: getFullName(data.profile.name, data.profile.lastName),
             estatus: data.profile.estatus ?? true,
           },
           role: data.role,
         };
 
-        await usersService.updateUser(user._id, updateData, selectedImage);
+        // Si se quitó la imagen existente, pasamos null para indicar que se debe eliminar
+        const imageToSend = removedExistingImage ? null : selectedImage;
+
+        await usersService.updateUser(user._id, updateData, imageToSend);
         toast.success(`Usuario ${data.username} actualizado correctamente`);
       } else {
         const newUserData = {
           username: data.username,
-          password: data.password!, 
+          email: data.email,
+          phone: data.phone,
+          password: data.password!,
           department: data.department,
           profile: {
-            name: getFirstName(data.profile.name) || "",
-            fullName: data.profile.fullName,
+            name: data.profile.name,
+            lastName: data.profile.lastName,
+            fullName: getFullName(data.profile.name, data.profile.lastName),
             estatus: data.profile.estatus ?? true,
           },
           role: data.role,
@@ -212,6 +277,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     setShowConfirmPassword(false);
     setSelectedImage(null);
     setImagePreview(null);
+    setRemovedExistingImage(false);
     setIsOpen(false);
   };
 
@@ -291,13 +357,18 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                             sizes="120px"
                           />
                         </div>
+                        {isEditing && !selectedImage && user?.profile?.image?.data && (
+                          <small className="text-info mt-1">
+                            Imagen actual del usuario
+                          </small>
+                        )}
                         <Button
                           variant="link"
                           className="position-absolute text-danger p-0"
                           onClick={removeImage}
                           disabled={loading}
-                          style={{ 
-                            top: "-10px", 
+                          style={{
+                            top: "-10px",
                             right: "-10px",
                             width: "24px",
                             height: "24px",
@@ -364,6 +435,12 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                       style={{ fontSize: "0.75rem", lineHeight: "1.2" }}
                     >
                       <strong>Requisitos:</strong> Máximo 1MB • JPG/PNG únicamente
+                      {isEditing && !imagePreview && !user?.profile?.image?.data && (
+                        <br />
+                      )}
+                      {isEditing && !imagePreview && !user?.profile?.image?.data && (
+                        <span className="text-info">No hay imagen de perfil</span>
+                      )}
                     </small>
                   </div>
                 </Form.Group>
@@ -390,17 +467,71 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="text-dark mb-1">
-                    Nombre Completo:
+                    Email:
+                  </Form.Label>
+                  <Form.Control
+                    type="email"
+                    placeholder="Ingresa el email"
+                    {...register("email")}
+                    disabled={loading}
+                    isInvalid={!!errors.email}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.email?.message}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-dark mb-1">
+                    Teléfono:
+                  </Form.Label>
+                  <Form.Control
+                    type="tel"
+                    placeholder="Ingresa el teléfono"
+                    {...register("phone")}
+                    disabled={loading}
+                    isInvalid={!!errors.phone}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.phone?.message}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-dark mb-1">
+                    Nombre:
                   </Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Ingresa el nombre completo"
-                    {...register("profile.fullName")}
+                    placeholder="Ingresa el nombre"
+                    {...register("profile.name")}
                     disabled={loading}
-                    isInvalid={!!errors.profile?.fullName}
+                    isInvalid={!!errors.profile?.name}
                   />
                   <Form.Control.Feedback type="invalid">
-                    {errors.profile?.fullName?.message}
+                    {errors.profile?.name?.message}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-dark mb-1">
+                    Apellido:
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ingresa el apellido"
+                    {...register("profile.lastName")}
+                    disabled={loading}
+                    isInvalid={!!errors.profile?.lastName}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.profile?.lastName?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </Col>

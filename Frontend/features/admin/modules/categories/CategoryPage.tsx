@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Search } from "lucide-react";
+import { FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -39,8 +39,8 @@ const CategoriesPage: React.FC = () => {
             selectedType === "todos"
               ? undefined
               : selectedType === "activos"
-              ? "true"
-              : "false",
+                ? "true"
+                : "false",
           ...params,
         };
 
@@ -116,6 +116,34 @@ const CategoriesPage: React.FC = () => {
     updatedAt: cat.updatedAt || cat.createdAt,
     description: cat.description,
   }));
+
+  // Función para generar los números de página a mostrar
+  const getPageNumbers = () => {
+    const { page, pages } = pagination;
+    const delta = 2; // Número de páginas a mostrar antes y después de la página actual
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
+      range.push(i);
+    }
+
+    if (page - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (page + delta < pages - 1) {
+      rangeWithDots.push('...', pages);
+    } else if (pages > 1) {
+      rangeWithDots.push(pages);
+    }
+
+    return rangeWithDots;
+  };
 
   return (
     <div className="container-fluid">
@@ -206,11 +234,10 @@ const CategoriesPage: React.FC = () => {
                           </td>
                           <td className="text-center">
                             <span
-                              className={`badge fs-6 ${
-                                category.status
-                                  ? "bg-success bg-opacity-10 text-success"
-                                  : "bg-danger bg-opacity-10 text-danger"
-                              }`}
+                              className={`badge fs-6 ${category.status
+                                ? "bg-success bg-opacity-10 text-success"
+                                : "bg-danger bg-opacity-10 text-danger"
+                                }`}
                             >
                               {category.status ? "Activo" : "Inactivo"}
                             </span>
@@ -257,25 +284,41 @@ const CategoriesPage: React.FC = () => {
                     <span className="text-muted">
                       Mostrando {categories.length} de {pagination.total} registros
                     </span>
-                    <div className="d-flex gap-1">
+                    <div className="d-flex gap-1 align-items-center">
                       <button
-                        className="btn btn-outline-secondary btn-sm"
+                        className="btn btn-outline-secondary btn-sm d-flex align-items-center"
                         disabled={pagination.page === 1}
                         onClick={() => handlePageChange(pagination.page - 1)}
                       >
+                        <ChevronLeft size={16} />
                         Anterior
                       </button>
+
+                      {getPageNumbers().map((pageNum, index) => (
+                        <React.Fragment key={index}>
+                          {pageNum === '...' ? (
+                            <span className="px-2 text-muted">...</span>
+                          ) : (
+                            <button
+                              className={`btn btn-sm ${pageNum === pagination.page
+                                ? 'btn-primary'
+                                : 'btn-outline-secondary'
+                                }`}
+                              onClick={() => handlePageChange(pageNum as number)}
+                            >
+                              {pageNum}
+                            </button>
+                          )}
+                        </React.Fragment>
+                      ))}
+
                       <button
-                        className="btn btn-sm btn-primary"
-                      >
-                        {pagination.page}
-                      </button>
-                      <button
-                        className="btn btn-outline-secondary btn-sm"
+                        className="btn btn-outline-secondary btn-sm d-flex align-items-center"
                         disabled={pagination.page === pagination.pages}
                         onClick={() => handlePageChange(pagination.page + 1)}
                       >
                         Siguiente
+                        <ChevronRight size={16} />
                       </button>
                     </div>
                   </div>

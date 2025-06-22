@@ -2,26 +2,32 @@ import { Company } from "../../companies/types";
 
 export interface ImportedInvoice {
   _id: string;
-  fiscalFolioId: string;
-  issuerTaxId: string;
-  issuerName: string;
-  receiverTaxId: string;
-  company: Pick<Company, '_id' | 'name' | 'rfc'>;
-  certificationProviderId: string;
-  issuanceDate: string;
-  taxAuthorityCertificationDate: string;
-  cancellationDate?: string | null;
-  amount: number;
-  voucherType: 'I' | 'E' | 'P';
-  status: 0 | 1;
+  folioFiscalId: string;
+  rfcEmisor: string;
+  nombreEmisor: string;
+  rfcReceptor: string;
+  nombreReceptor: string;
+  empresa: Pick<Company, '_id' | 'name' | 'rfc'>;
+  rfcProveedorCertificacion: string;
+  fechaEmision: string;
+  fechaCertificacionSAT: string;
+  fechaCancelacion?: string | null;
+  importe: number;
+  tipoComprobante: 'I' | 'E' | 'P';
+  estatus: 0 | 1;
   createdAt: string;
   updatedAt: string;
+  // Campos virtuales
+  descripcionTipoComprobante?: string;
+  descripcionEstatus?: string;
+  estaCancelado?: boolean;
+  estaVigente?: boolean;
 }
 
 export interface SummaryData {
-  totalInvoices: number;
-  cancelledInvoices: number;
-  uniqueProviders: number;
+  totalFacturas: number;
+  facturasCanceladas: number;
+  proveedoresUnicos: number;
 }
 
 export interface Pagination {

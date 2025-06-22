@@ -15,49 +15,47 @@ export const bulkUpsertInvoices = async (req, res) => {
     if (!invoices || !Array.isArray(invoices)) {
       return res.status(400).json({
         success: false,
-        message: 'Request body must be an array of invoices.'
+        message: 'El cuerpo de la petición debe ser un arreglo de facturas.'
       });
     }
 
-    // 1. Find all relevant companies in one go
-    const receiverRfcs = [...new Set(invoices.map(inv => inv.RfcReceptor.toUpperCase()))];
-    const companies = await Company.find({ rfc: { $in: receiverRfcs } });
-    
-    // 2. Create a map for quick lookup
+    const rfcReceptores = [...new Set(invoices.map(inv => inv.RfcReceptor.toUpperCase()))];
+    const companies = await Company.find({ rfc: { $in: rfcReceptores } });
+
     const companyMap = new Map(companies.map(comp => [comp.rfc.toUpperCase(), comp._id]));
 
     const operations = invoices
       .map(invoice => {
-        const receiverRfc = invoice.RfcReceptor.toUpperCase();
-        const companyId = companyMap.get(receiverRfc);
+        const rfcReceptor = invoice.RfcReceptor.toUpperCase();
+        const companyId = companyMap.get(rfcReceptor);
 
-        // 3. Skip invoice if its company doesn't exist in the DB
         if (!companyId) {
-          return null; 
+          return null;
         }
 
         const invoiceData = {
-          fiscalFolioId: invoice.Uuid,
-          issuerTaxId: invoice.RfcEmisor,
-          issuerName: invoice.NombreEmisor,
-          receiverTaxId: invoice.RfcReceptor,
-          certificationProviderId: invoice.RfcPac,
-          issuanceDate: parseDate(invoice.FechaEmision),
-          taxAuthorityCertificationDate: parseDate(invoice.FechaCertificacionSat),
-          amount: parseFloat(String(invoice.Monto).replace(/[^0-9.-]+/g,"")) || 0,
-          voucherType: invoice.EfectoComprobante,
-          status: parseInt(invoice.Estatus, 10),
-          cancellationDate: parseDate(invoice.FechaCancelacion),
-          company: companyId, // 4. Assign the company ObjectId
+          folioFiscalId: invoice.Uuid,
+          rfcEmisor: invoice.RfcEmisor,
+          nombreEmisor: invoice.NombreEmisor,
+          rfcReceptor: invoice.RfcReceptor,
+          nombreReceptor: invoice.NombreReceptor,
+          rfcProveedorCertificacion: invoice.RfcPac,
+          fechaEmision: parseDate(invoice.FechaEmision),
+          fechaCertificacionSAT: parseDate(invoice.FechaCertificacionSat),
+          importe: parseFloat(String(invoice.Monto).replace(/[^0-9.-]+/g, "")) || 0,
+          tipoComprobante: invoice.EfectoComprobante,
+          estatus: parseInt(invoice.Estatus, 10),
+          fechaCancelacion: parseDate(invoice.FechaCancelacion),
+          razonSocial: companyId,
         };
-        
-        if (!invoiceData.fiscalFolioId) {
+
+        if (!invoiceData.folioFiscalId) {
           return null;
         }
-        
+
         return {
           updateOne: {
-            filter: { fiscalFolioId: invoiceData.fiscalFolioId },
+            filter: { folioFiscalId: invoiceData.folioFiscalId },
             update: { $set: invoiceData },
             upsert: true,
           },
@@ -68,7 +66,7 @@ export const bulkUpsertInvoices = async (req, res) => {
     if (operations.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No valid invoices to process.'
+        message: 'No hay facturas válidas para procesar.'
       });
     }
 
@@ -76,7 +74,7 @@ export const bulkUpsertInvoices = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `${result.upsertedCount + result.modifiedCount} invoices processed successfully.`,
+      message: `${result.upsertedCount + result.modifiedCount} facturas procesadas exitosamente.`,
       data: {
         inserted: result.upsertedCount,
         updated: result.modifiedCount,
@@ -92,38 +90,37 @@ export const bulkUpsertInvoices = async (req, res) => {
 
 export const getInvoices = async (req, res) => {
   try {
-    const { page = 1, limit = 15, receiverTaxId, status, sortBy = 'issuanceDate', order = 'desc' } = req.query;
+    const { page = 1, limit = 15, rfcReceptor, estatus, sortBy = 'fechaEmision', order = 'desc' } = req.query;
 
-    if (!receiverTaxId) {
+    if (!rfcReceptor) {
       return res.status(400).json({
         success: false,
-        message: 'A receiverTaxId is required.'
+        message: 'Se requiere un RFC del receptor.'
       });
     }
 
-    const query = { receiverTaxId: receiverTaxId.toUpperCase() };
-    if (status && ['0', '1'].includes(status)) {
-      query.status = parseInt(status, 10);
+    const query = { rfcReceptor: rfcReceptor.toUpperCase() };
+    if (estatus && ['0', '1'].includes(estatus)) {
+      query.estatus = parseInt(estatus, 10);
     }
 
     const sortOptions = { [sortBy]: order === 'asc' ? 1 : -1 };
-      
+
     const invoicesPromise = ImportedInvoices.find(query)
-      .populate('company', 'name rfc') // Populate company data
+      .populate('razonSocial', 'name rfc')
       .sort(sortOptions)
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .lean({ getters: true }) // Use getters to apply schema transforms
+      .lean({ getters: true })
       .exec();
 
     const countPromise = ImportedInvoices.countDocuments(query);
 
     const [invoicesFromDb, count] = await Promise.all([invoicesPromise, countPromise]);
 
-    // Manually convert Decimal128 to float for each invoice
     const invoices = invoicesFromDb.map(invoice => ({
       ...invoice,
-      amount: invoice.amount ? parseFloat(invoice.amount.toString()) : 0,
+      importe: invoice.importe ? parseFloat(invoice.importe.toString()) : 0,
     }));
 
     res.status(200).json({
@@ -146,16 +143,16 @@ export const getInvoices = async (req, res) => {
 
 export const getInvoicesSummary = async (req, res) => {
   try {
-    const { receiverTaxId } = req.query;
+    const { rfcReceptor } = req.query;
 
-    if (!receiverTaxId) {
+    if (!rfcReceptor) {
       return res.status(400).json({
         success: false,
-        message: 'A receiverTaxId is required.'
+        message: 'Se requiere un RFC del receptor.'
       });
     }
 
-    const summaryData = await ImportedInvoices.getSummary(receiverTaxId);
+    const summaryData = await ImportedInvoices.obtenerResumen(rfcReceptor);
 
     res.status(200).json({
       success: true,

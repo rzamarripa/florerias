@@ -4,8 +4,8 @@ import CategoriesPage from "@/features/admin/modules/categories/CategoryPage";
 export default function Page() {
   return (
     <div className="container-fluid">
-      <PageBreadcrumb title="Categorías" subtitle="Catálogos" section="Admin" />
-      <CategoriesPage/>
+      <PageBreadcrumb title="Unidades de Negocio" subtitle="Catálogos" section="Admin" />
+      <CategoriesPage />
     </div>
   );
 } 
