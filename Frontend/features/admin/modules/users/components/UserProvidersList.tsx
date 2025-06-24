@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Modal, Pagination, Spinner, Table } from "react-bootstrap";
+import { Button, Modal, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { usersService } from "../services/users";
 import { User, UserProvider } from "../types";
@@ -44,10 +44,10 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
         page: pagination.page,
         limit: pagination.limit,
       });
-      if (response.data) {
+      if (response.success && response.data) {
         setProviders(response.data);
-        if ((response as any).pagination) {
-          setPagination((response as any).pagination);
+        if ('pagination' in response && response.pagination) {
+          setPagination(response.pagination);
         }
       }
     } catch (error) {

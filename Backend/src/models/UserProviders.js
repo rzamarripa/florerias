@@ -20,7 +20,7 @@ const rsUserProviderSchema = new Schema({
 
 rsUserProviderSchema.index({ userId: 1, providerId: 1 }, { unique: true });
 
-rsUserProviderSchema.statics.getProvidersByUser = async function (userId) {
+rsUserProviderSchema.statics.getProvidersByUser = function (userId) {
   return this.find({ userId }).populate("providerId");
 };
 

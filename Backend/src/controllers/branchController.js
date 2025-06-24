@@ -4,21 +4,39 @@ import { Company } from "../models/Company.js";
 import { Country } from "../models/Country.js";
 import { Municipality } from "../models/Municipality.js";
 import { State } from "../models/State.js";
+import { RsBranchBrand } from "../models/BranchBrands.js";
 
 export const getAll = async (req, res) => {
   try {
     const branches = await Branch.find({ isActive: true })
       .select("_id name companyId countryId stateId municipalityId")
       .populate("companyId", "_id name")
-      .populate("brandId", "_id name")
       .populate("countryId", "_id name")
       .populate("stateId", "_id name")
       .populate("municipalityId", "_id name")
       .sort({ name: 1 });
 
+    // Obtener las marcas asociadas a cada sucursal
+    const branchesWithBrands = await Promise.all(
+      branches.map(async (branch) => {
+        const brandRelations = await RsBranchBrand.find({ branchId: branch._id })
+          .populate("brandId", "_id name")
+          .lean();
+
+        const brands = brandRelations
+          .filter((rel) => rel.brandId)
+          .map((rel) => rel.brandId);
+
+        return {
+          ...branch.toObject(),
+          brands: brands,
+        };
+      })
+    );
+
     res.status(200).json({
       success: true,
-      data: branches,
+      data: branchesWithBrands,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -45,7 +63,6 @@ export const getAllBranches = async (req, res) => {
     const total = await Branch.countDocuments(filters);
     const branches = await Branch.find(filters)
       .populate("companyId", "_id name")
-      .populate("brandId", "_id name")
       .populate("countryId", "_id name")
       .populate("stateId", "_id name")
       .populate("municipalityId", "_id name")
@@ -53,9 +70,27 @@ export const getAllBranches = async (req, res) => {
       .limit(limit)
       .sort({ createdAt: -1 });
 
+    // Obtener las marcas asociadas a cada sucursal
+    const branchesWithBrands = await Promise.all(
+      branches.map(async (branch) => {
+        const brandRelations = await RsBranchBrand.find({ branchId: branch._id })
+          .populate("brandId", "_id name")
+          .lean();
+
+        const brands = brandRelations
+          .filter((rel) => rel.brandId)
+          .map((rel) => rel.brandId);
+
+        return {
+          ...branch.toObject(),
+          brands: brands,
+        };
+      })
+    );
+
     res.status(200).json({
       success: true,
-      data: branches,
+      data: branchesWithBrands,
       pagination: {
         page,
         limit,
@@ -72,7 +107,6 @@ export const createBranch = async (req, res) => {
   try {
     const {
       companyId,
-      brandId,
       name,
       countryId,
       stateId,
@@ -82,6 +116,7 @@ export const createBranch = async (req, res) => {
       phone,
       email,
       description,
+      rsBrands,
     } = req.body;
 
     const company = await Company.findOne({ _id: companyId, isActive: true });
@@ -89,14 +124,6 @@ export const createBranch = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Selected company does not exist or is not active",
-      });
-    }
-
-    const brand = await Brand.findOne({ _id: brandId, isActive: true });
-    if (!brand) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected brand does not exist or is not active",
       });
     }
 
@@ -136,7 +163,6 @@ export const createBranch = async (req, res) => {
 
     const newBranch = await Branch.create({
       companyId,
-      brandId,
       name,
       countryId,
       stateId,
@@ -149,9 +175,16 @@ export const createBranch = async (req, res) => {
       isActive: true,
     });
 
+    if (rsBrands && Array.isArray(rsBrands) && rsBrands.length > 0) {
+      const relations = rsBrands.map((brandId) => ({
+        branchId: newBranch._id,
+        brandId: brandId,
+      }));
+      await RsBranchBrand.insertMany(relations);
+    }
+
     await newBranch.populate([
       { path: "companyId", select: "_id name" },
-      { path: "brandId", select: "_id name" },
       { path: "countryId", select: "_id name" },
       { path: "stateId", select: "_id name" },
       { path: "municipalityId", select: "_id name" },
@@ -167,7 +200,7 @@ export const createBranch = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "A branch with that name already exists for the selected brand",
+          "A branch with that name already exists for the selected company",
       });
     }
     res.status(500).json({ success: false, message: error.message });
@@ -179,7 +212,6 @@ export const updateBranch = async (req, res) => {
     const { id } = req.params;
     const {
       companyId,
-      brandId,
       name,
       countryId,
       stateId,
@@ -189,6 +221,7 @@ export const updateBranch = async (req, res) => {
       phone,
       email,
       description,
+      rsBrands,
     } = req.body;
 
     const company = await Company.findOne({ _id: companyId, isActive: true });
@@ -196,14 +229,6 @@ export const updateBranch = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Selected company does not exist or is not active",
-      });
-    }
-
-    const brand = await Brand.findOne({ _id: brandId, isActive: true });
-    if (!brand) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected brand does not exist or is not active",
       });
     }
 
@@ -245,7 +270,6 @@ export const updateBranch = async (req, res) => {
       id,
       {
         companyId,
-        brandId,
         name,
         countryId,
         stateId,
@@ -259,7 +283,6 @@ export const updateBranch = async (req, res) => {
       { new: true }
     ).populate([
       { path: "companyId", select: "_id name" },
-      { path: "brandId", select: "_id name" },
       { path: "countryId", select: "_id name" },
       { path: "stateId", select: "_id name" },
       { path: "municipalityId", select: "_id name" },
@@ -272,6 +295,18 @@ export const updateBranch = async (req, res) => {
       });
     }
 
+    if (rsBrands !== undefined) {
+      await RsBranchBrand.deleteMany({ branchId: id });
+
+      if (rsBrands && Array.isArray(rsBrands) && rsBrands.length > 0) {
+        const relations = rsBrands.map((brandId) => ({
+          branchId: id,
+          brandId: brandId,
+        }));
+        await RsBranchBrand.insertMany(relations);
+      }
+    }
+
     res.json({
       success: true,
       data: updatedBranch,
@@ -282,7 +317,7 @@ export const updateBranch = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "A branch with that name already exists for the selected brand",
+          "A branch with that name already exists for the selected company",
       });
     }
     res.status(500).json({ success: false, message: error.message });
@@ -362,6 +397,114 @@ export const getMunicipalitiesByStateId = async (req, res) => {
       .select("_id name")
       .sort({ name: 1 });
     res.status(200).json({ success: true, data: municipalities });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getBranchesByBrand = async (req, res) => {
+  try {
+    const { brandId } = req.params;
+
+    const relations = await RsBranchBrand.find({ brandId }).populate({
+      path: "branchId",
+      select: "_id name companyId brandId address phone email",
+      match: { isActive: true },
+      populate: {
+        path: "companyId",
+        select: "_id name",
+      },
+    });
+
+    const branches = relations
+      .filter((rel) => rel.branchId) // Filter out any null branchIds (from inactive branches)
+      .map((rel) => rel.branchId);
+
+    res.status(200).json({
+      success: true,
+      data: branches,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getBranchBrands = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    const relations = await RsBranchBrand.find({ branchId }).populate({
+      path: "brandId",
+      select: "_id name",
+      match: { isActive: true },
+    });
+
+    const brands = relations
+      .filter((rel) => rel.brandId) // Filter out any null brandIds (from inactive brands)
+      .map((rel) => rel.brandId);
+
+    res.status(200).json({
+      success: true,
+      data: brands,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const assignBrandsToBranch = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+    const { brandIds } = req.body;
+
+    const branch = await Branch.findById(branchId);
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Branch not found",
+      });
+    }
+
+    await RsBranchBrand.deleteMany({ branchId });
+
+    const relations = await Promise.all(
+      brandIds.map((brandId) =>
+        RsBranchBrand.createRelation(branchId, brandId)
+      )
+    );
+
+    const populatedRelations = await RsBranchBrand.find({
+      _id: { $in: relations.map((r) => r._id) },
+    }).populate("brandId");
+
+    res.status(200).json({
+      success: true,
+      message: "Brands assigned successfully",
+      data: populatedRelations,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const removeBrandFromBranch = async (req, res) => {
+  try {
+    const { branchId, brandId } = req.params;
+
+    const branch = await Branch.findById(branchId);
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Branch not found",
+      });
+    }
+
+    await RsBranchBrand.removeRelation(branchId, brandId);
+
+    res.status(200).json({
+      success: true,
+      message: "Brand removed successfully",
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

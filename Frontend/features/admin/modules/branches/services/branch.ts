@@ -45,4 +45,16 @@ export const branchService = {
       method: "DELETE",
     });
   },
+
+  getBranchBrands: async (branchId: string) => {
+    return await apiCall<any[]>(`/branches/${branchId}/brands`);
+  },
+
+  assignBrandsToBranch: async (branchId: string, brandIds: string[]) => {
+    return await apiCall<any[]>(`/branches/${branchId}/brands`, {
+      method: "PUT",
+      body: JSON.stringify({ brandIds }),
+      headers: { "Content-Type": "application/json" },
+    });
+  },
 };

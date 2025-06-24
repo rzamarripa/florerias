@@ -14,11 +14,10 @@ export const branchSchema = z.object({
     .max(150, "La razón social no puede exceder 150 caracteres")
     .trim(),
 
-  brandId: z
-    .string()
-    .min(1, "La marca es requerida")
-    .max(50, "La marca no puede exceder 50 caracteres")
-    .trim(),
+  rsBrands: z
+    .array(z.string())
+    .min(1, "Debe seleccionar al menos una marca")
+    .optional(),
 
   countryId: z
     .string()

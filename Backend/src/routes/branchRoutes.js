@@ -8,12 +8,17 @@ import {
   updateBranch,
   getStatesByCountryId,
   getMunicipalitiesByStateId,
+  getBranchesByBrand,
+  getBranchBrands,
+  assignBrandsToBranch,
+  removeBrandFromBranch,
 } from "../controllers/branchController.js";
 
 const router = express.Router();
 
 router.get("/", getAllBranches);
 router.get("/all", getAll);
+router.get("/by-brand/:brandId", getBranchesByBrand);
 router.post("/", createBranch);
 router.put("/:id", updateBranch);
 router.delete("/:id", deleteBranch);
@@ -21,5 +26,10 @@ router.put("/:id/active", activeBranch);
 
 router.get("/states/by-country/:countryId", getStatesByCountryId);
 router.get("/municipalities/by-state/:stateId", getMunicipalitiesByStateId);
+
+// Rutas para manejar relaciones con marcas
+router.get("/:branchId/brands", getBranchBrands);
+router.put("/:branchId/brands", assignBrandsToBranch);
+router.delete("/:branchId/brands/:brandId", removeBrandFromBranch);
 
 export default router;

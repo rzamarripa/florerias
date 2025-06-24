@@ -1,11 +1,9 @@
-import MultiSelect, { SelectOption } from "@/components/forms/Multiselect";
-import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Button, Modal, Table } from "react-bootstrap";
+import { Button, Modal, Table, Form } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { providersService } from "../services/providers";
 import { usersService } from "../services/users";
-import { Provider, User } from "../types";
+import { Provider, User, UserProvider } from "../types";
 
 interface UserProvidersModalProps {
   user: User;
@@ -28,8 +26,9 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
   const [showModal, setShowModal] = useState<boolean>(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [loadingUserProviders, setLoadingUserProviders] = useState<boolean>(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
@@ -48,7 +47,7 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
     if (showModal) {
       loadProviders();
     }
-  }, [searchTerm, pagination.page]);
+  }, [pagination.page]);
 
   const loadProviders = async () => {
     try {
@@ -57,11 +56,12 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
         page: pagination.page,
         limit: pagination.limit,
         isActive: true,
-        ...(searchTerm && { search: searchTerm }),
       });
-      if (response.data) {
+      if (response.success && response.data) {
         setProviders(response.data);
-        setPagination((response as any).pagination);
+        if (response.pagination) {
+          setPagination(response.pagination);
+        }
       }
     } catch (error) {
       console.error("Error loading providers:", error);
@@ -73,16 +73,19 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
 
   const loadUserProviders = async () => {
     try {
+      setLoadingUserProviders(true);
       const response = await usersService.getUserProviders(user._id);
-      if (response.data) {
+      if (response.success && response.data) {
         const providerIds = response.data.map(
-          (userProvider: any) => userProvider.providerId._id
+          (userProvider: UserProvider) => userProvider.providerId._id
         );
         setSelectedProviders(providerIds);
       }
     } catch (error) {
       console.error("Error loading user providers:", error);
       toast.error("Error al cargar los proveedores del usuario");
+    } finally {
+      setLoadingUserProviders(false);
     }
   };
 
@@ -93,12 +96,19 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedProviders([]);
-    setSearchTerm("");
+    setSelectedProviderId("");
     setPagination({ ...pagination, page: 1 });
   };
 
-  const handleProviderChange = (values: string[]) => {
-    setSelectedProviders(values);
+  const handleAddProvider = () => {
+    if (selectedProviderId && !selectedProviders.includes(selectedProviderId)) {
+      setSelectedProviders([...selectedProviders, selectedProviderId]);
+      setSelectedProviderId("");
+    }
+  };
+
+  const handleRemoveProvider = (providerId: string) => {
+    setSelectedProviders(selectedProviders.filter(id => id !== providerId));
   };
 
   const handleSave = async () => {
@@ -123,13 +133,11 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
     }
   };
 
-  const getMultiSelectOptions = (): SelectOption[] => {
-    return providers.map((provider) => ({
-      value: provider._id,
-      label: provider.commercialName,
-      businessName: provider.businessName,
-      contactName: provider.contactName,
-    }));
+  const getSelectedProvidersData = () => {
+    return selectedProviders.map(providerId => {
+      const provider = providers.find(p => p._id === providerId);
+      return provider || { _id: providerId, commercialName: "Cargando...", businessName: "", contactName: "" };
+    });
   };
 
   return (
@@ -141,7 +149,7 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
         title={buttonProps.title || "Asignar proveedores"}
         onClick={handleOpenModal}
       >
-        {children || <Plus size={16} />}
+        {children || "Asignar Proveedores"}
       </button>
 
       <Modal
@@ -159,16 +167,34 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
         </Modal.Header>
 
         <Modal.Body className="px-4 py-2">
-          <MultiSelect
-            value={selectedProviders}
-            options={getMultiSelectOptions()}
-            onChange={handleProviderChange}
-            loading={loading}
-            placeholder="Buscar y seleccionar proveedores..."
-            noOptionsMessage="No se encontraron proveedores"
-            loadingMessage="Cargando proveedores..."
-            className="mb-3"
-          />
+          <div className="row mb-3">
+            <div className="col-md-8">
+              <Form.Select
+                value={selectedProviderId}
+                onChange={(e) => setSelectedProviderId(e.target.value)}
+                disabled={loading}
+              >
+                <option value="">Seleccionar proveedor...</option>
+                {providers
+                  .filter(provider => !selectedProviders.includes(provider._id))
+                  .map((provider) => (
+                    <option key={provider._id} value={provider._id}>
+                      {provider.commercialName} - {provider.businessName}
+                    </option>
+                  ))}
+              </Form.Select>
+            </div>
+            <div className="col-md-4">
+              <Button
+                variant="outline-primary"
+                onClick={handleAddProvider}
+                disabled={!selectedProviderId || loading}
+                className="w-100"
+              >
+                Agregar
+              </Button>
+            </div>
+          </div>
 
           <div className="table-responsive" style={{ maxHeight: "400px" }}>
             <Table className="table table-hover table-sm">
@@ -177,50 +203,42 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
                   <th>Nombre Comercial</th>
                   <th>Razón Social</th>
                   <th>Contacto</th>
-                  <th style={{ width: "50px" }}></th>
+                  <th style={{ width: "80px" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {loadingUserProviders ? (
                   <tr>
                     <td colSpan={4} className="text-center py-3">
                       <div
                         className="spinner-border spinner-border-sm"
                         role="status"
                       >
-                        <span className="visually-hidden">Cargando...</span>
+                        <span className="visually-hidden">Cargando proveedores asignados...</span>
                       </div>
                     </td>
                   </tr>
-                ) : providers.length === 0 ? (
+                ) : selectedProviders.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="text-center py-3 text-muted">
-                      No se encontraron proveedores activos
+                      No hay proveedores asignados
                     </td>
                   </tr>
                 ) : (
-                  providers.map((provider) => (
+                  getSelectedProvidersData().map((provider) => (
                     <tr key={provider._id}>
                       <td>{provider.commercialName}</td>
                       <td>{provider.businessName}</td>
                       <td>{provider.contactName}</td>
                       <td>
                         <Button
-                          className="btn btn-link text-primary p-0 border-0"
-                          variant="outline-primary"
-                          onClick={() => {
-                            if (!selectedProviders.includes(provider._id)) {
-                              setSelectedProviders([
-                                ...selectedProviders,
-                                provider._id,
-                              ]);
-                            }
-                          }}
-                          disabled={selectedProviders.includes(provider._id)}
-                          title="Agregar proveedor"
-                          style={{ cursor: "pointer" }}
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => handleRemoveProvider(provider._id)}
+                          disabled={loading}
+                          title="Remover proveedor"
                         >
-                          <Plus size={18} strokeWidth={2.5} />
+                          ×
                         </Button>
                       </td>
                     </tr>
@@ -231,7 +249,9 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
           </div>
 
           <div className="mt-3 text-muted small">
-            Mostrando {providers.length} de {pagination.total} proveedores
+            {selectedProviders.length > 0 && (
+              <span>Proveedores asignados: {selectedProviders.length}</span>
+            )}
           </div>
         </Modal.Body>
 

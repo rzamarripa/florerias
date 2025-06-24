@@ -5,6 +5,7 @@ import { Button, Form, Modal } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
+import MultiSelect from "@/components/forms/Multiselect";
 import { BranchFormData, branchSchema } from "../schemas/BranchSchema";
 import { branchService } from "../services/branch";
 import { Brand, brandsService } from "../services/brands";
@@ -50,7 +51,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
     defaultValues: {
       name: "",
       companyId: "",
-      brandId: "",
+      rsBrands: [],
       countryId: "",
       stateId: "",
       municipalityId: "",
@@ -101,12 +102,6 @@ const BranchModal: React.FC<BranchModalProps> = ({
             : editingBranch.companyId
         );
         setValue(
-          "brandId",
-          typeof editingBranch.brandId === "object"
-            ? editingBranch.brandId._id
-            : editingBranch.brandId
-        );
-        setValue(
           "countryId",
           typeof editingBranch.countryId === "object"
             ? editingBranch.countryId._id
@@ -128,6 +123,20 @@ const BranchModal: React.FC<BranchModalProps> = ({
         setValue("phone", editingBranch.phone);
         setValue("email", editingBranch.email);
         setValue("description", editingBranch.description || "");
+
+        // Cargar marcas de la sucursal usando el nuevo endpoint
+        setLoadingBrands(true);
+        branchService.getBranchBrands(editingBranch._id)
+          .then((res: any) => {
+            if (res.success && Array.isArray(res.data)) {
+              const brandIds = res.data.map((brand: any) => brand._id);
+              setValue("rsBrands", brandIds);
+            }
+          })
+          .catch((error: any) => {
+            console.error("Error loading branch brands:", error);
+          })
+          .finally(() => setLoadingBrands(false));
 
         // Cargar marcas de la compañía seleccionada
         const companyId =
@@ -184,7 +193,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
     if (selectedCompany && !isEditing) {
       setLoadingBrands(true);
       setBrands([]);
-      setValue("brandId", "");
+      setValue("rsBrands", []);
 
       brandsService
         .getByCompany(selectedCompany)
@@ -255,14 +264,19 @@ const BranchModal: React.FC<BranchModalProps> = ({
 
   const onSubmit = async (data: BranchFormData) => {
     try {
+      const submitData = {
+        ...data,
+        rsBrands: data.rsBrands || [],
+      };
+
       if (isEditing && editingBranch) {
         await branchService.update(editingBranch._id, {
-          ...data,
+          ...submitData,
           _id: editingBranch._id,
         });
         toast.success("Sucursal actualizada correctamente");
       } else {
-        await branchService.create(data);
+        await branchService.create(submitData);
         toast.success("Sucursal creada correctamente");
       }
       setShowModal(false);
@@ -349,36 +363,26 @@ const BranchModal: React.FC<BranchModalProps> = ({
               </div>
 
               <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    Marca <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Controller
-                    name="brandId"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Select
-                        {...field}
-                        isInvalid={!!errors.brandId}
-                        disabled={loadingBrands || !selectedCompany}
-                      >
-                        <option value="">
-                          {selectedCompany
-                            ? "Seleccionar marca"
-                            : "Primero selecciona una razón social"}
-                        </option>
-                        {brands.map((brand) => (
-                          <option key={brand._id} value={brand._id}>
-                            {brand.name}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.brandId?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
+                <Controller
+                  name="rsBrands"
+                  control={control}
+                  render={({ field }) => (
+                    <MultiSelect
+                      value={field.value || []}
+                      options={brands.map((brand) => ({
+                        value: brand._id,
+                        label: brand.name,
+                      }))}
+                      onChange={field.onChange}
+                      loading={loadingBrands}
+                      disabled={!selectedCompany}
+                      label="Marcas"
+                      placeholder={selectedCompany ? "Seleccionar marcas..." : "Primero selecciona una razón social"}
+                      required
+                      error={errors.rsBrands?.message}
+                    />
+                  )}
+                />
               </div>
             </div>
 

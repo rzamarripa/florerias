@@ -7,11 +7,6 @@ const branchSchema = new Schema({
     ref: "cc_company",
     required: true,
   },
-  brandId: {
-    type: Schema.Types.ObjectId,
-    ref: "cc_brand",
-    required: true,
-  },
   name: {
     type: String,
     required: true,
@@ -63,7 +58,7 @@ const branchSchema = new Schema({
   },
 });
 
-branchSchema.index({ name: 1, brandId: 1 }, { unique: true });
+branchSchema.index({ name: 1, companyId: 1 }, { unique: true });
 
 branchSchema.statics.seedIfEmpty = async function () {
   const count = await this.countDocuments();

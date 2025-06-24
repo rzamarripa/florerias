@@ -1,12 +1,13 @@
 "use client";
 
-import { FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Search, ChevronLeft, ChevronRight, Tag } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Form, Table } from "react-bootstrap";
 import { BsCheck2 } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import BranchModal from "./components/BranchModal";
+import BranchBrandsModal from "./components/BranchBrandsModal";
 import { branchService } from "./services/branch";
 import { Branch } from "./types";
 
@@ -189,7 +190,6 @@ const BranchPage: React.FC = () => {
                   <th className="text-center">#</th>
                   <th>NOMBRE</th>
                   <th>RAZÓN SOCIAL</th>
-                  <th>MARCA</th>
                   <th>CONTACTO</th>
                   <th className="text-center">ESTATUS</th>
                   <th className="text-center text-nowrap">FECHA CREACIÓN</th>
@@ -199,7 +199,7 @@ const BranchPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-4">
+                    <td colSpan={8} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
                         <div
                           className="spinner-border text-primary mb-2"
@@ -241,13 +241,6 @@ const BranchPage: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <span className="text-dark">
-                          {typeof branch.brandId === "object"
-                            ? branch.brandId.name
-                            : ""}
-                        </span>
-                      </td>
-                      <td>
                         <div className="d-flex flex-column">
                           <span className="text-dark">{branch.phone}</span>
                           <small className="text-muted">{branch.email}</small>
@@ -282,6 +275,19 @@ const BranchPage: React.FC = () => {
                             editingBranch={branch}
                             onBranchSaved={handleBranchSaved}
                           />
+
+                          <BranchBrandsModal
+                            branch={branch}
+                            onBrandsSaved={handleBranchSaved}
+                            buttonProps={{
+                              variant: "light",
+                              size: "sm",
+                              className: "btn-icon rounded-circle",
+                              title: `Ver marcas de ${branch.name}`,
+                            }}
+                          >
+                            <Tag size={16} />
+                          </BranchBrandsModal>
 
                           <button
                             className="btn btn-light btn-icon btn-sm rounded-circle"

@@ -1,7 +1,6 @@
 export interface Branch {
   _id: string;
   companyId: { _id: string; name: string } | string;
-  brandId: { _id: string; name: string } | string;
   name: string;
   countryId: { _id: string; name: string } | string;
   stateId: { _id: string; name: string } | string;
@@ -13,6 +12,7 @@ export interface Branch {
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
+  brands?: { _id: string; name: string }[]; // Marcas asociadas a la sucursal
 }
 
 export type CreateBranchRequest = Omit<
@@ -22,16 +22,15 @@ export type CreateBranchRequest = Omit<
   | "updatedAt"
   | "isActive"
   | "companyId"
-  | "brandId"
   | "countryId"
   | "stateId"
   | "municipalityId"
 > & {
   companyId: string;
-  brandId: string;
   countryId: string;
   stateId: string;
   municipalityId: string;
+  rsBrands?: string[]; // Array de brandIds para la relación muchos a muchos
 };
 
 export type UpdateBranchRequest = Partial<CreateBranchRequest> & {
