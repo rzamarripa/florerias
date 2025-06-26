@@ -7,7 +7,9 @@ import {
   getByProviderAndCompany,
   getSummaryByProviderAndCompany,
   markInvoiceAsFullyPaid,
-  markInvoiceAsPartiallyPaid
+  markInvoiceAsPartiallyPaid,
+  toggleFacturaAutorizada,
+  updateImporteAPagar
 } from '../controllers/importedInvoicesController.js';
 
 import { protect } from '../middleware/auth.js';
@@ -29,5 +31,9 @@ router.get('/summary-by-provider-company', getSummaryByProviderAndCompany);
 router.put('/:id/mark-as-paid', markInvoiceAsFullyPaid);
 
 router.put('/:id/partial-payment', markInvoiceAsPartiallyPaid);
+
+router.patch('/:id/toggle-autorizada', toggleFacturaAutorizada);
+
+router.put('/:id/update-importe-apagar', updateImporteAPagar);
 
 export default router; 

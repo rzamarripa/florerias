@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Table, Alert, Row, Col } from 'react-bootstrap';
 import { FiTrash2 } from 'react-icons/fi';
 import { useUserSessionStore } from '@/stores/userSessionStore';
@@ -19,6 +19,7 @@ interface FacturaProcesada {
     saldo: number;
     importePagado: number;
     razonSocial?: { name: string };
+    guardada?: boolean;
 }
 
 interface EnviarPagoModalProps {
@@ -28,18 +29,32 @@ interface EnviarPagoModalProps {
     paqueteExistente?: any;
     razonSocialName?: string;
     isNewPackage?: boolean;
-    onSuccess?: () => void;
+    onSuccess?: (packpageId?: string) => void;
 }
 
 const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, facturas, paqueteExistente, razonSocialName, isNewPackage = true, onSuccess }) => {
     const [fechaPago, setFechaPago] = useState<string>(paqueteExistente?.fechaPago || '');
     const [comentario, setComentario] = useState<string>(paqueteExistente?.comentario || '');
-    const [facturasLocal, setFacturasLocal] = useState<FacturaProcesada[]>(facturas);
+    const [facturasLocal, setFacturasLocal] = useState<FacturaProcesada[]>([]);
     const { user } = useUserSessionStore();
 
-    React.useEffect(() => {
-        setFacturasLocal(facturas);
-    }, [facturas]);
+    useEffect(() => {
+        // IDs de facturas guardadas en el paquete existente
+        const idsGuardadas = paqueteExistente
+            ? paqueteExistente.facturas.map((f: any) => f._id)
+            : [];
+        // Agrega la propiedad guardada a cada factura
+        const facturasConEstado = facturas.map(f => ({
+            ...f,
+            guardada: idsGuardadas.includes(f._id)
+        }));
+        setFacturasLocal(facturasConEstado);
+    }, [facturas, paqueteExistente]);
+
+    useEffect(() => {
+        setFechaPago(paqueteExistente?.fechaPago || '');
+        setComentario(paqueteExistente?.comentario || '');
+    }, [paqueteExistente, show]);
 
     const handleRemoveFactura = (id: string) => {
         setFacturasLocal(prev => prev.filter(f => f._id !== id));
@@ -47,9 +62,6 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
 
     const totalPagar = facturasLocal.reduce((sum, f) => sum + (f.importePagado || 0), 0);
     const totalSaldo = facturasLocal.reduce((sum, f) => sum + (f.saldo || 0), 0);
-    const totalImporte = facturasLocal.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
-
-    const tipoPaquete = paqueteExistente ? 'Paquete Existente' : 'Nuevo Paquete';
 
     const handleGuardar = async () => {
         try {
@@ -73,20 +85,23 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 comentario,
                 fechaPago,
             };
-            console.log('Datos enviados al backend:', dataToSend);
+            let packpageId: string | undefined = undefined;
             if (isNewPackage) {
-                await createInvoicesPackpage(dataToSend);
+                const response = await createInvoicesPackpage(dataToSend);
+                packpageId = response?.data?._id;
             } else if (paqueteExistente) {
-                await updateInvoicesPackpage(paqueteExistente.folioId, {
+                const response = await updateInvoicesPackpage(paqueteExistente._id, {
                     facturas: facturasLocal.map(f => f._id),
                     comentario,
                     fechaPago,
                 });
+                packpageId = response?.data?._id;
             }
             toast.success('Paquete guardado correctamente');
             onClose();
-            if (onSuccess) onSuccess();
+            if (onSuccess) onSuccess(packpageId);
         } catch (error) {
+            console.error('Error al guardar el paquete:', error);
             toast.error('Error al guardar el paquete');
         }
     };
@@ -95,7 +110,10 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
         <Modal show={show} onHide={onClose} size="xl" centered backdrop="static">
             <Modal.Header closeButton>
                 <Modal.Title>
-                    Enviar facturas a Pago{razonSocialName ? ` de ${razonSocialName}` : ''} ({tipoPaquete})
+                    {paqueteExistente ? 
+                        `Editar Paquete de Facturas - Folio: ${paqueteExistente.folio}` :
+                        `Enviar facturas a Pago${razonSocialName ? ` de ${razonSocialName}` : ''} (Nuevo Paquete)`
+                    }
                 </Modal.Title>
             </Modal.Header>
             <Modal.Body>
@@ -131,14 +149,21 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                         />
                     </Col>
                 </Row>
-                <Alert variant="info" className="mb-3">
-                    <b>¡Aviso!</b> No hay presupuesto asignado. Se puede enviar a pago.
-                </Alert>
+                {paqueteExistente && (
+                    <Alert variant="info" className="mb-3">
+                        <b>Paquete existente seleccionado:</b> 
+                        <ul className="mb-0 mt-2">
+                            <li><span className="badge bg-success bg-opacity-10 text-success me-2">Guardada</span> Facturas que ya están en este paquete</li>
+                            <li><span className="badge bg-primary bg-opacity-10 text-primary me-2">Nueva</span> Facturas pagadas que se agregarán al paquete</li>
+                        </ul>
+                    </Alert>
+                )}
                 <div className="table-responsive">
-                    <Table responsive hover className="mb-0">
+                    <Table responsive className="mb-0">
                         <thead className="bg-light">
                             <tr>
                                 <th>#</th>
+                                <th>Estado</th>
                                 <th>Proveedor</th>
                                 <th>Folio</th>
                                 <th>F. Emisión</th>
@@ -158,6 +183,20 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                                 return (
                                     <tr key={f._id}>
                                         <td>{idx + 1}</td>
+                                        {/* Estado de guardado */}
+                                        <td>
+                                            {f.guardada ? (
+                                                <span className="badge bg-success bg-opacity-10 text-success fw-bold">
+                                                    <i className="bi bi-check-circle me-1"></i>
+                                                    Guardada
+                                                </span>
+                                            ) : (
+                                                <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
+                                                    <i className="bi bi-plus-circle me-1"></i>
+                                                    Nueva
+                                                </span>
+                                            )}
+                                        </td>
                                         {/* Proveedor */}
                                         <td>
                                             <div>
@@ -212,7 +251,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                                 );
                             })}
                             <tr className="fw-bold text-center">
-                                <td colSpan={8}>Totales</td>
+                                <td colSpan={9}>Totales</td>
                                 <td>{totalSaldo.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</td>
                                 <td>{totalPagar.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</td>
                                 <td></td>

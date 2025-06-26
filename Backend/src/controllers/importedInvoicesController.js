@@ -560,4 +560,50 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+// TOGGLE - Cambiar el estado de 'autorizada' de una factura
+export const toggleFacturaAutorizada = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const factura = await ImportedInvoices.findById(id);
+
+        if (!factura) {
+            return res.status(404).json({ success: false, message: 'Factura no encontrada.' });
+        }
+
+        factura.autorizada = !factura.autorizada;
+        await factura.save();
+
+        res.status(200).json({
+            success: true,
+            data: { _id: factura._id, autorizada: factura.autorizada },
+            message: 'Estado de autorización actualizado correctamente'
+        });
+    } catch (error) {
+        console.error('Error toggling factura autorizada:', error);
+        res.status(500).json({ success: false, message: error.message || 'Error interno del servidor.' });
+    }
+};
+
+// Nuevo endpoint: actualizar importeAPagar de una factura
+export const updateImporteAPagar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { importeAPagar, motivo, porcentaje } = req.body;
+    if (!importeAPagar || importeAPagar <= 0) {
+      return res.status(400).json({ success: false, message: 'El importe a pagar debe ser mayor a 0' });
+    }
+    const invoice = await ImportedInvoices.findById(id);
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: 'Factura no encontrada' });
+    }
+    invoice.importeAPagar = importeAPagar;
+    invoice.motivoDescuento = motivo || '';
+    invoice.descuento = porcentaje || 0;
+    await invoice.save();
+    res.status(200).json({ success: true, message: 'Importe actualizado correctamente', data: invoice });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 }; 

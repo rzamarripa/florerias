@@ -79,6 +79,12 @@ export const createInvoicesPackpage = async (req, res) => {
         // Guardar el paquete
         const paqueteGuardado = await nuevoPaquete.save();
 
+        // Marcar las facturas como registradas
+        await ImportedInvoices.updateMany(
+            { _id: { $in: facturas } },
+            { $set: { estaRegistrada: true, autorizada: false } }
+        );
+
         // Obtener el paquete con las facturas pobladas
         const paqueteCompleto = await InvoicesPackpage.findById(paqueteGuardado._id)
             .populate('facturas');
@@ -156,6 +162,7 @@ export const getInvoicesPackpages = async (req, res) => {
 export const getInvoicesPackpageById = async (req, res) => {
     try {
         const { id } = req.params;
+        console.log('Buscando paquete con ID:', id);
 
         const paquete = await InvoicesPackpage.findById(id)
             .populate('facturas');
@@ -167,9 +174,45 @@ export const getInvoicesPackpageById = async (req, res) => {
             });
         }
 
+        // Normalización de datos para el frontend
+        function normalizeFactura(f) {
+            const toNumber = v => (typeof v === 'object' && v !== null && v._bsontype === 'Decimal128') ? parseFloat(v.toString()) : v;
+            const toString = v => (typeof v === 'object' && v !== null && v._bsontype === 'ObjectId') ? v.toString() : v;
+            return {
+                ...f._doc,
+                _id: toString(f._id),
+                importeAPagar: toNumber(f.importeAPagar),
+                importePagado: toNumber(f.importePagado),
+                razonSocial: toString(f.razonSocial),
+                fechaEmision: f.fechaEmision ? new Date(f.fechaEmision).toISOString() : null,
+                fechaCertificacionSAT: f.fechaCertificacionSAT ? new Date(f.fechaCertificacionSAT).toISOString() : null,
+                fechaCancelacion: f.fechaCancelacion ? new Date(f.fechaCancelacion).toISOString() : null,
+                fechaRevision: f.fechaRevision ? new Date(f.fechaRevision).toISOString() : null,
+            };
+        }
+
+        function normalizePackpage(paquete) {
+            const toNumber = v => (typeof v === 'object' && v !== null && v._bsontype === 'Decimal128') ? parseFloat(v.toString()) : v;
+            const toString = v => (typeof v === 'object' && v !== null && v._bsontype === 'ObjectId') ? v.toString() : v;
+            return {
+                ...paquete._doc,
+                _id: toString(paquete._id),
+                usuario_id: toString(paquete.usuario_id),
+                departamento_id: toString(paquete.departamento_id),
+                totalImporteAPagar: toNumber(paquete.totalImporteAPagar),
+                totalPagado: toNumber(paquete.totalPagado),
+                fechaPago: paquete.fechaPago ? new Date(paquete.fechaPago).toISOString() : null,
+                fechaCreacion: paquete.fechaCreacion ? new Date(paquete.fechaCreacion).toISOString() : null,
+                createdAt: paquete.createdAt ? new Date(paquete.createdAt).toISOString() : null,
+                updatedAt: paquete.updatedAt ? new Date(paquete.updatedAt).toISOString() : null,
+                facturas: (paquete.facturas || []).map(normalizeFactura)
+            };
+        }
+
         res.status(200).json({
             success: true,
-            data: paquete
+            data: normalizePackpage(paquete),
+            message: 'Paquete de facturas encontrado exitosamente.'
         });
 
     } catch (error) {
@@ -234,7 +277,8 @@ export const updateInvoicesPackpage = async (req, res) => {
                 const datosRemocion = {
                     descripcionPago: 'Removida del paquete',
                     estadoPago: 0, // Pendiente
-                    registrado: 0 // No registrado
+                    registrado: 0, // No registrado
+                    estaRegistrada: false // Marcar como no registrada
                 };
 
                 await Promise.all(
@@ -254,7 +298,8 @@ export const updateInvoicesPackpage = async (req, res) => {
                     descripcionPago: comentario || 'Agregada al paquete',
                     estadoPago: 1, // Enviado a pago
                     registrado: 1, // Registrado
-                    fechaRevision: new Date()
+                    fechaRevision: new Date(),
+                    estaRegistrada: true // Marcar como registrada
                 };
 
                 await Promise.all(

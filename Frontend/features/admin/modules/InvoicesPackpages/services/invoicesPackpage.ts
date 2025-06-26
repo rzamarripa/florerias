@@ -1,5 +1,4 @@
 import { apiCall } from "@/utils/api";
-import { ApiResponse } from '@/utils/api';
 
 export interface InvoicesPackpage {
     _id: string;
@@ -205,7 +204,7 @@ export const getInvoicesPackpages = async (params: {
 // Servicio para obtener un paquete específico
 export const getInvoicesPackpageById = async (id: string): Promise<InvoicesPackpageResponse> => {
     const response = await apiCall<InvoicesPackpageResponse>(`/invoices-packpage/${id}`);
-    return response.data;
+    return response;
 };
 
 // Servicio para actualizar un paquete
@@ -280,4 +279,27 @@ export const getInvoicesPackpagesByUsuario = async (usuario_id: string): Promise
         `/invoices-packpage/by-usuario?usuario_id=${usuario_id}&_t=${timestamp}`
     );
     return response.data;
-}; 
+};
+
+// Servicio para activar/desactivar autorización de una factura
+export interface ToggleFacturaAutorizadaResponse {
+    success: boolean;
+    data: { _id: string; autorizada: boolean };
+    message?: string;
+}
+
+export const toggleFacturaAutorizada = async (facturaId: string): Promise<ToggleFacturaAutorizadaResponse> => {
+    const response = await apiCall<ToggleFacturaAutorizadaResponse>(`/imported-invoices/${facturaId}/toggle-autorizada`, {
+        method: 'PATCH',
+    });
+    return response;
+};
+
+// Servicio para actualizar el importeAPagar de una factura
+export async function updateImporteAPagar(invoiceId: string, nuevoImporte: number, motivo: string, porcentaje: number) {
+    const response = await apiCall<any>(`/imported-invoices/${invoiceId}/update-importe-apagar`, {
+        method: 'PUT',
+        body: JSON.stringify({ importeAPagar: nuevoImporte, motivo, porcentaje }),
+    });
+    return response.data;
+} 

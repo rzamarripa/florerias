@@ -220,6 +220,26 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     trim: true,
     maxLength: 50,
     default: 'Activo'
+  },
+
+  // Si la factura está registrada en un paquete
+  estaRegistrada: {
+    type: Boolean,
+    default: false
+  },
+
+  // Motivo del descuento
+  motivoDescuento: {
+    type: String,
+    trim: true,
+    maxLength: 500,
+    default: ''
+  },
+
+  // Porcentaje de descuento aplicado
+  descuento: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true,
@@ -273,10 +293,6 @@ ImportedInvoicesSchema.virtual('estaVigente').get(function () {
 // Métodos virtuales actualizados
 ImportedInvoicesSchema.virtual('estaPagada').get(function () {
   return this.estadoPago === 2;
-});
-
-ImportedInvoicesSchema.virtual('estaRegistrada').get(function () {
-  return this.estadoPago === 3;
 });
 
 ImportedInvoicesSchema.virtual('fueEnviadaAPago').get(function () {
