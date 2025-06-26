@@ -198,11 +198,11 @@ export const importedInvoicesService = {
   getStatistics: async (rfcReceptor: string, period: 'month' | 'quarter' | 'year' = 'month'): Promise<{
     success: boolean;
     data: {
-      importeTotal: number;
-      importePromedio: number;
-      topProviders: Array<{ name: string; count: number; importe: number }>;
-      tipoComprobanteDistribution: Array<{ type: string; count: number; importe: number }>;
-      monthlyTrend: Array<{ month: string; count: number; importe: number }>;
+      importeAPagarTotal: number;
+      importeAPagarPromedio: number;
+      topProviders: Array<{ name: string; count: number; importeAPagar: number }>;
+      tipoComprobanteDistribution: Array<{ type: string; count: number; importeAPagar: number }>;
+      monthlyTrend: Array<{ month: string; count: number; importeAPagar: number }>;
     } | null;
     message?: string;
   }> => {

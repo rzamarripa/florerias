@@ -6,6 +6,7 @@ export interface UserProvider {
     commercialName: string;
     businessName: string;
     contactName: string;
+    rfc: string;
     isActive: boolean;
   };
   createdAt: string;
@@ -68,4 +69,93 @@ export interface GetBrandsByCompanyResponse {
 export interface GetBranchesByBrandResponse {
   success: boolean;
   data: Branch[];
+}
+
+// Tipos para InvoicesPackpage
+export interface ImportedInvoice {
+  _id: string;
+  folioFiscalId: string;
+  rfcEmisor: string;
+  nombreEmisor: string;
+  rfcReceptor: string;
+  nombreReceptor: string;
+  importeAPagar: number;
+  importePagado: number;
+  tipoComprobante: 'I' | 'E' | 'P';
+  estatus: 0 | 1;
+  estadoPago: 0 | 1 | 2 | 3;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoicesPackpage {
+  _id: string;
+  facturas: ImportedInvoice[];
+  estatus: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado';
+  usuario_id: string;
+  fechaCreacion: string;
+  departamento_id: number;
+  departamento: string;
+  totalImporteAPagar: number;
+  totalPagado: number;
+  comentario?: string;
+  fechaPago: string;
+  folio: number;
+  totalFacturas: number;
+  createdAt: string;
+  updatedAt: string;
+  // Campos virtuales
+  estaCompleto?: boolean;
+  porcentajePagado?: number;
+  tieneSaldoPendiente?: boolean;
+  saldo?: number;
+  estaVencido?: boolean;
+  diasParaVencimiento?: number;
+}
+
+export interface GetInvoicesPackpagesResponse {
+  success: boolean;
+  data: InvoicesPackpage[];
+  pagination?: {
+    total: number;
+    page: number;
+    pages: number;
+    limit: number;
+  };
+  message?: string;
+}
+
+export interface CreateInvoicesPackpageRequest {
+  facturas: string[];
+  usuario_id: string;
+  departamento_id: number;
+  departamento: string;
+  comentario?: string;
+  fechaPago: string;
+  totalImporteAPagar?: number;
+}
+
+export interface UpdateInvoicesPackpageRequest {
+  facturas?: string[];
+  estatus?: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado';
+  departamento_id?: number;
+  departamento?: string;
+  comentario?: string;
+  fechaPago?: string;
+  totalImporteAPagar?: number;
+}
+
+export interface InvoicesPackpageSummary {
+  total: number;
+  borradores: number;
+  enviados: number;
+  aprobados: number;
+  pagados: number;
+  vencidos: number;
+}
+
+export interface GetInvoicesPackpagesSummaryResponse {
+  success: boolean;
+  data: InvoicesPackpageSummary;
+  message?: string;
 } 

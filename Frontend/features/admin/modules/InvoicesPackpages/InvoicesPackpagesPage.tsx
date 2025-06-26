@@ -1,18 +1,39 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Row, 
-  Col, 
-  Form, 
-  Button, 
-  Card, 
-  Table, 
-  ButtonGroup
+import {
+    Container,
+    Row,
+    Col,
+    Form,
+    Button,
+    Card,
+    Table,
+    ButtonGroup,
+    Spinner,
+    Modal
 } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import BudgetSummaryCards from './components/BudgetSummaryCards';
-import { userProvidersService, companiesService, brandsService, branchesService } from './services';
+import {
+    userProvidersService,
+    companiesService,
+    brandsService,
+    branchesService,
+    getInvoicesByProviderAndCompany,
+    getInvoicesSummaryByProviderAndCompany,
+    ImportedInvoice,
+    InvoicesResponse,
+    InvoicesSummaryResponse,
+    createInvoicesPackpage,
+    updateInvoicesPackpage,
+    getInvoicesPackpages,
+    getInvoicesPackpagesByUsuario
+} from './services';
 import { UserProvider, Company, Brand, Branch } from './types';
+import PagoFacturaModal from './components/PagoFacturaModal';
+import { markInvoiceAsFullyPaid, markInvoiceAsPartiallyPaid } from './services/invoicesPackpage';
+import EnviarPagoModal from './components/EnviarPagoModal';
+import { useUserSessionStore } from '@/stores/userSessionStore';
 
 const InvoicesPackpagePage: React.FC = () => {
     const [selectedMonth, setSelectedMonth] = useState(0);
@@ -20,7 +41,7 @@ const InvoicesPackpagePage: React.FC = () => {
     const [selectedPackageId, setSelectedPackageId] = useState('');
     const [userProviders, setUserProviders] = useState<UserProvider[]>([]);
     const [selectedProvider, setSelectedProvider] = useState<string>('');
-    
+
     // Estados para los selects en cascada
     const [companies, setCompanies] = useState<Company[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
@@ -28,19 +49,38 @@ const InvoicesPackpagePage: React.FC = () => {
     const [selectedCompany, setSelectedCompany] = useState<string>('');
     const [selectedBrand, setSelectedBrand] = useState<string>('');
     const [selectedBranch, setSelectedBranch] = useState<string>('');
-    
+
     // Estados de carga
     const [loadingBrands, setLoadingBrands] = useState(false);
     const [loadingBranches, setLoadingBranches] = useState(false);
+    const [loadingInvoices, setLoadingInvoices] = useState(false);
+    const [loadingSummary, setLoadingSummary] = useState(false);
 
-    // Example existing packages
-    const existingPackages = [
-        { folioId: 'PKT-001', name: 'Paquete Enero' },
-        { folioId: 'PKT-002', name: 'Paquete Febrero' },
-        { folioId: 'PKT-003', name: 'Paquete Marzo' },
-    ];
+    // Estados para las facturas
+    const [invoices, setInvoices] = useState<ImportedInvoice[]>([]);
+    const [invoicesSummary, setInvoicesSummary] = useState<InvoicesSummaryResponse['data'] | null>(null);
+    const [pagination, setPagination] = useState({
+        total: 0,
+        page: 1,
+        pages: 0,
+        limit: 15
+    });
+    const [currentPage, setCurrentPage] = useState(1);
 
-    const months = [
+    // Estados para los modales
+    const [showPagoModal, setShowPagoModal] = useState(false);
+    const [tipoPagoModal, setTipoPagoModal] = useState<'completo' | 'parcial'>('completo');
+    const [saldoModal, setSaldoModal] = useState(0);
+    const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+    const [showEnviarPagoModal, setShowEnviarPagoModal] = useState(false);
+    const [facturasProcesadas, setFacturasProcesadas] = useState<ImportedInvoice[]>([]);
+    const [paqueteExistenteSeleccionado, setPaqueteExistenteSeleccionado] = useState<any>(null);
+    const [existingPackages, setExistingPackages] = useState<any[]>([]);
+
+    const { user } = useUserSessionStore();
+
+    // Declaración de los meses del año (requerido por el linter)
+    const months: string[] = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
@@ -79,6 +119,7 @@ const InvoicesPackpagePage: React.FC = () => {
             setUserProviders(response.data || []);
         } catch (err) {
             console.error('Error cargando proveedores del usuario:', err);
+            toast.error('Error al cargar los proveedores');
         }
     };
 
@@ -88,6 +129,7 @@ const InvoicesPackpagePage: React.FC = () => {
             setCompanies(response.data || []);
         } catch (err) {
             console.error('Error cargando razones sociales:', err);
+            toast.error('Error al cargar las razones sociales');
         }
     };
 
@@ -102,6 +144,7 @@ const InvoicesPackpagePage: React.FC = () => {
         } catch (err) {
             console.error('Error cargando marcas:', err);
             setBrands([]);
+            toast.error('Error al cargar las marcas');
         } finally {
             setLoadingBrands(false);
         }
@@ -118,6 +161,7 @@ const InvoicesPackpagePage: React.FC = () => {
         } catch (err) {
             console.error('Error cargando sucursales:', err);
             setBranches([]);
+            toast.error('Error al cargar las sucursales');
         } finally {
             setLoadingBranches(false);
         }
@@ -142,22 +186,165 @@ const InvoicesPackpagePage: React.FC = () => {
         setSelectedBranch(event.target.value);
     };
 
-    const handleSearch = () => {
-        // Aquí implementarías la lógica de búsqueda con los filtros seleccionados
-        console.log('Buscando con filtros:', {
-            month: selectedMonth,
-            provider: selectedProvider,
-            company: selectedCompany,
-            brand: selectedBrand,
-            branch: selectedBranch,
-            year: new Date().getFullYear() // Por ahora hardcodeado
-        });
+    const handleSearch = async () => {
+        if (!selectedProvider && !selectedCompany) {
+            toast.warn('Selecciona al menos un proveedor o una razón social para buscar');
+            return;
+        }
+
+        try {
+            setLoadingInvoices(true);
+            setLoadingSummary(true);
+
+            // Obtener RFC del proveedor seleccionado
+            const selectedUserProvider = userProviders.find(up => up.providerId._id === selectedProvider);
+            const rfcProvider = selectedUserProvider?.providerId.rfc;
+
+            // Obtener RFC de la empresa seleccionada
+            const selectedCompanyData = companies.find(c => c._id === selectedCompany);
+            const rfcCompany = selectedCompanyData?.rfc;
+
+            // Buscar facturas y paquetes existentes al mismo tiempo
+            const [invoicesResponse, summaryResponse, packagesResponse] = await Promise.all([
+                getInvoicesByProviderAndCompany({
+                    rfcProvider,
+                    rfcCompany,
+                    page: currentPage,
+                    limit: 15,
+                    sortBy: 'fechaEmision',
+                    order: 'desc'
+                }),
+                getInvoicesSummaryByProviderAndCompany({
+                    rfcProvider,
+                    rfcCompany
+                }),
+                user?._id ? getInvoicesPackpagesByUsuario(user._id) : Promise.resolve([])
+            ]);
+
+            console.log('invoicesResponse:', invoicesResponse);
+            console.log('summaryResponse:', summaryResponse);
+            console.log('packagesResponse:', packagesResponse);
+
+            // Agregar log específico para verificar los datos de importePagado
+            if (invoicesResponse && Array.isArray(invoicesResponse)) {
+                console.log('Datos de facturas recibidos:', invoicesResponse.map(inv => ({
+                    _id: inv._id,
+                    folioFiscalId: inv.folioFiscalId,
+                    importeAPagar: inv.importeAPagar,
+                    importePagado: inv.importePagado,
+                    estadoPago: inv.estadoPago
+                })));
+            }
+
+            if (invoicesResponse) {
+                setInvoices(invoicesResponse);
+                setPagination(pagination);
+            } else {
+                toast.error('Error al cargar las facturas');
+            }
+
+            if (summaryResponse) {
+                setInvoicesSummary(summaryResponse);
+            } else {
+                toast.error('Error al cargar el resumen');
+            }
+
+            // Actualizar paquetes existentes
+            if (packagesResponse) {
+                setExistingPackages(packagesResponse);
+            }
+
+        } catch (error) {
+            console.error('Error en la búsqueda:', error);
+            toast.error('Error al realizar la búsqueda');
+        } finally {
+            setLoadingInvoices(false);
+            setLoadingSummary(false);
+        }
     };
+
+    const handlePageChange = async (page: number) => {
+        setCurrentPage(page);
+
+        if (!selectedProvider && !selectedCompany) return;
+
+        try {
+            setLoadingInvoices(true);
+
+            const selectedUserProvider = userProviders.find(up => up.providerId._id === selectedProvider);
+            const rfcProvider = selectedUserProvider?.providerId.rfc;
+
+            const selectedCompanyData = companies.find(c => c._id === selectedCompany);
+            const rfcCompany = selectedCompanyData?.rfc;
+
+            const response = await getInvoicesByProviderAndCompany({
+                rfcProvider,
+                rfcCompany,
+                page,
+                limit: 15,
+                sortBy: 'fechaEmision',
+                order: 'desc'
+            });
+
+            if (response) {
+                setInvoices(response);
+                setPagination(pagination);
+                // Los paquetes ya están cargados, no necesitamos recargarlos
+            }
+        } catch (error) {
+            console.error('Error al cambiar página:', error);
+            toast.error('Error al cambiar de página');
+        } finally {
+            setLoadingInvoices(false);
+        }
+    };
+
+    const getEstadoPagoText = (estadoPago: number) => {
+        switch (estadoPago) {
+            case 0: return { text: 'Pendiente', variant: 'warning' };
+            case 1: return { text: 'Enviado', variant: 'info' };
+            case 2: return { text: 'Pagado', variant: 'success' };
+            case 3: return { text: 'Registrado', variant: 'primary' };
+            default: return { text: 'Desconocido', variant: 'secondary' };
+        }
+    };
+
+    const getEstatusText = (estatus: number) => {
+        return estatus === 1
+            ? { text: 'Vigente', variant: 'success' }
+            : { text: 'Cancelado', variant: 'danger' };
+    };
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        }).format(amount);
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('es-MX');
+    };
+
+    const loadExistingPackages = async () => {
+        if (!user?._id) return;
+        try {
+            const paquetes = await getInvoicesPackpagesByUsuario(user._id);
+            setExistingPackages(paquetes || []);
+        } catch (err) {
+            setExistingPackages([]);
+        }
+    };
+
+    // IDs de facturas ya guardadas en paquetes del usuario
+    const facturasGuardadas = React.useMemo(() => {
+        return existingPackages.flatMap(pkg => pkg.facturas.map((f: any) => f._id));
+    }, [existingPackages]);
 
     return (
         <Container fluid className="mt-4">
-            <BudgetSummaryCards />
-            
+            <BudgetSummaryCards summary={invoicesSummary ?? undefined} />
+
             {/* Filtros de año, mes y proveedor */}
             <Card className="mt-4 border-0 shadow-sm">
                 <Card.Body>
@@ -177,7 +364,7 @@ const InvoicesPackpagePage: React.FC = () => {
                             <Form.Group>
                                 <Form.Label>Mes:</Form.Label>
                                 <div className="d-flex gap-1 flex-wrap">
-                                    {months.map((mes, idx) => (
+                                    {months.map((mes: string, idx: number) => (
                                         <Button
                                             key={mes}
                                             size="sm"
@@ -192,7 +379,7 @@ const InvoicesPackpagePage: React.FC = () => {
                             </Form.Group>
                         </Col>
                     </Row>
-                    
+
                     {/* Fila de selects en cascada: Razón Social, Marca, Sucursal */}
                     <Row className="mb-3">
                         <Col md={4}>
@@ -204,8 +391,8 @@ const InvoicesPackpagePage: React.FC = () => {
                                 >
                                     <option value="">Selecciona una razón social...</option>
                                     {companies.map((company) => (
-                                        <option 
-                                            key={company._id} 
+                                        <option
+                                            key={company._id}
                                             value={company._id}
                                         >
                                             {company.name}
@@ -226,8 +413,8 @@ const InvoicesPackpagePage: React.FC = () => {
                                         {loadingBrands ? 'Cargando marcas...' : 'Selecciona una marca...'}
                                     </option>
                                     {brands.map((brand) => (
-                                        <option 
-                                            key={brand._id} 
+                                        <option
+                                            key={brand._id}
                                             value={brand._id}
                                         >
                                             {brand.name}
@@ -248,8 +435,8 @@ const InvoicesPackpagePage: React.FC = () => {
                                         {loadingBranches ? 'Cargando sucursales...' : 'Selecciona una sucursal...'}
                                     </option>
                                     {branches.map((branch) => (
-                                        <option 
-                                            key={branch._id} 
+                                        <option
+                                            key={branch._id}
                                             value={branch._id}
                                         >
                                             {branch.name}
@@ -259,7 +446,7 @@ const InvoicesPackpagePage: React.FC = () => {
                             </Form.Group>
                         </Col>
                     </Row>
-                    
+
                     {/* Fila de proveedores y buscar */}
                     <Row className="align-items-end">
                         <Col md={8}>
@@ -271,8 +458,8 @@ const InvoicesPackpagePage: React.FC = () => {
                                 >
                                     <option value="">Selecciona un proveedor...</option>
                                     {userProviders.map((userProvider) => (
-                                        <option 
-                                            key={userProvider.providerId._id} 
+                                        <option
+                                            key={userProvider.providerId._id}
                                             value={userProvider.providerId._id}
                                         >
                                             {userProvider.providerId.commercialName} - {userProvider.providerId.businessName}
@@ -282,8 +469,8 @@ const InvoicesPackpagePage: React.FC = () => {
                             </Form.Group>
                         </Col>
                         <Col md={4}>
-                            <Button 
-                                variant="primary" 
+                            <Button
+                                variant="primary"
                                 onClick={handleSearch}
                             >
                                 <i className="bi bi-search me-2"></i>Buscar
@@ -302,10 +489,10 @@ const InvoicesPackpagePage: React.FC = () => {
                     <h6 className="mb-3 fw-bold text-primary">
                         Selecciona el tipo de operación:
                     </h6>
-                    
+
                     <Row className="mb-4">
                         <Col md={3}>
-                            <Card 
+                            <Card
                                 className={`h-100 ${isNewPackage ? 'border-success bg-light' : 'border-secondary'}`}
                                 style={{ cursor: 'pointer' }}
                                 onClick={() => setIsNewPackage(true)}
@@ -322,7 +509,7 @@ const InvoicesPackpagePage: React.FC = () => {
                             </Card>
                         </Col>
                         <Col md={3}>
-                            <Card 
+                            <Card
                                 className={`h-100 ${!isNewPackage ? 'border-secondary bg-light' : 'border-light'}`}
                                 style={{ cursor: 'pointer' }}
                                 onClick={() => setIsNewPackage(false)}
@@ -348,8 +535,8 @@ const InvoicesPackpagePage: React.FC = () => {
                                     >
                                         <option value="">Selecciona un paquete...</option>
                                         {existingPackages.map(pkg => (
-                                            <option key={pkg.folioId} value={pkg.folioId}>
-                                                {pkg.name} ({pkg.folioId})
+                                            <option key={pkg._id} value={pkg._id}>
+                                                {pkg.comentario || `Folio ${pkg.folio}`} (Folio: {pkg.folio})
                                             </option>
                                         ))}
                                     </Form.Select>
@@ -357,12 +544,21 @@ const InvoicesPackpagePage: React.FC = () => {
                             </Col>
                         )}
                     </Row>
-                    
+
                     <div className="d-flex justify-content-end gap-2">
                         <Button variant="outline-secondary" size="sm">
                             <i className="bi bi-eye me-2"></i>Mostrar UUID
                         </Button>
-                        <Button variant="primary" size="sm">
+                        <Button
+                            variant="primary"
+                            onClick={() => {
+                                // Filtra facturas procesadas (importePagado > 0)
+                                const procesadas = invoices.filter(f => f.importePagado > 0);
+                                setFacturasProcesadas(procesadas);
+                                setPaqueteExistenteSeleccionado(isNewPackage ? null : existingPackages.find(p => p.folioId === selectedPackageId));
+                                setShowEnviarPagoModal(true);
+                            }}
+                        >
                             <i className="bi bi-send me-2"></i>Enviar a Pago
                         </Button>
                     </div>
@@ -373,47 +569,268 @@ const InvoicesPackpagePage: React.FC = () => {
             <Card className="mt-4 border-0 shadow-sm">
                 <Card.Header className="bg-light border-bottom">
                     <Card.Title className="mb-0 fw-bold">Lista de Facturas</Card.Title>
+                    {invoicesSummary && (
+                        <div className="mt-2">
+                            <small className="text-muted">
+                                Total: {invoicesSummary.totalFacturas} facturas |
+                                Importe: {formatCurrency(invoicesSummary.totalImporteAPagar)} |
+                                Pagado: {formatCurrency(invoicesSummary.totalPagado)} |
+                                Saldo: {formatCurrency(invoicesSummary.totalSaldo)}
+                            </small>
+                        </div>
+                    )}
                 </Card.Header>
                 <Card.Body className="p-0">
-                    <Table responsive hover className="mb-0">
-                        <thead className="bg-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Folio</th>
-                                <th>Proveedor</th>
-                                <th>Fecha</th>
-                                <th>Monto</th>
-                                <th>Estado</th>
-                                <th className="text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colSpan={7} className="text-center py-4 text-muted">
-                                    Sin datos
-                                </td>
-                            </tr>
-                        </tbody>
-                    </Table>
+                    {loadingInvoices ? (
+                        <div className="text-center py-5">
+                            <Spinner animation="border" role="status">
+                                <span className="visually-hidden">Cargando...</span>
+                            </Spinner>
+                            <p className="mt-2 text-muted">Cargando facturas...</p>
+                        </div>
+                    ) : invoices.length === 0 ? (
+                        <div className="text-center py-5">
+                            <i className="bi bi-file-earmark-text display-4 text-muted"></i>
+                            <p className="mt-2 text-muted">No se encontraron facturas</p>
+                            <small className="text-muted">
+                                {!selectedProvider && !selectedCompany
+                                    ? 'Selecciona un proveedor o razón social para buscar facturas'
+                                    : 'No hay facturas que coincidan con los filtros seleccionados'
+                                }
+                            </small>
+                        </div>
+                    ) : (
+                        <Table responsive hover className="mb-0">
+                            <thead className="bg-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Seleccionar para pago</th>
+                                    <th>Proveedor</th>
+                                    <th>Folio</th>
+                                    <th>F. Emisión</th>
+                                    <th>Info</th>
+                                    <th>Emisor RFC</th>
+                                    <th>Estatus</th>
+                                    <th>Fecha Cancelación</th>
+                                    <th>Importe Pagado</th>
+                                    <th>Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {invoices.map((invoice, index) => {
+                                    const estadoPago = getEstadoPagoText(invoice.estadoPago);
+                                    const estatus = getEstatusText(invoice.estatus);
+                                    const saldo = invoice.importePagado >= invoice.importeAPagar ? 0 : (invoice.importeAPagar - invoice.importePagado);
+                                    const isProcesada = invoice.importePagado > 0;
+                                    const isGuardada = facturasGuardadas.includes(invoice._id);
+
+                                    // Log para verificar los datos de importePagado en cada factura
+                                    console.log(`Factura ${index + 1}:`, {
+                                        folioFiscalId: invoice.folioFiscalId,
+                                        importeAPagar: invoice.importeAPagar,
+                                        importePagado: invoice.importePagado,
+                                        estadoPago: invoice.estadoPago
+                                    });
+
+                                    return (
+                                        <tr key={invoice._id}>
+                                            <td>{(currentPage - 1) * 15 + index + 1}</td>
+                                            {/* Seleccionar para pago */}
+                                            <td className="text-center">
+                                                {isGuardada ? (
+                                                    <span className="badge bg-success bg-opacity-10 text-success fw-bold py-2 px-3">Guardada</span>
+                                                ) : isProcesada ? (
+                                                    <span className="badge bg-primary bg-opacity-10 text-primary fw-bold py-2 px-3">Procesada</span>
+                                                ) : (
+                                                    <div className="d-flex flex-column gap-1 w-100">
+                                                        <div className="d-flex gap-1 w-100">
+                                                            <Button
+                                                                variant="light"
+                                                                className="d-flex align-items-center justify-content-center w-100 py-1 border-2 border-success text-success"
+                                                                onClick={() => { setTipoPagoModal('completo'); setSaldoModal(saldo); setSelectedInvoiceId(invoice._id); setShowPagoModal(true); }}
+                                                            >
+                                                                <i className="bi bi-check2 text-success me-1"></i>
+                                                                <span className="text-success fw-bold">Completa</span>
+                                                            </Button>
+                                                            <Button
+                                                                variant="light"
+                                                                className="d-flex align-items-center justify-content-center w-100 py-1 border-2 border-warning text-warning"
+                                                                onClick={() => { setTipoPagoModal('parcial'); setSaldoModal(saldo); setSelectedInvoiceId(invoice._id); setShowPagoModal(true); }}
+                                                            >
+                                                                <i className="bi bi-dash text-warning me-1"></i>
+                                                                <span className="text-warning fw-bold">Parcial</span>
+                                                            </Button>
+                                                        </div>
+                                                        <Button
+                                                            variant="light"
+                                                            className="d-flex align-items-center justify-content-center w-100 py-1 border-2 border-info text-info"
+                                                        >
+                                                            <i className="bi bi-gem text-info me-1"></i>
+                                                            <span className="text-info fw-bold">Descuento</span>
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            {/* Proveedor */}
+                                            <td>
+                                                <div>
+                                                    <strong>{invoice.nombreEmisor}</strong>
+                                                    <br />
+                                                    <small className="text-muted">
+                                                        {invoice.rfcEmisor}
+                                                    </small>
+                                                </div>
+                                            </td>
+                                            {/* Folio */}
+                                            <td>
+                                                <small className="font-monospace">
+                                                    {invoice.folioFiscalId}
+                                                </small>
+                                            </td>
+                                            {/* Fecha Emisión */}
+                                            <td>{formatDate(invoice.fechaEmision)}</td>
+                                            {/* Info */}
+                                            <td>
+                                                <span className="badge fs-6 bg-warning bg-opacity-10 text-warning">PPD</span>
+                                            </td>
+                                            {/* Emisor RFC */}
+                                            <td>{invoice.rfcEmisor}</td>
+                                            {/* Estatus */}
+                                            <td>
+                                                <span className={`badge fs-6 ${estatus.text === 'Vigente' ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}`}>{estatus.text}</span>
+                                            </td>
+                                            {/* Fecha Cancelación */}
+                                            <td>
+                                                {invoice.fechaCancelacion ? formatDate(invoice.fechaCancelacion) : ''}
+                                            </td>
+                                            {/* Importe Pagado */}
+                                            <td>
+                                                <div className="d-flex flex-column">
+                                                    <span className={`fw-bold ${invoice.importePagado > 0 ? 'text-success' : 'text-muted'}`}>
+                                                        {formatCurrency(invoice.importePagado)}
+                                                    </span>
+                                                    {invoice.importePagado > 0 && (
+                                                        <small className="text-muted">
+                                                            {Math.round((invoice.importePagado / invoice.importeAPagar) * 100)}% pagado
+                                                        </small>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            {/* Saldo */}
+                                            <td>
+                                                <span className={saldo > 0 ? 'text-warning' : 'text-success'}>
+                                                    {formatCurrency(saldo)}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </Table>
+                    )}
                 </Card.Body>
-                
+
                 {/* Paginación */}
-                <Card.Footer className="bg-white border-top">
-                    <div className="d-flex justify-content-between align-items-center">
-                        <span className="text-muted">Mostrando 0 de 0 registros</span>
-                        <ButtonGroup size="sm">
-                            <Button variant="outline-secondary" disabled>
-                                <i className="bi bi-chevron-left"></i> Anterior
-                            </Button>
-                            <Button variant="primary">1</Button>
-                            <Button variant="outline-secondary" disabled>2</Button>
-                            <Button variant="outline-secondary" disabled>
-                                Siguiente <i className="bi bi-chevron-right"></i>
-                            </Button>
-                        </ButtonGroup>
-                    </div>
-                </Card.Footer>
+                {pagination.total > 0 && (
+                    <Card.Footer className="bg-white border-top">
+                        <div className="d-flex justify-content-between align-items-center">
+                            <span className="text-muted">
+                                Mostrando {((currentPage - 1) * pagination.limit) + 1} a {Math.min(currentPage * pagination.limit, pagination.total)} de {pagination.total} registros
+                            </span>
+                            <ButtonGroup size="sm">
+                                <Button
+                                    variant="outline-secondary"
+                                    disabled={currentPage === 1}
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                >
+                                    <i className="bi bi-chevron-left"></i> Anterior
+                                </Button>
+
+                                {/* Mostrar páginas */}
+                                {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                                    const pageNum = Math.max(1, Math.min(pagination.pages - 4, currentPage - 2)) + i;
+                                    if (pageNum > pagination.pages) return null;
+
+                                    return (
+                                        <Button
+                                            key={pageNum}
+                                            variant={pageNum === currentPage ? 'primary' : 'outline-secondary'}
+                                            onClick={() => handlePageChange(pageNum)}
+                                        >
+                                            {pageNum}
+                                        </Button>
+                                    );
+                                })}
+
+                                <Button
+                                    variant="outline-secondary"
+                                    disabled={currentPage === pagination.pages}
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                >
+                                    Siguiente <i className="bi bi-chevron-right"></i>
+                                </Button>
+                            </ButtonGroup>
+                        </div>
+                    </Card.Footer>
+                )}
             </Card>
+
+            <PagoFacturaModal
+                show={showPagoModal}
+                onClose={() => setShowPagoModal(false)}
+                tipoPago={tipoPagoModal}
+                saldo={saldoModal}
+                onSubmit={async (data) => {
+                    if (tipoPagoModal === 'completo' && selectedInvoiceId) {
+                        try {
+                            await markInvoiceAsFullyPaid(selectedInvoiceId, data.descripcion);
+                            toast.success('Factura marcada como pagada completamente');
+                            setShowPagoModal(false);
+                            setSelectedInvoiceId(null);
+                            // Refrescar la lista de facturas
+                            handleSearch();
+                        } catch (error) {
+                            toast.error('Error al marcar la factura como pagada completamente');
+                        }
+                    } else if (tipoPagoModal === 'parcial' && selectedInvoiceId) {
+                        try {
+                            await markInvoiceAsPartiallyPaid(selectedInvoiceId, data.descripcion, Number(data.monto) || 0);
+                            toast.success('Pago parcial registrado correctamente');
+                            setShowPagoModal(false);
+                            setSelectedInvoiceId(null);
+                            handleSearch();
+                        } catch (error) {
+                            toast.error('Error al registrar el pago parcial');
+                        }
+                    }
+                }}
+            />
+
+            <EnviarPagoModal
+                show={showEnviarPagoModal}
+                onClose={() => setShowEnviarPagoModal(false)}
+                facturas={facturasProcesadas.map(f => ({
+                    _id: f._id,
+                    nombreEmisor: f.nombreEmisor,
+                    folioFiscalId: f.folioFiscalId,
+                    fechaEmision: f.fechaEmision,
+                    tipoComprobante: f.tipoComprobante,
+                    rfcEmisor: f.rfcEmisor,
+                    estatus: String(f.estatus),
+                    descripcionEstatus: f.estatus === 1 ? 'Vigente' : 'Cancelado',
+                    fechaCancelacion: f.fechaCancelacion,
+                    importeAPagar: f.importeAPagar,
+                    saldo: f.importeAPagar - f.importePagado,
+                    importePagado: f.importePagado,
+                }))}
+                paqueteExistente={paqueteExistenteSeleccionado}
+                razonSocialName={companies.find(c => c._id === selectedCompany)?.name || ''}
+                isNewPackage={isNewPackage}
+                onSuccess={() => {
+                    setShowEnviarPagoModal(false);
+                    loadExistingPackages(); // Refresca la lista de paquetes después de guardar
+                }}
+            />
         </Container>
     );
 };

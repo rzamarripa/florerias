@@ -18,6 +18,7 @@ export interface User {
   username: string;
   email: string;
   phone: string;
+  departmentId: string;
   department?: string;
   profile: {
     name: string;
@@ -81,6 +82,7 @@ export interface CreateUserData {
   email: string;
   phone: string;
   password: string;
+  departmentId: string;
   department?: string;
   profile: {
     name: string;
@@ -96,6 +98,7 @@ export interface UpdateUserData {
   username?: string;
   email?: string;
   phone?: string;
+  departmentId?: string;
   department?: string;
   profile?: {
     name: string;

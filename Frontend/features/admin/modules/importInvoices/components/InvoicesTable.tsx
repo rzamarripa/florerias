@@ -122,7 +122,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
                   </span>
                 </td>
                 <td className="text-muted">{formatDate(invoice.fechaCancelacion)}</td>
-                <td className="text-end fw-medium">{formatCurrency(Number(invoice.importe))}</td>
+                <td className="text-end fw-medium">{formatCurrency(Number(invoice.importeAPagar))}</td>
               </tr>
             ))}
           </tbody>

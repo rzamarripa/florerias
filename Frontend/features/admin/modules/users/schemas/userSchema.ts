@@ -15,6 +15,7 @@ export const userFormSchema = z.object({
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
   profile: profileSchema,
+  departmentId: z.string().min(1, "El departamento es requerido"),
   department: z.string().optional(),
   role: z.string().min(1, "El rol es requerido"),
 })
@@ -51,7 +52,7 @@ export const userFormSchema = z.object({
 export type UserFormData = z.infer<typeof userFormSchema>;
 
 export type CreateUserData = Required<Pick<UserFormData, 'username' | 'email' | 'phone' | 'password' | 'profile' | 'role'>> &
-  Pick<UserFormData, 'department' | 'confirmPassword'>;
+  Pick<UserFormData, 'departmentId' | 'department' | 'confirmPassword'>;
 
 export type UpdateUserData = Required<Pick<UserFormData, 'username' | 'email' | 'phone' | 'profile' | 'role'>> &
-  Pick<UserFormData, 'department'>;
+  Pick<UserFormData, 'departmentId' | 'department'>;

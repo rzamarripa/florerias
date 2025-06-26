@@ -189,4 +189,9 @@ export const usersService = {
       return { success: false, message: error.message, data: [] };
     }
   },
+
+  getAllDepartments: async () => {
+    const response = await apiCall<any>(`/departments`);
+    return response;
+  },
 };

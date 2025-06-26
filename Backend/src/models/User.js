@@ -22,7 +22,15 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    department: String,
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "cc_department",
+      required: true
+    },
+    department: {
+      type: String,
+      required: true
+    },
     profile: {
       name: {
         type: String,

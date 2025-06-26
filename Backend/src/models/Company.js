@@ -48,6 +48,6 @@ companySchema.statics.seedIfEmpty = async function () {
   }
 };
 
-const Company = mongoose.model("cc_company", companySchema);
+const Company = mongoose.model("cc_companies", companySchema);
 
 export { Company };

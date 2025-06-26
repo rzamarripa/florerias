@@ -3,14 +3,21 @@ import { Row, Col } from 'react-bootstrap';
 import { FileText, Calendar, PieChart, Info } from 'lucide-react';
 import BudgetStatisticCard from './BudgetStatisticCard';
 
-const BudgetSummaryCards: React.FC = () => {
+interface BudgetSummaryCardsProps {
+    summary?: {
+        facturasPagadas?: number;
+        totalPagado?: number;
+    };
+}
+
+const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({ summary }) => {
     return (
         <Row className="g-3">
             <Col md={3}>
                 <BudgetStatisticCard
-                    title="0 Factura"
-                    subtitle="Seleccionadas para pago"
-                    stats="$0"
+                    title={`${summary?.facturasPagadas ?? 0} Facturas pagadas`}
+                    subtitle="Pagadas este periodo"
+                    stats={`$${(summary?.totalPagado ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
                     icon={<FileText size={24} />}
                     variant="info"
                 />

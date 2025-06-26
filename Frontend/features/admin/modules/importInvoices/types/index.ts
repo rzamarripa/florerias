@@ -12,9 +12,11 @@ export interface ImportedInvoice {
   fechaEmision: string;
   fechaCertificacionSAT: string;
   fechaCancelacion?: string | null;
-  importe: number;
+  importeAPagar: number;
+  importePagado: number;
   tipoComprobante: 'I' | 'E' | 'P';
   estatus: 0 | 1;
+  estadoPago: 0 | 1 | 2 | 3;
   createdAt: string;
   updatedAt: string;
   // Campos virtuales
@@ -22,12 +24,18 @@ export interface ImportedInvoice {
   descripcionEstatus?: string;
   estaCancelado?: boolean;
   estaVigente?: boolean;
+  saldo?: number;
+  porcentajePagado?: number;
+  descripcionEstadoPago?: string;
 }
 
 export interface SummaryData {
   totalFacturas: number;
   facturasCanceladas: number;
   proveedoresUnicos: number;
+  totalImporteAPagar?: number;
+  totalPagado?: number;
+  totalSaldo?: number;
 }
 
 export interface Pagination {

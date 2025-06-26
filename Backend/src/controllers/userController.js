@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { Role } from "../models/Roles.js";
 import { User } from "../models/User.js";
 import { RsUserProvider } from "../models/UserProviders.js";
+import { Department } from "../models/Department.js";
 
 export const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -19,8 +20,16 @@ export const registerUser = async (req, res) => {
       userData = req.body;
     }
 
-    const { username, email, phone, password, department, profile, role } = userData;
-    console.log(profile);
+    const { username, email, phone, password, departmentId, profile, role } = userData;
+
+    // Validar departamento
+    if (!departmentId) {
+      return res.status(400).json({ success: false, message: "El departamento es requerido" });
+    }
+    const departmentDoc = await Department.findById(departmentId);
+    if (!departmentDoc) {
+      return res.status(400).json({ success: false, message: "Departamento no encontrado" });
+    }
 
     const userExists = await User.findOne({
       $or: [
@@ -52,7 +61,8 @@ export const registerUser = async (req, res) => {
       email,
       phone,
       password,
-      department,
+      departmentId: departmentDoc._id,
+      department: departmentDoc.name,
       profile: {
         name: profile?.name || "",
         lastName: profile?.lastName || "",
@@ -83,6 +93,8 @@ export const registerUser = async (req, res) => {
           phone: user.phone,
           profile: user.profile,
           role: user.role,
+          departmentId: user.departmentId,
+          department: user.department,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -163,7 +175,11 @@ export const loginUser = async (req, res) => {
       success: true,
       message: "Login successful",
       data: {
-        user: user.getPublicProfile(),
+        user: {
+          ...user.getPublicProfile(),
+          departmentId: user.departmentId,
+          department: user.department,
+        },
         role: user.role?.name || null,
         allowedModules,
         token,
@@ -267,14 +283,23 @@ export const updateUser = async (req, res) => {
       userData = req.body;
     }
 
-    const { username, email, phone, department, profile, role } = userData;
+    const { username, email, phone, departmentId, profile, role } = userData;
 
     const updateData = {};
 
     if (username) updateData.username = username;
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
-    if (department) updateData.department = department;
+
+    // Validar departamento
+    if (departmentId) {
+      const departmentDoc = await Department.findById(departmentId);
+      if (!departmentDoc) {
+        return res.status(400).json({ success: false, message: "Departamento no encontrado" });
+      }
+      updateData.departmentId = departmentDoc._id;
+      updateData.department = departmentDoc.name;
+    }
 
     if (profile) {
       updateData.profile = {
@@ -347,7 +372,20 @@ export const updateUser = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "User updated successfully",
-      data: user,
+      data: {
+        user: {
+          _id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          profile: user.profile,
+          role: user.role,
+          departmentId: user.departmentId,
+          department: user.department,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+      },
     });
   } catch (error) {
     console.error("Error in updateUser:", error);

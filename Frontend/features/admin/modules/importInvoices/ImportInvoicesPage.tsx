@@ -128,8 +128,10 @@ const ImportInvoicesPage: React.FC = () => {
       nombreEmisor: d.NombreEmisor,
       rfcReceptor: d.RfcReceptor,
       nombreReceptor: d.NombreReceptor,
-      importe: parseFloat(String(d.Monto).replace(/[^0-9.-]+/g, "")) || 0,
+      importeAPagar: parseFloat(String(d.Monto).replace(/[^0-9.-]+/g, "")) || 0,
+      importePagado: 0,
       estatus: d.Estatus === '1' ? 1 : 0,
+      estadoPago: 0,
       fechaEmision: d.FechaEmision,
       tipoComprobante: d.EfectoComprobante,
       // Default values for fields not in raw data
