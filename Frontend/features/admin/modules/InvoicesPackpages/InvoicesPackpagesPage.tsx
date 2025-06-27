@@ -377,11 +377,11 @@ const InvoicesPackagePage: React.FC = () => {
         });
     }, [invoices, facturasGuardadas, tempPayments]);
 
-    // Facturas pagadas completamente y no guardadas
-    const facturasPagadasNoGuardadas = React.useMemo(() => {
+    // Facturas con pagos (completos o parciales) y no guardadas
+    const facturasConPagosNoGuardadas = React.useMemo(() => {
         return invoices.filter(f => {
             const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
-            return invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar && !facturasGuardadas.includes(f._id);
+            return invoiceWithTempPayments.importePagado > 0 && !facturasGuardadas.includes(f._id);
         });
     }, [invoices, facturasGuardadas, tempPayments]);
 
@@ -391,14 +391,14 @@ const InvoicesPackagePage: React.FC = () => {
         const paquete = existingPackages.find(p => p._id === selectedPackageId);
         if (paquete) {
             facturasGuardadasEnPaquete = paquete.facturas.filter(
-                (f: any) => f.importePagado >= f.importeAPagar
+                (f: any) => f.importePagado > 0
             );
         }
     }
 
     const contadorFacturas = isNewPackage
-        ? facturasPagadasNoGuardadas.length
-        : facturasPagadasNoGuardadas.length + facturasGuardadasEnPaquete.length;
+        ? facturasConPagosNoGuardadas.length
+        : facturasConPagosNoGuardadas.length + facturasGuardadasEnPaquete.length;
 
     function marcarFacturasGuardadas(facturasDisponibles: any[], paqueteExistente: any) {
         const idsGuardadas = paqueteExistente
@@ -644,7 +644,7 @@ const InvoicesPackagePage: React.FC = () => {
                             disabled={facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)}
                             onClick={() => {
                                 if (facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)) {
-                                    toast.warn('No hay facturas pagadas disponibles para guardar en paquete. Todas las facturas pagadas ya están guardadas o no hay facturas con pagos.');
+                                    toast.warn('No hay facturas con pagos disponibles para guardar en paquete. Todas las facturas con pagos ya están procesadas o no hay facturas con pagos.');
                                     return;
                                 }
 
@@ -653,17 +653,17 @@ const InvoicesPackagePage: React.FC = () => {
 
                                 if (!isNewPackage && selectedPackageId) {
                                     paqueteExistenteSeleccionado = existingPackages.find(p => p._id === selectedPackageId);
-                                    // Solo incluir facturas pagadas completamente (considerando pagos temporales)
-                                    const facturasPagadas = facturasDisponibles.filter(f => {
+                                    // Incluir facturas con pagos (completos o parciales)
+                                    const facturasConPagos = facturasDisponibles.filter(f => {
                                         const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
-                                        return invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar;
+                                        return invoiceWithTempPayments.importePagado > 0;
                                     });
-                                    facturasParaEnviar = marcarFacturasGuardadas(facturasPagadas, paqueteExistenteSeleccionado);
+                                    facturasParaEnviar = marcarFacturasGuardadas(facturasConPagos, paqueteExistenteSeleccionado);
                                 } else {
-                                    // Solo incluir facturas pagadas completamente (considerando pagos temporales)
+                                    // Incluir facturas con pagos (completos o parciales)
                                     facturasParaEnviar = facturasDisponibles.filter(f => {
                                         const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
-                                        return invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar;
+                                        return invoiceWithTempPayments.importePagado > 0;
                                     });
                                 }
                                 setFacturasProcesadas(facturasParaEnviar);
@@ -739,7 +739,6 @@ const InvoicesPackagePage: React.FC = () => {
                                     const invoiceWithTempPayments = getInvoiceWithTempPayments(invoice);
                                     const estatus = getEstatusText(invoice.estatus);
                                     const saldo = invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar ? 0 : (invoiceWithTempPayments.importeAPagar - invoiceWithTempPayments.importePagado);
-                                    const isPagada = invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar;
                                     const isGuardada = facturasGuardadas.includes(invoice._id);
                                     const hasTempPayment = tempPayments[invoice._id];
                                     
@@ -749,17 +748,7 @@ const InvoicesPackagePage: React.FC = () => {
                                             {/* Seleccionar para pago */}
                                             <td className="text-center">
                                                 {isGuardada ? (
-                                                    <span className="badge bg-success bg-opacity-10 text-success fw-bold py-2 px-3">Registrada</span>
-                                                ) : isPagada ? (
-                                                    <div className="d-flex flex-column gap-1">
-                                                        <span className="badge bg-primary bg-opacity-10 text-primary fw-bold py-2 px-3">Pagada</span>
-                                                        {hasTempPayment && (
-                                                            <span className="badge bg-warning bg-opacity-10 text-warning fw-bold py-1 px-2">
-                                                                <i className="bi bi-clock me-1"></i>
-                                                                Temporal
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    <span className="badge bg-primary bg-opacity-10 text-primary fw-bold py-2 px-3">Procesada</span>
                                                 ) : (
                                                     <div className="d-flex flex-column gap-1 w-100">
                                                         <div className="d-flex gap-1 w-100">
