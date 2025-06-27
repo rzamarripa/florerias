@@ -10,6 +10,14 @@ const InvoicesPackpageSchema = new mongoose.Schema({
         required: true
     }],
 
+    // Referencia a la relación con Company, Brand, Branch
+    packpageCompanyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'rs_invoices_packpages_companies',
+        required: false, // Opcional para mantener compatibilidad con registros existentes
+        index: true
+    },
+
     // Estatus del paquete de facturas
     estatus: {
         type: String,

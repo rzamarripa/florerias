@@ -30,9 +30,12 @@ interface EnviarPagoModalProps {
     razonSocialName?: string;
     isNewPackage?: boolean;
     onSuccess?: (packpageId?: string) => void;
+    selectedCompanyId?: string;
+    selectedBrandId?: string;
+    selectedBranchId?: string;
 }
 
-const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, facturas, paqueteExistente, razonSocialName, isNewPackage = true, onSuccess }) => {
+const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, facturas, paqueteExistente, razonSocialName, isNewPackage = true, onSuccess, selectedCompanyId, selectedBrandId, selectedBranchId }) => {
     const [fechaPago, setFechaPago] = useState<string>(paqueteExistente?.fechaPago || '');
     const [comentario, setComentario] = useState<string>(paqueteExistente?.comentario || '');
     const [facturasLocal, setFacturasLocal] = useState<FacturaProcesada[]>([]);
@@ -84,6 +87,9 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 departamento: user.department,
                 comentario,
                 fechaPago,
+                companyId: selectedCompanyId,
+                brandId: selectedBrandId,
+                branchId: selectedBranchId,
             };
             let packpageId: string | undefined = undefined;
             if (isNewPackage) {
@@ -94,6 +100,9 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                     facturas: facturasLocal.map(f => f._id),
                     comentario,
                     fechaPago,
+                    companyId: selectedCompanyId,
+                    brandId: selectedBrandId,
+                    branchId: selectedBranchId,
                 });
                 packpageId = response?.data?._id;
             }
@@ -110,7 +119,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
         <Modal show={show} onHide={onClose} size="xl" centered backdrop="static">
             <Modal.Header closeButton>
                 <Modal.Title>
-                    {paqueteExistente ? 
+                    {paqueteExistente ?
                         `Editar Paquete de Facturas - Folio: ${paqueteExistente.folio}` :
                         `Enviar facturas a Pago${razonSocialName ? ` de ${razonSocialName}` : ''} (Nuevo Paquete)`
                     }
@@ -151,7 +160,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 </Row>
                 {paqueteExistente && (
                     <Alert variant="info" className="mb-3">
-                        <b>Paquete existente seleccionado:</b> 
+                        <b>Paquete existente seleccionado:</b>
                         <ul className="mb-0 mt-2">
                             <li><span className="badge bg-success bg-opacity-10 text-success me-2">Guardada</span> Facturas que ya están en este paquete</li>
                             <li><span className="badge bg-primary bg-opacity-10 text-primary me-2">Nueva</span> Facturas pagadas que se agregarán al paquete</li>

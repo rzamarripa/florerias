@@ -323,7 +323,7 @@ const InvoicesPackpagePage: React.FC = () => {
 
     // Facturas pagadas disponibles para guardar en paquetes
     const facturasDisponibles = React.useMemo(() => {
-        return invoices.filter(f => 
+        return invoices.filter(f =>
             f.importePagado > 0 && !facturasGuardadas.includes(f._id)
         );
     }, [invoices, facturasGuardadas]);
@@ -576,10 +576,10 @@ const InvoicesPackpagePage: React.FC = () => {
                                     toast.warn('No hay facturas pagadas disponibles para guardar en paquete. Todas las facturas pagadas ya están guardadas o no hay facturas con pagos.');
                                     return;
                                 }
-                                
+
                                 let paqueteExistenteSeleccionado = null;
                                 let facturasParaEnviar = facturasDisponibles;
-                                
+
                                 if (!isNewPackage && selectedPackageId) {
                                     paqueteExistenteSeleccionado = existingPackages.find(p => p._id === selectedPackageId);
                                     // Solo incluir facturas pagadas completamente
@@ -844,6 +844,9 @@ const InvoicesPackpagePage: React.FC = () => {
                 paqueteExistente={paqueteExistenteSeleccionado}
                 razonSocialName={companies.find(c => c._id === selectedCompany)?.name || ''}
                 isNewPackage={isNewPackage}
+                selectedCompanyId={selectedCompany}
+                selectedBrandId={selectedBrand}
+                selectedBranchId={selectedBranch}
                 onSuccess={async () => {
                     setShowEnviarPagoModal(false);
                     const paquetes = await loadExistingPackages();

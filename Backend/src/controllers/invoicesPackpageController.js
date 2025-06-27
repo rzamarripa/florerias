@@ -1,5 +1,6 @@
 import { InvoicesPackpage } from "../models/InvoicesPackpage.js";
 import { ImportedInvoices } from "../models/ImportedInvoices.js";
+import { InvoicesPackpageCompany } from "../models/InvoicesPackpageCompany.js";
 import mongoose from "mongoose";
 
 // CREATE - Crear un nuevo paquete de facturas
@@ -12,7 +13,11 @@ export const createInvoicesPackpage = async (req, res) => {
             departamento,
             comentario,
             fechaPago,
-            totalImporteAPagar
+            totalImporteAPagar,
+            // Nuevos campos para la relación con Company, Brand, Branch
+            companyId,
+            brandId,
+            branchId
         } = req.body;
 
         // Validar datos requeridos
@@ -79,6 +84,33 @@ export const createInvoicesPackpage = async (req, res) => {
         // Guardar el paquete
         const paqueteGuardado = await nuevoPaquete.save();
 
+        // Crear la relación con Company, Brand, Branch si se proporcionan
+        let packpageCompanyId = null;
+        if (companyId) {
+            const packpageCompanyData = {
+                packpageId: paqueteGuardado._id,
+                companyId: new mongoose.Types.ObjectId(companyId)
+            };
+
+            // Agregar brandId si se proporciona
+            if (brandId) {
+                packpageCompanyData.brandId = new mongoose.Types.ObjectId(brandId);
+            }
+
+            // Agregar branchId si se proporciona
+            if (branchId) {
+                packpageCompanyData.branchId = new mongoose.Types.ObjectId(branchId);
+            }
+
+            const packpageCompany = new InvoicesPackpageCompany(packpageCompanyData);
+            const packpageCompanyGuardado = await packpageCompany.save();
+            packpageCompanyId = packpageCompanyGuardado._id;
+
+            // Actualizar el paquete con la referencia a la relación
+            paqueteGuardado.packpageCompanyId = packpageCompanyId;
+            await paqueteGuardado.save();
+        }
+
         // Marcar las facturas como registradas
         await ImportedInvoices.updateMany(
             { _id: { $in: facturas } },
@@ -87,7 +119,11 @@ export const createInvoicesPackpage = async (req, res) => {
 
         // Obtener el paquete con las facturas pobladas
         const paqueteCompleto = await InvoicesPackpage.findById(paqueteGuardado._id)
-            .populate('facturas');
+            .populate('facturas')
+            .populate({
+                path: 'packpageCompanyId',
+                populate: ['companyId', 'brandId', 'branchId']
+            });
 
         res.status(201).json({
             success: true,
@@ -129,6 +165,10 @@ export const getInvoicesPackpages = async (req, res) => {
         // Consulta con paginación
         const paquetesPromise = InvoicesPackpage.find(filtros)
             .populate('facturas')
+            .populate({
+                path: 'packpageCompanyId',
+                populate: ['companyId', 'brandId', 'branchId']
+            })
             .sort(sortOptions)
             .limit(limit * 1)
             .skip((page - 1) * limit)
@@ -165,7 +205,11 @@ export const getInvoicesPackpageById = async (req, res) => {
         console.log('Buscando paquete con ID:', id);
 
         const paquete = await InvoicesPackpage.findById(id)
-            .populate('facturas');
+            .populate('facturas')
+            .populate({
+                path: 'packpageCompanyId',
+                populate: ['companyId', 'brandId', 'branchId']
+            });
 
         if (!paquete) {
             return res.status(404).json({
@@ -199,13 +243,23 @@ export const getInvoicesPackpageById = async (req, res) => {
                 _id: toString(paquete._id),
                 usuario_id: toString(paquete.usuario_id),
                 departamento_id: toString(paquete.departamento_id),
+                packpageCompanyId: paquete.packpageCompanyId ? toString(paquete.packpageCompanyId._id) : null,
                 totalImporteAPagar: toNumber(paquete.totalImporteAPagar),
                 totalPagado: toNumber(paquete.totalPagado),
                 fechaPago: paquete.fechaPago ? new Date(paquete.fechaPago).toISOString() : null,
                 fechaCreacion: paquete.fechaCreacion ? new Date(paquete.fechaCreacion).toISOString() : null,
                 createdAt: paquete.createdAt ? new Date(paquete.createdAt).toISOString() : null,
                 updatedAt: paquete.updatedAt ? new Date(paquete.updatedAt).toISOString() : null,
-                facturas: (paquete.facturas || []).map(normalizeFactura)
+                facturas: (paquete.facturas || []).map(normalizeFactura),
+                // Agregar información de la relación Company, Brand, Branch
+                companyInfo: paquete.packpageCompanyId ? {
+                    companyId: paquete.packpageCompanyId.companyId ? toString(paquete.packpageCompanyId.companyId._id) : null,
+                    companyName: paquete.packpageCompanyId.companyId ? paquete.packpageCompanyId.companyId.name : null,
+                    brandId: paquete.packpageCompanyId.brandId ? toString(paquete.packpageCompanyId.brandId._id) : null,
+                    brandName: paquete.packpageCompanyId.brandId ? paquete.packpageCompanyId.brandId.name : null,
+                    branchId: paquete.packpageCompanyId.branchId ? toString(paquete.packpageCompanyId.branchId._id) : null,
+                    branchName: paquete.packpageCompanyId.branchId ? paquete.packpageCompanyId.branchId.name : null,
+                } : null
             };
         }
 
@@ -235,7 +289,11 @@ export const updateInvoicesPackpage = async (req, res) => {
             departamento,
             comentario,
             fechaPago,
-            totalImporteAPagar
+            totalImporteAPagar,
+            // Nuevos campos para la relación con Company, Brand, Branch
+            companyId,
+            brandId,
+            branchId
         } = req.body;
 
         // Buscar el paquete existente
@@ -331,9 +389,57 @@ export const updateInvoicesPackpage = async (req, res) => {
             await paqueteActualizado.actualizarTotales();
         }
 
+        // Actualizar la relación con Company, Brand, Branch si se proporcionan
+        if (companyId !== undefined) {
+            if (paqueteExistente.packpageCompanyId) {
+                // Actualizar relación existente
+                const packpageCompanyData = {
+                    companyId: new mongoose.Types.ObjectId(companyId)
+                };
+
+                if (brandId !== undefined) {
+                    packpageCompanyData.brandId = brandId ? new mongoose.Types.ObjectId(brandId) : null;
+                }
+
+                if (branchId !== undefined) {
+                    packpageCompanyData.branchId = branchId ? new mongoose.Types.ObjectId(branchId) : null;
+                }
+
+                await InvoicesPackpageCompany.findByIdAndUpdate(
+                    paqueteExistente.packpageCompanyId,
+                    { $set: packpageCompanyData }
+                );
+            } else if (companyId) {
+                // Crear nueva relación
+                const packpageCompanyData = {
+                    packpageId: id,
+                    companyId: new mongoose.Types.ObjectId(companyId)
+                };
+
+                if (brandId) {
+                    packpageCompanyData.brandId = new mongoose.Types.ObjectId(brandId);
+                }
+
+                if (branchId) {
+                    packpageCompanyData.branchId = new mongoose.Types.ObjectId(branchId);
+                }
+
+                const packpageCompany = new InvoicesPackpageCompany(packpageCompanyData);
+                const packpageCompanyGuardado = await packpageCompany.save();
+
+                // Actualizar el paquete con la referencia
+                paqueteActualizado.packpageCompanyId = packpageCompanyGuardado._id;
+                await paqueteActualizado.save();
+            }
+        }
+
         // Obtener el paquete actualizado con las facturas pobladas
         const paqueteCompleto = await InvoicesPackpage.findById(id)
-            .populate('facturas');
+            .populate('facturas')
+            .populate({
+                path: 'packpageCompanyId',
+                populate: ['companyId', 'brandId', 'branchId']
+            });
 
         res.status(200).json({
             success: true,
@@ -380,11 +486,15 @@ export const deleteInvoicesPackpage = async (req, res) => {
             fechaRevision: new Date()
         };
 
-        await Promise.all(
-            paquete.facturas.map(facturaId =>
-                ImportedInvoices.findByIdAndUpdate(facturaId, { $set: datosRemocion })
-            )
-        );
+        await Promise.all([
+            // Actualizar facturas
+            ImportedInvoices.updateMany(
+                { _id: { $in: paquete.facturas } },
+                { $set: datosRemocion }
+            ),
+            // Eliminar la relación con Company, Brand, Branch si existe
+            paquete.packpageCompanyId ? InvoicesPackpageCompany.findByIdAndDelete(paquete.packpageCompanyId) : Promise.resolve()
+        ]);
 
         // Eliminar el paquete
         await InvoicesPackpage.findByIdAndDelete(id);
@@ -514,7 +624,12 @@ export const getInvoicesPackpagesByUsuario = async (req, res) => {
         // Convertir a ObjectId
         const usuarioObjectId = new mongoose.Types.ObjectId(usuario_id);
 
-        const paquetes = await InvoicesPackpage.find({ usuario_id: usuarioObjectId }).populate('facturas');
+        const paquetes = await InvoicesPackpage.find({ usuario_id: usuarioObjectId })
+            .populate('facturas')
+            .populate({
+                path: 'packpageCompanyId',
+                populate: ['companyId', 'brandId', 'branchId']
+            });
 
         // Agregar headers para evitar caché
         res.set({

@@ -3,6 +3,7 @@ import { apiCall } from "@/utils/api";
 export interface InvoicesPackpage {
     _id: string;
     facturas: ImportedInvoice[];
+    packpageCompanyId?: string;
     estatus: string;
     usuario_id: string;
     fechaCreacion: string;
@@ -16,6 +17,15 @@ export interface InvoicesPackpage {
     totalFacturas: number;
     createdAt: string;
     updatedAt: string;
+    // Información de la relación Company, Brand, Branch
+    companyInfo?: {
+        companyId: string;
+        companyName: string;
+        brandId?: string;
+        brandName?: string;
+        branchId?: string;
+        branchName?: string;
+    };
 }
 
 export interface ImportedInvoice {
@@ -171,6 +181,10 @@ export const createInvoicesPackpage = async (data: {
     comentario?: string;
     fechaPago: string;
     totalImporteAPagar?: number;
+    // Nuevos campos para la relación
+    companyId?: string;
+    brandId?: string;
+    branchId?: string;
 }): Promise<InvoicesPackpageResponse> => {
     const response = await apiCall<InvoicesPackpageResponse>("/invoices-packpage", {
         method: "POST",
@@ -216,6 +230,10 @@ export const updateInvoicesPackpage = async (id: string, data: {
     comentario?: string;
     fechaPago?: string;
     totalImporteAPagar?: number;
+    // Nuevos campos para la relación
+    companyId?: string;
+    brandId?: string;
+    branchId?: string;
 }): Promise<InvoicesPackpageResponse> => {
     const response = await apiCall<InvoicesPackpageResponse>(`/invoices-packpage/${id}`, {
         method: "PUT",
