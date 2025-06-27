@@ -13,7 +13,14 @@ export const rolesService = {
   create: async (data: Partial<Role>): Promise<ApiResponse<Role>> => {
     return await apiCall<Role>("/roles", {
       method: "POST",
-      data,
+      body: JSON.stringify(data),
+    });
+  },
+
+  createRole: async (data: Partial<Role>): Promise<ApiResponse<Role>> => {
+    return await apiCall<Role>("/roles", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
@@ -23,7 +30,7 @@ export const rolesService = {
   ): Promise<ApiResponse<Role>> => {
     return await apiCall<Role>(`/roles/${id}`, {
       method: "PUT",
-      data,
+      body: JSON.stringify(data),
     });
   },
 

@@ -1,36 +1,26 @@
 import { Role } from "../models/Roles.js";
+import { Module } from "../models/Module.js";
+import { roleService } from "../services/roleService.js";
 
 const createRole = async (req, res) => {
   try {
-    const { name, modules } = req.body;
-
-    const roleExists = await Role.findOne({ name: name });
-    if (roleExists) {
-      return res.status(400).json({
-        success: false,
-        message: "Role already exists with this name",
-      });
-    }
-
-    const role = await Role.create({
-      name,
-      description: "",
-      modules: modules || [],
-    });
+    const role = await roleService.createRole(req.body);
 
     res.status(201).json({
       success: true,
-      message: "Role created successfully",
+      message: "Rol creado exitosamente",
       data: {
         _id: role._id,
         name: role.name,
         description: role.description,
         estatus: role.estatus,
+        modules: role.modules,
         createdAt: role.createdAt,
       },
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Error creating role:", error);
+    res.status(400).json({
       success: false,
       message: error.message,
     });
@@ -39,9 +29,7 @@ const createRole = async (req, res) => {
 
 const getAllRoles = async (req, res) => {
   try {
-    const roles = await Role.find()
-      .select("name description estatus modules createdAt")
-      .sort({ createdAt: -1 });
+    const roles = await roleService.getAllRoles();
 
     res.status(200).json({
       success: true,
@@ -49,6 +37,7 @@ const getAllRoles = async (req, res) => {
       data: roles,
     });
   } catch (error) {
+    console.error("Error getting roles:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -58,23 +47,15 @@ const getAllRoles = async (req, res) => {
 
 const getRoleById = async (req, res) => {
   try {
-    const role = await Role.findById(req.params.id).select(
-      "name description estatus createdAt"
-    );
-
-    if (!role) {
-      return res.status(404).json({
-        success: false,
-        message: "Role not found",
-      });
-    }
+    const role = await roleService.getRoleById(req.params.id);
 
     res.status(200).json({
       success: true,
       data: role,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Error getting role:", error);
+    res.status(404).json({
       success: false,
       message: error.message,
     });
@@ -84,9 +65,9 @@ const getRoleById = async (req, res) => {
 const getRoleModules = async (req, res) => {
   try {
     const role = await Role.findById(req.params.id).populate({
-      path: "ac_module",
+      path: "modules",
       populate: {
-        path: "ac_page",
+        path: "page",
         select: "name path",
       },
     });
@@ -94,7 +75,7 @@ const getRoleModules = async (req, res) => {
     if (!role) {
       return res.status(404).json({
         success: false,
-        message: "Role not found",
+        message: "Rol no encontrado",
       });
     }
 
@@ -128,6 +109,7 @@ const getRoleModules = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Error getting role modules:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -137,38 +119,23 @@ const getRoleModules = async (req, res) => {
 
 const updateRole = async (req, res) => {
   try {
-    const { name, description, modules } = req.body;
-
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-    if (modules !== undefined) updateData.modules = modules;
-
-    const role = await Role.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!role) {
-      return res.status(404).json({
-        success: false,
-        message: "Role not found",
-      });
-    }
+    const role = await roleService.updateRole(req.params.id, req.body);
 
     res.status(200).json({
       success: true,
-      message: "Role updated successfully",
+      message: "Rol actualizado exitosamente",
       data: {
         _id: role._id,
         name: role.name,
         description: role.description,
         estatus: role.estatus,
+        modules: role.modules,
         createdAt: role.createdAt,
       },
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Error updating role:", error);
+    res.status(400).json({
       success: false,
       message: error.message,
     });
@@ -177,25 +144,15 @@ const updateRole = async (req, res) => {
 
 const deleteRole = async (req, res) => {
   try {
-    const role = await Role.findByIdAndUpdate(
-      req.params.id,
-      { estatus: false },
-      { new: true }
-    );
-
-    if (!role) {
-      return res.status(404).json({
-        success: false,
-        message: "Role not found",
-      });
-    }
+    await roleService.deleteRole(req.params.id);
 
     res.status(200).json({
       success: true,
-      message: "Role deleted successfully",
+      message: "Rol eliminado exitosamente",
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Error deleting role:", error);
+    res.status(404).json({
       success: false,
       message: error.message,
     });
