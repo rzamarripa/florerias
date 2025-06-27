@@ -1,43 +1,43 @@
 import express from 'express';
 import {
-    createInvoicesPackpage,
-    getInvoicesPackpages,
-    getInvoicesPackpageById,
-    updateInvoicesPackpage,
-    deleteInvoicesPackpage,
-    getInvoicesPackpagesSummary,
-    getVencidosInvoicesPackpages,
-    changeInvoicesPackpageStatus,
-    getInvoicesPackpagesByUsuario
+    createInvoicesPackage,
+    getInvoicesPackages,
+    getInvoicesPackageById,
+    updateInvoicesPackage,
+    deleteInvoicesPackage,
+    getInvoicesPackagesSummary,
+    getVencidosInvoicesPackages,
+    changeInvoicesPackageStatus,
+    getInvoicesPackagesByUsuario
 } from '../controllers/invoicesPackpageController.js';
 
 const router = express.Router();
 
 // Crear un nuevo paquete de facturas
-router.post('/', createInvoicesPackpage);
+router.post('/', createInvoicesPackage);
 
 // Obtener todos los paquetes con paginación
-router.get('/', getInvoicesPackpages);
+router.get('/', getInvoicesPackages);
 
 // Obtener paquetes de facturas por usuario
-router.get('/by-usuario', getInvoicesPackpagesByUsuario);
+router.get('/by-usuario', getInvoicesPackagesByUsuario);
 
 // Obtener un paquete específico por ID
-router.get('/:id', getInvoicesPackpageById);
+router.get('/:id', getInvoicesPackageById);
 
 // Actualizar un paquete de facturas
-router.put('/:id', updateInvoicesPackpage);
+router.put('/:id', updateInvoicesPackage);
 
 // Eliminar un paquete de facturas
-router.delete('/:id', deleteInvoicesPackpage);
+router.delete('/:id', deleteInvoicesPackage);
 
 // Obtener resumen de paquetes
-router.get('/summary', getInvoicesPackpagesSummary);
+router.get('/summary', getInvoicesPackagesSummary);
 
 // Obtener paquetes vencidos
-router.get('/vencidos', getVencidosInvoicesPackpages);
+router.get('/vencidos', getVencidosInvoicesPackages);
 
 // Cambiar estatus de un paquete
-router.patch('/:id/status', changeInvoicesPackpageStatus);
+router.patch('/:id/status', changeInvoicesPackageStatus);
 
 export default router; 

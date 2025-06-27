@@ -9,7 +9,7 @@ interface PagoFacturaModalProps {
     tipoPago: 'completo' | 'parcial';
     saldo: number;
     invoiceId: string | null;
-    onSuccess: () => void;
+    onSuccess: (invoiceId: string, tipoPago: 'completo' | 'parcial', descripcion: string, monto?: number) => void;
 }
 
 const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({ 
@@ -40,6 +40,11 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
             return;
         }
 
+        if (tipoPago === 'parcial' && Number(monto) > saldo) {
+            toast.error('El monto no puede exceder el saldo disponible');
+            return;
+        }
+
         try {
             setLoading(true);
             
@@ -53,7 +58,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
             
             setDescripcion('');
             setMonto('');
-            onSuccess();
+            onSuccess(invoiceId, tipoPago, descripcion, tipoPago === 'parcial' ? Number(monto) : undefined);
             onClose();
         } catch (error) {
             console.error('Error al procesar el pago:', error);

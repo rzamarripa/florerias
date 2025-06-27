@@ -71,10 +71,10 @@ export interface GetBranchesByBrandResponse {
   data: Branch[];
 }
 
-// Tipos para InvoicesPackpage
+// Tipos para InvoicesPackage
 export interface ImportedInvoice {
   _id: string;
-  folioFiscalId: string;
+  uuid: string;
   rfcEmisor: string;
   nombreEmisor: string;
   rfcReceptor: string;
@@ -88,7 +88,7 @@ export interface ImportedInvoice {
   updatedAt: string;
 }
 
-export interface InvoicesPackpage {
+export interface InvoicesPackage {
   _id: string;
   facturas: ImportedInvoice[];
   estatus: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado';
@@ -113,9 +113,9 @@ export interface InvoicesPackpage {
   diasParaVencimiento?: number;
 }
 
-export interface GetInvoicesPackpagesResponse {
+export interface GetInvoicesPackagesResponse {
   success: boolean;
-  data: InvoicesPackpage[];
+  data: InvoicesPackage[];
   pagination?: {
     total: number;
     page: number;
@@ -125,7 +125,7 @@ export interface GetInvoicesPackpagesResponse {
   message?: string;
 }
 
-export interface CreateInvoicesPackpageRequest {
+export interface CreateInvoicesPackageRequest {
   facturas: string[];
   usuario_id: string;
   departamento_id: number;
@@ -135,7 +135,7 @@ export interface CreateInvoicesPackpageRequest {
   totalImporteAPagar?: number;
 }
 
-export interface UpdateInvoicesPackpageRequest {
+export interface UpdateInvoicesPackageRequest {
   facturas?: string[];
   estatus?: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado';
   departamento_id?: number;
@@ -145,7 +145,7 @@ export interface UpdateInvoicesPackpageRequest {
   totalImporteAPagar?: number;
 }
 
-export interface InvoicesPackpageSummary {
+export interface InvoicesPackageSummary {
   total: number;
   borradores: number;
   enviados: number;
@@ -154,8 +154,8 @@ export interface InvoicesPackpageSummary {
   vencidos: number;
 }
 
-export interface GetInvoicesPackpagesSummaryResponse {
+export interface GetInvoicesPackagesSummaryResponse {
   success: boolean;
-  data: InvoicesPackpageSummary;
+  data: InvoicesPackageSummary;
   message?: string;
 } 

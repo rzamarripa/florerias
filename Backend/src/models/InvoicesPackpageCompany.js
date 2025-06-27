@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-const invoicesPackpageCompanySchema = new Schema({
+const invoicesPackageCompanySchema = new Schema({
     // Referencia al paquete de facturas
-    packpageId: {
+    packageId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'cc_invoices_packpage',
+        ref: 'cc_invoices_package',
         required: true,
         index: true
     },
@@ -42,31 +42,31 @@ const invoicesPackpageCompanySchema = new Schema({
     }
 }, {
     timestamps: true,
-    collection: 'rs_invoices_packpages_companies'
+    collection: 'rs_invoices_packages_companies'
 });
 
 // Índices compuestos para optimizar consultas
-invoicesPackpageCompanySchema.index({ packpageId: 1, companyId: 1 });
-invoicesPackpageCompanySchema.index({ companyId: 1, brandId: 1 });
-invoicesPackpageCompanySchema.index({ brandId: 1, branchId: 1 });
+invoicesPackageCompanySchema.index({ packageId: 1, companyId: 1 });
+invoicesPackageCompanySchema.index({ companyId: 1, brandId: 1 });
+invoicesPackageCompanySchema.index({ brandId: 1, branchId: 1 });
 
 // Métodos estáticos
-invoicesPackpageCompanySchema.statics.findByPackpageId = function (packpageId) {
-    return this.findOne({ packpageId }).populate(['companyId', 'brandId', 'branchId']);
+invoicesPackageCompanySchema.statics.findByPackageId = function (packageId) {
+    return this.findOne({ packageId }).populate(['companyId', 'brandId', 'branchId']);
 };
 
-invoicesPackpageCompanySchema.statics.findByCompanyId = function (companyId) {
-    return this.find({ companyId }).populate(['packpageId', 'brandId', 'branchId']);
+invoicesPackageCompanySchema.statics.findByCompanyId = function (companyId) {
+    return this.find({ companyId }).populate(['packageId', 'brandId', 'branchId']);
 };
 
-invoicesPackpageCompanySchema.statics.findByBrandId = function (brandId) {
-    return this.find({ brandId }).populate(['packpageId', 'companyId', 'branchId']);
+invoicesPackageCompanySchema.statics.findByBrandId = function (brandId) {
+    return this.find({ brandId }).populate(['packageId', 'companyId', 'branchId']);
 };
 
-invoicesPackpageCompanySchema.statics.findByBranchId = function (branchId) {
-    return this.find({ branchId }).populate(['packpageId', 'companyId', 'brandId']);
+invoicesPackageCompanySchema.statics.findByBranchId = function (branchId) {
+    return this.find({ branchId }).populate(['packageId', 'companyId', 'brandId']);
 };
 
-const InvoicesPackpageCompany = mongoose.model('rs_invoices_packpages_companies', invoicesPackpageCompanySchema);
+const InvoicesPackageCompany = mongoose.model('rs_invoices_packages_companies', invoicesPackageCompanySchema);
 
-export { InvoicesPackpageCompany }; 
+export { InvoicesPackageCompany }; 

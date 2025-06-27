@@ -2,37 +2,42 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, Table, Button, Badge, Spinner, Alert } from 'react-bootstrap';
-import { getInvoicesPackpageById, InvoicesPackpage, ImportedInvoice, toggleFacturaAutorizada } from '../services/invoicesPackpage';
+import { getInvoicesPackageById, InvoicesPackage, ImportedInvoice, toggleFacturaAutorizada } from '../services/invoicesPackpage';
 import { BsClipboard } from 'react-icons/bs';
 import { FiTrash2 } from 'react-icons/fi';
 import { BsCheck2 } from 'react-icons/bs';
+import { toast } from 'react-toastify';
+import { useUserSessionStore } from '@/stores/userSessionStore';
 
 const NewPackpageDetailsPage: React.FC = () => {
     const searchParams = useSearchParams();
     const router = useRouter();
     const packpageId = searchParams.get('packpageId');
-    const [packpage, setPackpage] = useState<InvoicesPackpage | null>(null);
+    const [packpage, setPackpage] = useState<InvoicesPackage | null>(null);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { user } = useUserSessionStore();
 
     useEffect(() => {
-        if (!packpageId) return;
-        const fetchPackpage = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await getInvoicesPackpageById(packpageId);
-                console.log('detalle-paquete', response.data)
-                setPackpage(response.data);
-            } catch {
-                setError('Error al cargar el paquete.');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchPackpage();
+        if (packpageId) {
+            loadPackpage();
+        }
     }, [packpageId]);
+
+    const loadPackpage = async () => {
+        try {
+            setLoading(true);
+            const response = await getInvoicesPackageById(packpageId!);
+            console.log(response);
+            setPackpage(response);
+        } catch (error) {
+            console.error('Error loading packpage:', error);
+            toast.error('Error al cargar el paquete');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleCopy = (uuid: string) => {
         navigator.clipboard.writeText(uuid);
@@ -129,16 +134,16 @@ const NewPackpageDetailsPage: React.FC = () => {
                                         </div>
                                     </td>
                                     <td>
-                                        <div>{factura.folioFiscalId}</div>
+                                        <div>{factura.uuid}</div>
                                         <div className="mt-1">
                                             <Button
                                                 variant="outline-primary"
                                                 size="sm"
                                                 className="d-flex align-items-center"
-                                                onClick={() => handleCopy(factura.folioFiscalId)}
+                                                onClick={() => handleCopy(factura.uuid)}
                                             >
                                                 <BsClipboard className="me-1" />
-                                                {copied === factura.folioFiscalId ? 'Copiado' : 'Copiar UUID'}
+                                                {copied === factura.uuid ? 'Copiado' : 'Copiar UUID'}
                                             </Button>
                                         </div>
                                     </td>

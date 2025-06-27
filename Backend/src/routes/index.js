@@ -18,8 +18,8 @@ import bankAccountRoutes from "./bankAccountRoutes.js";
 import expenseConceptRoutes from "./expenseConceptRoutes.js";
 import departmentRoutes from "./departmentRoutes.js";
 import importedInvoicesRoutes from "./importedInvoicesRoutes.js";
-import invoicesPackpageRoutes from "./invoicesPackpageRoutes.js";
-import invoicesPackpageCompanyRoutes from "./invoicesPackpageCompanyRoutes.js";
+import invoicesPackageRoutes from "./invoicesPackpageRoutes.js";
+import invoicesPackageCompanyRoutes from "./invoicesPackpageCompanyRoutes.js";
 
 const router = Router();
 
@@ -41,7 +41,7 @@ router.use("/departments", departmentRoutes);
 router.use("/banks", bankRoutes);
 router.use("/bank-accounts", bankAccountRoutes);
 router.use("/imported-invoices", importedInvoicesRoutes);
-router.use("/invoices-packpage", invoicesPackpageRoutes);
-router.use("/invoices-packpage-company", invoicesPackpageCompanyRoutes);
+router.use("/invoices-package", invoicesPackageRoutes);
+router.use("/invoices-package-company", invoicesPackageCompanyRoutes);
 
 export default router;

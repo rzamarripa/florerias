@@ -2,7 +2,7 @@ import { Company } from "../../companies/types";
 
 export interface ImportedInvoice {
   _id: string;
-  folioFiscalId: string;
+  uuid: string;
   rfcEmisor: string;
   nombreEmisor: string;
   rfcReceptor: string;

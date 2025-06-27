@@ -123,7 +123,7 @@ const ImportInvoicesPage: React.FC = () => {
     // 2. Transform raw data to ImportedInvoice format for table preview
     const invoicesPreview: ImportedInvoice[] = data.map((d, index) => ({
       _id: `preview-${index}`,
-      folioFiscalId: d.Uuid,
+      uuid: d.Uuid,
       rfcEmisor: d.RfcEmisor,
       nombreEmisor: d.NombreEmisor,
       rfcReceptor: d.RfcReceptor,

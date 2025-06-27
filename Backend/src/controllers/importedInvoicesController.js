@@ -35,7 +35,7 @@ export const bulkUpsertInvoices = async (req, res) => {
         }
 
         const invoiceData = {
-          folioFiscalId: invoice.Uuid,
+          uuid: invoice.Uuid,
           rfcEmisor: invoice.RfcEmisor,
           nombreEmisor: invoice.NombreEmisor,
           rfcReceptor: invoice.RfcReceptor,
@@ -50,13 +50,13 @@ export const bulkUpsertInvoices = async (req, res) => {
           razonSocial: companyId,
         };
 
-        if (!invoiceData.folioFiscalId) {
+        if (!invoiceData.uuid) {
           return null;
         }
 
         return {
           updateOne: {
-            filter: { folioFiscalId: invoiceData.folioFiscalId },
+            filter: { uuid: invoiceData.uuid },
             update: { $set: invoiceData },
             upsert: true,
           },
