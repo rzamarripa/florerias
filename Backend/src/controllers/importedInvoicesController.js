@@ -564,26 +564,43 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
 
 // TOGGLE - Cambiar el estado de 'autorizada' de una factura
 export const toggleFacturaAutorizada = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const factura = await ImportedInvoices.findById(id);
+  try {
+    const { id } = req.params;
+    const factura = await ImportedInvoices.findById(id);
 
-        if (!factura) {
-            return res.status(404).json({ success: false, message: 'Factura no encontrada.' });
-        }
-
-        factura.autorizada = !factura.autorizada;
-        await factura.save();
-
-        res.status(200).json({
-            success: true,
-            data: { _id: factura._id, autorizada: factura.autorizada },
-            message: 'Estado de autorización actualizado correctamente'
-        });
-    } catch (error) {
-        console.error('Error toggling factura autorizada:', error);
-        res.status(500).json({ success: false, message: error.message || 'Error interno del servidor.' });
+    if (!factura) {
+      return res.status(404).json({ success: false, message: 'Factura no encontrada.' });
     }
+
+    // Cambiar el estado de autorización
+    factura.autorizada = !factura.autorizada;
+
+    // Si la factura está siendo rechazada (autorizada: false), devolver importePagado a cero
+    if (!factura.autorizada) {
+      factura.importePagado = 0;
+      factura.estadoPago = 0; // Pendiente
+      factura.esCompleta = false;
+      factura.pagado = 0;
+      factura.descripcionPago = 'Pago rechazado - Factura no autorizada';
+    }
+
+    await factura.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        _id: factura._id,
+        autorizada: factura.autorizada,
+        importePagado: factura.importePagado
+      },
+      message: factura.autorizada
+        ? 'Estado de autorización actualizado correctamente'
+        : 'Factura rechazada y pago devuelto a cero'
+    });
+  } catch (error) {
+    console.error('Error toggling factura autorizada:', error);
+    res.status(500).json({ success: false, message: error.message || 'Error interno del servidor.' });
+  }
 };
 
 // Nuevo endpoint: actualizar importeAPagar de una factura
@@ -605,5 +622,47 @@ export const updateImporteAPagar = async (req, res) => {
     res.status(200).json({ success: true, message: 'Importe actualizado correctamente', data: invoice });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Nueva función: Obtener una factura individual por ID
+export const getInvoiceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere el ID de la factura.'
+      });
+    }
+
+    const invoice = await ImportedInvoices.findById(id)
+      .populate('razonSocial', 'name rfc')
+      .lean({ getters: true });
+
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        message: 'Factura no encontrada.'
+      });
+    }
+
+    // Normalizar los datos numéricos
+    const normalizedInvoice = {
+      ...invoice,
+      importeAPagar: invoice.importeAPagar ? parseFloat(invoice.importeAPagar.toString()) : 0,
+      importePagado: invoice.importePagado ? parseFloat(invoice.importePagado.toString()) : 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: normalizedInvoice,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 }; 

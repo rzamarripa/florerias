@@ -2,7 +2,6 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { Button, Spinner } from 'react-bootstrap';
-import { Eye } from 'lucide-react';
 
 interface PackpageActionsProps {
   packpageId: string;
@@ -23,7 +22,7 @@ const PackpageActions: React.FC<PackpageActionsProps> = ({ packpageId, onEdit, o
         title="Ver detalle"
         onClick={() => router.push(`/modulos/paquetes-facturas/detalle-paquete?packpageId=${packpageId}`)}
       >
-        <Eye className="bi bi-eye" />
+        <i className="bi bi-eye"></i>
       </Button>
       <Button
         variant="light"

@@ -1,4 +1,4 @@
-import { apiCall } from "@/utils/api";
+import { apiCall, ApiResponse } from "@/utils/api";
 
 export interface InvoicesPackage {
     _id: string;
@@ -124,6 +124,7 @@ export interface InvoicesPackageSummaryResponse {
 
 // Servicio para obtener facturas filtradas por proveedor y empresa
 export const getInvoicesByProviderAndCompany = async (params: {
+    providerIds?: string; // IDs de proveedores separados por coma
     rfcProvider?: string;
     rfcCompany?: string;
     page?: number;
@@ -216,9 +217,14 @@ export const getInvoicesPackages = async (params: {
 };
 
 // Servicio para obtener un paquete específico
-export const getInvoicesPackageById = async (id: string): Promise<InvoicesPackageResponse> => {
-    const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${id}`);
-    return response.data;
+export const getInvoicesPackageById = async (id: string): Promise<ApiResponse<InvoicesPackageResponse>> => {
+    const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${id}`, {
+        headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        }
+    });
+    return response;
 };
 
 // Servicio para actualizar un paquete
@@ -303,16 +309,20 @@ export const getInvoicesPackagesByUsuario = async (usuario_id: string): Promise<
 // Interfaz para la respuesta de toggle de factura autorizada
 export interface ToggleFacturaAutorizadaResponse {
     success: boolean;
-    data: { _id: string; autorizada: boolean };
+    data: {
+        _id: string;
+        autorizada: boolean;
+        importePagado: number;
+    };
     message?: string;
 }
 
 // Servicio para cambiar el estado de autorización de una factura
-export const toggleFacturaAutorizada = async (facturaId: string): Promise<ToggleFacturaAutorizadaResponse> => {
+export const toggleFacturaAutorizada = async (facturaId: string): Promise<ApiResponse<ToggleFacturaAutorizadaResponse>> => {
     const response = await apiCall<ToggleFacturaAutorizadaResponse>(`/imported-invoices/${facturaId}/toggle-autorizada`, {
         method: "PATCH",
     });
-    return response.data;
+    return response;
 };
 
 // Servicio para actualizar importe a pagar de una factura
@@ -322,4 +332,10 @@ export async function updateImporteAPagar(invoiceId: string, nuevoImporte: numbe
         body: JSON.stringify({ importeAPagar: nuevoImporte, motivo, porcentaje }),
     });
     return response;
-} 
+}
+
+// Servicio para obtener una factura individual por ID
+export const getInvoiceById = async (id: string): Promise<ApiResponse<ImportedInvoice>> => {
+    const response = await apiCall<ImportedInvoice>(`/imported-invoices/${id}`);
+    return response;
+}; 

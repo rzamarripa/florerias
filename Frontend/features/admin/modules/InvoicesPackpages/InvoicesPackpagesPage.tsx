@@ -22,7 +22,8 @@ import {
     getInvoicesSummaryByProviderAndCompany,
     ImportedInvoice,
     InvoicesSummaryResponse,
-    getInvoicesPackagesByUsuario
+    getInvoicesPackagesByUsuario,
+    toggleFacturaAutorizada
 } from './services';
 import { UserProvider, Company, Brand, Branch } from './types';
 import PagoFacturaModal from './components/PagoFacturaModal';
@@ -31,13 +32,14 @@ import { useUserSessionStore } from '@/stores/userSessionStore';
 import CreatedPackpageModal from './components/CreatedPackpageModal';
 import { useRouter } from 'next/navigation';
 import DescuentoFacturaModal from './components/DescuentoFacturaModal';
+import MultiSelect from '@/components/forms/Multiselect';
 
 const InvoicesPackagePage: React.FC = () => {
     const [selectedMonth, setSelectedMonth] = useState(0);
     const [isNewPackage, setIsNewPackage] = useState(true);
     const [selectedPackageId, setSelectedPackageId] = useState('');
     const [userProviders, setUserProviders] = useState<UserProvider[]>([]);
-    const [selectedProvider, setSelectedProvider] = useState<string>('');
+    const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
 
     // Estados para los selects en cascada
     const [companies, setCompanies] = useState<Company[]>([]);
@@ -201,7 +203,7 @@ const InvoicesPackagePage: React.FC = () => {
         if (!invoice) return;
 
         const originalSaldo = invoice.importeAPagar - invoice.importePagado;
-        
+
         setTempPayments(prev => ({
             ...prev,
             [invoiceId]: {
@@ -234,26 +236,21 @@ const InvoicesPackagePage: React.FC = () => {
     };
 
     const handleSearch = async () => {
-        if (!selectedProvider && !selectedCompany) {
+        if (selectedProviders.length === 0 && !selectedCompany) {
             toast.warn('Selecciona al menos un proveedor o una razón social para buscar');
             return;
         }
-
         try {
             setLoadingInvoices(true);
-
-            // Obtener RFC del proveedor seleccionado
-            const selectedUserProvider = userProviders.find(up => up.providerId._id === selectedProvider);
-            const rfcProvider = selectedUserProvider?.providerId.rfc;
-
+            // Obtener los IDs de los proveedores seleccionados
+            const providerIdsParam = selectedProviders.join(',');
             // Obtener RFC de la empresa seleccionada
             const selectedCompanyData = companies.find(c => c._id === selectedCompany);
             const rfcCompany = selectedCompanyData?.rfc;
-
             // Buscar facturas y paquetes existentes al mismo tiempo
             const [invoicesResponse, summaryResponse, packagesResponse] = await Promise.all([
                 getInvoicesByProviderAndCompany({
-                    rfcProvider,
+                    providerIds: providerIdsParam,
                     rfcCompany,
                     page: currentPage,
                     limit: 15,
@@ -261,7 +258,6 @@ const InvoicesPackagePage: React.FC = () => {
                     order: 'desc'
                 }),
                 getInvoicesSummaryByProviderAndCompany({
-                    rfcProvider,
                     rfcCompany
                 }),
                 user?._id ? getInvoicesPackagesByUsuario(user._id) : Promise.resolve([])
@@ -412,6 +408,10 @@ const InvoicesPackagePage: React.FC = () => {
         }));
     }
 
+    const handleViewInvoiceDetail = (invoiceId: string) => {
+        router.push(`/modulos/paquetes-facturas/detalle-factura?invoiceId=${invoiceId}`);
+    };
+
     return (
         <Container fluid className="mt-4">
             <BudgetSummaryCards summary={invoicesSummary ?? undefined} />
@@ -523,20 +523,16 @@ const InvoicesPackagePage: React.FC = () => {
                         <Col md={8}>
                             <Form.Group>
                                 <Form.Label>Proveedores</Form.Label>
-                                <Form.Select
-                                    value={selectedProvider}
-                                    onChange={handleProviderChange}
-                                >
-                                    <option value="">Selecciona un proveedor...</option>
-                                    {userProviders.map((userProvider) => (
-                                        <option
-                                            key={userProvider.providerId._id}
-                                            value={userProvider.providerId._id}
-                                        >
-                                            {userProvider.providerId.commercialName} - {userProvider.providerId.businessName}
-                                        </option>
-                                    ))}
-                                </Form.Select>
+                                <MultiSelect
+                                    value={selectedProviders}
+                                    options={userProviders.map((userProvider) => ({
+                                        value: userProvider.providerId._id,
+                                        label: `${userProvider.providerId.commercialName} - ${userProvider.providerId.businessName}`,
+                                    }))}
+                                    onChange={setSelectedProviders}
+                                    placeholder="Selecciona uno o más proveedores..."
+                                    isSearchable
+                                />
                             </Form.Group>
                         </Col>
                         <Col md={4}>
@@ -557,129 +553,155 @@ const InvoicesPackagePage: React.FC = () => {
                     <Card.Title className="mb-0 fw-bold">Configuración del Paquete de Facturas</Card.Title>
                 </Card.Header>
                 <Card.Body>
-                    <h6 className="mb-3 fw-bold text-primary">
-                        Selecciona el tipo de operación:
-                    </h6>
+                    {Object.keys(tempPayments).length === 0 ? (
+                        <div className="text-center py-4">
+                            <i className="bi bi-info-circle display-4 text-muted mb-3"></i>
+                            <h6 className="text-muted mb-2">No hay pagos registrados</h6>
+                            <p className="text-muted small mb-0">
+                                Registra al menos un pago de factura para poder crear o actualizar paquetes
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <h6 className="mb-3 fw-bold text-primary">
+                                Selecciona el tipo de operación:
+                            </h6>
 
-                    <Row className="mb-4">
-                        <Col md={3}>
-                            <Card
-                                className={`h-100 ${isNewPackage ? 'border-success bg-light' : 'border-secondary'}`}
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setIsNewPackage(true)}
-                            >
-                                <Card.Body className="text-center py-2">
-                                    <div className="mb-2">
-                                        <i className="bi bi-plus-circle display-6 text-success"></i>
-                                    </div>
-                                    <Card.Title className="h6 text-success">Nuevo Paquete</Card.Title>
-                                    <Card.Text className="text-muted small">
-                                        Crear un paquete desde cero
-                                    </Card.Text>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        <Col md={3}>
-                            <Card
-                                className={`h-100 ${!isNewPackage ? 'border-secondary bg-light' : 'border-light'}`}
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setIsNewPackage(false)}
-                            >
-                                <Card.Body className="text-center py-2">
-                                    <div className="mb-2">
-                                        <i className="bi bi-layers display-6 text-secondary"></i>
-                                    </div>
-                                    <Card.Title className="h6 text-secondary">Paquete Existente</Card.Title>
-                                    <Card.Text className="text-muted small">
-                                        Agregar a un paquete existente en borrador
-                                    </Card.Text>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        {!isNewPackage && (
-                            <Col md={3}>
-                                <Form.Group>
-                                    <Form.Label>Selecciona un paquete:</Form.Label>
-                                    <Form.Select
-                                        value={selectedPackageId}
-                                        onChange={e => setSelectedPackageId(e.target.value)}
+                            <Row className="mb-4">
+                                <Col md={3}>
+                                    <Card
+                                        className={`h-100 ${isNewPackage ? 'border-success bg-light' : 'border-secondary'}`}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => setIsNewPackage(true)}
                                     >
-                                        <option value="">Selecciona un paquete...</option>
-                                        {existingPackages.map(pkg => (
-                                            <option key={pkg._id} value={pkg._id}>
-                                                {pkg.comentario || `Folio ${pkg.folio}`} (Folio: {pkg.folio})
-                                            </option>
-                                        ))}
-                                    </Form.Select>
-                                </Form.Group>
-                            </Col>
-                        )}
-                    </Row>
+                                        <Card.Body className="text-center py-2">
+                                            <div className="mb-2">
+                                                <i className="bi bi-plus-circle display-6 text-success"></i>
+                                            </div>
+                                            <Card.Title className="h6 text-success">Nuevo Paquete</Card.Title>
+                                            <Card.Text className="text-muted small">
+                                                Crear un paquete desde cero
+                                            </Card.Text>
+                                        </Card.Body>
+                                    </Card>
+                                </Col>
+                                <Col md={3}>
+                                    <Card
+                                        className={`h-100 ${!isNewPackage ? 'border-secondary bg-light' : 'border-light'}`}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => setIsNewPackage(false)}
+                                    >
+                                        <Card.Body className="text-center py-2">
+                                            <div className="mb-2">
+                                                <i className="bi bi-layers display-6 text-secondary"></i>
+                                            </div>
+                                            <Card.Title className="h6 text-secondary">Paquete Existente</Card.Title>
+                                            <Card.Text className="text-muted small">
+                                                Agregar a un paquete existente en borrador
+                                            </Card.Text>
+                                        </Card.Body>
+                                    </Card>
+                                </Col>
+                                {!isNewPackage && (
+                                    <Col md={3} className="d-flex align-items-end gap-2">
+                                        <Form.Group className="flex-grow-1">
+                                            <Form.Label>Selecciona un paquete:</Form.Label>
+                                            <Form.Select
+                                                value={selectedPackageId}
+                                                onChange={e => setSelectedPackageId(e.target.value)}
+                                            >
+                                                <option value="">Selecciona un paquete...</option>
+                                                {existingPackages.map(pkg => (
+                                                    <option key={pkg._id} value={pkg._id}>
+                                                        {pkg.comentario || `Folio ${pkg.folio}`} (Folio: {pkg.folio})
+                                                    </option>
+                                                ))}
+                                            </Form.Select>
+                                        </Form.Group>
+                                        {/* Botón para ver detalle del paquete seleccionado */}
+                                        <Button
+                                            variant="outline-primary"
+                                            className="mb-2"
+                                            disabled={!selectedPackageId}
+                                            onClick={() => {
+                                                if (selectedPackageId) {
+                                                    router.push(`/modulos/paquetes-facturas/detalle-paquete?packpageId=${selectedPackageId}`);
+                                                }
+                                            }}
+                                            title="Ver detalle del paquete"
+                                        >
+                                            <i className="bi bi-eye"></i>
+                                        </Button>
+                                    </Col>
+                                )}
+                            </Row>
 
-                    <div className="d-flex justify-content-end gap-2">
-                        <Button variant="outline-secondary" size="sm">
-                            <i className="bi bi-eye me-2"></i>Mostrar UUID
-                        </Button>
-                        {Object.keys(tempPayments).length > 0 && (
-                            <Button variant="warning" size="sm">
-                                <i className="bi bi-clock me-2"></i>
-                                Pagos Temporales: {Object.keys(tempPayments).length}
-                            </Button>
-                        )}
-                        {Object.keys(tempPayments).length > 0 && (
-                            <Button 
-                                variant="outline-danger" 
-                                size="sm"
-                                onClick={() => {
-                                    setTempPayments({});
-                                    toast.info('Pagos temporales eliminados');
-                                }}
-                            >
-                                <i className="bi bi-trash me-2"></i>
-                                Limpiar
-                            </Button>
-                        )}
-                        <Button
-                            variant="primary"
-                            disabled={facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)}
-                            onClick={() => {
-                                if (facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)) {
-                                    toast.warn('No hay facturas con pagos disponibles para guardar en paquete. Todas las facturas con pagos ya están procesadas o no hay facturas con pagos.');
-                                    return;
-                                }
+                            <div className="d-flex justify-content-end gap-2">
+                                <Button variant="outline-secondary" size="sm">
+                                    <i className="bi bi-eye me-2"></i>Mostrar UUID
+                                </Button>
+                                {Object.keys(tempPayments).length > 0 && (
+                                    <Button variant="warning" size="sm">
+                                        <i className="bi bi-clock me-2"></i>
+                                        Pagos Temporales: {Object.keys(tempPayments).length}
+                                    </Button>
+                                )}
+                                {Object.keys(tempPayments).length > 0 && (
+                                    <Button
+                                        variant="outline-danger"
+                                        size="sm"
+                                        onClick={() => {
+                                            setTempPayments({});
+                                            toast.info('Pagos temporales eliminados');
+                                        }}
+                                    >
+                                        <i className="bi bi-trash me-2"></i>
+                                        Limpiar
+                                    </Button>
+                                )}
+                                <Button
+                                    variant="primary"
+                                    disabled={facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)}
+                                    onClick={() => {
+                                        if (facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)) {
+                                            toast.warn('No hay facturas con pagos disponibles para guardar en paquete. Todas las facturas con pagos ya están procesadas o no hay facturas con pagos.');
+                                            return;
+                                        }
 
-                                let paqueteExistenteSeleccionado = null;
-                                let facturasParaEnviar = facturasDisponibles;
+                                        let paqueteExistenteSeleccionado = null;
+                                        let facturasParaEnviar = facturasDisponibles;
 
-                                if (!isNewPackage && selectedPackageId) {
-                                    paqueteExistenteSeleccionado = existingPackages.find(p => p._id === selectedPackageId);
-                                    // Incluir facturas con pagos (completos o parciales)
-                                    const facturasConPagos = facturasDisponibles.filter(f => {
-                                        const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
-                                        return invoiceWithTempPayments.importePagado > 0;
-                                    });
-                                    facturasParaEnviar = marcarFacturasGuardadas(facturasConPagos, paqueteExistenteSeleccionado);
-                                } else {
-                                    // Incluir facturas con pagos (completos o parciales)
-                                    facturasParaEnviar = facturasDisponibles.filter(f => {
-                                        const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
-                                        return invoiceWithTempPayments.importePagado > 0;
-                                    });
-                                }
-                                setFacturasProcesadas(facturasParaEnviar);
-                                setPaqueteExistenteSeleccionado(paqueteExistenteSeleccionado);
-                                setShowEnviarPagoModal(true);
-                            }}
-                        >
-                            <i className="bi bi-send me-2"></i>
-                            {(!isNewPackage && selectedPackageId) ? 'Actualizar Paquete' : 'Enviar a Pago'}
-                            {facturasDisponibles.length > 0 && (
-                                <span className="badge bg-light text-primary ms-2">
-                                    {contadorFacturas}
-                                </span>
-                            )}
-                        </Button>
-                    </div>
+                                        if (!isNewPackage && selectedPackageId) {
+                                            paqueteExistenteSeleccionado = existingPackages.find(p => p._id === selectedPackageId);
+                                            // Incluir facturas con pagos (completos o parciales)
+                                            const facturasConPagos = facturasDisponibles.filter(f => {
+                                                const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
+                                                return invoiceWithTempPayments.importePagado > 0;
+                                            });
+                                            facturasParaEnviar = marcarFacturasGuardadas(facturasConPagos, paqueteExistenteSeleccionado);
+                                        } else {
+                                            // Incluir facturas con pagos (completos o parciales)
+                                            facturasParaEnviar = facturasDisponibles.filter(f => {
+                                                const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
+                                                return invoiceWithTempPayments.importePagado > 0;
+                                            });
+                                        }
+                                        setFacturasProcesadas(facturasParaEnviar);
+                                        setPaqueteExistenteSeleccionado(paqueteExistenteSeleccionado);
+                                        setShowEnviarPagoModal(true);
+                                    }}
+                                >
+                                    <i className="bi bi-send me-2"></i>
+                                    {(!isNewPackage && selectedPackageId) ? 'Actualizar Paquete' : 'Enviar a Pago'}
+                                    {facturasDisponibles.length > 0 && (
+                                        <span className="badge bg-light text-primary ms-2">
+                                            {contadorFacturas}
+                                        </span>
+                                    )}
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </Card.Body>
             </Card>
 
@@ -711,8 +733,8 @@ const InvoicesPackagePage: React.FC = () => {
                             <i className="bi bi-file-earmark-text display-4 text-muted"></i>
                             <p className="mt-2 text-muted">No se encontraron facturas</p>
                             <small className="text-muted">
-                                {!selectedProvider && !selectedCompany
-                                    ? 'Selecciona un proveedor o razón social para buscar facturas'
+                                {!selectedProviders.length && !selectedCompany
+                                    ? 'Selecciona al menos un proveedor o una razón social para buscar facturas'
                                     : 'No hay facturas que coincidan con los filtros seleccionados'
                                 }
                             </small>
@@ -730,8 +752,10 @@ const InvoicesPackagePage: React.FC = () => {
                                     <th>Emisor RFC</th>
                                     <th>Estatus</th>
                                     <th>Fecha Cancelación</th>
+                                    <th>Total a Pagar</th>
                                     <th>Importe Pagado</th>
                                     <th>Saldo</th>
+                                    <th>Detalle</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -741,7 +765,7 @@ const InvoicesPackagePage: React.FC = () => {
                                     const saldo = invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar ? 0 : (invoiceWithTempPayments.importeAPagar - invoiceWithTempPayments.importePagado);
                                     const isGuardada = facturasGuardadas.includes(invoice._id);
                                     const hasTempPayment = tempPayments[invoice._id];
-                                    
+
                                     return (
                                         <tr key={invoice._id}>
                                             <td>{(currentPage - 1) * 15 + index + 1}</td>
@@ -816,6 +840,14 @@ const InvoicesPackagePage: React.FC = () => {
                                             <td>
                                                 {invoice.fechaCancelacion ? formatDate(invoice.fechaCancelacion) : ''}
                                             </td>
+                                            {/* Total a Pagar */}
+                                            <td>
+                                                <div className="d-flex flex-column">
+                                                    <span className={`fw-bold ${invoiceWithTempPayments.importeAPagar > 0 ? 'text-success' : 'text-muted'}`}>
+                                                        {formatCurrency(invoiceWithTempPayments.importeAPagar)}
+                                                    </span>
+                                                </div>
+                                            </td>
                                             {/* Importe Pagado */}
                                             <td>
                                                 <div className="d-flex flex-column">
@@ -840,6 +872,16 @@ const InvoicesPackagePage: React.FC = () => {
                                                 <span className={saldo > 0 ? 'text-warning' : 'text-success'}>
                                                     {formatCurrency(saldo)}
                                                 </span>
+                                            </td>
+                                            {/* Detalle */}
+                                            <td>
+                                                <Button
+                                                    variant="light"
+                                                    size="sm"
+                                                    onClick={() => handleViewInvoiceDetail(invoice._id)}
+                                                >
+                                                    <i className="bi bi-eye"></i>
+                                                </Button>
                                             </td>
                                         </tr>
                                     );

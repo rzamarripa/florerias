@@ -84,6 +84,7 @@ export interface ImportedInvoice {
   tipoComprobante: 'I' | 'E' | 'P';
   estatus: 0 | 1;
   estadoPago: 0 | 1 | 2 | 3;
+  autorizada: boolean;
   createdAt: string;
   updatedAt: string;
 }
