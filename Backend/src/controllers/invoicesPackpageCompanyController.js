@@ -1,21 +1,21 @@
-import { InvoicesPackpageCompany } from "../models/InvoicesPackpageCompany.js";
+import { InvoicesPackageCompany } from "../models/InvoicesPackpageCompany.js";
 import mongoose from "mongoose";
 
 // CREATE - Crear una nueva relación
-export const createInvoicesPackpageCompany = async (req, res) => {
+export const createInvoicesPackageCompany = async (req, res) => {
     try {
-        const { packpageId, companyId, brandId, branchId } = req.body;
+        const { packageId, companyId, brandId, branchId } = req.body;
 
         // Validar datos requeridos
-        if (!packpageId || !companyId) {
+        if (!packageId || !companyId) {
             return res.status(400).json({
                 success: false,
-                message: 'packpageId y companyId son requeridos.'
+                message: 'packageId y companyId son requeridos.'
             });
         }
 
         // Verificar que no exista ya una relación para este paquete
-        const existingRelation = await InvoicesPackpageCompany.findOne({ packpageId });
+        const existingRelation = await InvoicesPackageCompany.findOne({ packageId });
         if (existingRelation) {
             return res.status(400).json({
                 success: false,
@@ -24,25 +24,25 @@ export const createInvoicesPackpageCompany = async (req, res) => {
         }
 
         // Crear la relación
-        const packpageCompanyData = {
-            packpageId: new mongoose.Types.ObjectId(packpageId),
+        const packageCompanyData = {
+            packageId: new mongoose.Types.ObjectId(packageId),
             companyId: new mongoose.Types.ObjectId(companyId)
         };
 
         if (brandId) {
-            packpageCompanyData.brandId = new mongoose.Types.ObjectId(brandId);
+            packageCompanyData.brandId = new mongoose.Types.ObjectId(brandId);
         }
 
         if (branchId) {
-            packpageCompanyData.branchId = new mongoose.Types.ObjectId(branchId);
+            packageCompanyData.branchId = new mongoose.Types.ObjectId(branchId);
         }
 
-        const nuevaRelacion = new InvoicesPackpageCompany(packpageCompanyData);
+        const nuevaRelacion = new InvoicesPackageCompany(packageCompanyData);
         const relacionGuardada = await nuevaRelacion.save();
 
         // Obtener la relación con datos poblados
-        const relacionCompleta = await InvoicesPackpageCompany.findById(relacionGuardada._id)
-            .populate(['packpageId', 'companyId', 'brandId', 'branchId']);
+        const relacionCompleta = await InvoicesPackageCompany.findById(relacionGuardada._id)
+            .populate(['packageId', 'companyId', 'brandId', 'branchId']);
 
         res.status(201).json({
             success: true,
@@ -51,7 +51,7 @@ export const createInvoicesPackpageCompany = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating invoices packpage company relation:', error);
+        console.error('Error creating invoices package company relation:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Error interno del servidor.'
@@ -59,12 +59,12 @@ export const createInvoicesPackpageCompany = async (req, res) => {
     }
 };
 
-// READ - Obtener relación por packpageId
-export const getInvoicesPackpageCompanyByPackpageId = async (req, res) => {
+// READ - Obtener relación por packageId
+export const getInvoicesPackageCompanyByPackageId = async (req, res) => {
     try {
-        const { packpageId } = req.params;
+        const { packageId } = req.params;
 
-        const relacion = await InvoicesPackpageCompany.findByPackpageId(packpageId);
+        const relacion = await InvoicesPackageCompany.findByPackageId(packageId);
 
         if (!relacion) {
             return res.status(404).json({
@@ -80,7 +80,7 @@ export const getInvoicesPackpageCompanyByPackpageId = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error getting invoices packpage company relation:', error);
+        console.error('Error getting invoices package company relation:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Error interno del servidor.'
@@ -89,13 +89,13 @@ export const getInvoicesPackpageCompanyByPackpageId = async (req, res) => {
 };
 
 // UPDATE - Actualizar una relación existente
-export const updateInvoicesPackpageCompany = async (req, res) => {
+export const updateInvoicesPackageCompany = async (req, res) => {
     try {
         const { id } = req.params;
         const { companyId, brandId, branchId } = req.body;
 
         // Buscar la relación existente
-        const relacionExistente = await InvoicesPackpageCompany.findById(id);
+        const relacionExistente = await InvoicesPackageCompany.findById(id);
         if (!relacionExistente) {
             return res.status(404).json({
                 success: false,
@@ -109,11 +109,11 @@ export const updateInvoicesPackpageCompany = async (req, res) => {
         if (brandId !== undefined) datosActualizacion.brandId = brandId ? new mongoose.Types.ObjectId(brandId) : null;
         if (branchId !== undefined) datosActualizacion.branchId = branchId ? new mongoose.Types.ObjectId(branchId) : null;
 
-        const relacionActualizada = await InvoicesPackpageCompany.findByIdAndUpdate(
+        const relacionActualizada = await InvoicesPackageCompany.findByIdAndUpdate(
             id,
             { $set: datosActualizacion },
             { new: true, runValidators: true }
-        ).populate(['packpageId', 'companyId', 'brandId', 'branchId']);
+        ).populate(['packageId', 'companyId', 'brandId', 'branchId']);
 
         res.status(200).json({
             success: true,
@@ -122,7 +122,7 @@ export const updateInvoicesPackpageCompany = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating invoices packpage company relation:', error);
+        console.error('Error updating invoices package company relation:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Error interno del servidor.'
@@ -131,11 +131,11 @@ export const updateInvoicesPackpageCompany = async (req, res) => {
 };
 
 // DELETE - Eliminar una relación
-export const deleteInvoicesPackpageCompany = async (req, res) => {
+export const deleteInvoicesPackageCompany = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const relacion = await InvoicesPackpageCompany.findByIdAndDelete(id);
+        const relacion = await InvoicesPackageCompany.findByIdAndDelete(id);
         if (!relacion) {
             return res.status(404).json({
                 success: false,
@@ -149,7 +149,7 @@ export const deleteInvoicesPackpageCompany = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error deleting invoices packpage company relation:', error);
+        console.error('Error deleting invoices package company relation:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Error interno del servidor.'
@@ -158,11 +158,11 @@ export const deleteInvoicesPackpageCompany = async (req, res) => {
 };
 
 // GET - Obtener relaciones por companyId
-export const getInvoicesPackpageCompanyByCompanyId = async (req, res) => {
+export const getInvoicesPackageCompanyByCompanyId = async (req, res) => {
     try {
         const { companyId } = req.params;
 
-        const relaciones = await InvoicesPackpageCompany.findByCompanyId(companyId);
+        const relaciones = await InvoicesPackageCompany.findByCompanyId(companyId);
 
         res.status(200).json({
             success: true,
@@ -170,7 +170,7 @@ export const getInvoicesPackpageCompanyByCompanyId = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error getting invoices packpage company relations by company:', error);
+        console.error('Error getting invoices package company relations by company:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Error interno del servidor.'
@@ -179,11 +179,11 @@ export const getInvoicesPackpageCompanyByCompanyId = async (req, res) => {
 };
 
 // GET - Obtener relaciones por brandId
-export const getInvoicesPackpageCompanyByBrandId = async (req, res) => {
+export const getInvoicesPackageCompanyByBrandId = async (req, res) => {
     try {
         const { brandId } = req.params;
 
-        const relaciones = await InvoicesPackpageCompany.findByBrandId(brandId);
+        const relaciones = await InvoicesPackageCompany.findByBrandId(brandId);
 
         res.status(200).json({
             success: true,
@@ -191,7 +191,7 @@ export const getInvoicesPackpageCompanyByBrandId = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error getting invoices packpage company relations by brand:', error);
+        console.error('Error getting invoices package company relations by brand:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Error interno del servidor.'
@@ -200,11 +200,11 @@ export const getInvoicesPackpageCompanyByBrandId = async (req, res) => {
 };
 
 // GET - Obtener relaciones por branchId
-export const getInvoicesPackpageCompanyByBranchId = async (req, res) => {
+export const getInvoicesPackageCompanyByBranchId = async (req, res) => {
     try {
         const { branchId } = req.params;
 
-        const relaciones = await InvoicesPackpageCompany.findByBranchId(branchId);
+        const relaciones = await InvoicesPackageCompany.findByBranchId(branchId);
 
         res.status(200).json({
             success: true,
@@ -212,7 +212,7 @@ export const getInvoicesPackpageCompanyByBranchId = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error getting invoices packpage company relations by branch:', error);
+        console.error('Error getting invoices package company relations by branch:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Error interno del servidor.'

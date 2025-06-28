@@ -1,35 +1,35 @@
 import express from 'express';
 import {
-    createInvoicesPackpageCompany,
-    getInvoicesPackpageCompanyByPackpageId,
-    updateInvoicesPackpageCompany,
-    deleteInvoicesPackpageCompany,
-    getInvoicesPackpageCompanyByCompanyId,
-    getInvoicesPackpageCompanyByBrandId,
-    getInvoicesPackpageCompanyByBranchId
+    createInvoicesPackageCompany,
+    getInvoicesPackageCompanyByPackageId,
+    updateInvoicesPackageCompany,
+    deleteInvoicesPackageCompany,
+    getInvoicesPackageCompanyByCompanyId,
+    getInvoicesPackageCompanyByBrandId,
+    getInvoicesPackageCompanyByBranchId
 } from '../controllers/invoicesPackpageCompanyController.js';
 
 const router = express.Router();
 
 // Crear una nueva relación
-router.post('/', createInvoicesPackpageCompany);
+router.post('/', createInvoicesPackageCompany);
 
-// Obtener relación por packpageId
-router.get('/packpage/:packpageId', getInvoicesPackpageCompanyByPackpageId);
+// Obtener relación por packageId
+router.get('/package/:packageId', getInvoicesPackageCompanyByPackageId);
 
 // Obtener relaciones por companyId
-router.get('/company/:companyId', getInvoicesPackpageCompanyByCompanyId);
+router.get('/company/:companyId', getInvoicesPackageCompanyByCompanyId);
 
 // Obtener relaciones por brandId
-router.get('/brand/:brandId', getInvoicesPackpageCompanyByBrandId);
+router.get('/brand/:brandId', getInvoicesPackageCompanyByBrandId);
 
 // Obtener relaciones por branchId
-router.get('/branch/:branchId', getInvoicesPackpageCompanyByBranchId);
+router.get('/branch/:branchId', getInvoicesPackageCompanyByBranchId);
 
 // Actualizar una relación existente
-router.put('/:id', updateInvoicesPackpageCompany);
+router.put('/:id', updateInvoicesPackageCompany);
 
 // Eliminar una relación
-router.delete('/:id', deleteInvoicesPackpageCompany);
+router.delete('/:id', deleteInvoicesPackageCompany);
 
 export default router; 

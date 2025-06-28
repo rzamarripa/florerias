@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { toast } from 'react-toastify';
-import { markInvoiceAsFullyPaid, markInvoiceAsPartiallyPaid } from '../services/invoicesPackpage';
 
 interface PagoFacturaModalProps {
     show: boolean;
@@ -9,7 +8,7 @@ interface PagoFacturaModalProps {
     tipoPago: 'completo' | 'parcial';
     saldo: number;
     invoiceId: string | null;
-    onSuccess: () => void;
+    onSuccess: (invoiceId: string, tipoPago: 'completo' | 'parcial', descripcion: string, monto?: number) => void;
 }
 
 const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({ 
@@ -40,28 +39,25 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
             return;
         }
 
+        if (tipoPago === 'parcial' && Number(monto) > saldo) {
+            toast.error('El monto no puede exceder el saldo disponible');
+            return;
+        }
+
         try {
             setLoading(true);
             
-            if (tipoPago === 'completo') {
-                await markInvoiceAsFullyPaid(invoiceId, descripcion);
-                toast.success('Factura marcada como pagada completamente');
-            } else {
-                await markInvoiceAsPartiallyPaid(invoiceId, descripcion, Number(monto) || 0);
-                toast.success('Pago parcial registrado correctamente');
-            }
+            // Solo guardar en estado local, SIN hacer llamadas al backend
+            onSuccess(invoiceId, tipoPago, descripcion, tipoPago === 'parcial' ? Number(monto) : undefined);
+            
+            toast.success(tipoPago === 'completo' ? 'Pago completo registrado temporalmente' : 'Pago parcial registrado temporalmente');
             
             setDescripcion('');
             setMonto('');
-            onSuccess();
             onClose();
         } catch (error) {
             console.error('Error al procesar el pago:', error);
-            if (tipoPago === 'completo') {
-                toast.error('Error al marcar la factura como pagada completamente');
-            } else {
-                toast.error('Error al registrar el pago parcial');
-            }
+            toast.error('Error al procesar el pago');
         } finally {
             setLoading(false);
         }
@@ -90,6 +86,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
                         <Form.Control
                             type="number"
                             min="1"
+                            max={saldo}
                             value={monto}
                             onChange={e => setMonto(e.target.value)}
                             placeholder="Cantidad"

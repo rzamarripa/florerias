@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Counter } from "./Counter.js";
 import { ImportedInvoices } from './ImportedInvoices.js';
 
-const InvoicesPackpageSchema = new mongoose.Schema({
+const InvoicesPackageSchema = new mongoose.Schema({
     // Arreglo de facturas importadas
     facturas: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -11,9 +11,9 @@ const InvoicesPackpageSchema = new mongoose.Schema({
     }],
 
     // Referencia a la relación con Company, Brand, Branch
-    packpageCompanyId: {
+    packageCompanyId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'rs_invoices_packpages_companies',
+        ref: 'rs_invoices_packages_companies',
         required: false, // Opcional para mantener compatibilidad con registros existentes
         index: true
     },
@@ -115,7 +115,7 @@ const InvoicesPackpageSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true,
-    collection: 'cc_invoices_packpage',
+    collection: 'cc_invoices_package',
 
     toJSON: {
         virtuals: true,
@@ -132,34 +132,34 @@ const InvoicesPackpageSchema = new mongoose.Schema({
 });
 
 // Índices compuestos para optimizar consultas
-InvoicesPackpageSchema.index({ usuario_id: 1, estatus: 1 });
-InvoicesPackpageSchema.index({ departamento_id: 1, estatus: 1 });
-InvoicesPackpageSchema.index({ fechaPago: 1, estatus: 1 });
-InvoicesPackpageSchema.index({ fechaCreacion: -1, estatus: 1 });
+InvoicesPackageSchema.index({ usuario_id: 1, estatus: 1 });
+InvoicesPackageSchema.index({ departamento_id: 1, estatus: 1 });
+InvoicesPackageSchema.index({ fechaPago: 1, estatus: 1 });
+InvoicesPackageSchema.index({ fechaCreacion: -1, estatus: 1 });
 
 // Métodos virtuales actualizados
-InvoicesPackpageSchema.virtual('estaCompleto').get(function () {
+InvoicesPackageSchema.virtual('estaCompleto').get(function () {
     return this.totalPagado >= this.totalImporteAPagar;
 });
 
-InvoicesPackpageSchema.virtual('porcentajePagado').get(function () {
+InvoicesPackageSchema.virtual('porcentajePagado').get(function () {
     if (this.totalImporteAPagar <= 0) return 0;
     return Math.round((this.totalPagado / this.totalImporteAPagar) * 100);
 });
 
-InvoicesPackpageSchema.virtual('tieneSaldoPendiente').get(function () {
+InvoicesPackageSchema.virtual('tieneSaldoPendiente').get(function () {
     return this.totalPagado < this.totalImporteAPagar;
 });
 
-InvoicesPackpageSchema.virtual('saldo').get(function () {
+InvoicesPackageSchema.virtual('saldo').get(function () {
     return this.totalImporteAPagar - this.totalPagado;
 });
 
-InvoicesPackpageSchema.virtual('estaVencido').get(function () {
+InvoicesPackageSchema.virtual('estaVencido').get(function () {
     return new Date() > this.fechaPago;
 });
 
-InvoicesPackpageSchema.virtual('diasParaVencimiento').get(function () {
+InvoicesPackageSchema.virtual('diasParaVencimiento').get(function () {
     const hoy = new Date();
     const vencimiento = new Date(this.fechaPago);
     const diffTime = vencimiento - hoy;
@@ -168,7 +168,7 @@ InvoicesPackpageSchema.virtual('diasParaVencimiento').get(function () {
 });
 
 // Métodos de instancia actualizados
-InvoicesPackpageSchema.methods.actualizarTotales = async function () {
+InvoicesPackageSchema.methods.actualizarTotales = async function () {
     // Obtener las facturas del paquete
     const facturas = await ImportedInvoices.find({
         _id: { $in: this.facturas }
@@ -182,7 +182,7 @@ InvoicesPackpageSchema.methods.actualizarTotales = async function () {
     return this.save();
 };
 
-InvoicesPackpageSchema.methods.agregarFactura = async function (facturaId) {
+InvoicesPackageSchema.methods.agregarFactura = async function (facturaId) {
     if (!this.facturas.includes(facturaId)) {
         this.facturas.push(facturaId);
         await this.actualizarTotales();
@@ -190,43 +190,43 @@ InvoicesPackpageSchema.methods.agregarFactura = async function (facturaId) {
     return this;
 };
 
-InvoicesPackpageSchema.methods.removerFactura = async function (facturaId) {
+InvoicesPackageSchema.methods.removerFactura = async function (facturaId) {
     this.facturas = this.facturas.filter(id => id.toString() !== facturaId.toString());
     await this.actualizarTotales();
     return this;
 };
 
-InvoicesPackpageSchema.methods.cambiarEstatus = function (nuevoEstatus) {
+InvoicesPackageSchema.methods.cambiarEstatus = function (nuevoEstatus) {
     this.estatus = nuevoEstatus;
     return this.save();
 };
 
 // Métodos estáticos
-InvoicesPackpageSchema.statics.obtenerSiguienteFolio = async function () {
+InvoicesPackageSchema.statics.obtenerSiguienteFolio = async function () {
     const result = await Counter.findByIdAndUpdate(
-        { _id: "invoicesPackpageFolio" },
+        { _id: "invoicesPackageFolio" },
         { $inc: { seq: 1 } },
         { new: true, upsert: true }
     );
     return result.seq;
 };
 
-InvoicesPackpageSchema.statics.buscarPorDepartamento = function (departamentoId) {
+InvoicesPackageSchema.statics.buscarPorDepartamento = function (departamentoId) {
     return this.find({ departamento_id: departamentoId }).populate('facturas');
 };
 
-InvoicesPackpageSchema.statics.buscarPorUsuario = function (usuarioId) {
+InvoicesPackageSchema.statics.buscarPorUsuario = function (usuarioId) {
     return this.find({ usuario_id: usuarioId }).populate('facturas');
 };
 
-InvoicesPackpageSchema.statics.buscarVencidos = function () {
+InvoicesPackageSchema.statics.buscarVencidos = function () {
     return this.find({
         fechaPago: { $lt: new Date() },
         estatus: { $in: ['Borrador', 'Enviado', 'Aprobado'] }
     }).populate('facturas');
 };
 
-InvoicesPackpageSchema.statics.obtenerResumen = async function (usuarioId = null) {
+InvoicesPackageSchema.statics.obtenerResumen = async function (usuarioId = null) {
     const filtro = usuarioId ? { usuario_id: usuarioId } : {};
 
     const promesaTotal = this.countDocuments(filtro);
@@ -260,7 +260,7 @@ InvoicesPackpageSchema.statics.obtenerResumen = async function (usuarioId = null
 };
 
 // Middleware pre-save para validaciones actualizado
-InvoicesPackpageSchema.pre('save', function (next) {
+InvoicesPackageSchema.pre('save', function (next) {
     // Validar que totalPagado no exceda totalImporteAPagar
     if (this.totalPagado > this.totalImporteAPagar) {
         this.totalPagado = this.totalImporteAPagar;
@@ -274,6 +274,6 @@ InvoicesPackpageSchema.pre('save', function (next) {
     next();
 });
 
-const InvoicesPackpage = mongoose.model('cc_invoices_packpage', InvoicesPackpageSchema);
+const InvoicesPackage = mongoose.model('cc_invoices_package', InvoicesPackageSchema);
 
-export { InvoicesPackpage }; 
+export { InvoicesPackage }; 

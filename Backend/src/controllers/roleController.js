@@ -30,7 +30,7 @@ const createRole = async (req, res) => {
 const getAllRoles = async (req, res) => {
   try {
     const roles = await roleService.getAllRoles();
-
+    console.log(roles);
     res.status(200).json({
       success: true,
       count: roles.length,
@@ -99,7 +99,6 @@ const getRoleModules = async (req, res) => {
       });
       modulesByPage = Object.values(grouped);
     }
-
     res.status(200).json({
       success: true,
       data: {

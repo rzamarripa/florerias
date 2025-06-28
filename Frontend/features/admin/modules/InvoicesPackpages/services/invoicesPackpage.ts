@@ -1,9 +1,9 @@
 import { apiCall } from "@/utils/api";
 
-export interface InvoicesPackpage {
+export interface InvoicesPackage {
     _id: string;
     facturas: ImportedInvoice[];
-    packpageCompanyId?: string;
+    packageCompanyId?: string;
     estatus: string;
     usuario_id: string;
     fechaCreacion: string;
@@ -30,7 +30,7 @@ export interface InvoicesPackpage {
 
 export interface ImportedInvoice {
     _id: string;
-    folioFiscalId: string;
+    uuid: string;
     rfcEmisor: string;
     nombreEmisor: string;
     rfcReceptor: string;
@@ -98,19 +98,19 @@ export interface InvoicesSummaryResponse {
     };
 }
 
-export interface InvoicesPackpageResponse {
+export interface InvoicesPackageResponse {
     success: boolean;
-    data: InvoicesPackpage;
+    data: InvoicesPackage;
     message?: string;
 }
 
-export interface InvoicesPackpagesResponse {
+export interface InvoicesPackagesResponse {
     success: boolean;
-    data: InvoicesPackpage[];
+    data: InvoicesPackage[];
     pagination: Pagination;
 }
 
-export interface InvoicesPackpageSummaryResponse {
+export interface InvoicesPackageSummaryResponse {
     success: boolean;
     data: {
         total: number;
@@ -173,7 +173,7 @@ export const getInvoicesSummaryByProviderAndCompany = async (params: {
 };
 
 // Servicio para crear un paquete de facturas
-export const createInvoicesPackpage = async (data: {
+export const createInvoicesPackage = async (data: {
     facturas: string[];
     usuario_id: string;
     departamento_id: string;
@@ -185,8 +185,8 @@ export const createInvoicesPackpage = async (data: {
     companyId?: string;
     brandId?: string;
     branchId?: string;
-}): Promise<InvoicesPackpageResponse> => {
-    const response = await apiCall<InvoicesPackpageResponse>("/invoices-packpage", {
+}): Promise<InvoicesPackageResponse> => {
+    const response = await apiCall<InvoicesPackageResponse>("/invoices-package", {
         method: "POST",
         body: JSON.stringify(data),
     });
@@ -194,7 +194,7 @@ export const createInvoicesPackpage = async (data: {
 };
 
 // Servicio para obtener todos los paquetes
-export const getInvoicesPackpages = async (params: {
+export const getInvoicesPackages = async (params: {
     page?: number;
     limit?: number;
     estatus?: string;
@@ -202,7 +202,7 @@ export const getInvoicesPackpages = async (params: {
     departamento_id?: string;
     sortBy?: string;
     order?: string;
-}): Promise<InvoicesPackpagesResponse> => {
+}): Promise<InvoicesPackagesResponse> => {
     const queryParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
@@ -211,18 +211,18 @@ export const getInvoicesPackpages = async (params: {
         }
     });
 
-    const response = await apiCall<InvoicesPackpagesResponse>(`/invoices-packpage?${queryParams}`);
+    const response = await apiCall<InvoicesPackagesResponse>(`/invoices-package?${queryParams}`);
     return response.data;
 };
 
 // Servicio para obtener un paquete específico
-export const getInvoicesPackpageById = async (id: string): Promise<InvoicesPackpageResponse> => {
-    const response = await apiCall<InvoicesPackpageResponse>(`/invoices-packpage/${id}`);
-    return response;
+export const getInvoicesPackageById = async (id: string): Promise<InvoicesPackageResponse> => {
+    const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${id}`);
+    return response.data;
 };
 
 // Servicio para actualizar un paquete
-export const updateInvoicesPackpage = async (id: string, data: {
+export const updateInvoicesPackage = async (id: string, data: {
     facturas?: string[];
     estatus?: string;
     departamento_id?: string;
@@ -234,8 +234,8 @@ export const updateInvoicesPackpage = async (id: string, data: {
     companyId?: string;
     brandId?: string;
     branchId?: string;
-}): Promise<InvoicesPackpageResponse> => {
-    const response = await apiCall<InvoicesPackpageResponse>(`/invoices-packpage/${id}`, {
+}): Promise<InvoicesPackageResponse> => {
+    const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
     });
@@ -243,81 +243,83 @@ export const updateInvoicesPackpage = async (id: string, data: {
 };
 
 // Servicio para eliminar un paquete
-export const deleteInvoicesPackpage = async (id: string): Promise<{ success: boolean; message: string }> => {
-    const response = await apiCall<{ success: boolean; message: string }>(`/invoices-packpage/${id}`, {
+export const deleteInvoicesPackage = async (id: string): Promise<{ success: boolean; message: string }> => {
+    const response = await apiCall<{ success: boolean; message: string }>(`/invoices-package/${id}`, {
         method: "DELETE",
     });
-    return response.data;
+    return response;
 };
 
 // Servicio para obtener resumen de paquetes
-export const getInvoicesPackpagesSummary = async (usuario_id?: string): Promise<InvoicesPackpageSummaryResponse> => {
-    const queryParams = usuario_id ? `?usuario_id=${usuario_id}` : '';
-    const response = await apiCall<InvoicesPackpageSummaryResponse>(`/invoices-packpage/summary${queryParams}`);
+export const getInvoicesPackagesSummary = async (usuario_id?: string): Promise<InvoicesPackageSummaryResponse> => {
+    const queryParams = new URLSearchParams();
+    if (usuario_id) {
+        queryParams.append('usuario_id', usuario_id);
+    }
+
+    const response = await apiCall<InvoicesPackageSummaryResponse>(`/invoices-package/summary?${queryParams}`);
     return response.data;
 };
 
 // Servicio para cambiar estatus de un paquete
-export const changeInvoicesPackpageStatus = async (id: string, estatus: string): Promise<InvoicesPackpageResponse> => {
-    const response = await apiCall<InvoicesPackpageResponse>(`/invoices-packpage/${id}/status`, {
-        method: "PUT",
+export const changeInvoicesPackageStatus = async (id: string, estatus: string): Promise<InvoicesPackageResponse> => {
+    const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${id}/status`, {
+        method: "PATCH",
         body: JSON.stringify({ estatus }),
     });
     return response.data;
 };
 
 // Servicio para obtener paquetes vencidos
-export const getVencidosInvoicesPackpages = async (): Promise<InvoicesPackpagesResponse> => {
-    const response = await apiCall<InvoicesPackpagesResponse>("/invoices-packpage/vencidos");
+export const getVencidosInvoicesPackages = async (): Promise<InvoicesPackagesResponse> => {
+    const response = await apiCall<InvoicesPackagesResponse>("/invoices-package/vencidos");
     return response.data;
 };
 
 // Servicio para marcar factura como pagada completamente
 export async function markInvoiceAsFullyPaid(invoiceId: string, descripcion: string) {
-    const response = await apiCall<any>(`/imported-invoices/${invoiceId}/mark-as-paid`, {
+    const response = await apiCall(`/imported-invoices/${invoiceId}/mark-as-paid`, {
         method: "PUT",
         body: JSON.stringify({ descripcion }),
     });
-    return response.data;
+    return response;
 }
 
 // Servicio para marcar factura como pagada parcialmente
 export async function markInvoiceAsPartiallyPaid(invoiceId: string, descripcion: string, monto: number) {
-    const response = await apiCall<any>(`/imported-invoices/${invoiceId}/partial-payment`, {
+    const response = await apiCall(`/imported-invoices/${invoiceId}/partial-payment`, {
         method: "PUT",
         body: JSON.stringify({ descripcion, monto }),
     });
-    return response.data;
+    return response;
 }
 
 // Servicio para obtener paquetes por usuario
-export const getInvoicesPackpagesByUsuario = async (usuario_id: string): Promise<InvoicesPackpage[]> => {
-    const timestamp = new Date().getTime();
-    const response = await apiCall<{ success: boolean; data: InvoicesPackpage[] }>(
-        `/invoices-packpage/by-usuario?usuario_id=${usuario_id}&_t=${timestamp}`
-    );
+export const getInvoicesPackagesByUsuario = async (usuario_id: string): Promise<InvoicesPackage[]> => {
+    const response = await apiCall<InvoicesPackage[]>(`/invoices-package/by-usuario?usuario_id=${usuario_id}`);
     return response.data;
 };
 
-// Servicio para activar/desactivar autorización de una factura
+// Interfaz para la respuesta de toggle de factura autorizada
 export interface ToggleFacturaAutorizadaResponse {
     success: boolean;
     data: { _id: string; autorizada: boolean };
     message?: string;
 }
 
+// Servicio para cambiar el estado de autorización de una factura
 export const toggleFacturaAutorizada = async (facturaId: string): Promise<ToggleFacturaAutorizadaResponse> => {
     const response = await apiCall<ToggleFacturaAutorizadaResponse>(`/imported-invoices/${facturaId}/toggle-autorizada`, {
-        method: 'PATCH',
-    });
-    return response;
-};
-
-// Servicio para actualizar el importeAPagar de una factura
-export async function updateImporteAPagar(invoiceId: string, nuevoImporte: number, motivo: string, porcentaje: number) {
-    const response = await apiCall<any>(`/imported-invoices/${invoiceId}/update-importe-apagar`, {
-        method: 'PUT',
-        body: JSON.stringify({ importeAPagar: nuevoImporte, motivo, porcentaje }),
+        method: "PATCH",
     });
     return response.data;
+};
+
+// Servicio para actualizar importe a pagar de una factura
+export async function updateImporteAPagar(invoiceId: string, nuevoImporte: number, motivo: string, porcentaje: number) {
+    const response = await apiCall(`/imported-invoices/${invoiceId}/update-importe-apagar`, {
+        method: "PUT",
+        body: JSON.stringify({ importeAPagar: nuevoImporte, motivo, porcentaje }),
+    });
+    return response;
 } 

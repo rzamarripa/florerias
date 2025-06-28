@@ -22,7 +22,7 @@ import {
     getInvoicesSummaryByProviderAndCompany,
     ImportedInvoice,
     InvoicesSummaryResponse,
-    getInvoicesPackpagesByUsuario
+    getInvoicesPackagesByUsuario
 } from './services';
 import { UserProvider, Company, Brand, Branch } from './types';
 import PagoFacturaModal from './components/PagoFacturaModal';
@@ -32,7 +32,7 @@ import CreatedPackpageModal from './components/CreatedPackpageModal';
 import { useRouter } from 'next/navigation';
 import DescuentoFacturaModal from './components/DescuentoFacturaModal';
 
-const InvoicesPackpagePage: React.FC = () => {
+const InvoicesPackagePage: React.FC = () => {
     const [selectedMonth, setSelectedMonth] = useState(0);
     const [isNewPackage, setIsNewPackage] = useState(true);
     const [selectedPackageId, setSelectedPackageId] = useState('');
@@ -78,8 +78,18 @@ const InvoicesPackpagePage: React.FC = () => {
     // Estado para el modal de descuento
     const [showDescuentoModal, setShowDescuentoModal] = useState(false);
     const [descuentoSaldo, setDescuentoSaldo] = useState(0);
-    const [descuentoImporteAPagar, setDescuentoImporteAPagar] = useState(0);
     const [descuentoInvoiceId, setDescuentoInvoiceId] = useState<string | null>(null);
+
+    // Estado local para pagos temporales
+    const [tempPayments, setTempPayments] = useState<{
+        [invoiceId: string]: {
+            tipoPago: 'completo' | 'parcial';
+            descripcion: string;
+            monto?: number;
+            originalImportePagado: number;
+            originalSaldo: number;
+        }
+    }>({});
 
     const { user } = useUserSessionStore();
     const router = useRouter();
@@ -185,6 +195,44 @@ const InvoicesPackpagePage: React.FC = () => {
         setSelectedBranch(event.target.value);
     };
 
+    // Funciones para manejar pagos temporales
+    const handleTempPayment = (invoiceId: string, tipoPago: 'completo' | 'parcial', descripcion: string, monto?: number) => {
+        const invoice = invoices.find(inv => inv._id === invoiceId);
+        if (!invoice) return;
+
+        const originalSaldo = invoice.importeAPagar - invoice.importePagado;
+        
+        setTempPayments(prev => ({
+            ...prev,
+            [invoiceId]: {
+                tipoPago,
+                descripcion,
+                monto,
+                originalImportePagado: invoice.importePagado,
+                originalSaldo
+            }
+        }));
+
+        toast.success(tipoPago === 'completo' ? 'Pago completo registrado temporalmente' : 'Pago parcial registrado temporalmente');
+    };
+
+    const getInvoiceWithTempPayments = (invoice: ImportedInvoice) => {
+        const tempPayment = tempPayments[invoice._id];
+        if (!tempPayment) return invoice;
+
+        let newImportePagado = invoice.importePagado;
+        if (tempPayment.tipoPago === 'completo') {
+            newImportePagado = invoice.importeAPagar;
+        } else if (tempPayment.tipoPago === 'parcial' && tempPayment.monto) {
+            newImportePagado = invoice.importePagado + tempPayment.monto;
+        }
+
+        return {
+            ...invoice,
+            importePagado: newImportePagado
+        };
+    };
+
     const handleSearch = async () => {
         if (!selectedProvider && !selectedCompany) {
             toast.warn('Selecciona al menos un proveedor o una razón social para buscar');
@@ -216,7 +264,7 @@ const InvoicesPackpagePage: React.FC = () => {
                     rfcProvider,
                     rfcCompany
                 }),
-                user?._id ? getInvoicesPackpagesByUsuario(user._id) : Promise.resolve([])
+                user?._id ? getInvoicesPackagesByUsuario(user._id) : Promise.resolve([])
             ]);
 
             console.log('invoicesResponse:', invoicesResponse);
@@ -307,7 +355,7 @@ const InvoicesPackpagePage: React.FC = () => {
     const loadExistingPackages = async () => {
         if (!user?._id) return [];
         try {
-            const paquetes = await getInvoicesPackpagesByUsuario(user._id);
+            const paquetes = await getInvoicesPackagesByUsuario(user._id);
             setExistingPackages(paquetes || []);
             return paquetes || [];
         } catch {
@@ -323,15 +371,19 @@ const InvoicesPackpagePage: React.FC = () => {
 
     // Facturas pagadas disponibles para guardar en paquetes
     const facturasDisponibles = React.useMemo(() => {
-        return invoices.filter(f =>
-            f.importePagado > 0 && !facturasGuardadas.includes(f._id)
-        );
-    }, [invoices, facturasGuardadas]);
+        return invoices.filter(f => {
+            const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
+            return invoiceWithTempPayments.importePagado > 0 && !facturasGuardadas.includes(f._id);
+        });
+    }, [invoices, facturasGuardadas, tempPayments]);
 
-    // Facturas pagadas completamente y no guardadas
-    const facturasPagadasNoGuardadas = invoices.filter(
-        f => f.importePagado >= f.importeAPagar && !facturasGuardadas.includes(f._id)
-    );
+    // Facturas con pagos (completos o parciales) y no guardadas
+    const facturasConPagosNoGuardadas = React.useMemo(() => {
+        return invoices.filter(f => {
+            const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
+            return invoiceWithTempPayments.importePagado > 0 && !facturasGuardadas.includes(f._id);
+        });
+    }, [invoices, facturasGuardadas, tempPayments]);
 
     // Facturas guardadas en el paquete seleccionado (solo si hay paquete existente)
     let facturasGuardadasEnPaquete: any[] = [];
@@ -339,14 +391,14 @@ const InvoicesPackpagePage: React.FC = () => {
         const paquete = existingPackages.find(p => p._id === selectedPackageId);
         if (paquete) {
             facturasGuardadasEnPaquete = paquete.facturas.filter(
-                (f: any) => f.importePagado >= f.importeAPagar
+                (f: any) => f.importePagado > 0
             );
         }
     }
 
     const contadorFacturas = isNewPackage
-        ? facturasPagadasNoGuardadas.length
-        : facturasPagadasNoGuardadas.length + facturasGuardadasEnPaquete.length;
+        ? facturasConPagosNoGuardadas.length
+        : facturasConPagosNoGuardadas.length + facturasGuardadasEnPaquete.length;
 
     function marcarFacturasGuardadas(facturasDisponibles: any[], paqueteExistente: any) {
         const idsGuardadas = paqueteExistente
@@ -568,12 +620,31 @@ const InvoicesPackpagePage: React.FC = () => {
                         <Button variant="outline-secondary" size="sm">
                             <i className="bi bi-eye me-2"></i>Mostrar UUID
                         </Button>
+                        {Object.keys(tempPayments).length > 0 && (
+                            <Button variant="warning" size="sm">
+                                <i className="bi bi-clock me-2"></i>
+                                Pagos Temporales: {Object.keys(tempPayments).length}
+                            </Button>
+                        )}
+                        {Object.keys(tempPayments).length > 0 && (
+                            <Button 
+                                variant="outline-danger" 
+                                size="sm"
+                                onClick={() => {
+                                    setTempPayments({});
+                                    toast.info('Pagos temporales eliminados');
+                                }}
+                            >
+                                <i className="bi bi-trash me-2"></i>
+                                Limpiar
+                            </Button>
+                        )}
                         <Button
                             variant="primary"
                             disabled={facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)}
                             onClick={() => {
                                 if (facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)) {
-                                    toast.warn('No hay facturas pagadas disponibles para guardar en paquete. Todas las facturas pagadas ya están guardadas o no hay facturas con pagos.');
+                                    toast.warn('No hay facturas con pagos disponibles para guardar en paquete. Todas las facturas con pagos ya están procesadas o no hay facturas con pagos.');
                                     return;
                                 }
 
@@ -582,12 +653,18 @@ const InvoicesPackpagePage: React.FC = () => {
 
                                 if (!isNewPackage && selectedPackageId) {
                                     paqueteExistenteSeleccionado = existingPackages.find(p => p._id === selectedPackageId);
-                                    // Solo incluir facturas pagadas completamente
-                                    const facturasPagadas = facturasDisponibles.filter(f => f.importePagado >= f.importeAPagar);
-                                    facturasParaEnviar = marcarFacturasGuardadas(facturasPagadas, paqueteExistenteSeleccionado);
+                                    // Incluir facturas con pagos (completos o parciales)
+                                    const facturasConPagos = facturasDisponibles.filter(f => {
+                                        const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
+                                        return invoiceWithTempPayments.importePagado > 0;
+                                    });
+                                    facturasParaEnviar = marcarFacturasGuardadas(facturasConPagos, paqueteExistenteSeleccionado);
                                 } else {
-                                    // Solo incluir facturas pagadas completamente
-                                    facturasParaEnviar = facturasDisponibles.filter(f => f.importePagado >= f.importeAPagar);
+                                    // Incluir facturas con pagos (completos o parciales)
+                                    facturasParaEnviar = facturasDisponibles.filter(f => {
+                                        const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
+                                        return invoiceWithTempPayments.importePagado > 0;
+                                    });
                                 }
                                 setFacturasProcesadas(facturasParaEnviar);
                                 setPaqueteExistenteSeleccionado(paqueteExistenteSeleccionado);
@@ -646,8 +723,8 @@ const InvoicesPackpagePage: React.FC = () => {
                                 <tr>
                                     <th>#</th>
                                     <th>Seleccionar para pago</th>
+                                    <th>UUID</th>
                                     <th>Proveedor</th>
-                                    <th>Folio</th>
                                     <th>F. Emisión</th>
                                     <th>Info</th>
                                     <th>Emisor RFC</th>
@@ -659,19 +736,19 @@ const InvoicesPackpagePage: React.FC = () => {
                             </thead>
                             <tbody>
                                 {invoices.map((invoice, index) => {
+                                    const invoiceWithTempPayments = getInvoiceWithTempPayments(invoice);
                                     const estatus = getEstatusText(invoice.estatus);
-                                    const saldo = invoice.importePagado >= invoice.importeAPagar ? 0 : (invoice.importeAPagar - invoice.importePagado);
-                                    const isPagada = invoice.importePagado >= invoice.importeAPagar;
+                                    const saldo = invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar ? 0 : (invoiceWithTempPayments.importeAPagar - invoiceWithTempPayments.importePagado);
                                     const isGuardada = facturasGuardadas.includes(invoice._id);
+                                    const hasTempPayment = tempPayments[invoice._id];
+                                    
                                     return (
                                         <tr key={invoice._id}>
                                             <td>{(currentPage - 1) * 15 + index + 1}</td>
                                             {/* Seleccionar para pago */}
                                             <td className="text-center">
                                                 {isGuardada ? (
-                                                    <span className="badge bg-success bg-opacity-10 text-success fw-bold py-2 px-3">Registrada</span>
-                                                ) : isPagada ? (
-                                                    <span className="badge bg-primary bg-opacity-10 text-primary fw-bold py-2 px-3">Pagada</span>
+                                                    <span className="badge bg-primary bg-opacity-10 text-primary fw-bold py-2 px-3">Procesada</span>
                                                 ) : (
                                                     <div className="d-flex flex-column gap-1 w-100">
                                                         <div className="d-flex gap-1 w-100">
@@ -697,7 +774,6 @@ const InvoicesPackpagePage: React.FC = () => {
                                                             className="d-flex align-items-center justify-content-center w-100 py-1 border-2 border-info text-info"
                                                             onClick={() => {
                                                                 setDescuentoSaldo(saldo);
-                                                                setDescuentoImporteAPagar(invoice.importeAPagar);
                                                                 setDescuentoInvoiceId(invoice._id);
                                                                 setShowDescuentoModal(true);
                                                             }}
@@ -708,6 +784,12 @@ const InvoicesPackpagePage: React.FC = () => {
                                                     </div>
                                                 )}
                                             </td>
+                                            {/* UUID */}
+                                            <td>
+                                                <small className="font-monospace">
+                                                    {invoice.uuid}
+                                                </small>
+                                            </td>
                                             {/* Proveedor */}
                                             <td>
                                                 <div>
@@ -717,12 +799,6 @@ const InvoicesPackpagePage: React.FC = () => {
                                                         {invoice.rfcEmisor}
                                                     </small>
                                                 </div>
-                                            </td>
-                                            {/* Folio */}
-                                            <td>
-                                                <small className="font-monospace">
-                                                    {invoice.folioFiscalId}
-                                                </small>
                                             </td>
                                             {/* Fecha Emisión */}
                                             <td>{formatDate(invoice.fechaEmision)}</td>
@@ -743,12 +819,18 @@ const InvoicesPackpagePage: React.FC = () => {
                                             {/* Importe Pagado */}
                                             <td>
                                                 <div className="d-flex flex-column">
-                                                    <span className={`fw-bold ${invoice.importePagado > 0 ? 'text-success' : 'text-muted'}`}>
-                                                        {formatCurrency(invoice.importePagado)}
+                                                    <span className={`fw-bold ${invoiceWithTempPayments.importePagado > 0 ? 'text-success' : 'text-muted'}`}>
+                                                        {formatCurrency(invoiceWithTempPayments.importePagado)}
                                                     </span>
-                                                    {invoice.importePagado > 0 && (
+                                                    {invoiceWithTempPayments.importePagado > 0 && (
                                                         <small className="text-muted">
-                                                            {Math.round((invoice.importePagado / invoice.importeAPagar) * 100)}% pagado
+                                                            {Math.round((invoiceWithTempPayments.importePagado / invoiceWithTempPayments.importeAPagar) * 100)}% pagado
+                                                        </small>
+                                                    )}
+                                                    {hasTempPayment && (
+                                                        <small className="text-warning">
+                                                            <i className="bi bi-clock me-1"></i>
+                                                            Temporal
                                                         </small>
                                                     )}
                                                 </div>
@@ -818,10 +900,7 @@ const InvoicesPackpagePage: React.FC = () => {
                 tipoPago={tipoPagoModal}
                 saldo={saldoModal}
                 invoiceId={selectedInvoiceId}
-                onSuccess={() => {
-                    setSelectedInvoiceId(null);
-                    handleSearch();
-                }}
+                onSuccess={handleTempPayment}
             />
 
             <EnviarPagoModal
@@ -830,7 +909,7 @@ const InvoicesPackpagePage: React.FC = () => {
                 facturas={facturasProcesadas.map(f => ({
                     _id: f._id,
                     nombreEmisor: f.nombreEmisor,
-                    folioFiscalId: f.folioFiscalId,
+                    uuid: f.uuid,
                     fechaEmision: f.fechaEmision,
                     tipoComprobante: f.tipoComprobante,
                     rfcEmisor: f.rfcEmisor,
@@ -847,8 +926,11 @@ const InvoicesPackpagePage: React.FC = () => {
                 selectedCompanyId={selectedCompany}
                 selectedBrandId={selectedBrand}
                 selectedBranchId={selectedBranch}
+                tempPayments={tempPayments}
                 onSuccess={async () => {
                     setShowEnviarPagoModal(false);
+                    // Limpiar pagos temporales después del envío exitoso
+                    setTempPayments({});
                     const paquetes = await loadExistingPackages();
                     if (paquetes && paquetes.length > 0) {
                         // Ordena por fecha de creación descendente
@@ -864,7 +946,6 @@ const InvoicesPackpagePage: React.FC = () => {
                 show={showDescuentoModal}
                 onClose={() => setShowDescuentoModal(false)}
                 saldo={descuentoSaldo}
-                importeAPagar={descuentoImporteAPagar}
                 invoiceId={descuentoInvoiceId}
                 onSuccess={() => {
                     setShowDescuentoModal(false);
@@ -890,4 +971,4 @@ const InvoicesPackpagePage: React.FC = () => {
     );
 };
 
-export default InvoicesPackpagePage;
+export default InvoicesPackagePage;

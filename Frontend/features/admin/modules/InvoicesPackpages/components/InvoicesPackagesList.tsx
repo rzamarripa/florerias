@@ -11,14 +11,14 @@ import {
     Badge,
     Form,
     InputGroup,
-    Modal
+    Modal,
 } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
 import {
-    getInvoicesPackpagesByUsuario,
-    InvoicesPackpage,
-    deleteInvoicesPackpage
+    getInvoicesPackagesByUsuario,
+    InvoicesPackage,
+    deleteInvoicesPackage
 } from '../services/invoicesPackpage';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import PackpageActions from './PackpageActions';
@@ -29,14 +29,14 @@ interface InvoicesPackagesListProps {
 }
 
 const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true }) => {
-    const [packages, setPackages] = useState<InvoicesPackpage[]>([]);
+    const [packages, setPackages] = useState<InvoicesPackage[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedPackpageId, setSelectedPackpageId] = useState<string | null>(null);
     const [showEnviarPagoModal, setShowEnviarPagoModal] = useState(false);
-    const [paqueteExistenteSeleccionado, setPaqueteExistenteSeleccionado] = useState<InvoicesPackpage | null>(null);
+    const [paqueteExistenteSeleccionado, setPaqueteExistenteSeleccionado] = useState<InvoicesPackage | null>(null);
     const [facturasProcesadas, setFacturasProcesadas] = useState<any[]>([]);
     const { user } = useUserSessionStore();
     const router = useRouter();
@@ -44,7 +44,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
     const loadPackages = () => {
         if (show && user?._id) {
             setLoading(true);
-            getInvoicesPackpagesByUsuario(user._id)
+            getInvoicesPackagesByUsuario(user._id)
                 .then(paquetes => setPackages(paquetes || []))
                 .catch((error) => {
                     toast.error('Error al cargar los paquetes de facturas');
@@ -62,7 +62,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
         if (!selectedPackpageId) return;
         setDeletingId(selectedPackpageId);
         try {
-            await deleteInvoicesPackpage(selectedPackpageId);
+            await deleteInvoicesPackage(selectedPackpageId);
             toast.success('Paquete eliminado correctamente');
             setShowDeleteModal(false);
             setSelectedPackpageId(null);
@@ -74,7 +74,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
         }
     };
 
-    const handleEdit = (packpage: InvoicesPackpage) => {
+    const handleEdit = (packpage: InvoicesPackage) => {
         setPaqueteExistenteSeleccionado(packpage);
         // Solo incluir facturas pagadas completamente
         const facturasPagadas = (packpage.facturas || []).filter((f: any) => f.importePagado >= f.importeAPagar);
@@ -340,7 +340,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                 facturas={facturasProcesadas.map(f => ({
                     _id: f._id,
                     nombreEmisor: f.nombreEmisor,
-                    folioFiscalId: f.folioFiscalId,
+                    uuid: f.uuid,
                     fechaEmision: f.fechaEmision,
                     tipoComprobante: f.tipoComprobante,
                     rfcEmisor: f.rfcEmisor,

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Table, Alert, Row, Col } from 'react-bootstrap';
 import { FiTrash2 } from 'react-icons/fi';
 import { useUserSessionStore } from '@/stores/userSessionStore';
-import { createInvoicesPackpage, updateInvoicesPackpage } from '../services/invoicesPackpage';
+import { createInvoicesPackage, updateInvoicesPackage, markInvoiceAsFullyPaid, markInvoiceAsPartiallyPaid } from '../services/invoicesPackpage';
 import { toast } from 'react-toastify';
 
 interface FacturaProcesada {
     _id: string;
     nombreEmisor: string;
-    folioFiscalId: string;
+    uuid: string;
     fechaEmision: string;
     tipoComprobante: string;
     rfcEmisor: string;
@@ -33,9 +33,18 @@ interface EnviarPagoModalProps {
     selectedCompanyId?: string;
     selectedBrandId?: string;
     selectedBranchId?: string;
+    tempPayments?: {
+        [invoiceId: string]: {
+            tipoPago: 'completo' | 'parcial';
+            descripcion: string;
+            monto?: number;
+            originalImportePagado: number;
+            originalSaldo: number;
+        }
+    };
 }
 
-const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, facturas, paqueteExistente, razonSocialName, isNewPackage = true, onSuccess, selectedCompanyId, selectedBrandId, selectedBranchId }) => {
+const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, facturas, paqueteExistente, razonSocialName, isNewPackage = true, onSuccess, selectedCompanyId, selectedBrandId, selectedBranchId, tempPayments }) => {
     const [fechaPago, setFechaPago] = useState<string>(paqueteExistente?.fechaPago || '');
     const [comentario, setComentario] = useState<string>(paqueteExistente?.comentario || '');
     const [facturasLocal, setFacturasLocal] = useState<FacturaProcesada[]>([]);
@@ -80,6 +89,27 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 toast.error('La fecha de pago es obligatoria.');
                 return;
             }
+
+            // PASO 1: Procesar pagos temporales (PUT actualizar facturas)
+            if (tempPayments && Object.keys(tempPayments).length > 0) {
+                const paymentsToProcess = Object.entries(tempPayments).map(([invoiceId, payment]) => ({
+                    invoiceId,
+                    ...payment
+                }));
+                
+                // Procesar cada pago temporal
+                for (const payment of paymentsToProcess) {
+                    if (payment.tipoPago === 'completo') {
+                        await markInvoiceAsFullyPaid(payment.invoiceId, payment.descripcion);
+                    } else if (payment.tipoPago === 'parcial' && payment.monto) {
+                        await markInvoiceAsPartiallyPaid(payment.invoiceId, payment.descripcion, payment.monto);
+                    }
+                }
+                
+                toast.success('Pagos temporales procesados correctamente');
+            }
+
+            // PASO 2: Crear o actualizar paquete de facturas (POST)
             const dataToSend = {
                 facturas: facturasLocal.map(f => f._id),
                 usuario_id: user._id,
@@ -91,12 +121,13 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 brandId: selectedBrandId,
                 branchId: selectedBranchId,
             };
+            
             let packpageId: string | undefined = undefined;
             if (isNewPackage) {
-                const response = await createInvoicesPackpage(dataToSend);
+                const response = await createInvoicesPackage(dataToSend);
                 packpageId = response?.data?._id;
             } else if (paqueteExistente) {
-                const response = await updateInvoicesPackpage(paqueteExistente._id, {
+                const response = await updateInvoicesPackage(paqueteExistente._id, {
                     facturas: facturasLocal.map(f => f._id),
                     comentario,
                     fechaPago,
@@ -106,6 +137,10 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 });
                 packpageId = response?.data?._id;
             }
+
+            // PASO 3: La relación InvoicesPackageCompany se crea automáticamente en el backend
+            // cuando se proporcionan companyId, brandId, branchId en el paso 2
+
             toast.success('Paquete guardado correctamente');
             onClose();
             if (onSuccess) onSuccess(packpageId);
@@ -162,8 +197,8 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                     <Alert variant="info" className="mb-3">
                         <b>Paquete existente seleccionado:</b>
                         <ul className="mb-0 mt-2">
-                            <li><span className="badge bg-success bg-opacity-10 text-success me-2">Guardada</span> Facturas que ya están en este paquete</li>
-                            <li><span className="badge bg-primary bg-opacity-10 text-primary me-2">Nueva</span> Facturas pagadas que se agregarán al paquete</li>
+                            <li><span className="badge bg-primary bg-opacity-10 text-primary me-2">Procesada</span> Facturas que ya están en este paquete</li>
+                            <li><span className="badge bg-success bg-opacity-10 text-success me-2">Nueva</span> Facturas con pagos que se agregarán al paquete</li>
                         </ul>
                     </Alert>
                 )}
@@ -195,12 +230,12 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                                         {/* Estado de guardado */}
                                         <td>
                                             {f.guardada ? (
-                                                <span className="badge bg-success bg-opacity-10 text-success fw-bold">
+                                                <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
                                                     <i className="bi bi-check-circle me-1"></i>
-                                                    Guardada
+                                                    Procesada
                                                 </span>
                                             ) : (
-                                                <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
+                                                <span className="badge bg-success bg-opacity-10 text-success fw-bold">
                                                     <i className="bi bi-plus-circle me-1"></i>
                                                     Nueva
                                                 </span>
@@ -216,7 +251,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                                         </td>
                                         {/* Folio */}
                                         <td>
-                                            <small className="font-monospace">{f.folioFiscalId}</small>
+                                            <small className="font-monospace">{f.uuid}</small>
                                         </td>
                                         {/* Fecha Emisión */}
                                         <td>{f.fechaEmision ? new Date(f.fechaEmision).toLocaleDateString('es-MX') : ''}</td>

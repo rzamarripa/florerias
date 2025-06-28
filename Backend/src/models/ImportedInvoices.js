@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const ImportedInvoicesSchema = new mongoose.Schema({
   // UUID del folio fiscal (identificador único del CFDI)
-  folioFiscalId: {
+  uuid: {
     type: String,
     required: true,
     unique: true,

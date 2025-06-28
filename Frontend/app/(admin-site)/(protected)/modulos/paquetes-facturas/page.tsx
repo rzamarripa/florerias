@@ -1,11 +1,11 @@
 import PageBreadcrumb from "@/components/layout/PageBreadcrumb";
-import InvoicesPackpagePage from "@/features/admin/modules/InvoicesPackpages/InvoicesPackpagesPage";
+import InvoicesPackagePage from "@/features/admin/modules/InvoicesPackpages/InvoicesPackpagesPage";
 
-export default function PaisesPage() {
+export default function PaquetesFacturasPage() {
     return (
         <div className="container-fluid">
             <PageBreadcrumb title="Paquetes de facturas" subtitle="Catálogos" section="Admin" />
-            <InvoicesPackpagePage />
+            <InvoicesPackagePage />
         </div>
     );
 }
