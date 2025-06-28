@@ -4,8 +4,10 @@ export interface BankAccount {
   bank: { _id: string; name: string };
   accountNumber: string;
   clabe: string;
-  branch?: string;
+  branch: string;
+  initialBalance: number;
+  currentBalance: number;
   isActive: boolean;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
 }

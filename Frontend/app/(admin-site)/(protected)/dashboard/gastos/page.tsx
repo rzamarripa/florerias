@@ -1,15 +1,17 @@
 import PageBreadcrumb from "@/components/layout/PageBreadcrumb";
-import ConciliacionDashboardPage from "@/features/dashboard/ConciliacionDashboardPage";
+import GastosDashboardPage from "@/features/dashboard/GastosDashboardPage";
 
-export default function BancosPage() {
+const GastosPage = () => {
   return (
     <div className="container-fluid">
       <PageBreadcrumb
-        title="Conciliación Bancaria"
+        title="Dashboard Gastos"
         subtitle="Dashboard"
         section="Admin"
       />
-      <ConciliacionDashboardPage />
+      <GastosDashboardPage />
     </div>
   );
-}
+};
+
+export default GastosPage;

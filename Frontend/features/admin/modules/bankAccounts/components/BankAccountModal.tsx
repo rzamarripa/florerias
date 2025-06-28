@@ -1,28 +1,17 @@
-import { getModalButtonStyles } from "@/utils/modalButtonStyles";
-import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useState } from "react";
-import { Button, Form, Modal } from "react-bootstrap";
-import { Controller, useForm } from "react-hook-form";
+import { Button, Form, Modal, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { banksService } from "../../banks/services/banks";
+import { Bank } from "../../banks/types";
 import { companiesService } from "../../companies/services/companies";
-import {
-  BankAccountFormData,
-  bankAccountSchema,
-} from "../schemas/bankAccountSchema";
+import { Company } from "../../companies/types";
 import { bankAccountsService } from "../services/bankAccounts";
 import { BankAccount } from "../types";
 
 interface BankAccountModalProps {
   mode: "create" | "edit";
-  onBankAccountSaved?: () => void;
   editingBankAccount?: BankAccount | null;
-  buttonProps?: {
-    variant?: string;
-    size?: "sm" | "lg";
-    className?: string;
-    title?: string;
-  };
+  onBankAccountSaved?: () => void;
   defaultCompanyId?: string;
   show?: boolean;
   onClose?: () => void;
@@ -30,299 +19,255 @@ interface BankAccountModalProps {
 
 const BankAccountModal: React.FC<BankAccountModalProps> = ({
   mode,
+  editingBankAccount,
+
   onBankAccountSaved,
-  editingBankAccount = null,
-  buttonProps = {},
   defaultCompanyId,
   show,
   onClose,
 }) => {
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [banks, setBanks] = useState<{ _id: string; name: string }[]>([]);
-  const [companies, setCompanies] = useState<{ _id: string; name: string }[]>(
-    []
-  );
-  const isEditing = mode === "edit";
-  const isControlled =
-    typeof show === "boolean" && typeof onClose === "function";
-  const modalVisible = isControlled ? show : showModal;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors, isSubmitting, isValid },
-  } = useForm<BankAccountFormData>({
-    resolver: zodResolver(bankAccountSchema),
-    defaultValues: {
-      company: "",
-      bank: "",
-      accountNumber: "",
-      clabe: "",
-      branch: "",
-    },
-    mode: "onChange",
-  });
+  const [company, setCompany] = useState(defaultCompanyId || "");
+  const [bank, setBank] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [clabe, setClabe] = useState("");
+  const [branch, setBranch] = useState("");
+  const [initialBalance, setInitialBalance] = useState<number | string>("");
+  const [currentBalance, setCurrentBalance] = useState<number | string>("");
+
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    if (modalVisible) {
-      banksService.getAll({ limit: 100 }).then((res: any) => {
-        if (res && Array.isArray(res.data)) setBanks(res.data);
+    setShowModal(!!show);
+    if (show) {
+      companiesService.getAll({ limit: 1000 }).then((res: any) => {
+        if (res.success) setCompanies(res.data);
       });
-      companiesService.getAll({ limit: 100 }).then((res: any) => {
-        if (res && Array.isArray(res.data)) setCompanies(res.data);
+      banksService.getAll({ limit: 1000 }).then((res: any) => {
+        if (res.success) setBanks(res.data);
       });
-      if (isEditing && editingBankAccount) {
-        setValue("company", editingBankAccount.company._id);
-        setValue("bank", editingBankAccount.bank._id);
-        setValue("accountNumber", editingBankAccount.accountNumber);
-        setValue("clabe", editingBankAccount.clabe);
-        setValue("branch", editingBankAccount.branch || "");
+
+      if (mode === "edit" && editingBankAccount) {
+        setCompany(editingBankAccount.company?._id || "");
+        setBank(editingBankAccount.bank?._id || "");
+        setAccountNumber(editingBankAccount.accountNumber || "");
+        setClabe(editingBankAccount.clabe || "");
+        setBranch(editingBankAccount.branch || "");
+        setInitialBalance(editingBankAccount.initialBalance || 0);
+        setCurrentBalance(editingBankAccount.currentBalance || 0);
       } else {
-        reset({
-          company: defaultCompanyId || "",
-          bank: "",
-          accountNumber: "",
-          clabe: "",
-          branch: "",
-        });
+        resetForm();
+        if (defaultCompanyId) setCompany(defaultCompanyId);
       }
     }
-  }, [
-    modalVisible,
-    isEditing,
-    editingBankAccount,
-    setValue,
-    reset,
-    defaultCompanyId,
-  ]);
+  }, [show, mode, editingBankAccount, defaultCompanyId]);
 
-  const handleOpenModal = () => {
-    if (!isControlled) {
-      setShowModal(true);
-    }
+  const resetForm = () => {
+    setCompany("");
+    setBank("");
+    setAccountNumber("");
+    setClabe("");
+    setBranch("");
+    setInitialBalance("");
+    setCurrentBalance("");
   };
 
-  const handleCloseModal = () => {
-    if (isControlled && onClose) {
-      onClose();
-    } else {
-      setShowModal(false);
-      reset();
-    }
+  const handleClose = () => {
+    setShowModal(false);
+    onClose?.();
+    resetForm();
   };
 
-  const onSubmit = async (data: BankAccountFormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const formData = {
+      company,
+      bank,
+      accountNumber,
+      clabe,
+      branch: branch || undefined,
+      initialBalance: Number(initialBalance),
+      currentBalance: Number(currentBalance),
+    };
+
+    // Si es modo crear y no se ha tocado currentBalance, igualar a initialBalance
+    if (
+      mode === "create" &&
+      (currentBalance === "" || currentBalance === undefined)
+    ) {
+      formData.currentBalance = Number(initialBalance);
+    }
+
     try {
-      const payload = {
-        company: data.company,
-        bank: data.bank,
-        accountNumber: data.accountNumber.trim(),
-        clabe: data.clabe.trim(),
-        branch: data.branch?.trim() || "",
-      };
       let response;
-      if (isEditing && editingBankAccount) {
+      if (mode === "create") {
+        response = await bankAccountsService.create(formData);
+      } else if (editingBankAccount) {
         response = await bankAccountsService.update(
           editingBankAccount._id,
-          payload
+          formData
         );
-      } else {
-        response = await bankAccountsService.create(payload);
       }
-      if (response.success) {
-        const action = isEditing ? "actualizada" : "creada";
-        toast.success(`Cuenta bancaria ${action} exitosamente`);
+
+      if (response && response.success) {
+        toast.success(
+          `Cuenta bancaria ${
+            mode === "create" ? "creada" : "actualizada"
+          } correctamente.`
+        );
         onBankAccountSaved?.();
-        handleCloseModal();
+        handleClose();
       } else {
-        const errorMessage =
-          response.message ||
-          `Error al ${isEditing ? "actualizar" : "crear"} la cuenta bancaria`;
-        toast.error(errorMessage);
+        toast.error(
+          response?.message ||
+            `Error al ${
+              mode === "create" ? "crear" : "actualizar"
+            } la cuenta bancaria.`
+        );
       }
     } catch (error: any) {
-      console.error("Error in bank account operation:", error);
-      let errorMessage = `Error al ${
-        isEditing ? "actualizar" : "crear"
-      } la cuenta bancaria`;
-      if (
-        error.response?.status === 400 &&
-        error.response.data?.message?.toLowerCase().includes("already exists")
-      ) {
-        errorMessage = "Ya existe una cuenta bancaria con esos datos.";
-      } else if (error.response?.status === 404) {
-        errorMessage = "Cuenta bancaria no encontrada";
-      } else if (error.response?.status >= 500) {
-        errorMessage = "Error interno del servidor. Intenta nuevamente.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage);
+      console.error("Error submitting form:", error);
+      toast.error(
+        error.message ||
+          `Ocurrió un error al ${
+            mode === "create" ? "crear" : "actualizar"
+          } la cuenta.`
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  const defaultButtonProps = getModalButtonStyles("Cuenta Bancaria");
-  const currentButtonConfig = defaultButtonProps[mode];
-  const finalButtonProps = { ...currentButtonConfig, ...buttonProps };
 
   return (
     <>
-      {!isControlled && (
-        <Button
-          variant={finalButtonProps.variant}
-          size={finalButtonProps.size}
-          className={finalButtonProps.className}
-          title={finalButtonProps.title}
-          onClick={handleOpenModal}
-          disabled={isEditing && !editingBankAccount}
-        >
-          {finalButtonProps.children}
-        </Button>
-      )}
-      <Modal show={modalVisible} onHide={handleCloseModal} size="lg" centered>
+      <Modal show={showModal} onHide={handleClose} centered>
         <Modal.Header closeButton>
           <Modal.Title>
-            {isEditing ? "Editar Cuenta Bancaria" : "Nueva Cuenta Bancaria"}
+            {mode === "create"
+              ? "Agregar Nueva Cuenta Bancaria"
+              : "Editar Cuenta Bancaria"}
           </Modal.Title>
         </Modal.Header>
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Modal.Body>
+        <Modal.Body>
+          <Form noValidate onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
-              <Form.Label>
-                Razón Social <span className="text-danger">*</span>
-              </Form.Label>
-              <Controller
-                name="company"
-                control={control}
-                render={({ field }) => (
-                  <Form.Select {...field} isInvalid={!!errors.company}>
-                    <option value="">Selecciona una razón social</option>
-                    {companies.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </Form.Select>
-                )}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.company?.message}
-              </Form.Control.Feedback>
+              <Form.Label>Razón Social</Form.Label>
+              <Form.Select
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                required
+                disabled={!!defaultCompanyId}
+              >
+                <option value="">Selecciona una razón social</option>
+                {companies.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Form.Select>
             </Form.Group>
+
             <Form.Group className="mb-3">
-              <Form.Label>
-                Banco <span className="text-danger">*</span>
-              </Form.Label>
-              <Controller
-                name="bank"
-                control={control}
-                render={({ field }) => (
-                  <Form.Select {...field} isInvalid={!!errors.bank}>
-                    <option value="">Selecciona un banco</option>
-                    {banks.map((b) => (
-                      <option key={b._id} value={b._id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </Form.Select>
-                )}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.bank?.message}
-              </Form.Control.Feedback>
+              <Form.Label>Banco</Form.Label>
+              <Form.Select
+                value={bank}
+                onChange={(e) => setBank(e.target.value)}
+                required
+              >
+                <option value="">Selecciona un banco</option>
+                {banks.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name}
+                  </option>
+                ))}
+              </Form.Select>
             </Form.Group>
+
             <Form.Group className="mb-3">
-              <Form.Label>
-                Número de cuenta <span className="text-danger">*</span>
-              </Form.Label>
-              <Controller
-                name="accountNumber"
-                control={control}
-                render={({ field }) => (
-                  <Form.Control
-                    type="text"
-                    placeholder="Número de cuenta"
-                    isInvalid={!!errors.accountNumber}
-                    {...field}
-                  />
-                )}
+              <Form.Label>Número de Cuenta</Form.Label>
+              <Form.Control
+                type="text"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+                required
               />
-              <Form.Control.Feedback type="invalid">
-                {errors.accountNumber?.message}
-              </Form.Control.Feedback>
             </Form.Group>
+
             <Form.Group className="mb-3">
-              <Form.Label>
-                Clabe interbancaria <span className="text-danger">*</span>
-              </Form.Label>
-              <Controller
-                name="clabe"
-                control={control}
-                render={({ field }) => (
-                  <Form.Control
-                    type="text"
-                    placeholder="Clabe interbancaria"
-                    isInvalid={!!errors.clabe}
-                    {...field}
-                  />
-                )}
+              <Form.Label>CLABE</Form.Label>
+              <Form.Control
+                type="text"
+                value={clabe}
+                onChange={(e) => setClabe(e.target.value)}
+                required
+                minLength={18}
+                maxLength={18}
               />
-              <Form.Control.Feedback type="invalid">
-                {errors.clabe?.message}
-              </Form.Control.Feedback>
             </Form.Group>
+
             <Form.Group className="mb-3">
-              <Form.Label>Sucursal</Form.Label>
-              <Controller
-                name="branch"
-                control={control}
-                render={({ field }) => (
-                  <Form.Control
-                    type="text"
-                    placeholder="Escriba el nombre de la sucursal del banco"
-                    isInvalid={!!errors.branch}
-                    {...field}
-                  />
-                )}
+              <Form.Label>Saldo Inicial</Form.Label>
+              <Form.Control
+                type="number"
+                value={initialBalance}
+                onChange={(e) => setInitialBalance(e.target.value)}
+                required
+                disabled={mode === "edit"}
               />
-              <Form.Control.Feedback type="invalid">
-                {errors.branch?.message}
-              </Form.Control.Feedback>
             </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="light"
-              onClick={handleCloseModal}
-              disabled={isSubmitting}
-              className="fw-medium px-4"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isSubmitting || !isValid}
-            >
-              {isSubmitting ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                    aria-hidden="true"
-                  ></span>
-                  {isEditing ? "Actualizando..." : "Guardando..."}
-                </>
-              ) : isEditing ? (
-                "Actualizar"
-              ) : (
-                "Guardar"
-              )}
-            </Button>
-          </Modal.Footer>
-        </Form>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Saldo Actual</Form.Label>
+              <Form.Control
+                type="number"
+                value={currentBalance}
+                onChange={(e) => setCurrentBalance(e.target.value)}
+                required
+                min="0"
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Sucursal (Opcional)</Form.Label>
+              <Form.Control
+                type="text"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+              />
+            </Form.Group>
+
+            <div className="d-flex justify-content-end gap-2">
+              <Button
+                variant="light"
+                onClick={handleClose}
+                className="fw-medium px-4"
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                    <span className="ms-1">Guardando...</span>
+                  </>
+                ) : (
+                  "Guardar"
+                )}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
       </Modal>
     </>
   );

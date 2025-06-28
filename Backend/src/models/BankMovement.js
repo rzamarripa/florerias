@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const bankMovementSchema = new Schema({
-  company: {
-    type: Schema.Types.ObjectId,
-    ref: "cc_company",
-    required: true,
-  },
+  company: { type: Schema.Types.ObjectId, ref: "cc_companies", required: true },
   bankAccount: {
     type: Schema.Types.ObjectId,
     ref: "cc_bank_account",

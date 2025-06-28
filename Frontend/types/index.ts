@@ -1,6 +1,6 @@
 import React from "react";
 
-export type ChildrenType = Readonly<{ children: React.ReactNode }>
+export type ChildrenType = Readonly<{ children: React.ReactNode }>;
 
 export interface ApiResponse<T> {
   success: boolean;

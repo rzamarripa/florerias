@@ -27,11 +27,11 @@ export interface User {
     path?: string;
     estatus: boolean;
     image?:
-    | undefined
-    | {
-      data: string;
-      contentType: string;
-    };
+      | undefined
+      | {
+          data: string;
+          contentType: string;
+        };
   };
   role?: Role;
   createdAt: string;

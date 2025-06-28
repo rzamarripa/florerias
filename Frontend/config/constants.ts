@@ -1,18 +1,38 @@
 import { type MenuItemType } from "@/types/layout";
-import { TbAlertHexagon, TbLayoutDashboard } from "react-icons/tb";
+import {
+  CircleDollarSign,
+  Component,
+  Inbox,
+  LayoutDashboard,
+  PackageOpen,
+  ShieldUser,
+} from "lucide-react";
 
 export const menuItems: MenuItemType[] = [
   { key: "menu", label: "Menu", isTitle: true },
   {
     key: "dashboard",
     label: "Dashboard",
-    icon: TbLayoutDashboard,
-    url: "/dashboard",
+    icon: LayoutDashboard,
+    children: [
+      {
+        key: "dashboard-gastos",
+        label: "Dashboard Gastos",
+        url: "/dashboard/gastos",
+        parentKey: "dashboard",
+      },
+      {
+        key: "dashboard-conciliacion",
+        label: "Dashboard Conciliación",
+        url: "/dashboard/conciliacion",
+        parentKey: "dashboard",
+      },
+    ],
   },
   {
     key: "catalogos",
     label: "Catálogos",
-    icon: TbAlertHexagon,
+    icon: Inbox,
     children: [
       {
         key: "razonesSociales",
@@ -85,7 +105,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "paquetes",
     label: "Paquetes",
-    icon: TbAlertHexagon,
+    icon: PackageOpen,
     children: [
       {
         key: "solicitarPaquete",
@@ -107,7 +127,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "presupuestos",
     label: "Presupuestos",
-    icon: TbAlertHexagon,
+    icon: CircleDollarSign,
     children: [
       {
         key: "asignarPresupuesto",
@@ -124,7 +144,7 @@ export const menuItems: MenuItemType[] = [
   {
     key: "gestion",
     label: "Gestión",
-    icon: TbAlertHexagon,
+    icon: ShieldUser,
     children: [
       { key: "roles", label: "Roles", url: "/gestion/roles" },
       { key: "pages", label: "Páginas", url: "/gestion/paginas" },
@@ -134,9 +154,18 @@ export const menuItems: MenuItemType[] = [
   {
     key: "modulos",
     label: "Módulos",
-    icon: TbAlertHexagon,
+    icon: Component,
     children: [
-      { key: "importar-metadatos", label: "Importar Metadatos", url: "/modulos/importar-metadatos" }
+      {
+        key: "importar-metadatos",
+        label: "Importar Metadatos",
+        url: "/modulos/importar-metadatos",
+      },
+      {
+        key: "importar-movimientos-bancario",
+        label: "Importar Movimientos Bancarios",
+        url: "/herramientas/importar-movimientos-bancarios",
+      },
     ],
   },
 ];

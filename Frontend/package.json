@@ -15,6 +15,7 @@
     "apexcharts": "^4.7.0",
     "bootstrap": "^5.3.6",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
     "express-rate-limit": "^7.5.0",
@@ -35,6 +36,7 @@
     "react-toastify": "^11.0.5",
     "simplebar-react": "3.3.0",
     "usehooks-ts": "^3.1.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.62",
     "zustand": "^5.0.5"
   },

@@ -1,4 +1,4 @@
-import { apiCall, ApiResponse } from "@/utils/api";
+import { apiCall } from "@/utils/api";
 
 export const importLogService = {
   getAccountsStatusToday: async () => {

@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import ProtectedModule from "@/components/auth/ProtectedModule";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Search,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, Form, Spinner, Table } from "react-bootstrap";
@@ -95,12 +102,16 @@ const BankAccountsPage: React.FC = () => {
     const range = [];
     const rangeWithDots = [];
 
-    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
+    for (
+      let i = Math.max(2, page - delta);
+      i <= Math.min(pages - 1, page + delta);
+      i++
+    ) {
       range.push(i);
     }
 
     if (page - delta > 2) {
-      rangeWithDots.push(1, '...');
+      rangeWithDots.push(1, "...");
     } else {
       rangeWithDots.push(1);
     }
@@ -108,7 +119,7 @@ const BankAccountsPage: React.FC = () => {
     rangeWithDots.push(...range);
 
     if (page + delta < pages - 1) {
-      rangeWithDots.push('...', pages);
+      rangeWithDots.push("...", pages);
     } else if (pages > 1) {
       rangeWithDots.push(pages);
     }
@@ -158,7 +169,14 @@ const BankAccountsPage: React.FC = () => {
               <BankAccountModal
                 mode="create"
                 onBankAccountSaved={handleBankAccountSaved}
+                defaultCompanyId={companyFilter}
               />
+              <ProtectedModule module="Create" page="bankAccounts">
+                <BankAccountModal
+                  mode="create"
+                  onBankAccountSaved={handleBankAccountSaved}
+                />
+              </ProtectedModule>
             </div>
             <div className="table-responsive shadow-sm">
               {loading ? (
@@ -189,6 +207,12 @@ const BankAccountsPage: React.FC = () => {
                         <th className="text-center" style={{ width: "15%" }}>
                           Clabe
                         </th>
+                        <th className="text-center" style={{ width: "10%" }}>
+                          Saldo Inicial
+                        </th>
+                        <th className="text-center" style={{ width: "10%" }}>
+                          Saldo Actual
+                        </th>
                         <th className="text-center" style={{ width: "15%" }}>
                           Sucursal
                         </th>
@@ -218,13 +242,26 @@ const BankAccountsPage: React.FC = () => {
                             {account.accountNumber}
                           </td>
                           <td className="text-center">{account.clabe}</td>
+                          <td className="text-center">
+                            {new Intl.NumberFormat("es-MX", {
+                              style: "currency",
+                              currency: "MXN",
+                            }).format(account.initialBalance || 0)}
+                          </td>
+                          <td className="text-center">
+                            {new Intl.NumberFormat("es-MX", {
+                              style: "currency",
+                              currency: "MXN",
+                            }).format(account.currentBalance || 0)}
+                          </td>
                           <td className="text-center">{account.branch}</td>
                           <td className="text-center">
                             <span
-                              className={`badge fs-6 ${account.isActive
+                              className={`badge fs-6 ${
+                                account.isActive
                                   ? "bg-success bg-opacity-10 text-success"
                                   : "bg-danger bg-opacity-10 text-danger"
-                                }`}
+                              }`}
                             >
                               {account.isActive ? "Activo" : "Inactivo"}
                             </span>
@@ -273,7 +310,7 @@ const BankAccountsPage: React.FC = () => {
 
                   {getPageNumbers().map((pageNum, index) => (
                     <React.Fragment key={index}>
-                      {pageNum === '...' ? (
+                      {pageNum === "..." ? (
                         <span className="px-2 text-muted">...</span>
                       ) : (
                         <Button

@@ -1,11 +1,20 @@
 import { Router } from "express";
 
+import bankAccountRoutes from "./bankAccountRoutes.js";
+import bankRoutes from "./bankRoutes.js";
 import branchRoutes from "./branchRoutes.js";
 import brandRoutes from "./brandRoutes.js";
 import categoryRoutes from "./categoryRoutes.js";
 import companyRoutes from "./companyRoutes.js";
 import countryRoutes from "./countryRoutes.js";
+import dashboardRoutes from "./dashboardRoutes.js";
+import departmentRoutes from "./departmentRoutes.js";
 import expenseConceptCategoryRoutes from "./expenseConceptCategoryRoutes.js";
+import expenseConceptRoutes from "./expenseConceptRoutes.js";
+import importedInvoicesRoutes from "./importedInvoicesRoutes.js";
+import invoicesPackpageCompanyRoutes from "./invoicesPackpageCompanyRoutes.js";
+import invoicesPackpageRoutes from "./invoicesPackpageRoutes.js";
+import logImportBankMovementsRoutes from "./logImportBankMovementsRoutes.js";
 import moduleRoutes from "./moduleRoutes.js";
 import municipalityRoutes from "./municipalityRoutes.js";
 import pageRoutes from "./pageRoutes.js";
@@ -13,13 +22,6 @@ import providerRoutes from "./providerRoutes.js";
 import roleRoutes from "./roleRoutes.js";
 import stateRoutes from "./stateRoutes.js";
 import userRoutes from "./userRoutes.js";
-import bankRoutes from "./bankRoutes.js";
-import bankAccountRoutes from "./bankAccountRoutes.js";
-import expenseConceptRoutes from "./expenseConceptRoutes.js";
-import departmentRoutes from "./departmentRoutes.js";
-import importedInvoicesRoutes from "./importedInvoicesRoutes.js";
-import invoicesPackpageRoutes from "./invoicesPackpageRoutes.js";
-import invoicesPackpageCompanyRoutes from "./invoicesPackpageCompanyRoutes.js";
 
 const router = Router();
 
@@ -41,7 +43,9 @@ router.use("/departments", departmentRoutes);
 router.use("/banks", bankRoutes);
 router.use("/bank-accounts", bankAccountRoutes);
 router.use("/imported-invoices", importedInvoicesRoutes);
+router.use("/dashboard", dashboardRoutes);
 router.use("/invoices-packpage", invoicesPackpageRoutes);
 router.use("/invoices-packpage-company", invoicesPackpageCompanyRoutes);
+router.use("/log-import-bank-movements", logImportBankMovementsRoutes);
 
 export default router;

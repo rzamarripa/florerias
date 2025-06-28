@@ -9,7 +9,7 @@ const rsCompanyBrandSchema = new Schema({
   },
   companyId: {
     type: Schema.Types.ObjectId,
-    ref: "cc_company",
+    ref: "cc_companies",
     required: true,
   },
   createdAt: {

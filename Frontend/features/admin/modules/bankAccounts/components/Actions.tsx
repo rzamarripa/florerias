@@ -1,22 +1,12 @@
+import ProtectedModule from "@/components/auth/ProtectedModule";
 import React, { useState } from "react";
 import { Spinner } from "react-bootstrap";
-import { BsCheck2 } from "react-icons/bs";
+import { BsCheck2, BsPencil } from "react-icons/bs";
 import { FiTrash2 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { bankAccountsService } from "../services/bankAccounts";
+import { BankAccount } from "../types";
 import BankAccountModal from "./BankAccountModal";
-
-interface BankAccount {
-  _id: string;
-  company: { _id: string; name: string };
-  bank: { _id: string; name: string };
-  accountNumber: string;
-  clabe: string;
-  branch?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
 
 interface BankAccountActionsProps {
   bankAccount: BankAccount;
@@ -28,8 +18,12 @@ const BankAccountActions: React.FC<BankAccountActionsProps> = ({
   onBankAccountSaved,
 }) => {
   const [isToggling, setIsToggling] = useState<boolean>(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  const handleToggleBankAccount = async (id: string, currentStatus: boolean) => {
+  const handleToggleBankAccount = async (
+    id: string,
+    currentStatus: boolean
+  ) => {
     try {
       setIsToggling(true);
       let response;
@@ -45,12 +39,16 @@ const BankAccountActions: React.FC<BankAccountActionsProps> = ({
       } else {
         const errorMessage =
           response.message ||
-          `Error al ${currentStatus ? "desactivar" : "activar"} la cuenta bancaria`;
+          `Error al ${
+            currentStatus ? "desactivar" : "activar"
+          } la cuenta bancaria`;
         toast.error(errorMessage);
       }
     } catch (error: any) {
       console.error("Error toggling bank account:", error);
-      let errorMessage = `Error al ${currentStatus ? "desactivar" : "activar"} la cuenta bancaria`;
+      let errorMessage = `Error al ${
+        currentStatus ? "desactivar" : "activar"
+      } la cuenta bancaria`;
       if (error.response?.status === 400) {
         errorMessage = error.response.data?.message || errorMessage;
       } else if (error.response?.status === 404) {
@@ -86,12 +84,27 @@ const BankAccountActions: React.FC<BankAccountActionsProps> = ({
       <BankAccountModal
         mode="edit"
         editingBankAccount={bankAccount}
-        onBankAccountSaved={onBankAccountSaved}
+        onBankAccountSaved={() => {
+          setShowEditModal(false);
+          onBankAccountSaved?.();
+        }}
+        show={showEditModal}
+        onClose={() => setShowEditModal(false)}
       />
+      <button
+        className="btn btn-light btn-icon btn-sm rounded-circle"
+        title="Editar cuenta bancaria"
+        onClick={() => setShowEditModal(true)}
+        tabIndex={0}
+      >
+        <BsPencil size={16} />
+      </button>
       <button
         className={getToggleButtonClass()}
         title={getToggleButtonTitle()}
-        onClick={() => handleToggleBankAccount(bankAccount._id, bankAccount.isActive)}
+        onClick={() =>
+          handleToggleBankAccount(bankAccount._id, bankAccount.isActive)
+        }
         disabled={isToggling}
       >
         {isToggling ? (
@@ -106,8 +119,37 @@ const BankAccountActions: React.FC<BankAccountActionsProps> = ({
           <BsCheck2 size={16} />
         )}
       </button>
+      <ProtectedModule module="Update" page="bankAccounts">
+        <BankAccountModal
+          mode="edit"
+          editingBankAccount={bankAccount}
+          onBankAccountSaved={onBankAccountSaved}
+        />
+      </ProtectedModule>
+      <ProtectedModule module="Delete" page="bankAccounts">
+        <button
+          className={getToggleButtonClass()}
+          title={getToggleButtonTitle()}
+          onClick={() =>
+            handleToggleBankAccount(bankAccount._id, bankAccount.isActive)
+          }
+          disabled={isToggling}
+        >
+          {isToggling ? (
+            <Spinner
+              animation="border"
+              size="sm"
+              style={{ width: "16px", height: "16px" }}
+            />
+          ) : bankAccount.isActive ? (
+            <FiTrash2 size={16} />
+          ) : (
+            <BsCheck2 size={16} />
+          )}
+        </button>
+      </ProtectedModule>
     </div>
   );
 };
 
-export default BankAccountActions; 
+export default BankAccountActions;

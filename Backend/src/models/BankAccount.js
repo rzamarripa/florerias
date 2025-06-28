@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const bankAccountSchema = new Schema({
   company: {
     type: Schema.Types.ObjectId,
-    ref: "cc_company",
+    ref: "cc_companies",
     required: true,
   },
   bank: {

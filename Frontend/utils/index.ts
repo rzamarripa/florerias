@@ -11,3 +11,20 @@ export const base64ToFile = (base64String: string, filename: string): File => {
 
   return new File([u8arr], filename, { type: mime });
 };
+
+export const formatMoney = (val: any) => {
+  if (val === null || val === undefined) return "";
+  return Number(val).toLocaleString("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  });
+};
+
+export const formatDate = (val: any) => {
+  if (val === null || val === undefined) return "";
+  return new Date(val).toLocaleDateString("es-MX", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};

@@ -7,11 +7,10 @@ const roleVisibilitySchema = new Schema({
     ref: "ac_role",
     required: true,
   },
-  // Si companies, brands y branches están vacíos, significa acceso total
   companies: [
     {
       type: Schema.Types.ObjectId,
-      ref: "cc_company",
+      ref: "cc_companies",
     },
   ],
   brands: [
@@ -41,7 +40,6 @@ roleVisibilitySchema.pre("save", function (next) {
   next();
 });
 
-// Si el array está vacío, significa acceso total a ese nivel
 roleVisibilitySchema.methods.hasAccessToCompany = function (companyId) {
   return (
     this.companies.length === 0 ||
@@ -62,49 +60,41 @@ roleVisibilitySchema.methods.hasAccessToBranch = function (branchId) {
   );
 };
 
-// Método para obtener la estructura jerárquica de permisos
 roleVisibilitySchema.methods.getHierarchicalStructure = async function () {
   try {
-    // Importar modelos
     const { Company } = await import("./Company.js");
     const { Brand } = await import("./Brand.js");
     const { RsCompanyBrand } = await import("./CompanyBrands.js");
     const { Branch } = await import("./Branch.js");
 
-    // Estructura base
     const structure = {
       hasFullAccess: this.companies.length === 0,
       companies: {},
     };
 
-    // Obtener compañías
     let companies;
     if (this.companies.length === 0) {
-      // Acceso total, obtener todas las compañías activas
       companies = await Company.find({ isActive: true });
     } else {
-      // Acceso limitado a compañías específicas
       companies = await Company.find({
         _id: { $in: this.companies },
         isActive: true,
       });
     }
 
-    // Procesar compañías
     for (const company of companies) {
       structure.companies[company._id] = {
         name: company.name,
         brands: {},
       };
 
-      // Obtener marcas de la compañía
       const companyBrands = await RsCompanyBrand.getBrandsByCompany(
         company._id
       );
 
       for (const relation of companyBrands) {
         const brand = relation.brandId;
-        if (!brand || !brand._id) continue; // Skip si la marca no existe
+        if (!brand || !brand._id) continue;
 
         if (
           this.brands.length === 0 ||
@@ -115,7 +105,6 @@ roleVisibilitySchema.methods.getHierarchicalStructure = async function () {
             branches: {},
           };
 
-          // Obtener sucursales de la marca en esta compañía
           const branches = await Branch.find({
             companyId: company._id,
             brandId: brand._id,
