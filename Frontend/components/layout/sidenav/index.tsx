@@ -31,7 +31,7 @@ const Sidenav = () => {
       <Link href="/" className="logo">
         <span className="logo logo-light">
           <span className="logo-lg">
-            <Image src={logo.src} alt="logo" width={92.3} height={26} />
+            <Image src={logo.src} alt="logo" width={93} height={26} />
           </span>
           <span className="logo-sm">
             <Image
@@ -45,12 +45,7 @@ const Sidenav = () => {
 
         <span className="logo logo-dark">
           <span className="logo-lg">
-            <Image
-              src={logoDark.src}
-              alt="dark logo"
-              width={92.3}
-              height={26}
-            />
+            <Image src={logoDark.src} alt="dark logo" width={93} height={26} />
           </span>
           <span className="logo-sm">
             <Image

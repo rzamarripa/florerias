@@ -57,9 +57,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
     <Card.Body style={{ marginTop: -20, textAlign: "center" }}>
       <h4 className="fw-bold mb-1">{fullName}</h4>
       <div className="text-primary fw-medium mb-0">{role}</div>
-      <div className="text-muted mb-0" style={{ fontSize: 14 }}>
-        Miembro desde {memberSince}
-      </div>
+      <div className="text-muted mb-0 fs-6">Miembro desde {memberSince}</div>
     </Card.Body>
   </Card>
 );

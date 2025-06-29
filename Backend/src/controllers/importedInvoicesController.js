@@ -3,7 +3,11 @@ import { Company } from "../models/Company.js";
 import { Provider } from "../models/Provider.js";
 
 const parseDate = (dateString) => {
-  if (!dateString || !dateString.trim() || dateString.trim() === '0000-00-00 00:00:00') {
+  if (
+    !dateString ||
+    !dateString.trim() ||
+    dateString.trim() === "0000-00-00 00:00:00"
+  ) {
     return null;
   }
   const date = new Date(dateString);
@@ -16,17 +20,21 @@ export const bulkUpsertInvoices = async (req, res) => {
     if (!invoices || !Array.isArray(invoices)) {
       return res.status(400).json({
         success: false,
-        message: 'El cuerpo de la petición debe ser un arreglo de facturas.'
+        message: "El cuerpo de la petición debe ser un arreglo de facturas.",
       });
     }
 
-    const rfcReceptores = [...new Set(invoices.map(inv => inv.RfcReceptor.toUpperCase()))];
+    const rfcReceptores = [
+      ...new Set(invoices.map((inv) => inv.RfcReceptor.toUpperCase())),
+    ];
     const companies = await Company.find({ rfc: { $in: rfcReceptores } });
 
-    const companyMap = new Map(companies.map(comp => [comp.rfc.toUpperCase(), comp._id]));
+    const companyMap = new Map(
+      companies.map((comp) => [comp.rfc.toUpperCase(), comp._id])
+    );
 
     const operations = invoices
-      .map(invoice => {
+      .map((invoice) => {
         const rfcReceptor = invoice.RfcReceptor.toUpperCase();
         const companyId = companyMap.get(rfcReceptor);
 
@@ -43,7 +51,8 @@ export const bulkUpsertInvoices = async (req, res) => {
           rfcProveedorCertificacion: invoice.RfcPac,
           fechaEmision: parseDate(invoice.FechaEmision),
           fechaCertificacionSAT: parseDate(invoice.FechaCertificacionSat),
-          importeAPagar: parseFloat(String(invoice.Monto).replace(/[^0-9.-]+/g, "")) || 0,
+          importeAPagar:
+            parseFloat(String(invoice.Monto).replace(/[^0-9.-]+/g, "")) || 0,
           tipoComprobante: invoice.EfectoComprobante,
           estatus: parseInt(invoice.Estatus, 10),
           fechaCancelacion: parseDate(invoice.FechaCancelacion),
@@ -62,12 +71,12 @@ export const bulkUpsertInvoices = async (req, res) => {
           },
         };
       })
-      .filter(op => op !== null);
+      .filter((op) => op !== null);
 
     if (operations.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No hay facturas válidas para procesar.'
+        message: "No hay facturas válidas para procesar.",
       });
     }
 
@@ -75,11 +84,13 @@ export const bulkUpsertInvoices = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `${result.upsertedCount + result.modifiedCount} facturas procesadas exitosamente.`,
+      message: `${
+        result.upsertedCount + result.modifiedCount
+      } facturas procesadas exitosamente.`,
       data: {
         inserted: result.upsertedCount,
         updated: result.modifiedCount,
-      }
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -91,24 +102,31 @@ export const bulkUpsertInvoices = async (req, res) => {
 
 export const getInvoices = async (req, res) => {
   try {
-    const { page = 1, limit = 15, rfcReceptor, estatus, sortBy = 'fechaEmision', order = 'desc' } = req.query;
+    const {
+      page = 1,
+      limit = 15,
+      rfcReceptor,
+      estatus,
+      sortBy = "fechaEmision",
+      order = "desc",
+    } = req.query;
 
     if (!rfcReceptor) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere un RFC del receptor.'
+        message: "Se requiere un RFC del receptor.",
       });
     }
 
     const query = { rfcReceptor: rfcReceptor.toUpperCase() };
-    if (estatus && ['0', '1'].includes(estatus)) {
+    if (estatus && ["0", "1"].includes(estatus)) {
       query.estatus = parseInt(estatus, 10);
     }
 
-    const sortOptions = { [sortBy]: order === 'asc' ? 1 : -1 };
+    const sortOptions = { [sortBy]: order === "asc" ? 1 : -1 };
 
     const invoicesPromise = ImportedInvoices.find(query)
-      .populate('razonSocial', 'name rfc')
+      .populate("razonSocial", "name rfc")
       .sort(sortOptions)
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -117,11 +135,16 @@ export const getInvoices = async (req, res) => {
 
     const countPromise = ImportedInvoices.countDocuments(query);
 
-    const [invoicesFromDb, count] = await Promise.all([invoicesPromise, countPromise]);
+    const [invoicesFromDb, count] = await Promise.all([
+      invoicesPromise,
+      countPromise,
+    ]);
 
-    const invoices = invoicesFromDb.map(invoice => ({
+    const invoices = invoicesFromDb.map((invoice) => ({
       ...invoice,
-      importeAPagar: invoice.importeAPagar ? parseFloat(invoice.importeAPagar.toString()) : 0,
+      importeAPagar: invoice.importeAPagar
+        ? parseFloat(invoice.importeAPagar.toString())
+        : 0,
     }));
 
     res.status(200).json({
@@ -149,7 +172,7 @@ export const getInvoicesSummary = async (req, res) => {
     if (!rfcReceptor) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere un RFC del receptor.'
+        message: "Se requiere un RFC del receptor.",
       });
     }
 
@@ -177,15 +200,16 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
       rfcCompany,
       estatus,
       estadoPago,
-      sortBy = 'fechaEmision',
-      order = 'desc'
+      sortBy = "fechaEmision",
+      order = "desc",
     } = req.query;
 
     // Validar que se proporcione al menos uno de los RFCs
     if (!rfcProvider && !rfcCompany) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere al menos un RFC de proveedor o empresa para filtrar.'
+        message:
+          "Se requiere al menos un RFC de proveedor o empresa para filtrar.",
       });
     }
 
@@ -203,20 +227,20 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
     }
 
     // Filtros adicionales
-    if (estatus && ['0', '1'].includes(estatus)) {
+    if (estatus && ["0", "1"].includes(estatus)) {
       query.estatus = parseInt(estatus, 10);
     }
 
-    if (estadoPago && ['0', '1', '2', '3'].includes(estadoPago)) {
+    if (estadoPago && ["0", "1", "2", "3"].includes(estadoPago)) {
       query.estadoPago = parseInt(estadoPago, 10);
     }
 
     // Opciones de ordenamiento
-    const sortOptions = { [sortBy]: order === 'asc' ? 1 : -1 };
+    const sortOptions = { [sortBy]: order === "asc" ? 1 : -1 };
 
     // Consulta con paginación
     const invoicesPromise = ImportedInvoices.find(query)
-      .populate('razonSocial', 'name rfc')
+      .populate("razonSocial", "name rfc")
       .sort(sortOptions)
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -225,25 +249,34 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
 
     const countPromise = ImportedInvoices.countDocuments(query);
 
-    const [invoicesFromDb, count] = await Promise.all([invoicesPromise, countPromise]);
+    const [invoicesFromDb, count] = await Promise.all([
+      invoicesPromise,
+      countPromise,
+    ]);
 
     // Procesar las facturas para asegurar que los campos decimales se conviertan correctamente
-    const invoices = invoicesFromDb.map(invoice => ({
+    const invoices = invoicesFromDb.map((invoice) => ({
       ...invoice,
-      importeAPagar: invoice.importeAPagar ? parseFloat(invoice.importeAPagar.toString()) : 0,
-      importePagado: invoice.importePagado ? parseFloat(invoice.importePagado.toString()) : 0,
+      importeAPagar: invoice.importeAPagar
+        ? parseFloat(invoice.importeAPagar.toString())
+        : 0,
+      importePagado: invoice.importePagado
+        ? parseFloat(invoice.importePagado.toString())
+        : 0,
     }));
 
     // Obtener información adicional de proveedores y empresas si se solicitó
     let additionalInfo = {};
 
     if (rfcProvider) {
-      const provider = await Provider.findOne({ rfc: rfcProvider.toUpperCase() });
+      const provider = await Provider.findOne({
+        rfc: rfcProvider.toUpperCase(),
+      });
       if (provider) {
         additionalInfo.provider = {
           name: provider.name,
           rfc: provider.rfc,
-          email: provider.email
+          email: provider.email,
         };
       }
     }
@@ -253,7 +286,7 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
       if (company) {
         additionalInfo.company = {
           name: company.name,
-          rfc: company.rfc
+          rfc: company.rfc,
         };
       }
     }
@@ -269,12 +302,11 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
         limit: parseInt(limit, 10),
       },
     });
-
   } catch (error) {
-    console.error('Error getting invoices by provider and company:', error);
+    console.error("Error getting invoices by provider and company:", error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.',
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
@@ -288,7 +320,8 @@ export const getInvoicesSummaryByProviderAndCompany = async (req, res) => {
     if (!rfcProvider && !rfcCompany) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere al menos un RFC de proveedor o empresa para filtrar.'
+        message:
+          "Se requiere al menos un RFC de proveedor o empresa para filtrar.",
       });
     }
 
@@ -312,7 +345,7 @@ export const getInvoicesSummaryByProviderAndCompany = async (req, res) => {
       facturasPagadas,
       facturasRegistradas,
       totalImporteAPagar,
-      totalPagado
+      totalPagado,
     ] = await Promise.all([
       ImportedInvoices.countDocuments(query),
       ImportedInvoices.countDocuments({ ...query, estatus: 0 }),
@@ -322,12 +355,12 @@ export const getInvoicesSummaryByProviderAndCompany = async (req, res) => {
       ImportedInvoices.countDocuments({ ...query, estadoPago: 3 }),
       ImportedInvoices.aggregate([
         { $match: query },
-        { $group: { _id: null, total: { $sum: '$importeAPagar' } } }
+        { $group: { _id: null, total: { $sum: "$importeAPagar" } } },
       ]),
       ImportedInvoices.aggregate([
         { $match: query },
-        { $group: { _id: null, total: { $sum: '$importePagado' } } }
-      ])
+        { $group: { _id: null, total: { $sum: "$importePagado" } } },
+      ]),
     ]);
 
     const summaryData = {
@@ -339,19 +372,22 @@ export const getInvoicesSummaryByProviderAndCompany = async (req, res) => {
       facturasRegistradas,
       totalImporteAPagar: totalImporteAPagar[0]?.total || 0,
       totalPagado: totalPagado[0]?.total || 0,
-      totalSaldo: (totalImporteAPagar[0]?.total || 0) - (totalPagado[0]?.total || 0)
+      totalSaldo:
+        (totalImporteAPagar[0]?.total || 0) - (totalPagado[0]?.total || 0),
     };
 
     res.status(200).json({
       success: true,
       data: summaryData,
     });
-
   } catch (error) {
-    console.error('Error getting invoices summary by provider and company:', error);
+    console.error(
+      "Error getting invoices summary by provider and company:",
+      error
+    );
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.',
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
@@ -359,10 +395,22 @@ export const getInvoicesSummaryByProviderAndCompany = async (req, res) => {
 // Obtener facturas filtradas por proveedor y razón social (empresa)
 export const getByProviderAndCompany = async (req, res) => {
   try {
-    const { rfcProvider, rfcCompany, page = 1, limit = 15, sortBy = "fechaEmision", order = "desc" } = req.query;
+    const {
+      rfcProvider,
+      rfcCompany,
+      page = 1,
+      limit = 15,
+      sortBy = "fechaEmision",
+      order = "desc",
+    } = req.query;
 
     if (!rfcProvider && !rfcCompany) {
-      return res.status(400).json({ success: false, message: "Se requiere al menos rfcProvider o rfcCompany" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Se requiere al menos rfcProvider o rfcCompany",
+        });
     }
 
     // Buscar compañía activa
@@ -370,7 +418,12 @@ export const getByProviderAndCompany = async (req, res) => {
     if (rfcCompany) {
       company = await Company.findOne({ rfc: rfcCompany, isActive: true });
       if (!company) {
-        return res.status(404).json({ success: false, message: "Razón social no encontrada o inactiva" });
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "Razón social no encontrada o inactiva",
+          });
       }
     }
 
@@ -379,14 +432,19 @@ export const getByProviderAndCompany = async (req, res) => {
     if (rfcProvider) {
       provider = await Provider.findOne({ rfc: rfcProvider, isActive: true });
       if (!provider) {
-        return res.status(404).json({ success: false, message: "Proveedor no encontrado o inactivo" });
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "Proveedor no encontrado o inactivo",
+          });
       }
     }
 
     // Construir filtro de búsqueda
     const filter = {
       estatus: 1, // Vigente
-      fechaCancelacion: null
+      fechaCancelacion: null,
     };
 
     if (company) {
@@ -407,16 +465,21 @@ export const getByProviderAndCompany = async (req, res) => {
         .sort(sort)
         .skip(skip)
         .limit(parseInt(limit)),
-      ImportedInvoices.countDocuments(filter)
+      ImportedInvoices.countDocuments(filter),
     ]);
 
     res.json({
       success: true,
-      data: facturas
+      data: facturas,
     });
   } catch (error) {
-    console.error("Error al obtener facturas por proveedor y razón social:", error);
-    res.status(500).json({ success: false, message: "Error interno del servidor" });
+    console.error(
+      "Error al obtener facturas por proveedor y razón social:",
+      error
+    );
+    res
+      .status(500)
+      .json({ success: false, message: "Error interno del servidor" });
   }
 };
 
@@ -428,7 +491,8 @@ export const getSummaryByProviderAndCompany = async (req, res) => {
     if (!rfcProvider && !rfcCompany) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere al menos un RFC de proveedor o empresa para filtrar.'
+        message:
+          "Se requiere al menos un RFC de proveedor o empresa para filtrar.",
       });
     }
 
@@ -437,7 +501,12 @@ export const getSummaryByProviderAndCompany = async (req, res) => {
     if (rfcCompany) {
       company = await Company.findOne({ rfc: rfcCompany, isActive: true });
       if (!company) {
-        return res.status(404).json({ success: false, message: "Razón social no encontrada o inactiva" });
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "Razón social no encontrada o inactiva",
+          });
       }
     }
 
@@ -446,14 +515,19 @@ export const getSummaryByProviderAndCompany = async (req, res) => {
     if (rfcProvider) {
       provider = await Provider.findOne({ rfc: rfcProvider, isActive: true });
       if (!provider) {
-        return res.status(404).json({ success: false, message: "Proveedor no encontrado o inactivo" });
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "Proveedor no encontrado o inactivo",
+          });
       }
     }
 
     // Construir filtro de búsqueda
     const filter = {
       estatus: 1,
-      fechaCancelacion: null
+      fechaCancelacion: null,
     };
 
     if (company) {
@@ -469,13 +543,23 @@ export const getSummaryByProviderAndCompany = async (req, res) => {
 
     // Calcular resumen
     const totalFacturas = facturas.length;
-    const facturasCanceladas = facturas.filter(f => f.estatus === 0).length;
-    const facturasPendientes = facturas.filter(f => f.estadoPago === 0).length;
-    const facturasEnviadas = facturas.filter(f => f.estadoPago === 1).length;
-    const facturasPagadas = facturas.filter(f => f.estadoPago === 2).length;
-    const facturasRegistradas = facturas.filter(f => f.estadoPago === 3).length;
-    const totalImporteAPagar = facturas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
-    const totalPagado = facturas.reduce((sum, f) => sum + (f.importePagado || 0), 0);
+    const facturasCanceladas = facturas.filter((f) => f.estatus === 0).length;
+    const facturasPendientes = facturas.filter(
+      (f) => f.estadoPago === 0
+    ).length;
+    const facturasEnviadas = facturas.filter((f) => f.estadoPago === 1).length;
+    const facturasPagadas = facturas.filter((f) => f.estadoPago === 2).length;
+    const facturasRegistradas = facturas.filter(
+      (f) => f.estadoPago === 3
+    ).length;
+    const totalImporteAPagar = facturas.reduce(
+      (sum, f) => sum + (f.importeAPagar || 0),
+      0
+    );
+    const totalPagado = facturas.reduce(
+      (sum, f) => sum + (f.importePagado || 0),
+      0
+    );
     const totalSaldo = totalImporteAPagar - totalPagado;
 
     res.json({
@@ -489,12 +573,17 @@ export const getSummaryByProviderAndCompany = async (req, res) => {
         facturasRegistradas,
         totalImporteAPagar,
         totalPagado,
-        totalSaldo
-      }
+        totalSaldo,
+      },
     });
   } catch (error) {
-    console.error("Error al obtener resumen de facturas por proveedor y razón social:", error);
-    res.status(500).json({ success: false, message: "Error interno del servidor" });
+    console.error(
+      "Error al obtener resumen de facturas por proveedor y razón social:",
+      error
+    );
+    res
+      .status(500)
+      .json({ success: false, message: "Error interno del servidor" });
   }
 };
 
@@ -507,7 +596,9 @@ export const markInvoiceAsFullyPaid = async (req, res) => {
     // Buscar la factura
     const invoice = await ImportedInvoices.findById(id);
     if (!invoice) {
-      return res.status(404).json({ success: false, message: 'Factura no encontrada' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Factura no encontrada" });
     }
 
     // Actualizar los campos correctamente
@@ -521,7 +612,13 @@ export const markInvoiceAsFullyPaid = async (req, res) => {
 
     await invoice.save();
 
-    res.status(200).json({ success: true, message: 'Factura actualizada correctamente', data: invoice });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Factura actualizada correctamente",
+        data: invoice,
+      });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -533,12 +630,16 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
     const { descripcion, monto } = req.body;
 
     if (!monto || monto <= 0) {
-      return res.status(400).json({ success: false, message: 'El monto debe ser mayor a 0' });
+      return res
+        .status(400)
+        .json({ success: false, message: "El monto debe ser mayor a 0" });
     }
 
     const invoice = await ImportedInvoices.findById(id);
     if (!invoice) {
-      return res.status(404).json({ success: false, message: 'Factura no encontrada' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Factura no encontrada" });
     }
 
     invoice.descripcionPago = descripcion;
@@ -556,7 +657,13 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
 
     await invoice.save();
 
-    res.status(200).json({ success: true, message: 'Pago parcial registrado correctamente', data: invoice });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Pago parcial registrado correctamente",
+        data: invoice,
+      });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -569,7 +676,9 @@ export const toggleFacturaAutorizada = async (req, res) => {
     const factura = await ImportedInvoices.findById(id);
 
     if (!factura) {
-      return res.status(404).json({ success: false, message: 'Factura no encontrada.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Factura no encontrada." });
     }
 
     // Cambiar el estado de autorización
@@ -581,7 +690,7 @@ export const toggleFacturaAutorizada = async (req, res) => {
       factura.estadoPago = 0; // Pendiente
       factura.esCompleta = false;
       factura.pagado = 0;
-      factura.descripcionPago = 'Pago rechazado - Factura no autorizada';
+      factura.descripcionPago = "Pago rechazado - Factura no autorizada";
     }
 
     await factura.save();
@@ -591,15 +700,20 @@ export const toggleFacturaAutorizada = async (req, res) => {
       data: {
         _id: factura._id,
         autorizada: factura.autorizada,
-        importePagado: factura.importePagado
+        importePagado: factura.importePagado,
       },
       message: factura.autorizada
-        ? 'Estado de autorización actualizado correctamente'
-        : 'Factura rechazada y pago devuelto a cero'
+        ? "Estado de autorización actualizado correctamente"
+        : "Factura rechazada y pago devuelto a cero",
     });
   } catch (error) {
-    console.error('Error toggling factura autorizada:', error);
-    res.status(500).json({ success: false, message: error.message || 'Error interno del servidor.' });
+    console.error("Error toggling factura autorizada:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: error.message || "Error interno del servidor.",
+      });
   }
 };
 
@@ -609,17 +723,30 @@ export const updateImporteAPagar = async (req, res) => {
     const { id } = req.params;
     const { importeAPagar, motivo, porcentaje } = req.body;
     if (!importeAPagar || importeAPagar <= 0) {
-      return res.status(400).json({ success: false, message: 'El importe a pagar debe ser mayor a 0' });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "El importe a pagar debe ser mayor a 0",
+        });
     }
     const invoice = await ImportedInvoices.findById(id);
     if (!invoice) {
-      return res.status(404).json({ success: false, message: 'Factura no encontrada' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Factura no encontrada" });
     }
     invoice.importeAPagar = importeAPagar;
-    invoice.motivoDescuento = motivo || '';
+    invoice.motivoDescuento = motivo || "";
     invoice.descuento = porcentaje || 0;
     await invoice.save();
-    res.status(200).json({ success: true, message: 'Importe actualizado correctamente', data: invoice });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Importe actualizado correctamente",
+        data: invoice,
+      });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -633,26 +760,30 @@ export const getInvoiceById = async (req, res) => {
     if (!id) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere el ID de la factura.'
+        message: "Se requiere el ID de la factura.",
       });
     }
 
     const invoice = await ImportedInvoices.findById(id)
-      .populate('razonSocial', 'name rfc')
+      .populate("razonSocial", "name rfc")
       .lean({ getters: true });
 
     if (!invoice) {
       return res.status(404).json({
         success: false,
-        message: 'Factura no encontrada.'
+        message: "Factura no encontrada.",
       });
     }
 
     // Normalizar los datos numéricos
     const normalizedInvoice = {
       ...invoice,
-      importeAPagar: invoice.importeAPagar ? parseFloat(invoice.importeAPagar.toString()) : 0,
-      importePagado: invoice.importePagado ? parseFloat(invoice.importePagado.toString()) : 0,
+      importeAPagar: invoice.importeAPagar
+        ? parseFloat(invoice.importeAPagar.toString())
+        : 0,
+      importePagado: invoice.importePagado
+        ? parseFloat(invoice.importePagado.toString())
+        : 0,
     };
 
     res.status(200).json({
@@ -665,4 +796,4 @@ export const getInvoiceById = async (req, res) => {
       message: error.message,
     });
   }
-}; 
+};

@@ -110,12 +110,12 @@ export const menuItems: MenuItemType[] = [
       {
         key: "solicitarPaquete",
         label: "Solicitar Paquete",
-        url: "/paquetes/solicitarPaquete",
+        url: "/modulos/paquetes-facturas",
       },
       {
         key: "misPaquetes",
         label: "Mis Paquetes",
-        url: "/paquetes/misPaquetes",
+        url: "/modulos/paquetes-facturas/listado-paquetes",
       },
       {
         key: "historialPaquetes",

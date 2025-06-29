@@ -20,29 +20,32 @@ export const registerUser = async (req, res) => {
       userData = req.body;
     }
 
-    const { username, email, phone, password, departmentId, profile, role } = userData;
+    const { username, email, phone, password, departmentId, profile, role } =
+      userData;
 
     // Validar departamento
     if (!departmentId) {
-      return res.status(400).json({ success: false, message: "El departamento es requerido" });
+      return res
+        .status(400)
+        .json({ success: false, message: "El departamento es requerido" });
     }
     const departmentDoc = await Department.findById(departmentId);
     if (!departmentDoc) {
-      return res.status(400).json({ success: false, message: "Departamento no encontrado" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Departamento no encontrado" });
     }
 
     const userExists = await User.findOne({
-      $or: [
-        { username },
-        { email }
-      ]
+      $or: [{ username }, { email }],
     });
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: userExists.username === username
-          ? "User already exists with this username"
-          : "User already exists with this email",
+        message:
+          userExists.username === username
+            ? "User already exists with this username"
+            : "User already exists with this email",
       });
     }
 
@@ -295,7 +298,9 @@ export const updateUser = async (req, res) => {
     if (departmentId) {
       const departmentDoc = await Department.findById(departmentId);
       if (!departmentDoc) {
-        return res.status(400).json({ success: false, message: "Departamento no encontrado" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Departamento no encontrado" });
       }
       updateData.departmentId = departmentDoc._id;
       updateData.department = departmentDoc.name;
@@ -309,7 +314,6 @@ export const updateUser = async (req, res) => {
         path: profile.path,
         estatus: profile.estatus,
       };
-
       const existingUser = await User.findById(req.params.id);
       if (existingUser && existingUser.profile.image) {
         updateData.profile.image = existingUser.profile.image;
@@ -342,17 +346,18 @@ export const updateUser = async (req, res) => {
       const existingUser = await User.findOne({
         $or: [
           ...(email ? [{ email }] : []),
-          ...(username ? [{ username }] : [])
+          ...(username ? [{ username }] : []),
         ],
-        _id: { $ne: req.params.id }
+        _id: { $ne: req.params.id },
       });
 
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          message: existingUser.email === email
-            ? "Email already exists"
-            : "Username already exists",
+          message:
+            existingUser.email === email
+              ? "Email already exists"
+              : "Username already exists",
         });
       }
     }
@@ -388,7 +393,6 @@ export const updateUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error in updateUser:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -639,5 +643,34 @@ export const removeProvider = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// Nueva función para actualizar solo la portada (profile.path)
+export const updateUserCover = async (req, res) => {
+  try {
+    const { path } = req.body;
+    if (!path) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Falta el campo path" });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      { "profile.path": path },
+      { new: true, runValidators: true }
+    ).populate("role", "name description");
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Portada actualizada correctamente",
+      data: { user },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
