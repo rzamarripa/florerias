@@ -62,7 +62,6 @@ export const registerUser = async (req, res) => {
       phone,
       password,
       departmentId: departmentDoc._id,
-      department: departmentDoc.name,
       profile: {
         name: profile?.name || "",
         lastName: profile?.lastName || "",
@@ -81,6 +80,7 @@ export const registerUser = async (req, res) => {
     }
 
     const user = await User.create(newUserData);
+    await user.populate('departmentId');
 
     res.status(201).json({
       success: true,
@@ -93,8 +93,8 @@ export const registerUser = async (req, res) => {
           phone: user.phone,
           profile: user.profile,
           role: user.role,
-          departmentId: user.departmentId,
-          department: user.department,
+          departmentId: user.departmentId?._id,
+          department: user.departmentId?.name,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -130,7 +130,8 @@ export const loginUser = async (req, res) => {
             select: "name path",
           },
         },
-      });
+      })
+      .populate('departmentId');
 
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({
@@ -177,8 +178,8 @@ export const loginUser = async (req, res) => {
       data: {
         user: {
           ...user.getPublicProfile(),
-          departmentId: user.departmentId,
-          department: user.department,
+          departmentId: user.departmentId?._id,
+          department: user.departmentId?.name,
         },
         role: user.role?.name || null,
         allowedModules,

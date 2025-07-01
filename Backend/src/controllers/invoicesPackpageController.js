@@ -60,6 +60,34 @@ export const createInvoicesPackage = async (req, res) => {
             });
         }
 
+        // Verificar que no haya facturas duplicadas en el mismo paquete
+        const facturasDuplicadas = facturas.filter((facturaId, index) =>
+            facturas.indexOf(facturaId) !== index
+        );
+
+        if (facturasDuplicadas.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se pueden agregar facturas duplicadas al mismo paquete.'
+            });
+        }
+
+        // Actualizar las facturas agregadas al paquete con el nuevo estado
+        await ImportedInvoices.updateMany(
+            { _id: { $in: facturas } },
+            {
+                $set: {
+                    autorizada: false, // Pendiente de autorización
+                    pagoRechazado: false, // No rechazado inicialmente
+                    estaRegistrada: true, // Marcar como registrada en paquete
+                    estadoPago: null, // Pendiente de autorización
+                    esCompleta: false, // No está completamente pagada hasta que se autorice
+                    registrado: 1, // Registrado
+                    fechaRevision: new Date()
+                }
+            }
+        );
+
         // Obtener el siguiente folio
         const siguienteFolio = await InvoicesPackage.obtenerSiguienteFolio();
 
@@ -110,12 +138,6 @@ export const createInvoicesPackage = async (req, res) => {
             paqueteGuardado.packageCompanyId = packageCompanyId;
             await paqueteGuardado.save();
         }
-
-        // Marcar las facturas como registradas
-        await ImportedInvoices.updateMany(
-            { _id: { $in: facturas } },
-            { $set: { estaRegistrada: true, autorizada: false } }
-        );
 
         // Obtener el paquete con las facturas pobladas
         const paqueteCompleto = await InvoicesPackage.findById(paqueteGuardado._id)
@@ -326,51 +348,93 @@ export const updateInvoicesPackage = async (req, res) => {
                 });
             }
 
-            // Actualizar las facturas que se removieron del paquete
-            const facturasRemovidas = paqueteExistente.facturas.filter(
-                facturaId => !facturas.includes(facturaId.toString())
+            // Verificar que no haya facturas duplicadas en el mismo paquete
+            const facturasDuplicadas = facturas.filter((facturaId, index) =>
+                facturas.indexOf(facturaId) !== index
             );
 
-            if (facturasRemovidas.length > 0) {
-                const datosRemocion = {
-                    descripcionPago: 'Removida del paquete',
-                    estadoPago: 0, // Pendiente
-                    registrado: 0, // No registrado
-                    estaRegistrada: false // Marcar como no registrada
-                };
-
-                await Promise.all(
-                    facturasRemovidas.map(facturaId =>
-                        ImportedInvoices.findByIdAndUpdate(facturaId, { $set: datosRemocion })
-                    )
-                );
+            if (facturasDuplicadas.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No se pueden agregar facturas duplicadas al mismo paquete.'
+                });
             }
 
-            // Actualizar las facturas que se agregaron al paquete
-            const facturasNuevas = facturas.filter(
-                facturaId => !paqueteExistente.facturas.includes(facturaId)
+            // Identificar facturas que se están agregando al paquete (nuevas)
+            const facturasNuevas = facturas.filter(facturaId =>
+                !paqueteExistente.facturas.includes(facturaId.toString())
             );
 
-            if (facturasNuevas.length > 0) {
-                const datosAgregacion = {
-                    descripcionPago: comentario || 'Agregada al paquete',
-                    estadoPago: 1, // Enviado a pago
-                    registrado: 1, // Registrado
-                    fechaRevision: new Date(),
-                    estaRegistrada: true // Marcar como registrada
-                };
+            // Verificar que las facturas completamente pagadas no estén ya en el paquete
+            const facturasCompletamentePagadas = facturasExistentes.filter(f =>
+                f.importePagado >= f.importeAPagar
+            );
+            const facturasCompletamentePagadasEnPaquete = paqueteExistente.facturas.filter(facturaId => {
+                const factura = facturasExistentes.find(f => f._id.toString() === facturaId.toString());
+                return factura && factura.importePagado >= factura.importeAPagar;
+            });
 
-                await Promise.all(
-                    facturasNuevas.map(facturaId =>
-                        ImportedInvoices.findByIdAndUpdate(facturaId, { $set: datosAgregacion })
-                    )
-                );
+            const facturasCompletamentePagadasDuplicadas = facturasCompletamentePagadas.filter(f =>
+                facturasCompletamentePagadasEnPaquete.includes(f._id)
+            );
+
+            if (facturasCompletamentePagadasDuplicadas.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No se pueden agregar facturas completamente pagadas que ya están en el paquete.'
+                });
+            }
+
+            // Procesar solo las facturas nuevas que se están agregando al paquete
+            if (facturasNuevas.length > 0) {
+                for (const facturaId of facturasNuevas) {
+                    const factura = facturasExistentes.find(f => f._id.toString() === facturaId.toString());
+
+                    if (factura) {
+                        const datosAgregacion = {
+                            descripcionPago: comentario || 'Agregada al paquete',
+                            registrado: 1, // Registrado
+                            fechaRevision: new Date(),
+                            estaRegistrada: true, // Marcar como registrada en paquete
+                            pagoRechazado: false, // No rechazado inicialmente
+                        };
+
+                        // Tanto para pagos completos como parciales, marcar como pendiente de autorización
+                        if (factura.importePagado >= factura.importeAPagar) {
+                            // Pago completo - pendiente de autorización
+                            datosAgregacion.estadoPago = null; // Pendiente de autorización
+                            datosAgregacion.autorizada = false; // Pendiente de autorización
+                            datosAgregacion.esCompleta = false; // No está completamente pagada hasta que se autorice
+                        } else if (factura.importePagado > 0) {
+                            // Pago parcial - también pendiente de autorización (como los completos)
+                            datosAgregacion.estadoPago = null; // Pendiente de autorización
+                            datosAgregacion.autorizada = false; // Pendiente de autorización
+                            datosAgregacion.esCompleta = false;
+                        } else {
+                            // Sin pagos - estado inicial
+                            datosAgregacion.estadoPago = 1; // Enviado a pago
+                            datosAgregacion.autorizada = false;
+                            datosAgregacion.esCompleta = false;
+                        }
+
+                        await ImportedInvoices.findByIdAndUpdate(facturaId, { $set: datosAgregacion });
+                    }
+                }
             }
         }
 
         // Actualizar el paquete
         const datosActualizacion = {};
-        if (facturas) datosActualizacion.facturas = facturas;
+        if (facturas) {
+            // En lugar de reemplazar todas las facturas, agregar solo las nuevas
+            const facturasActuales = paqueteExistente.facturas.map(f => f.toString());
+            const facturasNuevas = facturas.filter(f => !facturasActuales.includes(f.toString()));
+
+            if (facturasNuevas.length > 0) {
+                // Agregar las nuevas facturas al array existente
+                datosActualizacion.facturas = [...paqueteExistente.facturas, ...facturasNuevas];
+            }
+        }
         if (estatus) datosActualizacion.estatus = estatus;
         if (departamento_id) datosActualizacion.departamento_id = departamento_id;
         if (departamento) datosActualizacion.departamento = departamento;
@@ -642,5 +706,24 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
     } catch (error) {
         console.error('Error en getInvoicesPackagesByUsuario:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Función para actualizar totales de paquetes cuando se desautoriza una factura
+export const actualizarTotalesPaquetesPorFactura = async (facturaId) => {
+    try {
+        // Buscar todos los paquetes que contengan esta factura
+        const paquetes = await InvoicesPackage.find({
+            facturas: facturaId
+        });
+
+        // Actualizar los totales de cada paquete
+        for (const paquete of paquetes) {
+            await paquete.actualizarTotales();
+        }
+
+        console.log(`Totales actualizados para ${paquetes.length} paquetes que contienen la factura ${facturaId}`);
+    } catch (error) {
+        console.error('Error actualizando totales de paquetes:', error);
     }
 }; 

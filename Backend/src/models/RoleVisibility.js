@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const roleVisibilitySchema = new Schema({
-  roleId: {
+  userId: {
     type: Schema.Types.ObjectId,
-    ref: "ac_role",
+    ref: "ac_users",
     required: true,
   },
   companies: [
@@ -66,6 +66,7 @@ roleVisibilitySchema.methods.getHierarchicalStructure = async function () {
     const { Brand } = await import("./Brand.js");
     const { RsCompanyBrand } = await import("./CompanyBrands.js");
     const { Branch } = await import("./Branch.js");
+    const { RsBranchBrand } = await import("./BranchBrands.js");
 
     const structure = {
       hasFullAccess: this.companies.length === 0,
@@ -105,22 +106,25 @@ roleVisibilitySchema.methods.getHierarchicalStructure = async function () {
             branches: {},
           };
 
-          const branches = await Branch.find({
-            companyId: company._id,
-            brandId: brand._id,
-            isActive: true,
-          });
+          const branchBrandRelations = await RsBranchBrand.find({
+            brandId: brand._id
+          }).populate('branchId');
 
-          for (const branch of branches) {
-            if (
-              this.branches.length === 0 ||
-              this.branches.some((b) => b.equals(branch._id))
-            ) {
-              structure.companies[company._id].brands[brand._id].branches[
-                branch._id
-              ] = {
-                name: branch.name,
-              };
+          for (const branchRelation of branchBrandRelations) {
+            const branch = branchRelation.branchId;
+            if (!branch || !branch._id) continue;
+
+            if (branch.companyId && branch.companyId.equals(company._id)) {
+              if (
+                this.branches.length === 0 ||
+                this.branches.some((b) => b.equals(branch._id))
+              ) {
+                structure.companies[company._id].brands[brand._id].branches[
+                  branch._id
+                ] = {
+                  name: branch.name,
+                };
+              }
             }
           }
         }
@@ -135,7 +139,7 @@ roleVisibilitySchema.methods.getHierarchicalStructure = async function () {
 };
 
 const RoleVisibility = mongoose.model(
-  "ac_role_visibility",
+  "ac_user_visibility",
   roleVisibilitySchema
 );
 

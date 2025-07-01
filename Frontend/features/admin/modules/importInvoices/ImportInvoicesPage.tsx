@@ -10,9 +10,12 @@ import { CloudUpload, Save } from 'lucide-react';
 import { importedInvoicesService } from './services/importedInvoices';
 import { companiesService } from '../companies/services/companies';
 import { Company } from '../companies/types';
+
 import { ImportedInvoice, Pagination, RawInvoiceData, SummaryData } from './types';
 import SummaryCards from './components/SummaryCards';
 import InvoicesTable from './components/InvoicesTable';
+import { getUserVisibilityForSelects } from '../InvoicesPackpages/services';
+import { useUserSessionStore } from '@/stores';
 
 const ImportInvoicesPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -32,13 +35,15 @@ const ImportInvoicesPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
 
+  const { user } = useUserSessionStore();
+
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await companiesService.getAllActive();
-        if (response.success) {
-          const activeCompanies = response.data.filter(company => company.isActive);
-          setCompanies(activeCompanies);
+        const userVisibility = await getUserVisibilityForSelects(user!._id);
+        console.log(userVisibility);
+        if (userVisibility.companies) {
+          setCompanies(userVisibility.companies);
         } else {
           toast.error('Error al cargar las razones sociales.');
         }

@@ -157,12 +157,12 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     }
   },
 
-  // Estado del pago (0=Pendiente, 1=Enviado a pago, 2=Pagado, 3=Registrado)
+  // Estado del pago (null=Pendiente de autorización, 0=Pendiente, 1=Enviado a pago, 2=Pagado, 3=Registrado)
   estadoPago: {
     type: Number,
     enum: {
-      values: [0, 1, 2, 3],
-      message: 'El estado de pago debe ser 0 (Pendiente), 1 (Enviado), 2 (Pagado), o 3 (Registrado)'
+      values: [null, 0, 1, 2, 3],
+      message: 'El estado de pago debe ser null (Pendiente de autorización), 0 (Pendiente), 1 (Enviado), 2 (Pagado), o 3 (Registrado)'
     },
     default: 0,
     index: true
@@ -185,6 +185,12 @@ const ImportedInvoicesSchema = new mongoose.Schema({
   autorizada: {
     type: Boolean,
     default: true
+  },
+
+  // Si el pago fue rechazado (no se puede volver a autorizar hasta que se vuelva a pagar)
+  pagoRechazado: {
+    type: Boolean,
+    default: false
   },
 
   // Fecha de revisión
@@ -268,6 +274,7 @@ ImportedInvoicesSchema.index({ folio: 1, serie: 1 });
 ImportedInvoicesSchema.index({ estadoPago: 1, estatus: 1 });
 ImportedInvoicesSchema.index({ fechaRevision: -1 });
 ImportedInvoicesSchema.index({ autorizada: 1 });
+ImportedInvoicesSchema.index({ pagoRechazado: 1 });
 
 ImportedInvoicesSchema.virtual('descripcionTipoComprobante').get(function () {
   const tipos = {
@@ -314,6 +321,7 @@ ImportedInvoicesSchema.virtual('porcentajePagado').get(function () {
 
 ImportedInvoicesSchema.virtual('descripcionEstadoPago').get(function () {
   const estados = {
+    null: 'Pendiente de autorización',
     0: 'Pendiente',
     1: 'Enviado a pago',
     2: 'Pagado',

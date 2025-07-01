@@ -1,24 +1,27 @@
 import express from "express";
 import {
-  getRoleVisibilityStructure,
-  updateRoleVisibility,
+  getUserVisibilityStructure,
+  updateUserVisibility,
   checkAccess,
   getAllStructure,
+  getUserVisibilityForSelects,
+  testBranchBrandRelations,
 } from "../controllers/roleVisibilityController.js";
 import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Obtener estructura jerárquica completa
 router.get("/structure", protect, getAllStructure);
 
-// Obtener estructura jerárquica de visibilidad para un rol
-router.get("/:roleId/structure", protect, getRoleVisibilityStructure);
+router.get("/:userId/structure", protect, getUserVisibilityStructure);
 
-// Actualizar visibilidad de un rol
-router.put("/:roleId", protect, updateRoleVisibility);
+router.get("/:userId/selects", protect, getUserVisibilityForSelects);
 
-// Verificar acceso a una entidad específica
-router.get("/:roleId/check-access", protect, checkAccess);
+router.put("/:userId", protect, updateUserVisibility);
+
+router.get("/:userId/check-access", protect, checkAccess);
+
+// Ruta de prueba para verificar relaciones marca-sucursal
+router.get("/test/branch-brand/:brandId", protect, testBranchBrandRelations);
 
 export default router;

@@ -20,6 +20,9 @@ interface FacturaProcesada {
     importePagado: number;
     razonSocial?: { name: string };
     guardada?: boolean;
+    completamentePagada?: boolean;
+    autorizada?: boolean;
+    estaRegistrada?: boolean;
 }
 
 interface EnviarPagoModalProps {
@@ -51,17 +54,40 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
     const { user } = useUserSessionStore();
 
     useEffect(() => {
-        // IDs de facturas guardadas en el paquete existente
-        const idsGuardadas = paqueteExistente
-            ? paqueteExistente.facturas.map((f: any) => f._id)
+        // IDs de facturas completamente pagadas que ya están en el paquete existente
+        const idsCompletamentePagadas = paqueteExistente
+            ? paqueteExistente.facturas
+                .filter((f: any) => f.importePagado >= f.importeAPagar)
+                .map((f: any) => f._id)
             : [];
+
+        // Filtrar facturas: solo excluir las que están completamente pagadas en el paquete existente
+        // Las facturas con pago parcial pueden ser registradas nuevamente
+        const facturasFiltradas = facturas.filter(f => !idsCompletamentePagadas.includes(f._id));
+
         // Agrega la propiedad guardada a cada factura
-        const facturasConEstado = facturas.map(f => ({
-            ...f,
-            guardada: idsGuardadas.includes(f._id)
-        }));
+        const facturasConEstado = facturasFiltradas.map(f => {
+            // Calcular el importe pagado considerando pagos temporales
+            let importePagadoCalculado = f.importePagado;
+            if (tempPayments && tempPayments[f._id]) {
+                const tempPayment = tempPayments[f._id];
+                if (tempPayment.tipoPago === 'completo') {
+                    importePagadoCalculado = f.importeAPagar;
+                } else if (tempPayment.tipoPago === 'parcial' && tempPayment.monto) {
+                    importePagadoCalculado = tempPayment.originalImportePagado + tempPayment.monto;
+                }
+            }
+
+            return {
+                ...f,
+                guardada: idsCompletamentePagadas.includes(f._id),
+                completamentePagada: importePagadoCalculado >= f.importeAPagar,
+                importePagado: importePagadoCalculado // Actualizar el importe pagado con los pagos temporales
+            };
+        });
+
         setFacturasLocal(facturasConEstado);
-    }, [facturas, paqueteExistente]);
+    }, [facturas, paqueteExistente, tempPayments]);
 
     useEffect(() => {
         setFechaPago(paqueteExistente?.fechaPago || '');
@@ -72,8 +98,38 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
         setFacturasLocal(prev => prev.filter(f => f._id !== id));
     };
 
-    const totalPagar = facturasLocal.reduce((sum, f) => sum + (f.importePagado || 0), 0);
-    const totalSaldo = facturasLocal.reduce((sum, f) => sum + (f.saldo || 0), 0);
+    // Calcular el total considerando pagos temporales y reales
+    const totalPagar = facturasLocal.reduce((sum, f) => {
+        let importePagadoCalculado = f.importePagado;
+
+        // Si hay pagos temporales para esta factura, calcular el importe total
+        if (tempPayments && tempPayments[f._id]) {
+            const tempPayment = tempPayments[f._id];
+            if (tempPayment.tipoPago === 'completo') {
+                importePagadoCalculado = f.importeAPagar;
+            } else if (tempPayment.tipoPago === 'parcial' && tempPayment.monto) {
+                importePagadoCalculado = tempPayment.originalImportePagado + tempPayment.monto;
+            }
+        }
+
+        return sum + importePagadoCalculado;
+    }, 0);
+
+    const totalSaldo = facturasLocal.reduce((sum, f) => {
+        let importePagadoCalculado = f.importePagado;
+
+        // Si hay pagos temporales para esta factura, calcular el importe total
+        if (tempPayments && tempPayments[f._id]) {
+            const tempPayment = tempPayments[f._id];
+            if (tempPayment.tipoPago === 'completo') {
+                importePagadoCalculado = f.importeAPagar;
+            } else if (tempPayment.tipoPago === 'parcial' && tempPayment.monto) {
+                importePagadoCalculado = tempPayment.originalImportePagado + tempPayment.monto;
+            }
+        }
+
+        return sum + (f.importeAPagar - importePagadoCalculado);
+    }, 0);
 
     const handleGuardar = async () => {
         try {
@@ -81,6 +137,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 toast.error('No hay usuario logueado');
                 return;
             }
+            console.log('user', user);
             if (!user._id || !user.departmentId || !user.department) {
                 toast.error('Faltan datos del usuario o departamento.');
                 return;
@@ -96,7 +153,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                     invoiceId,
                     ...payment
                 }));
-                
+
                 // Procesar cada pago temporal
                 for (const payment of paymentsToProcess) {
                     if (payment.tipoPago === 'completo') {
@@ -105,7 +162,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                         await markInvoiceAsPartiallyPaid(payment.invoiceId, payment.descripcion, payment.monto);
                     }
                 }
-                
+
                 toast.success('Pagos temporales procesados correctamente');
             }
 
@@ -121,7 +178,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 brandId: selectedBrandId,
                 branchId: selectedBranchId,
             };
-            
+
             let packpageId: string | undefined = undefined;
             if (isNewPackage) {
                 const response = await createInvoicesPackage(dataToSend);
@@ -197,9 +254,22 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                     <Alert variant="info" className="mb-3">
                         <b>Paquete existente seleccionado:</b>
                         <ul className="mb-0 mt-2">
-                            <li><span className="badge bg-primary bg-opacity-10 text-primary me-2">Procesada</span> Facturas que ya están en este paquete</li>
-                            <li><span className="badge bg-success bg-opacity-10 text-success me-2">Nueva</span> Facturas con pagos que se agregarán al paquete</li>
+                            <li><span className="badge bg-success bg-opacity-10 text-success me-2">Completamente Pagada</span> Facturas completamente pagadas (no se pueden agregar nuevamente)</li>
+                            <li><span className="badge bg-primary bg-opacity-10 text-primary me-2">Pago Parcial</span> Facturas con pagos parciales (pueden ser agregadas múltiples veces para completar el pago)</li>
+                            <li><span className="badge bg-warning bg-opacity-10 text-warning me-2">Nueva</span> Facturas nuevas que se agregarán al paquete</li>
+                            <li><span className="badge bg-info bg-opacity-10 text-info me-2">Autorizada</span> Facturas que han sido autorizadas</li>
+                            <li><span className="badge bg-secondary bg-opacity-10 text-secondary me-2">Pendiente</span> Facturas pendientes de autorización</li>
                         </ul>
+                    </Alert>
+                )}
+
+                {paqueteExistente && facturasLocal.length === 0 && (
+                    <Alert variant="warning" className="mb-3">
+                        <b>No hay facturas nuevas para agregar:</b>
+                        <p className="mb-0 mt-2">
+                            Todas las facturas seleccionadas ya están incluidas en este paquete existente.
+                            No se pueden agregar facturas duplicadas al mismo paquete.
+                        </p>
                     </Alert>
                 )}
                 <div className="table-responsive">
@@ -222,20 +292,56 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                         </thead>
                         <tbody>
                             {facturasLocal.map((f, idx) => {
-                                const saldo = f.importeAPagar - f.importePagado;
+                                // Calcular importe pagado considerando pagos temporales
+                                let importePagadoCalculado = f.importePagado;
+                                let saldoCalculado = f.importeAPagar - f.importePagado;
+
+                                // Si hay pagos temporales para esta factura, calcular el importe total
+                                if (tempPayments && tempPayments[f._id]) {
+                                    const tempPayment = tempPayments[f._id];
+                                    if (tempPayment.tipoPago === 'completo') {
+                                        importePagadoCalculado = f.importeAPagar;
+                                        saldoCalculado = 0;
+                                    } else if (tempPayment.tipoPago === 'parcial' && tempPayment.monto) {
+                                        importePagadoCalculado = tempPayment.originalImportePagado + tempPayment.monto;
+                                        saldoCalculado = f.importeAPagar - importePagadoCalculado;
+                                    }
+                                }
+
                                 const estatus = f.estatus === '1' ? { text: 'Vigente', variant: 'success' } : { text: 'Cancelado', variant: 'danger' };
                                 return (
                                     <tr key={f._id}>
                                         <td>{idx + 1}</td>
                                         {/* Estado de guardado */}
                                         <td>
-                                            {f.guardada ? (
+                                            {f.completamentePagada ? (
+                                                <div className="d-flex flex-column gap-1">
+                                                    {f.estaRegistrada ? (
+                                                        f.autorizada ? (
+                                                            <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
+                                                                <i className="bi bi-shield-check me-1"></i>
+                                                                Autorizada
+                                                            </span>
+                                                        ) : (
+                                                            <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
+                                                                <i className="bi bi-clock me-1"></i>
+                                                                Procesada
+                                                            </span>
+                                                        )
+                                                    ) : (
+                                                        <span className="badge bg-success bg-opacity-10 text-success fw-bold">
+                                                            <i className="bi bi-check-circle me-1"></i>
+                                                            Completamente Pagada
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : f.importePagado > 0 ? (
                                                 <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
-                                                    <i className="bi bi-check-circle me-1"></i>
-                                                    Procesada
+                                                    <i className="bi bi-clock me-1"></i>
+                                                    Pago Parcial: {Math.round((f.importePagado / f.importeAPagar) * 100)}%
                                                 </span>
                                             ) : (
-                                                <span className="badge bg-success bg-opacity-10 text-success fw-bold">
+                                                <span className="badge bg-warning bg-opacity-10 text-warning fw-bold">
                                                     <i className="bi bi-plus-circle me-1"></i>
                                                     Nueva
                                                 </span>
@@ -269,15 +375,21 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                                         <td>{f.fechaCancelacion ? new Date(f.fechaCancelacion).toLocaleDateString('es-MX') : ''}</td>
                                         {/* Saldo */}
                                         <td>
-                                            <span className={saldo > 0 ? 'text-warning' : 'text-success'}>
-                                                {f.saldo.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
+                                            <span className={saldoCalculado > 0 ? 'text-warning' : 'text-success'}>
+                                                {saldoCalculado.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
                                             </span>
                                         </td>
                                         {/* Importe Pagado */}
                                         <td>
-                                            <span className={f.importePagado > 0 ? 'text-success' : 'text-muted'}>
-                                                {f.importePagado.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
+                                            <span className={importePagadoCalculado > 0 ? 'text-success' : 'text-muted'}>
+                                                {importePagadoCalculado.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
                                             </span>
+                                            {tempPayments && tempPayments[f._id] && (
+                                                <small className="text-warning d-block">
+                                                    <i className="bi bi-clock me-1"></i>
+                                                    Temporal
+                                                </small>
+                                            )}
                                         </td>
                                         {/* Acciones */}
                                         <td className="text-center align-middle">
@@ -306,7 +418,14 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onClose}>Cerrar</Button>
-                <Button variant="primary" onClick={handleGuardar} disabled={facturasLocal.length === 0}>Guardar</Button>
+                <Button
+                    variant="primary"
+                    onClick={handleGuardar}
+                    disabled={facturasLocal.length === 0}
+                    title={facturasLocal.length === 0 ? 'No hay facturas nuevas para agregar al paquete' : ''}
+                >
+                    Guardar
+                </Button>
             </Modal.Footer>
         </Modal>
     );

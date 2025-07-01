@@ -6,7 +6,7 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-export interface RoleVisibilityUpdatePayload {
+export interface UserVisibilityUpdatePayload {
   companies: string[];
   brands: string[];
   branches: string[];
@@ -19,9 +19,9 @@ export interface VisibilityStructure {
   selectedBranches: string[];
 }
 
-export const roleVisibilityService = {
-  getStructure: (roleId: string): Promise<ApiResponse<VisibilityStructure>> => {
-    return apiCall(`/role-visibility/${roleId}/structure`);
+export const userVisibilityService = {
+  getStructure: (userId: string): Promise<ApiResponse<VisibilityStructure>> => {
+    return apiCall(`/role-visibility/${userId}/structure`);
   },
 
   getAllStructure: (): Promise<ApiResponse<VisibilityStructure>> => {
@@ -29,10 +29,10 @@ export const roleVisibilityService = {
   },
 
   update: (
-    roleId: string,
-    data: RoleVisibilityUpdatePayload
+    userId: string,
+    data: UserVisibilityUpdatePayload
   ): Promise<ApiResponse<any>> => {
-    return apiCall(`/role-visibility/${roleId}`, {
+    return apiCall(`/role-visibility/${userId}`, {
       method: "PUT",
       body: JSON.stringify(data),
       headers: {
@@ -42,7 +42,7 @@ export const roleVisibilityService = {
   },
 
   checkAccess: (
-    roleId: string,
+    userId: string,
     params: { companyId?: string; brandId?: string; branchId?: string }
   ): Promise<ApiResponse<boolean>> => {
     const queryParams = new URLSearchParams();
@@ -51,7 +51,7 @@ export const roleVisibilityService = {
     if (params.branchId) queryParams.append("branchId", params.branchId);
 
     return apiCall(
-      `/role-visibility/${roleId}/check-access?${queryParams.toString()}`
+      `/role-visibility/${userId}/check-access?${queryParams.toString()}`
     );
   },
 };

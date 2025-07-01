@@ -45,7 +45,15 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
         if (show && user?._id) {
             setLoading(true);
             getInvoicesPackagesByUsuario(user._id)
-                .then(paquetes => setPackages(paquetes || []))
+                .then(paquetes => {
+                    if (Array.isArray(paquetes?.data)) {
+                        setPackages(paquetes.data);
+                    } else if (Array.isArray(paquetes)) {
+                        setPackages(paquetes);
+                    } else {
+                        setPackages([]);
+                    }
+                })
                 .catch((error) => {
                     toast.error('Error al cargar los paquetes de facturas');
                     console.error(error);
@@ -76,9 +84,9 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
 
     const handleEdit = (packpage: InvoicesPackage) => {
         setPaqueteExistenteSeleccionado(packpage);
-        // Solo incluir facturas pagadas completamente
-        const facturasPagadas = (packpage.facturas || []).filter((f: any) => f.importePagado >= f.importeAPagar);
-        setFacturasProcesadas(facturasPagadas);
+        // Incluir todas las facturas del paquete (autorizadas o no)
+        const todasLasFacturas = (packpage.facturas || []);
+        setFacturasProcesadas(todasLasFacturas);
         setShowEnviarPagoModal(true);
     };
 
@@ -99,6 +107,27 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
             default:
                 return <span className="badge bg-light text-dark fw-bold py-2 px-3">{status}</span>;
         }
+    };
+
+    // Función para obtener el estado de autorización del paquete
+    const getAutorizacionStatus = (packpage: InvoicesPackage) => {
+        const facturasCompletamentePagadas = packpage.facturas.filter((f: any) => f.importePagado >= f.importeAPagar);
+        const facturasAutorizadas = facturasCompletamentePagadas.filter((f: any) => f.autorizada);
+        const facturasPendientes = facturasCompletamentePagadas.filter((f: any) => !f.autorizada && f.estaRegistrada);
+
+        if (facturasCompletamentePagadas.length === 0) {
+            return { tipo: 'sin_pagos_completos', texto: 'Sin pagos completos', variant: 'secondary' };
+        }
+
+        if (facturasAutorizadas.length === facturasCompletamentePagadas.length) {
+            return { tipo: 'todas_autorizadas', texto: 'Todas autorizadas', variant: 'success' };
+        }
+
+        if (facturasPendientes.length > 0) {
+            return { tipo: 'pendientes', texto: `${facturasPendientes.length} pendientes de autorización`, variant: 'warning' };
+        }
+
+        return { tipo: 'parcial', texto: `${facturasAutorizadas.length}/${facturasCompletamentePagadas.length} autorizadas`, variant: 'info' };
     };
 
     const formatCurrency = (amount: number) => {
@@ -159,8 +188,8 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                             </Form.Group>
                         </Col>
                         <Col md={6} className="text-end">
-                            <Button 
-                                variant="primary" 
+                            <Button
+                                variant="primary"
                                 onClick={() => router.push('/modulos/paquetes-facturas')}
                             >
                                 <i className="bi bi-plus-circle me-2"></i>
@@ -210,6 +239,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                     <th>Departamento</th>
                                     <th>Comentario</th>
                                     <th>Estatus</th>
+                                    <th>Autorización</th>
                                     <th>Total Facturas</th>
                                     <th>Importe Total</th>
                                     <th>Pagado</th>
@@ -222,8 +252,8 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                             <tbody>
                                 {filteredPackages.map((pkg) => {
                                     const saldo = pkg.totalImporteAPagar - pkg.totalPagado;
-                                    const porcentajePagado = pkg.totalImporteAPagar > 0 
-                                        ? Math.round((pkg.totalPagado / pkg.totalImporteAPagar) * 100) 
+                                    const porcentajePagado = pkg.totalImporteAPagar > 0
+                                        ? Math.round((pkg.totalPagado / pkg.totalImporteAPagar) * 100)
                                         : 0;
                                     return (
                                         <tr key={pkg._id}>
@@ -246,6 +276,16 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                             </td>
                                             <td>
                                                 {getStatusBadge(pkg.estatus)}
+                                            </td>
+                                            <td>
+                                                {(() => {
+                                                    const authStatus = getAutorizacionStatus(pkg);
+                                                    return (
+                                                        <span className={`badge bg-${authStatus.variant} bg-opacity-10 text-${authStatus.variant} fw-bold py-2 px-3`}>
+                                                            {authStatus.texto}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </td>
                                             <td>
                                                 <div className="">
@@ -299,10 +339,10 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                                 </small>
                                             </td>
                                             <td>
-                                                <PackpageActions 
-                                                    packpageId={pkg._id} 
-                                                    onEdit={() => handleEdit(pkg)} 
-                                                    onDelete={() => { setSelectedPackpageId(pkg._id); setShowDeleteModal(true); }} 
+                                                <PackpageActions
+                                                    packpageId={pkg._id}
+                                                    onEdit={() => handleEdit(pkg)}
+                                                    onDelete={() => { setSelectedPackpageId(pkg._id); setShowDeleteModal(true); }}
                                                     loadingDelete={deletingId === pkg._id}
                                                 />
                                             </td>
@@ -321,7 +361,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                     <Modal.Title>Eliminar paquete</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    ¿Estás seguro que deseas eliminar este paquete? Esta acción no se puede deshacer.<br/>
+                    ¿Estás seguro que deseas eliminar este paquete? Esta acción no se puede deshacer.<br />
                     Si el paquete contiene facturas, sus campos de registro serán limpiados.
                 </Modal.Body>
                 <Modal.Footer>
@@ -350,6 +390,9 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                     importeAPagar: f.importeAPagar,
                     saldo: f.importeAPagar - f.importePagado,
                     importePagado: f.importePagado,
+                    completamentePagada: f.importePagado >= f.importeAPagar,
+                    autorizada: f.autorizada,
+                    estaRegistrada: f.estaRegistrada
                 }))}
                 paqueteExistente={paqueteExistenteSeleccionado}
                 razonSocialName={paqueteExistenteSeleccionado?.departamento || ''}

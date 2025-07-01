@@ -47,11 +47,13 @@ export interface ImportedInvoice {
     formaPago?: string;
     metodoPago?: string;
     importePagado: number;
-    estadoPago: number;
+    estadoPago: number | null;
     esCompleta: boolean;
     descripcionPago?: string;
     autorizada: boolean;
+    pagoRechazado: boolean;
     fechaRevision?: string;
+    estaRegistrada?: boolean;
     razonSocial: {
         _id: string;
         name: string;
@@ -127,13 +129,15 @@ export const getInvoicesByProviderAndCompany = async (params: {
     providerIds?: string; // IDs de proveedores separados por coma
     rfcProvider?: string;
     rfcCompany?: string;
+    startDate?: string; // Fecha de inicio en formato ISO
+    endDate?: string; // Fecha de fin en formato ISO
     page?: number;
     limit?: number;
     estatus?: string;
     estadoPago?: string;
     sortBy?: string;
     order?: string;
-}): Promise<ImportedInvoice[]> => {
+}): Promise<any> => {
     const queryParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
@@ -142,25 +146,17 @@ export const getInvoicesByProviderAndCompany = async (params: {
         }
     });
 
-    const response = await apiCall<ImportedInvoice[]>(`/imported-invoices/by-provider-company?${queryParams}`);
-    return response.data;
+    const response = await apiCall<any>(`/imported-invoices/by-provider-company?${queryParams}`);
+    return response;
 };
 
 // Servicio para obtener resumen de facturas por proveedor y empresa
 export const getInvoicesSummaryByProviderAndCompany = async (params: {
     rfcProvider?: string;
     rfcCompany?: string;
-}): Promise<{
-    totalFacturas: number;
-    facturasCanceladas: number;
-    facturasPendientes: number;
-    facturasEnviadas: number;
-    facturasPagadas: number;
-    facturasRegistradas: number;
-    totalImporteAPagar: number;
-    totalPagado: number;
-    totalSaldo: number;
-}> => {
+    startDate?: string; // Fecha de inicio en formato ISO
+    endDate?: string; // Fecha de fin en formato ISO
+}): Promise<any> => {
     const queryParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
@@ -170,7 +166,7 @@ export const getInvoicesSummaryByProviderAndCompany = async (params: {
     });
 
     const response = await apiCall<any>(`/imported-invoices/summary-by-provider-company?${queryParams}`);
-    return response.data;
+    return response;
 };
 
 // Servicio para crear un paquete de facturas
@@ -301,9 +297,9 @@ export async function markInvoiceAsPartiallyPaid(invoiceId: string, descripcion:
 }
 
 // Servicio para obtener paquetes por usuario
-export const getInvoicesPackagesByUsuario = async (usuario_id: string): Promise<InvoicesPackage[]> => {
-    const response = await apiCall<InvoicesPackage[]>(`/invoices-package/by-usuario?usuario_id=${usuario_id}`);
-    return response.data;
+export const getInvoicesPackagesByUsuario = async (usuario_id: string): Promise<any> => {
+    const response = await apiCall<any>(`/invoices-package/by-usuario?usuario_id=${usuario_id}`);
+    return response;
 };
 
 // Interfaz para la respuesta de toggle de factura autorizada
@@ -312,6 +308,7 @@ export interface ToggleFacturaAutorizadaResponse {
     data: {
         _id: string;
         autorizada: boolean;
+        pagoRechazado: boolean;
         importePagado: number;
     };
     message?: string;
@@ -338,4 +335,23 @@ export async function updateImporteAPagar(invoiceId: string, nuevoImporte: numbe
 export const getInvoiceById = async (id: string): Promise<ApiResponse<ImportedInvoice>> => {
     const response = await apiCall<ImportedInvoice>(`/imported-invoices/${id}`);
     return response;
+};
+
+// Servicio para obtener la estructura de visibilidad del usuario para selects
+export const getUserVisibilityForSelects = async (userId: string): Promise<{
+    companies: Array<{
+        _id: string;
+        name: string;
+        rfc: string;
+        legalRepresentative: string;
+        address: string;
+        isActive: boolean;
+        createdAt: string;
+    }>;
+    brands: Array<{ _id: string; name: string; companyId: string }>;
+    branches: Array<{ _id: string; name: string; brandId: string; companyId: string }>;
+    hasFullAccess: boolean;
+}> => {
+    const response = await apiCall<any>(`/role-visibility/${userId}/selects`);
+    return response.data;
 }; 

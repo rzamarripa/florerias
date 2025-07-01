@@ -27,10 +27,6 @@ const userSchema = new Schema(
       ref: "cc_department",
       required: true
     },
-    department: {
-      type: String,
-      required: true
-    },
     profile: {
       name: {
         type: String,

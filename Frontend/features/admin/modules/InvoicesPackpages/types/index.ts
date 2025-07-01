@@ -85,6 +85,7 @@ export interface ImportedInvoice {
   estatus: 0 | 1;
   estadoPago: 0 | 1 | 2 | 3;
   autorizada: boolean;
+  pagoRechazado: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,4 +160,30 @@ export interface GetInvoicesPackagesSummaryResponse {
   success: boolean;
   data: InvoicesPackageSummary;
   message?: string;
+}
+
+// Tipos para la estructura de visibilidad
+export interface VisibilityCompany {
+  _id: string;
+  name: string;
+}
+
+export interface VisibilityBrand {
+  _id: string;
+  name: string;
+  companyId: string;
+}
+
+export interface VisibilityBranch {
+  _id: string;
+  name: string;
+  brandId: string;
+  companyId: string;
+}
+
+export interface UserVisibilityStructure {
+  companies: VisibilityCompany[];
+  brands: VisibilityBrand[];
+  branches: VisibilityBranch[];
+  hasFullAccess: boolean;
 } 

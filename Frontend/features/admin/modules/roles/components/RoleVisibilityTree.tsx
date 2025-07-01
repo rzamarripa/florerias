@@ -2,13 +2,20 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Card } from 'react-bootstrap';
-import { roleVisibilityService } from '../services/roleVisibility';
+import { userVisibilityService } from '../services/roleVisibility';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import 'jstree/dist/themes/default/style.min.css';
 import jQuery from 'jquery';
 import 'jstree';
 import { toast } from 'react-toastify';
 import { TbBuildingSkyscraper, TbBuildingStore, TbUsers } from 'react-icons/tb';
+
+// Declaraciones de tipos para jsTree
+declare global {
+  interface JQuery {
+    jstree(command?: string | any, ...args: any[]): any;
+  }
+}
 
 // Asignar jQuery globalmente para jsTree
 if (typeof window !== 'undefined') {
@@ -44,8 +51,8 @@ interface TreeNode {
   };
 }
 
-interface RoleVisibilityTreeProps {
-  roleId: string;
+interface UserVisibilityTreeProps {
+  userId: string;
 }
 
 interface JsTreeNode {
@@ -53,7 +60,7 @@ interface JsTreeNode {
   id: string;
 }
 
-const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
+const UserVisibilityTree: React.FC<UserVisibilityTreeProps> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
@@ -63,7 +70,7 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
     branches: string[];
   }>({ companies: [], brands: [], branches: [] });
   const token = useUserSessionStore(state => state.token);
-  const updateTimeoutRef = useRef<NodeJS.Timeout>();
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -71,7 +78,7 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
       return;
     }
     loadVisibilityStructure();
-  }, [roleId, token]);
+  }, [userId, token]);
 
   const loadVisibilityStructure = async () => {
     try {
@@ -79,18 +86,18 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
       setError('');
 
       // Primero obtenemos la estructura completa
-      const structureResponse = await roleVisibilityService.getAllStructure();
-      // Luego obtenemos las selecciones del rol
-      const selectedResponse = await roleVisibilityService.getStructure(roleId);
+      const structureResponse = await userVisibilityService.getAllStructure();
+      // Luego obtenemos las selecciones del usuario
+      const selectedResponse = await userVisibilityService.getStructure(userId);
 
       if (structureResponse.success && selectedResponse.success) {
         const structure = structureResponse.data;
         const selected = selectedResponse.data as VisibilityStructure;
-        
+
         const nodes: TreeNode[] = [
-          { 
-            id: 'root', 
-            text: 'Visibilidad', 
+          {
+            id: 'root',
+            text: 'Visibilidad',
             parent: '#',
             state: { opened: true }
           }
@@ -104,7 +111,7 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
         });
 
         // Convertir la estructura jerárquica a formato de árbol
-        if (structure.companies) {
+        if (structure?.companies) {
           Object.entries(structure.companies).forEach(([companyId, companyData]: [string, any]) => {
             const companyNodeId = `company_${companyId}`;
             // Agregar compañía
@@ -113,7 +120,7 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
               text: companyData.name || 'Compañía sin nombre',
               parent: 'root',
               type: 'company',
-              state: { 
+              state: {
                 opened: true,
                 selected: selected.selectedCompanies?.includes(companyId) || false
               }
@@ -128,7 +135,7 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
                   text: brandData.name || 'Marca sin nombre',
                   parent: companyNodeId,
                   type: 'brand',
-                  state: { 
+                  state: {
                     opened: true,
                     selected: selected.selectedBrands?.includes(brandId) || false
                   }
@@ -142,7 +149,7 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
                       text: branchData.name || 'Sucursal sin nombre',
                       parent: brandNodeId,
                       type: 'branch',
-                      state: { 
+                      state: {
                         selected: selected.selectedBranches?.includes(branchId) || false
                       }
                     });
@@ -174,7 +181,7 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
 
     updateTimeoutRef.current = setTimeout(async () => {
       try {
-        const response = await roleVisibilityService.update(roleId, data);
+        const response = await userVisibilityService.update(userId, data);
         if (response.success) {
           toast.success('Visibilidad actualizada correctamente');
         } else {
@@ -187,12 +194,12 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
         loadVisibilityStructure();
       }
     }, 500); // Esperar 500ms entre actualizaciones
-  }, [roleId]);
+  }, [userId]);
 
   useEffect(() => {
     if (!loading && treeData.length > 0 && typeof window !== 'undefined') {
       const $tree = jQuery('#visibility-tree');
-      
+
       // Destruir instancia anterior si existe
       if ($tree.jstree(true)) {
         $tree.jstree('destroy');
@@ -236,12 +243,12 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
         plugins: ['checkbox', 'types', 'wholerow', 'changed', 'state']
       });
 
-      $tree.on('ready.jstree', function() {
+      $tree.on('ready.jstree', function () {
         $tree.jstree('open_all');
       });
 
       // Manejar cambios en la selección
-      $tree.on('changed.jstree', function(e: JsTreeEvent, data: JsTreeData) {
+      $tree.on('changed.jstree', function (e: any, data: JsTreeData) {
         if (!data.node) return;
 
         const selectedNodes = data.selected;
@@ -281,7 +288,7 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
         clearTimeout(updateTimeoutRef.current);
       }
     };
-  }, [loading, treeData, roleId, token, debouncedUpdate]);
+  }, [loading, treeData, userId, token, debouncedUpdate]);
 
   if (loading) {
     return <div>Cargando...</div>;
@@ -291,8 +298,8 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
     return (
       <div className="alert alert-danger">
         {error}
-        <button 
-          className="btn btn-link" 
+        <button
+          className="btn btn-link"
           onClick={() => {
             setError('');
             loadVisibilityStructure();
@@ -307,10 +314,10 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
   return (
     <Card>
       <Card.Header>
-        <h4 className="card-title">Visibilidad del Rol</h4>
+        <h4 className="card-title">Visibilidad del Usuario</h4>
         <p className="text-muted mb-0">
-          Selecciona las razones sociales, marcas y sucursales a las que este rol tendrá acceso.
-          Si no seleccionas ninguna, el rol tendrá acceso total.
+          Selecciona las razones sociales, marcas y sucursales a las que este usuario tendrá acceso.
+          Si no seleccionas ninguna, el usuario tendrá acceso total.
         </p>
       </Card.Header>
       <Card.Body>
@@ -430,4 +437,4 @@ const RoleVisibilityTree: React.FC<RoleVisibilityTreeProps> = ({ roleId }) => {
   );
 };
 
-export default RoleVisibilityTree; 
+export default UserVisibilityTree; 

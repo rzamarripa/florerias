@@ -271,6 +271,12 @@ InvoicesPackageSchema.pre('save', function (next) {
         return next(new Error('El paquete debe contener al menos una factura'));
     }
 
+    // Validar que no haya facturas duplicadas
+    const facturasUnicas = [...new Set(this.facturas.map(id => id.toString()))];
+    if (facturasUnicas.length !== this.facturas.length) {
+        return next(new Error('No se pueden agregar facturas duplicadas al mismo paquete'));
+    }
+
     next();
 });
 

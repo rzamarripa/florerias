@@ -149,6 +149,7 @@ export const menuItems: MenuItemType[] = [
       { key: "roles", label: "Roles", url: "/gestion/roles" },
       { key: "pages", label: "Páginas", url: "/gestion/paginas" },
       { key: "users", label: "Usuarios", url: "/gestion/usuarios" },
+      { key: "visibilidad", label: "Visibilidad", url: "/gestion/visibilidad" },
     ],
   },
   {
@@ -162,9 +163,19 @@ export const menuItems: MenuItemType[] = [
         url: "/modulos/importar-metadatos",
       },
       {
+        key: "paquetes-facturas",
+        label: "Paquetes de Facturas",
+        url: "/modulos/paquetes-facturas",
+      },
+      {
         key: "importar-movimientos-bancario",
         label: "Importar Movimientos Bancarios",
         url: "/herramientas/importar-movimientos-bancarios",
+      },
+      {
+        key: "listado-paquetes",
+        label: "Listado de Paquetes",
+        url: "/modulos/paquetes-facturas/listado-paquetes",
       },
     ],
   },

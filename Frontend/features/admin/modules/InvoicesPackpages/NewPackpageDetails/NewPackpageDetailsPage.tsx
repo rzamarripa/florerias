@@ -79,8 +79,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     const handleToggleAutorizada = async (facturaId: string) => {
         try {
             const result = await toggleFacturaAutorizada(facturaId);
-            if (result && result.data && typeof result.data.autorizada !== 'undefined') {
-                console.log('result', result.data.autorizada);
+            if (result && result.success && result.data && typeof result.data.autorizada !== 'undefined') {
                 setPackpage((prev) => {
                     if (!prev) return prev;
                     return {
@@ -89,22 +88,31 @@ const NewPackpageDetailsPage: React.FC = () => {
                             f._id === facturaId ? {
                                 ...f,
                                 autorizada: result.data.autorizada,
+                                pagoRechazado: result.data.pagoRechazado || f.pagoRechazado,
                                 importePagado: result.data.importePagado || f.importePagado
                             } : f
                         ),
                     };
                 });
 
-                // Mostrar mensaje informativo si la factura fue rechazada
                 if (!result.data.autorizada) {
                     toast.info('Factura rechazada. El pago ha sido devuelto a cero.');
+                } else {
+                    toast.success('Estado de autorización actualizado correctamente.');
                 }
+                // Recargar la página para reflejar los cambios
+                window.location.reload();
             } else {
                 console.error('Respuesta inesperada de toggleFacturaAutorizada:', result);
-                alert('Error inesperado al cambiar el estado de autorización');
+                toast.error('Error inesperado al cambiar el estado de autorización');
             }
-        } catch {
-            alert('Error al cambiar el estado de autorización');
+        } catch (error: any) {
+            // Si el error es porque la factura tiene pago rechazado, mostrar toast específico
+            if (error.response?.status === 400 && error.response?.data?.message) {
+                toast.error(error.response.data.message);
+            } else {
+                toast.error('Error al cambiar el estado de autorización');
+            }
         }
     };
 
@@ -320,7 +328,18 @@ const NewPackpageDetailsPage: React.FC = () => {
                                         <Badge className="bg-success bg-opacity-10 text-success">Vigente</Badge>
                                     </td>
                                     <td>
-                                        <span className="text-primary">{factura.autorizada ? 'Autorizada' : 'Pendiente'}</span>
+                                        <span className="text-primary">
+                                            {factura.autorizada ? 'Autorizada' :
+                                                factura.pagoRechazado ? 'Pago Rechazado' : 'Pendiente'}
+                                        </span>
+                                        {factura.pagoRechazado && (
+                                            <div className="mt-1">
+                                                <Badge bg="danger" className="text-white">
+                                                    <i className="bi bi-exclamation-triangle me-1"></i>
+                                                    Requiere nuevo pago
+                                                </Badge>
+                                            </div>
+                                        )}
                                     </td>
                                     <td>${factura.importeAPagar.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                                     <td>${(factura.importeAPagar - factura.importePagado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
@@ -331,8 +350,8 @@ const NewPackpageDetailsPage: React.FC = () => {
                                             variant="outline-success"
                                             size="sm"
                                             className="fw-bold border-2 border-success text-success me-1"
-                                            title="Autorizar"
-                                            disabled={factura.autorizada}
+                                            title={factura.pagoRechazado ? "No se puede autorizar - Pago rechazado" : "Autorizar"}
+                                            disabled={factura.autorizada || factura.pagoRechazado}
                                             onClick={() => handleToggleAutorizada(factura._id)}
                                         >
                                             Sí <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✓</span>

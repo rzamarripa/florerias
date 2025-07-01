@@ -1,6 +1,8 @@
 import { ImportedInvoices } from "../models/ImportedInvoices.js";
 import { Company } from "../models/Company.js";
 import { Provider } from "../models/Provider.js";
+import { actualizarTotalesPaquetesPorFactura } from "./invoicesPackpageController.js";
+import mongoose from "mongoose";
 
 const parseDate = (dateString) => {
   if (!dateString || !dateString.trim() || dateString.trim() === '0000-00-00 00:00:00') {
@@ -47,7 +49,7 @@ export const bulkUpsertInvoices = async (req, res) => {
           tipoComprobante: invoice.EfectoComprobante,
           estatus: parseInt(invoice.Estatus, 10),
           fechaCancelacion: parseDate(invoice.FechaCancelacion),
-          razonSocial: companyId,
+          razonSocial: typeof companyId === 'string' ? new mongoose.Types.ObjectId(companyId) : companyId,
         };
 
         if (!invoiceData.uuid) {
@@ -175,6 +177,8 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
       limit = 15,
       rfcProvider,
       rfcCompany,
+      startDate,
+      endDate,
       estatus,
       estadoPago,
       sortBy = 'fechaEmision',
@@ -200,6 +204,17 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
     // Si se proporciona RFC de empresa, filtrar por rfcReceptor
     if (rfcCompany) {
       query.rfcReceptor = rfcCompany.toUpperCase();
+    }
+
+    // Filtros de fecha si se proporcionan
+    if (startDate || endDate) {
+      query.fechaEmision = {};
+      if (startDate) {
+        query.fechaEmision.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.fechaEmision.$lte = new Date(endDate);
+      }
     }
 
     // Filtros adicionales
@@ -282,7 +297,7 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
 // Función adicional: Obtener resumen de facturas por proveedor y empresa
 export const getInvoicesSummaryByProviderAndCompany = async (req, res) => {
   try {
-    const { rfcProvider, rfcCompany } = req.query;
+    const { rfcProvider, rfcCompany, startDate, endDate } = req.query;
 
     // Validar que se proporcione al menos uno de los RFCs
     if (!rfcProvider && !rfcCompany) {
@@ -301,6 +316,17 @@ export const getInvoicesSummaryByProviderAndCompany = async (req, res) => {
 
     if (rfcCompany) {
       query.rfcReceptor = rfcCompany.toUpperCase();
+    }
+
+    // Filtros de fecha si se proporcionan
+    if (startDate || endDate) {
+      query.fechaEmision = {};
+      if (startDate) {
+        query.fechaEmision.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.fechaEmision.$lte = new Date(endDate);
+      }
     }
 
     // Obtener estadísticas
@@ -359,22 +385,49 @@ export const getInvoicesSummaryByProviderAndCompany = async (req, res) => {
 // Obtener facturas filtradas por proveedor y razón social (empresa)
 export const getByProviderAndCompany = async (req, res) => {
   try {
-    const { rfcProvider, rfcCompany, page = 1, limit = 15, sortBy = "fechaEmision", order = "desc" } = req.query;
+    console.log('Datos recibidos en la petición:', req.query); // LOG de entrada
+    const {
+      rfcProvider,
+      rfcCompany,
+      providerIds, // Nuevo parámetro para IDs de proveedores
+      startDate,   // Nuevo parámetro para fecha de inicio
+      endDate,     // Nuevo parámetro para fecha de fin
+      page = 1,
+      limit = 15,
+      sortBy = "fechaEmision",
+      order = "desc"
+    } = req.query;
 
-    if (!rfcProvider && !rfcCompany) {
-      return res.status(400).json({ success: false, message: "Se requiere al menos rfcProvider o rfcCompany" });
+    if (!rfcProvider && !rfcCompany && !providerIds) {
+      return res.status(400).json({ success: false, message: "Se requiere al menos rfcProvider, rfcCompany o providerIds" });
     }
 
-    // Buscar compañía activa
+    // Buscar compañía activa por nombre o RFC
     let company;
     if (rfcCompany) {
-      company = await Company.findOne({ rfc: rfcCompany, isActive: true });
+      // Intentar buscar por nombre primero, luego por RFC
+      company = await Company.findOne({
+        $or: [
+          { name: rfcCompany, isActive: true },
+          { rfc: rfcCompany, isActive: true }
+        ]
+      });
       if (!company) {
         return res.status(404).json({ success: false, message: "Razón social no encontrada o inactiva" });
       }
     }
 
-    // Buscar proveedor activo
+    // Buscar proveedores por IDs si se proporcionan
+    let providers = [];
+    if (providerIds) {
+      const providerIdArray = providerIds.split(',').map(id => id.trim());
+      providers = await Provider.find({ _id: { $in: providerIdArray }, isActive: true });
+      if (providers.length === 0) {
+        return res.status(404).json({ success: false, message: "No se encontraron proveedores activos con los IDs proporcionados" });
+      }
+    }
+
+    // Buscar proveedor por RFC si se proporciona
     let provider;
     if (rfcProvider) {
       provider = await Provider.findOne({ rfc: rfcProvider, isActive: true });
@@ -390,16 +443,33 @@ export const getByProviderAndCompany = async (req, res) => {
     };
 
     if (company) {
-      filter.razonSocial = company._id;
       filter.rfcReceptor = company.rfc;
     }
-    if (provider) {
+
+    // Filtrar por proveedores (IDs o RFC)
+    if (providers.length > 0) {
+      const rfcProviders = providers.map(p => p.rfc);
+      filter.rfcEmisor = { $in: rfcProviders };
+    } else if (provider) {
       filter.rfcEmisor = provider.rfc;
+    }
+
+    // Filtros de fecha si se proporcionan
+    if (startDate || endDate) {
+      filter.fechaEmision = {};
+      if (startDate) {
+        filter.fechaEmision.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        filter.fechaEmision.$lte = new Date(endDate);
+      }
     }
 
     // Paginación y orden
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const sort = { [sortBy]: order === "asc" ? 1 : -1 };
+
+    console.log('Filtro final para la consulta:', filter); // LOG del filtro
 
     // Consulta principal
     const [facturas, total] = await Promise.all([
@@ -409,6 +479,8 @@ export const getByProviderAndCompany = async (req, res) => {
         .limit(parseInt(limit)),
       ImportedInvoices.countDocuments(filter)
     ]);
+
+    console.log('facturas', facturas);
 
     res.json({
       success: true,
@@ -423,25 +495,47 @@ export const getByProviderAndCompany = async (req, res) => {
 // Resumen filtrado por proveedor y razón social (empresa)
 export const getSummaryByProviderAndCompany = async (req, res) => {
   try {
-    const { rfcProvider, rfcCompany } = req.query;
+    const {
+      rfcProvider,
+      rfcCompany,
+      providerIds, // Nuevo parámetro para IDs de proveedores
+      startDate,   // Nuevo parámetro para fecha de inicio
+      endDate      // Nuevo parámetro para fecha de fin
+    } = req.query;
 
-    if (!rfcProvider && !rfcCompany) {
+    if (!rfcProvider && !rfcCompany && !providerIds) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere al menos un RFC de proveedor o empresa para filtrar.'
+        message: 'Se requiere al menos un RFC de proveedor, empresa o IDs de proveedores para filtrar.'
       });
     }
 
-    // Buscar compañía activa
+    // Buscar compañía activa por nombre o RFC
     let company;
     if (rfcCompany) {
-      company = await Company.findOne({ rfc: rfcCompany, isActive: true });
+      // Intentar buscar por nombre primero, luego por RFC
+      company = await Company.findOne({
+        $or: [
+          { name: rfcCompany, isActive: true },
+          { rfc: rfcCompany, isActive: true }
+        ]
+      });
       if (!company) {
         return res.status(404).json({ success: false, message: "Razón social no encontrada o inactiva" });
       }
     }
 
-    // Buscar proveedor activo
+    // Buscar proveedores por IDs si se proporcionan
+    let providers = [];
+    if (providerIds) {
+      const providerIdArray = providerIds.split(',').map(id => id.trim());
+      providers = await Provider.find({ _id: { $in: providerIdArray }, isActive: true });
+      if (providers.length === 0) {
+        return res.status(404).json({ success: false, message: "No se encontraron proveedores activos con los IDs proporcionados" });
+      }
+    }
+
+    // Buscar proveedor por RFC si se proporciona
     let provider;
     if (rfcProvider) {
       provider = await Provider.findOne({ rfc: rfcProvider, isActive: true });
@@ -457,11 +551,26 @@ export const getSummaryByProviderAndCompany = async (req, res) => {
     };
 
     if (company) {
-      filter.razonSocial = company._id;
       filter.rfcReceptor = company.rfc;
     }
-    if (provider) {
+
+    // Filtrar por proveedores (IDs o RFC)
+    if (providers.length > 0) {
+      const rfcProviders = providers.map(p => p.rfc);
+      filter.rfcEmisor = { $in: rfcProviders };
+    } else if (provider) {
       filter.rfcEmisor = provider.rfc;
+    }
+
+    // Filtros de fecha si se proporcionan
+    if (startDate || endDate) {
+      filter.fechaEmision = {};
+      if (startDate) {
+        filter.fechaEmision.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        filter.fechaEmision.$lte = new Date(endDate);
+      }
     }
 
     // Obtener facturas que cumplen el filtro
@@ -541,22 +650,37 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Factura no encontrada' });
     }
 
+    // Calcular el nuevo importe pagado sumando al existente
+    const nuevoImportePagado = (invoice.importePagado || 0) + monto;
+
     invoice.descripcionPago = descripcion;
-    invoice.importePagado = (invoice.importePagado || 0) + monto;
+    invoice.importePagado = nuevoImportePagado;
     invoice.fechaRevision = new Date();
 
-    if (invoice.importePagado >= invoice.importeAPagar) {
+    // Si el pago completo se alcanza, marcar como pendiente de autorización
+    if (nuevoImportePagado >= invoice.importeAPagar) {
       invoice.importePagado = invoice.importeAPagar;
-      invoice.estadoPago = 2; // Pagado
-      invoice.esCompleta = true;
+      invoice.estadoPago = null; // Pendiente de autorización
+      invoice.esCompleta = false; // No está completamente pagada hasta que se autorice
+      invoice.autorizada = false; // Pendiente de autorización
+      invoice.estaRegistrada = true; // Marcar como registrada en paquete
     } else {
-      invoice.estadoPago = 1; // Enviado a pago (parcial)
+      // Si es pago parcial, también marcar como pendiente de autorización (como los pagos completos)
+      invoice.estadoPago = null; // Pendiente de autorización
       invoice.esCompleta = false;
+      invoice.autorizada = false; // Pendiente de autorización
+      invoice.estaRegistrada = true; // Marcar como registrada en paquete
     }
 
     await invoice.save();
 
-    res.status(200).json({ success: true, message: 'Pago parcial registrado correctamente', data: invoice });
+    res.status(200).json({
+      success: true,
+      message: nuevoImportePagado >= invoice.importeAPagar
+        ? 'Pago completado. Pendiente de autorización.'
+        : 'Pago parcial registrado. Pendiente de autorización.',
+      data: invoice
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -572,30 +696,63 @@ export const toggleFacturaAutorizada = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Factura no encontrada.' });
     }
 
+    // Verificar que la factura esté registrada en un paquete
+    if (!factura.estaRegistrada) {
+      return res.status(400).json({
+        success: false,
+        message: 'Solo se pueden autorizar facturas que estén registradas en un paquete.'
+      });
+    }
+
+    // Verificar que la factura tenga pago completo
+    if (factura.importePagado < factura.importeAPagar) {
+      return res.status(400).json({
+        success: false,
+        message: 'Solo se pueden autorizar facturas con pago completo.'
+      });
+    }
+
     // Cambiar el estado de autorización
     factura.autorizada = !factura.autorizada;
 
-    // Si la factura está siendo rechazada (autorizada: false), devolver importePagado a cero
-    if (!factura.autorizada) {
+    if (factura.autorizada) {
+      // Si se está autorizando
+      factura.estadoPago = 2; // Pagado
+      factura.esCompleta = true;
+      factura.pagado = 1;
+      factura.pagoRechazado = false;
+      factura.descripcionPago = 'Pago autorizado';
+    } else {
+      // Si se está rechazando la autorización
       factura.importePagado = 0;
       factura.estadoPago = 0; // Pendiente
       factura.esCompleta = false;
       factura.pagado = 0;
+      factura.pagoRechazado = true;
+      factura.estaRegistrada = true; // Mantener registrada en el paquete actual
       factura.descripcionPago = 'Pago rechazado - Factura no autorizada';
     }
 
     await factura.save();
+
+    // Si se desautorizó la factura, actualizar los totales de los paquetes que la contengan
+    if (!factura.autorizada) {
+      await actualizarTotalesPaquetesPorFactura(factura._id);
+    }
 
     res.status(200).json({
       success: true,
       data: {
         _id: factura._id,
         autorizada: factura.autorizada,
-        importePagado: factura.importePagado
+        pagoRechazado: factura.pagoRechazado,
+        importePagado: factura.importePagado,
+        estadoPago: factura.estadoPago,
+        esCompleta: factura.esCompleta
       },
       message: factura.autorizada
-        ? 'Estado de autorización actualizado correctamente'
-        : 'Factura rechazada y pago devuelto a cero'
+        ? 'Factura autorizada correctamente'
+        : 'Factura rechazada. Los datos de pago se han reiniciado y puede ser pagada nuevamente en otro paquete.'
     });
   } catch (error) {
     console.error('Error toggling factura autorizada:', error);
