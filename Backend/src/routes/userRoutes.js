@@ -12,6 +12,7 @@ import {
   registerUser,
   removeProvider,
   updateUser,
+  updateUserCover,
 } from "../controllers/userController.js";
 import { uploadSingle } from "../middleware/multerUpload.js";
 
@@ -29,6 +30,7 @@ router.put("/:id/password", changePassword);
 router.put("/:id/activate", activateUser);
 router.put("/:id/role", assignRoles);
 router.put("/:userId/providers", assignProviders);
+router.put("/:userId/cover", updateUserCover);
 router.delete("/:userId/providers/:providerId", removeProvider);
 
 router.delete("/:id", deleteUser);

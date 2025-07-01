@@ -5,10 +5,12 @@ import ProfileCard from "@/components/layout/profile/ProfileCard";
 import { usersService } from "@/features/admin/modules/users/services/users";
 import { useUserSessionStore } from "@/stores";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import { apiCall } from "@/utils/api";
 
 const ProfileInfo = () => {
-  const { user } = useUserSessionStore();
+  const { user, setUser, token } = useUserSessionStore();
   const profile = user?.profile;
   const role = user?.role?.name || "Sin rol";
   const memberSince = user?.createdAt
@@ -20,25 +22,59 @@ const ProfileInfo = () => {
   const profileFullName = profile?.fullName || "";
   const profilePath = profile?.path || "";
   const profileEstatus = profile?.estatus ?? true;
-  const profileCoverUrl = profile?.path || coverDefault.src;
+
+  // Lógica mejorada: si hay path del usuario, úsalo; si no, usa el default
+  const profileCoverUrl = profilePath || coverDefault.src;
 
   const [cover, setCover] = useState<string>(profileCoverUrl);
   const [showUnsplash, setShowUnsplash] = useState(false);
   const userId = user?._id;
 
+  // Actualizar el estado local cuando cambie el perfil del usuario
+  useEffect(() => {
+    if (profilePath) {
+      setCover(profilePath);
+    } else {
+      setCover(coverDefault.src);
+    }
+  }, [profilePath]);
+
   const handleSelectCover = async (url: string) => {
     setCover(url);
     setShowUnsplash(false);
+
     if (userId) {
-      await usersService.updateUser(userId, {
-        profile: {
-          name: profileName,
-          fullName: profileFullName,
-          path: profilePath,
-          estatus: profileEstatus,
-          lastName: profileLastName,
-        },
-      });
+      try {
+        // Tipar la respuesta para evitar error de linter
+        type CoverResponse = { user: typeof user };
+        const response = await apiCall<CoverResponse>(
+          `/users/${userId}/cover`,
+          {
+            method: "PUT",
+            body: JSON.stringify({ path: url }),
+          }
+        );
+        if (response.success && response.data && response.data.user) {
+          setUser(
+            {
+              ...user,
+              profile: {
+                ...user?.profile,
+                path: url,
+              },
+            },
+            token || null
+          );
+          toast.success("✅ Portada actualizada correctamente");
+        } else {
+          toast.error("❌ Error al actualizar la portada");
+        }
+      } catch (error) {
+        setCover(profileCoverUrl);
+        toast.error("❌ Error al actualizar la portada");
+      }
+    } else {
+      toast.error("❌ Error: Usuario no identificado");
     }
   };
 
@@ -55,7 +91,7 @@ const ProfileInfo = () => {
   return (
     <>
       <ProfileCard
-        coverUrl={cover}
+        coverUrl={typeof cover === "string" ? cover : coverDefault.src}
         userImage={getUserImage()}
         fullName={profile?.fullName || user?.username || "Usuario"}
         role={role}

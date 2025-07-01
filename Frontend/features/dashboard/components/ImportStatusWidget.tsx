@@ -20,7 +20,6 @@ const ImportStatusWidget = () => {
       setError(null);
       const res = await getImportStatus();
       if (res.success) {
-        console.log(res.data);
         setData(res.data);
       } else {
         setError(res.message || "No se pudieron cargar los datos.");
