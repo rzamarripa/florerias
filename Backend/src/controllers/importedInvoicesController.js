@@ -1,7 +1,7 @@
 import { ImportedInvoices } from "../models/ImportedInvoices.js";
 import { Company } from "../models/Company.js";
 import { Provider } from "../models/Provider.js";
-import { actualizarTotalesPaquetesPorFactura } from "./invoicesPackpageController.js";
+import { actualizarTotalesPaquetesPorFactura, actualizarFacturaEnPaquetes } from "./invoicesPackpageController.js";
 import mongoose from "mongoose";
 
 const parseDate = (dateString) => {
@@ -749,13 +749,13 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
       invoice.importePagado = invoice.importeAPagar;
       invoice.estadoPago = null; // Pendiente de autorización
       invoice.esCompleta = false; // No está completamente pagada hasta que se autorice
-      invoice.autorizada = false; // Pendiente de autorización
+      invoice.autorizada = null; // Pendiente de autorización
       invoice.estaRegistrada = true; // Marcar como registrada en paquete
     } else {
       // Si es pago parcial, también marcar como pendiente de autorización (como los pagos completos)
       invoice.estadoPago = null; // Pendiente de autorización
       invoice.esCompleta = false;
-      invoice.autorizada = false; // Pendiente de autorización
+      invoice.autorizada = null; // Pendiente de autorización
       invoice.estaRegistrada = true; // Marcar como registrada en paquete
     }
 
@@ -777,6 +777,7 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
 export const toggleFacturaAutorizada = async (req, res) => {
   try {
     const { id } = req.params;
+    const { autorizada } = req.body;
     const factura = await ImportedInvoices.findById(id);
 
     if (!factura) {
@@ -791,10 +792,15 @@ export const toggleFacturaAutorizada = async (req, res) => {
       });
     }
 
-
-
-    // Cambiar el estado de autorización
-    factura.autorizada = !factura.autorizada;
+    // Si se recibe el parámetro 'autorizada', establecerlo directamente
+    if (typeof autorizada === 'boolean') {
+      factura.autorizada = autorizada;
+    } else {
+      // Cambiar el estado de autorización (toggle)
+      // Si es null (pendiente) o false, autorizar (true)
+      // Si es true, rechazar (false)
+      factura.autorizada = factura.autorizada === true ? false : true;
+    }
 
     if (factura.autorizada) {
       // Si se está autorizando
@@ -814,11 +820,23 @@ export const toggleFacturaAutorizada = async (req, res) => {
       factura.descripcionPago = 'Pago rechazado - Factura no autorizada';
     }
 
-    await factura.save();
+        // NO guardar la factura original, solo actualizar la factura embebida en el paquete
+    // await factura.save();
+
+    // Actualizar la factura embebida en todos los paquetes que la contengan
+    await actualizarFacturaEnPaquetes(factura._id, {
+        autorizada: factura.autorizada,
+        pagoRechazado: factura.pagoRechazado,
+        importePagado: factura.importePagado,
+        estadoPago: factura.estadoPago,
+        esCompleta: factura.esCompleta,
+        pagado: factura.pagado,
+        descripcionPago: factura.descripcionPago
+    });
 
     // Si se desautorizó la factura, actualizar los totales de los paquetes que la contengan
     if (!factura.autorizada) {
-      await actualizarTotalesPaquetesPorFactura(factura._id);
+        await actualizarTotalesPaquetesPorFactura(factura._id);
     }
 
     res.status(200).json({
@@ -827,7 +845,7 @@ export const toggleFacturaAutorizada = async (req, res) => {
         _id: factura._id,
         autorizada: factura.autorizada,
         pagoRechazado: factura.pagoRechazado,
-        importePagado: factura.importePagado,
+        importePagado: parseFloat(factura.importePagado || 0),
         estadoPago: factura.estadoPago,
         esCompleta: factura.esCompleta
       },

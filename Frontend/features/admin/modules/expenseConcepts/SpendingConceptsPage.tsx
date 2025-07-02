@@ -8,16 +8,21 @@ import ExpenseConceptModal from "./components/ExpenseConceptModal";
 import ExpenseConceptActions from "./components/ExpenseConceptActions";
 import { expenseConceptService } from "./services/expenseConcepts";
 import { expenseConceptCategoryService } from "../expenseConceptCategories/services/expenseConceptCategories";
+import { departmentService } from "../departments/services/departments";
 import { ExpenseConcept, ExpenseConceptSearchParams } from "./types";
 import { ExpenseConceptCategory } from "../expenseConceptCategories/types";
+import { Department } from "../departments/types";
 
 const ExpenseConceptsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [concepts, setConcepts] = useState<ExpenseConcept[]>([]);
   const [categories, setCategories] = useState<ExpenseConceptCategory[]>([]);
+  const [departments, setDepartments] = useState<Pick<Department, '_id' | 'name'>[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingCategories, setLoadingCategories] = useState<boolean>(false);
+  const [loadingDepartments, setLoadingDepartments] = useState<boolean>(false);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -43,6 +48,23 @@ const ExpenseConceptsPage: React.FC = () => {
     }
   }, []);
 
+  const loadDepartments = async () => {
+    try {
+      setLoadingDepartments(true);
+      const response = await departmentService.getActive();
+      if (response.success) {
+        setDepartments(response.data as unknown as Pick<Department, '_id' | 'name'>[]);
+      } else {
+        toast.error("Error al cargar los departamentos");
+      }
+    } catch (error: any) {
+      toast.error("Error al cargar los departamentos");
+      console.error("Error loading departments:", error);
+    } finally {
+      setLoadingDepartments(false);
+    }
+  };
+
   const loadConcepts = useCallback(
     async (isInitial: boolean, params?: Partial<ExpenseConceptSearchParams>) => {
       try {
@@ -54,6 +76,7 @@ const ExpenseConceptsPage: React.FC = () => {
           limit: params?.limit || pagination.limit,
           search: searchTerm.trim() || undefined,
           categoryId: selectedCategory || undefined,
+          departmentId: selectedDepartment || undefined,
         };
 
         const response = await expenseConceptService.getAll(searchParams);
@@ -72,11 +95,12 @@ const ExpenseConceptsPage: React.FC = () => {
         setLoading(false);
       }
     },
-    [pagination.page, pagination.limit, searchTerm, selectedCategory]
+    [pagination.page, pagination.limit, searchTerm, selectedCategory, selectedDepartment]
   );
 
   useEffect(() => {
     loadCategories();
+    loadDepartments();
     loadConcepts(true);
   }, []);
 
@@ -94,7 +118,7 @@ const ExpenseConceptsPage: React.FC = () => {
     return () => {
       if (searchTimeout) clearTimeout(searchTimeout);
     };
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategory, selectedDepartment]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
@@ -102,6 +126,10 @@ const ExpenseConceptsPage: React.FC = () => {
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
     setSelectedCategory(e.target.value);
+  };
+
+  const handleDepartmentChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+    setSelectedDepartment(e.target.value);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -180,6 +208,19 @@ const ExpenseConceptsPage: React.FC = () => {
                   </option>
                 ))}
               </Form.Select>
+              <Form.Select
+                value={selectedDepartment}
+                onChange={handleDepartmentChange}
+                style={{ minWidth: "200px" }}
+                disabled={loadingDepartments}
+              >
+                <option value="">Todos los departamentos</option>
+                {departments.map((department) => (
+                  <option key={department._id} value={department._id}>
+                    {department.name}
+                  </option>
+                ))}
+              </Form.Select>
 
               <ExpenseConceptModal
                 mode="create"
@@ -207,6 +248,7 @@ const ExpenseConceptsPage: React.FC = () => {
                       <th>Nombre</th>
                       <th>Descripción</th>
                       <th>Categoría</th>
+                      <th>Departamento</th>
                       <th className="text-center">Estatus</th>
                       <th className="text-center">Acciones</th>
                     </tr>
@@ -231,6 +273,9 @@ const ExpenseConceptsPage: React.FC = () => {
                         </td>
                         <td>
                           <span className="fw-medium">{concept.categoryId.name}</span>
+                        </td>
+                        <td>
+                          <span className="fw-medium">{concept.departmentId?.name || '-'}</span>
                         </td>
                         <td className="text-center">
                           <span

@@ -15,18 +15,14 @@ import { toast } from 'react-toastify';
 import BudgetSummaryCards from './components/BudgetSummaryCards';
 import {
     userProvidersService,
-    companiesService,
-    brandsService,
-    branchesService,
     getInvoicesByProviderAndCompany,
     getInvoicesSummaryByProviderAndCompany,
     ImportedInvoice,
     InvoicesSummaryResponse,
     getInvoicesPackagesByUsuario,
-    toggleFacturaAutorizada,
     getUserVisibilityForSelects
 } from './services';
-import { UserProvider, Company, Brand, Branch, UserVisibilityStructure, VisibilityCompany, VisibilityBrand, VisibilityBranch } from './types';
+import { UserProvider, UserVisibilityStructure, VisibilityCompany, VisibilityBrand, VisibilityBranch } from './types';
 import PagoFacturaModal from './components/PagoFacturaModal';
 import EnviarPagoModal from './components/EnviarPagoModal';
 import { useUserSessionStore } from '@/stores/userSessionStore';
@@ -51,9 +47,6 @@ const InvoicesPackagePage: React.FC = () => {
     const [selectedBrand, setSelectedBrand] = useState<string>('');
     const [selectedBranch, setSelectedBranch] = useState<string>('');
 
-    // Estados de carga
-    const [loadingBrands, setLoadingBrands] = useState(false);
-    const [loadingBranches, setLoadingBranches] = useState(false);
     const [loadingInvoices, setLoadingInvoices] = useState(false);
 
     // Estados para la estructura de visibilidad
@@ -212,6 +205,50 @@ const InvoicesPackagePage: React.FC = () => {
         toast.success(tipoPago === 'completo' ? 'Pago completo registrado temporalmente' : 'Pago parcial registrado temporalmente');
     };
 
+    // Función para eliminar un pago temporal
+    const handleRemoveTempPayment = (invoiceId: string) => {
+        setTempPayments(prev => {
+            const newTempPayments = { ...prev };
+            delete newTempPayments[invoiceId];
+            return newTempPayments;
+        });
+        toast.info('Pago temporal eliminado');
+    };
+
+    // Función para calcular el resumen combinado (backend + pagos temporales)
+    const combinedSummary = React.useMemo(() => {
+        if (!invoicesSummary) return null;
+
+        // Calcular total de pagos temporales
+        let totalTempPagado = 0;
+        let facturasTempPagadas = 0;
+
+        Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
+            if (payment.tipoPago === 'completo') {
+                // Buscar la factura original para obtener el importe a pagar
+                const invoice = invoices.find(inv => inv._id === invoiceId);
+                if (invoice) {
+                    totalTempPagado += invoice.importeAPagar;
+                    facturasTempPagadas += 1;
+                }
+            } else if (payment.tipoPago === 'parcial' && payment.monto) {
+                totalTempPagado += payment.monto;
+                // Solo contar como pagada si el pago parcial + original completa la factura
+                const invoice = invoices.find(inv => inv._id === invoiceId);
+                if (invoice && (invoice.importePagado + payment.monto) >= invoice.importeAPagar) {
+                    facturasTempPagadas += 1;
+                }
+            }
+        });
+
+        return {
+            ...invoicesSummary,
+            totalPagado: invoicesSummary.totalPagado + totalTempPagado,
+            totalSaldo: invoicesSummary.totalSaldo - totalTempPagado,
+            facturasPagadas: (invoicesSummary.facturasPagadas || 0) + facturasTempPagadas
+        };
+    }, [invoicesSummary, tempPayments, invoices]);
+
     const getInvoiceWithTempPayments = (invoice: ImportedInvoice) => {
         const tempPayment = tempPayments[invoice._id];
         if (!tempPayment) return invoice;
@@ -353,7 +390,6 @@ const InvoicesPackagePage: React.FC = () => {
     const getFacturaEstado = (invoice: ImportedInvoice) => {
         const invoiceWithTempPayments = getInvoiceWithTempPayments(invoice);
         const isCompletamentePagada = invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar;
-        const hasTempPayment = tempPayments[invoice._id];
 
         // Si tiene pago parcial (sin importar si es temporal o real)
         if (invoiceWithTempPayments.importePagado > 0 && invoiceWithTempPayments.importePagado < invoiceWithTempPayments.importeAPagar) {
@@ -522,7 +558,7 @@ const InvoicesPackagePage: React.FC = () => {
 
     return (
         <Container fluid className="mt-4">
-            <BudgetSummaryCards summary={invoicesSummary ?? undefined} />
+            <BudgetSummaryCards summary={combinedSummary ?? undefined} />
 
             {/* Filtros de año, mes y proveedor */}
             <Card className="mt-4 border-0 shadow-sm">
@@ -863,13 +899,19 @@ const InvoicesPackagePage: React.FC = () => {
             <Card className="mt-4 border-0 shadow-sm">
                 <Card.Header className="bg-light border-bottom">
                     <Card.Title className="mb-0 fw-bold">Lista de Facturas</Card.Title>
-                    {invoicesSummary && (
+                    {combinedSummary && (
                         <div className="mt-2">
                             <small className="text-muted">
-                                Total: {invoicesSummary.totalFacturas} facturas |
-                                Importe: {formatCurrency(invoicesSummary.totalImporteAPagar)} |
-                                Pagado: {formatCurrency(invoicesSummary.totalPagado)} |
-                                Saldo: {formatCurrency(invoicesSummary.totalSaldo)}
+                                Total: {combinedSummary.totalFacturas} facturas |
+                                Importe: {formatCurrency(combinedSummary.totalImporteAPagar)} |
+                                Pagado: {formatCurrency(combinedSummary.totalPagado)} |
+                                Saldo: {formatCurrency(combinedSummary.totalSaldo)}
+                                {Object.keys(tempPayments).length > 0 && (
+                                    <span className="text-warning ms-2">
+                                        <i className="bi bi-clock me-1"></i>
+                                        Incluye {Object.keys(tempPayments).length} pago{Object.keys(tempPayments).length > 1 ? 's' : ''} temporal{Object.keys(tempPayments).length > 1 ? 'es' : ''}
+                                    </span>
+                                )}
                             </small>
                         </div>
                     )}
@@ -906,10 +948,9 @@ const InvoicesPackagePage: React.FC = () => {
                                     <th>Emisor RFC</th>
                                     <th>Estatus</th>
                                     <th>Fecha Cancelación</th>
-                                    <th>Total a Pagar</th>
+                                    <th>Total</th>
                                     <th>Importe Pagado</th>
                                     <th>Saldo</th>
-                                    <th>Detalle</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -918,7 +959,6 @@ const InvoicesPackagePage: React.FC = () => {
                                     const estatus = getEstatusText(invoice.estatus);
                                     const saldo = invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar ? 0 : (invoiceWithTempPayments.importeAPagar - invoiceWithTempPayments.importePagado);
                                     const facturaEstado = getFacturaEstado(invoice);
-                                    const isGuardada = facturasGuardadas.includes(invoice._id);
                                     const hasTempPayment = tempPayments[invoice._id];
 
                                     return (
@@ -1053,16 +1093,6 @@ const InvoicesPackagePage: React.FC = () => {
                                                     {formatCurrency(saldo)}
                                                 </span>
                                             </td>
-                                            {/* Detalle */}
-                                            <td>
-                                                <Button
-                                                    variant="light"
-                                                    size="sm"
-                                                    onClick={() => handleViewInvoiceDetail(invoice._id)}
-                                                >
-                                                    <i className="bi bi-eye"></i>
-                                                </Button>
-                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -1150,6 +1180,7 @@ const InvoicesPackagePage: React.FC = () => {
                 selectedBrandId={selectedBrand}
                 selectedBranchId={selectedBranch}
                 tempPayments={tempPayments}
+                onRemoveTempPayment={handleRemoveTempPayment}
                 onSuccess={async () => {
                     setShowEnviarPagoModal(false);
                     // Limpiar pagos temporales después del envío exitoso

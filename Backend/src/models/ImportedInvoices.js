@@ -181,10 +181,11 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     maxLength: 500
   },
 
-  // Si está autorizada
+  // Si está autorizada (null = pendiente, true = autorizada, false = rechazada)
   autorizada: {
     type: Boolean,
-    default: true
+    default: null,
+    required: false
   },
 
   // Si el pago fue rechazado (no se puede volver a autorizar hasta que se vuelva a pagar)

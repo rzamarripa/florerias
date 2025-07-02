@@ -8,7 +8,8 @@ import {
     getInvoicesPackagesSummary,
     getVencidosInvoicesPackages,
     changeInvoicesPackageStatus,
-    getInvoicesPackagesByUsuario
+    getInvoicesPackagesByUsuario,
+    enviarPaqueteADireccion
 } from '../controllers/invoicesPackpageController.js';
 
 const router = express.Router();
@@ -39,5 +40,8 @@ router.get('/vencidos', getVencidosInvoicesPackages);
 
 // Cambiar estatus de un paquete
 router.patch('/:id/status', changeInvoicesPackageStatus);
+
+// Enviar paquete a dirección
+router.post('/:id/enviar-direccion', enviarPaqueteADireccion);
 
 export default router; 

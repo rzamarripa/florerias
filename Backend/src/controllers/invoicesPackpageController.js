@@ -1,6 +1,7 @@
 import { InvoicesPackage } from "../models/InvoicesPackpage.js";
 import { ImportedInvoices } from "../models/ImportedInvoices.js";
 import { InvoicesPackageCompany } from "../models/InvoicesPackpageCompany.js";
+
 import mongoose from "mongoose";
 
 // CREATE - Crear un nuevo paquete de facturas
@@ -38,7 +39,7 @@ export const createInvoicesPackage = async (req, res) => {
         // Verificar que las facturas existan y pertenezcan al mismo receptor
         const facturasExistentes = await ImportedInvoices.find({
             _id: { $in: facturas }
-        });
+        }).populate('razonSocial');
 
         if (facturasExistentes.length !== facturas.length) {
             return res.status(400).json({
@@ -77,7 +78,7 @@ export const createInvoicesPackage = async (req, res) => {
             { _id: { $in: facturas } },
             {
                 $set: {
-                    autorizada: false, // Pendiente de autorización
+                    autorizada: null, // Pendiente de autorización
                     pagoRechazado: false, // No rechazado inicialmente
                     estaRegistrada: true, // Marcar como registrada en paquete
                     estadoPago: null, // Pendiente de autorización
@@ -94,16 +95,48 @@ export const createInvoicesPackage = async (req, res) => {
         // Convertir usuario_id a ObjectId
         const usuarioObjectId = new mongoose.Types.ObjectId(usuario_id);
 
-        // Crear el paquete
+        // La fechaPago ya viene calculada desde el frontend como el jueves de la semana siguiente
+        // No necesitamos volver a calcularla aquí
+        const fechaPagoParaGuardar = new Date(fechaPago);
+
+        // Preparar las facturas embebidas con todos sus datos
+        const facturasEmbebidas = facturasExistentes.map(factura => {
+            const facturaData = factura.toObject();
+            // Asegurar que el _id esté presente
+            facturaData._id = factura._id;
+            
+            // FORZAR que autorizada sea null (pendiente) al crear el paquete
+            facturaData.autorizada = null;
+            facturaData.estadoPago = null;
+            facturaData.esCompleta = false;
+            facturaData.pagoRechazado = false;
+            facturaData.estaRegistrada = true;
+            facturaData.registrado = 1;
+            facturaData.fechaRevision = new Date();
+            
+            // Asegurar que razonSocial tenga la estructura correcta
+            if (facturaData.razonSocial && typeof facturaData.razonSocial === 'object' && facturaData.razonSocial._id) {
+                facturaData.razonSocial = {
+                    _id: facturaData.razonSocial._id,
+                    name: facturaData.razonSocial.name || '',
+                    rfc: facturaData.razonSocial.rfc || ''
+                };
+            }
+            
+            return facturaData;
+        });
+
+        // Crear el paquete con las facturas embebidas
         const nuevoPaquete = new InvoicesPackage({
-            facturas,
+            facturas: facturasEmbebidas,
             usuario_id: usuarioObjectId,
             departamento_id,
             departamento,
             comentario,
-            fechaPago: new Date(fechaPago),
+            fechaPago: fechaPagoParaGuardar,
             totalImporteAPagar: totalImporteAPagar || 0,
             folio: siguienteFolio
+            // createdAt se establecerá automáticamente con la fecha actual
         });
 
         // Calcular totales automáticamente
@@ -139,9 +172,8 @@ export const createInvoicesPackage = async (req, res) => {
             await paqueteGuardado.save();
         }
 
-        // Obtener el paquete con las facturas pobladas
+        // Obtener el paquete con las facturas embebidas
         const paqueteCompleto = await InvoicesPackage.findById(paqueteGuardado._id)
-            .populate('facturas')
             .populate({
                 path: 'packageCompanyId',
                 populate: ['companyId', 'brandId', 'branchId']
@@ -186,7 +218,6 @@ export const getInvoicesPackages = async (req, res) => {
 
         // Consulta con paginación
         const paquetesPromise = InvoicesPackage.find(filtros)
-            .populate('facturas')
             .populate({
                 path: 'packageCompanyId',
                 populate: ['companyId', 'brandId', 'branchId']
@@ -227,7 +258,6 @@ export const getInvoicesPackageById = async (req, res) => {
         console.log('Buscando paquete con ID:', id);
 
         const paquete = await InvoicesPackage.findById(id)
-            .populate('facturas')
             .populate({
                 path: 'packageCompanyId',
                 populate: ['companyId', 'brandId', 'branchId']
@@ -244,12 +274,31 @@ export const getInvoicesPackageById = async (req, res) => {
         function normalizeFactura(f) {
             const toNumber = v => (typeof v === 'object' && v !== null && v._bsontype === 'Decimal128') ? parseFloat(v.toString()) : v;
             const toString = v => (typeof v === 'object' && v !== null && v._bsontype === 'ObjectId') ? v.toString() : v;
+            
+            // Normalizar razonSocial - puede ser un ObjectId o un objeto populado
+            let razonSocialNormalizada;
+            if (f.razonSocial && typeof f.razonSocial === 'object' && f.razonSocial._id) {
+                // Si está populado, mantener la estructura
+                razonSocialNormalizada = {
+                    _id: toString(f.razonSocial._id),
+                    name: f.razonSocial.name || '',
+                    rfc: f.razonSocial.rfc || ''
+                };
+            } else {
+                // Si es solo un ObjectId, crear estructura básica
+                razonSocialNormalizada = {
+                    _id: toString(f.razonSocial),
+                    name: '',
+                    rfc: ''
+                };
+            }
+            
             return {
                 ...f._doc,
                 _id: toString(f._id),
                 importeAPagar: toNumber(f.importeAPagar),
                 importePagado: toNumber(f.importePagado),
-                razonSocial: toString(f.razonSocial),
+                razonSocial: razonSocialNormalizada,
                 fechaEmision: f.fechaEmision ? new Date(f.fechaEmision).toISOString() : null,
                 fechaCertificacionSAT: f.fechaCertificacionSAT ? new Date(f.fechaCertificacionSAT).toISOString() : null,
                 fechaCancelacion: f.fechaCancelacion ? new Date(f.fechaCancelacion).toISOString() : null,
@@ -339,7 +388,7 @@ export const updateInvoicesPackage = async (req, res) => {
             // Verificar que las nuevas facturas existan
             const facturasExistentes = await ImportedInvoices.find({
                 _id: { $in: facturas }
-            });
+            }).populate('razonSocial');
 
             if (facturasExistentes.length !== facturas.length) {
                 return res.status(400).json({
@@ -361,21 +410,22 @@ export const updateInvoicesPackage = async (req, res) => {
             }
 
             // Identificar facturas que se están agregando al paquete (nuevas)
+            const facturasActualesIds = paqueteExistente.facturas.map(f => f._id.toString());
             const facturasNuevas = facturas.filter(facturaId =>
-                !paqueteExistente.facturas.includes(facturaId.toString())
+                !facturasActualesIds.includes(facturaId.toString())
             );
 
             // Verificar que las facturas completamente pagadas no estén ya en el paquete
             const facturasCompletamentePagadas = facturasExistentes.filter(f =>
                 f.importePagado >= f.importeAPagar
             );
-            const facturasCompletamentePagadasEnPaquete = paqueteExistente.facturas.filter(facturaId => {
-                const factura = facturasExistentes.find(f => f._id.toString() === facturaId.toString());
+            const facturasCompletamentePagadasEnPaquete = paqueteExistente.facturas.filter(facturaEmbebida => {
+                const factura = facturasExistentes.find(f => f._id.toString() === facturaEmbebida._id.toString());
                 return factura && factura.importePagado >= factura.importeAPagar;
             });
 
             const facturasCompletamentePagadasDuplicadas = facturasCompletamentePagadas.filter(f =>
-                facturasCompletamentePagadasEnPaquete.includes(f._id)
+                facturasCompletamentePagadasEnPaquete.some(fe => fe._id.toString() === f._id.toString())
             );
 
             if (facturasCompletamentePagadasDuplicadas.length > 0) {
@@ -403,17 +453,17 @@ export const updateInvoicesPackage = async (req, res) => {
                         if (factura.importePagado >= factura.importeAPagar) {
                             // Pago completo - pendiente de autorización
                             datosAgregacion.estadoPago = null; // Pendiente de autorización
-                            datosAgregacion.autorizada = false; // Pendiente de autorización
+                            datosAgregacion.autorizada = null; // Pendiente de autorización
                             datosAgregacion.esCompleta = false; // No está completamente pagada hasta que se autorice
                         } else if (factura.importePagado > 0) {
                             // Pago parcial - también pendiente de autorización (como los completos)
                             datosAgregacion.estadoPago = null; // Pendiente de autorización
-                            datosAgregacion.autorizada = false; // Pendiente de autorización
+                            datosAgregacion.autorizada = null; // Pendiente de autorización
                             datosAgregacion.esCompleta = false;
                         } else {
                             // Sin pagos - estado inicial
                             datosAgregacion.estadoPago = 1; // Enviado a pago
-                            datosAgregacion.autorizada = false;
+                            datosAgregacion.autorizada = null;
                             datosAgregacion.esCompleta = false;
                         }
 
@@ -427,19 +477,51 @@ export const updateInvoicesPackage = async (req, res) => {
         const datosActualizacion = {};
         if (facturas) {
             // En lugar de reemplazar todas las facturas, agregar solo las nuevas
-            const facturasActuales = paqueteExistente.facturas.map(f => f.toString());
-            const facturasNuevas = facturas.filter(f => !facturasActuales.includes(f.toString()));
+            const facturasActualesIds = paqueteExistente.facturas.map(f => f._id.toString());
+            const facturasNuevas = facturas.filter(f => !facturasActualesIds.includes(f.toString()));
 
             if (facturasNuevas.length > 0) {
-                // Agregar las nuevas facturas al array existente
-                datosActualizacion.facturas = [...paqueteExistente.facturas, ...facturasNuevas];
+                // Obtener los datos completos de las nuevas facturas
+                const nuevasFacturasEmbebidas = facturasExistentes
+                    .filter(f => facturasNuevas.includes(f._id.toString()))
+                    .map(factura => {
+                        const facturaData = factura.toObject();
+                        facturaData._id = factura._id;
+                        
+                        // FORZAR que autorizada sea null (pendiente) al agregar al paquete
+                        facturaData.autorizada = null;
+                        facturaData.estadoPago = null;
+                        facturaData.esCompleta = false;
+                        facturaData.pagoRechazado = false;
+                        facturaData.estaRegistrada = true;
+                        facturaData.registrado = 1;
+                        facturaData.fechaRevision = new Date();
+                        
+                        // Asegurar que razonSocial tenga la estructura correcta
+                        if (facturaData.razonSocial && typeof facturaData.razonSocial === 'object' && facturaData.razonSocial._id) {
+                            facturaData.razonSocial = {
+                                _id: facturaData.razonSocial._id,
+                                name: facturaData.razonSocial.name || '',
+                                rfc: facturaData.razonSocial.rfc || ''
+                            };
+                        }
+                        
+                        return facturaData;
+                    });
+
+                // Agregar las nuevas facturas embebidas al array existente
+                datosActualizacion.facturas = [...paqueteExistente.facturas, ...nuevasFacturasEmbebidas];
             }
         }
         if (estatus) datosActualizacion.estatus = estatus;
         if (departamento_id) datosActualizacion.departamento_id = departamento_id;
         if (departamento) datosActualizacion.departamento = departamento;
         if (comentario !== undefined) datosActualizacion.comentario = comentario;
-        if (fechaPago) datosActualizacion.fechaPago = new Date(fechaPago);
+        if (fechaPago) {
+            // La fechaPago ya viene calculada desde el frontend como el jueves de la semana siguiente
+            // No necesitamos volver a calcularla aquí
+            datosActualizacion.fechaPago = new Date(fechaPago);
+        }
         if (totalImporteAPagar !== undefined) datosActualizacion.totalImporteAPagar = totalImporteAPagar;
 
         const paqueteActualizado = await InvoicesPackage.findByIdAndUpdate(
@@ -497,9 +579,8 @@ export const updateInvoicesPackage = async (req, res) => {
             }
         }
 
-        // Obtener el paquete actualizado con las facturas pobladas
+        // Obtener el paquete actualizado con las facturas embebidas
         const paqueteCompleto = await InvoicesPackage.findById(id)
-            .populate('facturas')
             .populate({
                 path: 'packageCompanyId',
                 populate: ['companyId', 'brandId', 'branchId']
@@ -550,10 +631,13 @@ export const deleteInvoicesPackage = async (req, res) => {
             fechaRevision: new Date()
         };
 
+        // Extraer los IDs de las facturas embebidas
+        const facturaIds = paquete.facturas.map(f => f._id);
+
         await Promise.all([
             // Actualizar facturas
             ImportedInvoices.updateMany(
-                { _id: { $in: paquete.facturas } },
+                { _id: { $in: facturaIds } },
                 { $set: datosRemocion }
             ),
             // Eliminar la relación con Company, Brand, Branch si existe
@@ -649,8 +733,11 @@ export const changeInvoicesPackageStatus = async (req, res) => {
                 fechaRevision: new Date()
             };
 
+            // Extraer los IDs de las facturas embebidas
+            const facturaIds = paquete.facturas.map(f => f._id);
+
             await Promise.all(
-                paquete.facturas.map(facturaId =>
+                facturaIds.map(facturaId =>
                     ImportedInvoices.findByIdAndUpdate(facturaId, { $set: datosPago })
                 )
             );
@@ -659,8 +746,7 @@ export const changeInvoicesPackageStatus = async (req, res) => {
         // Cambiar el estatus
         await paquete.cambiarEstatus(estatus);
 
-        const paqueteActualizado = await InvoicesPackage.findById(id)
-            .populate('facturas');
+        const paqueteActualizado = await InvoicesPackage.findById(id);
 
         res.status(200).json({
             success: true,
@@ -689,7 +775,6 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
         const usuarioObjectId = new mongoose.Types.ObjectId(usuario_id);
 
         const paquetes = await InvoicesPackage.find({ usuario_id: usuarioObjectId })
-            .populate('facturas')
             .populate({
                 path: 'packageCompanyId',
                 populate: ['companyId', 'brandId', 'branchId']
@@ -712,9 +797,9 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
 // Función para actualizar totales de paquetes cuando se desautoriza una factura
 export const actualizarTotalesPaquetesPorFactura = async (facturaId) => {
     try {
-        // Buscar todos los paquetes que contengan esta factura
+        // Buscar todos los paquetes que contengan esta factura por _id
         const paquetes = await InvoicesPackage.find({
-            facturas: facturaId
+            'facturas._id': facturaId
         });
 
         // Actualizar los totales de cada paquete
@@ -725,5 +810,90 @@ export const actualizarTotalesPaquetesPorFactura = async (facturaId) => {
         console.log(`Totales actualizados para ${paquetes.length} paquetes que contienen la factura ${facturaId}`);
     } catch (error) {
         console.error('Error actualizando totales de paquetes:', error);
+    }
+};
+
+// Función para actualizar una factura embebida en todos los paquetes que la contengan
+export const actualizarFacturaEnPaquetes = async (facturaId, datosActualizados) => {
+    try {
+        // Actualizar directamente en la base de datos usando $set
+        const result = await InvoicesPackage.updateMany(
+            { 'facturas._id': facturaId },
+            { 
+                $set: {
+                    'facturas.$.autorizada': datosActualizados.autorizada,
+                    'facturas.$.pagoRechazado': datosActualizados.pagoRechazado,
+                    'facturas.$.importePagado': datosActualizados.importePagado,
+                    'facturas.$.estadoPago': datosActualizados.estadoPago,
+                    'facturas.$.esCompleta': datosActualizados.esCompleta,
+                    'facturas.$.pagado': datosActualizados.pagado || 0,
+                    'facturas.$.descripcionPago': datosActualizados.descripcionPago || ''
+                }
+            }
+        );
+
+        console.log(`Factura embebida actualizada en ${result.modifiedCount} paquetes para la factura ${facturaId}`);
+    } catch (error) {
+        console.error('Error actualizando factura embebida en paquetes:', error);
+    }
+};
+
+// Función para enviar paquete a dirección (actualizar facturas originales con datos finales)
+export const enviarPaqueteADireccion = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const paquete = await InvoicesPackage.findById(id);
+        if (!paquete) {
+            return res.status(404).json({
+                success: false,
+                message: 'Paquete de facturas no encontrado.'
+            });
+        }
+
+        // Verificar que todas las facturas estén procesadas (sin pendientes)
+        const facturasPendientes = paquete.facturas.filter(f => f.autorizada === null);
+        if (facturasPendientes.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se puede enviar el paquete. Hay facturas pendientes de procesar.'
+            });
+        }
+
+        // Actualizar las facturas originales con los datos finales del paquete
+        for (const facturaEmbebida of paquete.facturas) {
+            const datosActualizacion = {
+                autorizada: facturaEmbebida.autorizada,
+                pagoRechazado: facturaEmbebida.pagoRechazado,
+                importePagado: facturaEmbebida.importePagado,
+                estadoPago: facturaEmbebida.estadoPago,
+                esCompleta: facturaEmbebida.esCompleta,
+                pagado: facturaEmbebida.pagado,
+                descripcionPago: facturaEmbebida.descripcionPago,
+                fechaRevision: new Date()
+            };
+
+            await ImportedInvoices.findByIdAndUpdate(
+                facturaEmbebida._id,
+                { $set: datosActualizacion }
+            );
+        }
+
+        // Cambiar el estatus del paquete a "Enviado"
+        paquete.estatus = 'Enviado';
+        await paquete.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Paquete enviado a dirección correctamente.',
+            data: paquete
+        });
+
+    } catch (error) {
+        console.error('Error enviando paquete a dirección:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
     }
 }; 

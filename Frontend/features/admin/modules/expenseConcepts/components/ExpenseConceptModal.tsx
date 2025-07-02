@@ -6,7 +6,9 @@ import { toast } from "react-toastify";
 import { getModalButtonStyles } from "../../../../../utils/modalButtonStyles";
 import { expenseConceptService } from "../services/expenseConcepts";
 import { expenseConceptCategoryService } from "../../expenseConceptCategories/services/expenseConceptCategories";
+import { departmentService } from "../../departments/services/departments";
 import { ExpenseConceptCategory } from "../../expenseConceptCategories/types";
+import { Department } from "../../departments/types";
 import { expenseConceptSchema } from "../schemas/expenseConceptSchema";
 import { ExpenseConceptData, ExpenseConceptFormData } from "../types";
     
@@ -30,7 +32,9 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [categories, setCategories] = useState<ExpenseConceptCategory[]>([]);
+  const [departments, setDepartments] = useState<Pick<Department, '_id' | 'name'>[]>([]);
   const [loadingCategories, setLoadingCategories] = useState<boolean>(false);
+  const [loadingDepartments, setLoadingDepartments] = useState<boolean>(false);
   const isEditing = mode === "edit";
 
   const {
@@ -45,6 +49,7 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
       name: "",
       description: "",
       categoryId: "",
+      departmentId: "",
     },
     mode: "onChange",
   });
@@ -66,26 +71,47 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
     }
   };
 
+  const loadDepartments = async () => {
+    try {
+      setLoadingDepartments(true);
+      const response = await departmentService.getActive();
+      if (response.success) {
+        const { data } = response;
+        setDepartments(data as unknown as Pick<Department, '_id' | 'name'>[]);
+      } else {
+        toast.error("Error al cargar los departamentos");
+      }
+    } catch (error: any) {
+      toast.error("Error al cargar los departamentos");
+      console.error("Error loading departments:", error);
+    } finally {
+      setLoadingDepartments(false);
+    }
+  };
+
   useEffect(() => {
     if (showModal) {
       loadCategories();
+      loadDepartments();
       if (isEditing && editingConcepto) {
         if ('nombre' in editingConcepto) {
           // Es un objeto legacy
           setValue("name", editingConcepto.nombre);
           setValue("description", editingConcepto.descripcion);
-          // categoryId se debe obtener del backend o manejar de otra forma
+          // categoryId y departmentId se deben obtener del backend o manejar de otra forma
         } else {
           // Es un objeto ExpenseConcept
           setValue("name", editingConcepto.name);
           setValue("description", editingConcepto.description);
           setValue("categoryId", editingConcepto.categoryId._id);
+          setValue("departmentId", editingConcepto.departmentId._id);
         }
       } else {
         reset({
           name: "",
           description: "",
           categoryId: "",
+          departmentId: "",
         });
       }
     }
@@ -106,6 +132,7 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
         name: data.name.trim(),
         description: data.description.trim(),
         categoryId: data.categoryId,
+        departmentId: data.departmentId,
       };
 
       let response;
@@ -139,7 +166,7 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
       if (error.response?.status === 400) {
         errorMessage =
           error.response.data?.message ||
-          "Ya existe un concepto de gasto con ese nombre en esta categoría";
+          "Ya existe un concepto de gasto con ese nombre en esta categoría y departamento";
       } else if (error.response?.status === 404) {
         errorMessage = "Concepto de gasto no encontrado";
       } else if (error.response?.status >= 500) {
@@ -254,6 +281,36 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
               </Form.Control.Feedback>
               <Form.Text className="text-muted">
                 Selecciona la categoría a la que pertenece este concepto de gasto.
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>
+                Departamento <span className="text-danger">*</span>
+              </Form.Label>
+              <Controller
+                name="departmentId"
+                control={control}
+                render={({ field }) => (
+                  <Form.Select
+                    isInvalid={!!errors.departmentId}
+                    disabled={loadingDepartments}
+                    {...field}
+                  >
+                    <option value="">Seleccionar departamento</option>
+                    {departments.map((department) => (
+                      <option key={department._id} value={department._id}>
+                        {department.name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                )}
+              />
+              <Form.Control.Feedback type="invalid">
+                {errors.departmentId?.message}
+              </Form.Control.Feedback>
+              <Form.Text className="text-muted">
+                Selecciona el departamento responsable de este concepto de gasto.
               </Form.Text>
             </Form.Group>
           </Modal.Body>

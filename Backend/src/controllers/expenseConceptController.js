@@ -3,8 +3,9 @@ import { ExpenseConcept } from "../models/ExpenseConcept.js";
 export const getAll = async (req, res) => {
   try {
     const concepts = await ExpenseConcept.find({ isActive: true })
-      .select("_id name description categoryId")
+      .select("_id name description categoryId departmentId")
       .populate("categoryId", "name")
+      .populate("departmentId", "name")
       .sort({ name: 1 });
 
     res.status(200).json({
@@ -23,6 +24,7 @@ export const getAllExpenseConcepts = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
     const categoryId = req.query.categoryId || "";
+    const departmentId = req.query.departmentId || "";
 
     const filters = {};
     if (search) {
@@ -34,10 +36,14 @@ export const getAllExpenseConcepts = async (req, res) => {
     if (categoryId) {
       filters.categoryId = categoryId;
     }
+    if (departmentId) {
+      filters.departmentId = departmentId;
+    }
 
     const total = await ExpenseConcept.countDocuments(filters);
     const concepts = await ExpenseConcept.find(filters)
       .populate("categoryId", "name")
+      .populate("departmentId", "name")
       .skip(skip)
       .limit(limit)
       .sort({ name: 1 });
@@ -61,8 +67,9 @@ export const getById = async (req, res) => {
   try {
     const { id } = req.params;
     const concept = await ExpenseConcept.findOne({ _id: id, isActive: true })
-      .select("_id name description categoryId")
-      .populate("categoryId", "name");
+      .select("_id name description categoryId departmentId")
+      .populate("categoryId", "name")
+      .populate("departmentId", "name");
 
     if (!concept) {
       return res.status(404).json({
@@ -78,17 +85,18 @@ export const getById = async (req, res) => {
 
 export const createExpenseConcept = async (req, res) => {
   try {
-    const { name, description, categoryId } = req.body;
+    const { name, description, categoryId, departmentId } = req.body;
     const newConcept = await ExpenseConcept.create({
       name: name.trim(),
       description: description.trim(),
       categoryId,
+      departmentId,
       isActive: true,
     });
 
     const populatedConcept = await ExpenseConcept.findById(
       newConcept._id
-    ).populate("categoryId", "name");
+    ).populate("categoryId", "name").populate("departmentId", "name");
 
     res.status(201).json({
       success: true,
@@ -100,7 +108,7 @@ export const createExpenseConcept = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "An expense concept with that name already exists for this category",
+          "An expense concept with that name already exists for this category and department",
       });
     }
     res.status(500).json({ success: false, message: error.message });
@@ -110,16 +118,17 @@ export const createExpenseConcept = async (req, res) => {
 export const updateExpenseConcept = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, categoryId } = req.body;
+    const { name, description, categoryId, departmentId } = req.body;
     const updatedConcept = await ExpenseConcept.findByIdAndUpdate(
       id,
       {
         name: name.trim(),
         description: description.trim(),
         categoryId,
+        departmentId,
       },
       { new: true }
-    ).populate("categoryId", "name");
+    ).populate("categoryId", "name").populate("departmentId", "name");
 
     if (!updatedConcept) {
       return res.status(404).json({
@@ -137,7 +146,7 @@ export const updateExpenseConcept = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          "An expense concept with that name already exists for this category",
+          "An expense concept with that name already exists for this category and department",
       });
     }
     res.status(500).json({ success: false, message: error.message });

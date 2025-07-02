@@ -50,8 +50,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
             // Solo guardar en estado local, SIN hacer llamadas al backend
             onSuccess(invoiceId, tipoPago, descripcion, tipoPago === 'parcial' ? Number(monto) : undefined);
             
-            toast.success(tipoPago === 'completo' ? 'Pago completo registrado temporalmente' : 'Pago parcial registrado temporalmente');
-            
             setDescripcion('');
             setMonto('');
             onClose();

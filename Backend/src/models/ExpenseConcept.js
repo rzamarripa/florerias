@@ -7,6 +7,11 @@ const expenseConceptSchema = new Schema({
     ref: "cc_expense_concept_category",
     required: true,
   },
+  departmentId: {
+    type: Schema.Types.ObjectId,
+    ref: "cc_department",
+    required: true,
+  },
   name: {
     type: String,
     required: true,
@@ -31,7 +36,7 @@ const expenseConceptSchema = new Schema({
   },
 });
 
-expenseConceptSchema.index({ name: 1, categoryId: 1 }, { unique: true });
+expenseConceptSchema.index({ name: 1, categoryId: 1, departmentId: 1 }, { unique: true });
 
 expenseConceptSchema.pre("save", function (next) {
   this.updatedAt = new Date();

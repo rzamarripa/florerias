@@ -10,18 +10,19 @@ import {
 
 export const expenseConceptService = {
   getActive: async () => {
-    return await apiCall<{ success: boolean; data: Pick<ExpenseConcept, '_id' | 'name' | 'categoryId'>[] }>(
+    return await apiCall<{ success: boolean; data: Pick<ExpenseConcept, '_id' | 'name' | 'categoryId' | 'departmentId'>[] }>(
       "/expense-concept/all"
     );
   },
 
   getAll: async (params: ExpenseConceptSearchParams = {}) => {
-    const { page = 1, limit = 10, search, categoryId, isActive } = params;
+    const { page = 1, limit = 10, search, categoryId, departmentId, isActive } = params;
     const searchParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       ...(search && { search }),
       ...(categoryId && { categoryId }),
+      ...(departmentId && { departmentId }),
       ...(isActive && { isActive: isActive.toString() }),
     });
     return await apiCall<ExpenseConceptListResponse>(`/expense-concept?${searchParams}`);

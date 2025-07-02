@@ -50,7 +50,7 @@ export interface ImportedInvoice {
     estadoPago: number | null;
     esCompleta: boolean;
     descripcionPago?: string;
-    autorizada: boolean;
+    autorizada: boolean | null;
     pagoRechazado: boolean;
     fechaRevision?: string;
     estaRegistrada?: boolean;
@@ -264,12 +264,20 @@ export const getInvoicesPackagesSummary = async (usuario_id?: string): Promise<I
 };
 
 // Servicio para cambiar estatus de un paquete
-export const changeInvoicesPackageStatus = async (id: string, estatus: string): Promise<InvoicesPackageResponse> => {
-    const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${id}/status`, {
+export const changeInvoicesPackageStatus = async (id: string, estatus: string): Promise<any> => {
+    const response = await apiCall<any>(`/invoices-package/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ estatus }),
     });
-    return response.data;
+    return response;
+};
+
+// Servicio para enviar paquete a dirección
+export const enviarPaqueteADireccion = async (id: string): Promise<any> => {
+    const response = await apiCall<any>(`/invoices-package/${id}/enviar-direccion`, {
+        method: "POST",
+    });
+    return response;
 };
 
 // Servicio para obtener paquetes vencidos
@@ -307,17 +315,22 @@ export interface ToggleFacturaAutorizadaResponse {
     success: boolean;
     data: {
         _id: string;
-        autorizada: boolean;
+        autorizada: boolean | null;
         pagoRechazado: boolean;
         importePagado: number;
+        estadoPago: number | null;
+        esCompleta: boolean;
     };
     message?: string;
 }
 
 // Servicio para cambiar el estado de autorización de una factura
-export const toggleFacturaAutorizada = async (facturaId: string): Promise<ApiResponse<ToggleFacturaAutorizadaResponse>> => {
+export const toggleFacturaAutorizada = async (facturaId: string, autorizada?: boolean): Promise<ApiResponse<ToggleFacturaAutorizadaResponse>> => {
+    const body = typeof autorizada === 'boolean' ? JSON.stringify({ autorizada }) : undefined;
     const response = await apiCall<ToggleFacturaAutorizadaResponse>(`/imported-invoices/${facturaId}/toggle-autorizada`, {
         method: "PATCH",
+        ...(body ? { body } : {}),
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
     });
     return response;
 };

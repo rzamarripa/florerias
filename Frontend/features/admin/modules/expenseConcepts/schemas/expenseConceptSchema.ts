@@ -17,6 +17,10 @@ export const expenseConceptSchema = z.object({
     .string()
     .min(1, "Debe seleccionar una categoría")
     .trim(),
+  departmentId: z
+    .string()
+    .min(1, "Debe seleccionar un departamento")
+    .trim(),
 });
 
 export type ExpenseConceptFormData = z.infer<typeof expenseConceptSchema>;
