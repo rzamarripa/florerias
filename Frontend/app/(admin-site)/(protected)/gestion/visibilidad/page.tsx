@@ -1,15 +1,14 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Container } from 'react-bootstrap';
-import UserVisibilitySelector from '@/features/admin/modules/roles/components/UserVisibilitySelector';
+import UserVisibility from "@/features/admin/modules/userVisibility/UserVisibility";
+import { Container } from "react-bootstrap";
 
 const VisibilityPage = () => {
   return (
     <Container fluid className="p-4">
-      <UserVisibilitySelector />
+      <UserVisibility />
     </Container>
   );
 };
 
-export default VisibilityPage; 
+export default VisibilityPage;

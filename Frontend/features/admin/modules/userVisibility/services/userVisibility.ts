@@ -1,11 +1,5 @@
 import { apiCall } from "@/utils/api";
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  message?: string;
-  data?: T;
-}
-
 export interface UserVisibilityUpdatePayload {
   companies: string[];
   brands: string[];
@@ -20,19 +14,16 @@ export interface VisibilityStructure {
 }
 
 export const userVisibilityService = {
-  getStructure: (userId: string): Promise<ApiResponse<VisibilityStructure>> => {
-    return apiCall(`/role-visibility/${userId}/structure`);
+  getStructure: (userId: string) => {
+    return apiCall<VisibilityStructure>(`/role-visibility/${userId}/structure`);
   },
 
-  getAllStructure: (): Promise<ApiResponse<VisibilityStructure>> => {
-    return apiCall("/role-visibility/structure");
+  getAllStructure: () => {
+    return apiCall<VisibilityStructure>("/role-visibility/structure");
   },
 
-  update: (
-    userId: string,
-    data: UserVisibilityUpdatePayload
-  ): Promise<ApiResponse<any>> => {
-    return apiCall(`/role-visibility/${userId}`, {
+  update: (userId: string, data: UserVisibilityUpdatePayload) => {
+    return apiCall<any>(`/role-visibility/${userId}`, {
       method: "PUT",
       body: JSON.stringify(data),
       headers: {
@@ -44,13 +35,13 @@ export const userVisibilityService = {
   checkAccess: (
     userId: string,
     params: { companyId?: string; brandId?: string; branchId?: string }
-  ): Promise<ApiResponse<boolean>> => {
+  ) => {
     const queryParams = new URLSearchParams();
     if (params.companyId) queryParams.append("companyId", params.companyId);
     if (params.brandId) queryParams.append("brandId", params.brandId);
     if (params.branchId) queryParams.append("branchId", params.branchId);
 
-    return apiCall(
+    return apiCall<boolean>(
       `/role-visibility/${userId}/check-access?${queryParams.toString()}`
     );
   },

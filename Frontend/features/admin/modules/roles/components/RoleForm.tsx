@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Button, Card, Form } from 'react-bootstrap';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { roleSchema } from '../schemas/roleSchema';
-import { roleService } from '../services/roleService';
-import { toast } from 'react-toastify';
-import RoleVisibilityTree from './RoleVisibilityTree';
+import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useEffect, useState } from "react";
+import { Button, Card, Form } from "react-bootstrap";
+import { useForm } from "react-hook-form";
+import { toast } from "react-toastify";
+import RoleVisibilityTree from "../../userVisibility/components/UserVisibilityTree";
+import { roleSchema } from "../schemas/roleSchema";
+import { roleService } from "../services/roleService";
 
 interface RoleFormProps {
   roleId?: string;
@@ -43,7 +43,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
         setShowVisibility(true);
       }
     } catch (error) {
-      console.error('Error al cargar el rol:', error);
+      console.error("Error al cargar el rol:", error);
     }
   };
 
@@ -54,7 +54,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
         setModules(response.data);
       }
     } catch (error) {
-      console.error('Error al cargar los módulos:', error);
+      console.error("Error al cargar los módulos:", error);
     }
   };
 
@@ -66,7 +66,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
         : await roleService.create(data);
 
       if (response.success) {
-        toast.success(response.message || 'Rol guardado exitosamente');
+        toast.success(response.message || "Rol guardado exitosamente");
         if (!roleId) {
           reset();
         }
@@ -75,11 +75,11 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
         }
         setShowVisibility(true);
       } else {
-        toast.error(response.message || 'Error al guardar el rol');
+        toast.error(response.message || "Error al guardar el rol");
       }
     } catch (error) {
-      console.error('Error al guardar el rol:', error);
-      toast.error('Error al guardar el rol');
+      console.error("Error al guardar el rol:", error);
+      toast.error("Error al guardar el rol");
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
       <Form onSubmit={handleSubmit(onSubmit)}>
         <Card>
           <Card.Header>
-            <h4 className="card-title">{roleId ? 'Editar' : 'Nuevo'} Rol</h4>
+            <h4 className="card-title">{roleId ? "Editar" : "Nuevo"} Rol</h4>
           </Card.Header>
           <Card.Body>
             <div className="row">
@@ -99,7 +99,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
                   <Form.Label>Nombre</Form.Label>
                   <Form.Control
                     type="text"
-                    {...register('name')}
+                    {...register("name")}
                     isInvalid={!!errors.name}
                   />
                   {errors.name && (
@@ -114,7 +114,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
                   <Form.Label>Descripción</Form.Label>
                   <Form.Control
                     type="text"
-                    {...register('description')}
+                    {...register("description")}
                     isInvalid={!!errors.description}
                   />
                   {errors.description && (
@@ -135,7 +135,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
                       type="checkbox"
                       label={module.name}
                       value={module._id}
-                      {...register('modules')}
+                      {...register("modules")}
                     />
                   </div>
                 ))}
@@ -144,7 +144,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
 
             <div className="text-end">
               <Button type="submit" variant="primary" disabled={loading}>
-                {loading ? 'Guardando...' : 'Guardar'}
+                {loading ? "Guardando..." : "Guardar"}
               </Button>
             </div>
           </Card.Body>
@@ -160,4 +160,4 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
   );
 };
 
-export default RoleForm; 
+export default RoleForm;

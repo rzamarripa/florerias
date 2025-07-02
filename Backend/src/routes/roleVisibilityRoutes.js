@@ -1,11 +1,11 @@
 import express from "express";
 import {
-  getUserVisibilityStructure,
-  updateUserVisibility,
   checkAccess,
   getAllStructure,
   getUserVisibilityForSelects,
+  getUserVisibilityStructure,
   testBranchBrandRelations,
+  updateUserVisibility,
 } from "../controllers/roleVisibilityController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -21,7 +21,6 @@ router.put("/:userId", protect, updateUserVisibility);
 
 router.get("/:userId/check-access", protect, checkAccess);
 
-// Ruta de prueba para verificar relaciones marca-sucursal
 router.get("/test/branch-brand/:brandId", protect, testBranchBrandRelations);
 
 export default router;

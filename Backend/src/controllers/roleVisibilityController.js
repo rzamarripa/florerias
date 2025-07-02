@@ -1,31 +1,28 @@
+import { RsBranchBrand } from "../models/BranchBrands.js";
+import { Company } from "../models/Company.js";
+import { RsCompanyBrand } from "../models/CompanyBrands.js";
 import { RoleVisibility } from "../models/RoleVisibility.js";
 import { User } from "../models/User.js";
-import { Company } from "../models/Company.js";
-import { Brand } from "../models/Brand.js";
-import { RsCompanyBrand } from "../models/CompanyBrands.js";
-import { Branch } from "../models/Branch.js";
-import { RsBranchBrand } from "../models/BranchBrands.js";
 
-// Obtener la estructura jerárquica completa sin filtrar por usuario
 export const getAllStructure = async (req, res) => {
   try {
-    const companies = await Company.find({ isActive: true });
-
-    const companyBrands = await RsCompanyBrand.find().populate('brandId');
-
-    const branches = await Branch.find({ isActive: true });
+    const companies = await Company.find({ isActive: true }).lean();
+    const companyBrands = await RsCompanyBrand.find()
+      .populate("brandId")
+      .lean();
+    const branchBrands = await RsBranchBrand.find().populate("branchId").lean();
 
     const companyMap = new Map();
     const brandMap = new Map();
 
-    companies.forEach(company => {
+    companies.forEach((company) => {
       companyMap.set(company._id.toString(), {
         name: company.name,
-        brands: {}
+        brands: {},
       });
     });
 
-    companyBrands.forEach(relation => {
+    companyBrands.forEach((relation) => {
       const companyId = relation.companyId.toString();
       const brand = relation.brandId;
 
@@ -37,29 +34,33 @@ export const getAllStructure = async (req, res) => {
       if (!companyMap.get(companyId).brands[brandId]) {
         companyMap.get(companyId).brands[brandId] = {
           name: brand.name,
-          branches: {}
+          branches: {},
         };
       }
     });
 
-    branches.forEach(branch => {
-      const companyId = branch.companyId.toString();
-      const brandId = branch.brandId?.toString();
+    branchBrands.forEach((relation) => {
+      const brandId = relation.brandId.toString();
+      const branch = relation.branchId;
 
-      if (!companyMap.has(companyId) || !brandId) return;
+      if (!branch || !branch.isActive) return;
+
+      const branchId = branch._id.toString();
+      const companyId = branch.companyId.toString();
+
+      if (!companyMap.has(companyId)) return;
 
       const company = companyMap.get(companyId);
       if (company.brands[brandId]) {
-        company.brands[brandId].branches[branch._id.toString()] = {
-          name: branch.name
+        company.brands[brandId].branches[branchId] = {
+          name: branch.name,
         };
       }
     });
 
     const structure = {
-      companies: Object.fromEntries(companyMap)
+      companies: Object.fromEntries(companyMap),
     };
-
 
     res.json({
       success: true,
@@ -75,12 +76,10 @@ export const getAllStructure = async (req, res) => {
   }
 };
 
-// Obtener la estructura jerárquica de visibilidad para un usuario
 export const getUserVisibilityStructure = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Verificar que el usuario existe
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -89,37 +88,23 @@ export const getUserVisibilityStructure = async (req, res) => {
       });
     }
 
-    // Obtener o crear la configuración de visibilidad
-    let visibility = await RoleVisibility.findOne({ userId });
-    if (!visibility) {
-      // Si no existe, crear una con acceso total (arrays vacíos)
-      try {
-        visibility = await RoleVisibility.create({ userId });
-      } catch (error) {
-        console.error("Error al crear visibilidad:", error);
-        return res.status(500).json({
-          success: false,
-          message: "Error al crear la configuración de visibilidad",
-          error: error.message,
-        });
-      }
-    }
+    const visibility = await RoleVisibility.findOne({ userId });
 
-    // Obtener la estructura jerárquica
-    try {
-      const structure = await visibility.getHierarchicalStructure();
-      res.json({
-        success: true,
-        data: structure,
-      });
-    } catch (error) {
-      console.error("Error al obtener estructura:", error);
-      res.status(500).json({
-        success: false,
-        message: "Error al obtener la estructura jerárquica",
-        error: error.message,
-      });
-    }
+    res.json({
+      success: true,
+      data: {
+        companies: {},
+        selectedCompanies: visibility
+          ? visibility.companies.map((id) => id.toString())
+          : [],
+        selectedBrands: visibility
+          ? visibility.brands.map((id) => id.toString())
+          : [],
+        selectedBranches: visibility
+          ? visibility.branches.map((id) => id.toString())
+          : [],
+      },
+    });
   } catch (error) {
     console.error("Error general:", error);
     res.status(500).json({
@@ -130,13 +115,11 @@ export const getUserVisibilityStructure = async (req, res) => {
   }
 };
 
-// Actualizar la visibilidad de un usuario
 export const updateUserVisibility = async (req, res) => {
   try {
     const { userId } = req.params;
     const { companies, brands, branches } = req.body;
 
-    // Verificar que el usuario existe
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -145,41 +128,12 @@ export const updateUserVisibility = async (req, res) => {
       });
     }
 
-    // Procesar las marcas para obtener automáticamente las sucursales relacionadas
-    let processedBranches = branches || [];
-
-    if (brands && brands.length > 0) {
-      try {
-        // Obtener todas las relaciones marca-sucursal para las marcas seleccionadas
-        const branchBrandRelations = await RsBranchBrand.find({
-          brandId: { $in: brands }
-        }).populate('branchId');
-
-        // Extraer los IDs de las sucursales relacionadas
-        const relatedBranchIds = branchBrandRelations
-          .filter(relation => relation.branchId && relation.branchId._id)
-          .map(relation => relation.branchId._id);
-
-        // Combinar las sucursales explícitamente seleccionadas con las relacionadas a las marcas
-        const allBranchIds = [...new Set([...processedBranches, ...relatedBranchIds])];
-        processedBranches = allBranchIds;
-
-        console.log('Marcas seleccionadas:', brands);
-        console.log('Sucursales relacionadas encontradas:', relatedBranchIds);
-        console.log('Sucursales finales (explícitas + relacionadas):', processedBranches);
-      } catch (error) {
-        console.error('Error al obtener sucursales relacionadas:', error);
-        // Continuar con las sucursales explícitamente seleccionadas si hay error
-      }
-    }
-
-    // Actualizar o crear la configuración de visibilidad
     const visibility = await RoleVisibility.findOneAndUpdate(
       { userId },
       {
         companies: companies || [],
         brands: brands || [],
-        branches: processedBranches,
+        branches: branches || [],
       },
       { upsert: true, new: true }
     );
@@ -198,7 +152,6 @@ export const updateUserVisibility = async (req, res) => {
   }
 };
 
-// Verificar acceso a una entidad específica
 export const checkAccess = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -206,7 +159,6 @@ export const checkAccess = async (req, res) => {
 
     const visibility = await RoleVisibility.findOne({ userId });
     if (!visibility) {
-      // Si no hay configuración, asumir acceso total
       return res.json({
         success: true,
         data: { hasAccess: true },
@@ -239,12 +191,10 @@ export const checkAccess = async (req, res) => {
   }
 };
 
-// Obtener la estructura de visibilidad del usuario para selects en cascada
 export const getUserVisibilityForSelects = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Verificar que el usuario existe
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -253,44 +203,47 @@ export const getUserVisibilityForSelects = async (req, res) => {
       });
     }
 
-    // Obtener o crear la configuración de visibilidad
-    let visibility = await RoleVisibility.findOne({ userId });
+    const visibility = await RoleVisibility.findOne({ userId });
+
     if (!visibility) {
-      // Si no existe, crear una con acceso total (arrays vacíos)
-      visibility = await RoleVisibility.create({ userId });
+      return res.json({
+        success: true,
+        data: {
+          companies: [],
+          brands: [],
+          branches: [],
+          hasFullAccess: true,
+        },
+      });
     }
 
-    // Obtener la estructura jerárquica
     const structure = await visibility.getHierarchicalStructure();
 
-    // Obtener los datos completos de las compañías usando los IDs de la estructura
     const companyIds = Object.keys(structure.companies);
     const companiesData = await Company.find({
       _id: { $in: companyIds },
-      isActive: true
+      isActive: true,
     });
 
-    // Convertir a formato para selects
-    const companies = companiesData.map(company => ({
+    const companies = companiesData.map((company) => ({
       _id: company._id.toString(),
       name: company.name,
       rfc: company.rfc,
       legalRepresentative: company.legalRepresentative,
       address: company.address,
       isActive: company.isActive,
-      createdAt: company.createdAt.toISOString()
+      createdAt: company.createdAt.toISOString(),
     }));
 
     const brands = [];
     const branches = [];
 
-    // Extraer marcas y sucursales de la estructura
     Object.entries(structure.companies).forEach(([companyId, company]) => {
       Object.entries(company.brands).forEach(([brandId, brandData]) => {
         brands.push({
           _id: brandId,
           name: brandData.name,
-          companyId: companyId
+          companyId: companyId,
         });
 
         Object.entries(brandData.branches).forEach(([branchId, branchData]) => {
@@ -298,7 +251,7 @@ export const getUserVisibilityForSelects = async (req, res) => {
             _id: branchId,
             name: branchData.name,
             brandId: brandId,
-            companyId: companyId
+            companyId: companyId,
           });
         });
       });
@@ -310,7 +263,7 @@ export const getUserVisibilityForSelects = async (req, res) => {
         companies,
         brands,
         branches,
-        hasFullAccess: structure.hasFullAccess
+        hasFullAccess: structure.hasFullAccess,
       },
     });
   } catch (error) {
@@ -323,7 +276,6 @@ export const getUserVisibilityForSelects = async (req, res) => {
   }
 };
 
-// Función de prueba para verificar la obtención de sucursales desde rs_branch_brand
 export const testBranchBrandRelations = async (req, res) => {
   try {
     const { brandId } = req.params;
@@ -335,19 +287,17 @@ export const testBranchBrandRelations = async (req, res) => {
       });
     }
 
-    // Obtener las relaciones marca-sucursal para la marca especificada
     const branchBrandRelations = await RsBranchBrand.find({
-      brandId: brandId
-    }).populate('branchId');
+      brandId: brandId,
+    }).populate("branchId");
 
-    // Extraer información de las sucursales
     const branches = branchBrandRelations
-      .filter(relation => relation.branchId && relation.branchId._id)
-      .map(relation => ({
+      .filter((relation) => relation.branchId && relation.branchId._id)
+      .map((relation) => ({
         branchId: relation.branchId._id,
         branchName: relation.branchId.name,
         companyId: relation.branchId.companyId,
-        brandId: relation.brandId
+        brandId: relation.brandId,
       }));
 
     res.json({
@@ -355,7 +305,7 @@ export const testBranchBrandRelations = async (req, res) => {
       data: {
         brandId,
         totalRelations: branchBrandRelations.length,
-        branches
+        branches,
       },
     });
   } catch (error) {
