@@ -15,14 +15,37 @@ const roleVisibilitySchema = new Schema({
   ],
   brands: [
     {
-      type: Schema.Types.ObjectId,
-      ref: "cc_brand",
+      companyId: {
+        type: Schema.Types.ObjectId,
+        ref: "cc_companies",
+        required: true,
+      },
+      brandId: {
+        type: Schema.Types.ObjectId,
+        ref: "cc_brand",
+        required: true,
+      },
+      _id: false,
     },
   ],
   branches: [
     {
-      type: Schema.Types.ObjectId,
-      ref: "cc_branch",
+      companyId: {
+        type: Schema.Types.ObjectId,
+        ref: "cc_companies",
+        required: true,
+      },
+      brandId: {
+        type: Schema.Types.ObjectId,
+        ref: "cc_brand",
+        required: true,
+      },
+      branchId: {
+        type: Schema.Types.ObjectId,
+        ref: "cc_branch",
+        required: true,
+      },
+      _id: false,
     },
   ],
   createdAt: {
@@ -47,16 +70,28 @@ roleVisibilitySchema.methods.hasAccessToCompany = function (companyId) {
   );
 };
 
-roleVisibilitySchema.methods.hasAccessToBrand = function (brandId) {
+roleVisibilitySchema.methods.hasAccessToBrand = function (companyId, brandId) {
   return (
-    this.brands.length === 0 || this.brands.some((id) => id.equals(brandId))
+    this.brands.length === 0 ||
+    this.brands.some(
+      (b) => b.companyId.equals(companyId) && b.brandId.equals(brandId)
+    )
   );
 };
 
-roleVisibilitySchema.methods.hasAccessToBranch = function (branchId) {
+roleVisibilitySchema.methods.hasAccessToBranch = function (
+  companyId,
+  brandId,
+  branchId
+) {
   return (
     this.branches.length === 0 ||
-    this.branches.some((id) => id.equals(branchId))
+    this.branches.some(
+      (b) =>
+        b.companyId.equals(companyId) &&
+        b.brandId.equals(brandId) &&
+        b.branchId.equals(branchId)
+    )
   );
 };
 
@@ -99,7 +134,10 @@ roleVisibilitySchema.methods.getHierarchicalStructure = async function () {
 
         if (
           this.brands.length === 0 ||
-          this.brands.some((b) => b.equals(brand._id))
+          this.brands.some(
+            (b) =>
+              b.companyId.equals(company._id) && b.brandId.equals(brand._id)
+          )
         ) {
           structure.companies[company._id].brands[brand._id] = {
             name: brand.name,
@@ -107,8 +145,8 @@ roleVisibilitySchema.methods.getHierarchicalStructure = async function () {
           };
 
           const branchBrandRelations = await RsBranchBrand.find({
-            brandId: brand._id
-          }).populate('branchId');
+            brandId: brand._id,
+          }).populate("branchId");
 
           for (const branchRelation of branchBrandRelations) {
             const branch = branchRelation.branchId;
@@ -117,7 +155,12 @@ roleVisibilitySchema.methods.getHierarchicalStructure = async function () {
             if (branch.companyId && branch.companyId.equals(company._id)) {
               if (
                 this.branches.length === 0 ||
-                this.branches.some((b) => b.equals(branch._id))
+                this.branches.some(
+                  (b) =>
+                    b.companyId.equals(company._id) &&
+                    b.brandId.equals(brand._id) &&
+                    b.branchId.equals(branch._id)
+                )
               ) {
                 structure.companies[company._id].brands[brand._id].branches[
                   branch._id

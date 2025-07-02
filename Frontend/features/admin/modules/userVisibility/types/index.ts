@@ -15,6 +15,8 @@ export interface VisibilityStructure {
   selectedCompanies: string[];
   selectedBrands: string[];
   selectedBranches: string[];
+  brands?: any[];
+  branches?: any[];
 }
 
 export interface JsTreeData {

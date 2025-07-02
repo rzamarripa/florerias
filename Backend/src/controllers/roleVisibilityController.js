@@ -98,10 +98,23 @@ export const getUserVisibilityStructure = async (req, res) => {
           ? visibility.companies.map((id) => id.toString())
           : [],
         selectedBrands: visibility
-          ? visibility.brands.map((id) => id.toString())
+          ? visibility.brands.map((b) => b.brandId.toString())
           : [],
         selectedBranches: visibility
-          ? visibility.branches.map((id) => id.toString())
+          ? visibility.branches.map((b) => b.branchId.toString())
+          : [],
+        brands: visibility
+          ? visibility.brands.map((b) => ({
+              companyId: b.companyId.toString(),
+              brandId: b.brandId.toString(),
+            }))
+          : [],
+        branches: visibility
+          ? visibility.branches.map((b) => ({
+              companyId: b.companyId.toString(),
+              brandId: b.brandId.toString(),
+              branchId: b.branchId.toString(),
+            }))
           : [],
       },
     });
@@ -118,7 +131,7 @@ export const getUserVisibilityStructure = async (req, res) => {
 export const updateUserVisibility = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { companies, brands, branches } = req.body;
+    let { companies, brands, branches } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -126,6 +139,15 @@ export const updateUserVisibility = async (req, res) => {
         success: false,
         message: "Usuario no encontrado",
       });
+    }
+
+    // Normalizar brands y branches para que sean arrays de objetos
+    if (brands && brands.length > 0 && typeof brands[0] === "string") {
+      // Compatibilidad: si viene como array de brandId, convertir a objetos sin companyId
+      brands = brands.map((brandId) => ({ brandId }));
+    }
+    if (branches && branches.length > 0 && typeof branches[0] === "string") {
+      branches = branches.map((branchId) => ({ branchId }));
     }
 
     const visibility = await RoleVisibility.findOneAndUpdate(
