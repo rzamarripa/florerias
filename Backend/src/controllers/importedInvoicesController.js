@@ -791,13 +791,7 @@ export const toggleFacturaAutorizada = async (req, res) => {
       });
     }
 
-    // Verificar que la factura tenga pago completo
-    if (factura.importePagado < factura.importeAPagar) {
-      return res.status(400).json({
-        success: false,
-        message: 'Solo se pueden autorizar facturas con pago completo.'
-      });
-    }
+
 
     // Cambiar el estado de autorización
     factura.autorizada = !factura.autorizada;
