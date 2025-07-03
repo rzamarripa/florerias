@@ -12,11 +12,11 @@ import {
   ListGroup,
   Row,
 } from "react-bootstrap";
+import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
 import CreateRoleModal from "./components/CreateRolModal";
 import { rolesService } from "./services/roles";
 import { Module, Page, Role, SelectedModules } from "./types";
-import { BsPencil } from "react-icons/bs";
 
 const RolesPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -28,6 +28,8 @@ const RolesPage: React.FC = () => {
   const [originalRoleModules, setOriginalRoleModules] = useState<{
     [roleId: string]: string[];
   }>({});
+  const [isEditingName, setIsEditingName] = useState<boolean>(false);
+  const [editedName, setEditedName] = useState<string>("");
 
   useEffect(() => {
     loadInitialData();
@@ -123,10 +125,9 @@ const RolesPage: React.FC = () => {
         .filter(([_, isSelected]) => isSelected)
         .map(([moduleId, _]) => moduleId);
 
-      const response = await rolesService.update(
-        selectedRole._id,
-        { modules: selectedModuleIds.map(id => ({ _id: id } as Module)) }
-      );
+      const response = await rolesService.update(selectedRole._id, {
+        modules: selectedModuleIds.map((id) => ({ _id: id } as Module)),
+      });
 
       if (response.success) {
         setOriginalRoleModules((prev) => ({
@@ -138,11 +139,11 @@ const RolesPage: React.FC = () => {
           prev.map((role) =>
             role._id === selectedRole._id
               ? {
-                ...role,
-                modules: selectedModuleIds.map(
-                  (id) => ({ _id: id } as Module)
-                ),
-              }
+                  ...role,
+                  modules: selectedModuleIds.map(
+                    (id) => ({ _id: id } as Module)
+                  ),
+                }
               : role
           )
         );
@@ -156,6 +157,41 @@ const RolesPage: React.FC = () => {
       console.error("Error updating role modules:", error);
       toast.error("Error al actualizar los módulos del rol");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNameSave = async () => {
+    if (
+      !selectedRole ||
+      editedName.trim() === "" ||
+      editedName === selectedRole.name
+    ) {
+      setIsEditingName(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await rolesService.update(selectedRole._id, {
+        name: editedName,
+      });
+      if (response.success) {
+        setRoles((prev) =>
+          prev.map((role) =>
+            role._id === selectedRole._id ? { ...role, name: editedName } : role
+          )
+        );
+        setSelectedRole((prev) =>
+          prev ? { ...prev, name: editedName } : prev
+        );
+        toast.success("Nombre actualizado correctamente");
+      } else {
+        toast.error(response.message || "Error al actualizar el nombre");
+      }
+    } catch (error) {
+      toast.error("Error al actualizar el nombre");
+    } finally {
+      setIsEditingName(false);
       setLoading(false);
     }
   };
@@ -232,12 +268,54 @@ const RolesPage: React.FC = () => {
             <Card>
               <Card.Header className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h5 className="mb-0">{selectedRole.name}</h5>
-                  <small className="text-muted">
-                    Módulos (
-                    {Object.values(selectedModules).filter(Boolean).length}{" "}
-                    seleccionados)
-                  </small>
+                  <div className="d-flex align-items-center gap-1">
+                    {isEditingName ? (
+                      <input
+                        type="text"
+                        value={editedName}
+                        autoFocus
+                        onChange={(e) => setEditedName(e.target.value)}
+                        onBlur={handleNameSave}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleNameSave();
+                          if (e.key === "Escape") setIsEditingName(false);
+                        }}
+                        className="form-control form-control-sm"
+                      />
+                    ) : (
+                      <>
+                        <h5
+                          onClick={() => {
+                            setEditedName(selectedRole.name);
+                            setIsEditingName(true);
+                          }}
+                          title="Editar nombre"
+                          className="mb-0 d-inline-block cursor-pointer fw-bold"
+                        >
+                          {selectedRole.name}
+                        </h5>
+                        <button
+                          type="button"
+                          className="btn btn-link p-0"
+                          onClick={() => {
+                            setEditedName(selectedRole.name);
+                            setIsEditingName(true);
+                          }}
+                          tabIndex={-1}
+                          aria-label="Editar nombre"
+                        >
+                          <BsPencil size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <div>
+                    <small className="text-muted">
+                      Módulos (
+                      {Object.values(selectedModules).filter(Boolean).length}{" "}
+                      seleccionados)
+                    </small>
+                  </div>
                 </div>
                 <div>
                   {!isEditing ? (
