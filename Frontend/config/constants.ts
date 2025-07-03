@@ -173,11 +173,6 @@ export const menuItems: MenuItemType[] = [
         url: "/herramientas/importar-movimientos-bancarios",
       },
       {
-        key: "listado-paquetes",
-        label: "Listado de Paquetes",
-        url: "/modulos/paquetes-facturas/listado-paquetes",
-      },
-      {
         key: "pagos-efectivo",
         label: "Pagos en Efectivo",
         url: "/modulos/pagos-efectivo",
