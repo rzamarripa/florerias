@@ -34,8 +34,7 @@ const UserVisibilityTree: React.FC<UserVisibilityTreeProps> = ({ userId }) => {
         <h4 className="card-title">Visibilidad del Usuario</h4>
         <p className="text-muted mb-0">
           Selecciona las razones sociales, marcas y sucursales a las que este
-          usuario tendrá acceso. Si no seleccionas ninguna, el usuario tendrá
-          acceso total.
+          usuario tendrá acceso. Si no seleccionas ninguna, no tendrás ningun tipo de acceso.
         </p>
       </Card.Header>
       <Card.Body>

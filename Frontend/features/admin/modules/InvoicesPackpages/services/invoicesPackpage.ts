@@ -306,9 +306,15 @@ export async function markInvoiceAsPartiallyPaid(invoiceId: string, descripcion:
     return response;
 }
 
-// Servicio para obtener paquetes por usuario
+// Servicio para obtener paquetes por usuario (con filtrado de visibilidad)
 export const getInvoicesPackagesByUsuario = async (usuario_id: string): Promise<any> => {
     const response = await apiCall<any>(`/invoices-package/by-usuario?usuario_id=${usuario_id}`);
+    return response;
+};
+
+// Servicio para obtener paquetes creados por el usuario (sin filtrado de visibilidad)
+export const getInvoicesPackagesCreatedByUsuario = async (usuario_id: string): Promise<any> => {
+    const response = await apiCall<any>(`/invoices-package/created-by-usuario?usuario_id=${usuario_id}`);
     return response;
 };
 
@@ -327,8 +333,11 @@ export interface ToggleFacturaAutorizadaResponse {
 }
 
 // Servicio para cambiar el estado de autorización de una factura
-export const toggleFacturaAutorizada = async (facturaId: string, autorizada?: boolean): Promise<ApiResponse<ToggleFacturaAutorizadaResponse>> => {
-    const body = typeof autorizada === 'boolean' ? JSON.stringify({ autorizada }) : undefined;
+export const toggleFacturaAutorizada = async (facturaId: string, autorizada?: boolean, packageId?: string): Promise<ApiResponse<ToggleFacturaAutorizadaResponse>> => {
+    const bodyObj: any = {};
+    if (typeof autorizada === 'boolean') bodyObj.autorizada = autorizada;
+    if (packageId) bodyObj.packageId = packageId;
+    const body = Object.keys(bodyObj).length > 0 ? JSON.stringify(bodyObj) : undefined;
     const response = await apiCall<ToggleFacturaAutorizadaResponse>(`/imported-invoices/${facturaId}/toggle-autorizada`, {
         method: "PATCH",
         ...(body ? { body } : {}),

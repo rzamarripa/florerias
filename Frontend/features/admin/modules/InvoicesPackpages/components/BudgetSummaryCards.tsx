@@ -4,20 +4,53 @@ import { FileText, Calendar, PieChart, Info } from 'lucide-react';
 import BudgetStatisticCard from './BudgetStatisticCard';
 
 interface BudgetSummaryCardsProps {
-    summary?: {
-        facturasPagadas?: number;
-        totalPagado?: number;
+    tempPayments?: {
+        [invoiceId: string]: {
+            tipoPago: 'completo' | 'parcial';
+            descripcion: string;
+            monto?: number;
+            originalImportePagado: number;
+            originalSaldo: number;
+            conceptoGasto?: string;
+        }
     };
+    invoices?: any[];
 }
 
-const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({ summary }) => {
+const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({ tempPayments = {}, invoices = [] }) => {
+    // Calcular resumen solo de pagos temporales locales
+    const localPaymentsSummary = React.useMemo(() => {
+        let totalTempPagado = 0;
+        let facturasTempPagadas = 0;
+
+        Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
+            if (payment.tipoPago === 'completo') {
+                // Buscar la factura original para obtener el importe a pagar
+                const invoice = invoices.find(inv => inv._id === invoiceId);
+                if (invoice) {
+                    totalTempPagado += invoice.importeAPagar;
+                    facturasTempPagadas += 1;
+                }
+            } else if (payment.tipoPago === 'parcial' && payment.monto) {
+                totalTempPagado += payment.monto;
+                // Contar todas las facturas con pagos parciales, sin importar si completan la factura
+                facturasTempPagadas += 1;
+            }
+        });
+
+        return {
+            totalTempPagado,
+            facturasTempPagadas
+        };
+    }, [tempPayments, invoices]);
+
     return (
         <Row className="g-3">
             <Col md={3}>
                 <BudgetStatisticCard
-                    title={`${summary?.facturasPagadas ?? 0} Facturas pagadas`}
-                    subtitle="Pagadas este periodo"
-                    stats={`$${(summary?.totalPagado ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
+                    title={`${localPaymentsSummary.facturasTempPagadas} Facturas seleccionadas`}
+                    subtitle="Seleccionadas para pago"
+                    stats={`$${localPaymentsSummary.totalTempPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
                     icon={<FileText size={24} />}
                     variant="info"
                 />

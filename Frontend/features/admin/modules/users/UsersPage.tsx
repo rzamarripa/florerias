@@ -51,6 +51,8 @@ const UsersPage: React.FC = () => {
         ...(statusFilter && { estatus: statusFilter }),
       });
 
+      console.log(response.data);
+
       if (response.data) {
         setUsers(response.data);
       }
@@ -245,7 +247,7 @@ const UsersPage: React.FC = () => {
                       </td>
                       <td>{user.email || "-"}</td>
                       <td>{user.phone || "-"}</td>
-                      <td>{user.department || "-"}</td>
+                      <td>{user.department}</td>
                       <td>
                         {typeof user.role === "object"
                           ? user.role.name

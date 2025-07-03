@@ -9,6 +9,7 @@ import {
     getVencidosInvoicesPackages,
     changeInvoicesPackageStatus,
     getInvoicesPackagesByUsuario,
+    getInvoicesPackagesCreatedByUsuario,
     enviarPaqueteADireccion
 } from '../controllers/invoicesPackpageController.js';
 
@@ -20,8 +21,11 @@ router.post('/', createInvoicesPackage);
 // Obtener todos los paquetes con paginación
 router.get('/', getInvoicesPackages);
 
-// Obtener paquetes de facturas por usuario
+// Obtener paquetes de facturas por usuario (con filtrado de visibilidad)
 router.get('/by-usuario', getInvoicesPackagesByUsuario);
+
+// Obtener paquetes creados por el usuario (sin filtrado de visibilidad)
+router.get('/created-by-usuario', getInvoicesPackagesCreatedByUsuario);
 
 // Obtener un paquete específico por ID
 router.get('/:id', getInvoicesPackageById);

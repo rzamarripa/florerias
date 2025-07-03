@@ -213,6 +213,7 @@ export const getAllUsers = async (req, res) => {
 
     const users = await User.find(filters)
       .populate("role", "name description")
+      .populate("departmentId", "name")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -229,6 +230,7 @@ export const getAllUsers = async (req, res) => {
         };
       }
 
+      userObj.department = userObj.departmentId?.name || "";
       return userObj;
     });
 

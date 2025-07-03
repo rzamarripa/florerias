@@ -452,15 +452,21 @@ InvoicesPackageSchema.virtual('diasParaVencimiento').get(function () {
 
 // Métodos de instancia actualizados para trabajar con datos embebidos
 InvoicesPackageSchema.methods.actualizarTotales = async function () {
-    // Calcular totales usando los datos embebidos de las facturas
-    this.totalImporteAPagar = this.facturas.reduce((sum, factura) => {
+    // NUEVA LÓGICA: 
+    // - totalImporteAPagar: solo facturas autorizadas (para guardar en BD)
+    // - totalPagado: solo facturas autorizadas
+    const facturasAutorizadas = this.facturas.filter(factura => factura.autorizada === true);
+    
+    // Calcular totalImporteAPagar usando solo facturas autorizadas (para guardar en BD)
+    this.totalImporteAPagar = facturasAutorizadas.reduce((sum, factura) => {
         const importe = typeof factura.importeAPagar === 'object' && factura.importeAPagar !== null && factura.importeAPagar._bsontype === 'Decimal128'
             ? parseFloat(factura.importeAPagar.toString())
             : factura.importeAPagar || 0;
         return sum + importe;
     }, 0);
 
-    this.totalPagado = this.facturas.reduce((sum, factura) => {
+    // Calcular totalPagado usando solo facturas autorizadas
+    this.totalPagado = facturasAutorizadas.reduce((sum, factura) => {
         const importe = typeof factura.importePagado === 'object' && factura.importePagado !== null && factura.importePagado._bsontype === 'Decimal128'
             ? parseFloat(factura.importePagado.toString())
             : factura.importePagado || 0;

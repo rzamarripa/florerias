@@ -23,6 +23,7 @@ import {
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import PackpageActions from './PackpageActions';
 import EnviarPagoModal from './EnviarPagoModal';
+import { formatDate } from 'date-fns';
 
 interface InvoicesPackagesListProps {
     show?: boolean;
@@ -124,7 +125,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
         }
 
         if (facturasPendientes.length > 0) {
-            return { tipo: 'pendientes', texto: `${facturasPendientes.length} pendientes de autorización`, variant: 'warning' };
+            return { tipo: 'pendientes', texto: 'Hay facturas pendientes', variant: 'warning' };
         }
 
         return { tipo: 'parcial', texto: `${facturasAutorizadas.length}/${facturasCompletamentePagadas.length} autorizadas`, variant: 'info' };
@@ -137,23 +138,8 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
         }).format(amount);
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('es-MX', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    };
 
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('es-MX', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
+
 
     const filteredPackages = packages.filter(pkg => {
         if (!searchTerm) return true;
@@ -320,7 +306,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                             <td>
                                                 <div>
                                                     <div className="fw-bold mb-1">
-                                                        {formatDate(pkg.fechaPago)}
+                                                    {formatDate(pkg.fechaPago.toString(), 'dd/MM/yyyy')}
                                                     </div>
                                                     {new Date(pkg.fechaPago) < new Date() && pkg.estatus !== 'Pagado' ? (
                                                         <Badge className="badge bg-danger bg-opacity-10 text-danger fw-bold py-1 px-2">
@@ -334,8 +320,8 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                                 </div>
                                             </td>
                                             <td>
-                                                <small className="text-muted">
-                                                    {formatDateTime(pkg.fechaCreacion)}
+                                                <small className=" ">
+                                                    {formatDate(pkg.createdAt.toString(), 'dd/MM/yyyy')}
                                                 </small>
                                             </td>
                                             <td>

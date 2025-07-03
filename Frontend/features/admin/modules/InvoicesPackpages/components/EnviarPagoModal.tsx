@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Table, Alert, Row, Col } from 'react-bootstrap';
 import { FiTrash2 } from 'react-icons/fi';
+import { BsClipboard } from 'react-icons/bs';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import { createInvoicesPackage, updateInvoicesPackage, markInvoiceAsFullyPaid, markInvoiceAsPartiallyPaid } from '../services/invoicesPackpage';
-import { getNextThursdayOfWeek, formatDate } from '@/utils/dateUtils';
+import { getNextThursdayOfWeek } from '@/utils/dateUtils';
 import { toast } from 'react-toastify';
 
 interface FacturaProcesada {
@@ -55,6 +56,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
     const [comentario, setComentario] = useState<string>(paqueteExistente?.comentario || '');
     const [facturasLocal, setFacturasLocal] = useState<FacturaProcesada[]>([]);
     const [fechaCalculada, setFechaCalculada] = useState<string>('');
+    const [copied, setCopied] = useState<string | null>(null);
     const { user } = useUserSessionStore();
 
     useEffect(() => {
@@ -97,10 +99,15 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
         if (paqueteExistente?.fechaPago) {
             // Si es un paquete existente, usar la fecha guardada
             setFechaPago(paqueteExistente.fechaPago);
+            const fechaCalculada = getNextThursdayOfWeek(paqueteExistente.fechaPago);
+            setFechaCalculada(fechaCalculada.toISOString().split('T')[0]);
         } else if (show && isNewPackage) {
-            // Si es un nuevo paquete y el modal se está abriendo, pre-llenar con la fecha actual
+            // Si es un nuevo paquete, precargar con la fecha calculada (jueves de la semana siguiente)
             const today = new Date();
-            setFechaPago(today.toISOString().split('T')[0]);
+            const fechaCalculada = getNextThursdayOfWeek(today);
+            const fechaCalculadaStr = fechaCalculada.toISOString().split('T')[0];
+            setFechaPago(fechaCalculadaStr);
+            setFechaCalculada(fechaCalculadaStr);
         }
         setComentario(paqueteExistente?.comentario || '');
     }, [paqueteExistente, show, isNewPackage]);
@@ -108,6 +115,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
     // Calcular la fecha del jueves de la semana siguiente cuando cambie la fecha de pago
     useEffect(() => {
         if (fechaPago) {
+            // Recalcular siempre que cambie la fecha de pago (tanto para paquetes nuevos como existentes)
             const fechaCalculada = getNextThursdayOfWeek(fechaPago);
             setFechaCalculada(fechaCalculada.toISOString().split('T')[0]);
         } else {
@@ -122,6 +130,12 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
         if (tempPayments && tempPayments[id] && onRemoveTempPayment) {
             onRemoveTempPayment(id);
         }
+    };
+
+    const handleCopy = (uuid: string) => {
+        navigator.clipboard.writeText(uuid);
+        setCopied(uuid);
+        setTimeout(() => setCopied(null), 1500);
     };
 
     // Calcular el total considerando pagos temporales y reales
@@ -263,20 +277,14 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                             <Form.Control
                                 type="date"
                                 value={fechaPago}
-                                onChange={e => setFechaPago(e.target.value)}
+                                onChange={e => {
+                                    const selectedDate = e.target.value;
+                                    const calculated = getNextThursdayOfWeek(selectedDate);
+                                    const calculatedStr = calculated.toISOString().split('T')[0];
+                                    setFechaPago(calculatedStr);
+                                    setFechaCalculada(calculatedStr);
+                                }}
                             />
-                            {fechaCalculada && (
-                                <div className="mt-2">
-                                    <small className="text-info">
-                                        <i className="bi bi-calendar-event me-1"></i>
-                                        <strong>Fecha calculada:</strong> {formatDate(fechaCalculada)}
-                                    </small>
-                                    <br />
-                                    <small className="text-muted">
-                                        (Jueves de la semana siguiente)
-                                    </small>
-                                </div>
-                            )}
                         </Form.Group>
                     </Col>
                     <Col md={6}>
@@ -300,18 +308,6 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                         />
                     </Col>
                 </Row>
-                {paqueteExistente && (
-                    <Alert variant="info" className="mb-3">
-                        <b>Paquete existente seleccionado:</b>
-                        <ul className="mb-0 mt-2">
-                            <li><span className="badge bg-success bg-opacity-10 text-success me-2">Completamente Pagada</span> Facturas completamente pagadas (no se pueden agregar nuevamente)</li>
-                            <li><span className="badge bg-primary bg-opacity-10 text-primary me-2">Pago Parcial</span> Facturas con pagos parciales (pueden ser agregadas múltiples veces para completar el pago)</li>
-                            <li><span className="badge bg-warning bg-opacity-10 text-warning me-2">Nueva</span> Facturas nuevas que se agregarán al paquete</li>
-                            <li><span className="badge bg-info bg-opacity-10 text-info me-2">Autorizada</span> Facturas que han sido autorizadas</li>
-                            <li><span className="badge bg-secondary bg-opacity-10 text-secondary me-2">Pendiente</span> Facturas pendientes de autorización</li>
-                        </ul>
-                    </Alert>
-                )}
 
                 {paqueteExistente && facturasLocal.length === 0 && (
                     <Alert variant="warning" className="mb-3">
@@ -407,7 +403,15 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                                         </td>
                                         {/* Folio */}
                                         <td>
-                                            <small className="font-monospace">{f.uuid}</small>
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
+                                                className="d-flex align-items-center fw-bold text-white"
+                                                onClick={() => handleCopy(f.uuid)}
+                                            >
+                                                <BsClipboard className="me-1" />
+                                                {copied === f.uuid ? 'Copiado' : 'COPIAR'}
+                                            </Button>
                                         </td>
                                         {/* Fecha Emisión */}
                                         <td>{f.fechaEmision ? new Date(f.fechaEmision).toLocaleDateString('es-MX') : ''}</td>

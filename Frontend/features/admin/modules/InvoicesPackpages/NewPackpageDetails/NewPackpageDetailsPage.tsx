@@ -6,6 +6,7 @@ import { getInvoicesPackageById, InvoicesPackage, ImportedInvoice, toggleFactura
 import { BsClipboard } from 'react-icons/bs';
 import { toast } from 'react-toastify';
 import { useUserSessionStore } from '@/stores';
+import { formatDate } from 'date-fns';
 
 // Estilos para mostrar borde solo en hover
 const actionButtonStyles = `
@@ -89,7 +90,6 @@ const NewPackpageDetailsPage: React.FC = () => {
                     console.log('UUIDs:', uuids);
                     console.log('UUIDs únicos:', uuidsUnicos);
                 }
-
                 setPackpage(packpageData);
             }
         } catch (error) {
@@ -129,7 +129,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                 return;
             }
 
-            const result = await toggleFacturaAutorizada(facturaId, nuevoEstado);
+            const result = await toggleFacturaAutorizada(facturaId, nuevoEstado, packpage?._id);
             console.log('Resultado del toggle:', result);
 
             if (result && result.success && typeof (result.data as any).autorizada !== 'undefined') {
@@ -151,8 +151,13 @@ const NewPackpageDetailsPage: React.FC = () => {
                     );
 
                     // Recalcular totales
-                    const totalPagado = facturasActualizadas.reduce((sum, f) => sum + (f.importePagado || 0), 0);
-                    const totalImporteAPagar = facturasActualizadas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
+                    const facturasAutorizadas = facturasActualizadas.filter(f => f.autorizada === true);
+                    
+                    // Total pagado: solo facturas autorizadas
+                    const totalPagado = facturasAutorizadas.reduce((sum, f) => sum + (f.importePagado || 0), 0);
+                    
+                    // Total importe a pagar: solo facturas autorizadas (como se guarda en BD)
+                    const totalImporteAPagar = facturasAutorizadas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
 
                     console.log('Totales recalculados:', { totalPagado, totalImporteAPagar });
 
@@ -165,7 +170,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                 });
 
                 if (!(result.data as any).autorizada) {
-                    toast.info('Factura rechazada. El pago ha sido devuelto a cero.');
+                    toast.info('Factura rechazada. Los datos de pago se han reiniciado y puede ser pagada nuevamente en otro paquete.');
                 } else {
                     toast.success('Estado de autorización actualizado correctamente.');
                 }
@@ -186,13 +191,13 @@ const NewPackpageDetailsPage: React.FC = () => {
         try {
             const result = await enviarPaqueteADireccion(packpage._id);
             if (result && result.success && result.data && result.data.estatus === 'Enviado') {
-                toast.success('Paquete enviado a dirección correctamente');
+                toast.success('Paquete enviado a tesorería correctamente');
                 setPackpage(prev => prev ? { ...prev, estatus: 'Enviado' } : null);
             } else {
-                toast.error('Error al enviar el paquete a dirección');
+                toast.error('Error al enviar el paquete a tesorería');
             }
         } catch (error: any) {
-            toast.error(error?.message || 'Error al enviar el paquete a dirección');
+            toast.error(error?.message || 'Error al enviar el paquete a tesorería');
         }
     };
 
@@ -200,6 +205,20 @@ const NewPackpageDetailsPage: React.FC = () => {
     const puedeEnviarADireccion = packpage && packpage.facturas &&
         packpage.facturas.length > 0 &&
         packpage.facturas.every((factura: ImportedInvoice) => factura.autorizada !== null);
+
+    // Función para calcular el total de visualización (autorizadas + pendientes)
+    const calcularTotalVisualizacion = () => {
+        if (!packpage?.facturas) return 0;
+        const facturasNoRechazadas = packpage.facturas.filter(f => f.autorizada !== false); // autorizadas + pendientes
+        return facturasNoRechazadas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
+    };
+
+    // Función para calcular el total pagado de visualización (autorizadas + pendientes)
+    const calcularTotalPagadoVisualizacion = () => {
+        if (!packpage?.facturas) return 0;
+        const facturasNoRechazadas = packpage.facturas.filter(f => f.autorizada !== false); // autorizadas + pendientes
+        return facturasNoRechazadas.reduce((sum, f) => sum + (f.importePagado || 0), 0);
+    };
 
     if (loading) {
         return (
@@ -345,14 +364,14 @@ const NewPackpageDetailsPage: React.FC = () => {
                             disabled={!puedeEnviarADireccion || packpage.estatus !== 'Borrador'}
                         >
                             <i className="bi bi-send me-1"></i>
-                            Enviar a Dirección
+                            Enviar a Tesorería
                         </Button>
                     </div>
 
                     <div className=" text-md" style={{ fontSize: '0.8rem' }}>
                         {user?.username && (
                             <div>
-                                <p className='mb-0 fw-bold'>Usuario: <span className="fw-semibold text-uppercase">{user.username}</span></p>
+                                <p className='mb-0 fw-bold'>Usuario: <span className="fw-semibold text-uppercase">{user.profile.fullName}</span></p>
                                 <p className='mb-2 fw-bold'>Departamento:{packpage.departamento && <span className="fw-semibold text-uppercase "> {packpage.departamento}</span>}</p>
                             </div>
                         )}
@@ -368,14 +387,14 @@ const NewPackpageDetailsPage: React.FC = () => {
                                 <div>
                                     <div className="fw-bold text-primary">Comentario: {packpage.comentario}</div>
                                     <div className="text-dark">
-                                        Fecha Pago: {packpage.fechaPago ? new Date(packpage.fechaPago).toLocaleString('es-MX') : 'N/A'}
+                                        Fecha Pago: {formatDate(packpage.fechaPago.toString(), 'dd/MM/yyyy')}
                                     </div>
                                 </div>
                             </div>
                             <div className="d-flex align-items-center gap-2">
                                 <span className="fw-semibold text-muted">Estatus actual:</span>
                                 <Badge bg="info" className="me-2">{packpage.estatus}</Badge>
-                                <Badge bg="primary">Borrador → Validar con Dirección</Badge>
+                                <Badge bg="primary">Borrador → Tesorería</Badge>
                             </div>
                         </Card.Body>
                     </Card>
@@ -395,9 +414,9 @@ const NewPackpageDetailsPage: React.FC = () => {
                                 <th>Emisor RFC</th>
                                 <th>Estatus</th>
                                 <th>Estatus Aut.</th>
-                                <th>Total</th>
-                                <th>Saldo</th>
-                                <th>A Pagar</th>
+                                <th className='text-center'>Total</th>
+                                <th className='text-center'>Saldo</th>
+                                <th className='text-center'>A Pagar</th>
                                 <th className=' text-center'>Acción</th>
                             </tr>
                         </thead>
@@ -436,18 +455,10 @@ const NewPackpageDetailsPage: React.FC = () => {
                                             {factura.autorizada ? 'Autorizada' :
                                                 factura.pagoRechazado ? 'Pago Rechazado' : 'Pendiente'}
                                         </span>
-                                        {factura.pagoRechazado && (
-                                            <div className="mt-1">
-                                                <Badge bg="danger" className="text-white">
-                                                    <i className="bi bi-exclamation-triangle me-1"></i>
-                                                    Requiere nuevo pago
-                                                </Badge>
-                                            </div>
-                                        )}
                                     </td>
-                                    <td>${(factura.importeAPagar || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                    <td>${((factura.importeAPagar || 0) - (factura.importePagado || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                    <td>${(factura.importePagado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                    <td className='text-end'>${(factura.importeAPagar || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                    <td className='text-end'>${((factura.importeAPagar || 0) - (factura.importePagado || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                    <td className='text-end'>${(factura.importePagado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                                     <td className="text-center">
                                         <div className="d-flex justify-content-center align-items-center">
                                             <Button
@@ -474,11 +485,11 @@ const NewPackpageDetailsPage: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
-                            <tr className="fw-bold text-center">
-                                <td colSpan={8}>Total a pagar</td>
-                                <td colSpan={1}>${(packpage.totalImporteAPagar || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                <td colSpan={1}>${((packpage.totalImporteAPagar || 0) - (packpage.totalPagado || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                <td colSpan={1}>${((packpage.facturas || []).filter(f => f.autorizada).reduce((sum, f) => sum + (f.importeAPagar || 0), 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                            <tr className="fw-bold text-left">
+                                <td className='text-end' colSpan={8}>Total a pagar</td>
+                                <td className='text-end' colSpan={1}>${calcularTotalVisualizacion().toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                <td className='text-end' colSpan={1}>${((calcularTotalVisualizacion()) - (calcularTotalPagadoVisualizacion())).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                <td className='text-end' colSpan={1}>${calcularTotalPagadoVisualizacion().toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                                 <td></td>
                             </tr>
                         </tbody>

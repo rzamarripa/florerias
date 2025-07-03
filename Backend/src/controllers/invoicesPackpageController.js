@@ -2,6 +2,7 @@ import { InvoicesPackage } from "../models/InvoicesPackpage.js";
 import { ImportedInvoices } from "../models/ImportedInvoices.js";
 import { InvoicesPackageCompany } from "../models/InvoicesPackpageCompany.js";
 import { ExpenseConcept } from "../models/ExpenseConcept.js";
+import { RoleVisibility } from "../models/RoleVisibility.js";
 
 import mongoose from "mongoose";
 
@@ -99,8 +100,9 @@ export const createInvoicesPackage = async (req, res) => {
         const usuarioObjectId = new mongoose.Types.ObjectId(usuario_id);
 
         // La fechaPago ya viene calculada desde el frontend como el jueves de la semana siguiente
-        // No necesitamos volver a calcularla aquí
+        // Ajustar la hora a las 12:00 UTC para evitar desfases de zona horaria
         const fechaPagoParaGuardar = new Date(fechaPago);
+        fechaPagoParaGuardar.setUTCHours(12, 0, 0, 0);
 
         // Obtener todos los conceptos de gasto involucrados
         let conceptosGastoMap = {};
@@ -403,6 +405,7 @@ export const updateInvoicesPackage = async (req, res) => {
         }
 
         // Si se están actualizando las facturas, validar
+        let facturasExistentes = [];
         if (facturas && Array.isArray(facturas)) {
             if (facturas.length === 0) {
                 return res.status(400).json({
@@ -412,7 +415,7 @@ export const updateInvoicesPackage = async (req, res) => {
             }
 
             // Verificar que las nuevas facturas existan
-            const facturasExistentes = await ImportedInvoices.find({
+            facturasExistentes = await ImportedInvoices.find({
                 _id: { $in: facturas }
             }).populate('razonSocial');
 
@@ -545,8 +548,10 @@ export const updateInvoicesPackage = async (req, res) => {
         if (comentario !== undefined) datosActualizacion.comentario = comentario;
         if (fechaPago) {
             // La fechaPago ya viene calculada desde el frontend como el jueves de la semana siguiente
-            // No necesitamos volver a calcularla aquí
-            datosActualizacion.fechaPago = new Date(fechaPago);
+            // Ajustar la hora a las 12:00 UTC para evitar desfases de zona horaria
+            const fechaPagoParaGuardar = new Date(fechaPago);
+            fechaPagoParaGuardar.setUTCHours(12, 0, 0, 0);
+            datosActualizacion.fechaPago = fechaPagoParaGuardar;
         }
         if (totalImporteAPagar !== undefined) datosActualizacion.totalImporteAPagar = totalImporteAPagar;
 
@@ -789,7 +794,7 @@ export const changeInvoicesPackageStatus = async (req, res) => {
     }
 };
 
-// GET - Obtener paquetes por usuario_id
+// GET - Obtener paquetes por usuario_id con filtrado por visibilidad
 export const getInvoicesPackagesByUsuario = async (req, res) => {
     try {
         const { usuario_id } = req.query;
@@ -800,7 +805,79 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
         // Convertir a ObjectId
         const usuarioObjectId = new mongoose.Types.ObjectId(usuario_id);
 
-        const paquetes = await InvoicesPackage.find({ usuario_id: usuarioObjectId })
+
+
+        // Obtener la visibilidad del usuario
+        const userVisibility = await RoleVisibility.findOne({ userId: usuarioObjectId });
+        
+        let packageIds = [];
+
+        if (userVisibility) {
+            // Si el usuario tiene visibilidad configurada, filtrar por sus permisos
+            const { companies, brands, branches } = userVisibility;
+            
+            // Construir filtros para la tabla relacional
+            const filterConditions = [];
+            
+            // Si tiene acceso a compañías específicas
+            if (companies && companies.length > 0) {
+                filterConditions.push({ companyId: { $in: companies } });
+            }
+            
+            // Si tiene acceso a marcas específicas
+            if (brands && brands.length > 0) {
+                const brandConditions = brands.map(brand => ({
+                    companyId: brand.companyId,
+                    brandId: brand.brandId
+                }));
+                filterConditions.push({ $or: brandConditions });
+            }
+            
+            // Si tiene acceso a sucursales específicas
+            if (branches && branches.length > 0) {
+                const branchConditions = branches.map(branch => ({
+                    companyId: branch.companyId,
+                    brandId: branch.brandId,
+                    branchId: branch.branchId
+                }));
+                filterConditions.push({ $or: branchConditions });
+            }
+            
+            // Si no hay filtros específicos, el usuario no tiene acceso a nada
+            if (filterConditions.length === 0) {
+                return res.status(200).json({ success: true, data: [] });
+            }
+            
+            // Buscar paquetes en la tabla relacional que coincidan con la visibilidad
+            const packageRelations = await InvoicesPackageCompany.find({
+                $or: filterConditions
+            });
+            
+            packageIds = packageRelations.map(rel => rel.packageId);
+            
+            // Si no hay paquetes relacionados, devolver array vacío
+            if (packageIds.length === 0) {
+                return res.status(200).json({ success: true, data: [] });
+            }
+        }
+
+        // Construir la consulta de paquetes
+        let paquetesQuery = InvoicesPackage.find();
+        
+        if (userVisibility && packageIds.length > 0) {
+            // Filtrar por los paquetes que el usuario puede ver
+            paquetesQuery = paquetesQuery.find({
+                $or: [
+                    { _id: { $in: packageIds } },
+                    { usuario_id: usuarioObjectId } // También incluir paquetes creados por el usuario
+                ]
+            });
+        } else {
+            // Si no hay visibilidad configurada, mostrar todos los paquetes del usuario
+            paquetesQuery = paquetesQuery.find({ usuario_id: usuarioObjectId });
+        }
+
+        const paquetes = await paquetesQuery
             .populate({
                 path: 'packageCompanyId',
                 populate: ['companyId', 'brandId', 'branchId']
@@ -816,6 +893,39 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
         res.status(200).json({ success: true, data: paquetes });
     } catch (error) {
         console.error('Error en getInvoicesPackagesByUsuario:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// GET - Obtener paquetes creados por el usuario (sin filtrado de visibilidad)
+export const getInvoicesPackagesCreatedByUsuario = async (req, res) => {
+    try {
+        const { usuario_id } = req.query;
+        if (!usuario_id) {
+            return res.status(400).json({ success: false, message: 'usuario_id es requerido' });
+        }
+
+        // Convertir a ObjectId
+        const usuarioObjectId = new mongoose.Types.ObjectId(usuario_id);
+
+        // Obtener solo los paquetes creados por el usuario (sin filtrado de visibilidad)
+        const paquetes = await InvoicesPackage.find({ usuario_id: usuarioObjectId })
+            .populate({
+                path: 'packageCompanyId',
+                populate: ['companyId', 'brandId', 'branchId']
+            })
+            .sort({ createdAt: -1 }); // Ordenar por fecha de creación descendente
+
+        // Agregar headers para evitar caché
+        res.set({
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+
+        res.status(200).json({ success: true, data: paquetes });
+    } catch (error) {
+        console.error('Error en getInvoicesPackagesCreatedByUsuario:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -842,20 +952,25 @@ export const actualizarTotalesPaquetesPorFactura = async (facturaId) => {
 // Función para actualizar una factura embebida en todos los paquetes que la contengan
 export const actualizarFacturaEnPaquetes = async (facturaId, datosActualizados) => {
     try {
+        // Preparar los campos a actualizar
+        const camposActualizacion = {
+            'facturas.$.autorizada': datosActualizados.autorizada,
+            'facturas.$.pagoRechazado': datosActualizados.pagoRechazado,
+            'facturas.$.estadoPago': datosActualizados.estadoPago,
+            'facturas.$.esCompleta': datosActualizados.esCompleta,
+            'facturas.$.pagado': datosActualizados.pagado || 0,
+            'facturas.$.descripcionPago': datosActualizados.descripcionPago || ''
+        };
+
+        // Solo actualizar importePagado si se está autorizando (no si se está rechazando)
+        if (datosActualizados.importePagado !== undefined) {
+            camposActualizacion['facturas.$.importePagado'] = datosActualizados.importePagado;
+        }
+
         // Actualizar directamente en la base de datos usando $set
         const result = await InvoicesPackage.updateMany(
             { 'facturas._id': facturaId },
-            {
-                $set: {
-                    'facturas.$.autorizada': datosActualizados.autorizada,
-                    'facturas.$.pagoRechazado': datosActualizados.pagoRechazado,
-                    'facturas.$.importePagado': datosActualizados.importePagado,
-                    'facturas.$.estadoPago': datosActualizados.estadoPago,
-                    'facturas.$.esCompleta': datosActualizados.esCompleta,
-                    'facturas.$.pagado': datosActualizados.pagado || 0,
-                    'facturas.$.descripcionPago': datosActualizados.descripcionPago || ''
-                }
-            }
+            { $set: camposActualizacion }
         );
 
         console.log(`Factura embebida actualizada en ${result.modifiedCount} paquetes para la factura ${facturaId}`);
@@ -886,8 +1001,10 @@ export const enviarPaqueteADireccion = async (req, res) => {
             });
         }
 
-        // Actualizar las facturas originales con los datos finales del paquete
-        for (const facturaEmbebida of paquete.facturas) {
+        // NUEVA LÓGICA: Solo actualizar las facturas originales de las facturas autorizadas
+        const facturasAutorizadas = paquete.facturas.filter(f => f.autorizada === true);
+        
+        for (const facturaEmbebida of facturasAutorizadas) {
             const datosActualizacion = {
                 autorizada: facturaEmbebida.autorizada,
                 pagoRechazado: facturaEmbebida.pagoRechazado,
@@ -911,7 +1028,7 @@ export const enviarPaqueteADireccion = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: 'Paquete enviado a dirección correctamente.',
+            message: `Paquete enviado a dirección correctamente. ${facturasAutorizadas.length} facturas autorizadas procesadas.`,
             data: paquete
         });
 

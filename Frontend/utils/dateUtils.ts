@@ -2,6 +2,10 @@
  * Utilidades para el manejo de fechas en el frontend
  */
 
+import { format } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
+import { es } from 'date-fns/locale';
+
 /**
  * Calcula el jueves de la semana siguiente a la fecha proporcionada
  * @param fecha - Fecha de referencia
@@ -9,24 +13,16 @@
  */
 export const getNextThursdayOfWeek = (fecha: Date | string): Date => {
     const date = new Date(fecha);
-    
-    // Obtener el día de la semana (0 = Domingo, 1 = Lunes, ..., 4 = Jueves, ..., 6 = Sábado)
+    // Día de la semana: 0=Domingo, 1=Lunes, ..., 6=Sábado
     const dayOfWeek = date.getDay();
-    
-    // Calcular cuántos días hay que agregar para llegar al jueves de la semana siguiente
-    // Primero avanzamos al domingo de la semana siguiente (7 días), luego al jueves (+4 días)
-    const daysToNextWeekSunday = 7 - dayOfWeek; // Días para llegar al domingo de la semana siguiente
-    const daysToThursday = 4; // Jueves es el día 4 de la semana (0-indexed)
-    const totalDaysToAdd = daysToNextWeekSunday + daysToThursday;
-    
-    // Crear la nueva fecha
-    const nextThursday = new Date(date);
-    nextThursday.setDate(date.getDate() + totalDaysToAdd);
-    
-    // Establecer la hora a 00:00:00 para consistencia
-    nextThursday.setHours(0, 0, 0, 0);
-    
-    return nextThursday;
+    // Días hasta el próximo lunes
+    const daysToNextMonday = ((8 - dayOfWeek) % 7) || 7;
+    const nextMonday = new Date(date);
+    nextMonday.setDate(date.getDate() + daysToNextMonday);
+    // Jueves = lunes + 3 días
+    nextMonday.setDate(nextMonday.getDate() + 3);
+    nextMonday.setHours(0, 0, 0, 0);
+    return nextMonday;
 };
 
 /**
@@ -40,16 +36,13 @@ export const getNextThursdayFromToday = (): Date => {
 /**
  * Formatea una fecha para mostrar en formato legible
  * @param fecha - Fecha a formatear
+ * @param formato - Formato de la fecha
  * @returns Fecha formateada
  */
-export const formatDate = (fecha: Date | string): string => {
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-MX', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+export const formatDate = (fecha: Date | string, formato: string = "EEEE, d 'de' MMMM 'de' yyyy"): string => {
+    const timeZone = 'America/Mexico_City';
+    const zonedDate = toZonedTime(new Date(fecha), timeZone);
+    return format(zonedDate, formato, { locale: es });
 };
 
 /**

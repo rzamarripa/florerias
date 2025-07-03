@@ -3,6 +3,7 @@ import { Company } from "../models/Company.js";
 import { Provider } from "../models/Provider.js";
 import { actualizarTotalesPaquetesPorFactura, actualizarFacturaEnPaquetes } from "./invoicesPackpageController.js";
 import mongoose from "mongoose";
+import { InvoicesPackage } from "../models/InvoicesPackpage.js";
 
 const parseDate = (dateString) => {
   if (
@@ -780,7 +781,7 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
 export const toggleFacturaAutorizada = async (req, res) => {
   try {
     const { id } = req.params;
-    const { autorizada } = req.body;
+    const { autorizada, packageId } = req.body;
     const factura = await ImportedInvoices.findById(id);
 
     if (!factura) {
@@ -799,45 +800,63 @@ export const toggleFacturaAutorizada = async (req, res) => {
     if (typeof autorizada === 'boolean') {
       factura.autorizada = autorizada;
     } else {
-      // Cambiar el estado de autorización (toggle)
-      // Si es null (pendiente) o false, autorizar (true)
-      // Si es true, rechazar (false)
       factura.autorizada = factura.autorizada === true ? false : true;
     }
 
     if (factura.autorizada) {
-      // Si se está autorizando
-      factura.estadoPago = 2; // Pagado
-      factura.esCompleta = true;
-      factura.pagado = 1;
-      factura.pagoRechazado = false;
-      factura.descripcionPago = 'Pago autorizado';
+      // Buscar la factura embebida en el paquete para obtener los datos de pago actualizados
+      const paquete = packageId
+        ? await InvoicesPackage.findById(packageId)
+        : await InvoicesPackage.findOne({ 'facturas._id': factura._id });
+      if (paquete) {
+        const facturaEmbebida = paquete.facturas.find(f => f._id.toString() === factura._id.toString());
+        if (facturaEmbebida) {
+          factura.importePagado = facturaEmbebida.importePagado || 0;
+          factura.estadoPago = 2;
+          factura.esCompleta = true;
+          factura.pagado = 1;
+          factura.pagoRechazado = false;
+          factura.estaRegistrada = true;
+          factura.descripcionPago = 'Pago autorizado';
+          factura.fechaRevision = new Date();
+        }
+      }
     } else {
-      // Si se está rechazando la autorización
       factura.importePagado = 0;
-      factura.estadoPago = 0; // Pendiente
+      factura.estadoPago = 0;
       factura.esCompleta = false;
       factura.pagado = 0;
       factura.pagoRechazado = true;
-      factura.estaRegistrada = true; // Mantener registrada en el paquete actual
       factura.descripcionPago = 'Pago rechazado - Factura no autorizada';
+      factura.fechaRevision = new Date();
     }
 
-    // NO guardar la factura original, solo actualizar la factura embebida en el paquete
-    // await factura.save();
+    await factura.save();
 
-    // Actualizar la factura embebida en todos los paquetes que la contengan
-    await actualizarFacturaEnPaquetes(factura._id, {
-      autorizada: factura.autorizada,
-      pagoRechazado: factura.pagoRechazado,
-      importePagado: factura.importePagado,
-      estadoPago: factura.estadoPago,
-      esCompleta: factura.esCompleta,
-      pagado: factura.pagado,
-      descripcionPago: factura.descripcionPago
-    });
+    // Actualizar solo la factura embebida en el paquete actual si se recibe packageId
+    let paquetesAActualizar = [];
+    if (packageId) {
+      paquetesAActualizar = [await InvoicesPackage.findById(packageId)];
+    } else {
+      paquetesAActualizar = await InvoicesPackage.find({ 'facturas._id': factura._id });
+    }
+    for (const paquete of paquetesAActualizar) {
+      if (!paquete) continue;
+      const idx = paquete.facturas.findIndex(f => f._id.toString() === factura._id.toString());
+      if (idx !== -1) {
+        paquete.facturas[idx].autorizada = factura.autorizada;
+        paquete.facturas[idx].pagoRechazado = factura.pagoRechazado;
+        paquete.facturas[idx].estadoPago = factura.estadoPago;
+        paquete.facturas[idx].esCompleta = factura.esCompleta;
+        paquete.facturas[idx].pagado = factura.pagado;
+        paquete.facturas[idx].descripcionPago = factura.descripcionPago;
+        if (factura.autorizada) {
+          paquete.facturas[idx].importePagado = factura.importePagado;
+        }
+        await paquete.actualizarTotales();
+      }
+    }
 
-    // Si se desautorizó la factura, actualizar los totales de los paquetes que la contengan
     if (!factura.autorizada) {
       await actualizarTotalesPaquetesPorFactura(factura._id);
     }

@@ -145,7 +145,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
                         <option value="">Seleccione un concepto de gasto...</option>
                         {(Array.isArray(conceptosGasto) ? conceptosGasto : []).map(concepto => (
                             <option key={concepto._id} value={concepto._id}>
-                                {concepto.name} - {concepto.categoryId.name}
+                                {concepto.categoryId.name} - {concepto.name}
                             </option>
                         ))}
                     </Form.Select>

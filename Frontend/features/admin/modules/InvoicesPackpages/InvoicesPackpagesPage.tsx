@@ -20,7 +20,7 @@ import {
     getInvoicesSummaryByProviderAndCompany,
     ImportedInvoice,
     InvoicesSummaryResponse,
-    getInvoicesPackagesByUsuario,
+    getInvoicesPackagesCreatedByUsuario,
     getUserVisibilityForSelects
 } from './services';
 import { UserProvider, UserVisibilityStructure, VisibilityCompany, VisibilityBrand, VisibilityBranch } from './types';
@@ -303,7 +303,7 @@ const InvoicesPackagePage: React.FC = () => {
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString()
                 }),
-                user?._id ? getInvoicesPackagesByUsuario(user._id) : Promise.resolve([])
+                user?._id ? getInvoicesPackagesCreatedByUsuario(user._id) : Promise.resolve([])
             ]);
 
             console.log('invoicesResponse:', invoicesResponse);
@@ -460,7 +460,8 @@ const InvoicesPackagePage: React.FC = () => {
     const loadExistingPackages = async () => {
         if (!user?._id) return [];
         try {
-            const paquetes = await getInvoicesPackagesByUsuario(user._id);
+            // Usar el nuevo servicio que solo obtiene paquetes creados por el usuario
+            const paquetes = await getInvoicesPackagesCreatedByUsuario(user._id);
             setExistingPackages(Array.isArray(paquetes?.data) ? paquetes.data : Array.isArray(paquetes) ? paquetes : []);
             return Array.isArray(paquetes?.data) ? paquetes.data : Array.isArray(paquetes) ? paquetes : [];
         } catch {
@@ -488,15 +489,19 @@ const InvoicesPackagePage: React.FC = () => {
             const hasTempPayment = tempPayments[f._id];
             const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
 
+            // Permitir facturas rechazadas aunque tengan estaRegistrada: true
+            const esRechazada = f.autorizada === false || f.pagoRechazado === true;
+
             // Una factura está disponible si:
-            // 1. Tiene pagos temporales (sin importar si son completos o parciales)
-            // 2. O tiene pagos reales pero NO está completamente pagada
-            // 3. Y NO está en la lista de facturas completamente pagadas en paquetes existentes
+            // 1. Es rechazada (puede seleccionarse de nuevo)
+            // 2. O tiene pagos temporales (sin importar si son completos o parciales)
+            // 3. O tiene pagos reales pero NO está completamente pagada
+            // 4. Y NO está en la lista de facturas completamente pagadas en paquetes existentes
             const tienePagos = hasTempPayment || (invoiceWithTempPayments.importePagado > 0);
             const noEstaCompletamentePagada = invoiceWithTempPayments.importePagado < invoiceWithTempPayments.importeAPagar;
             const noEstaGuardada = !facturasGuardadas.includes(f._id);
 
-            return tienePagos && (noEstaCompletamentePagada || hasTempPayment) && noEstaGuardada;
+            return esRechazada || (tienePagos && (noEstaCompletamentePagada || hasTempPayment) && noEstaGuardada);
         });
     }, [invoices, facturasGuardadas, tempPayments]);
 
@@ -506,15 +511,19 @@ const InvoicesPackagePage: React.FC = () => {
             const hasTempPayment = tempPayments[f._id];
             const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
 
+            // Permitir facturas rechazadas aunque tengan estaRegistrada: true
+            const esRechazada = f.autorizada === false || f.pagoRechazado === true;
+
             // Una factura está disponible si:
-            // 1. Tiene pagos temporales (sin importar si son completos o parciales)
-            // 2. O tiene pagos reales pero NO está completamente pagada
-            // 3. Y NO está en la lista de facturas completamente pagadas en paquetes existentes
+            // 1. Es rechazada (puede seleccionarse de nuevo)
+            // 2. O tiene pagos temporales (sin importar si son completos o parciales)
+            // 3. O tiene pagos reales pero NO está completamente pagada
+            // 4. Y NO está en la lista de facturas completamente pagadas en paquetes existentes
             const tienePagos = hasTempPayment || (invoiceWithTempPayments.importePagado > 0);
             const noEstaCompletamentePagada = invoiceWithTempPayments.importePagado < invoiceWithTempPayments.importeAPagar;
             const noEstaGuardada = !facturasGuardadas.includes(f._id);
 
-            return tienePagos && (noEstaCompletamentePagada || hasTempPayment) && noEstaGuardada;
+            return esRechazada || (tienePagos && (noEstaCompletamentePagada || hasTempPayment) && noEstaGuardada);
         });
     }, [invoices, facturasGuardadas, tempPayments]);
 
@@ -555,13 +564,14 @@ const InvoicesPackagePage: React.FC = () => {
         }));
     }
 
-    const handleViewInvoiceDetail = (invoiceId: string) => {
-        router.push(`/modulos/paquetes-facturas/detalle-factura?invoiceId=${invoiceId}`);
-    };
+
 
     return (
         <Container fluid className="mt-4">
-            <BudgetSummaryCards summary={combinedSummary ?? undefined} />
+            <BudgetSummaryCards 
+                tempPayments={tempPayments}
+                invoices={invoices}
+            />
 
             {/* Filtros de año, mes y proveedor */}
             <Card className="mt-4 border-0 shadow-sm">
