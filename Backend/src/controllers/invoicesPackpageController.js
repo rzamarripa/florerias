@@ -1,6 +1,7 @@
 import { InvoicesPackage } from "../models/InvoicesPackpage.js";
 import { ImportedInvoices } from "../models/ImportedInvoices.js";
 import { InvoicesPackageCompany } from "../models/InvoicesPackpageCompany.js";
+import { ExpenseConcept } from "../models/ExpenseConcept.js";
 
 import mongoose from "mongoose";
 
@@ -18,7 +19,9 @@ export const createInvoicesPackage = async (req, res) => {
             // Nuevos campos para la relación con Company, Brand, Branch
             companyId,
             brandId,
-            branchId
+            branchId,
+            // Nuevo campo para conceptos de gasto por factura
+            conceptosGasto
         } = req.body;
 
         // Validar datos requeridos
@@ -50,11 +53,11 @@ export const createInvoicesPackage = async (req, res) => {
 
         // Verificar que todas las facturas pertenezcan al mismo receptor
         const rfcReceptor = facturasExistentes[0].rfcReceptor;
-        const mismasFacturas = facturasExistentes.every(factura =>
-            factura.rfcReceptor === rfcReceptor
+        const facturasConReceptorDiferente = facturasExistentes.filter(
+            factura => factura.rfcReceptor !== rfcReceptor
         );
 
-        if (!mismasFacturas) {
+        if (facturasConReceptorDiferente.length > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'Todas las facturas deben pertenecer al mismo receptor.'
@@ -99,12 +102,27 @@ export const createInvoicesPackage = async (req, res) => {
         // No necesitamos volver a calcularla aquí
         const fechaPagoParaGuardar = new Date(fechaPago);
 
+        // Obtener todos los conceptos de gasto involucrados
+        let conceptosGastoMap = {};
+        if (conceptosGasto && Object.keys(conceptosGasto).length > 0) {
+            const conceptosIds = Object.values(conceptosGasto).map(id => new mongoose.Types.ObjectId(id));
+            const conceptosDocs = await ExpenseConcept.find({ _id: { $in: conceptosIds } });
+            conceptosGastoMap = conceptosDocs.reduce((acc, concepto) => {
+                acc[concepto._id.toString()] = {
+                    id: concepto._id,
+                    name: concepto.name,
+                    descripcion: concepto.description
+                };
+                return acc;
+            }, {});
+        }
+
         // Preparar las facturas embebidas con todos sus datos
         const facturasEmbebidas = facturasExistentes.map(factura => {
             const facturaData = factura.toObject();
             // Asegurar que el _id esté presente
             facturaData._id = factura._id;
-            
+
             // FORZAR que autorizada sea null (pendiente) al crear el paquete
             facturaData.autorizada = null;
             facturaData.estadoPago = null;
@@ -113,7 +131,15 @@ export const createInvoicesPackage = async (req, res) => {
             facturaData.estaRegistrada = true;
             facturaData.registrado = 1;
             facturaData.fechaRevision = new Date();
-            
+
+            // Asignar concepto de gasto si se proporciona para esta factura
+            if (conceptosGasto && conceptosGasto[factura._id.toString()]) {
+                const conceptoId = conceptosGasto[factura._id.toString()];
+                if (conceptosGastoMap[conceptoId]) {
+                    facturaData.conceptoGasto = conceptosGastoMap[conceptoId];
+                }
+            }
+
             // Asegurar que razonSocial tenga la estructura correcta
             if (facturaData.razonSocial && typeof facturaData.razonSocial === 'object' && facturaData.razonSocial._id) {
                 facturaData.razonSocial = {
@@ -122,7 +148,7 @@ export const createInvoicesPackage = async (req, res) => {
                     rfc: facturaData.razonSocial.rfc || ''
                 };
             }
-            
+
             return facturaData;
         });
 
@@ -274,7 +300,7 @@ export const getInvoicesPackageById = async (req, res) => {
         function normalizeFactura(f) {
             const toNumber = v => (typeof v === 'object' && v !== null && v._bsontype === 'Decimal128') ? parseFloat(v.toString()) : v;
             const toString = v => (typeof v === 'object' && v !== null && v._bsontype === 'ObjectId') ? v.toString() : v;
-            
+
             // Normalizar razonSocial - puede ser un ObjectId o un objeto populado
             let razonSocialNormalizada;
             if (f.razonSocial && typeof f.razonSocial === 'object' && f.razonSocial._id) {
@@ -292,7 +318,7 @@ export const getInvoicesPackageById = async (req, res) => {
                     rfc: ''
                 };
             }
-            
+
             return {
                 ...f._doc,
                 _id: toString(f._id),
@@ -487,7 +513,7 @@ export const updateInvoicesPackage = async (req, res) => {
                     .map(factura => {
                         const facturaData = factura.toObject();
                         facturaData._id = factura._id;
-                        
+
                         // FORZAR que autorizada sea null (pendiente) al agregar al paquete
                         facturaData.autorizada = null;
                         facturaData.estadoPago = null;
@@ -496,7 +522,7 @@ export const updateInvoicesPackage = async (req, res) => {
                         facturaData.estaRegistrada = true;
                         facturaData.registrado = 1;
                         facturaData.fechaRevision = new Date();
-                        
+
                         // Asegurar que razonSocial tenga la estructura correcta
                         if (facturaData.razonSocial && typeof facturaData.razonSocial === 'object' && facturaData.razonSocial._id) {
                             facturaData.razonSocial = {
@@ -505,7 +531,7 @@ export const updateInvoicesPackage = async (req, res) => {
                                 rfc: facturaData.razonSocial.rfc || ''
                             };
                         }
-                        
+
                         return facturaData;
                     });
 
@@ -819,7 +845,7 @@ export const actualizarFacturaEnPaquetes = async (facturaId, datosActualizados) 
         // Actualizar directamente en la base de datos usando $set
         const result = await InvoicesPackage.updateMany(
             { 'facturas._id': facturaId },
-            { 
+            {
                 $set: {
                     'facturas.$.autorizada': datosActualizados.autorizada,
                     'facturas.$.pagoRechazado': datosActualizados.pagoRechazado,

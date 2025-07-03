@@ -27,6 +27,24 @@ export interface ImportedInvoice {
   saldo?: number;
   porcentajePagado?: number;
   descripcionEstadoPago?: string;
+  // Campos adicionales
+  folio?: string;
+  serie?: string;
+  formaPago?: string;
+  metodoPago?: string;
+  esCompleta?: boolean;
+  descripcionPago?: string;
+  autorizada?: boolean;
+  pagoRechazado?: boolean;
+  fechaRevision?: string;
+  registrado?: number;
+  pagado?: number;
+  fiestatus?: string;
+  estaRegistrada?: boolean;
+  motivoDescuento?: string;
+  descuento?: number;
+  // Nuevo campo para concepto de gasto
+  conceptoGasto?: string;
 }
 
 export interface SummaryData {

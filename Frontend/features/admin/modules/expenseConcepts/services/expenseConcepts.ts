@@ -15,6 +15,12 @@ export const expenseConceptService = {
     );
   },
 
+  getByDepartment: async (departmentId: string) => {
+    return await apiCall<{ success: boolean; data: Pick<ExpenseConcept, '_id' | 'name' | 'description' | 'categoryId' | 'departmentId'>[] }>(
+      `/expense-concept/department/${departmentId}`
+    );
+  },
+
   getAll: async (params: ExpenseConceptSearchParams = {}) => {
     const { page = 1, limit = 10, search, categoryId, departmentId, isActive } = params;
     const searchParams = new URLSearchParams({

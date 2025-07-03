@@ -247,6 +247,14 @@ const ImportedInvoicesSchema = new mongoose.Schema({
   descuento: {
     type: Number,
     default: 0
+  },
+
+  // Referencia al concepto de gasto (opcional, se asigna al generar pago)
+  conceptoGasto: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cc_expense_concept',
+    default: null,
+    index: true
   }
 }, {
   timestamps: true,

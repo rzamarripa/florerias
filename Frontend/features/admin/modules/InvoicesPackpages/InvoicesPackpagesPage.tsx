@@ -12,6 +12,7 @@ import {
     Spinner,
 } from 'react-bootstrap';
 import { toast } from 'react-toastify';
+import { BsClipboard } from 'react-icons/bs';
 import BudgetSummaryCards from './components/BudgetSummaryCards';
 import {
     userProvidersService,
@@ -88,6 +89,7 @@ const InvoicesPackagePage: React.FC = () => {
             monto?: number;
             originalImportePagado: number;
             originalSaldo: number;
+            conceptoGasto?: string;
         }
     }>({});
 
@@ -185,7 +187,7 @@ const InvoicesPackagePage: React.FC = () => {
     };
 
     // Funciones para manejar pagos temporales
-    const handleTempPayment = (invoiceId: string, tipoPago: 'completo' | 'parcial', descripcion: string, monto?: number) => {
+    const handleTempPayment = (invoiceId: string, tipoPago: 'completo' | 'parcial', descripcion: string, monto?: number, conceptoGasto?: string) => {
         const invoice = invoices.find(inv => inv._id === invoiceId);
         if (!invoice) return;
 
@@ -198,7 +200,8 @@ const InvoicesPackagePage: React.FC = () => {
                 descripcion,
                 monto,
                 originalImportePagado: invoice.importePagado,
-                originalSaldo
+                originalSaldo,
+                conceptoGasto
             }
         }));
 
@@ -1030,9 +1033,18 @@ const InvoicesPackagePage: React.FC = () => {
                                             </td>
                                             {/* UUID */}
                                             <td>
-                                                <small className="font-monospace">
-                                                    {invoice.uuid}
-                                                </small>
+                                                <Button
+                                                    variant="primary"
+                                                    size="sm"
+                                                    className="d-flex align-items-center fw-bold text-white"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(invoice.uuid);
+                                                        toast.success('UUID copiado al portapapeles');
+                                                    }}
+                                                >
+                                                    <BsClipboard className="me-1" />
+                                                    COPIAR
+                                                </Button>
                                             </td>
                                             {/* Proveedor */}
                                             <td>

@@ -23,6 +23,7 @@ import roleRoutes from "./roleRoutes.js";
 import stateRoutes from "./stateRoutes.js";
 import userRoutes from "./userRoutes.js";
 import roleVisibilityRoutes from "./roleVisibilityRoutes.js";
+import cashPaymentRoutes from "./cashPaymentRoutes.js";
 
 const router = Router();
 
@@ -49,5 +50,6 @@ router.use("/invoices-package", invoicesPackageRoutes);
 router.use("/invoices-package-company", invoicesPackageCompanyRoutes);
 router.use("/log-import-bank-movements", logImportBankMovementsRoutes);
 router.use("/role-visibility", roleVisibilityRoutes);
+router.use("/cash-payments", cashPaymentRoutes);
 
 export default router;

@@ -198,3 +198,33 @@ export const activeExpenseConcept = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Obtener conceptos de gasto filtrados por departmentId
+export const getExpenseConceptsByDepartment = async (req, res) => {
+  try {
+    const { departmentId } = req.params;
+
+    if (!departmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "departmentId es requerido",
+      });
+    }
+
+    const concepts = await ExpenseConcept.find({
+      departmentId: departmentId,
+      isActive: true
+    })
+      .select("_id name description categoryId departmentId")
+      .populate("categoryId", "name")
+      .populate("departmentId", "name")
+      .sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: concepts,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

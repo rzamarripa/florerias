@@ -10,7 +10,7 @@ const InvoicesPackageSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             required: true
         },
-        
+
         // UUID del folio fiscal (identificador único del CFDI)
         uuid: {
             type: String,
@@ -246,6 +246,23 @@ const InvoicesPackageSchema = new mongoose.Schema({
             default: 0
         },
 
+        // Referencia al concepto de gasto (objeto con id, name, descripcion)
+        conceptoGasto: {
+            id: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'cc_expense_concept',
+                required: false
+            },
+            name: {
+                type: String,
+                required: false
+            },
+            descripcion: {
+                type: String,
+                required: false
+            }
+        },
+
         // Timestamps de la factura original
         createdAt: {
             type: Date,
@@ -285,8 +302,6 @@ const InvoicesPackageSchema = new mongoose.Schema({
         required: true,
         index: true
     },
-
-
 
     // ID del departamento
     departamento_id: {
@@ -368,19 +383,19 @@ const InvoicesPackageSchema = new mongoose.Schema({
             if (ret.totalPagado && typeof ret.totalPagado.toString === 'function') {
                 ret.totalPagado = parseFloat(ret.totalPagado.toString());
             }
-            
+
             // Transformar campos Decimal128 de las facturas embebidas
             if (ret.facturas && Array.isArray(ret.facturas)) {
                 ret.facturas = ret.facturas.map(factura => {
                     const facturaTransformed = { ...factura };
-                    
+
                     if (factura.importeAPagar && typeof factura.importeAPagar.toString === 'function') {
                         facturaTransformed.importeAPagar = parseFloat(factura.importeAPagar.toString());
                     }
                     if (factura.importePagado && typeof factura.importePagado.toString === 'function') {
                         facturaTransformed.importePagado = parseFloat(factura.importePagado.toString());
                     }
-                    
+
                     // Normalizar razonSocial si es un ObjectId
                     if (factura.razonSocial && typeof factura.razonSocial === 'object' && factura.razonSocial._bsontype === 'ObjectId') {
                         facturaTransformed.razonSocial = {
@@ -389,11 +404,11 @@ const InvoicesPackageSchema = new mongoose.Schema({
                             rfc: ''
                         };
                     }
-                    
+
                     return facturaTransformed;
                 });
             }
-            
+
             return ret;
         }
     }
@@ -439,19 +454,19 @@ InvoicesPackageSchema.virtual('diasParaVencimiento').get(function () {
 InvoicesPackageSchema.methods.actualizarTotales = async function () {
     // Calcular totales usando los datos embebidos de las facturas
     this.totalImporteAPagar = this.facturas.reduce((sum, factura) => {
-        const importe = typeof factura.importeAPagar === 'object' && factura.importeAPagar !== null && factura.importeAPagar._bsontype === 'Decimal128' 
-            ? parseFloat(factura.importeAPagar.toString()) 
+        const importe = typeof factura.importeAPagar === 'object' && factura.importeAPagar !== null && factura.importeAPagar._bsontype === 'Decimal128'
+            ? parseFloat(factura.importeAPagar.toString())
             : factura.importeAPagar || 0;
         return sum + importe;
     }, 0);
-    
+
     this.totalPagado = this.facturas.reduce((sum, factura) => {
-        const importe = typeof factura.importePagado === 'object' && factura.importePagado !== null && factura.importePagado._bsontype === 'Decimal128' 
-            ? parseFloat(factura.importePagado.toString()) 
+        const importe = typeof factura.importePagado === 'object' && factura.importePagado !== null && factura.importePagado._bsontype === 'Decimal128'
+            ? parseFloat(factura.importePagado.toString())
             : factura.importePagado || 0;
         return sum + importe;
     }, 0);
-    
+
     this.totalFacturas = this.facturas.length;
 
     return this.save();
@@ -459,7 +474,7 @@ InvoicesPackageSchema.methods.actualizarTotales = async function () {
 
 InvoicesPackageSchema.methods.agregarFactura = async function (facturaData) {
     // Verificar que la factura no esté ya en el paquete por UUID o _id
-    const facturaExistente = this.facturas.find(f => 
+    const facturaExistente = this.facturas.find(f =>
         f.uuid === facturaData.uuid || f._id.toString() === facturaData._id.toString()
     );
     if (!facturaExistente) {
@@ -471,7 +486,7 @@ InvoicesPackageSchema.methods.agregarFactura = async function (facturaData) {
 
 InvoicesPackageSchema.methods.removerFactura = async function (identificador) {
     // Puede ser UUID o _id
-    this.facturas = this.facturas.filter(factura => 
+    this.facturas = this.facturas.filter(factura =>
         factura.uuid !== identificador && factura._id.toString() !== identificador.toString()
     );
     await this.actualizarTotales();
@@ -571,11 +586,11 @@ InvoicesPackageSchema.pre('save', function (next) {
     const ids = this.facturas.map(factura => factura._id.toString());
     const uuidsUnicos = [...new Set(uuids)];
     const idsUnicos = [...new Set(ids)];
-    
+
     if (uuidsUnicos.length !== uuids.length) {
         return next(new Error('No se pueden agregar facturas duplicadas al mismo paquete (UUID duplicado)'));
     }
-    
+
     if (idsUnicos.length !== ids.length) {
         return next(new Error('No se pueden agregar facturas duplicadas al mismo paquete (ID duplicado)'));
     }

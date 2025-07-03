@@ -146,6 +146,9 @@ export const getInvoices = async (req, res) => {
       importeAPagar: invoice.importeAPagar
         ? parseFloat(invoice.importeAPagar.toString())
         : 0,
+      importePagado: invoice.importePagado
+        ? parseFloat(invoice.importePagado.toString())
+        : 0,
     }));
 
     res.status(200).json({
@@ -820,23 +823,23 @@ export const toggleFacturaAutorizada = async (req, res) => {
       factura.descripcionPago = 'Pago rechazado - Factura no autorizada';
     }
 
-        // NO guardar la factura original, solo actualizar la factura embebida en el paquete
+    // NO guardar la factura original, solo actualizar la factura embebida en el paquete
     // await factura.save();
 
     // Actualizar la factura embebida en todos los paquetes que la contengan
     await actualizarFacturaEnPaquetes(factura._id, {
-        autorizada: factura.autorizada,
-        pagoRechazado: factura.pagoRechazado,
-        importePagado: factura.importePagado,
-        estadoPago: factura.estadoPago,
-        esCompleta: factura.esCompleta,
-        pagado: factura.pagado,
-        descripcionPago: factura.descripcionPago
+      autorizada: factura.autorizada,
+      pagoRechazado: factura.pagoRechazado,
+      importePagado: factura.importePagado,
+      estadoPago: factura.estadoPago,
+      esCompleta: factura.esCompleta,
+      pagado: factura.pagado,
+      descripcionPago: factura.descripcionPago
     });
 
     // Si se desautorizó la factura, actualizar los totales de los paquetes que la contengan
     if (!factura.autorizada) {
-        await actualizarTotalesPaquetesPorFactura(factura._id);
+      await actualizarTotalesPaquetesPorFactura(factura._id);
     }
 
     res.status(200).json({

@@ -44,6 +44,7 @@ interface EnviarPagoModalProps {
             monto?: number;
             originalImportePagado: number;
             originalSaldo: number;
+            conceptoGasto?: string;
         }
     };
     onRemoveTempPayment?: (invoiceId: string) => void;
@@ -116,7 +117,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
 
     const handleRemoveFactura = (id: string) => {
         setFacturasLocal(prev => prev.filter(f => f._id !== id));
-        
+
         // Si la factura tiene un pago temporal, también eliminarlo del state principal
         if (tempPayments && tempPayments[id] && onRemoveTempPayment) {
             onRemoveTempPayment(id);
@@ -194,7 +195,15 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
             // PASO 2: Crear o actualizar paquete de facturas (POST)
             // Usar la fecha calculada (jueves de la semana siguiente) en lugar de la fecha seleccionada
             const fechaPagoParaGuardar = fechaCalculada || fechaPago;
-            
+
+            // Preparar conceptos de gasto para cada factura
+            const conceptosGasto: { [invoiceId: string]: string } = {};
+            facturasLocal.forEach(factura => {
+                if (tempPayments && tempPayments[factura._id] && tempPayments[factura._id].conceptoGasto) {
+                    conceptosGasto[factura._id] = tempPayments[factura._id].conceptoGasto!;
+                }
+            });
+
             const dataToSend = {
                 facturas: facturasLocal.map(f => f._id),
                 usuario_id: user._id,
@@ -205,6 +214,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 companyId: selectedCompanyId,
                 brandId: selectedBrandId,
                 branchId: selectedBranchId,
+                conceptosGasto
             };
 
             let packpageId: string | undefined = undefined;

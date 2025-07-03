@@ -81,13 +81,34 @@ export interface ImportedInvoice {
   nombreReceptor: string;
   importeAPagar: number;
   importePagado: number;
-  tipoComprobante: 'I' | 'E' | 'P';
-  estatus: 0 | 1;
-  estadoPago: 0 | 1 | 2 | 3;
-  autorizada: boolean;
-  pagoRechazado: boolean;
+  estatus: number;
+  estadoPago: number;
+  fechaEmision: string;
+  tipoComprobante: string;
+  empresa: { _id: string; name: string; rfc: string };
+  rfcProveedorCertificacion: string;
+  fechaCertificacionSAT: string;
+  fechaCancelacion?: string;
   createdAt: string;
   updatedAt: string;
+  // Campos adicionales
+  folio?: string;
+  serie?: string;
+  formaPago?: string;
+  metodoPago?: string;
+  esCompleta?: boolean;
+  descripcionPago?: string;
+  autorizada?: boolean;
+  pagoRechazado?: boolean;
+  fechaRevision?: string;
+  registrado?: number;
+  pagado?: number;
+  fiestatus?: string;
+  estaRegistrada?: boolean;
+  motivoDescuento?: string;
+  descuento?: number;
+  // Nuevo campo para concepto de gasto
+  conceptoGasto?: string;
 }
 
 export interface InvoicesPackage {

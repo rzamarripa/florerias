@@ -61,7 +61,7 @@ const NewPackpageDetailsPage: React.FC = () => {
             } else {
                 console.log('Paquete encontrado:', response.data);
                 const packpageData = response.data as any;
-                
+
                 // Normalizar datos numéricos
                 if (packpageData.facturas) {
                     packpageData.facturas = packpageData.facturas.map((f: any) => ({
@@ -70,17 +70,17 @@ const NewPackpageDetailsPage: React.FC = () => {
                         importePagado: parseFloat(f.importePagado || 0)
                     }));
                 }
-                
+
                 packpageData.totalImporteAPagar = parseFloat(packpageData.totalImporteAPagar || 0);
                 packpageData.totalPagado = parseFloat(packpageData.totalPagado || 0);
-                
+
                 console.log('Facturas del paquete:', packpageData.facturas);
                 console.log('Número de facturas:', packpageData.facturas?.length);
-                console.log('Totales:', { 
-                    totalImporteAPagar: packpageData.totalImporteAPagar, 
-                    totalPagado: packpageData.totalPagado 
+                console.log('Totales:', {
+                    totalImporteAPagar: packpageData.totalImporteAPagar,
+                    totalPagado: packpageData.totalPagado
                 });
-                
+
                 // Verificar si hay duplicados por UUID
                 const uuids = packpageData.facturas?.map((f: any) => f.uuid) || [];
                 const uuidsUnicos = [...new Set(uuids)];
@@ -89,7 +89,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                     console.log('UUIDs:', uuids);
                     console.log('UUIDs únicos:', uuidsUnicos);
                 }
-                
+
                 setPackpage(packpageData);
             }
         } catch (error) {
@@ -128,17 +128,17 @@ const NewPackpageDetailsPage: React.FC = () => {
             if (factura.autorizada === nuevoEstado) {
                 return;
             }
-            
+
             const result = await toggleFacturaAutorizada(facturaId, nuevoEstado);
             console.log('Resultado del toggle:', result);
-            
+
             if (result && result.success && typeof (result.data as any).autorizada !== 'undefined') {
                 console.log('Datos de respuesta:', result.data);
-                
+
                 // Actualizar el estado local con los datos de la respuesta
                 setPackpage((prev) => {
                     if (!prev) return prev;
-                    
+
                     const facturasActualizadas = prev.facturas.map(f =>
                         f._id === facturaId ? {
                             ...f,
@@ -149,13 +149,13 @@ const NewPackpageDetailsPage: React.FC = () => {
                             esCompleta: (result.data as any).esCompleta
                         } : f
                     );
-                    
+
                     // Recalcular totales
                     const totalPagado = facturasActualizadas.reduce((sum, f) => sum + (f.importePagado || 0), 0);
                     const totalImporteAPagar = facturasActualizadas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
-                    
+
                     console.log('Totales recalculados:', { totalPagado, totalImporteAPagar });
-                    
+
                     return {
                         ...prev,
                         facturas: facturasActualizadas,
@@ -163,7 +163,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                         totalImporteAPagar
                     };
                 });
-                
+
                 if (!(result.data as any).autorizada) {
                     toast.info('Factura rechazada. El pago ha sido devuelto a cero.');
                 } else {
@@ -197,8 +197,8 @@ const NewPackpageDetailsPage: React.FC = () => {
     };
 
     // Verificar si se puede enviar a dirección (todas las facturas procesadas)
-    const puedeEnviarADireccion = packpage && packpage.facturas && 
-        packpage.facturas.length > 0 && 
+    const puedeEnviarADireccion = packpage && packpage.facturas &&
+        packpage.facturas.length > 0 &&
         packpage.facturas.every((factura: ImportedInvoice) => factura.autorizada !== null);
 
     if (loading) {
@@ -333,31 +333,31 @@ const NewPackpageDetailsPage: React.FC = () => {
             {/* HEADER MODERNO */}
             {packpage && (
                 <div className="mb-1">
-                                <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-2">
-                <div className="d-flex align-items-center mb-2 mb-md-0">
-                    <h3 className="fw-bold mb-0 me-3" style={{ letterSpacing: '0.5px' }}>
-                        Paquete Folio: <span className="text-primary">{packpage.folio}</span>
-                    </h3>
-                </div>
-                <Button 
-                    variant="primary" 
-                    onClick={handleEnviarADireccion}
-                    disabled={!puedeEnviarADireccion || packpage.estatus !== 'Borrador'}
-                >
-                    <i className="bi bi-send me-1"></i>
-                    Enviar a Dirección
-                </Button>
-            </div>
-                    
-                        <div className=" text-md" style={{ fontSize: '0.8rem' }}>
-                            {user?.username && (
-                                <div>
-                                    <p className='mb-0 fw-bold'>Usuario: <span className="fw-semibold text-uppercase">{user.username}</span></p>
-                                    <p className='mb-2 fw-bold'>Departamento:{packpage.departamento && <span className="fw-semibold text-uppercase "> {packpage.departamento}</span>}</p>
-                                </div>
-                            )}
-                            
+                    <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-2">
+                        <div className="d-flex align-items-center mb-2 mb-md-0">
+                            <h3 className="fw-bold mb-0 me-3" style={{ letterSpacing: '0.5px' }}>
+                                Paquete Folio: <span className="text-primary">{packpage.folio}</span>
+                            </h3>
                         </div>
+                        <Button
+                            variant="primary"
+                            onClick={handleEnviarADireccion}
+                            disabled={!puedeEnviarADireccion || packpage.estatus !== 'Borrador'}
+                        >
+                            <i className="bi bi-send me-1"></i>
+                            Enviar a Dirección
+                        </Button>
+                    </div>
+
+                    <div className=" text-md" style={{ fontSize: '0.8rem' }}>
+                        {user?.username && (
+                            <div>
+                                <p className='mb-0 fw-bold'>Usuario: <span className="fw-semibold text-uppercase">{user.username}</span></p>
+                                <p className='mb-2 fw-bold'>Departamento:{packpage.departamento && <span className="fw-semibold text-uppercase "> {packpage.departamento}</span>}</p>
+                            </div>
+                        )}
+
+                    </div>
                     {/* Comentario y estatus */}
                     <Card className="mb-2 border-0 shadow-sm bg-light">
                         <Card.Body className="py-3 px-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between">
@@ -412,18 +412,15 @@ const NewPackpageDetailsPage: React.FC = () => {
                                         </div>
                                     </td>
                                     <td>
-                                        <div>{factura.uuid}</div>
-                                        <div className="mt-1">
-                                            <Button
-                                                variant="outline-primary"
-                                                size="sm"
-                                                className="d-flex align-items-center"
-                                                onClick={() => handleCopy(factura.uuid)}
-                                            >
-                                                <BsClipboard className="me-1" />
-                                                {copied === factura.uuid ? 'Copiado' : 'Copiar UUID'}
-                                            </Button>
-                                        </div>
+                                        <Button
+                                            variant="primary"
+                                            size="sm"
+                                            className="d-flex align-items-center fw-bold text-white"
+                                            onClick={() => handleCopy(factura.uuid)}
+                                        >
+                                            <BsClipboard className="me-1" />
+                                            {copied === factura.uuid ? 'Copiado' : 'COPIAR'}
+                                        </Button>
                                     </td>
                                     <td>{factura.fechaEmision ? new Date(factura.fechaEmision).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</td>
                                     <td>
@@ -453,26 +450,26 @@ const NewPackpageDetailsPage: React.FC = () => {
                                     <td>${(factura.importePagado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                                     <td className="text-center">
                                         <div className="d-flex justify-content-center align-items-center">
-                                        <Button
-                                            variant="outline-success"
-                                            size="sm"
-                                            className="fw-bold text-success me-1 action-button-hover-border"
-                                            title="Autorizar factura"
-                                            onClick={() => handleToggleAutorizada(factura._id, true)}
-                                            disabled={packpage.estatus === 'Enviado'}
-                                        >
-                                            Sí <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✓</span>
-                                        </Button>
-                                        <Button
-                                            variant="outline-danger"
-                                            size="sm"
-                                            className="fw-bold text-danger me-1 action-button-hover-border"
-                                            title="Rechazar factura"
-                                            onClick={() => handleToggleAutorizada(factura._id, false)}
-                                            disabled={packpage.estatus === 'Enviado'}
-                                        >
-                                            No <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✗</span>
-                                        </Button>
+                                            <Button
+                                                variant="outline-success"
+                                                size="sm"
+                                                className="fw-bold text-success me-1 action-button-hover-border"
+                                                title="Autorizar factura"
+                                                onClick={() => handleToggleAutorizada(factura._id, true)}
+                                                disabled={packpage.estatus === 'Enviado'}
+                                            >
+                                                Sí <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✓</span>
+                                            </Button>
+                                            <Button
+                                                variant="outline-danger"
+                                                size="sm"
+                                                className="fw-bold text-danger me-1 action-button-hover-border"
+                                                title="Rechazar factura"
+                                                onClick={() => handleToggleAutorizada(factura._id, false)}
+                                                disabled={packpage.estatus === 'Enviado'}
+                                            >
+                                                No <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✗</span>
+                                            </Button>
                                         </div>
                                     </td>
                                 </tr>

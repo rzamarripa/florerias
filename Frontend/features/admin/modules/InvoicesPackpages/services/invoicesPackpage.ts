@@ -182,6 +182,8 @@ export const createInvoicesPackage = async (data: {
     companyId?: string;
     brandId?: string;
     branchId?: string;
+    // Nuevo campo para conceptos de gasto por factura
+    conceptosGasto?: { [invoiceId: string]: string };
 }): Promise<InvoicesPackageResponse> => {
     const response = await apiCall<InvoicesPackageResponse>("/invoices-package", {
         method: "POST",

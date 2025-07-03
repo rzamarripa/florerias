@@ -177,6 +177,11 @@ export const menuItems: MenuItemType[] = [
         label: "Listado de Paquetes",
         url: "/modulos/paquetes-facturas/listado-paquetes",
       },
+      {
+        key: "pagos-efectivo",
+        label: "Pagos en Efectivo",
+        url: "/modulos/pagos-efectivo",
+      },
     ],
   },
 ];
