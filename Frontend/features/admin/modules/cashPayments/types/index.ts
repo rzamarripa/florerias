@@ -1,6 +1,7 @@
 export interface CashPayment {
     _id: string;
-    amount: number;
+    importeAPagar: number;
+    importePagado: number;
     expenseConcept: {
         _id: string;
         name: string;
@@ -9,10 +10,20 @@ export interface CashPayment {
     };
     description?: string;
     createdAt: string;
+    
+    // Estados de autorización y pago
+    autorizada?: boolean | null;
+    pagoRechazado?: boolean;
+    estadoPago?: number | null;
+    esCompleta?: boolean;
+    registrado?: number;
+    pagado?: number;
+    descripcionPago?: string;
+    fechaRevision?: string | null;
 }
 
 export interface CashPaymentFormData {
-    amount: number;
+    importeAPagar: number;
     expenseConcept: string;
     description?: string;
 }

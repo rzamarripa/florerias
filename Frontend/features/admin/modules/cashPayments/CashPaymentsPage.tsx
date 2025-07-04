@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getCashPayments, createCashPayment, updateCashPayment, deleteCashPayment } from "./services/cashPayments";
-import { getExpenseConceptsActive } from "../expenseConcepts/services/expenseConcepts";
+import { getCashPayments, updateCashPayment, deleteCashPayment } from "./services/cashPayments";
 import { CashPayment, CashPaymentFormData } from "./types";
 import { CashPaymentModal } from "./components/CashPaymentModal";
 import { Table, Button, Spinner, Alert, Card, OverlayTrigger, Tooltip } from "react-bootstrap";
@@ -15,7 +14,6 @@ const CashPaymentsPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [editingPayment, setEditingPayment] = useState<CashPayment | null>(null);
-    const [expenseConcepts, setExpenseConcepts] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [pagination, setPagination] = useState({ page: 1, limit: PAGE_SIZE, total: 0, pages: 0 });
     const { user } = useUserSessionStore();
@@ -34,18 +32,8 @@ const CashPaymentsPage: React.FC = () => {
         setLoading(false);
     };
 
-    const fetchExpenseConcepts = async () => {
-        try {
-            const res = await getExpenseConceptsActive();
-            setExpenseConcepts(res.data.data);
-        } catch {
-            setExpenseConcepts([]);
-        }
-    };
-
     useEffect(() => {
         fetchPayments(1);
-        fetchExpenseConcepts();
     }, []);
 
     const handlePageChange = (page: number) => {
@@ -75,18 +63,28 @@ const CashPaymentsPage: React.FC = () => {
     };
 
     const handleAdd = async (data: CashPaymentFormData) => {
-        setLoading(true);
-        setError(null);
-        try {
-            await createCashPayment(data);
+        // Si es edición, usar el flujo original
+        if (editingPayment) {
+            setLoading(true);
+            setError(null);
+            try {
+                await updateCashPayment(editingPayment._id, data);
+                setEditingPayment(null);
+                setModalOpen(false);
+                toast.success("Pago actualizado correctamente");
+                fetchPayments(pagination.page);
+            } catch (e: any) {
+                setError(e?.message || "Error al actualizar pago");
+                toast.error(e?.message || "Error al actualizar pago");
+            }
+            setLoading(false);
+        } else {
+            // Si es creación, el modal maneja todo el flujo
+            // Solo necesitamos actualizar la lista
             setModalOpen(false);
             toast.success("Pago creado correctamente");
             fetchPayments(pagination.page);
-        } catch (e: any) {
-            setError(e?.message || "Error al guardar pago");
-            toast.error(e?.message || "Error al guardar pago");
         }
-        setLoading(false);
     };
 
     const handleEdit = async (data: CashPaymentFormData) => {
@@ -149,6 +147,7 @@ const CashPaymentsPage: React.FC = () => {
                                     <th>Importe</th>
                                     <th>Concepto</th>
                                     <th>Descripción</th>
+                                    <th>Estatus</th>
                                     <th>Fecha</th>
                                     <th className="text-center">Acciones</th>
                                 </tr>
@@ -179,10 +178,36 @@ const CashPaymentsPage: React.FC = () => {
                                     (Array.isArray(payments) ? payments : []).map((p, idx) => (
                                         <tr key={p._id}>
                                             <td>{(pagination.page - 1) * pagination.limit + idx + 1}</td>
-                                            <td>{p.amount.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</td>
+                                            <td>{p.importeAPagar.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</td>
                                             <td>{p.expenseConcept?.categoryId?.name ? `${p.expenseConcept.categoryId.name} - ` : ""}{p.expenseConcept?.name}</td>
                                             <td>{p.description}</td>
-                                            <td>{new Date(p.createdAt).toLocaleString()}</td>
+                                            <td>
+                                                {(() => {
+                                                    let text = '';
+                                                    let variant = '';
+                                                    switch (p.estadoPago) {
+                                                        case 0:
+                                                        default:
+                                                            text = 'Pendiente';
+                                                            variant = 'secondary';
+                                                            break;
+                                                        case 1:
+                                                            text = 'Enviado a pago';
+                                                            variant = 'info';
+                                                            break;
+                                                        case 2:
+                                                            text = 'Pagado';
+                                                            variant = 'success';
+                                                            break;
+                                                        case 3:
+                                                            text = 'Registrado';
+                                                            variant = 'primary';
+                                                            break;
+                                                    }
+                                                    return <span className={`badge bg-${variant}`}>{text}</span>;
+                                                })()}
+                                            </td>
+                                            <td>{new Date(p.createdAt).toLocaleDateString("es-MX")}</td>
                                             <td className="text-center">
                                                 <OverlayTrigger placement="top" overlay={<Tooltip>Editar</Tooltip>}>
                                                     <Button variant="light" size="sm" className="me-2" onClick={() => openEditModal(p)}>
@@ -253,7 +278,7 @@ const CashPaymentsPage: React.FC = () => {
                     onSuccess={editingPayment ? handleEdit : handleAdd}
                     loading={loading}
                     payment={editingPayment ? {
-                        amount: editingPayment.amount,
+                        importeAPagar: editingPayment.importeAPagar,
                         expenseConcept: editingPayment.expenseConcept?._id || "",
                         description: editingPayment.description || ""
                     } : undefined}

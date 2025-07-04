@@ -308,12 +308,6 @@ export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
                             onSelectPackage={handleSelectPackage}
                             onCreatePackage={handleCreatePackage}
                             loading={stepLoading}
-                            cashPaymentData={formData ? {
-                                amount: formData.importeAPagar,
-                                expenseConcept: formData.expenseConcept,
-                                expenseConceptName: expenseConcepts.find((c: any) => c._id === formData.expenseConcept)?.name,
-                                description: formData.description
-                            } : undefined}
                         />
                     </Modal.Body>
                 </div>

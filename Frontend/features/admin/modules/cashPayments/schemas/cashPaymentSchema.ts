@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const cashPaymentSchema = z.object({
-    amount: z
+    importeAPagar: z
         .number({ invalid_type_error: "El importe es obligatorio" })
         .min(0.01, "El importe debe ser mayor a 0"),
     expenseConcept: z

@@ -2,11 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, Table, Button, Badge, Spinner, Alert } from 'react-bootstrap';
-import { getInvoicesPackageById, InvoicesPackage, ImportedInvoice, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion } from '../services/invoicesPackpage';
+import { getInvoicesPackageById, ImportedInvoice, InvoicesPackage, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion } from '../services/invoicesPackpage';
 import { BsClipboard } from 'react-icons/bs';
 import { toast } from 'react-toastify';
 import { useUserSessionStore } from '@/stores';
 import { formatDate } from 'date-fns';
+import CashPaymentsInPackageTable from "../../cashPayments/components/CashPaymentsInPackageTable";
+import { authorizeCashPaymentInPackage, rejectCashPaymentInPackage } from "../../cashPayments/services/cashPayments";
 
 // Estilos para mostrar borde solo en hover
 const actionButtonStyles = `
@@ -37,6 +39,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     const [singleInvoice, setSingleInvoice] = useState<ImportedInvoice | null>(null);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'facturas' | 'pagosEfectivo'>('facturas');
 
     const { user } = useUserSessionStore();
 
@@ -220,6 +223,62 @@ const NewPackpageDetailsPage: React.FC = () => {
         return facturasNoRechazadas.reduce((sum, f) => sum + (f.importePagado || 0), 0);
     };
 
+    // Handler para recargar el paquete tras autorizar/rechazar
+    const reloadPackpage = async () => {
+        if (!packpage?._id) return;
+        try {
+            const response = await getInvoicesPackageById(packpage._id);
+            if (response && response.data) {
+                const packpageData = response.data as any;
+                
+                // Normalizar datos numéricos
+                if (packpageData.facturas) {
+                    packpageData.facturas = packpageData.facturas.map((f: any) => ({
+                        ...f,
+                        importeAPagar: parseFloat(f.importeAPagar || 0),
+                        importePagado: parseFloat(f.importePagado || 0)
+                    }));
+                }
+                
+                packpageData.totalImporteAPagar = parseFloat(packpageData.totalImporteAPagar || 0);
+                packpageData.totalPagado = parseFloat(packpageData.totalPagado || 0);
+                
+                setPackpage(packpageData);
+            }
+        } catch (error) {
+            console.error('Error al recargar el paquete:', error);
+            toast.error('Error al recargar el paquete');
+        }
+    };
+
+    // Handler para autorizar pago en efectivo
+    const handleAuthorizeCashPayment = async (pagoId: string) => {
+        setLoading(true);
+        try {
+            if (!packpage) return;
+            await authorizeCashPaymentInPackage(packpage._id, pagoId);
+            await reloadPackpage();
+            toast.success("Pago autorizado correctamente");
+        } catch {
+            toast.error("Error al autorizar el pago");
+        }
+        setLoading(false);
+    };
+
+    // Handler para rechazar pago en efectivo
+    const handleRejectCashPayment = async (pagoId: string) => {
+        setLoading(true);
+        try {
+            if (!packpage) return;
+            await rejectCashPaymentInPackage(packpage._id, pagoId);
+            await reloadPackpage();
+            toast.success("Pago rechazado correctamente");
+        } catch {
+            toast.error("Error al rechazar el pago");
+        }
+        setLoading(false);
+    };
+
     if (loading) {
         return (
             <div className="text-center py-5">
@@ -401,101 +460,123 @@ const NewPackpageDetailsPage: React.FC = () => {
                 </div>
             )}
 
-            <Card className="shadow-sm border-0">
-                <Card.Body className="p-0">
-                    <Table responsive hover className="mb-0 align-middle">
-                        <thead className="bg-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Proveedor</th>
-                                <th>Folio</th>
-                                <th>F. Emisión</th>
-                                <th>Info</th>
-                                <th>Emisor RFC</th>
-                                <th>Estatus</th>
-                                <th>Estatus Aut.</th>
-                                <th className='text-center'>Total</th>
-                                <th className='text-center'>Saldo</th>
-                                <th className='text-center'>A Pagar</th>
-                                <th className=' text-center'>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(packpage.facturas || []).map((factura: ImportedInvoice, idx: number) => (
-                                <tr key={factura._id} className={idx % 2 === 1 ? 'bg-pink bg-opacity-25' : ''}>
-                                    <td>{idx + 1}</td>
-                                    <td>
-                                        <div className="fw-bold">{factura.nombreEmisor}</div>
-                                        <div>
-                                            <Badge bg="secondary" className="me-1">servicio {idx + 1}</Badge>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <Button
-                                            variant="primary"
-                                            size="sm"
-                                            className="d-flex align-items-center fw-bold text-white"
-                                            onClick={() => handleCopy(factura.uuid)}
-                                        >
-                                            <BsClipboard className="me-1" />
-                                            {copied === factura.uuid ? 'Copiado' : 'COPIAR'}
-                                        </Button>
-                                    </td>
-                                    <td>{factura.fechaEmision ? new Date(factura.fechaEmision).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</td>
-                                    <td>
-                                        <Badge bg="info" className="me-1">{factura.tipoComprobante}</Badge>
-                                        <Badge bg="warning" className="me-1 text-dark">PUE</Badge>
-                                    </td>
-                                    <td>{factura.rfcEmisor}</td>
-                                    <td>
-                                        <Badge className="bg-success bg-opacity-10 text-success">Vigente</Badge>
-                                    </td>
-                                    <td>
-                                        <span className="text-primary">
-                                            {factura.autorizada ? 'Autorizada' :
-                                                factura.pagoRechazado ? 'Pago Rechazado' : 'Pendiente'}
-                                        </span>
-                                    </td>
-                                    <td className='text-end'>${(factura.importeAPagar || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                    <td className='text-end'>${((factura.importeAPagar || 0) - (factura.importePagado || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                    <td className='text-end'>${(factura.importePagado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                    <td className="text-center">
-                                        <div className="d-flex justify-content-center align-items-center">
-                                            <Button
-                                                variant="outline-success"
-                                                size="sm"
-                                                className="fw-bold text-success me-1 action-button-hover-border"
-                                                title="Autorizar factura"
-                                                onClick={() => handleToggleAutorizada(factura._id, true)}
-                                                disabled={packpage.estatus === 'Enviado'}
-                                            >
-                                                Sí <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✓</span>
-                                            </Button>
-                                            <Button
-                                                variant="outline-danger"
-                                                size="sm"
-                                                className="fw-bold text-danger me-1 action-button-hover-border"
-                                                title="Rechazar factura"
-                                                onClick={() => handleToggleAutorizada(factura._id, false)}
-                                                disabled={packpage.estatus === 'Enviado'}
-                                            >
-                                                No <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✗</span>
-                                            </Button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            <tr className="fw-bold text-left">
-                                <td className='text-end' colSpan={8}>Total a pagar</td>
-                                <td className='text-end' colSpan={1}>${calcularTotalVisualizacion().toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                <td className='text-end' colSpan={1}>${((calcularTotalVisualizacion()) - (calcularTotalPagadoVisualizacion())).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                <td className='text-end' colSpan={1}>${calcularTotalPagadoVisualizacion().toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                <td></td>
-                            </tr>
-                        </tbody>
-                    </Table>
-                </Card.Body>
-            </Card>
+            {/* Tabs de facturas y pagos en efectivo */}
+            <ul className="nav nav-tabs mb-3">
+                <li className="nav-item">
+                    <a href="#facturas" className={`nav-link${activeTab === 'facturas' ? ' active' : ''}`} onClick={() => setActiveTab('facturas')}>Facturas</a>
+                </li>
+                <li className="nav-item">
+                    <a href="#pagosEfectivo" className={`nav-link${activeTab === 'pagosEfectivo' ? ' active' : ''}`} onClick={() => setActiveTab('pagosEfectivo')}>Pagos en efectivo</a>
+                </li>
+            </ul>
+            <div className="tab-content">
+                <div className={`tab-pane${activeTab === 'facturas' ? ' show active' : ''}`} id="facturas">
+                    <Card className="shadow-sm border-0">
+                        <Card.Body className="p-0">
+                            <Table responsive hover className="mb-0 align-middle">
+                                <thead className="bg-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Proveedor</th>
+                                        <th>Folio</th>
+                                        <th>F. Emisión</th>
+                                        <th>Info</th>
+                                        <th>Emisor RFC</th>
+                                        <th>Estatus</th>
+                                        <th>Estatus Aut.</th>
+                                        <th className='text-center'>Total</th>
+                                        <th className='text-center'>Saldo</th>
+                                        <th className='text-center'>A Pagar</th>
+                                        <th className=' text-center'>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(packpage.facturas || []).map((factura: ImportedInvoice, idx: number) => (
+                                        <tr key={factura._id} className={idx % 2 === 1 ? 'bg-pink bg-opacity-25' : ''}>
+                                            <td>{idx + 1}</td>
+                                            <td>
+                                                <div className="fw-bold">{factura.nombreEmisor}</div>
+                                                <div>
+                                                    <Badge bg="secondary" className="me-1">servicio {idx + 1}</Badge>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <Button
+                                                    variant="primary"
+                                                    size="sm"
+                                                    className="d-flex align-items-center fw-bold text-white"
+                                                    onClick={() => handleCopy(factura.uuid)}
+                                                >
+                                                    <BsClipboard className="me-1" />
+                                                    {copied === factura.uuid ? 'Copiado' : 'COPIAR'}
+                                                </Button>
+                                            </td>
+                                            <td>{factura.fechaEmision ? new Date(factura.fechaEmision).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</td>
+                                            <td>
+                                                <Badge bg="info" className="me-1">{factura.tipoComprobante}</Badge>
+                                                <Badge bg="warning" className="me-1 text-dark">PUE</Badge>
+                                            </td>
+                                            <td>{factura.rfcEmisor}</td>
+                                            <td>
+                                                <Badge className="bg-success bg-opacity-10 text-success">Vigente</Badge>
+                                            </td>
+                                            <td>
+                                                <span className="text-primary">
+                                                    {factura.autorizada ? 'Autorizada' :
+                                                        factura.pagoRechazado ? 'Pago Rechazado' : 'Pendiente'}
+                                                </span>
+                                            </td>
+                                            <td className='text-end'>${(factura.importeAPagar || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                            <td className='text-end'>${((factura.importeAPagar || 0) - (factura.importePagado || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                            <td className='text-end'>${(factura.importePagado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                            <td className="text-center">
+                                                <div className="d-flex justify-content-center align-items-center">
+                                                    <Button
+                                                        variant="outline-success"
+                                                        size="sm"
+                                                        className="fw-bold text-success me-1 action-button-hover-border"
+                                                        title="Autorizar factura"
+                                                        onClick={() => handleToggleAutorizada(factura._id, true)}
+                                                        disabled={packpage.estatus === 'Enviado'}
+                                                    >
+                                                        Sí <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✓</span>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline-danger"
+                                                        size="sm"
+                                                        className="fw-bold text-danger me-1 action-button-hover-border"
+                                                        title="Rechazar factura"
+                                                        onClick={() => handleToggleAutorizada(factura._id, false)}
+                                                        disabled={packpage.estatus === 'Enviado'}
+                                                    >
+                                                        No <span style={{ fontWeight: 'bold', fontSize: '1.1em' }}>✗</span>
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    <tr className="fw-bold text-left">
+                                        <td className='text-end' colSpan={8}>Total a pagar</td>
+                                        <td className='text-end' colSpan={1}>${calcularTotalVisualizacion().toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                        <td className='text-end' colSpan={1}>${((calcularTotalVisualizacion()) - (calcularTotalPagadoVisualizacion())).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                        <td className='text-end' colSpan={1}>${calcularTotalPagadoVisualizacion().toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </Table>
+                        </Card.Body>
+                    </Card>
+                </div>
+                <div className={`tab-pane${activeTab === 'pagosEfectivo' ? ' show active' : ''}`} id="pagosEfectivo">
+                    <CashPaymentsInPackageTable
+                        pagos={packpage?.pagosEfectivo || []}
+                        onAuthorize={handleAuthorizeCashPayment}
+                        onReject={handleRejectCashPayment}
+                        loading={loading}
+                        packageStatus={packpage?.estatus}
+                    />
+                </div>
+            </div>
             <div className="mt-4">
                 <Button variant="secondary" onClick={() => router.back()}>Cerrar</Button>
                 <Button variant="outline-secondary" className="ms-2">Mostrar Timeline</Button>

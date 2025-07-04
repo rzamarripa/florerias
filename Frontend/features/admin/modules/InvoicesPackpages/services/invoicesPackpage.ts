@@ -1,5 +1,30 @@
 import { apiCall, ApiResponse } from "@/utils/api";
 
+export interface CashPaymentEmbedded {
+    _id: string;
+    importeAPagar: number;
+    importePagado: number;
+    expenseConcept: {
+        _id: string;
+        name: string;
+        categoryId?: {
+            _id: string;
+            name: string;
+        };
+    };
+    description?: string;
+    createdAt: string;
+    // Estados de autorización embebidos
+    autorizada?: boolean | null;
+    pagoRechazado?: boolean;
+    estadoPago?: number | null;
+    esCompleta?: boolean;
+    registrado?: number;
+    pagado?: number;
+    descripcionPago?: string;
+    fechaRevision?: string | null;
+}
+
 export interface InvoicesPackage {
     _id: string;
     facturas: ImportedInvoice[];
@@ -17,6 +42,8 @@ export interface InvoicesPackage {
     totalFacturas: number;
     createdAt: string;
     updatedAt: string;
+    // Array de pagos en efectivo embebidos
+    pagosEfectivo?: CashPaymentEmbedded[];
     // Información de la relación Company, Brand, Branch
     companyInfo?: {
         companyId: string;

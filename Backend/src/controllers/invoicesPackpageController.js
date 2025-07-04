@@ -3,6 +3,7 @@ import { ImportedInvoices } from "../models/ImportedInvoices.js";
 import { InvoicesPackageCompany } from "../models/InvoicesPackpageCompany.js";
 import { ExpenseConcept } from "../models/ExpenseConcept.js";
 import { RoleVisibility } from "../models/RoleVisibility.js";
+import { CashPayment } from "../models/CashPayment.js";
 
 import mongoose from "mongoose";
 
@@ -22,14 +23,18 @@ export const createInvoicesPackage = async (req, res) => {
             brandId,
             branchId,
             // Nuevo campo para conceptos de gasto por factura
-            conceptosGasto
+            conceptosGasto,
+            pagosEfectivo
         } = req.body;
 
-        // Validar datos requeridos
-        if (!facturas || !Array.isArray(facturas) || facturas.length === 0) {
+        // Validar datos requeridos - debe haber al menos facturas o pagos en efectivo
+        const tieneFacturas = facturas && Array.isArray(facturas) && facturas.length > 0;
+        const tienePagosEfectivo = pagosEfectivo && Array.isArray(pagosEfectivo) && pagosEfectivo.length > 0;
+        
+        if (!tieneFacturas && !tienePagosEfectivo) {
             return res.status(400).json({
                 success: false,
-                message: 'Se requiere al menos una factura para crear el paquete.'
+                message: 'Se requiere al menos una factura o un pago en efectivo para crear el paquete.'
             });
         }
 
@@ -40,58 +45,61 @@ export const createInvoicesPackage = async (req, res) => {
             });
         }
 
-        // Verificar que las facturas existan y pertenezcan al mismo receptor
-        const facturasExistentes = await ImportedInvoices.find({
-            _id: { $in: facturas }
-        }).populate('razonSocial');
+        // Verificar que las facturas existan y pertenezcan al mismo receptor (solo si hay facturas)
+        let facturasExistentes = [];
+        if (tieneFacturas) {
+            facturasExistentes = await ImportedInvoices.find({
+                _id: { $in: facturas }
+            }).populate('razonSocial');
 
-        if (facturasExistentes.length !== facturas.length) {
-            return res.status(400).json({
-                success: false,
-                message: 'Una o más facturas no existen.'
-            });
-        }
-
-        // Verificar que todas las facturas pertenezcan al mismo receptor
-        const rfcReceptor = facturasExistentes[0].rfcReceptor;
-        const facturasConReceptorDiferente = facturasExistentes.filter(
-            factura => factura.rfcReceptor !== rfcReceptor
-        );
-
-        if (facturasConReceptorDiferente.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Todas las facturas deben pertenecer al mismo receptor.'
-            });
-        }
-
-        // Verificar que no haya facturas duplicadas en el mismo paquete
-        const facturasDuplicadas = facturas.filter((facturaId, index) =>
-            facturas.indexOf(facturaId) !== index
-        );
-
-        if (facturasDuplicadas.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No se pueden agregar facturas duplicadas al mismo paquete.'
-            });
-        }
-
-        // Actualizar las facturas agregadas al paquete con el nuevo estado
-        await ImportedInvoices.updateMany(
-            { _id: { $in: facturas } },
-            {
-                $set: {
-                    autorizada: null, // Pendiente de autorización
-                    pagoRechazado: false, // No rechazado inicialmente
-                    estaRegistrada: true, // Marcar como registrada en paquete
-                    estadoPago: null, // Pendiente de autorización
-                    esCompleta: false, // No está completamente pagada hasta que se autorice
-                    registrado: 1, // Registrado
-                    fechaRevision: new Date()
-                }
+            if (facturasExistentes.length !== facturas.length) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Una o más facturas no existen.'
+                });
             }
-        );
+
+            // Verificar que todas las facturas pertenezcan al mismo receptor
+            const rfcReceptor = facturasExistentes[0].rfcReceptor;
+            const facturasConReceptorDiferente = facturasExistentes.filter(
+                factura => factura.rfcReceptor !== rfcReceptor
+            );
+
+            if (facturasConReceptorDiferente.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Todas las facturas deben pertenecer al mismo receptor.'
+                });
+            }
+
+            // Verificar que no haya facturas duplicadas en el mismo paquete
+            const facturasDuplicadas = facturas.filter((facturaId, index) =>
+                facturas.indexOf(facturaId) !== index
+            );
+
+            if (facturasDuplicadas.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No se pueden agregar facturas duplicadas al mismo paquete.'
+                });
+            }
+
+            // Actualizar las facturas agregadas al paquete con el nuevo estado
+            await ImportedInvoices.updateMany(
+                { _id: { $in: facturas } },
+                {
+                    $set: {
+                        autorizada: null, // Pendiente de autorización
+                        pagoRechazado: false, // No rechazado inicialmente
+                        estaRegistrada: true, // Marcar como registrada en paquete
+                        estadoPago: 0, // Pendiente de autorización
+                        esCompleta: false, // No está completamente pagada hasta que se autorice
+                        registrado: 1, // Registrado
+                        fechaRevision: new Date()
+                    }
+                }
+            );
+        }
 
         // Obtener el siguiente folio
         const siguienteFolio = await InvoicesPackage.obtenerSiguienteFolio();
@@ -119,44 +127,82 @@ export const createInvoicesPackage = async (req, res) => {
             }, {});
         }
 
-        // Preparar las facturas embebidas con todos sus datos
-        const facturasEmbebidas = facturasExistentes.map(factura => {
-            const facturaData = factura.toObject();
-            // Asegurar que el _id esté presente
-            facturaData._id = factura._id;
+        // Preparar las facturas embebidas con todos sus datos (solo si hay facturas)
+        let facturasEmbebidas = [];
+        if (tieneFacturas) {
+            facturasEmbebidas = facturasExistentes.map(factura => {
+                const facturaData = factura.toObject();
+                // Asegurar que el _id esté presente
+                facturaData._id = factura._id;
 
-            // FORZAR que autorizada sea null (pendiente) al crear el paquete
-            facturaData.autorizada = null;
-            facturaData.estadoPago = null;
-            facturaData.esCompleta = false;
-            facturaData.pagoRechazado = false;
-            facturaData.estaRegistrada = true;
-            facturaData.registrado = 1;
-            facturaData.fechaRevision = new Date();
+                // FORZAR que autorizada sea null (pendiente) al crear el paquete
+                facturaData.autorizada = null;
+                facturaData.estadoPago = 0;
+                facturaData.esCompleta = false;
+                facturaData.pagoRechazado = false;
+                facturaData.estaRegistrada = true;
+                facturaData.registrado = 1;
+                facturaData.fechaRevision = new Date();
 
-            // Asignar concepto de gasto si se proporciona para esta factura
-            if (conceptosGasto && conceptosGasto[factura._id.toString()]) {
-                const conceptoId = conceptosGasto[factura._id.toString()];
-                if (conceptosGastoMap[conceptoId]) {
-                    facturaData.conceptoGasto = conceptosGastoMap[conceptoId];
+                // Asignar concepto de gasto si se proporciona para esta factura
+                if (conceptosGasto && conceptosGasto[factura._id.toString()]) {
+                    const conceptoId = conceptosGasto[factura._id.toString()];
+                    if (conceptosGastoMap[conceptoId]) {
+                        facturaData.conceptoGasto = conceptosGastoMap[conceptoId];
+                    }
                 }
+
+                // Asegurar que razonSocial tenga la estructura correcta
+                if (facturaData.razonSocial && typeof facturaData.razonSocial === 'object' && facturaData.razonSocial._id) {
+                    facturaData.razonSocial = {
+                        _id: facturaData.razonSocial._id,
+                        name: facturaData.razonSocial.name || '',
+                        rfc: facturaData.razonSocial.rfc || ''
+                    };
+                }
+
+                return facturaData;
+            });
+        }
+
+        // Preparar los pagos en efectivo embebidos con todos sus datos
+        let pagosEfectivoEmbebidos = [];
+        if (Array.isArray(pagosEfectivo) && pagosEfectivo.length > 0) {
+            pagosEfectivoEmbebidos = [];
+            for (const pago of pagosEfectivo) {
+                // Si el pago ya existe (tiene _id), lo buscamos, si no, lo creamos
+                let pagoDoc;
+                if (pago._id) {
+                    pagoDoc = await CashPayment.findById(pago._id);
+                } else {
+                    pagoDoc = await CashPayment.create({
+                        importeAPagar: pago.importeAPagar,
+                        expenseConcept: pago.expenseConcept,
+                        description: pago.description,
+                        importePagado: pago.importeAPagar // Guardar como importeAPagar al crear
+                    });
+                }
+                if (!pagoDoc) continue;
+                // Embebe todos los campos relevantes (igual que una factura)
+                const pagoData = pagoDoc.toObject();
+                // Forzar campos de estado iniciales
+                pagoData.autorizada = null;
+                pagoData.estadoPago = 0;
+                pagoData.esCompleta = false;
+                pagoData.pagoRechazado = false;
+                pagoData.registrado = 0;
+                pagoData.pagado = 0;
+                pagoData.descripcionPago = '';
+                pagoData.fechaRevision = new Date();
+                pagoData.importePagado = pagoData.importeAPagar; // SIEMPRE igual al crear
+                pagosEfectivoEmbebidos.push(pagoData);
             }
+        }
 
-            // Asegurar que razonSocial tenga la estructura correcta
-            if (facturaData.razonSocial && typeof facturaData.razonSocial === 'object' && facturaData.razonSocial._id) {
-                facturaData.razonSocial = {
-                    _id: facturaData.razonSocial._id,
-                    name: facturaData.razonSocial.name || '',
-                    rfc: facturaData.razonSocial.rfc || ''
-                };
-            }
-
-            return facturaData;
-        });
-
-        // Crear el paquete con las facturas embebidas
+        // Crear el paquete con las facturas y pagos en efectivo embebidos
         const nuevoPaquete = new InvoicesPackage({
             facturas: facturasEmbebidas,
+            pagosEfectivo: pagosEfectivoEmbebidos,
             usuario_id: usuarioObjectId,
             departamento_id,
             departamento,
@@ -481,12 +527,12 @@ export const updateInvoicesPackage = async (req, res) => {
                         // Tanto para pagos completos como parciales, marcar como pendiente de autorización
                         if (factura.importePagado >= factura.importeAPagar) {
                             // Pago completo - pendiente de autorización
-                            datosAgregacion.estadoPago = null; // Pendiente de autorización
+                            datosAgregacion.estadoPago = 0; // Pendiente de autorización
                             datosAgregacion.autorizada = null; // Pendiente de autorización
                             datosAgregacion.esCompleta = false; // No está completamente pagada hasta que se autorice
                         } else if (factura.importePagado > 0) {
                             // Pago parcial - también pendiente de autorización (como los completos)
-                            datosAgregacion.estadoPago = null; // Pendiente de autorización
+                            datosAgregacion.estadoPago = 0; // Pendiente de autorización
                             datosAgregacion.autorizada = null; // Pendiente de autorización
                             datosAgregacion.esCompleta = false;
                         } else {
@@ -519,7 +565,7 @@ export const updateInvoicesPackage = async (req, res) => {
 
                         // FORZAR que autorizada sea null (pendiente) al agregar al paquete
                         facturaData.autorizada = null;
-                        facturaData.estadoPago = null;
+                        facturaData.estadoPago = 0;
                         facturaData.esCompleta = false;
                         facturaData.pagoRechazado = false;
                         facturaData.estaRegistrada = true;

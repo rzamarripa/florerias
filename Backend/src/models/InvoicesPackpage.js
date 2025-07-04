@@ -275,6 +275,43 @@ const InvoicesPackageSchema = new mongoose.Schema({
         }
     }],
 
+    // Arreglo de pagos en efectivo embebidos
+    pagosEfectivo: [{
+        // Referencia al pago original
+        _id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true
+        },
+        importeAPagar: { 
+            type: mongoose.Schema.Types.Decimal128, 
+            required: true,
+            get: function (value) {
+                return value ? parseFloat(value.toString()) : 0;
+            }
+        },
+        importePagado: { 
+            type: mongoose.Schema.Types.Decimal128, 
+            min: 0,
+            default: 0,
+            get: function (value) {
+                return value ? parseFloat(value.toString()) : 0;
+            }
+        },
+        expenseConcept: { type: mongoose.Schema.Types.ObjectId, ref: "cc_expense_concept", required: true },
+        description: { type: String },
+        createdAt: { type: Date, default: Date.now },
+
+        // Estados de autorización (igual que facturas)
+        autorizada: { type: Boolean, default: null }, // null = pendiente, true = autorizada, false = rechazada
+        pagoRechazado: { type: Boolean, default: false },
+        estadoPago: { type: Number, enum: [0, 1, 2, 3], default: 0 },
+        esCompleta: { type: Boolean, default: false },
+        registrado: { type: Number, enum: [0, 1], default: 0 },
+        pagado: { type: Number, enum: [0, 1], default: 0 },
+        descripcionPago: { type: String, trim: true, maxLength: 500 },
+        fechaRevision: { type: Date, default: null }
+    }],
+
     // Referencia a la relación con Company, Brand, Branch
     packageCompanyId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -409,6 +446,22 @@ const InvoicesPackageSchema = new mongoose.Schema({
                 });
             }
 
+            // Transformar campos Decimal128 de los pagos en efectivo embebidos
+            if (ret.pagosEfectivo && Array.isArray(ret.pagosEfectivo)) {
+                ret.pagosEfectivo = ret.pagosEfectivo.map(pago => {
+                    const pagoTransformed = { ...pago };
+
+                    if (pago.importeAPagar && typeof pago.importeAPagar.toString === 'function') {
+                        pagoTransformed.importeAPagar = parseFloat(pago.importeAPagar.toString());
+                    }
+                    if (pago.importePagado && typeof pago.importePagado.toString === 'function') {
+                        pagoTransformed.importePagado = parseFloat(pago.importePagado.toString());
+                    }
+
+                    return pagoTransformed;
+                });
+            }
+
             return ret;
         }
     }
@@ -453,27 +506,44 @@ InvoicesPackageSchema.virtual('diasParaVencimiento').get(function () {
 // Métodos de instancia actualizados para trabajar con datos embebidos
 InvoicesPackageSchema.methods.actualizarTotales = async function () {
     // NUEVA LÓGICA: 
-    // - totalImporteAPagar: solo facturas autorizadas (para guardar en BD)
-    // - totalPagado: solo facturas autorizadas
+    // - totalImporteAPagar: suma de facturas autorizadas + pagos en efectivo autorizados
+    // - totalPagado: suma de facturas autorizadas + pagos en efectivo autorizados
     const facturasAutorizadas = this.facturas.filter(factura => factura.autorizada === true);
-    
-    // Calcular totalImporteAPagar usando solo facturas autorizadas (para guardar en BD)
-    this.totalImporteAPagar = facturasAutorizadas.reduce((sum, factura) => {
+    const pagosEfectivoAutorizados = Array.isArray(this.pagosEfectivo) ? this.pagosEfectivo.filter(pago => pago.autorizada === true) : [];
+
+    // Calcular totalImporteAPagar usando facturas y pagos en efectivo autorizados
+    const totalFacturas = facturasAutorizadas.reduce((sum, factura) => {
         const importe = typeof factura.importeAPagar === 'object' && factura.importeAPagar !== null && factura.importeAPagar._bsontype === 'Decimal128'
             ? parseFloat(factura.importeAPagar.toString())
             : factura.importeAPagar || 0;
         return sum + importe;
     }, 0);
+    const totalPagosEfectivo = pagosEfectivoAutorizados.reduce((sum, pago) => {
+        const importe = typeof pago.importeAPagar === 'object' && pago.importeAPagar !== null && pago.importeAPagar._bsontype === 'Decimal128'
+            ? parseFloat(pago.importeAPagar.toString())
+            : pago.importeAPagar || 0;
+        return sum + importe;
+    }, 0);
+    this.totalImporteAPagar = totalFacturas + totalPagosEfectivo;
 
-    // Calcular totalPagado usando solo facturas autorizadas
-    this.totalPagado = facturasAutorizadas.reduce((sum, factura) => {
+    // Calcular totalPagado usando facturas y pagos en efectivo autorizados
+    const totalPagadoFacturas = facturasAutorizadas.reduce((sum, factura) => {
         const importe = typeof factura.importePagado === 'object' && factura.importePagado !== null && factura.importePagado._bsontype === 'Decimal128'
             ? parseFloat(factura.importePagado.toString())
             : factura.importePagado || 0;
         return sum + importe;
     }, 0);
+    const totalPagadoEfectivo = pagosEfectivoAutorizados.reduce((sum, pago) => {
+        // Para pagos en efectivo, el pagado es el mismo que el importeAPagar si está autorizado
+        const pagado = typeof pago.importeAPagar === 'object' && pago.importeAPagar !== null && pago.importeAPagar._bsontype === 'Decimal128'
+            ? parseFloat(pago.importeAPagar.toString())
+            : pago.importeAPagar || 0;
+        return sum + pagado;
+    }, 0);
+    this.totalPagado = totalPagadoFacturas + totalPagadoEfectivo;
 
-    this.totalFacturas = this.facturas.length;
+    // Actualizar el total de elementos (facturas + pagos en efectivo)
+    this.totalFacturas = this.facturas.length + (Array.isArray(this.pagosEfectivo) ? this.pagosEfectivo.length : 0);
 
     return this.save();
 };
@@ -582,9 +652,12 @@ InvoicesPackageSchema.pre('save', function (next) {
         this.totalPagado = this.totalImporteAPagar;
     }
 
-    // Validar que haya al menos una factura
-    if (this.facturas.length === 0) {
-        return next(new Error('El paquete debe contener al menos una factura'));
+    // Validar que haya al menos una factura o un pago en efectivo
+    const tieneFacturas = this.facturas && this.facturas.length > 0;
+    const tienePagosEfectivo = this.pagosEfectivo && Array.isArray(this.pagosEfectivo) && this.pagosEfectivo.length > 0;
+    
+    if (!tieneFacturas && !tienePagosEfectivo) {
+        return next(new Error('El paquete debe contener al menos una factura o un pago en efectivo'));
     }
 
     // Validar que no haya facturas duplicadas por UUID o _id
