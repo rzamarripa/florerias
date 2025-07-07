@@ -64,6 +64,13 @@ export const categoryService = {
       return await categoryService.activate(id);
     }
   },
+
+  toggleHasRoutes: async (id: string, hasRoutes: boolean) => {
+    return await apiCall<Category[]>(`/categories/${id}/hasRoutes`, {
+      method: "PATCH",
+      body: JSON.stringify({ hasRoutes }),
+    });
+  },
 };
 
 export const {
@@ -74,4 +81,5 @@ export const {
   activate: activateCategory,
   delete: deleteCategory,
   toggleStatus: toggleCategoryStatus,
+  toggleHasRoutes: toggleCategoryHasRoutes,
 } = categoryService;

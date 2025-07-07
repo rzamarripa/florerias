@@ -14,10 +14,12 @@ interface CategoryLegacy {
   createdAt: string;
   updatedAt: string;
   description?: string;
+  hasRoutes?: boolean;
 }
 
 interface ExtendedCategoryFormData extends CategoryFormData {
   status?: boolean;
+  hasRoutes?: boolean;
 }
 
 interface CategoryModalProps {
@@ -52,6 +54,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     defaultValues: {
       name: "",
       description: "",
+      hasRoutes: false,
     },
     mode: "onChange",
   });
@@ -61,10 +64,12 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
       if (isEditing && editingCategoria) {
         setValue("name", editingCategoria.nombre);
         setValue("description", editingCategoria.description || "");
+        setValue("hasRoutes", editingCategoria.hasRoutes || false);
       } else {
         reset({
           name: "",
           description: "",
+          hasRoutes: false,
         });
       }
     }
@@ -84,6 +89,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
       const categoryData: CategoryFormData = {
         name: data.name.trim(),
         description: data.description?.trim() || undefined,
+        hasRoutes: data.hasRoutes || false,
       };
 
       let response;
@@ -202,6 +208,37 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
               </Form.Control.Feedback>
               <Form.Text className="text-muted">
                 Máximo 200 caracteres
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Check
+                type="checkbox"
+                id="hasRoutes"
+                label="Tiene rutas asociadas"
+                className="d-flex align-items-center"
+              >
+                <Controller
+                  name="hasRoutes"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Check.Input
+                      type="checkbox"
+                      checked={field.value || false}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      isInvalid={!!errors.hasRoutes}
+                    />
+                  )}
+                />
+                <Form.Check.Label className="ms-2">
+                  Tiene rutas asociadas
+                </Form.Check.Label>
+              </Form.Check>
+              <Form.Control.Feedback type="invalid">
+                {errors.hasRoutes?.message}
+              </Form.Control.Feedback>
+              <Form.Text className="text-muted">
+                Marca esta opción si la categoría tiene rutas o páginas asociadas
               </Form.Text>
             </Form.Group>
           </Modal.Body>

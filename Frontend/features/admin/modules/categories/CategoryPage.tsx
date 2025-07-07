@@ -112,6 +112,7 @@ const CategoriesPage: React.FC = () => {
     _id: cat._id,
     nombre: cat.name,
     status: cat.isActive,
+    hasRoutes: cat.hasRoutes,
     createdAt: cat.createdAt,
     updatedAt: cat.updatedAt || cat.createdAt,
     description: cat.description,
@@ -214,6 +215,7 @@ const CategoriesPage: React.FC = () => {
                         <th>Nombre</th>
                         <th>Descripción</th>
                         <th className="text-center">Estatus</th>
+                        <th className="text-center">Rutas</th>
                         <th className="text-center text-nowrap">Fecha creación</th>
                         <th className="text-center">Acciones</th>
                       </tr>
@@ -240,6 +242,16 @@ const CategoriesPage: React.FC = () => {
                                 }`}
                             >
                               {category.status ? "Activo" : "Inactivo"}
+                            </span>
+                          </td>
+                          <td className="text-center">
+                            <span
+                              className={`badge fs-6 ${category.hasRoutes
+                                ? "bg-primary bg-opacity-10 text-primary"
+                                : "bg-secondary bg-opacity-10 text-secondary"
+                                }`}
+                            >
+                              {category.hasRoutes ? "Sí" : "No"}
                             </span>
                           </td>
                           <td className="text-center">

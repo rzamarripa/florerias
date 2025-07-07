@@ -3,6 +3,7 @@ export interface Category {
   name: string;
   description?: string;
   isActive: boolean;
+  hasRoutes: boolean;
   createdAt: string;
   updatedAt?: string;
 }
@@ -10,6 +11,7 @@ export interface Category {
 export interface CategoryFormData {
   name: string;
   description?: string;
+  hasRoutes?: boolean;
 }
 export interface PaginationInfo {
   page: number;
@@ -38,6 +40,7 @@ export interface CategoryLegacy {
   _id: string;
   nombre: string;
   status: boolean;
+  hasRoutes: boolean;
   createdAt: string;
   updatedAt: string;
   description?: string;
@@ -58,6 +61,7 @@ export const mapCategoryToLegacy = (category: Category): CategoryLegacy => ({
   _id: category._id,
   nombre: category.name,
   status: category.isActive,
+  hasRoutes: category.hasRoutes,
   createdAt: category.createdAt,
   updatedAt: category.updatedAt || category.createdAt,
   description: category.description,

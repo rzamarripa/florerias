@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 
 export const categorySchema = z.object({
@@ -12,6 +11,7 @@ export const categorySchema = z.object({
     .string()
     .max(200, "La descripción no puede exceder 200 caracteres")
     .optional(),
+  hasRoutes: z.boolean().optional(),
 });
 
 export const categoryLegacySchema = z.object({

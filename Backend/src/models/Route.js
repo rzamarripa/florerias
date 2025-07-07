@@ -12,6 +12,11 @@ const routeSchema = new Schema({
     ref: "cc_brand",
     required: true,
   },
+  companyId: {
+    type: Schema.Types.ObjectId,
+    ref: "cc_companies",
+    required: true,
+  },
   branchId: {
     type: Schema.Types.ObjectId,
     ref: "cc_branch",
@@ -32,7 +37,7 @@ const routeSchema = new Schema({
   },
 });
 
-routeSchema.index({ name: 1, brandId: 1, branchId: 1 }, { unique: true });
+routeSchema.index({ name: 1, brandId: 1, companyId: 1, branchId: 1 }, { unique: true });
 
 routeSchema.statics.seedIfEmpty = async function () {
   const count = await this.countDocuments();
@@ -51,6 +56,7 @@ routeSchema.statics.seedIfEmpty = async function () {
         seedData.push({
           name: `Route ${index + 1}`,
           brandId: relation.brandId._id,
+          companyId: relation.branchId.companyId,
           branchId: relation.branchId._id,
           description: `Route for ${relation.brandId.name} at ${relation.branchId.name}`,
           status: true,
@@ -65,11 +71,15 @@ routeSchema.statics.seedIfEmpty = async function () {
 };
 
 routeSchema.statics.getRoutesByBranch = async function (branchId) {
-  return this.find({ branchId }).populate("brandId");
+  return this.find({ branchId }).populate("brandId").populate("companyId");
 };
 
 routeSchema.statics.getRoutesByBrand = async function (brandId) {
-  return this.find({ brandId }).populate("branchId");
+  return this.find({ brandId }).populate("branchId").populate("companyId");
+};
+
+routeSchema.statics.getRoutesByCompany = async function (companyId) {
+  return this.find({ companyId }).populate("brandId").populate("branchId");
 };
 
 const Route = mongoose.model("cc_route", routeSchema);

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Branch } from "../models/Branch.js";
 import { RsBranchBrand } from "../models/BranchBrands.js";
 import { Budget } from "../models/Budget.js";
@@ -15,6 +16,7 @@ export const getBudgetTreeData = async (req, res) => {
       .populate("municipalityId");
     const routes = await Route.find({ status: true })
       .populate("brandId")
+      .populate("companyId")
       .populate("branchId");
 
     const companyBrandRelations = await RsCompanyBrand.find()
@@ -72,20 +74,6 @@ export const getBudgetTreeData = async (req, res) => {
           );
 
           companyBranches.forEach((branch) => {
-            treeNodes.push({
-              id: `branch_${branch._id}`,
-              text: branch.name,
-              parent: `company_${company._id}`,
-              type: "branch",
-              hasRoutes: category.hasRoutes,
-              state: { opened: false },
-              data: {
-                categoryId: category._id.toString(),
-                companyId: company._id.toString(),
-                branchId: branch._id.toString(),
-              },
-            });
-
             const branchBrands = branchBrandRelations
               .filter(
                 (rel) => rel.branchId?._id.toString() === branch._id.toString()
@@ -98,9 +86,24 @@ export const getBudgetTreeData = async (req, res) => {
 
             branchBrands.forEach((brand) => {
               treeNodes.push({
-                id: `brand_${brand._id}`,
+                id: `branch_${branch._id}_${company._id}_${brand._id}`,
+                text: branch.name,
+                parent: `company_${company._id}`,
+                type: "branch",
+                hasRoutes: category.hasRoutes,
+                state: { opened: false },
+                data: {
+                  categoryId: category._id.toString(),
+                  companyId: company._id.toString(),
+                  branchId: branch._id.toString(),
+                  brandId: brand._id.toString(),
+                },
+              });
+
+              treeNodes.push({
+                id: `brand_${brand._id}_${company._id}_${branch._id}`,
                 text: brand.name,
-                parent: `branch_${branch._id}`,
+                parent: `branch_${branch._id}_${company._id}_${brand._id}`,
                 type: "brand",
                 hasRoutes: category.hasRoutes,
                 state: { opened: false },
@@ -115,14 +118,15 @@ export const getBudgetTreeData = async (req, res) => {
               const brandRoutes = routes.filter(
                 (route) =>
                   route.brandId?._id.toString() === brand._id.toString() &&
+                  route.companyId?._id.toString() === company._id.toString() &&
                   route.branchId?._id.toString() === branch._id.toString()
               );
 
               brandRoutes.forEach((route) => {
                 treeNodes.push({
-                  id: `route_${route._id}`,
+                  id: `route_${route._id}_${company._id}_${brand._id}_${branch._id}`,
                   text: route.name,
-                  parent: `brand_${brand._id}`,
+                  parent: `brand_${brand._id}_${company._id}_${branch._id}`,
                   type: "route",
                   hasRoutes: category.hasRoutes,
                   state: { opened: false },
@@ -148,7 +152,7 @@ export const getBudgetTreeData = async (req, res) => {
 
           companyBrands.forEach((brand) => {
             treeNodes.push({
-              id: `brand_${brand._id}`,
+              id: `brand_${brand._id}_${company._id}`,
               text: brand.name,
               parent: `company_${company._id}`,
               type: "brand",
@@ -173,9 +177,9 @@ export const getBudgetTreeData = async (req, res) => {
 
             brandBranches.forEach((branch) => {
               treeNodes.push({
-                id: `branch_${branch._id}`,
+                id: `branch_${branch._id}_${company._id}_${brand._id}`,
                 text: branch.name,
-                parent: `brand_${brand._id}`,
+                parent: `brand_${brand._id}_${company._id}`,
                 type: "branch",
                 hasRoutes: category.hasRoutes,
                 state: { opened: false },
@@ -191,6 +195,8 @@ export const getBudgetTreeData = async (req, res) => {
         }
       });
     });
+
+    
 
     res.json({
       success: true,
@@ -210,6 +216,7 @@ export const getBudgetTreeData = async (req, res) => {
 export const getBudgetsByMonth = async (req, res) => {
   try {
     const { month } = req.params;
+    const { companyId, categoryId, branchId, routeId, brandId } = req.query;
 
     if (!/^\d{4}-\d{2}$/.test(month)) {
       return res.status(400).json({
@@ -218,12 +225,54 @@ export const getBudgetsByMonth = async (req, res) => {
       });
     }
 
-    const budgets = await Budget.getBudgetsByMonth(month);
+    // Si se proveen filtros adicionales, aplicar lógica avanzada
+    if (companyId && categoryId && brandId) {
+      const Category = mongoose.model("cc_category");
+      const category = await Category.findById(categoryId);
+      if (!category) {
+        return res.status(400).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+      const filter = {
+        companyId,
+        categoryId,
+        brandId,
+        month,
+      };
+      if (category.hasRoutes) {
+        if (!routeId) {
+          return res.status(400).json({
+            success: false,
+            message: "routeId is required for categories with routes",
+          });
+        }
+        filter.routeId = routeId;
+      } else {
+        if (!branchId) {
+          return res.status(400).json({
+            success: false,
+            message: "branchId is required for categories without routes",
+          });
+        }
+        filter.branchId = branchId;
+      }
+      console.log("[getBudgetsByMonth] Filtros recibidos:", filter);
+      const budgets = await Budget.getBudgetByFilters(filter);
+      console.log("[getBudgetsByMonth] Presupuestos devueltos:", budgets.map(b => b._id));
+      return res.json({
+        success: true,
+        data: budgets,
+        message: "Budgets retrieved successfully",
+      });
+    }
 
-    res.json({
+    // Si no se pasan todos los filtros, NO devolver presupuestos
+    return res.json({
       success: true,
-      data: budgets,
-      message: "Budgets retrieved successfully",
+      data: [],
+      message: "Filtros insuficientes para obtener presupuesto específico",
     });
   } catch (error) {
     console.error("Error getting budgets by month:", error);
@@ -238,7 +287,7 @@ export const getBudgetsByMonth = async (req, res) => {
 export const getBudgetsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const { month } = req.query;
+    const { month, companyId, branchId, routeId, brandId } = req.query;
 
     if (month && !/^\d{4}-\d{2}$/.test(month)) {
       return res.status(400).json({
@@ -247,12 +296,54 @@ export const getBudgetsByCategory = async (req, res) => {
       });
     }
 
-    const budgets = await Budget.getBudgetsByCategory(categoryId, month);
+    // Si se proveen filtros adicionales, aplicar lógica avanzada
+    if (companyId && brandId) {
+      const Category = mongoose.model("cc_category");
+      const category = await Category.findById(categoryId);
+      if (!category) {
+        return res.status(400).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+      const filter = {
+        companyId,
+        categoryId,
+        brandId,
+      };
+      if (month) filter.month = month;
+      if (category.hasRoutes) {
+        if (!routeId) {
+          return res.status(400).json({
+            success: false,
+            message: "routeId is required for categories with routes",
+          });
+        }
+        filter.routeId = routeId;
+      } else {
+        if (!branchId) {
+          return res.status(400).json({
+            success: false,
+            message: "branchId is required for categories without routes",
+          });
+        }
+        filter.branchId = branchId;
+      }
+      console.log("[getBudgetsByCategory] Filtros recibidos:", filter);
+      const budgets = await Budget.getBudgetByFilters(filter);
+      console.log("[getBudgetsByCategory] Presupuestos devueltos:", budgets.map(b => b._id));
+      return res.json({
+        success: true,
+        data: budgets,
+        message: "Budgets retrieved successfully",
+      });
+    }
 
-    res.json({
+    // Si no se pasan todos los filtros, NO devolver presupuestos
+    return res.json({
       success: true,
-      data: budgets,
-      message: "Budgets retrieved successfully",
+      data: [],
+      message: "Filtros insuficientes para obtener presupuesto específico",
     });
   } catch (error) {
     console.error("Error getting budgets by category:", error);
@@ -282,16 +373,52 @@ export const createBudget = async (req, res) => {
       });
     }
 
-    const existingBudget = await Budget.findOne({
-      routeId: budgetData.routeId || null,
+    // Validar la lógica de negocio antes de crear/actualizar
+    try {
+      await Budget.validateBudgetData(budgetData);
+    } catch (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError.message,
+      });
+    }
+
+    // Obtener la categoría para determinar la lógica de negocio
+    const Category = mongoose.model("cc_category");
+    const category = await Category.findById(budgetData.categoryId);
+    
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    // Construir el filtro de búsqueda basado en la lógica de negocio
+    // SIEMPRE incluir companyId para evitar duplicados en múltiples razones sociales
+    const searchFilter = {
       brandId: budgetData.brandId,
-      companyId: budgetData.companyId,
-      branchId: budgetData.branchId,
+      companyId: budgetData.companyId, // CRÍTICO: siempre incluir companyId específico
       categoryId: budgetData.categoryId,
       month: budgetData.month,
-    });
+    };
+
+    // Agregar routeId o branchId según la lógica de la categoría
+    if (category.hasRoutes) {
+      searchFilter.routeId = budgetData.routeId;
+      // Para categorías con rutas, NO incluimos branchId en el filtro de búsqueda
+      // porque branchId se obtiene automáticamente de la ruta
+    } else {
+      searchFilter.branchId = budgetData.branchId;
+      // Para categorías sin rutas, NO incluimos routeId en el filtro de búsqueda
+      // porque routeId debe ser null
+    }
+
+    console.log("Searching for existing budget with filter:", JSON.stringify(searchFilter, null, 2));
+    const existingBudget = await Budget.findOne(searchFilter);
 
     if (existingBudget) {
+      console.log("Found existing budget:", existingBudget._id);
       existingBudget.assignedAmount = budgetData.assignedAmount;
       await existingBudget.save();
 
@@ -309,8 +436,47 @@ export const createBudget = async (req, res) => {
       });
     }
 
-    const newBudget = new Budget(budgetData);
+    // Preparar los datos para el nuevo presupuesto
+    // MANTENER SIEMPRE el companyId específico para evitar duplicados
+    const newBudgetData = {
+      brandId: budgetData.brandId,
+      companyId: budgetData.companyId, // CRÍTICO: mantener companyId específico
+      categoryId: budgetData.categoryId,
+      assignedAmount: budgetData.assignedAmount,
+      month: budgetData.month,
+    };
+
+    // Asignar routeId o branchId según la lógica de negocio
+    if (category.hasRoutes) {
+      newBudgetData.routeId = budgetData.routeId;
+      // Para categorías con rutas, branchId se obtiene automáticamente de la ruta
+      if (budgetData.routeId) {
+        const Route = mongoose.model("cc_route");
+        const route = await Route.findById(budgetData.routeId);
+        if (route && route.branchId) {
+          newBudgetData.branchId = route.branchId;
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: "Route not found or route does not have a branch assigned",
+          });
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "RouteId is required for categories with routes",
+        });
+      }
+    } else {
+      newBudgetData.branchId = budgetData.branchId;
+      // Para categorías sin rutas, routeId debe ser null
+      newBudgetData.routeId = null;
+    }
+
+    console.log("Creating new budget with data:", JSON.stringify(newBudgetData, null, 2));
+    const newBudget = new Budget(newBudgetData);
     await newBudget.save();
+    console.log("New budget created with ID:", newBudget._id);
 
     const populatedBudget = await Budget.findById(newBudget._id)
       .populate("routeId")
@@ -354,6 +520,35 @@ export const updateBudget = async (req, res) => {
         success: false,
         message: "Assigned amount must be greater than 0",
       });
+    }
+
+    // Obtener el presupuesto actual para validar la lógica de negocio
+    const currentBudget = await Budget.findById(id);
+    if (!currentBudget) {
+      return res.status(404).json({
+        success: false,
+        message: "Budget not found",
+      });
+    }
+
+    // Si se está actualizando categoryId, routeId o branchId, validar la lógica de negocio
+    if (updateData.categoryId || updateData.routeId !== undefined || updateData.branchId !== undefined) {
+      const validationData = {
+        categoryId: updateData.categoryId || currentBudget.categoryId,
+        routeId: updateData.routeId !== undefined ? updateData.routeId : currentBudget.routeId,
+        brandId: updateData.brandId || currentBudget.brandId,
+        companyId: updateData.companyId || currentBudget.companyId,
+        branchId: updateData.branchId !== undefined ? updateData.branchId : currentBudget.branchId,
+      };
+
+      try {
+        await Budget.validateBudgetData(validationData);
+      } catch (validationError) {
+        return res.status(400).json({
+          success: false,
+          message: validationError.message,
+        });
+      }
     }
 
     const budget = await Budget.findByIdAndUpdate(id, updateData, {

@@ -1,6 +1,15 @@
 import { apiCall, ApiResponse } from "@/utils/api";
 import { Budget, BudgetFormData, BudgetTreeNode } from "../types";
 
+interface BudgetFilters {
+  companyId?: string;
+  categoryId?: string;
+  branchId?: string;
+  routeId?: string;
+  brandId?: string;
+  month?: string;
+}
+
 class BudgetService {
   private baseUrl = "/budget";
 
@@ -16,9 +25,19 @@ class BudgetService {
     }
   }
 
-  async getBudgetsByMonth(month: string): Promise<ApiResponse<Budget[]>> {
+  async getBudgetsByMonth(month: string, filters?: BudgetFilters): Promise<ApiResponse<Budget[]>> {
     try {
-      return await apiCall<Budget[]>(`${this.baseUrl}/month/${month}`);
+      let url = `${this.baseUrl}/month/${month}`;
+      if (filters) {
+        const params = new URLSearchParams();
+        if (filters.companyId) params.append("companyId", filters.companyId);
+        if (filters.categoryId) params.append("categoryId", filters.categoryId);
+        if (filters.branchId) params.append("branchId", filters.branchId);
+        if (filters.routeId) params.append("routeId", filters.routeId);
+        if (filters.brandId) params.append("brandId", filters.brandId);
+        url += `?${params.toString()}`;
+      }
+      return await apiCall<Budget[]>(url);
     } catch (error: any) {
       return {
         success: false,
@@ -30,12 +49,19 @@ class BudgetService {
 
   async getBudgetsByCategory(
     categoryId: string,
-    month?: string
+    filters?: BudgetFilters
   ): Promise<ApiResponse<Budget[]>> {
     try {
-      const url = month
-        ? `${this.baseUrl}/category/${categoryId}?month=${month}`
-        : `${this.baseUrl}/category/${categoryId}`;
+      let url = `${this.baseUrl}/category/${categoryId}`;
+      if (filters) {
+        const params = new URLSearchParams();
+        if (filters.month) params.append("month", filters.month);
+        if (filters.companyId) params.append("companyId", filters.companyId);
+        if (filters.branchId) params.append("branchId", filters.branchId);
+        if (filters.routeId) params.append("routeId", filters.routeId);
+        if (filters.brandId) params.append("brandId", filters.brandId);
+        url += `?${params.toString()}`;
+      }
       return await apiCall<Budget[]>(url);
     } catch (error: any) {
       return {

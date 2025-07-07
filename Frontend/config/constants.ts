@@ -132,7 +132,7 @@ export const menuItems: MenuItemType[] = [
       {
         key: "asignarPresupuesto",
         label: "Asignar Presupuesto",
-        url: "/presupuestos/asignarPresupuesto",
+        url: "/presupuestos/asignar-presupuesto",
       },
       {
         key: "historialPresupuestos",

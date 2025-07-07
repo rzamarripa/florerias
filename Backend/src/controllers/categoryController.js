@@ -66,11 +66,12 @@ export const getAllCategories = async (req, res) => {
 
 export const createCategory = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, hasRoutes } = req.body;
 
     const newCategory = await Category.create({
       name,
       description,
+      hasRoutes: hasRoutes || false,
       isActive: true,
     });
 
@@ -93,11 +94,11 @@ export const createCategory = async (req, res) => {
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, hasRoutes } = req.body;
 
     const updatedCategory = await Category.findByIdAndUpdate(
       id,
-      { name, description },
+      { name, description, hasRoutes },
       { new: true }
     );
 
@@ -173,6 +174,33 @@ export const activeCategory = async (req, res) => {
       });
 
     res.json({ success: true, message: "Categoría activada con éxito" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const toggleHasRoutes = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { hasRoutes } = req.body;
+
+    const updatedCategory = await Category.findByIdAndUpdate(
+      id,
+      { hasRoutes },
+      { new: true }
+    );
+
+    if (!updatedCategory)
+      return res.status(404).json({
+        success: false,
+        message: "Categoría no encontrada",
+      });
+
+    res.json({
+      success: true,
+      data: updatedCategory,
+      message: `Campo hasRoutes ${hasRoutes ? 'activado' : 'desactivado'} con éxito`,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -105,7 +105,15 @@ const BudgetTree: React.FC<BudgetTreeProps> = ({
 
   const getDisplayAmount = (node: TreeNodeWithChildren): number => {
     if (isEditableNode(node)) {
-      return pendingChanges[node.id] ?? budgetAmounts[node.id] ?? 0;
+      const amount = pendingChanges[node.id] ?? budgetAmounts[node.id] ?? 0;
+      // Log temporal para depuración
+      console.log(`[BudgetTree] Node ${node.id} (${node.type}):`, {
+        pendingAmount: pendingChanges[node.id],
+        budgetAmount: budgetAmounts[node.id],
+        finalAmount: amount,
+        nodeData: node.data
+      });
+      return amount;
     }
     return calculateParentTotal(node);
   };

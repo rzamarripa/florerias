@@ -80,25 +80,45 @@ const Budget: React.FC = () => {
   };
 
   const loadBudgetAmounts = async () => {
-    if (!selectedMonth) return;
+    if (!selectedMonth || treeData.length === 0) return;
 
     try {
-      const response = await budgetService.getBudgetsByMonth(selectedMonth);
+      const amounts: Record<string, number> = {};
+      // Filtrar solo nodos editables (branch o route)
+      const editableNodes = treeData.filter(
+        (node) =>
+          (node.type === "route") ||
+          (node.type === "branch" && !node.hasRoutes)
+      );
 
-      if (response.success && response.data) {
-        const amounts: Record<string, number> = {};
-
-        response.data.forEach((budget) => {
-          // Create keys for different node types based on budget assignment
-          if (budget.routeId) {
-            amounts[`route_${budget.routeId._id}`] = budget.assignedAmount;
-          } else {
-            amounts[`branch_${budget.branchId._id}`] = budget.assignedAmount;
-          }
-        });
-
-        setBudgetAmounts(amounts);
+      // Consultar el presupuesto para cada nodo editable
+      for (const node of editableNodes) {
+        const filters: any = {
+          companyId: node.data?.companyId,
+          categoryId: node.data?.categoryId,
+          brandId: node.data?.brandId,
+          month: selectedMonth,
+        };
+        if (node.type === "route") {
+          filters.routeId = node.data?.routeId;
+        } else if (node.type === "branch") {
+          filters.branchId = node.data?.branchId;
+        }
+        // El id ahora es único por branch/route+company+brand
+        const nodeKey = node.id;
+        // Llamar al backend para obtener el presupuesto de este nodo
+        const response = await budgetService.getBudgetsByMonth(selectedMonth, filters);
+        if (response.success && response.data && response.data.length > 0) {
+          const budget = response.data[0];
+          amounts[nodeKey] = budget.assignedAmount;
+        } else {
+          amounts[nodeKey] = 0;
+        }
       }
+      setBudgetAmounts(amounts);
+      // Log temporal para depuración
+      console.log('[Budget] budgetAmounts cargados:', amounts);
+      console.log('[Budget] nodos editables encontrados:', editableNodes.length);
     } catch (error: any) {
       console.error("Error loading budget amounts:", error);
     }
