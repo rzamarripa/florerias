@@ -24,6 +24,7 @@ import stateRoutes from "./stateRoutes.js";
 import userRoutes from "./userRoutes.js";
 import roleVisibilityRoutes from "./roleVisibilityRoutes.js";
 import cashPaymentRoutes from "./cashPaymentRoutes.js";
+import authorizationFolioRoutes from "./authorizationFolioRoutes.js";
 
 const router = Router();
 
@@ -51,5 +52,6 @@ router.use("/invoices-package-company", invoicesPackageCompanyRoutes);
 router.use("/log-import-bank-movements", logImportBankMovementsRoutes);
 router.use("/role-visibility", roleVisibilityRoutes);
 router.use("/cash-payments", cashPaymentRoutes);
+router.use("/authorization-folios", authorizationFolioRoutes);
 
 export default router;
