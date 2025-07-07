@@ -10,7 +10,11 @@ const categorySchema = new Schema({
   },
   description: {
     type: String,
-    required: true
+    required: true,
+  },
+  hasRoutes: {
+    type: Boolean,
+    default: false,
   },
   isActive: {
     type: Boolean,

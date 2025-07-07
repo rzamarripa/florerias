@@ -8,9 +8,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    // ... existing code ...
-  },
   webpack: (config) => {
     config.module.rules.push({
       test: /\.(css)$/,
