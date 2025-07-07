@@ -4,6 +4,8 @@ import bankAccountRoutes from "./bankAccountRoutes.js";
 import bankRoutes from "./bankRoutes.js";
 import branchRoutes from "./branchRoutes.js";
 import brandRoutes from "./brandRoutes.js";
+import budgetRoutes from "./budgetRoutes.js";
+import cashPaymentRoutes from "./cashPaymentRoutes.js";
 import categoryRoutes from "./categoryRoutes.js";
 import companyRoutes from "./companyRoutes.js";
 import countryRoutes from "./countryRoutes.js";
@@ -20,10 +22,9 @@ import municipalityRoutes from "./municipalityRoutes.js";
 import pageRoutes from "./pageRoutes.js";
 import providerRoutes from "./providerRoutes.js";
 import roleRoutes from "./roleRoutes.js";
+import roleVisibilityRoutes from "./roleVisibilityRoutes.js";
 import stateRoutes from "./stateRoutes.js";
 import userRoutes from "./userRoutes.js";
-import roleVisibilityRoutes from "./roleVisibilityRoutes.js";
-import cashPaymentRoutes from "./cashPaymentRoutes.js";
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.use("/modules", moduleRoutes);
 router.use("/companies", companyRoutes);
 router.use("/brands", brandRoutes);
 router.use("/branches", branchRoutes);
+router.use("/budget", budgetRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/countries", countryRoutes);
 router.use("/states", stateRoutes);
