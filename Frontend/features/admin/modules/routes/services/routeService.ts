@@ -1,6 +1,32 @@
 import { apiCall, ApiResponse } from "@/utils/api";
 import { Route, RouteFormData } from "../types";
 
+interface Category {
+  _id: string;
+  name: string;
+  hasRoutes: boolean;
+}
+
+interface Company {
+  _id: string;
+  name: string;
+  legalRepresentative: string;
+}
+
+interface Brand {
+  _id: string;
+  name: string;
+  description?: string;
+  categoryId: string;
+}
+
+interface Branch {
+  _id: string;
+  name: string;
+  address: string;
+  companyId: string;
+}
+
 class RouteService {
   private baseUrl = "/routes";
 
@@ -118,6 +144,76 @@ class RouteService {
       return {
         success: false,
         message: error.message || "Error fetching routes by company",
+        data: [],
+      };
+    }
+  }
+
+  // Nuevos métodos para selects en cascada (mismo patrón que budgetService)
+  async getCategories(): Promise<ApiResponse<Category[]>> {
+    try {
+      const response = await apiCall<Category[]>("/categories/all");
+      if (response.success) {
+        // Filtrar solo las categorías con hasRoutes === true
+        response.data = response.data.filter(category => category.hasRoutes);
+      }
+      return response;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || "Error fetching categories",
+        data: [],
+      };
+    }
+  }
+
+  async getCompaniesByCategory(
+    categoryId: string
+  ): Promise<ApiResponse<Company[]>> {
+    try {
+      return await apiCall<Company[]>(
+        `/budget/companies/category/${categoryId}`
+      );
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || "Error fetching companies by category",
+        data: [],
+      };
+    }
+  }
+
+  async getBrandsByCategoryAndCompany(
+    categoryId: string,
+    companyId: string
+  ): Promise<ApiResponse<Brand[]>> {
+    try {
+      return await apiCall<Brand[]>(
+        `/budget/brands/category/${categoryId}/company/${companyId}`
+      );
+    } catch (error: any) {
+      return {
+        success: false,
+        message:
+          error.message || "Error fetching brands by category and company",
+        data: [],
+      };
+    }
+  }
+
+  async getBranchesByCompanyAndBrand(
+    companyId: string,
+    brandId: string
+  ): Promise<ApiResponse<Branch[]>> {
+    try {
+      return await apiCall<Branch[]>(
+        `/budget/branches/company/${companyId}/brand/${brandId}`
+      );
+    } catch (error: any) {
+      return {
+        success: false,
+        message:
+          error.message || "Error fetching branches by company and brand",
         data: [],
       };
     }

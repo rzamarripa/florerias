@@ -1,4 +1,3 @@
-import { useUserSessionStore } from "@/stores/userSessionStore";
 import React, { useEffect, useState } from "react";
 import { Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -28,28 +27,41 @@ const RouteModal: React.FC<RouteModalProps> = ({
     branchId: "",
     status: true,
   });
+  
   const [categories, setCategories] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
-  const { user } = useUserSessionStore();
+  const [loading, setLoading] = useState(false);
 
-  const fetchVisibilitySelects = async () => {
-    if (!user?._id) return;
-    const response = await routeService.getUserVisibilitySelects(user._id);
-    if (response.success && response.data) {
-      setCategories(response.data.categories || []);
-      setCompanies(response.data.companies || []);
-      setBrands(response.data.brands || []);
-      setBranches(response.data.branches || []);
+  // Cargar categorías al abrir el modal
+  useEffect(() => {
+    if (show) {
+      loadCategories();
     }
-  };
+  }, [show]);
+
+  // Cargar datos en cascada
+  useEffect(() => {
+    if (formData.categoryId) {
+      loadCompanies();
+      resetSelections(["company", "brand", "branch"]);
+    }
+  }, [formData.categoryId]);
 
   useEffect(() => {
-    if (show && user?._id) {
-      fetchVisibilitySelects();
+    if (formData.categoryId && formData.companyId) {
+      loadBrands();
+      resetSelections(["brand", "branch"]);
     }
-  }, [show, user]);
+  }, [formData.categoryId, formData.companyId]);
+
+  useEffect(() => {
+    if (formData.companyId && formData.brandId) {
+      loadBranches();
+      resetSelections(["branch"]);
+    }
+  }, [formData.companyId, formData.brandId]);
 
   useEffect(() => {
     if (editingRoute) {
@@ -74,6 +86,101 @@ const RouteModal: React.FC<RouteModalProps> = ({
       });
     }
   }, [editingRoute, show]);
+
+  const resetSelections = (selections: string[]) => {
+    const newFormData = { ...formData };
+    
+    if (selections.includes("company")) {
+      newFormData.companyId = "";
+      setCompanies([]);
+    }
+    if (selections.includes("brand")) {
+      newFormData.brandId = "";
+      setBrands([]);
+    }
+    if (selections.includes("branch")) {
+      newFormData.branchId = "";
+      setBranches([]);
+    }
+    
+    setFormData(newFormData);
+  };
+
+  const loadCategories = async () => {
+    try {
+      setLoading(true);
+      const response = await routeService.getCategories();
+      if (response.success) {
+        setCategories(response.data || []);
+      } else {
+        toast.error(response.message || "Error al cargar unidades de negocio");
+      }
+    } catch {
+      toast.error("Error al cargar unidades de negocio");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCompanies = async () => {
+    if (!formData.categoryId) return;
+
+    try {
+      setLoading(true);
+      const response = await routeService.getCompaniesByCategory(formData.categoryId);
+      if (response.success) {
+        setCompanies(response.data || []);
+      } else {
+        toast.error(response.message || "Error al cargar razones sociales");
+      }
+    } catch {
+      toast.error("Error al cargar razones sociales");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadBrands = async () => {
+    if (!formData.categoryId || !formData.companyId) return;
+
+    try {
+      setLoading(true);
+      const response = await routeService.getBrandsByCategoryAndCompany(
+        formData.categoryId,
+        formData.companyId
+      );
+      if (response.success) {
+        setBrands(response.data || []);
+      } else {
+        toast.error(response.message || "Error al cargar marcas");
+      }
+    } catch {
+      toast.error("Error al cargar marcas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadBranches = async () => {
+    if (!formData.companyId || !formData.brandId) return;
+
+    try {
+      setLoading(true);
+      const response = await routeService.getBranchesByCompanyAndBrand(
+        formData.companyId,
+        formData.brandId
+      );
+      if (response.success) {
+        setBranches(response.data || []);
+      } else {
+        toast.error(response.message || "Error al cargar sucursales");
+      }
+    } catch {
+      toast.error("Error al cargar sucursales");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,20 +230,6 @@ const RouteModal: React.FC<RouteModalProps> = ({
     onHide();
   };
 
-  // Filtrar razones sociales basadas en las categorías seleccionadas (si se requiere alguna lógica específica)
-  const filteredCompanies = companies;
-  
-  // Filtrar marcas por razón social
-  const filteredBrands = brands.filter(
-    (b) => b.companyId === formData.companyId
-  );
-  
-  // Filtrar sucursales por marca Y razón social
-  const filteredBranches = branches.filter(
-    (br) =>
-      br.brandId === formData.brandId && br.companyId === formData.companyId
-  );
-
   return (
     <Modal show={show} onHide={handleCancel} size="lg" centered>
       <Modal.Header closeButton>
@@ -181,12 +274,10 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     setFormData({
                       ...formData,
                       categoryId: e.target.value,
-                      companyId: "",
-                      brandId: "",
-                      branchId: "",
                     });
                   }}
                   required
+                  disabled={loading}
                 >
                   <option value="">Selecciona una opción…</option>
                   {categories.map((c) => (
@@ -206,15 +297,13 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     setFormData({
                       ...formData,
                       companyId: e.target.value,
-                      brandId: "",
-                      branchId: "",
                     });
                   }}
                   required
-                  disabled={!formData.categoryId}
+                  disabled={loading || !formData.categoryId}
                 >
                   <option value="">Selecciona una opción…</option>
-                  {filteredCompanies.map((c) => (
+                  {companies.map((c) => (
                     <option key={c._id} value={c._id}>
                       {c.name}
                     </option>
@@ -233,14 +322,13 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     setFormData({
                       ...formData,
                       brandId: e.target.value,
-                      branchId: "",
                     });
                   }}
                   required
-                  disabled={!formData.companyId}
+                  disabled={loading || !formData.companyId}
                 >
                   <option value="">Selecciona una opción…</option>
-                  {filteredBrands.map((b) => (
+                  {brands.map((b) => (
                     <option key={b._id} value={b._id}>
                       {b.name}
                     </option>
@@ -257,10 +345,10 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     setFormData({ ...formData, branchId: e.target.value });
                   }}
                   required
-                  disabled={!formData.brandId}
+                  disabled={loading || !formData.brandId}
                 >
                   <option value="">Selecciona una opción…</option>
-                  {filteredBranches.map((b) => (
+                  {branches.map((b) => (
                     <option key={b._id} value={b._id}>
                       {b.name}
                     </option>
@@ -270,7 +358,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
             </Col>
           </Row>
           <div className="d-flex gap-2">
-            <Button type="submit" variant="primary" disabled={isSubmitting}>
+            <Button type="submit" variant="primary" disabled={isSubmitting || loading}>
               {isSubmitting ? (
                 <>
                   <Spinner animation="border" size="sm" className="me-2" />
