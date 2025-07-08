@@ -61,9 +61,9 @@ budgetSchema.index(
     categoryId: 1,
     month: 1,
   },
-  { 
+  {
     unique: true,
-    partialFilterExpression: { routeId: { $exists: true, $ne: null } }
+    partialFilterExpression: { routeId: { $exists: true, $ne: null } },
   }
 );
 
@@ -76,52 +76,121 @@ budgetSchema.index(
     categoryId: 1,
     month: 1,
   },
-  { 
+  {
     unique: true,
-    partialFilterExpression: { routeId: null }
+    partialFilterExpression: { routeId: null },
   }
 );
 
 budgetSchema.pre("save", async function (next) {
   this.updatedAt = new Date();
-  
-  // Validación condicional del routeId basada en hasRoutes de la categoría
-  if (this.categoryId) {
-    const Category = mongoose.model("cc_category");
-    const category = await Category.findById(this.categoryId);
-    
-    if (!category) {
-      return next(new Error("Category not found"));
-    }
-    
-    if (category.hasRoutes && !this.routeId) {
-      return next(new Error("RouteId is required when category hasRoutes is true"));
-    }
-    
-    if (!category.hasRoutes && this.routeId) {
-      return next(new Error("RouteId should not be provided when category hasRoutes is false"));
-    }
+
+  try {
+    // Usar la validación completa que ya tenemos
+    await this.constructor.validateBudgetData({
+      categoryId: this.categoryId,
+      companyId: this.companyId,
+      branchId: this.branchId,
+      brandId: this.brandId,
+      routeId: this.routeId,
+    });
+    next();
+  } catch (error) {
+    next(error);
   }
-  
-  next();
 });
 
 budgetSchema.statics.validateBudgetData = async function (budgetData) {
+  // Obtener modelos usando mongoose.model para evitar problemas de importación circular
   const Category = mongoose.model("cc_category");
+  const RsCompanyBrand = mongoose.model("rs_company_brand");
+  const RsBranchBrand = mongoose.model("rs_branch_brand");
+  const Route = mongoose.model("cc_route");
+  const Branch = mongoose.model("cc_branch");
+
+  // Validar que la categoría existe
   const category = await Category.findById(budgetData.categoryId);
-  
   if (!category) {
     throw new Error("Category not found");
   }
-  
-  if (category.hasRoutes && !budgetData.routeId) {
-    throw new Error("RouteId is required when category hasRoutes is true");
+
+  // Validar que la relación company-brand existe
+  const companyBrandRelation = await RsCompanyBrand.findOne({
+    companyId: budgetData.companyId,
+    brandId: budgetData.brandId,
+  }).populate({
+    path: "brandId",
+    populate: {
+      path: "categoryId",
+      model: "cc_category",
+    },
+  });
+
+  if (!companyBrandRelation) {
+    throw new Error("The brand is not associated with the specified company");
   }
-  
-  if (!category.hasRoutes && budgetData.routeId) {
-    throw new Error("RouteId should not be provided when category hasRoutes is false");
+
+  // Validar que la brand pertenece a la categoría correcta
+  if (
+    companyBrandRelation.brandId.categoryId._id.toString() !==
+    budgetData.categoryId.toString()
+  ) {
+    throw new Error("The brand does not belong to the specified category");
   }
-  
+
+  // Validar que la branch pertenece a la company
+  const branch = await Branch.findById(budgetData.branchId);
+  if (!branch) {
+    throw new Error("Branch not found");
+  }
+
+  if (branch.companyId.toString() !== budgetData.companyId.toString()) {
+    throw new Error("The branch does not belong to the specified company");
+  }
+
+  // Validar que existe la relación branch-brand
+  const branchBrandRelation = await RsBranchBrand.findOne({
+    branchId: budgetData.branchId,
+    brandId: budgetData.brandId,
+  });
+
+  if (!branchBrandRelation) {
+    throw new Error("The brand is not associated with the specified branch");
+  }
+
+  if (category.hasRoutes) {
+    if (!budgetData.routeId) {
+      throw new Error("RouteId is required when category hasRoutes is true");
+    }
+
+    // Validar que la route existe y tiene las relaciones correctas
+    const route = await Route.findById(budgetData.routeId);
+    if (!route) {
+      throw new Error("Route not found");
+    }
+
+    // Verificar que la route pertenece a la branch correcta
+    if (route.branchId.toString() !== budgetData.branchId.toString()) {
+      throw new Error("The route does not belong to the specified branch");
+    }
+
+    // Verificar que la route pertenece a la company correcta
+    if (route.companyId.toString() !== budgetData.companyId.toString()) {
+      throw new Error("The route does not belong to the specified company");
+    }
+
+    // Verificar que la route pertenece a la brand correcta
+    if (route.brandId.toString() !== budgetData.brandId.toString()) {
+      throw new Error("The route does not belong to the specified brand");
+    }
+  } else {
+    if (budgetData.routeId) {
+      throw new Error(
+        "RouteId should not be provided when category hasRoutes is false"
+      );
+    }
+  }
+
   return true;
 };
 

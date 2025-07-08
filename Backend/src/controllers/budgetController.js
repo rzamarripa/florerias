@@ -1,29 +1,14 @@
 import mongoose from "mongoose";
-import { Branch } from "../models/Branch.js";
 import { RsBranchBrand } from "../models/BranchBrands.js";
 import { Budget } from "../models/Budget.js";
-import { Category } from "../models/Category.js";
 import { RsCompanyBrand } from "../models/CompanyBrands.js";
 import { Route } from "../models/Route.js";
 
-export const getBudgetTreeData = async (req, res) => {
+// Obtener companies que tienen marcas en una categoría específica
+export const getCompaniesByCategory = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true });
-    const branches = await Branch.find({ isActive: true })
-      .populate("companyId")
-      .populate("countryId")
-      .populate("stateId")
-      .populate("municipalityId");
-    const routes = await Route.find({ status: true })
-      .populate({
-        path: "brandId",
-        populate: {
-          path: "categoryId",
-          model: "cc_category",
-        },
-      })
-      .populate("companyId")
-      .populate("branchId");
+    const { categoryId } = req.params;
+
     const companyBrandRelations = await RsCompanyBrand.find()
       .populate("companyId")
       .populate({
@@ -33,199 +18,128 @@ export const getBudgetTreeData = async (req, res) => {
           model: "cc_category",
         },
       });
-    const branchBrandRelations = await RsBranchBrand.find()
-      .populate("branchId")
-      .populate({
-        path: "brandId",
-        populate: {
-          path: "categoryId",
-          model: "cc_category",
-        },
-      });
-    const treeNodes = [];
-    categories.forEach((category) => {
-      treeNodes.push({
-        id: `category_${category._id}`,
-        text: category.name,
-        parent: "#",
-        type: "category",
-        hasRoutes: category.hasRoutes,
-        state: { opened: true },
-        data: { categoryId: category._id.toString() },
-      });
-      const categoryCompanies = companyBrandRelations
-        .filter((rel) => {
-          const hasValidBrand = rel.brandId && rel.brandId.categoryId;
-          const matchesCategory =
-            hasValidBrand &&
-            rel.brandId.categoryId._id.toString() === category._id.toString();
-          return matchesCategory;
-        })
-        .map((rel) => rel.companyId)
-        .filter(
-          (company, index, self) =>
-            company &&
-            self.findIndex(
-              (c) => c._id.toString() === company._id.toString()
-            ) === index
-        );
-      categoryCompanies.forEach((company) => {
-        treeNodes.push({
-          id: `company_${company._id}`,
-          text: company.name,
-          parent: `category_${category._id}`,
-          type: "company",
-          hasRoutes: category.hasRoutes,
-          state: { opened: false },
-          data: {
-            categoryId: category._id.toString(),
-            companyId: company._id.toString(),
-          },
-        });
-        if (category.hasRoutes) {
-          const companyBranches = branches.filter(
-            (branch) =>
-              branch.companyId?._id.toString() === company._id.toString()
-          );
-          companyBranches.forEach((branch) => {
-            treeNodes.push({
-              id: `branch_${branch._id}_${company._id}`,
-              text: branch.name,
-              parent: `company_${company._id}`,
-              type: "branch",
-              hasRoutes: category.hasRoutes,
-              state: { opened: false },
-              data: {
-                categoryId: category._id.toString(),
-                companyId: company._id.toString(),
-                branchId: branch._id.toString(),
-              },
-            });
-            const branchBrands = branchBrandRelations
-              .filter((rel) => {
-                const matchesBranch =
-                  rel.branchId?._id.toString() === branch._id.toString();
-                const hasValidBrand = rel.brandId && rel.brandId.categoryId;
-                const matchesCategory =
-                  hasValidBrand &&
-                  rel.brandId.categoryId._id.toString() ===
-                    category._id.toString();
-                return matchesBranch && matchesCategory;
-              })
-              .map((rel) => rel.brandId);
-            branchBrands.forEach((brand) => {
-              treeNodes.push({
-                id: `brand_${brand._id}_${company._id}_${branch._id}`,
-                text: brand.name,
-                parent: `branch_${branch._id}_${company._id}`,
-                type: "brand",
-                hasRoutes: category.hasRoutes,
-                state: { opened: false },
-                data: {
-                  categoryId: category._id.toString(),
-                  companyId: company._id.toString(),
-                  branchId: branch._id.toString(),
-                  brandId: brand._id.toString(),
-                },
-              });
-              const brandRoutes = routes.filter((route) => {
-                const matchesBrand =
-                  route.brandId?._id.toString() === brand._id.toString();
-                const matchesCompany =
-                  route.companyId?._id.toString() === company._id.toString();
-                const matchesBranch =
-                  route.branchId?._id.toString() === branch._id.toString();
-                return matchesBrand && matchesCompany && matchesBranch;
-              });
-              brandRoutes.forEach((route) => {
-                treeNodes.push({
-                  id: `route_${route._id}_${company._id}_${brand._id}_${branch._id}`,
-                  text: route.name,
-                  parent: `brand_${brand._id}_${company._id}_${branch._id}`,
-                  type: "route",
-                  hasRoutes: category.hasRoutes,
-                  state: { opened: false },
-                  data: {
-                    categoryId: category._id.toString(),
-                    companyId: company._id.toString(),
-                    branchId: branch._id.toString(),
-                    brandId: brand._id.toString(),
-                    routeId: route._id.toString(),
-                  },
-                });
-              });
-            });
-          });
-        } else {
-          const companyBrands = companyBrandRelations
-            .filter((rel) => {
-              const matchesCompany =
-                rel.companyId?._id.toString() === company._id.toString();
-              const hasValidBrand = rel.brandId && rel.brandId.categoryId;
-              const matchesCategory =
-                hasValidBrand &&
-                rel.brandId.categoryId._id.toString() ===
-                  category._id.toString();
-              return matchesCompany && matchesCategory;
-            })
-            .map((rel) => rel.brandId);
-          companyBrands.forEach((brand) => {
-            treeNodes.push({
-              id: `brand_${brand._id}_${company._id}`,
-              text: brand.name,
-              parent: `company_${company._id}`,
-              type: "brand",
-              hasRoutes: category.hasRoutes,
-              state: { opened: false },
-              data: {
-                categoryId: category._id.toString(),
-                companyId: company._id.toString(),
-                brandId: brand._id.toString(),
-              },
-            });
-            const brandBranches = branchBrandRelations
-              .filter((rel) => {
-                const matchesBrand =
-                  rel.brandId?._id.toString() === brand._id.toString();
-                const matchesCompany =
-                  rel.branchId?.companyId?.toString() ===
-                  company._id.toString();
-                return matchesBrand && matchesCompany;
-              })
-              .map((rel) => rel.branchId);
-            brandBranches.forEach((branch) => {
-              treeNodes.push({
-                id: `branch_${branch._id}_${company._id}_${brand._id}`,
-                text: branch.name,
-                parent: `brand_${brand._id}_${company._id}`,
-                type: "branch",
-                hasRoutes: category.hasRoutes,
-                state: { opened: false },
-                data: {
-                  categoryId: category._id.toString(),
-                  companyId: company._id.toString(),
-                  branchId: branch._id.toString(),
-                  brandId: brand._id.toString(),
-                },
-              });
-            });
-          });
-        }
-      });
-    });
+
+    const companies = companyBrandRelations
+      .filter((rel) => rel.brandId?.categoryId?._id.toString() === categoryId)
+      .map((rel) => rel.companyId)
+      .filter(
+        (company, index, self) =>
+          company &&
+          self.findIndex((c) => c._id.toString() === company._id.toString()) ===
+            index
+      );
+
     res.json({
       success: true,
-      data: treeNodes,
-      message: "Tree data retrieved successfully",
+      data: companies,
+      message: "Companies retrieved successfully",
     });
   } catch (error) {
+    console.error("Error in getCompaniesByCategory:", error);
     res.status(500).json({
       success: false,
-      message: "Error retrieving tree data",
+      message: "Error retrieving companies by category",
       error: error.message,
     });
   }
 };
+
+// Obtener marcas por categoría y company
+export const getBrandsByCategoryAndCompany = async (req, res) => {
+  try {
+    const { categoryId, companyId } = req.params;
+
+    const companyBrandRelations = await RsCompanyBrand.find({
+      companyId: companyId,
+    }).populate({
+      path: "brandId",
+      populate: {
+        path: "categoryId",
+        model: "cc_category",
+      },
+    });
+
+    const brands = companyBrandRelations
+      .filter((rel) => rel.brandId?.categoryId?._id.toString() === categoryId)
+      .map((rel) => rel.brandId);
+
+    res.json({
+      success: true,
+      data: brands,
+      message: "Brands retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error in getBrandsByCategoryAndCompany:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving brands by category and company",
+      error: error.message,
+    });
+  }
+};
+
+// Obtener sucursales por company y brand
+export const getBranchesByCompanyAndBrand = async (req, res) => {
+  try {
+    const { companyId, brandId } = req.params;
+
+    const branchBrandRelations = await RsBranchBrand.find({
+      brandId: brandId,
+    }).populate({
+      path: "branchId",
+      populate: {
+        path: "companyId",
+        model: "cc_companies",
+      },
+    });
+
+    const branches = branchBrandRelations
+      .filter((rel) => rel.branchId?.companyId?._id.toString() === companyId)
+      .map((rel) => rel.branchId);
+
+    res.json({
+      success: true,
+      data: branches,
+      message: "Branches retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error in getBranchesByCompanyAndBrand:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving branches by company and brand",
+      error: error.message,
+    });
+  }
+};
+
+// Obtener rutas por company, brand y branch
+export const getRoutesByCompanyBrandAndBranch = async (req, res) => {
+  try {
+    const { companyId, brandId, branchId } = req.params;
+
+    const routes = await Route.find({
+      companyId: companyId,
+      brandId: brandId,
+      branchId: branchId,
+      status: true,
+    });
+
+    res.json({
+      success: true,
+      data: routes,
+      message: "Routes retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error in getRoutesByCompanyBrandAndBranch:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving routes by company, brand and branch",
+      error: error.message,
+    });
+  }
+};
+
+// Función eliminada - reemplazada por selects en cascada
 
 export const getBudgetsByMonth = async (req, res) => {
   try {

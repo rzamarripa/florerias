@@ -1,5 +1,5 @@
 import { apiCall, ApiResponse } from "@/utils/api";
-import { Budget, BudgetFormData, BudgetTreeNode } from "../types";
+import { Budget, BudgetFormData } from "../types";
 
 interface BudgetFilters {
   companyId?: string;
@@ -10,16 +10,122 @@ interface BudgetFilters {
   month?: string;
 }
 
+export interface Category {
+  _id: string;
+  name: string;
+  hasRoutes: boolean;
+}
+
+export interface Company {
+  _id: string;
+  name: string;
+  legalRepresentative: string;
+}
+
+export interface Brand {
+  _id: string;
+  name: string;
+  description?: string;
+  categoryId: string;
+}
+
+export interface Branch {
+  _id: string;
+  name: string;
+  address: string;
+  companyId: string;
+}
+
+export interface Route {
+  _id: string;
+  name: string;
+  description?: string;
+  companyId: string;
+  brandId: string;
+  branchId: string;
+}
+
 class BudgetService {
   private baseUrl = "/budget";
 
-  async getBudgetTreeData(): Promise<ApiResponse<BudgetTreeNode[]>> {
+  async getCategories(): Promise<ApiResponse<Category[]>> {
     try {
-      return await apiCall<BudgetTreeNode[]>(`${this.baseUrl}/tree`);
+      return await apiCall<Category[]>("/categories/all");
     } catch (error: any) {
       return {
         success: false,
-        message: error.message || "Error fetching budget tree data",
+        message: error.message || "Error fetching categories",
+        data: [],
+      };
+    }
+  }
+
+  // Nuevos métodos para selects en cascada
+  async getCompaniesByCategory(
+    categoryId: string
+  ): Promise<ApiResponse<Company[]>> {
+    try {
+      return await apiCall<Company[]>(
+        `${this.baseUrl}/companies/category/${categoryId}`
+      );
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || "Error fetching companies by category",
+        data: [],
+      };
+    }
+  }
+
+  async getBrandsByCategoryAndCompany(
+    categoryId: string,
+    companyId: string
+  ): Promise<ApiResponse<Brand[]>> {
+    try {
+      return await apiCall<Brand[]>(
+        `${this.baseUrl}/brands/category/${categoryId}/company/${companyId}`
+      );
+    } catch (error: any) {
+      return {
+        success: false,
+        message:
+          error.message || "Error fetching brands by category and company",
+        data: [],
+      };
+    }
+  }
+
+  async getBranchesByCompanyAndBrand(
+    companyId: string,
+    brandId: string
+  ): Promise<ApiResponse<Branch[]>> {
+    try {
+      return await apiCall<Branch[]>(
+        `${this.baseUrl}/branches/company/${companyId}/brand/${brandId}`
+      );
+    } catch (error: any) {
+      return {
+        success: false,
+        message:
+          error.message || "Error fetching branches by company and brand",
+        data: [],
+      };
+    }
+  }
+
+  async getRoutesByCompanyBrandAndBranch(
+    companyId: string,
+    brandId: string,
+    branchId: string
+  ): Promise<ApiResponse<Route[]>> {
+    try {
+      return await apiCall<Route[]>(
+        `${this.baseUrl}/routes/company/${companyId}/brand/${brandId}/branch/${branchId}`
+      );
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || "Error fetching routes",
         data: [],
       };
     }

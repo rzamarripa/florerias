@@ -4,10 +4,8 @@ import { Category } from "../models/Category.js";
 export const getAll = async (req, res) => {
   try {
     const categories = await Category.find({ isActive: true })
-      .select("_id name")
+      .select("_id name hasRoutes")
       .sort({ name: 1 });
-
-    console.log(categories)
 
     res.status(200).json({
       success: true,
@@ -39,15 +37,11 @@ export const getAllCategories = async (req, res) => {
       filters.isActive = isActive === "true";
     }
 
-    console.log("Filters applied:", filters);
-
     const total = await Category.countDocuments(filters);
     const categories = await Category.find(filters)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${categories.length} categories with filters:`, filters);
 
     res.status(200).json({
       success: true,
@@ -199,7 +193,9 @@ export const toggleHasRoutes = async (req, res) => {
     res.json({
       success: true,
       data: updatedCategory,
-      message: `Campo hasRoutes ${hasRoutes ? 'activado' : 'desactivado'} con éxito`,
+      message: `Campo hasRoutes ${
+        hasRoutes ? "activado" : "desactivado"
+      } con éxito`,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

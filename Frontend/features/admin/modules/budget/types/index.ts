@@ -31,26 +31,6 @@ export interface Budget {
   updatedAt: string;
 }
 
-export interface BudgetTreeNode {
-  id: string;
-  text: string;
-  parent: string;
-  type: "category" | "company" | "branch" | "brand" | "route";
-  hasRoutes?: boolean;
-  assignedAmount?: number;
-  state?: {
-    opened?: boolean;
-    selected?: boolean;
-  };
-  data?: {
-    categoryId?: string;
-    companyId?: string;
-    branchId?: string;
-    brandId?: string;
-    routeId?: string;
-  };
-}
-
 export interface BudgetFormData {
   categoryId: string;
   companyId: string;
