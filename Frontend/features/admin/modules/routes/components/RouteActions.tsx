@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { FiTrash2, FiEdit2 } from "react-icons/fi";
 import { Spinner } from "react-bootstrap";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import { toast } from "react-toastify";
-import { routeService } from "./services/routeService";
-import { Route } from "./types";
+import { routeService } from "../services/routeService";
+import { Route } from "../types";
 
 interface RouteActionsProps {
   route: Route;
@@ -11,7 +11,11 @@ interface RouteActionsProps {
   onEdit?: (route: Route) => void;
 }
 
-const RouteActions: React.FC<RouteActionsProps> = ({ route, onRouteSaved, onEdit }) => {
+const RouteActions: React.FC<RouteActionsProps> = ({
+  route,
+  onRouteSaved,
+  onEdit,
+}) => {
   const [isToggling, setIsToggling] = useState(false);
 
   const handleDelete = async () => {
@@ -60,7 +64,11 @@ const RouteActions: React.FC<RouteActionsProps> = ({ route, onRouteSaved, onEdit
         disabled={isToggling}
       >
         {isToggling ? (
-          <Spinner animation="border" size="sm" style={{ width: "16px", height: "16px" }} />
+          <Spinner
+            animation="border"
+            size="sm"
+            style={{ width: "16px", height: "16px" }}
+          />
         ) : (
           <FiTrash2 size={16} />
         )}
@@ -69,4 +77,4 @@ const RouteActions: React.FC<RouteActionsProps> = ({ route, onRouteSaved, onEdit
   );
 };
 
-export default RouteActions; 
+export default RouteActions;

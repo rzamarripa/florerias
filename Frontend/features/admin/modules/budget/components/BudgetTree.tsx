@@ -59,6 +59,13 @@ const BudgetTree: React.FC<BudgetTreeProps> = ({
         const parent = nodeMap.get(node.parent);
         if (parent) {
           parent.children!.push(nodeWithChildren);
+        } else {
+          console.warn(
+            "[BudgetTree] buildTreeStructure - Padre no encontrado para:",
+            node.id,
+            "parent:",
+            node.parent
+          );
         }
       }
     });
@@ -66,10 +73,10 @@ const BudgetTree: React.FC<BudgetTreeProps> = ({
     return rootNodes;
   };
 
-  const treeStructure = useMemo(
-    () => buildTreeStructure(data),
-    [data, expandedNodes]
-  );
+  const treeStructure = useMemo(() => {
+    const result = buildTreeStructure(data);
+    return result;
+  }, [data, expandedNodes]);
 
   const handleToggleExpand = (nodeId: string) => {
     const newExpanded = new Set(expandedNodes);
@@ -82,12 +89,26 @@ const BudgetTree: React.FC<BudgetTreeProps> = ({
   };
 
   const isEditableNode = (node: TreeNodeWithChildren): boolean => {
-    if (node.type === "route") return true;
+    const isRouteEditable = node.type === "route";
+    const isBranchEditable = node.type === "branch" && !node.hasRoutes;
 
-    if (node.type === "branch") {
-      return !node.hasRoutes;
+    // Log para depuración de nodos editables
+    if (node.type === "route" || node.type === "branch") {
+      console.log(
+        `[BudgetTree] isEditableNode - ${node.type} "${node.text}":`,
+        {
+          type: node.type,
+          hasRoutes: node.hasRoutes,
+          isRouteEditable,
+          isBranchEditable,
+          finalResult: isRouteEditable || isBranchEditable,
+          nodeData: node.data,
+        }
+      );
     }
 
+    if (isRouteEditable) return true;
+    if (isBranchEditable) return true;
     return false;
   };
 
@@ -106,13 +127,6 @@ const BudgetTree: React.FC<BudgetTreeProps> = ({
   const getDisplayAmount = (node: TreeNodeWithChildren): number => {
     if (isEditableNode(node)) {
       const amount = pendingChanges[node.id] ?? budgetAmounts[node.id] ?? 0;
-      // Log temporal para depuración
-      console.log(`[BudgetTree] Node ${node.id} (${node.type}):`, {
-        pendingAmount: pendingChanges[node.id],
-        budgetAmount: budgetAmounts[node.id],
-        finalAmount: amount,
-        nodeData: node.data
-      });
       return amount;
     }
     return calculateParentTotal(node);

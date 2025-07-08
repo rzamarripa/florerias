@@ -29,12 +29,19 @@ const Budget: React.FC = () => {
     setSelectedMonth(currentMonth);
   }, []);
 
+  // Cuando cambia el mes, solo carga el árbol
   useEffect(() => {
     if (selectedMonth) {
       loadTreeData();
-      loadBudgetAmounts();
     }
   }, [selectedMonth]);
+
+  // Cuando cambia el árbol o el mes, carga los presupuestos
+  useEffect(() => {
+    if (selectedMonth && treeData.length > 0) {
+      loadBudgetAmounts();
+    }
+  }, [selectedMonth, treeData]);
 
   const generateMonthOptions = () => {
     const months = [];
@@ -84,14 +91,23 @@ const Budget: React.FC = () => {
 
     try {
       const amounts: Record<string, number> = {};
-      // Filtrar solo nodos editables (branch o route)
       const editableNodes = treeData.filter(
         (node) =>
-          (node.type === "route") ||
-          (node.type === "branch" && !node.hasRoutes)
+          node.type === "route" || (node.type === "branch" && !node.hasRoutes)
       );
 
-      // Consultar el presupuesto para cada nodo editable
+      console.log(
+        "[Budget] loadBudgetAmounts - Nodos editables encontrados:",
+        editableNodes
+      );
+
+      // Mostrar específicamente nodos de tipo route
+      const routeNodes = editableNodes.filter((node) => node.type === "route");
+      console.log(
+        "[Budget] loadBudgetAmounts - Nodos de tipo ROUTE:",
+        routeNodes
+      );
+
       for (const node of editableNodes) {
         const filters: any = {
           companyId: node.data?.companyId,
@@ -101,13 +117,29 @@ const Budget: React.FC = () => {
         };
         if (node.type === "route") {
           filters.routeId = node.data?.routeId;
+          console.log(
+            `[Budget] loadBudgetAmounts - Consultando presupuesto para RUTA "${node.text}":`,
+            filters
+          );
         } else if (node.type === "branch") {
           filters.branchId = node.data?.branchId;
+          console.log(
+            `[Budget] loadBudgetAmounts - Consultando presupuesto para SUCURSAL "${node.text}":`,
+            filters
+          );
         }
-        // El id ahora es único por branch/route+company+brand
+
         const nodeKey = node.id;
-        // Llamar al backend para obtener el presupuesto de este nodo
-        const response = await budgetService.getBudgetsByMonth(selectedMonth, filters);
+        const response = await budgetService.getBudgetsByMonth(
+          selectedMonth,
+          filters
+        );
+
+        console.log(
+          `[Budget] loadBudgetAmounts - Respuesta para "${node.text}" (${node.type}):`,
+          response
+        );
+
         if (response.success && response.data && response.data.length > 0) {
           const budget = response.data[0];
           amounts[nodeKey] = budget.assignedAmount;
@@ -116,9 +148,7 @@ const Budget: React.FC = () => {
         }
       }
       setBudgetAmounts(amounts);
-      // Log temporal para depuración
-      console.log('[Budget] budgetAmounts cargados:', amounts);
-      console.log('[Budget] nodos editables encontrados:', editableNodes.length);
+      console.log("[Budget] loadBudgetAmounts - Amounts finales:", amounts);
     } catch (error: any) {
       console.error("Error loading budget amounts:", error);
     }

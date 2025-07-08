@@ -15,19 +15,34 @@ export const getBudgetTreeData = async (req, res) => {
       .populate("stateId")
       .populate("municipalityId");
     const routes = await Route.find({ status: true })
-      .populate("brandId")
+      .populate({
+        path: "brandId",
+        populate: {
+          path: "categoryId",
+          model: "cc_category",
+        },
+      })
       .populate("companyId")
       .populate("branchId");
-
     const companyBrandRelations = await RsCompanyBrand.find()
       .populate("companyId")
-      .populate("brandId");
+      .populate({
+        path: "brandId",
+        populate: {
+          path: "categoryId",
+          model: "cc_category",
+        },
+      });
     const branchBrandRelations = await RsBranchBrand.find()
       .populate("branchId")
-      .populate("brandId");
-
+      .populate({
+        path: "brandId",
+        populate: {
+          path: "categoryId",
+          model: "cc_category",
+        },
+      });
     const treeNodes = [];
-
     categories.forEach((category) => {
       treeNodes.push({
         id: `category_${category._id}`,
@@ -38,12 +53,14 @@ export const getBudgetTreeData = async (req, res) => {
         state: { opened: true },
         data: { categoryId: category._id.toString() },
       });
-
       const categoryCompanies = companyBrandRelations
-        .filter(
-          (rel) =>
-            rel.brandId?.categoryId?.toString() === category._id.toString()
-        )
+        .filter((rel) => {
+          const hasValidBrand = rel.brandId && rel.brandId.categoryId;
+          const matchesCategory =
+            hasValidBrand &&
+            rel.brandId.categoryId._id.toString() === category._id.toString();
+          return matchesCategory;
+        })
         .map((rel) => rel.companyId)
         .filter(
           (company, index, self) =>
@@ -52,7 +69,6 @@ export const getBudgetTreeData = async (req, res) => {
               (c) => c._id.toString() === company._id.toString()
             ) === index
         );
-
       categoryCompanies.forEach((company) => {
         treeNodes.push({
           id: `company_${company._id}`,
@@ -66,44 +82,42 @@ export const getBudgetTreeData = async (req, res) => {
             companyId: company._id.toString(),
           },
         });
-
         if (category.hasRoutes) {
           const companyBranches = branches.filter(
             (branch) =>
               branch.companyId?._id.toString() === company._id.toString()
           );
-
           companyBranches.forEach((branch) => {
+            treeNodes.push({
+              id: `branch_${branch._id}_${company._id}`,
+              text: branch.name,
+              parent: `company_${company._id}`,
+              type: "branch",
+              hasRoutes: category.hasRoutes,
+              state: { opened: false },
+              data: {
+                categoryId: category._id.toString(),
+                companyId: company._id.toString(),
+                branchId: branch._id.toString(),
+              },
+            });
             const branchBrands = branchBrandRelations
-              .filter(
-                (rel) => rel.branchId?._id.toString() === branch._id.toString()
-              )
-              .map((rel) => rel.brandId)
-              .filter(
-                (brand) =>
-                  brand?.categoryId?.toString() === category._id.toString()
-              );
-
+              .filter((rel) => {
+                const matchesBranch =
+                  rel.branchId?._id.toString() === branch._id.toString();
+                const hasValidBrand = rel.brandId && rel.brandId.categoryId;
+                const matchesCategory =
+                  hasValidBrand &&
+                  rel.brandId.categoryId._id.toString() ===
+                    category._id.toString();
+                return matchesBranch && matchesCategory;
+              })
+              .map((rel) => rel.brandId);
             branchBrands.forEach((brand) => {
-              treeNodes.push({
-                id: `branch_${branch._id}_${company._id}_${brand._id}`,
-                text: branch.name,
-                parent: `company_${company._id}`,
-                type: "branch",
-                hasRoutes: category.hasRoutes,
-                state: { opened: false },
-                data: {
-                  categoryId: category._id.toString(),
-                  companyId: company._id.toString(),
-                  branchId: branch._id.toString(),
-                  brandId: brand._id.toString(),
-                },
-              });
-
               treeNodes.push({
                 id: `brand_${brand._id}_${company._id}_${branch._id}`,
                 text: brand.name,
-                parent: `branch_${branch._id}_${company._id}_${brand._id}`,
+                parent: `branch_${branch._id}_${company._id}`,
                 type: "brand",
                 hasRoutes: category.hasRoutes,
                 state: { opened: false },
@@ -114,14 +128,15 @@ export const getBudgetTreeData = async (req, res) => {
                   brandId: brand._id.toString(),
                 },
               });
-
-              const brandRoutes = routes.filter(
-                (route) =>
-                  route.brandId?._id.toString() === brand._id.toString() &&
-                  route.companyId?._id.toString() === company._id.toString() &&
-                  route.branchId?._id.toString() === branch._id.toString()
-              );
-
+              const brandRoutes = routes.filter((route) => {
+                const matchesBrand =
+                  route.brandId?._id.toString() === brand._id.toString();
+                const matchesCompany =
+                  route.companyId?._id.toString() === company._id.toString();
+                const matchesBranch =
+                  route.branchId?._id.toString() === branch._id.toString();
+                return matchesBrand && matchesCompany && matchesBranch;
+              });
               brandRoutes.forEach((route) => {
                 treeNodes.push({
                   id: `route_${route._id}_${company._id}_${brand._id}_${branch._id}`,
@@ -143,13 +158,17 @@ export const getBudgetTreeData = async (req, res) => {
           });
         } else {
           const companyBrands = companyBrandRelations
-            .filter(
-              (rel) =>
-                rel.companyId?._id.toString() === company._id.toString() &&
-                rel.brandId?.categoryId?.toString() === category._id.toString()
-            )
+            .filter((rel) => {
+              const matchesCompany =
+                rel.companyId?._id.toString() === company._id.toString();
+              const hasValidBrand = rel.brandId && rel.brandId.categoryId;
+              const matchesCategory =
+                hasValidBrand &&
+                rel.brandId.categoryId._id.toString() ===
+                  category._id.toString();
+              return matchesCompany && matchesCategory;
+            })
             .map((rel) => rel.brandId);
-
           companyBrands.forEach((brand) => {
             treeNodes.push({
               id: `brand_${brand._id}_${company._id}`,
@@ -164,17 +183,16 @@ export const getBudgetTreeData = async (req, res) => {
                 brandId: brand._id.toString(),
               },
             });
-
             const brandBranches = branchBrandRelations
-              .filter(
-                (rel) => rel.brandId?._id.toString() === brand._id.toString()
-              )
-              .map((rel) => rel.branchId)
-              .filter(
-                (branch) =>
-                  branch?.companyId?.toString() === company._id.toString()
-              );
-
+              .filter((rel) => {
+                const matchesBrand =
+                  rel.brandId?._id.toString() === brand._id.toString();
+                const matchesCompany =
+                  rel.branchId?.companyId?.toString() ===
+                  company._id.toString();
+                return matchesBrand && matchesCompany;
+              })
+              .map((rel) => rel.branchId);
             brandBranches.forEach((branch) => {
               treeNodes.push({
                 id: `branch_${branch._id}_${company._id}_${brand._id}`,
@@ -195,16 +213,12 @@ export const getBudgetTreeData = async (req, res) => {
         }
       });
     });
-
-    
-
     res.json({
       success: true,
       data: treeNodes,
       message: "Tree data retrieved successfully",
     });
   } catch (error) {
-    console.error("Error getting budget tree data:", error);
     res.status(500).json({
       success: false,
       message: "Error retrieving tree data",
@@ -225,7 +239,6 @@ export const getBudgetsByMonth = async (req, res) => {
       });
     }
 
-    // Si se proveen filtros adicionales, aplicar lógica avanzada
     if (companyId && categoryId && brandId) {
       const Category = mongoose.model("cc_category");
       const category = await Category.findById(categoryId);
@@ -258,9 +271,7 @@ export const getBudgetsByMonth = async (req, res) => {
         }
         filter.branchId = branchId;
       }
-      console.log("[getBudgetsByMonth] Filtros recibidos:", filter);
       const budgets = await Budget.getBudgetByFilters(filter);
-      console.log("[getBudgetsByMonth] Presupuestos devueltos:", budgets.map(b => b._id));
       return res.json({
         success: true,
         data: budgets,
@@ -268,7 +279,6 @@ export const getBudgetsByMonth = async (req, res) => {
       });
     }
 
-    // Si no se pasan todos los filtros, NO devolver presupuestos
     return res.json({
       success: true,
       data: [],
@@ -296,7 +306,6 @@ export const getBudgetsByCategory = async (req, res) => {
       });
     }
 
-    // Si se proveen filtros adicionales, aplicar lógica avanzada
     if (companyId && brandId) {
       const Category = mongoose.model("cc_category");
       const category = await Category.findById(categoryId);
@@ -329,9 +338,7 @@ export const getBudgetsByCategory = async (req, res) => {
         }
         filter.branchId = branchId;
       }
-      console.log("[getBudgetsByCategory] Filtros recibidos:", filter);
       const budgets = await Budget.getBudgetByFilters(filter);
-      console.log("[getBudgetsByCategory] Presupuestos devueltos:", budgets.map(b => b._id));
       return res.json({
         success: true,
         data: budgets,
@@ -339,7 +346,6 @@ export const getBudgetsByCategory = async (req, res) => {
       });
     }
 
-    // Si no se pasan todos los filtros, NO devolver presupuestos
     return res.json({
       success: true,
       data: [],
@@ -373,7 +379,6 @@ export const createBudget = async (req, res) => {
       });
     }
 
-    // Validar la lógica de negocio antes de crear/actualizar
     try {
       await Budget.validateBudgetData(budgetData);
     } catch (validationError) {
@@ -383,10 +388,9 @@ export const createBudget = async (req, res) => {
       });
     }
 
-    // Obtener la categoría para determinar la lógica de negocio
     const Category = mongoose.model("cc_category");
     const category = await Category.findById(budgetData.categoryId);
-    
+
     if (!category) {
       return res.status(400).json({
         success: false,
@@ -394,31 +398,22 @@ export const createBudget = async (req, res) => {
       });
     }
 
-    // Construir el filtro de búsqueda basado en la lógica de negocio
-    // SIEMPRE incluir companyId para evitar duplicados en múltiples razones sociales
     const searchFilter = {
       brandId: budgetData.brandId,
-      companyId: budgetData.companyId, // CRÍTICO: siempre incluir companyId específico
+      companyId: budgetData.companyId,
       categoryId: budgetData.categoryId,
       month: budgetData.month,
     };
 
-    // Agregar routeId o branchId según la lógica de la categoría
     if (category.hasRoutes) {
       searchFilter.routeId = budgetData.routeId;
-      // Para categorías con rutas, NO incluimos branchId en el filtro de búsqueda
-      // porque branchId se obtiene automáticamente de la ruta
     } else {
       searchFilter.branchId = budgetData.branchId;
-      // Para categorías sin rutas, NO incluimos routeId en el filtro de búsqueda
-      // porque routeId debe ser null
     }
 
-    console.log("Searching for existing budget with filter:", JSON.stringify(searchFilter, null, 2));
     const existingBudget = await Budget.findOne(searchFilter);
 
     if (existingBudget) {
-      console.log("Found existing budget:", existingBudget._id);
       existingBudget.assignedAmount = budgetData.assignedAmount;
       await existingBudget.save();
 
@@ -436,20 +431,16 @@ export const createBudget = async (req, res) => {
       });
     }
 
-    // Preparar los datos para el nuevo presupuesto
-    // MANTENER SIEMPRE el companyId específico para evitar duplicados
     const newBudgetData = {
       brandId: budgetData.brandId,
-      companyId: budgetData.companyId, // CRÍTICO: mantener companyId específico
+      companyId: budgetData.companyId,
       categoryId: budgetData.categoryId,
       assignedAmount: budgetData.assignedAmount,
       month: budgetData.month,
     };
 
-    // Asignar routeId o branchId según la lógica de negocio
     if (category.hasRoutes) {
       newBudgetData.routeId = budgetData.routeId;
-      // Para categorías con rutas, branchId se obtiene automáticamente de la ruta
       if (budgetData.routeId) {
         const Route = mongoose.model("cc_route");
         const route = await Route.findById(budgetData.routeId);
@@ -469,14 +460,11 @@ export const createBudget = async (req, res) => {
       }
     } else {
       newBudgetData.branchId = budgetData.branchId;
-      // Para categorías sin rutas, routeId debe ser null
       newBudgetData.routeId = null;
     }
 
-    console.log("Creating new budget with data:", JSON.stringify(newBudgetData, null, 2));
     const newBudget = new Budget(newBudgetData);
     await newBudget.save();
-    console.log("New budget created with ID:", newBudget._id);
 
     const populatedBudget = await Budget.findById(newBudget._id)
       .populate("routeId")
@@ -522,7 +510,6 @@ export const updateBudget = async (req, res) => {
       });
     }
 
-    // Obtener el presupuesto actual para validar la lógica de negocio
     const currentBudget = await Budget.findById(id);
     if (!currentBudget) {
       return res.status(404).json({
@@ -531,14 +518,23 @@ export const updateBudget = async (req, res) => {
       });
     }
 
-    // Si se está actualizando categoryId, routeId o branchId, validar la lógica de negocio
-    if (updateData.categoryId || updateData.routeId !== undefined || updateData.branchId !== undefined) {
+    if (
+      updateData.categoryId ||
+      updateData.routeId !== undefined ||
+      updateData.branchId !== undefined
+    ) {
       const validationData = {
         categoryId: updateData.categoryId || currentBudget.categoryId,
-        routeId: updateData.routeId !== undefined ? updateData.routeId : currentBudget.routeId,
+        routeId:
+          updateData.routeId !== undefined
+            ? updateData.routeId
+            : currentBudget.routeId,
         brandId: updateData.brandId || currentBudget.brandId,
         companyId: updateData.companyId || currentBudget.companyId,
-        branchId: updateData.branchId !== undefined ? updateData.branchId : currentBudget.branchId,
+        branchId:
+          updateData.branchId !== undefined
+            ? updateData.branchId
+            : currentBudget.branchId,
       };
 
       try {

@@ -25,7 +25,10 @@ class BudgetService {
     }
   }
 
-  async getBudgetsByMonth(month: string, filters?: BudgetFilters): Promise<ApiResponse<Budget[]>> {
+  async getBudgetsByMonth(
+    month: string,
+    filters?: BudgetFilters
+  ): Promise<ApiResponse<Budget[]>> {
     try {
       let url = `${this.baseUrl}/month/${month}`;
       if (filters) {

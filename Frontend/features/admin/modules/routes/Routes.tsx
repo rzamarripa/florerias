@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { Button, Card, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
+import RouteActions from "./components/RouteActions";
+import RouteModal from "./components/RouteModal";
 import { routeService } from "./services/routeService";
 import { Route } from "./types";
-import RouteActions from "./RouteActions";
-import RouteModal from "./components/RouteModal";
 
 const Routes: React.FC = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -62,20 +62,20 @@ const Routes: React.FC = () => {
             <div>
               <h4 className="card-title">Gestión de Rutas</h4>
               <p className="text-muted mb-0">
-                Administra las rutas de distribución por marca, empresa y sucursal.
+                Administra las rutas de distribución por marca, empresa y
+                sucursal.
               </p>
             </div>
-            
           </div>
           <div className="ms-auto">
-              <Button
-                variant="primary"
-                onClick={handleNewRoute}
-                disabled={loading}
-              >
-                Nueva Ruta
-              </Button>
-            </div>
+            <Button
+              variant="primary"
+              onClick={handleNewRoute}
+              disabled={loading}
+            >
+              Nueva Ruta
+            </Button>
+          </div>
         </Card.Header>
       </Card>
 
@@ -154,4 +154,4 @@ const Routes: React.FC = () => {
   );
 };
 
-export default Routes; 
+export default Routes;
