@@ -1,8 +1,9 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, Table, Button, Badge, Spinner, Alert } from 'react-bootstrap';
-import { getInvoicesPackageById, ImportedInvoice, InvoicesPackage, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion } from '../services/invoicesPackpage';
+import { Card, Table, Button, Badge, Spinner, Alert, Modal, Form } from 'react-bootstrap';
+import { getInvoicesPackageById, ImportedInvoice, InvoicesPackage, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion, createAuthorizationFolio, CreateAuthorizationFolioRequest, getAuthorizationFoliosByPackage, getAuthorizationFolioByNumber, AuthorizationFolio, redeemAuthorizationFolio } from '../services/invoicesPackpage';
+import { getBudgetByCompanyBrandBranch, BudgetItem } from '../services/budget';
 import { BsClipboard } from 'react-icons/bs';
 import { toast } from 'react-toastify';
 import { useUserSessionStore } from '@/stores';
@@ -40,6 +41,14 @@ const NewPackpageDetailsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'facturas' | 'pagosEfectivo'>('facturas');
+    const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
+    const [solicitandoFolio, setSolicitandoFolio] = useState(false);
+    const [showFolioModal, setShowFolioModal] = useState(false);
+    const [folioIngresado, setFolioIngresado] = useState('');
+    const [validandoFolio, setValidandoFolio] = useState(false);
+    const [foliosAutorizados, setFoliosAutorizados] = useState<AuthorizationFolio[]>([]);
+    const [todosLosFolios, setTodosLosFolios] = useState<AuthorizationFolio[]>([]);
+    const [folioValidado, setFolioValidado] = useState<AuthorizationFolio | null>(null);
 
     const { user } = useUserSessionStore();
 
@@ -51,19 +60,129 @@ const NewPackpageDetailsPage: React.FC = () => {
         }
     }, [packpageId, invoiceId]);
 
+    // Función para obtener el presupuesto del mes
+    const loadBudgetData = async () => {
+        if (!packpage?.companyInfo) {
+            return;
+        }
+        
+        const { companyId, brandId, branchId } = packpage.companyInfo;
+        
+        
+        if (!companyId || !brandId || !branchId) {
+            return;
+        }
+
+        try {
+            // Función helper para convertir a string
+            const toString = (value: any): string => {
+                if (typeof value === 'string') return value;
+                if (value && typeof value === 'object' && value.toString) return value.toString();
+                return String(value || '');
+            };
+
+            // Convertir ObjectIds a strings si es necesario
+            const companyIdStr = toString(companyId);
+            const brandIdStr = toString(brandId);
+            const branchIdStr = toString(branchId);
+            
+            // Usar marzo 2025 que es donde existe el presupuesto
+            const monthFormatted = "2025-03";
+
+            const response = await getBudgetByCompanyBrandBranch({
+                companyId: companyIdStr,
+                brandId: brandIdStr,
+                branchId: branchIdStr,
+                month: monthFormatted
+            });
+
+            setBudgetData(response || []);
+
+        } catch (error) {
+            console.error('❌ Error al consultar presupuesto del paquete:', error);
+            setBudgetData([]);
+        }
+    };
+
+    // Cargar presupuesto cuando se cargue el paquete
+    useEffect(() => {
+        if (packpage) {
+            loadBudgetData();
+            loadFoliosAutorizados();
+        }
+    }, [packpage]);
+
+    // Función para cargar folios autorizados del paquete
+    const loadFoliosAutorizados = async () => {
+        if (!packpage?._id) return;
+        
+        try {
+            const folios = await getAuthorizationFoliosByPackage(packpage._id);
+            const foliosAutorizados = folios.filter(folio => folio.estatus === 'autorizado');
+            setFoliosAutorizados(foliosAutorizados);
+            setTodosLosFolios(folios); // Guardar todos los folios para la búsqueda
+        } catch (error) {
+            console.error('Error al cargar folios autorizados:', error);
+            setFoliosAutorizados([]);
+        }
+    };
+
+    // Función para validar folio ingresado
+    const validarFolioIngresado = async (): Promise<boolean> => {
+        if (!folioIngresado.trim()) {
+            toast.error('Por favor ingrese un folio');
+            return false;
+        }
+
+        if (!packpage?._id) {
+            toast.error('Error: ID del paquete no encontrado');
+            return false;
+        }
+
+        setValidandoFolio(true);
+        try {
+            const folio = await getAuthorizationFolioByNumber(folioIngresado.trim());
+            
+            if (!folio) {
+                toast.error('El folio ingresado no existe');
+                return false;
+            }
+
+            // Comparar los IDs como strings
+            const folioPackageId = String(folio.paquete_id);
+            const currentPackageId = String(packpage._id);
+
+            if (folioPackageId !== currentPackageId) {
+                toast.error('El folio no corresponde a este paquete');
+                return false;
+            }
+
+            if (folio.estatus !== 'autorizado') {
+                toast.error(`El folio tiene estatus "${folio.estatus}". Solo se aceptan folios autorizados`);
+                return false;
+            }
+
+            toast.success('Folio validado correctamente');
+            setFolioValidado(folio); // Guardar el folio validado para canjearlo después
+            return true;
+        } catch (error) {
+            console.error('Error al validar folio:', error);
+            toast.error('Error al validar el folio');
+            return false;
+        } finally {
+            setValidandoFolio(false);
+        }
+    };
+
     const loadPackpage = async () => {
         try {
             setLoading(true);
-            console.log('Cargando paquete con ID:', packpageId);
             const response = await getInvoicesPackageById(packpageId!);
-            console.log('Respuesta completa:', response);
-            console.log('response.data:', response.data);
 
             if (!response || !response.data) {
                 console.error('No se encontró el paquete. Response:', response);
                 setPackpage(null);
             } else {
-                console.log('Paquete encontrado:', response.data);
                 const packpageData = response.data as any;
 
                 // Normalizar datos numéricos
@@ -78,20 +197,10 @@ const NewPackpageDetailsPage: React.FC = () => {
                 packpageData.totalImporteAPagar = parseFloat(packpageData.totalImporteAPagar || 0);
                 packpageData.totalPagado = parseFloat(packpageData.totalPagado || 0);
 
-                console.log('Facturas del paquete:', packpageData.facturas);
-                console.log('Número de facturas:', packpageData.facturas?.length);
-                console.log('Totales:', {
-                    totalImporteAPagar: packpageData.totalImporteAPagar,
-                    totalPagado: packpageData.totalPagado
-                });
-
                 // Verificar si hay duplicados por UUID
                 const uuids = packpageData.facturas?.map((f: any) => f.uuid) || [];
                 const uuidsUnicos = [...new Set(uuids)];
                 if (uuids.length !== uuidsUnicos.length) {
-                    console.warn('¡Facturas duplicadas detectadas!');
-                    console.log('UUIDs:', uuids);
-                    console.log('UUIDs únicos:', uuidsUnicos);
                 }
                 setPackpage(packpageData);
             }
@@ -108,7 +217,6 @@ const NewPackpageDetailsPage: React.FC = () => {
         try {
             setLoading(true);
             const response = await getInvoiceById(invoiceId!);
-            console.log('response', response);
             setSingleInvoice(response.data);
         } catch (error) {
             console.error('Error loading invoice:', error);
@@ -133,10 +241,8 @@ const NewPackpageDetailsPage: React.FC = () => {
             }
 
             const result = await toggleFacturaAutorizada(facturaId, nuevoEstado, packpage?._id);
-            console.log('Resultado del toggle:', result);
 
             if (result && result.success && typeof (result.data as any).autorizada !== 'undefined') {
-                console.log('Datos de respuesta:', result.data);
 
                 // Actualizar el estado local con los datos de la respuesta
                 setPackpage((prev) => {
@@ -162,7 +268,6 @@ const NewPackpageDetailsPage: React.FC = () => {
                     // Total importe a pagar: solo facturas autorizadas (como se guarda en BD)
                     const totalImporteAPagar = facturasAutorizadas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
 
-                    console.log('Totales recalculados:', { totalPagado, totalImporteAPagar });
 
                     return {
                         ...prev,
@@ -191,16 +296,100 @@ const NewPackpageDetailsPage: React.FC = () => {
             toast.error('No se puede enviar el paquete. ID no encontrado.');
             return;
         }
+
+        // Verificar si hay exceso de presupuesto
+        const excesoInfo = verificarExcesoPresupuesto();
+        if (excesoInfo.excede) {
+            // Si hay exceso pero existen folios autorizados, abrir modal
+            if (foliosAutorizados.length > 0) {
+                setShowFolioModal(true);
+                return;
+            } else {
+                toast.error('No se puede enviar el paquete. Presupuesto excedido y no hay folios autorizados.');
+                return;
+            }
+        }
+
+        // Si no hay exceso, enviar directamente
+        await enviarPaqueteATesoreria();
+    };
+
+    const enviarPaqueteATesoreria = async (folioParaCanjear?: AuthorizationFolio) => {
+        if (!packpage?._id) return;
+        
         try {
             const result = await enviarPaqueteADireccion(packpage._id);
             if (result && result.success && result.data && result.data.estatus === 'Enviado') {
                 toast.success('Paquete enviado a tesorería correctamente');
                 setPackpage(prev => prev ? { ...prev, estatus: 'Enviado' } : null);
+                setShowFolioModal(false);
+                setFolioIngresado('');
+
+                // Si se utilizó un folio de autorización, canjearlo
+                const folioACanjear = folioParaCanjear || folioValidado;
+                if (folioACanjear) {
+                    try {
+                        await redeemAuthorizationFolio(folioACanjear._id);
+                        toast.success(`Folio ${folioACanjear.folio} canjeado correctamente`);
+                        setFolioValidado(null); // Limpiar el folio validado
+                        await loadFoliosAutorizados(); // Recargar folios para actualizar estado
+                    } catch (error) {
+                        console.error('Error al canjear folio:', error);
+                        toast.warning('Paquete enviado pero hubo un error al canjear el folio');
+                    }
+                }
             } else {
                 toast.error('Error al enviar el paquete a tesorería');
             }
         } catch (error: any) {
             toast.error(error?.message || 'Error al enviar el paquete a tesorería');
+        }
+    };
+
+    const handleValidarYEnviar = async () => {
+        const folioValido = await validarFolioIngresado();
+        if (folioValido) {
+            // Obtener el folio validado para pasarlo directamente
+            const folioValidadoActual = await getAuthorizationFolioByNumber(folioIngresado.trim());
+            await enviarPaqueteATesoreria(folioValidadoActual || undefined);
+        }
+    };
+
+    const handleSolicitarFolio = async () => {
+        if (!packpage?._id || !user?._id) {
+            toast.error('No se puede solicitar el folio. Datos faltantes.');
+            return;
+        }
+
+        setSolicitandoFolio(true);
+        try {
+            const excesoInfo = verificarExcesoPresupuesto();
+            const now = new Date();
+            const folioNumber = `AUTH-${packpage.folio}-${now.getTime()}`;
+            
+            const folioData: CreateAuthorizationFolioRequest = {
+                paquete_id: packpage._id,
+                motivo: `Exceso de presupuesto por $${excesoInfo.diferencia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+                usuario_id: user._id,
+                fecha: now.toISOString(),
+                fechaFolioAutorizacion: now.toISOString(),
+                folio: folioNumber
+            };
+
+            const response = await createAuthorizationFolio(folioData);
+            
+            if (response && response.success) {
+                toast.success(`Folio de autorización ${folioNumber} creado exitosamente`);
+                // Recargar folios autorizados
+                await loadFoliosAutorizados();
+            } else {
+                toast.error('Error al crear el folio de autorización');
+            }
+        } catch (error: any) {
+            console.error('Error al solicitar folio:', error);
+            toast.error(error?.message || 'Error al solicitar el folio de autorización');
+        } finally {
+            setSolicitandoFolio(false);
         }
     };
 
@@ -213,15 +402,148 @@ const NewPackpageDetailsPage: React.FC = () => {
     const calcularTotalVisualizacion = () => {
         if (!packpage?.facturas) return 0;
         const facturasNoRechazadas = packpage.facturas.filter(f => f.autorizada !== false); // autorizadas + pendientes
-        return facturasNoRechazadas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
+        return facturasNoRechazadas.reduce((sum, f) => sum + toNumber(f.importeAPagar), 0);
     };
 
     // Función para calcular el total pagado de visualización (autorizadas + pendientes)
     const calcularTotalPagadoVisualizacion = () => {
         if (!packpage?.facturas) return 0;
         const facturasNoRechazadas = packpage.facturas.filter(f => f.autorizada !== false); // autorizadas + pendientes
-        return facturasNoRechazadas.reduce((sum, f) => sum + (f.importePagado || 0), 0);
+        return facturasNoRechazadas.reduce((sum, f) => sum + toNumber(f.importePagado), 0);
     };
+
+    // Función helper para convertir valores a números
+    const toNumber = (value: any): number => {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') return parseFloat(value) || 0;
+        
+        // Manejar objetos con formato $numberDecimal de MongoDB
+        if (typeof value === 'object' && value !== null) {
+            if (value.$numberDecimal) {
+                return parseFloat(value.$numberDecimal) || 0;
+            }
+            if (value._bsontype === 'Decimal128') {
+                return parseFloat(value.toString()) || 0;
+            }
+        }
+        
+        return 0;
+    };
+
+    // Función para calcular totales de facturas
+    const calcularTotalesFacturas = () => {
+        if (!packpage?.facturas) return { total: 0, pagado: 0, pendiente: 0, cantidad: 0 };
+        
+        const facturasNoRechazadas = packpage.facturas.filter(f => f.autorizada !== false);
+        const total = facturasNoRechazadas.reduce((sum, f) => sum + toNumber(f.importeAPagar), 0);
+        const pagado = facturasNoRechazadas.reduce((sum, f) => sum + toNumber(f.importePagado), 0);
+        const pendiente = total - pagado;
+        
+        return {
+            total,
+            pagado,
+            pendiente,
+            cantidad: facturasNoRechazadas.length
+        };
+    };
+
+    // Función para calcular totales de pagos en efectivo
+    const calcularTotalesPagosEfectivo = () => {
+        if (!packpage?.pagosEfectivo) return { total: 0, pagado: 0, pendiente: 0, cantidad: 0 };
+        
+        const pagosNoRechazados = packpage.pagosEfectivo.filter(p => p.autorizada !== false);
+        const total = pagosNoRechazados.reduce((sum, p) => sum + toNumber(p.importeAPagar), 0);
+        const pagado = pagosNoRechazados.reduce((sum, p) => sum + toNumber(p.importePagado), 0);
+        const pendiente = total - pagado;
+        
+        return {
+            total,
+            pagado,
+            pendiente,
+            cantidad: pagosNoRechazados.length
+        };
+    };
+
+    // Función para calcular el presupuesto total del mes
+    const calcularPresupuestoTotal = () => {
+        if (!Array.isArray(budgetData)) return 0;
+        
+        return budgetData.reduce((acc, budget) => {
+            return acc + (budget.assignedAmount || 0);
+        }, 0);
+    };
+
+    // Función para verificar si el presupuesto se excede
+    const verificarExcesoPresupuesto = () => {
+        const presupuestoTotal = calcularPresupuestoTotal();
+        const totalPagadoPaquete = calcularTotalesFacturas().pagado + calcularTotalesPagosEfectivo().pagado;
+        
+        return {
+            presupuestoTotal,
+            totalPagadoPaquete,
+            excede: totalPagadoPaquete > presupuestoTotal,
+            diferencia: totalPagadoPaquete - presupuestoTotal
+        };
+    };
+
+    // Función para determinar qué mostrar según el estado de los folios
+    const determinarMensajeFolio = () => {
+        const excesoInfo = verificarExcesoPresupuesto();
+        
+        // Si no hay exceso, no mostrar nada
+        if (!excesoInfo.excede) {
+            return null;
+        }
+
+        // Si hay exceso pero no hay folios, mostrar alerta de exceso
+        if (todosLosFolios.length === 0) {
+            return {
+                tipo: 'exceso',
+                variant: 'warning',
+                titulo: 'Presupuesto total del mes excedido',
+                mensaje: 'Por favor solicite un folio de autorización.',
+                diferencia: excesoInfo.diferencia
+            };
+        }
+
+        // Si hay folios, mostrar el estado del folio más reciente
+        const folioMasReciente = todosLosFolios.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )[0];
+
+        if (folioMasReciente.estatus === 'pendiente') {
+            return {
+                tipo: 'folio',
+                variant: 'info',
+                titulo: 'Folio de autorización generado',
+                mensaje: 'Pendiente de autorización',
+                folio: folioMasReciente.folio
+            };
+        }
+
+        if (folioMasReciente.estatus === 'autorizado') {
+            return {
+                tipo: 'folio',
+                variant: 'success',
+                titulo: 'Folio de autorización generado',
+                mensaje: 'Autorizado y listo para canjear',
+                folio: folioMasReciente.folio
+            };
+        }
+
+        if (folioMasReciente.estatus === 'rechazado') {
+            return {
+                tipo: 'folio',
+                variant: 'danger',
+                titulo: 'Folio de autorización generado',
+                mensaje: 'Folio no autorizado, no es posible enviar a tesorería',
+                folio: folioMasReciente.folio
+            };
+        }
+
+        return null;
+    };
+
 
     // Handler para recargar el paquete tras autorizar/rechazar
     const reloadPackpage = async () => {
@@ -367,25 +689,25 @@ const NewPackpageDetailsPage: React.FC = () => {
                                 <div className="mb-2">
                                     <strong>Total a Pagar:</strong>
                                     <span className="ms-2 text-primary fw-bold">
-                                        ${singleInvoice.importeAPagar.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                        ${toNumber(singleInvoice.importeAPagar).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="mb-2">
                                     <strong>Importe Pagado:</strong>
                                     <span className="ms-2 text-success fw-bold">
-                                        ${singleInvoice.importePagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                        ${toNumber(singleInvoice.importePagado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="mb-2">
                                     <strong>Saldo Pendiente:</strong>
                                     <span className="ms-2 text-warning fw-bold">
-                                        ${(singleInvoice.importeAPagar - singleInvoice.importePagado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                        ${(toNumber(singleInvoice.importeAPagar) - toNumber(singleInvoice.importePagado)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="mb-2">
                                     <strong>Porcentaje Pagado:</strong>
                                     <span className="ms-2">
-                                        {Math.round((singleInvoice.importePagado / singleInvoice.importeAPagar) * 100)}%
+                                        {Math.round((toNumber(singleInvoice.importePagado) / toNumber(singleInvoice.importeAPagar)) * 100)}%
                                     </span>
                                 </div>
                             </div>
@@ -420,7 +742,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                         <Button
                             variant="primary"
                             onClick={handleEnviarADireccion}
-                            disabled={!puedeEnviarADireccion || packpage.estatus !== 'Borrador'}
+                            disabled={!puedeEnviarADireccion || packpage.estatus !== 'Borrador' || (verificarExcesoPresupuesto().excede && foliosAutorizados.length === 0)}
                         >
                             <i className="bi bi-send me-1"></i>
                             Enviar a Tesorería
@@ -457,6 +779,130 @@ const NewPackpageDetailsPage: React.FC = () => {
                             </div>
                         </Card.Body>
                     </Card>
+
+                    {/* Resumen financiero del paquete */}
+                    <Card className="mb-3 border-0 shadow-sm">
+                        <Card.Body className="py-3 px-4">
+                            <div className="row g-3">
+                                <div className="col-md-2">
+                                    <div className="d-flex align-items-center">
+                                        <div className="me-3" style={{ fontSize: '1.5rem', color: '#dc3545' }}>
+                                            <i className="bi bi-wallet2"></i>
+                                        </div>
+                                        <div>
+                                            <div className="fw-bold text-danger">Presupuesto</div>
+                                            <div className="text-muted small">
+                                                Mes de marzo
+                                            </div>
+                                            <div className="fw-bold text-danger">
+                                                ${calcularPresupuestoTotal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-md-2">
+                                    <div className="d-flex align-items-center">
+                                        <div className="me-3" style={{ fontSize: '1.5rem', color: '#17a2b8' }}>
+                                            <i className="bi bi-file-earmark-text"></i>
+                                        </div>
+                                        <div>
+                                            <div className="fw-bold text-info">Facturas</div>
+                                            <div className="text-muted small">
+                                                {calcularTotalesFacturas().cantidad} facturas
+                                            </div>
+                                            <div className="fw-bold text-primary">
+                                                ${calcularTotalesFacturas().total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-md-2">
+                                    <div className="d-flex align-items-center">
+                                        <div className="me-3" style={{ fontSize: '1.5rem', color: '#28a745' }}>
+                                            <i className="bi bi-cash-coin"></i>
+                                        </div>
+                                        <div>
+                                            <div className="fw-bold text-success">Pagos en efectivo</div>
+                                            <div className="text-muted small">
+                                                {calcularTotalesPagosEfectivo().cantidad} pagos
+                                            </div>
+                                            <div className="fw-bold text-primary">
+                                                ${calcularTotalesPagosEfectivo().total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-md-3">
+                                    <div className="d-flex align-items-center">
+                                        <div className="me-3" style={{ fontSize: '1.5rem', color: '#6f42c1' }}>
+                                            <i className="bi bi-calculator"></i>
+                                        </div>
+                                        <div>
+                                            <div className="fw-bold" style={{ color: '#6f42c1' }}>Total del paquete</div>
+                                            <div className="text-muted small">
+                                                {calcularTotalesFacturas().cantidad + calcularTotalesPagosEfectivo().cantidad} elementos
+                                            </div>
+                                            <div className="fw-bold text-primary">
+                                                ${(calcularTotalesFacturas().total + calcularTotalesPagosEfectivo().total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-md-3">
+                                    <div className="d-flex align-items-center">
+                                        <div className="me-3" style={{ fontSize: '1.5rem', color: '#fd7e14' }}>
+                                            <i className="bi bi-credit-card"></i>
+                                        </div>
+                                        <div>
+                                            <div className="fw-bold text-warning">Total pagado</div>
+                                            <div className="text-muted small">
+                                                Importes procesados
+                                            </div>
+                                            <div className="fw-bold text-success">
+                                                ${(calcularTotalesFacturas().pagado + calcularTotalesPagosEfectivo().pagado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Card.Body>
+                    </Card>
+
+                    {/* Alerta de exceso de presupuesto o estado del folio */}
+                    {(() => {
+                        const mensajeFolio = determinarMensajeFolio();
+                        if (!mensajeFolio) return null;
+
+                        return (
+                            <Alert variant={mensajeFolio.variant} className="mb-3 d-flex align-items-center justify-content-between">
+                                <div className="d-flex align-items-center">
+                                    <div className="me-3" style={{ fontSize: '1.5rem', color: mensajeFolio.variant === 'warning' ? '#856404' : mensajeFolio.variant === 'info' ? '#0c5460' : mensajeFolio.variant === 'success' ? '#0a3622' : '#721c24' }}>
+                                        <i className={`bi ${mensajeFolio.variant === 'warning' ? 'bi-exclamation-triangle-fill' : mensajeFolio.variant === 'info' ? 'bi-info-circle-fill' : mensajeFolio.variant === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}`}></i>
+                                    </div>
+                                    <div>
+                                        <div className="fw-bold">{mensajeFolio.titulo}</div>
+                                        <div className="text-muted">
+                                            {mensajeFolio.mensaje}
+                                            {mensajeFolio.diferencia && (
+                                                <>
+                                                    <br />
+                                                    Exceso: ${mensajeFolio.diferencia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="d-flex gap-2">
+                                    {mensajeFolio.tipo === 'exceso' && (
+                                        <Button variant="outline-warning" size="sm" className="fw-bold" onClick={handleSolicitarFolio} disabled={solicitandoFolio}>
+                                            <i className="bi bi-clipboard-check me-2"></i>
+                                            {solicitandoFolio ? 'Solicitando...' : 'Solicitar Folio'}
+                                        </Button>
+                                    )}
+                                </div>
+                            </Alert>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -526,9 +972,9 @@ const NewPackpageDetailsPage: React.FC = () => {
                                                         factura.pagoRechazado ? 'Pago Rechazado' : 'Pendiente'}
                                                 </span>
                                             </td>
-                                            <td className='text-end'>${(factura.importeAPagar || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                            <td className='text-end'>${((factura.importeAPagar || 0) - (factura.importePagado || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                                            <td className='text-end'>${(factura.importePagado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                            <td className='text-end'>${toNumber(factura.importeAPagar).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                            <td className='text-end'>${(toNumber(factura.importeAPagar) - toNumber(factura.importePagado)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                                            <td className='text-end'>${toNumber(factura.importePagado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                                             <td className="text-center">
                                                 <div className="d-flex justify-content-center align-items-center">
                                                     <Button
@@ -581,6 +1027,64 @@ const NewPackpageDetailsPage: React.FC = () => {
                 <Button variant="secondary" onClick={() => router.back()}>Cerrar</Button>
                 <Button variant="outline-secondary" className="ms-2">Mostrar Timeline</Button>
             </div>
+
+            {/* Modal para ingreso de folio de autorización */}
+            <Modal show={showFolioModal} onHide={() => {
+                setShowFolioModal(false);
+                setFolioValidado(null);
+                setFolioIngresado('');
+            }} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Ingrese folio de autorización</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <div className="mb-3">
+                        <Alert variant="warning">
+                            <i className="bi bi-exclamation-triangle me-2"></i>
+                            El presupuesto mensual ha sido excedido. Para enviar este paquete a tesorería,
+                            debe ingresar un folio de autorización válido.
+                        </Alert>
+                    </div>
+                    <Form>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Folio de autorización</Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="Ingrese el folio de autorización"
+                                value={folioIngresado}
+                                onChange={(e) => setFolioIngresado(e.target.value)}
+                                disabled={validandoFolio}
+                            />
+                            <Form.Text className="text-muted">
+                                El folio debe estar autorizado y corresponder a este paquete.
+                            </Form.Text>
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => {
+                        setShowFolioModal(false);
+                        setFolioValidado(null);
+                        setFolioIngresado('');
+                    }}>
+                        Cancelar
+                    </Button>
+                    <Button 
+                        variant="primary" 
+                        onClick={handleValidarYEnviar}
+                        disabled={validandoFolio || !folioIngresado.trim()}
+                    >
+                        {validandoFolio ? (
+                            <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Validando...
+                            </>
+                        ) : (
+                            'Validar y Enviar'
+                        )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </div>
     );
 };

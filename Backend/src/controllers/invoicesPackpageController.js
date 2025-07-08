@@ -4,6 +4,9 @@ import { InvoicesPackageCompany } from "../models/InvoicesPackpageCompany.js";
 import { ExpenseConcept } from "../models/ExpenseConcept.js";
 import { RoleVisibility } from "../models/RoleVisibility.js";
 import { CashPayment } from "../models/CashPayment.js";
+import { Budget } from "../models/Budget.js";
+import { Brand } from "../models/Brand.js";
+import { Company } from "../models/Company.js";
 
 import mongoose from "mongoose";
 
@@ -1080,6 +1083,92 @@ export const enviarPaqueteADireccion = async (req, res) => {
 
     } catch (error) {
         console.error('Error enviando paquete a dirección:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
+    }
+};
+
+// GET - Obtener presupuesto por compañía, marca, sucursal y mes
+export const getBudgetByCompanyBrandBranch = async (req, res) => {
+    try {
+        const { companyId, brandId, branchId, month } = req.query;
+
+        // Validar parámetros requeridos
+        if (!companyId || !brandId || !branchId || !month) {
+            return res.status(400).json({
+                success: false,
+                message: 'Los parámetros companyId, brandId, branchId y month son requeridos.'
+            });
+        }
+
+        // Validar formato del mes (YYYY-MM)
+        const monthRegex = /^\d{4}-\d{2}$/;
+        if (!monthRegex.test(month)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El formato del mes debe ser YYYY-MM.'
+            });
+        }
+
+        // Convertir los IDs a ObjectId
+        const companyObjectId = new mongoose.Types.ObjectId(companyId);
+        const brandObjectId = new mongoose.Types.ObjectId(brandId);
+        const branchObjectId = new mongoose.Types.ObjectId(branchId);
+
+        // Buscar la marca para obtener su categoryId
+        const brand = await Brand.findById(brandObjectId);
+        if (!brand) {
+            return res.status(404).json({
+                success: false,
+                message: 'Marca no encontrada.'
+            });
+        }
+
+        if (!brand.categoryId) {
+            return res.status(400).json({
+                success: false,
+                message: 'La marca seleccionada no tiene una categoría asignada.'
+            });
+        }
+
+        // Construir el filtro base con el categoryId obtenido de la marca
+        const filtro = {
+            companyId: companyObjectId,
+            brandId: brandObjectId,
+            branchId: branchObjectId,
+            categoryId: brand.categoryId,
+            month: month
+        };
+
+
+
+        // Buscar presupuestos que coincidan con los filtros
+        const presupuestos = await Budget.find(filtro)
+            .populate('routeId')
+            .populate('brandId')
+            .populate('companyId')
+            .populate('branchId')
+            .populate('categoryId');
+
+
+
+        // Agregar headers para evitar caché
+        res.set({
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+
+        res.status(200).json({
+            success: true,
+            data: presupuestos,
+            message: `Se encontraron ${presupuestos.length} presupuestos para los filtros especificados.`
+        });
+
+    } catch (error) {
+        console.error('Error en getBudgetByCompanyBrandBranch:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Error interno del servidor.'

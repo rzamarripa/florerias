@@ -231,6 +231,7 @@ export const getUserVisibilityForSelects = async (req, res) => {
       return res.json({
         success: true,
         data: {
+          categories: [],
           companies: [],
           brands: [],
           branches: [],
@@ -279,9 +280,42 @@ export const getUserVisibilityForSelects = async (req, res) => {
       });
     });
 
+    // Obtener categories desde las brands del userVisibility
+    const { Brand } = await import("../models/Brand.js");
+    const { Category } = await import("../models/Category.js");
+
+    const brandIds = brands.map((brand) => brand._id);
+    const brandsWithCategories = await Brand.find({
+      _id: { $in: brandIds },
+      categoryId: { $exists: true },
+    }).populate("categoryId");
+
+    const categoryIds = new Set();
+    brandsWithCategories.forEach((brand) => {
+      if (brand.categoryId && brand.categoryId.hasRoutes) {
+        categoryIds.add(brand.categoryId._id.toString());
+      }
+    });
+
+    const categoriesData = await Category.find({
+      _id: { $in: Array.from(categoryIds) },
+      isActive: true,
+      hasRoutes: true,
+    });
+
+    const categories = categoriesData.map((category) => ({
+      _id: category._id.toString(),
+      name: category.name,
+      description: category.description,
+      hasRoutes: category.hasRoutes,
+      isActive: category.isActive,
+      createdAt: category.createdAt.toISOString(),
+    }));
+
     res.json({
       success: true,
       data: {
+        categories,
         companies,
         brands,
         branches,

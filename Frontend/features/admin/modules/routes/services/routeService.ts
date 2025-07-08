@@ -75,6 +75,18 @@ class RouteService {
     }
   }
 
+  async getRoutesByCategory(categoryId: string): Promise<ApiResponse<Route[]>> {
+    try {
+      return await apiCall<Route[]>(`${this.baseUrl}/category/${categoryId}`);
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || "Error fetching routes by category",
+        data: [],
+      };
+    }
+  }
+
   async getRoutesByBranch(branchId: string): Promise<ApiResponse<Route[]>> {
     try {
       return await apiCall<Route[]>(`${this.baseUrl}/branch/${branchId}`);

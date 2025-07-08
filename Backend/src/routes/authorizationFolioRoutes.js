@@ -6,7 +6,8 @@ import {
     updateAuthorizationFolio,
     deleteAuthorizationFolio,
     authorizeOrRejectFolio,
-    redeemFolio
+    redeemFolio,
+    getAuthorizationFoliosByPackage
 } from '../controllers/authorizationFolioController.js';
 
 const router = express.Router();
@@ -17,6 +18,9 @@ router.get('/', getAllAuthorizationFolios);
 router.get('/:id', getAuthorizationFolioById);
 router.put('/:id', updateAuthorizationFolio);
 router.delete('/:id', deleteAuthorizationFolio);
+
+// Get folios by package
+router.get('/by-package/:packageId', getAuthorizationFoliosByPackage);
 
 // Authorize or Reject folio
 router.post('/:id/authorize', authorizeOrRejectFolio);

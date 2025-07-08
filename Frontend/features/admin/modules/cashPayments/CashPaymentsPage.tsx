@@ -183,6 +183,11 @@ const CashPaymentsPage: React.FC = () => {
                                             <td>{p.description}</td>
                                             <td>
                                                 {(() => {
+                                                    // Verificar primero si el pago está rechazado
+                                                    if (p.pagoRechazado === true) {
+                                                        return <span className="badge bg-danger bg-opacity-10 text-danger">Rechazado</span>;
+                                                    }
+                                                    
                                                     let text = '';
                                                     let variant = '';
                                                     switch (p.estadoPago) {
@@ -204,7 +209,7 @@ const CashPaymentsPage: React.FC = () => {
                                                             variant = 'primary';
                                                             break;
                                                     }
-                                                    return <span className={`badge bg-${variant}`}>{text}</span>;
+                                                    return <span className={`badge bg-${variant} bg-opacity-10 text-${variant}`}>{text}</span>;
                                                 })()}
                                             </td>
                                             <td>{new Date(p.createdAt).toLocaleDateString("es-MX")}</td>

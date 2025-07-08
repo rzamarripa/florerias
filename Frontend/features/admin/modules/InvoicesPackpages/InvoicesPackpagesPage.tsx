@@ -23,6 +23,7 @@ import {
     getInvoicesPackagesCreatedByUsuario,
     getUserVisibilityForSelects
 } from './services';
+import { getBudgetByCompanyBrandBranch, BudgetItem } from './services/budget';
 import { UserProvider, UserVisibilityStructure, VisibilityCompany, VisibilityBrand, VisibilityBranch } from './types';
 import PagoFacturaModal from './components/PagoFacturaModal';
 import EnviarPagoModal from './components/EnviarPagoModal';
@@ -52,6 +53,9 @@ const InvoicesPackagePage: React.FC = () => {
 
     // Estados para la estructura de visibilidad
     const [visibilityStructure, setVisibilityStructure] = useState<UserVisibilityStructure | null>(null);
+    
+    // Estado para el presupuesto
+    const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
 
     // Estados para las facturas
     const [invoices, setInvoices] = useState<ImportedInvoice[]>([]);
@@ -132,9 +136,6 @@ const InvoicesPackagePage: React.FC = () => {
 
         try {
             const response = await getUserVisibilityForSelects(user._id);
-            console.log('Estructura de visibilidad cargada:', response);
-            console.log('Compañías disponibles:', response.companies);
-            console.log('Número de compañías:', response.companies?.length || 0);
             setVisibilityStructure(response);
             setCompanies(response.companies);
         } catch (err) {
@@ -145,8 +146,6 @@ const InvoicesPackagePage: React.FC = () => {
 
     const handleCompanyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const companyId = event.target.value;
-        console.log('Compañía seleccionada:', companyId);
-        console.log('Estructura de visibilidad:', visibilityStructure);
 
         setSelectedCompany(companyId);
         setSelectedBrand('');
@@ -155,18 +154,14 @@ const InvoicesPackagePage: React.FC = () => {
         // Filtrar marcas por compañía seleccionada
         if (companyId && visibilityStructure) {
             const companyBrands = visibilityStructure.brands.filter(brand => brand.companyId === companyId);
-            console.log('Marcas filtradas para la compañía:', companyBrands);
             setBrands(companyBrands);
         } else {
-            console.log('No se encontraron marcas para la compañía');
             setBrands([]);
         }
     };
 
     const handleBrandChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const brandId = event.target.value;
-        console.log('Marca seleccionada:', brandId);
-        console.log('Estructura de visibilidad:', visibilityStructure);
 
         setSelectedBrand(brandId);
         setSelectedBranch('');
@@ -174,10 +169,8 @@ const InvoicesPackagePage: React.FC = () => {
         // Filtrar sucursales por marca seleccionada
         if (brandId && visibilityStructure) {
             const brandBranches = visibilityStructure.branches.filter(branch => branch.brandId === brandId);
-            console.log('Sucursales filtradas para la marca:', brandBranches);
             setBranches(brandBranches);
         } else {
-            console.log('No se encontraron sucursales para la marca');
             setBranches([]);
         }
     };
@@ -185,6 +178,49 @@ const InvoicesPackagePage: React.FC = () => {
     const handleBranchChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedBranch(event.target.value);
     };
+
+    // Función para consultar el presupuesto cuando se seleccionen los 3 valores
+    const consultarPresupuesto = async () => {
+        if (!selectedCompany || !selectedBrand || !selectedBranch) {
+            setBudgetData([]);
+            return;
+        }
+
+        try {
+            // Construir el mes en formato YYYY-MM
+            const monthFormatted = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
+
+            console.log('Consultando presupuesto con parámetros:', {
+                companyId: selectedCompany,
+                brandId: selectedBrand,
+                branchId: selectedBranch,
+                month: monthFormatted
+            });
+
+            const response = await getBudgetByCompanyBrandBranch({
+                companyId: selectedCompany,
+                brandId: selectedBrand,
+                branchId: selectedBranch,
+                month: monthFormatted
+            });
+
+            console.log('Presupuesto obtenido:', response);
+            
+            // Guardar el presupuesto en el estado - response ya es el array directamente
+            setBudgetData(response || []);
+
+        } catch (error) {
+            console.error('Error al consultar presupuesto:', error);
+            setBudgetData([]);
+        }
+    };
+
+    // Efecto para consultar presupuesto cuando se seleccionen los 3 valores
+    useEffect(() => {
+        consultarPresupuesto();
+    }, [selectedCompany, selectedBrand, selectedBranch, selectedYear, selectedMonth]);
+
+
 
     // Funciones para manejar pagos temporales
     const handleTempPayment = (invoiceId: string, tipoPago: 'completo' | 'parcial', descripcion: string, monto?: number, conceptoGasto?: string) => {
@@ -571,6 +607,7 @@ const InvoicesPackagePage: React.FC = () => {
             <BudgetSummaryCards 
                 tempPayments={tempPayments}
                 invoices={invoices}
+                budgetData={budgetData}
             />
 
             {/* Filtros de año, mes y proveedor */}

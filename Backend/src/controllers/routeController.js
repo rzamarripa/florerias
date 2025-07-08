@@ -2,10 +2,12 @@ import { Route } from "../models/Route.js";
 import { Brand } from "../models/Brand.js";
 import { Branch } from "../models/Branch.js";
 import { Company } from "../models/Company.js";
+import { Category } from "../models/Category.js";
 
 export const getAllRoutes = async (req, res) => {
   try {
     const routes = await Route.find()
+      .populate("categoryId")
       .populate("brandId")
       .populate("companyId")
       .populate("branchId");
@@ -30,6 +32,7 @@ export const getRouteById = async (req, res) => {
     const { id } = req.params;
 
     const route = await Route.findById(id)
+      .populate("categoryId")
       .populate("brandId")
       .populate("companyId")
       .populate("branchId");
@@ -60,15 +63,16 @@ export const createRoute = async (req, res) => {
   try {
     const routeData = req.body;
 
-    if (!routeData.name || !routeData.brandId || !routeData.companyId || !routeData.branchId) {
+    if (!routeData.name || !routeData.categoryId || !routeData.brandId || !routeData.companyId || !routeData.branchId) {
       return res.status(400).json({
         success: false,
-        message: "Name, brandId, companyId, and branchId are required",
+        message: "Name, categoryId, brandId, companyId, and branchId are required",
       });
     }
 
     const existingRoute = await Route.findOne({
       name: routeData.name,
+      categoryId: routeData.categoryId,
       brandId: routeData.brandId,
       companyId: routeData.companyId,
       branchId: routeData.branchId,
@@ -77,7 +81,7 @@ export const createRoute = async (req, res) => {
     if (existingRoute) {
       return res.status(400).json({
         success: false,
-        message: "Route already exists with this name for the specified brand, company, and branch",
+        message: "Route already exists with this name for the specified category, brand, company, and branch",
       });
     }
 
@@ -85,6 +89,7 @@ export const createRoute = async (req, res) => {
     await newRoute.save();
 
     const populatedRoute = await Route.findById(newRoute._id)
+      .populate("categoryId")
       .populate("brandId")
       .populate("companyId")
       .populate("branchId");
@@ -113,6 +118,7 @@ export const updateRoute = async (req, res) => {
       new: true,
       runValidators: true,
     })
+      .populate("categoryId")
       .populate("brandId")
       .populate("companyId")
       .populate("branchId");
@@ -161,6 +167,27 @@ export const deleteRoute = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error deleting route",
+      error: error.message,
+    });
+  }
+};
+
+export const getRoutesByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    const routes = await Route.getRoutesByCategory(categoryId);
+
+    res.json({
+      success: true,
+      data: routes,
+      message: "Routes retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error getting routes by category:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error getting routes by category",
       error: error.message,
     });
   }

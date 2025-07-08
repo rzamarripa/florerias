@@ -22,11 +22,13 @@ const RouteModal: React.FC<RouteModalProps> = ({
   const [formData, setFormData] = useState<RouteFormData>({
     name: "",
     description: "",
+    categoryId: "",
     brandId: "",
     companyId: "",
     branchId: "",
     status: true,
   });
+  const [categories, setCategories] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
@@ -36,6 +38,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
     if (!user?._id) return;
     const response = await routeService.getUserVisibilitySelects(user._id);
     if (response.success && response.data) {
+      setCategories(response.data.categories || []);
       setCompanies(response.data.companies || []);
       setBrands(response.data.brands || []);
       setBranches(response.data.branches || []);
@@ -53,6 +56,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
       setFormData({
         name: editingRoute.name,
         description: editingRoute.description || "",
+        categoryId: editingRoute.categoryId?._id || "",
         brandId: editingRoute.brandId._id,
         companyId: editingRoute.companyId._id,
         branchId: editingRoute.branchId._id,
@@ -62,6 +66,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
       setFormData({
         name: "",
         description: "",
+        categoryId: "",
         brandId: "",
         companyId: "",
         branchId: "",
@@ -75,6 +80,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
 
     if (
       !formData.name ||
+      !formData.categoryId ||
       !formData.brandId ||
       !formData.companyId ||
       !formData.branchId
@@ -117,10 +123,14 @@ const RouteModal: React.FC<RouteModalProps> = ({
     onHide();
   };
 
+  // Filtrar razones sociales basadas en las categorías seleccionadas (si se requiere alguna lógica específica)
+  const filteredCompanies = companies;
+  
   // Filtrar marcas por razón social
   const filteredBrands = brands.filter(
     (b) => b.companyId === formData.companyId
   );
+  
   // Filtrar sucursales por marca Y razón social
   const filteredBranches = branches.filter(
     (br) =>
@@ -162,7 +172,32 @@ const RouteModal: React.FC<RouteModalProps> = ({
             </Col>
           </Row>
           <Row>
-            <Col md={4}>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Unidad de Negocio *</Form.Label>
+                <Form.Select
+                  value={formData.categoryId}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      categoryId: e.target.value,
+                      companyId: "",
+                      brandId: "",
+                      branchId: "",
+                    });
+                  }}
+                  required
+                >
+                  <option value="">Selecciona una opción…</option>
+                  {categories.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Razón Social *</Form.Label>
                 <Form.Select
@@ -176,9 +211,10 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     });
                   }}
                   required
+                  disabled={!formData.categoryId}
                 >
                   <option value="">Selecciona una opción…</option>
-                  {companies.map((c) => (
+                  {filteredCompanies.map((c) => (
                     <option key={c._id} value={c._id}>
                       {c.name}
                     </option>
@@ -186,7 +222,9 @@ const RouteModal: React.FC<RouteModalProps> = ({
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={4}>
+          </Row>
+          <Row>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Marca *</Form.Label>
                 <Form.Select
@@ -210,7 +248,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={4}>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Sucursal *</Form.Label>
                 <Form.Select
@@ -218,6 +256,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
                   onChange={(e) => {
                     setFormData({ ...formData, branchId: e.target.value });
                   }}
+                  required
                   disabled={!formData.brandId}
                 >
                   <option value="">Selecciona una opción…</option>

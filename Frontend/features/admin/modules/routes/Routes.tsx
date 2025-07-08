@@ -62,7 +62,7 @@ const Routes: React.FC = () => {
             <div>
               <h4 className="card-title">Gestión de Rutas</h4>
               <p className="text-muted mb-0">
-                Administra las rutas de distribución por marca, empresa y
+                Administra las rutas de distribución por unidad de negocio, marca, empresa y
                 sucursal.
               </p>
             </div>
@@ -104,6 +104,7 @@ const Routes: React.FC = () => {
                 <tr>
                   <th>Nombre</th>
                   <th>Descripción</th>
+                  <th>Unidad de Negocio</th>
                   <th>Marca</th>
                   <th>Empresa</th>
                   <th>Sucursal</th>
@@ -114,7 +115,7 @@ const Routes: React.FC = () => {
               <tbody>
                 {routes.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center">
+                    <td colSpan={8} className="text-center">
                       No hay rutas disponibles
                     </td>
                   </tr>
@@ -123,6 +124,7 @@ const Routes: React.FC = () => {
                     <tr key={route._id}>
                       <td>{route.name}</td>
                       <td>{route.description || "-"}</td>
+                      <td>{route.categoryId?.name || "Sin categoría"}</td>
                       <td>{route.brandId.name}</td>
                       <td>{route.companyId.name}</td>
                       <td>{route.branchId.name}</td>

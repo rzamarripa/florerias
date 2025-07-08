@@ -5,6 +5,7 @@ import {
   createRoute,
   updateRoute,
   deleteRoute,
+  getRoutesByCategory,
   getRoutesByBranch,
   getRoutesByBrand,
   getRoutesByCompany,
@@ -18,6 +19,7 @@ router.post("/", createRoute);
 router.put("/:id", updateRoute);
 router.delete("/:id", deleteRoute);
 
+router.get("/category/:categoryId", getRoutesByCategory);
 router.get("/branch/:branchId", getRoutesByBranch);
 router.get("/brand/:brandId", getRoutesByBrand);
 router.get("/company/:companyId", getRoutesByCompany);

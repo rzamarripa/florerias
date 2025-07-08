@@ -48,9 +48,6 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
     // Función para calcular el total de saldo
     const calcularTotalSaldo = () => pagos.reduce((sum, p) => sum + (getNumber(p.importeAPagar) - getNumber(p.importePagado)), 0);
 
-    pagos.forEach((pago, idx) => {
-        console.log(`Pago #${idx + 1}: importeAPagar=`, pago.importeAPagar, 'importePagado=', pago.importePagado, pago);
-    });
 
     return (
         <div>
@@ -100,7 +97,11 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                                             </span>
                                         </td>
                                         <td>
-                                            <Badge className="bg-success bg-opacity-10 text-success">Vigente</Badge>
+                                            {pago.pagoRechazado === true ? (
+                                                <Badge className="bg-danger bg-opacity-10 text-danger">Rechazado</Badge>
+                                            ) : (
+                                                <Badge className="bg-success bg-opacity-10 text-success">Vigente</Badge>
+                                            )}
                                         </td>
                                         <td>
                                             <span className="text-primary">

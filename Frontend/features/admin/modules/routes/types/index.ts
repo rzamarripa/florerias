@@ -2,6 +2,11 @@ export interface Route {
   _id: string;
   name: string;
   description?: string;
+  categoryId?: {
+    _id: string;
+    name: string;
+    description?: string;
+  };
   brandId: {
     _id: string;
     name: string;
@@ -24,6 +29,7 @@ export interface Route {
 export interface RouteFormData {
   name: string;
   description?: string;
+  categoryId: string;
   brandId: string;
   companyId: string;
   branchId: string;

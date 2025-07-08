@@ -405,4 +405,70 @@ export const getUserVisibilityForSelects = async (userId: string): Promise<{
 }> => {
     const response = await apiCall<any>(`/role-visibility/${userId}/selects`);
     return response.data;
+};
+
+// Interfaces para folio de autorización
+export interface AuthorizationFolio {
+    _id: string;
+    paquete_id: string;
+    motivo: string;
+    usuario_id: string;
+    fecha: string;
+    estatus: string;
+    fechaFolioAutorizacion: string;
+    folio: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateAuthorizationFolioRequest {
+    paquete_id: string;
+    motivo: string;
+    usuario_id: string;
+    fecha: string;
+    fechaFolioAutorizacion: string;
+    folio: string;
+}
+
+export interface AuthorizationFolioResponse {
+    success: boolean;
+    data: AuthorizationFolio;
+    message?: string;
+}
+
+// Servicio para crear un folio de autorización
+export const createAuthorizationFolio = async (data: CreateAuthorizationFolioRequest): Promise<AuthorizationFolioResponse> => {
+    const response = await apiCall<AuthorizationFolio>("/authorization-folios", {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
+    return {
+        success: true,
+        data: response.data,
+    };
+};
+
+// Servicio para obtener folios de autorización por paquete
+export const getAuthorizationFoliosByPackage = async (packageId: string): Promise<AuthorizationFolio[]> => {
+    const url = `/authorization-folios/by-package/${packageId}`;
+    
+    const response = await apiCall<AuthorizationFolio[]>(url);
+    
+    return response.data || [];
+};
+
+// Servicio para buscar un folio por número
+export const getAuthorizationFolioByNumber = async (folioNumber: string): Promise<AuthorizationFolio | null> => {
+    const response = await apiCall<AuthorizationFolio[]>(`/authorization-folios?folio=${folioNumber}`);
+    return response.data && response.data.length > 0 ? response.data[0] : null;
+};
+
+// Servicio para canjear un folio de autorización
+export const redeemAuthorizationFolio = async (folioId: string): Promise<{ success: boolean; data: AuthorizationFolio; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: AuthorizationFolio; message: string }>(`/authorization-folios/${folioId}/redeem`, {
+        method: "POST",
+    });
+    
+    // La respuesta ya viene con el formato correcto desde el backend
+    return response.data;
 }; 
