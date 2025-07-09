@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"folio":{"$numberInt":"1"}},"name":"folio_1","background":true,"unique":true}],"uuid":"d2c8ea9aa0174413a42263678da38042","collectionName":"cc_authorization_folio","type":"collection"}
