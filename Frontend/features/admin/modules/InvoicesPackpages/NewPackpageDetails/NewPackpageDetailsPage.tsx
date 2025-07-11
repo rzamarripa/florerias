@@ -775,32 +775,61 @@ const NewPackpageDetailsPage: React.FC = () => {
                         )}
 
                     </div>
-                    {/* Comentario y estatus */}
+                    {/* Comentario, estatus y empresa */}
                     <Card className="mb-2 border-0 shadow-sm bg-light">
-                        <Card.Body className="py-3 px-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between">
-                            <div className="d-flex align-items-center mb-2 mb-md-0">
-                                <div className="me-3" style={{ fontSize: '1.7rem', color: '#0d6efd' }}>
-                                    <i className="bi bi-chat-left-text"></i>
-                                </div>
-                                <div>
-                                    <div className="fw-bold text-primary">Comentario: {packpage.comentario}</div>
-                                    <div className="text-dark">
-                                        Fecha Pago: {formatDate(packpage.fechaPago.toString(), 'dd/MM/yyyy')}
+                        <Card.Body className="py-3 px-4 d-flex flex-column flex-md-row align-items-md-start justify-content-between">
+                            <div className="flex-grow-1 me-md-4">
+                                {/* Comentario y fecha de pago */}
+                                <div className="d-flex align-items-center mb-3">
+                                    <div className="me-3" style={{ fontSize: '1.7rem', color: '#0d6efd' }}>
+                                        <i className="bi bi-chat-left-text"></i>
+                                    </div>
+                                    <div>
+                                        <div className="fw-bold text-primary">Comentario: {packpage.comentario}</div>
+                                        <div className="text-dark">
+                                            Fecha Pago: {formatDate(packpage.fechaPago.toString(), 'dd/MM/yyyy')}
+                                        </div>
                                     </div>
                                 </div>
+                                
+                                {/* Estatus */}
+                                <div className="d-flex align-items-center">
+                                    <span className="fw-semibold text-muted me-2">Estatus actual:</span>
+                                    <Badge bg="info" className="me-2">{packpage.estatus}</Badge>
+                                    <Badge bg="primary">Borrador → Tesorería</Badge>
+                                </div>
                             </div>
-                            <div className="d-flex align-items-center gap-2">
-                                <span className="fw-semibold text-muted">Estatus actual:</span>
-                                <Badge bg="info" className="me-2">{packpage.estatus}</Badge>
-                                <Badge bg="primary">Borrador → Tesorería</Badge>
-                                {packageCompanyInfo && (
-                                    <Badge bg="primary" className="ms-2">
-                                        {packageCompanyInfo.companyName}
-                                        {packageCompanyInfo.brandName && ` → ${packageCompanyInfo.brandName}`}
-                                        {packageCompanyInfo.branchName && ` → ${packageCompanyInfo.branchName}`}
-                                    </Badge>
-                                )}
-                            </div>
+
+                            {/* Información de la empresa - a la derecha */}
+                            {packageCompanyInfo && (
+                                <div className="d-flex align-items-center mt-3 mt-md-0">
+                                    <div className="me-3" style={{ fontSize: '1.5rem', color: '#0d6efd' }}>
+                                        <i className="bi bi-building"></i>
+                                    </div>
+                                    <div className="text-end text-md-end">
+                                        <div className="fw-bold text-primary" style={{ fontSize: '1.1rem' }}>
+                                            {packageCompanyInfo.companyId.name}
+                                        </div>
+                                        <div className="text-muted" style={{ fontSize: '1rem' }}>
+                                            {packageCompanyInfo.brandId && (
+                                                
+                                                <span className="me-3">
+                                                    Marca:
+                                                    <i className="bi bi-tag me-1"></i>
+                                                    {packageCompanyInfo.brandId.name}
+                                                </span>
+                                            )}
+                                            {packageCompanyInfo.branchId && (
+                                                <span>
+                                                    Sucursal:
+                                                    <i className="bi bi-geo-alt me-1"></i>
+                                                    {packageCompanyInfo.branchId.name}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </Card.Body>
                     </Card>
 

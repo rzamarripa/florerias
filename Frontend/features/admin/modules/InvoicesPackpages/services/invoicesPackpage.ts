@@ -477,12 +477,31 @@ export const redeemAuthorizationFolio = async (folioId: string): Promise<{ succe
 export interface PackageCompanyInfo {
     _id: string;
     packageId: string;
-    companyId: string;
-    companyName: string;
-    brandId?: string;
-    brandName?: string;
-    branchId?: string;
-    branchName?: string;
+    companyId: {
+        _id: string;
+        name: string;
+        rfc: string;
+        legalRepresentative: string;
+        address: string;
+        isActive: boolean;
+        createdAt: string;
+    };
+    brandId?: {
+        _id: string;
+        name: string;
+        companyId: string;
+        categoryId: string;
+        isActive: boolean;
+        createdAt: string;
+    };
+    branchId?: {
+        _id: string;
+        name: string;
+        brandId: string;
+        address: string;
+        isActive: boolean;
+        createdAt: string;
+    };
     createdAt: string;
     updatedAt: string;
 }
@@ -490,7 +509,7 @@ export interface PackageCompanyInfo {
 // Servicio para obtener información de compañía/marca/sucursal de un paquete
 export const getPackageCompanyInfo = async (packageId: string): Promise<PackageCompanyInfo | null> => {
     try {
-        const response = await apiCall<PackageCompanyInfo>(`/invoices-package-companies/${packageId}`);
+        const response = await apiCall<PackageCompanyInfo>(`/invoices-package-company/package/${packageId}`);
         return response.data;
     } catch (error) {
         console.error('Error al obtener información de compañía del paquete:', error);
