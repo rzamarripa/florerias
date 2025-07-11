@@ -10,6 +10,7 @@ import {
     Table,
     ButtonGroup,
     Spinner,
+    Modal,
 } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { BsClipboard } from 'react-icons/bs';
@@ -21,9 +22,10 @@ import {
     ImportedInvoice,
     InvoicesSummaryResponse,
     getInvoicesPackagesCreatedByUsuario,
-    getUserVisibilityForSelects
+    getUserVisibilityForSelects,
+    getBudgetByCompanyBrandBranch,
+    BudgetItem
 } from './services';
-import { getBudgetByCompanyBrandBranch, BudgetItem } from './services/budget';
 import { UserProvider, UserVisibilityStructure, VisibilityCompany, VisibilityBrand, VisibilityBranch } from './types';
 import PagoFacturaModal from './components/PagoFacturaModal';
 import EnviarPagoModal from './components/EnviarPagoModal';
@@ -32,6 +34,7 @@ import CreatedPackpageModal from './components/CreatedPackpageModal';
 import { useRouter } from 'next/navigation';
 import DescuentoFacturaModal from './components/DescuentoFacturaModal';
 import MultiSelect from '@/components/forms/Multiselect';
+import { CashPaymentModal } from '../cashPayments/components/CashPaymentModal';
 
 const InvoicesPackagePage: React.FC = () => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -53,7 +56,7 @@ const InvoicesPackagePage: React.FC = () => {
 
     // Estados para la estructura de visibilidad
     const [visibilityStructure, setVisibilityStructure] = useState<UserVisibilityStructure | null>(null);
-    
+
     // Estado para el presupuesto
     const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
 
@@ -85,6 +88,10 @@ const InvoicesPackagePage: React.FC = () => {
     const [descuentoSaldo, setDescuentoSaldo] = useState(0);
     const [descuentoInvoiceId, setDescuentoInvoiceId] = useState<string | null>(null);
 
+    // Estados para el modal de pago en efectivo
+    const [showCashPaymentModal, setShowCashPaymentModal] = useState(false);
+    const [showCashPaymentConfirmModal, setShowCashPaymentConfirmModal] = useState(false);
+
     // Estado local para pagos temporales
     const [tempPayments, setTempPayments] = useState<{
         [invoiceId: string]: {
@@ -109,8 +116,14 @@ const InvoicesPackagePage: React.FC = () => {
     // Cargar proveedores del usuario al montar el componente
     useEffect(() => {
         loadUserProviders();
-        loadUserVisibilityStructure();
     }, []);
+
+    // Cargar visibilidad cuando el usuario esté disponible
+    useEffect(() => {
+        if (user?._id) {
+            loadUserVisibilityStructure();
+        }
+    }, [user?._id]);
 
     // Cargar facturas automáticamente cuando cambie el año o mes
     useEffect(() => {
@@ -137,7 +150,7 @@ const InvoicesPackagePage: React.FC = () => {
         try {
             const response = await getUserVisibilityForSelects(user._id);
             setVisibilityStructure(response);
-            setCompanies(response.companies);
+            setCompanies(response?.companies || []);
         } catch (err) {
             console.error('Error cargando estructura de visibilidad:', err);
             toast.error('Error al cargar la estructura de visibilidad');
@@ -190,13 +203,6 @@ const InvoicesPackagePage: React.FC = () => {
             // Construir el mes en formato YYYY-MM
             const monthFormatted = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
 
-            console.log('Consultando presupuesto con parámetros:', {
-                companyId: selectedCompany,
-                brandId: selectedBrand,
-                branchId: selectedBranch,
-                month: monthFormatted
-            });
-
             const response = await getBudgetByCompanyBrandBranch({
                 companyId: selectedCompany,
                 brandId: selectedBrand,
@@ -204,8 +210,6 @@ const InvoicesPackagePage: React.FC = () => {
                 month: monthFormatted
             });
 
-            console.log('Presupuesto obtenido:', response);
-            
             // Guardar el presupuesto en el estado - response ya es el array directamente
             setBudgetData(response || []);
 
@@ -215,10 +219,14 @@ const InvoicesPackagePage: React.FC = () => {
         }
     };
 
-    // Efecto para consultar presupuesto cuando se seleccionen los 3 valores
+    // Efecto para consultar presupuesto SOLO cuando se seleccione la sucursal o cambien mes/año
     useEffect(() => {
-        consultarPresupuesto();
-    }, [selectedCompany, selectedBrand, selectedBranch, selectedYear, selectedMonth]);
+        if (selectedBranch) {
+            consultarPresupuesto();
+        } else {
+            setBudgetData([]);
+        }
+    }, [selectedBranch, selectedYear, selectedMonth]);
 
 
 
@@ -342,9 +350,7 @@ const InvoicesPackagePage: React.FC = () => {
                 user?._id ? getInvoicesPackagesCreatedByUsuario(user._id) : Promise.resolve([])
             ]);
 
-            console.log('invoicesResponse:', invoicesResponse);
-            console.log('summaryResponse:', summaryResponse);
-            console.log('packagesResponse:', packagesResponse);
+
 
             if (invoicesResponse && invoicesResponse.data) {
                 setInvoices(invoicesResponse.data);
@@ -425,10 +431,51 @@ const InvoicesPackagePage: React.FC = () => {
             : { text: 'Cancelado', variant: 'danger' };
     };
 
+    // Efecto para limpiar pagos temporales de facturas ya guardadas en paquetes
+    useEffect(() => {
+        if (existingPackages.length > 0) {
+            // Obtener IDs de facturas que ya están guardadas en paquetes (cualquier pago, completo o parcial)
+            const facturasEnPaquetes = existingPackages.flatMap(pkg =>
+                pkg.facturas.map((f: any) => f._id)
+            );
+
+            // Limpiar pagos temporales de facturas que ya están en paquetes
+            setTempPayments(prev => {
+                const newTempPayments = { ...prev };
+                let cambios = false;
+
+                Object.keys(newTempPayments).forEach(invoiceId => {
+                    if (facturasEnPaquetes.includes(invoiceId)) {
+                        delete newTempPayments[invoiceId];
+                        cambios = true;
+                    }
+                });
+
+                if (cambios) {
+                    console.log('Pagos temporales limpiados para facturas ya guardadas en paquetes');
+                }
+
+                return newTempPayments;
+            });
+        }
+    }, [existingPackages]);
+
     // Función para determinar el estado de pago y autorización de una factura
     const getFacturaEstado = (invoice: ImportedInvoice) => {
         const invoiceWithTempPayments = getInvoiceWithTempPayments(invoice);
         const isCompletamentePagada = invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar;
+
+        // NUEVO: Verificar si la factura tiene un pago temporal pendiente
+        const hasTempPayment = tempPayments[invoice._id];
+        if (hasTempPayment) {
+            return {
+                tipo: 'seleccionada',
+                etiqueta: 'Seleccionada',
+                mostrarBotones: false,
+                descripcion: 'Pago temporal registrado - Pendiente de envío',
+                color: 'info'
+            };
+        }
 
         // Si tiene pago parcial (sin importar si es temporal o real)
         if (invoiceWithTempPayments.importePagado > 0 && invoiceWithTempPayments.importePagado < invoiceWithTempPayments.importeAPagar) {
@@ -443,7 +490,7 @@ const InvoicesPackagePage: React.FC = () => {
         // Si está completamente pagada
         if (isCompletamentePagada) {
             // Si está en un paquete y pendiente de autorización
-            if (invoice.estaRegistrada && !invoice.autorizada) {
+            if (invoice.estaRegistrada && invoice.autorizada === null) {
                 return {
                     tipo: 'completa_pendiente',
                     etiqueta: 'Procesada',
@@ -454,13 +501,13 @@ const InvoicesPackagePage: React.FC = () => {
             }
 
             // Si está en un paquete y autorizada
-            if (invoice.estaRegistrada && invoice.autorizada) {
+            if (invoice.estaRegistrada && invoice.autorizada === true) {
                 return {
                     tipo: 'completa_autorizada',
                     etiqueta: 'Autorizada',
                     mostrarBotones: false,
                     descripcion: 'Pago completo autorizado',
-                    color: 'primary'
+                    color: 'success'
                 };
             }
 
@@ -510,14 +557,26 @@ const InvoicesPackagePage: React.FC = () => {
     const facturasGuardadas = React.useMemo(() => {
         // Considerar como "guardadas" las facturas que están completamente pagadas
         // Las facturas con pago parcial pueden ser registradas nuevamente
+        // IMPORTANTE: Excluir facturas rechazadas usando el estado actual de la factura principal
         return Array.isArray(existingPackages)
             ? existingPackages.flatMap(pkg =>
                 pkg.facturas
-                    .filter((f: any) => f.importePagado >= f.importeAPagar) // Facturas completamente pagadas
+                    .filter((f: any) => {
+                        // Buscar la factura actual en la lista principal para verificar su estado real
+                        const facturaActual = invoices.find(inv => inv._id === f._id);
+
+                        // Si la factura actual está rechazada, no considerarla como guardada
+                        if (facturaActual && (facturaActual.autorizada === false || facturaActual.pagoRechazado === true)) {
+                            return false;
+                        }
+
+                        // Solo considerar guardadas las facturas completamente pagadas
+                        return f.importePagado >= f.importeAPagar;
+                    })
                     .map((f: any) => f._id)
             )
             : [];
-    }, [existingPackages]);
+    }, [existingPackages, invoices]);
 
     // Facturas pagadas disponibles para guardar en paquetes
     const facturasDisponibles = React.useMemo(() => {
@@ -528,20 +587,45 @@ const InvoicesPackagePage: React.FC = () => {
             // Permitir facturas rechazadas aunque tengan estaRegistrada: true
             const esRechazada = f.autorizada === false || f.pagoRechazado === true;
 
+            // Una factura registrada con pago completo NO está disponible
+            if (f.estaRegistrada && invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar && !esRechazada) {
+                return false; // Factura completamente pagada y registrada = NO disponible
+            }
+
             // Una factura está disponible si:
             // 1. Es rechazada (puede seleccionarse de nuevo)
-            // 2. O tiene pagos temporales (sin importar si son completos o parciales)
-            // 3. O tiene pagos reales pero NO está completamente pagada
+            // 2. O tiene pagos temporales (seleccionada explícitamente por el usuario)
+            // 3. Para paquetes existentes: O tiene pagos reales pero NO está completamente pagada
             // 4. Y NO está en la lista de facturas completamente pagadas en paquetes existentes
-            const tienePagos = hasTempPayment || (invoiceWithTempPayments.importePagado > 0);
-            const noEstaCompletamentePagada = invoiceWithTempPayments.importePagado < invoiceWithTempPayments.importeAPagar;
             const noEstaGuardada = !facturasGuardadas.includes(f._id);
 
-            return esRechazada || (tienePagos && (noEstaCompletamentePagada || hasTempPayment) && noEstaGuardada);
+            // Para facturas rechazadas, siempre disponibles
+            if (esRechazada && noEstaGuardada) {
+                return true;
+            }
+
+            // Para facturas con pagos temporales, siempre disponibles (seleccionadas por el usuario)
+            if (hasTempPayment && noEstaGuardada) {
+                return true;
+            }
+
+            // Para facturas con pagos reales de otros paquetes, solo disponibles si:
+            // - Están parcialmente pagadas Y no están completamente pagadas
+            // - Y no están guardadas en paquetes existentes
+            const tienePagosReales = invoiceWithTempPayments.importePagado > 0 && !hasTempPayment;
+            const noEstaCompletamentePagada = invoiceWithTempPayments.importePagado < invoiceWithTempPayments.importeAPagar;
+
+            if (tienePagosReales && noEstaCompletamentePagada && noEstaGuardada) {
+                // Esta factura tiene pagos parciales de otros paquetes
+                // Solo estará disponible para paquetes existentes, no para nuevos
+                return true;
+            }
+
+            return false;
         });
     }, [invoices, facturasGuardadas, tempPayments]);
 
-    // Facturas con pagos (completos o parciales) y no guardadas
+    // Facturas con pagos disponibles para nuevos paquetes
     const facturasConPagosNoGuardadas = React.useMemo(() => {
         return invoices.filter(f => {
             const hasTempPayment = tempPayments[f._id];
@@ -550,18 +634,30 @@ const InvoicesPackagePage: React.FC = () => {
             // Permitir facturas rechazadas aunque tengan estaRegistrada: true
             const esRechazada = f.autorizada === false || f.pagoRechazado === true;
 
-            // Una factura está disponible si:
-            // 1. Es rechazada (puede seleccionarse de nuevo)
-            // 2. O tiene pagos temporales (sin importar si son completos o parciales)
-            // 3. O tiene pagos reales pero NO está completamente pagada
-            // 4. Y NO está en la lista de facturas completamente pagadas en paquetes existentes
-            const tienePagos = hasTempPayment || (invoiceWithTempPayments.importePagado > 0);
-            const noEstaCompletamentePagada = invoiceWithTempPayments.importePagado < invoiceWithTempPayments.importeAPagar;
+            // Una factura registrada con pago completo NO está disponible
+            if (f.estaRegistrada && invoiceWithTempPayments.importePagado >= invoiceWithTempPayments.importeAPagar && !esRechazada) {
+                return false; // Factura completamente pagada y registrada = NO disponible
+            }
+
             const noEstaGuardada = !facturasGuardadas.includes(f._id);
 
-            return esRechazada || (tienePagos && (noEstaCompletamentePagada || hasTempPayment) && noEstaGuardada);
+            // Para conteo de nuevos paquetes, solo considerar:
+            // 1. Facturas rechazadas (pueden volver a ser pagadas)
+            // 2. Facturas con pagos temporales (seleccionadas por el usuario)
+            if (isNewPackage) {
+                return (esRechazada || hasTempPayment) && noEstaGuardada;
+            } else {
+                // Para paquetes existentes, usar la misma lógica que facturasDisponibles
+                if (esRechazada && noEstaGuardada) return true;
+                if (hasTempPayment && noEstaGuardada) return true;
+
+                const tienePagosReales = invoiceWithTempPayments.importePagado > 0 && !hasTempPayment;
+                const noEstaCompletamentePagada = invoiceWithTempPayments.importePagado < invoiceWithTempPayments.importeAPagar;
+
+                return tienePagosReales && noEstaCompletamentePagada && noEstaGuardada;
+            }
         });
-    }, [invoices, facturasGuardadas, tempPayments]);
+    }, [invoices, facturasGuardadas, tempPayments, isNewPackage]);
 
     // Facturas guardadas en el paquete seleccionado (solo si hay paquete existente)
     let facturasGuardadasEnPaquete: any[] = [];
@@ -600,14 +696,15 @@ const InvoicesPackagePage: React.FC = () => {
         }));
     }
 
-
-
     return (
         <Container fluid className="mt-4">
-            <BudgetSummaryCards 
+            <BudgetSummaryCards
                 tempPayments={tempPayments}
                 invoices={invoices}
                 budgetData={budgetData}
+                existingPackages={existingPackages}
+                selectedYear={selectedYear}
+                selectedMonth={selectedMonth}
             />
 
             {/* Filtros de año, mes y proveedor */}
@@ -733,12 +830,20 @@ const InvoicesPackagePage: React.FC = () => {
                             </Form.Group>
                         </Col>
                         <Col md={4}>
-                            <Button
-                                variant="primary"
-                                onClick={handleSearch}
-                            >
-                                <i className="bi bi-search me-2"></i>Buscar
-                            </Button>
+                            <div className="d-flex gap-2">
+                                <Button
+                                    variant="primary"
+                                    onClick={handleSearch}
+                                >
+                                    <i className="bi bi-search me-2"></i>Buscar
+                                </Button>
+                                <Button
+                                    variant="success"
+                                    onClick={() => setShowCashPaymentModal(true)}
+                                >
+                                    <i className="bi bi-cash me-2"></i>Pagar en efectivo
+                                </Button>
+                            </div>
                         </Col>
                     </Row>
                 </Card.Body>
@@ -852,7 +957,8 @@ const InvoicesPackagePage: React.FC = () => {
                                             }}
                                             title="Ver detalle del paquete"
                                         >
-                                            <i className="bi bi-eye"></i>
+                                            <i className="bi bi-eye me-2"></i>
+                                            Ver detalle
                                         </Button>
                                     </Col>
                                 )}
@@ -883,10 +989,14 @@ const InvoicesPackagePage: React.FC = () => {
                                 )}
                                 <Button
                                     variant="primary"
-                                    disabled={facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)}
+                                    disabled={facturasConPagosNoGuardadas.length === 0 && !(selectedPackageId && !isNewPackage)}
                                     onClick={() => {
-                                        if (facturasDisponibles.length === 0 && !(selectedPackageId && !isNewPackage)) {
-                                            toast.warn('No hay facturas con pagos disponibles para guardar en paquete. Las facturas completamente pagadas no pueden ser agregadas nuevamente.');
+                                        if (facturasConPagosNoGuardadas.length === 0 && !(selectedPackageId && !isNewPackage)) {
+                                            if (isNewPackage) {
+                                                toast.warn('No hay facturas seleccionadas para el nuevo paquete. Registra pagos temporales o selecciona facturas rechazadas.');
+                                            } else {
+                                                toast.warn('No hay facturas con pagos disponibles para guardar en paquete.');
+                                            }
                                             return;
                                         }
 
@@ -914,16 +1024,22 @@ const InvoicesPackagePage: React.FC = () => {
                                             });
 
                                             if (facturasConPagos.length === 0) {
-                                                toast.warn('No hay facturas disponibles para agregar al paquete existente. Las facturas completamente pagadas no pueden ser agregadas nuevamente.');
+                                                toast.warn('No hay facturas disponibles para agregar al paquete existente. Selecciona facturas con pagos temporales o parciales.');
                                                 return;
                                             }
 
                                             facturasParaEnviar = marcarFacturasGuardadas(facturasConPagos, paqueteExistenteSeleccionado);
                                         } else {
-                                            // Incluir facturas con pagos (completos o parciales)
+                                            // Para nuevo paquete: SOLO incluir facturas con pagos temporales o rechazadas
+                                            // NO incluir facturas con pagos parciales de otros paquetes sin seleccionar
                                             facturasParaEnviar = facturasDisponibles.filter(f => {
-                                                const invoiceWithTempPayments = getInvoiceWithTempPayments(f);
-                                                return invoiceWithTempPayments.importePagado > 0;
+                                                const hasTempPayment = tempPayments[f._id];
+                                                const esRechazada = f.autorizada === false || f.pagoRechazado === true;
+
+                                                // Para nuevo paquete, solo permitir:
+                                                // 1. Facturas con pagos temporales (seleccionadas por el usuario)
+                                                // 2. Facturas rechazadas (pueden volver a ser pagadas)
+                                                return hasTempPayment || esRechazada;
                                             });
                                         }
                                         setFacturasProcesadas(facturasParaEnviar);
@@ -933,7 +1049,7 @@ const InvoicesPackagePage: React.FC = () => {
                                 >
                                     <i className="bi bi-send me-2"></i>
                                     {(!isNewPackage && selectedPackageId) ? 'Actualizar Paquete' : 'Enviar a Pago'}
-                                    {facturasDisponibles.length > 0 && (
+                                    {facturasConPagosNoGuardadas.length > 0 && (
                                         <span className="badge bg-light text-primary ms-2">
                                             {contadorFacturas}
                                         </span>
@@ -1019,14 +1135,16 @@ const InvoicesPackagePage: React.FC = () => {
                                                 {facturaEstado.etiqueta ? (
                                                     <span className={`badge ${facturaEstado.color === 'primary'
                                                         ? 'bg-primary bg-opacity-10 text-primary'
-                                                        : facturaEstado.tipo === 'completa_autorizada'
+                                                        : facturaEstado.color === 'success'
                                                             ? 'bg-success bg-opacity-10 text-success'
-                                                            : 'bg-warning bg-opacity-10 text-warning'
+                                                            : facturaEstado.color === 'info'
+                                                                ? 'bg-info bg-opacity-10 text-info'
+                                                                : 'bg-warning bg-opacity-10 text-warning'
                                                         } fw-bold py-2 px-3`}>
                                                         <i className={`bi ${facturaEstado.tipo === 'completa_autorizada'
                                                             ? 'bi-check-circle'
-                                                            : facturaEstado.color === 'primary'
-                                                                ? 'bi-clock'
+                                                            : facturaEstado.tipo === 'seleccionada'
+                                                                ? 'bi-hand-index'
                                                                 : 'bi-clock'
                                                             } me-1`}></i>
                                                         {facturaEstado.etiqueta}
@@ -1253,6 +1371,11 @@ const InvoicesPackagePage: React.FC = () => {
                         setShowCreatedPackpageModal(true);
                     }
                 }}
+                onCancel={() => {
+                    // Cuando se cancela el modal, los pagos temporales deben permanecer
+                    // para que el usuario pueda volver a intentar enviar el paquete
+                    setShowEnviarPagoModal(false);
+                }}
             />
 
             <DescuentoFacturaModal
@@ -1280,6 +1403,53 @@ const InvoicesPackagePage: React.FC = () => {
                     router.push('/modulos/paquetes-facturas/listado-paquetes');
                 }}
             />
+
+            <CashPaymentModal
+                show={showCashPaymentModal}
+                onHide={() => setShowCashPaymentModal(false)}
+                onSuccess={() => {
+                    setShowCashPaymentModal(false);
+                    setShowCashPaymentConfirmModal(true);
+                }}
+                departmentId={user?.departmentId || undefined}
+            />
+
+            {/* Modal de confirmación de pago en efectivo */}
+            <Modal show={showCashPaymentConfirmModal} onHide={() => setShowCashPaymentConfirmModal(false)} centered size="sm">
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        <i className="bi bi-check-circle text-success me-2"></i>
+                        Pago creado exitosamente
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="text-center">
+                    <i className="bi bi-cash-coin display-4 text-success mb-3"></i>
+                    <h6>Nuevo pago en efectivo creado</h6>
+                    <p className="text-muted mb-4">¿Qué deseas hacer ahora?</p>
+                </Modal.Body>
+                <Modal.Footer className="justify-content-center">
+                    <Button
+                        variant="primary"
+                        onClick={() => {
+                            setShowCashPaymentConfirmModal(false);
+                            router.push('/modulos/paquetes-facturas/listado-paquetes');
+                        }}
+                    >
+                        <i className="bi bi-list-ul me-2"></i>
+                        Ir al listado de paquetes
+                    </Button>
+                    <Button
+                        variant="outline-primary"
+                        onClick={() => {
+                            setShowCashPaymentConfirmModal(false);
+                            router.push('/modulos/pagos-efectivo');
+                        }}
+                    >
+                        <i className="bi bi-cash me-2"></i>
+                        Ver pagos en efectivo
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Container>
     );
 };

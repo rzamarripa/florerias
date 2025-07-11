@@ -33,7 +33,7 @@ export const createInvoicesPackage = async (req, res) => {
         // Validar datos requeridos - debe haber al menos facturas o pagos en efectivo
         const tieneFacturas = facturas && Array.isArray(facturas) && facturas.length > 0;
         const tienePagosEfectivo = pagosEfectivo && Array.isArray(pagosEfectivo) && pagosEfectivo.length > 0;
-        
+
         if (!tieneFacturas && !tienePagosEfectivo) {
             return res.status(400).json({
                 success: false,
@@ -211,7 +211,7 @@ export const createInvoicesPackage = async (req, res) => {
             departamento,
             comentario,
             fechaPago: fechaPagoParaGuardar,
-            totalImporteAPagar: totalImporteAPagar || 0,
+            totalImporteAPagar: 0, // Se calculará automáticamente en actualizarTotales()
             folio: siguienteFolio
             // createdAt se establecerá automáticamente con la fecha actual
         });
@@ -602,7 +602,7 @@ export const updateInvoicesPackage = async (req, res) => {
             fechaPagoParaGuardar.setUTCHours(12, 0, 0, 0);
             datosActualizacion.fechaPago = fechaPagoParaGuardar;
         }
-        if (totalImporteAPagar !== undefined) datosActualizacion.totalImporteAPagar = totalImporteAPagar;
+        // NO establecer totalImporteAPagar desde frontend - se calculará automáticamente
 
         const paqueteActualizado = await InvoicesPackage.findByIdAndUpdate(
             id,
@@ -610,10 +610,8 @@ export const updateInvoicesPackage = async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        // Recalcular totales si se cambiaron las facturas
-        if (facturas) {
-            await paqueteActualizado.actualizarTotales();
-        }
+        // Siempre recalcular totales para asegurar consistencia
+        await paqueteActualizado.actualizarTotales();
 
         // Actualizar la relación con Company, Brand, Branch si se proporcionan
         if (companyId !== undefined) {
@@ -858,21 +856,21 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
 
         // Obtener la visibilidad del usuario
         const userVisibility = await RoleVisibility.findOne({ userId: usuarioObjectId });
-        
+
         let packageIds = [];
 
         if (userVisibility) {
             // Si el usuario tiene visibilidad configurada, filtrar por sus permisos
             const { companies, brands, branches } = userVisibility;
-            
+
             // Construir filtros para la tabla relacional
             const filterConditions = [];
-            
+
             // Si tiene acceso a compañías específicas
             if (companies && companies.length > 0) {
                 filterConditions.push({ companyId: { $in: companies } });
             }
-            
+
             // Si tiene acceso a marcas específicas
             if (brands && brands.length > 0) {
                 const brandConditions = brands.map(brand => ({
@@ -881,7 +879,7 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
                 }));
                 filterConditions.push({ $or: brandConditions });
             }
-            
+
             // Si tiene acceso a sucursales específicas
             if (branches && branches.length > 0) {
                 const branchConditions = branches.map(branch => ({
@@ -891,19 +889,19 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
                 }));
                 filterConditions.push({ $or: branchConditions });
             }
-            
+
             // Si no hay filtros específicos, el usuario no tiene acceso a nada
             if (filterConditions.length === 0) {
                 return res.status(200).json({ success: true, data: [] });
             }
-            
+
             // Buscar paquetes en la tabla relacional que coincidan con la visibilidad
             const packageRelations = await InvoicesPackageCompany.find({
                 $or: filterConditions
             });
-            
+
             packageIds = packageRelations.map(rel => rel.packageId);
-            
+
             // Si no hay paquetes relacionados, devolver array vacío
             if (packageIds.length === 0) {
                 return res.status(200).json({ success: true, data: [] });
@@ -912,7 +910,7 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
 
         // Construir la consulta de paquetes
         let paquetesQuery = InvoicesPackage.find();
-        
+
         if (userVisibility && packageIds.length > 0) {
             // Filtrar por los paquetes que el usuario puede ver
             paquetesQuery = paquetesQuery.find({
@@ -1050,9 +1048,11 @@ export const enviarPaqueteADireccion = async (req, res) => {
             });
         }
 
-        // NUEVA LÓGICA: Solo actualizar las facturas originales de las facturas autorizadas
+        // NUEVA LÓGICA: Actualizar las facturas originales según su estado
         const facturasAutorizadas = paquete.facturas.filter(f => f.autorizada === true);
-        
+        const facturasRechazadas = paquete.facturas.filter(f => f.autorizada === false);
+
+        // Actualizar facturas autorizadas (como antes)
         for (const facturaEmbebida of facturasAutorizadas) {
             const datosActualizacion = {
                 autorizada: facturaEmbebida.autorizada,
@@ -1071,13 +1071,35 @@ export const enviarPaqueteADireccion = async (req, res) => {
             );
         }
 
+        // NUEVA FUNCIONALIDAD: Resetear facturas rechazadas a su estado original
+        for (const facturaEmbebida of facturasRechazadas) {
+            const datosReseteo = {
+                importePagado: 0,
+                estadoPago: 0, // Pendiente
+                esCompleta: false,
+                descripcionPago: null,
+                autorizada: null,
+                pagoRechazado: false,
+                fechaRevision: null,
+                registrado: 0,
+                pagado: 0,
+                estaRegistrada: false,
+                conceptoGasto: null
+            };
+
+            await ImportedInvoices.findByIdAndUpdate(
+                facturaEmbebida._id,
+                { $set: datosReseteo }
+            );
+        }
+
         // Cambiar el estatus del paquete a "Enviado"
         paquete.estatus = 'Enviado';
         await paquete.save();
 
         res.status(200).json({
             success: true,
-            message: `Paquete enviado a dirección correctamente. ${facturasAutorizadas.length} facturas autorizadas procesadas.`,
+            message: `Paquete enviado a dirección correctamente. ${facturasAutorizadas.length} facturas autorizadas procesadas. ${facturasRechazadas.length} facturas rechazadas reseteadas a su estado original.`,
             data: paquete
         });
 
@@ -1119,12 +1141,16 @@ export const getBudgetByCompanyBrandBranch = async (req, res) => {
 
         // Buscar la marca para obtener su categoryId
         const brand = await Brand.findById(brandObjectId);
+        console.log('getBudgetByCompanyBrandBranch - Marca encontrada:', brand);
+
         if (!brand) {
             return res.status(404).json({
                 success: false,
                 message: 'Marca no encontrada.'
             });
         }
+
+        console.log('getBudgetByCompanyBrandBranch - CategoryId de la marca:', brand.categoryId);
 
         if (!brand.categoryId) {
             return res.status(400).json({
@@ -1133,8 +1159,21 @@ export const getBudgetByCompanyBrandBranch = async (req, res) => {
             });
         }
 
-        // Construir el filtro base con el categoryId obtenido de la marca
-        const filtro = {
+        // Obtener la categoría para saber si maneja rutas
+        const Category = mongoose.model('cc_category');
+        const category = await Category.findById(brand.categoryId);
+
+        console.log('getBudgetByCompanyBrandBranch - Categoría encontrada:', category);
+
+        if (!category) {
+            return res.status(404).json({
+                success: false,
+                message: 'Categoría no encontrada.'
+            });
+        }
+
+        // Construir el filtro base
+        let filtro = {
             companyId: companyObjectId,
             brandId: brandObjectId,
             branchId: branchObjectId,
@@ -1142,17 +1181,44 @@ export const getBudgetByCompanyBrandBranch = async (req, res) => {
             month: month
         };
 
-
-
-        // Buscar presupuestos que coincidan con los filtros
-        const presupuestos = await Budget.find(filtro)
+        // Primero, buscar TODOS los presupuestos para esta combinación (sin filtrar por routeId)
+        // para entender qué presupuestos existen
+        console.log('getBudgetByCompanyBrandBranch - Buscando TODOS los presupuestos para la combinación...');
+        const todosLosPresupuestos = await Budget.find(filtro)
             .populate('routeId')
             .populate('brandId')
             .populate('companyId')
             .populate('branchId')
             .populate('categoryId');
 
+        console.log('getBudgetByCompanyBrandBranch - TODOS los presupuestos encontrados:', todosLosPresupuestos.map(p => ({
+            _id: p._id,
+            routeId: p.routeId,
+            assignedAmount: p.assignedAmount,
+            hasRoute: !!p.routeId
+        })));
 
+        // Determinar qué presupuesto devolver
+        let presupuestoSeleccionado = null;
+
+        if (!category.hasRoutes) {
+            // Si la categoría NO maneja rutas, buscar el presupuesto sin routeId
+            presupuestoSeleccionado = todosLosPresupuestos.find(p => p.routeId === null);
+            console.log('getBudgetByCompanyBrandBranch - Categoría SIN rutas, buscando presupuesto sin routeId');
+        } else {
+            // Si la categoría SÍ maneja rutas, tenemos opciones:
+            // 1. Presupuesto general (routeId null) - presupuesto base
+            // 2. Presupuestos específicos por ruta
+            // Por ahora, preferir el presupuesto general si existe, sino tomar el primero
+            presupuestoSeleccionado = todosLosPresupuestos.find(p => p.routeId === null) || todosLosPresupuestos[0];
+            console.log('getBudgetByCompanyBrandBranch - Categoría CON rutas, seleccionando presupuesto:', presupuestoSeleccionado ? (presupuestoSeleccionado.routeId ? 'con ruta específica' : 'general') : 'ninguno');
+        }
+
+        // Devolver el presupuesto seleccionado como array (para mantener compatibilidad con frontend)
+        const presupuestosRespuesta = presupuestoSeleccionado ? [presupuestoSeleccionado] : [];
+
+        console.log('getBudgetByCompanyBrandBranch - Presupuesto final seleccionado:', presupuestoSeleccionado);
+        console.log('getBudgetByCompanyBrandBranch - Cantidad de presupuestos a devolver:', presupuestosRespuesta.length);
 
         // Agregar headers para evitar caché
         res.set({
@@ -1161,10 +1227,16 @@ export const getBudgetByCompanyBrandBranch = async (req, res) => {
             'Expires': '0'
         });
 
+        console.log('getBudgetByCompanyBrandBranch - Respuesta a enviar:', {
+            success: true,
+            data: presupuestosRespuesta,
+            message: `Se encontró ${presupuestosRespuesta.length} presupuesto para los filtros especificados.`
+        });
+
         res.status(200).json({
             success: true,
-            data: presupuestos,
-            message: `Se encontraron ${presupuestos.length} presupuestos para los filtros especificados.`
+            data: presupuestosRespuesta,
+            message: `Se encontró ${presupuestosRespuesta.length} presupuesto para los filtros especificados.`
         });
 
     } catch (error) {

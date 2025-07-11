@@ -49,9 +49,10 @@ interface EnviarPagoModalProps {
         }
     };
     onRemoveTempPayment?: (invoiceId: string) => void;
+    onCancel?: () => void;
 }
 
-const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, facturas, paqueteExistente, razonSocialName, isNewPackage = true, onSuccess, selectedCompanyId, selectedBrandId, selectedBranchId, tempPayments, onRemoveTempPayment }) => {
+const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, facturas, paqueteExistente, razonSocialName, isNewPackage = true, onSuccess, selectedCompanyId, selectedBrandId, selectedBranchId, tempPayments, onRemoveTempPayment, onCancel }) => {
     const [fechaPago, setFechaPago] = useState<string>(paqueteExistente?.fechaPago || '');
     const [comentario, setComentario] = useState<string>(paqueteExistente?.comentario || '');
     const [facturasLocal, setFacturasLocal] = useState<FacturaProcesada[]>([]);
@@ -98,9 +99,12 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
     useEffect(() => {
         if (paqueteExistente?.fechaPago) {
             // Si es un paquete existente, usar la fecha guardada
-            setFechaPago(paqueteExistente.fechaPago);
-            const fechaCalculada = getNextThursdayOfWeek(paqueteExistente.fechaPago);
+            const fechaOriginal = new Date(paqueteExistente.fechaPago);
+            const fechaFormateada = fechaOriginal.toISOString().split('T')[0];
+            setFechaPago(fechaFormateada);
+            const fechaCalculada = getNextThursdayOfWeek(fechaFormateada);
             setFechaCalculada(fechaCalculada.toISOString().split('T')[0]);
+            setComentario(paqueteExistente.comentario || '');
         } else if (show && isNewPackage) {
             // Si es un nuevo paquete, precargar con la fecha calculada (jueves de la semana siguiente)
             const today = new Date();
@@ -108,8 +112,13 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
             const fechaCalculadaStr = fechaCalculada.toISOString().split('T')[0];
             setFechaPago(fechaCalculadaStr);
             setFechaCalculada(fechaCalculadaStr);
+            setComentario('');
+        } else if (show && !isNewPackage && !paqueteExistente) {
+            // Si está en modo edición pero no hay paquete existente, resetear
+            setFechaPago('');
+            setFechaCalculada('');
+            setComentario('');
         }
-        setComentario(paqueteExistente?.comentario || '');
     }, [paqueteExistente, show, isNewPackage]);
 
     // Calcular la fecha del jueves de la semana siguiente cuando cambie la fecha de pago
@@ -177,7 +186,6 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 toast.error('No hay usuario logueado');
                 return;
             }
-            console.log('user', user);
             if (!user._id || !user.departmentId || !user.department) {
                 toast.error('Faltan datos del usuario o departamento.');
                 return;
@@ -260,7 +268,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
     };
 
     return (
-        <Modal show={show} onHide={onClose} size="xl" centered backdrop="static">
+        <Modal show={show} onHide={onCancel || onClose} size="xl" centered backdrop="static">
             <Modal.Header closeButton>
                 <Modal.Title>
                     {paqueteExistente ?
@@ -471,7 +479,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 </div>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+                <Button variant="secondary" onClick={onCancel || onClose}>Cerrar</Button>
                 <Button
                     variant="primary"
                     onClick={handleGuardar}

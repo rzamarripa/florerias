@@ -50,10 +50,7 @@ export const getBudgetByCompanyBrandBranch = async (params: {
     });
 
     const response = await apiCall<BudgetItem[]>(`/invoices-package/budget?${queryParams}`);
-    
-    // Agregar console.log para mostrar el resultado
-    console.log('Resultado de la consulta de presupuesto:', response);
-    
-    // La respuesta directamente es el array de presupuestos
+
+    // La respuesta viene en response.data que es el array de presupuestos
     return response.data || [];
 };

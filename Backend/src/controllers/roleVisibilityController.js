@@ -105,16 +105,16 @@ export const getUserVisibilityStructure = async (req, res) => {
           : [],
         brands: visibility
           ? visibility.brands.map((b) => ({
-              companyId: b.companyId.toString(),
-              brandId: b.brandId.toString(),
-            }))
+            companyId: b.companyId.toString(),
+            brandId: b.brandId.toString(),
+          }))
           : [],
         branches: visibility
           ? visibility.branches.map((b) => ({
-              companyId: b.companyId.toString(),
-              brandId: b.brandId.toString(),
-              branchId: b.branchId.toString(),
-            }))
+            companyId: b.companyId.toString(),
+            brandId: b.brandId.toString(),
+            branchId: b.branchId.toString(),
+          }))
           : [],
       },
     });

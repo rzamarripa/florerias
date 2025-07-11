@@ -70,21 +70,8 @@ export const rejectCashPaymentInPackage = async (packageId: string, cashPaymentI
     });
 };
 
-// Obtener paquetes existentes en estatus "Borrador" para seleccionar
-export const getExistingPackagesForCashPayments = async (usuario_id?: string) => {
-    const params = new URLSearchParams({
-        estatus: 'Borrador',
-        limit: '50', // Limitar a 50 paquetes más recientes
-        sortBy: 'createdAt',
-        order: 'desc'
-    });
-    
-    if (usuario_id) {
-        params.append('usuario_id', usuario_id);
-    }
-    
-    return await apiCall(`/invoices-package?${params}`);
-};
+// Nota: Se usa getInvoicesPackagesCreatedByUsuario de invoicesPackpage.ts
+// para obtener paquetes creados por el usuario específico
 
 // Crear nuevo paquete con pago en efectivo
 export const createPackageWithCashPayment = async (data: {
@@ -106,7 +93,7 @@ export const createPackageWithCashPayment = async (data: {
         expenseConcept: data.cashPayment.expenseConcept,
         description: data.cashPayment.description
     });
-    
+
     // Luego crear el paquete con el pago en efectivo embebido
     const packageResponse = await apiCall("/invoices-package", {
         method: "POST",
@@ -124,6 +111,6 @@ export const createPackageWithCashPayment = async (data: {
             branchId: data.packageData.branchId
         }),
     });
-    
+
     return packageResponse;
 }; 

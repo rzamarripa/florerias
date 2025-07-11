@@ -227,7 +227,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                     <th>Estatus</th>
                                     <th>Autorización</th>
                                     <th>Total Facturas</th>
-                                    <th>Importe Total</th>
                                     <th>Pagado</th>
                                     <th>Saldo</th>
                                     <th>Fecha Pago</th>
@@ -283,11 +282,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                                 </div>
                                             </td>
                                             <td>
-                                                <div className="fw-bold text-center">
-                                                    {formatCurrency(pkg.totalImporteAPagar)}
-                                                </div>
-                                            </td>
-                                            <td>
                                                 <div>
                                                     <span className="fw-bold text-success">
                                                         {formatCurrency(pkg.totalPagado)}
@@ -306,7 +300,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                             <td>
                                                 <div>
                                                     <div className="fw-bold mb-1">
-                                                    {formatDate(pkg.fechaPago.toString(), 'dd/MM/yyyy')}
+                                                        {formatDate(pkg.fechaPago.toString(), 'dd/MM/yyyy')}
                                                     </div>
                                                     {new Date(pkg.fechaPago) < new Date() && pkg.estatus !== 'Pagado' ? (
                                                         <Badge className="badge bg-danger bg-opacity-10 text-danger fw-bold py-1 px-2">

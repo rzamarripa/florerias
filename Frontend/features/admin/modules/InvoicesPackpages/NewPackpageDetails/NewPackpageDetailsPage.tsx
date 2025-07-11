@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, Table, Button, Badge, Spinner, Alert, Modal, Form } from 'react-bootstrap';
-import { getInvoicesPackageById, ImportedInvoice, InvoicesPackage, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion, createAuthorizationFolio, CreateAuthorizationFolioRequest, getAuthorizationFoliosByPackage, getAuthorizationFolioByNumber, AuthorizationFolio, redeemAuthorizationFolio } from '../services/invoicesPackpage';
+import { getInvoicesPackageById, ImportedInvoice, InvoicesPackage, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion, createAuthorizationFolio, CreateAuthorizationFolioRequest, getAuthorizationFoliosByPackage, getAuthorizationFolioByNumber, AuthorizationFolio, redeemAuthorizationFolio, getPackageCompanyInfo, PackageCompanyInfo } from '../services/invoicesPackpage';
 import { getBudgetByCompanyBrandBranch, BudgetItem } from '../services/budget';
 import { BsClipboard } from 'react-icons/bs';
 import { toast } from 'react-toastify';
@@ -49,6 +49,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     const [foliosAutorizados, setFoliosAutorizados] = useState<AuthorizationFolio[]>([]);
     const [todosLosFolios, setTodosLosFolios] = useState<AuthorizationFolio[]>([]);
     const [folioValidado, setFolioValidado] = useState<AuthorizationFolio | null>(null);
+    const [packageCompanyInfo, setPackageCompanyInfo] = useState<PackageCompanyInfo | null>(null);
 
     const { user } = useUserSessionStore();
 
@@ -65,10 +66,10 @@ const NewPackpageDetailsPage: React.FC = () => {
         if (!packpage?.companyInfo) {
             return;
         }
-        
+
         const { companyId, brandId, branchId } = packpage.companyInfo;
-        
-        
+
+
         if (!companyId || !brandId || !branchId) {
             return;
         }
@@ -85,7 +86,7 @@ const NewPackpageDetailsPage: React.FC = () => {
             const companyIdStr = toString(companyId);
             const brandIdStr = toString(brandId);
             const branchIdStr = toString(branchId);
-            
+
             // Usar marzo 2025 que es donde existe el presupuesto
             const monthFormatted = "2025-03";
 
@@ -104,18 +105,34 @@ const NewPackpageDetailsPage: React.FC = () => {
         }
     };
 
+    // Función para cargar la información de compañía/marca/sucursal
+    const loadPackageCompanyInfo = async () => {
+        if (!packpage?._id) {
+            return;
+        }
+
+        try {
+            const response = await getPackageCompanyInfo(packpage._id);
+            setPackageCompanyInfo(response);
+        } catch (error) {
+            console.error('Error al cargar información de compañía del paquete:', error);
+            setPackageCompanyInfo(null);
+        }
+    };
+
     // Cargar presupuesto cuando se cargue el paquete
     useEffect(() => {
         if (packpage) {
             loadBudgetData();
             loadFoliosAutorizados();
+            loadPackageCompanyInfo();
         }
     }, [packpage]);
 
     // Función para cargar folios autorizados del paquete
     const loadFoliosAutorizados = async () => {
         if (!packpage?._id) return;
-        
+
         try {
             const folios = await getAuthorizationFoliosByPackage(packpage._id);
             const foliosAutorizados = folios.filter(folio => folio.estatus === 'autorizado');
@@ -142,7 +159,7 @@ const NewPackpageDetailsPage: React.FC = () => {
         setValidandoFolio(true);
         try {
             const folio = await getAuthorizationFolioByNumber(folioIngresado.trim());
-            
+
             if (!folio) {
                 toast.error('El folio ingresado no existe');
                 return false;
@@ -261,10 +278,10 @@ const NewPackpageDetailsPage: React.FC = () => {
 
                     // Recalcular totales
                     const facturasAutorizadas = facturasActualizadas.filter(f => f.autorizada === true);
-                    
+
                     // Total pagado: solo facturas autorizadas
                     const totalPagado = facturasAutorizadas.reduce((sum, f) => sum + (f.importePagado || 0), 0);
-                    
+
                     // Total importe a pagar: solo facturas autorizadas (como se guarda en BD)
                     const totalImporteAPagar = facturasAutorizadas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0);
 
@@ -316,7 +333,7 @@ const NewPackpageDetailsPage: React.FC = () => {
 
     const enviarPaqueteATesoreria = async (folioParaCanjear?: AuthorizationFolio) => {
         if (!packpage?._id) return;
-        
+
         try {
             const result = await enviarPaqueteADireccion(packpage._id);
             if (result && result.success && result.data && result.data.estatus === 'Enviado') {
@@ -366,7 +383,7 @@ const NewPackpageDetailsPage: React.FC = () => {
             const excesoInfo = verificarExcesoPresupuesto();
             const now = new Date();
             const folioNumber = `AUTH-${packpage.folio}-${now.getTime()}`;
-            
+
             const folioData: CreateAuthorizationFolioRequest = {
                 paquete_id: packpage._id,
                 motivo: `Exceso de presupuesto por $${excesoInfo.diferencia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
@@ -377,7 +394,7 @@ const NewPackpageDetailsPage: React.FC = () => {
             };
 
             const response = await createAuthorizationFolio(folioData);
-            
+
             if (response && response.success) {
                 toast.success(`Folio de autorización ${folioNumber} creado exitosamente`);
                 // Recargar folios autorizados
@@ -416,7 +433,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     const toNumber = (value: any): number => {
         if (typeof value === 'number') return value;
         if (typeof value === 'string') return parseFloat(value) || 0;
-        
+
         // Manejar objetos con formato $numberDecimal de MongoDB
         if (typeof value === 'object' && value !== null) {
             if (value.$numberDecimal) {
@@ -426,19 +443,19 @@ const NewPackpageDetailsPage: React.FC = () => {
                 return parseFloat(value.toString()) || 0;
             }
         }
-        
+
         return 0;
     };
 
     // Función para calcular totales de facturas
     const calcularTotalesFacturas = () => {
         if (!packpage?.facturas) return { total: 0, pagado: 0, pendiente: 0, cantidad: 0 };
-        
+
         const facturasNoRechazadas = packpage.facturas.filter(f => f.autorizada !== false);
         const total = facturasNoRechazadas.reduce((sum, f) => sum + toNumber(f.importeAPagar), 0);
         const pagado = facturasNoRechazadas.reduce((sum, f) => sum + toNumber(f.importePagado), 0);
         const pendiente = total - pagado;
-        
+
         return {
             total,
             pagado,
@@ -450,12 +467,12 @@ const NewPackpageDetailsPage: React.FC = () => {
     // Función para calcular totales de pagos en efectivo
     const calcularTotalesPagosEfectivo = () => {
         if (!packpage?.pagosEfectivo) return { total: 0, pagado: 0, pendiente: 0, cantidad: 0 };
-        
+
         const pagosNoRechazados = packpage.pagosEfectivo.filter(p => p.autorizada !== false);
         const total = pagosNoRechazados.reduce((sum, p) => sum + toNumber(p.importeAPagar), 0);
         const pagado = pagosNoRechazados.reduce((sum, p) => sum + toNumber(p.importePagado), 0);
         const pendiente = total - pagado;
-        
+
         return {
             total,
             pagado,
@@ -467,7 +484,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     // Función para calcular el presupuesto total del mes
     const calcularPresupuestoTotal = () => {
         if (!Array.isArray(budgetData)) return 0;
-        
+
         return budgetData.reduce((acc, budget) => {
             return acc + (budget.assignedAmount || 0);
         }, 0);
@@ -477,7 +494,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     const verificarExcesoPresupuesto = () => {
         const presupuestoTotal = calcularPresupuestoTotal();
         const totalPagadoPaquete = calcularTotalesFacturas().pagado + calcularTotalesPagosEfectivo().pagado;
-        
+
         return {
             presupuestoTotal,
             totalPagadoPaquete,
@@ -489,7 +506,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     // Función para determinar qué mostrar según el estado de los folios
     const determinarMensajeFolio = () => {
         const excesoInfo = verificarExcesoPresupuesto();
-        
+
         // Si no hay exceso, no mostrar nada
         if (!excesoInfo.excede) {
             return null;
@@ -507,7 +524,7 @@ const NewPackpageDetailsPage: React.FC = () => {
         }
 
         // Si hay folios, mostrar el estado del folio más reciente
-        const folioMasReciente = todosLosFolios.sort((a, b) => 
+        const folioMasReciente = todosLosFolios.sort((a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )[0];
 
@@ -552,7 +569,7 @@ const NewPackpageDetailsPage: React.FC = () => {
             const response = await getInvoicesPackageById(packpage._id);
             if (response && response.data) {
                 const packpageData = response.data as any;
-                
+
                 // Normalizar datos numéricos
                 if (packpageData.facturas) {
                     packpageData.facturas = packpageData.facturas.map((f: any) => ({
@@ -561,10 +578,10 @@ const NewPackpageDetailsPage: React.FC = () => {
                         importePagado: parseFloat(f.importePagado || 0)
                     }));
                 }
-                
+
                 packpageData.totalImporteAPagar = parseFloat(packpageData.totalImporteAPagar || 0);
                 packpageData.totalPagado = parseFloat(packpageData.totalPagado || 0);
-                
+
                 setPackpage(packpageData);
             }
         } catch (error) {
@@ -776,6 +793,13 @@ const NewPackpageDetailsPage: React.FC = () => {
                                 <span className="fw-semibold text-muted">Estatus actual:</span>
                                 <Badge bg="info" className="me-2">{packpage.estatus}</Badge>
                                 <Badge bg="primary">Borrador → Tesorería</Badge>
+                                {packageCompanyInfo && (
+                                    <Badge bg="primary" className="ms-2">
+                                        {packageCompanyInfo.companyName}
+                                        {packageCompanyInfo.brandName && ` → ${packageCompanyInfo.brandName}`}
+                                        {packageCompanyInfo.branchName && ` → ${packageCompanyInfo.branchName}`}
+                                    </Badge>
+                                )}
                             </div>
                         </Card.Body>
                     </Card>
@@ -1069,8 +1093,8 @@ const NewPackpageDetailsPage: React.FC = () => {
                     }}>
                         Cancelar
                     </Button>
-                    <Button 
-                        variant="primary" 
+                    <Button
+                        variant="primary"
                         onClick={handleValidarYEnviar}
                         disabled={validandoFolio || !folioIngresado.trim()}
                     >

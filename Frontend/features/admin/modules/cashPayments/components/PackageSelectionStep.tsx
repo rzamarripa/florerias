@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Row, Col, Alert, Spinner, Table, Card } from 'react-bootstrap';
 import { BsPlus, BsArrowLeft, BsCash } from 'react-icons/bs';
-import { getExistingPackagesForCashPayments } from '../services/cashPayments';
+import { getInvoicesPackagesCreatedByUsuario } from '../../InvoicesPackpages/services/invoicesPackpage';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import { getNextThursdayOfWeek } from '@/utils/dateUtils';
 
@@ -44,10 +44,10 @@ interface PackageSelectionStepProps {
     cashPaymentData?: CashPaymentData;
 }
 
-const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({ 
-    onBack, 
-    onSelectPackage, 
-    onCreatePackage, 
+const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
+    onBack,
+    onSelectPackage,
+    onCreatePackage,
     loading,
     cashPaymentData
 }) => {
@@ -66,8 +66,6 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
     const { user } = useUserSessionStore();
 
     useEffect(() => {
-        fetchPackages();
-        
         // Precargar fecha de pago con el próximo jueves
         const today = new Date();
         const nextThursday = getNextThursdayOfWeek(today);
@@ -77,12 +75,29 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
         }));
     }, []);
 
+    useEffect(() => {
+        if (user?._id) {
+            fetchPackages();
+        }
+    }, [user?._id]);
+
     const fetchPackages = async () => {
+        if (!user?._id) {
+            setPackages([]);
+            return;
+        }
+
         setLoadingPackages(true);
         setError(null);
         try {
-            const response = await getExistingPackagesForCashPayments(user?._id);
-            setPackages(Array.isArray(response.data) ? response.data : []);
+            const response = await getInvoicesPackagesCreatedByUsuario(user._id);
+            // Filtrar solo paquetes en estado "Borrador" y limitar a 50 más recientes
+            const filteredPackages = Array.isArray(response.data) ? response.data : Array.isArray(response) ? response : [];
+            const draftPackages = filteredPackages
+                .filter((pkg: any) => pkg.estatus === 'Borrador')
+                .slice(0, 50)
+                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            setPackages(draftPackages);
         } catch (e: any) {
             setError(e?.message || 'Error al cargar paquetes');
             setPackages([]);
@@ -103,7 +118,7 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
             setError('Comentario y fecha de pago son obligatorios');
             return;
         }
-        
+
         onCreatePackage({
             ...newPackageData,
             usuario_id: user?._id,
@@ -116,9 +131,9 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
         return (
             <div className="p-3">
                 <div className="d-flex align-items-center mb-3">
-                    <Button 
-                        variant="link" 
-                        className="p-0 me-2" 
+                    <Button
+                        variant="link"
+                        className="p-0 me-2"
                         onClick={() => setShowCreateForm(false)}
                     >
                         <BsArrowLeft size={20} />
@@ -155,13 +170,13 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
                             </Form.Group>
                         </Col>
                     </Row>
-                    
+
                     <div className="d-flex justify-content-between mt-3">
                         <Button variant="secondary" onClick={onBack} disabled={loading}>
                             Regresar
                         </Button>
-                        <Button 
-                            variant="primary" 
+                        <Button
+                            variant="primary"
                             onClick={handleCreateNewPackage}
                             disabled={loading || !newPackageData.comentario || !newPackageData.fechaPago}
                         >
@@ -213,9 +228,9 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
                                 <tr>
                                     <td>
                                         <span className="fw-bold text-success">
-                                            {cashPaymentData.amount.toLocaleString('es-MX', { 
-                                                style: 'currency', 
-                                                currency: 'MXN' 
+                                            {cashPaymentData.amount.toLocaleString('es-MX', {
+                                                style: 'currency',
+                                                currency: 'MXN'
                                             })}
                                         </span>
                                     </td>
@@ -264,7 +279,7 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
                                             </option>
                                         ))}
                                     </Form.Select>
-                                    
+
                                     {selectedPackageId && (
                                         <div className="bg-light p-2 rounded mb-3">
                                             {(() => {
@@ -276,7 +291,7 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
                                                         <p className="mb-1">{pkg.comentario}</p>
                                                         <p className="mb-0">
                                                             <small>
-                                                                Fecha: {new Date(pkg.fechaPago).toLocaleDateString()} | 
+                                                                Fecha: {new Date(pkg.fechaPago).toLocaleDateString()} |
                                                                 Total: {pkg.totalImporteAPagar.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
                                                             </small>
                                                         </p>
@@ -285,9 +300,9 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
                                             })()}
                                         </div>
                                     )}
-                                    
-                                    <Button 
-                                        variant="primary" 
+
+                                    <Button
+                                        variant="primary"
                                         onClick={handleSelectExistingPackage}
                                         disabled={!selectedPackageId || loading}
                                         className="w-100"
@@ -316,8 +331,8 @@ const PackageSelectionStep: React.FC<PackageSelectionStepProps> = ({
                             <p className="text-muted mb-3">
                                 Si no hay un paquete adecuado, puedes crear uno nuevo para este pago en efectivo.
                             </p>
-                            <Button 
-                                variant="success" 
+                            <Button
+                                variant="success"
                                 onClick={() => setShowCreateForm(true)}
                                 className="w-100"
                                 disabled={loading}

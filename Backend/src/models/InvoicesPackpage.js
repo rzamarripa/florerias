@@ -467,6 +467,34 @@ InvoicesPackageSchema.virtual("diasParaVencimiento").get(function () {
 });
 
 InvoicesPackageSchema.methods.actualizarTotales = async function () {
+  // CORREGIDO: Calcular totalImporteAPagar con TODAS las facturas (sin filtrar por autorizada)
+  // Esto representa el "gasto comprometido" total del paquete
+  const totalFacturasImporte = this.facturas.reduce((sum, factura) => {
+    const importe =
+      typeof factura.importeAPagar === "object" &&
+        factura.importeAPagar !== null &&
+        factura.importeAPagar._bsontype === "Decimal128"
+        ? parseFloat(factura.importeAPagar.toString())
+        : factura.importeAPagar || 0;
+    return sum + importe;
+  }, 0);
+
+  const totalPagosEfectivoImporte = Array.isArray(this.pagosEfectivo)
+    ? this.pagosEfectivo.reduce((sum, pago) => {
+      const importe =
+        typeof pago.importeAPagar === "object" &&
+          pago.importeAPagar !== null &&
+          pago.importeAPagar._bsontype === "Decimal128"
+          ? parseFloat(pago.importeAPagar.toString())
+          : pago.importeAPagar || 0;
+      return sum + importe;
+    }, 0)
+    : 0;
+
+  // totalImporteAPagar = suma de TODAS las facturas (gasto comprometido)
+  this.totalImporteAPagar = totalFacturasImporte + totalPagosEfectivoImporte;
+
+  // Para totalPagado, sí filtrar por autorizadas (gasto real procesado)
   const facturasAutorizadas = this.facturas.filter(
     (factura) => factura.autorizada === true
   );
@@ -474,31 +502,11 @@ InvoicesPackageSchema.methods.actualizarTotales = async function () {
     ? this.pagosEfectivo.filter((pago) => pago.autorizada === true)
     : [];
 
-  const totalFacturas = facturasAutorizadas.reduce((sum, factura) => {
-    const importe =
-      typeof factura.importeAPagar === "object" &&
-      factura.importeAPagar !== null &&
-      factura.importeAPagar._bsontype === "Decimal128"
-        ? parseFloat(factura.importeAPagar.toString())
-        : factura.importeAPagar || 0;
-    return sum + importe;
-  }, 0);
-  const totalPagosEfectivo = pagosEfectivoAutorizados.reduce((sum, pago) => {
-    const importe =
-      typeof pago.importeAPagar === "object" &&
-      pago.importeAPagar !== null &&
-      pago.importeAPagar._bsontype === "Decimal128"
-        ? parseFloat(pago.importeAPagar.toString())
-        : pago.importeAPagar || 0;
-    return sum + importe;
-  }, 0);
-  this.totalImporteAPagar = totalFacturas + totalPagosEfectivo;
-
   const totalPagadoFacturas = facturasAutorizadas.reduce((sum, factura) => {
     const importe =
       typeof factura.importePagado === "object" &&
-      factura.importePagado !== null &&
-      factura.importePagado._bsontype === "Decimal128"
+        factura.importePagado !== null &&
+        factura.importePagado._bsontype === "Decimal128"
         ? parseFloat(factura.importePagado.toString())
         : factura.importePagado || 0;
     return sum + importe;
@@ -506,8 +514,8 @@ InvoicesPackageSchema.methods.actualizarTotales = async function () {
   const totalPagadoEfectivo = pagosEfectivoAutorizados.reduce((sum, pago) => {
     const pagado =
       typeof pago.importeAPagar === "object" &&
-      pago.importeAPagar !== null &&
-      pago.importeAPagar._bsontype === "Decimal128"
+        pago.importeAPagar !== null &&
+        pago.importeAPagar._bsontype === "Decimal128"
         ? parseFloat(pago.importeAPagar.toString())
         : pago.importeAPagar || 0;
     return sum + pagado;

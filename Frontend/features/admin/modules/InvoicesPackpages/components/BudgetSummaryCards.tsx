@@ -17,9 +17,20 @@ interface BudgetSummaryCardsProps {
     };
     invoices?: any[];
     budgetData?: BudgetItem[];
+    // Nuevos props para calcular presupuesto utilizado por mes
+    existingPackages?: any[];
+    selectedYear?: number;
+    selectedMonth?: number;
 }
 
-const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({ tempPayments = {}, invoices = [], budgetData = [] }) => {
+const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
+    tempPayments = {},
+    invoices = [],
+    budgetData = [],
+    existingPackages = [],
+    selectedYear = new Date().getFullYear(),
+    selectedMonth = new Date().getMonth()
+}) => {
     // Calcular resumen solo de pagos temporales locales
     const localPaymentsSummary = React.useMemo(() => {
         let totalTempPagado = 0;
@@ -51,46 +62,68 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({ tempPayments = 
         if (!Array.isArray(budgetData)) {
             return 0;
         }
-        
+
         return budgetData.reduce((acc, budget) => {
             return acc + (budget.assignedAmount || 0);
         }, 0);
     }, [budgetData]);
 
-    // Calcular presupuesto utilizado (facturas pagadas + pagos temporales)
+    // Calcular presupuesto utilizado (solo facturas pagadas del mes específico + pagos temporales)
     const presupuestoUtilizado = React.useMemo(() => {
         let totalUtilizado = 0;
 
-        // 1. Sumar todos los importes ya pagados de las facturas del backend
-        const totalPagadoBackend = invoices.reduce((acc, invoice) => {
-            return acc + (invoice.importePagado || 0);
-        }, 0);
+        // 1. Filtrar paquetes del mes específico del presupuesto
+        const paquetesDelMes = existingPackages.filter(paquete => {
+            if (!paquete.fechaPago) return false;
 
-        // 2. Sumar pagos temporales locales (solo la parte adicional)
-        let totalPagosTemporales = 0;
-        Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
-            const invoice = invoices.find(inv => inv._id === invoiceId);
-            if (!invoice) return;
+            const fechaPago = new Date(paquete.fechaPago);
+            const yearPaquete = fechaPago.getFullYear();
+            const monthPaquete = fechaPago.getMonth(); // 0-based month
 
-            if (payment.tipoPago === 'completo') {
-                // Para pago completo, agregar solo la diferencia no pagada
-                const montoPendiente = invoice.importeAPagar - invoice.importePagado;
-                totalPagosTemporales += Math.max(0, montoPendiente);
-            } else if (payment.tipoPago === 'parcial' && payment.monto) {
-                // Para pago parcial, agregar solo el monto adicional
-                totalPagosTemporales += payment.monto;
-            }
+            return yearPaquete === selectedYear && monthPaquete === selectedMonth;
         });
 
-        totalUtilizado = totalPagadoBackend + totalPagosTemporales;
+
+
+        // 2. Sumar el gasto comprometido de paquetes del mes específico
+        // Usamos totalImporteAPagar (todas las facturas) no totalPagado (solo autorizadas)
+        const totalComprometidoDelMes = paquetesDelMes.reduce((acc, paquete) => {
+            return acc + (paquete.totalImporteAPagar || 0);
+        }, 0);
+
+        // 3. Sumar pagos temporales locales (solo si estamos viendo el mes actual)
+        let totalPagosTemporales = 0;
+        const mesActual = new Date().getMonth();
+        const yearActual = new Date().getFullYear();
+
+        // Solo incluir pagos temporales si estamos viendo el mes actual
+        if (selectedYear === yearActual && selectedMonth === mesActual) {
+            Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
+                const invoice = invoices.find(inv => inv._id === invoiceId);
+                if (!invoice) return;
+
+                if (payment.tipoPago === 'completo') {
+                    // Para pago completo, agregar solo la diferencia no pagada
+                    const montoPendiente = invoice.importeAPagar - invoice.importePagado;
+                    totalPagosTemporales += Math.max(0, montoPendiente);
+                } else if (payment.tipoPago === 'parcial' && payment.monto) {
+                    // Para pago parcial, agregar solo el monto adicional
+                    totalPagosTemporales += payment.monto;
+                }
+            });
+        }
+
+        totalUtilizado = totalComprometidoDelMes + totalPagosTemporales;
+
+
 
         return totalUtilizado;
-    }, [invoices, tempPayments]);
+    }, [existingPackages, tempPayments, invoices, selectedYear, selectedMonth]);
 
     // Calcular saldo
     const saldoPresupuesto = React.useMemo(() => {
         const saldo = totalBudget - presupuestoUtilizado;
-        
+
         return {
             monto: saldo,
             esAFavor: saldo >= 0,

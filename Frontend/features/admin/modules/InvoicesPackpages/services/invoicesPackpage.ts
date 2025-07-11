@@ -451,9 +451,9 @@ export const createAuthorizationFolio = async (data: CreateAuthorizationFolioReq
 // Servicio para obtener folios de autorización por paquete
 export const getAuthorizationFoliosByPackage = async (packageId: string): Promise<AuthorizationFolio[]> => {
     const url = `/authorization-folios/by-package/${packageId}`;
-    
+
     const response = await apiCall<AuthorizationFolio[]>(url);
-    
+
     return response.data || [];
 };
 
@@ -468,7 +468,32 @@ export const redeemAuthorizationFolio = async (folioId: string): Promise<{ succe
     const response = await apiCall<{ success: boolean; data: AuthorizationFolio; message: string }>(`/authorization-folios/${folioId}/redeem`, {
         method: "POST",
     });
-    
+
     // La respuesta ya viene con el formato correcto desde el backend
     return response.data;
+};
+
+// Interfaces para la información de compañía/marca/sucursal
+export interface PackageCompanyInfo {
+    _id: string;
+    packageId: string;
+    companyId: string;
+    companyName: string;
+    brandId?: string;
+    brandName?: string;
+    branchId?: string;
+    branchName?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Servicio para obtener información de compañía/marca/sucursal de un paquete
+export const getPackageCompanyInfo = async (packageId: string): Promise<PackageCompanyInfo | null> => {
+    try {
+        const response = await apiCall<PackageCompanyInfo>(`/invoices-package-companies/${packageId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener información de compañía del paquete:', error);
+        return null;
+    }
 }; 

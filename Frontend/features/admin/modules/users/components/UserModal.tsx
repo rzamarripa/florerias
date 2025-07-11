@@ -98,6 +98,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         setValue("profile.fullName", user.profile?.fullName || "");
         setValue("profile.estatus", user.profile?.estatus ?? true);
         setValue("department", user.department || "");
+        setValue("departmentId", user.departmentId || "");
         setValue("role", roleValue);
 
         // Configurar la imagen del usuario para edición
@@ -219,6 +220,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           username: data.username,
           email: data.email,
           phone: data.phone,
+          departmentId: data.departmentId,
           department: data.department,
           profile: {
             name: data.profile.name,

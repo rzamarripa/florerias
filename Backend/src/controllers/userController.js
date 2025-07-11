@@ -96,8 +96,8 @@ export const registerUser = async (req, res) => {
           phone: user.phone,
           profile: user.profile,
           role: user.role,
-          departmentId: user.departmentId?._id,
-          department: user.departmentId?.name,
+          departmentId: user.departmentId?._id || user.departmentId,
+          department: user.departmentId?.name || "",
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -231,6 +231,7 @@ export const getAllUsers = async (req, res) => {
       }
 
       userObj.department = userObj.departmentId?.name || "";
+      userObj.departmentId = userObj.departmentId?._id || userObj.departmentId;
       return userObj;
     });
 
@@ -368,7 +369,8 @@ export const updateUser = async (req, res) => {
     const user = await User.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
-    }).populate("role", "name description");
+    }).populate("role", "name description")
+      .populate("departmentId", "name");
 
     if (!user) {
       return res.status(404).json({
@@ -388,8 +390,8 @@ export const updateUser = async (req, res) => {
           phone: user.phone,
           profile: user.profile,
           role: user.role,
-          departmentId: user.departmentId,
-          department: user.department,
+          departmentId: user.departmentId?._id || user.departmentId,
+          department: user.departmentId?.name || user.department,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
