@@ -322,19 +322,19 @@ const InvoicesPackagePage: React.FC = () => {
             setLoadingInvoices(true);
             // Obtener los IDs de los proveedores seleccionados
             const providerIdsParam = selectedProviders.join(',');
-            // Obtener nombre de la empresa seleccionada
-            const selectedCompanyData = companies.find(c => c._id === selectedCompany);
-            const companyName = selectedCompanyData?.name;
+            
+            console.log('🔍 PACKAGES: Ejecutando handleSearch con companyId:', selectedCompany);
 
             // Calcular fechas de inicio y fin del mes seleccionado
             const startDate = new Date(selectedYear, selectedMonth, 1);
             const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999);
 
             // Buscar facturas y paquetes existentes al mismo tiempo
+            console.log('🚀 PACKAGES: Llamando a getInvoicesByProviderAndCompany');
             const [invoicesResponse, summaryResponse, packagesResponse] = await Promise.all([
                 getInvoicesByProviderAndCompany({
                     providerIds: providerIdsParam,
-                    rfcCompany: companyName,
+                    companyId: selectedCompany,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
                     page: currentPage,
@@ -343,7 +343,7 @@ const InvoicesPackagePage: React.FC = () => {
                     order: 'desc'
                 }),
                 getInvoicesSummaryByProviderAndCompany({
-                    rfcCompany: companyName,
+                    companyId: selectedCompany,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString()
                 }),
@@ -392,9 +392,6 @@ const InvoicesPackagePage: React.FC = () => {
 
             // Obtener los IDs de los proveedores seleccionados
             const providerIdsParam = selectedProviders.join(',');
-            // Obtener nombre de la empresa seleccionada
-            const selectedCompanyData = companies.find(c => c._id === selectedCompany);
-            const companyName = selectedCompanyData?.name;
 
             // Calcular fechas de inicio y fin del mes seleccionado
             const startDate = new Date(selectedYear, selectedMonth, 1);
@@ -402,7 +399,7 @@ const InvoicesPackagePage: React.FC = () => {
 
             const response = await getInvoicesByProviderAndCompany({
                 providerIds: providerIdsParam,
-                rfcCompany: companyName,
+                companyId: selectedCompany,
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString(),
                 page,

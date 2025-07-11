@@ -156,6 +156,7 @@ export const getInvoicesByProviderAndCompany = async (params: {
     providerIds?: string; // IDs de proveedores separados por coma
     rfcProvider?: string;
     rfcCompany?: string;
+    companyId?: string; // ID de empresa (método más confiable)
     startDate?: string; // Fecha de inicio en formato ISO
     endDate?: string; // Fecha de fin en formato ISO
     page?: number;
@@ -181,6 +182,7 @@ export const getInvoicesByProviderAndCompany = async (params: {
 export const getInvoicesSummaryByProviderAndCompany = async (params: {
     rfcProvider?: string;
     rfcCompany?: string;
+    companyId?: string; // ID de empresa (método más confiable)
     startDate?: string; // Fecha de inicio en formato ISO
     endDate?: string; // Fecha de fin en formato ISO
 }): Promise<any> => {

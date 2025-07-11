@@ -16,8 +16,14 @@ export const expenseConceptService = {
   },
 
   getByDepartment: async (departmentId: string) => {
-    return await apiCall<{ success: boolean; data: Pick<ExpenseConcept, '_id' | 'name' | 'description' | 'categoryId' | 'departmentId'>[] }>(
-      `/expense-concept/department/${departmentId}`
+    return await apiCall<Pick<ExpenseConcept, '_id' | 'name' | 'description' | 'categoryId' | 'departmentId'>[]>(
+      `/expense-concept/department/${departmentId}`,
+      {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      }
     );
   },
 

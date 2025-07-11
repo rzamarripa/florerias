@@ -8,7 +8,6 @@ import JSZip from 'jszip';
 import { CloudUpload, Save } from 'lucide-react';
 
 import { importedInvoicesService } from './services/importedInvoices';
-import { companiesService } from '../companies/services/companies';
 import { Company } from '../companies/types';
 
 import { ImportedInvoice, Pagination, RawInvoiceData, SummaryData } from './types';
@@ -41,7 +40,6 @@ const ImportInvoicesPage: React.FC = () => {
     const fetchCompanies = async () => {
       try {
         const userVisibility = await getUserVisibilityForSelects(user!._id);
-        console.log(userVisibility);
         if (userVisibility.companies) {
           setCompanies(userVisibility.companies);
         } else {
@@ -57,8 +55,8 @@ const ImportInvoicesPage: React.FC = () => {
     fetchCompanies();
   }, []);
 
-  const fetchDataForCompany = useCallback(async (rfcReceptor: string, page: number = 1) => {
-    if (!rfcReceptor) return;
+  const fetchDataForCompany = useCallback(async (companyId: string, page: number = 1) => {
+    if (!companyId) return;
 
     setIsPreview(false);
     setLoadingSummary(true);
@@ -66,8 +64,8 @@ const ImportInvoicesPage: React.FC = () => {
 
     try {
       const [summaryRes, invoicesRes] = await Promise.all([
-        importedInvoicesService.getSummary(rfcReceptor),
-        importedInvoicesService.getInvoices({ rfcReceptor, page })
+        importedInvoicesService.getSummary({ companyId }),
+        importedInvoicesService.getInvoices({ companyId, page })
       ]);
 
       if (summaryRes.success) setSummary(summaryRes.data);
@@ -179,6 +177,15 @@ const ImportInvoicesPage: React.FC = () => {
       return;
     }
 
+    // Obtener el RFC de la empresa seleccionada
+    const company = companies.find(c => c._id === selectedCompany);
+    if (!company) {
+      toast.error('No se pudo encontrar la empresa seleccionada.');
+      return;
+    }
+
+    const selectedRfc = company.rfc.trim().toUpperCase();
+
     const file = acceptedFiles[0];
     if (!file || (file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed')) {
       toast.error('Por favor, suba un archivo ZIP válido.');
@@ -227,11 +234,11 @@ const ImportInvoicesPage: React.FC = () => {
         });
 
         const allInvoicesMatch = data.every(
-          (invoice) => invoice.RfcReceptor.toUpperCase() === selectedCompany.toUpperCase()
+          (invoice) => invoice.RfcReceptor.trim().toUpperCase() === selectedRfc
         );
 
         if (!allInvoicesMatch) {
-          throw new Error(`No todas las facturas en el archivo pertenecen a la Razón Social seleccionada (${selectedCompany}).`);
+          throw new Error(`No todas las facturas en el archivo pertenecen a la Razón Social seleccionada (${selectedRfc}).`);
         }
 
         setParsedData(data);
@@ -246,7 +253,7 @@ const ImportInvoicesPage: React.FC = () => {
         if (selectedCompany) fetchDataForCompany(selectedCompany);
       })
       .finally(() => setIsUploading(false));
-  }, [selectedCompany, fetchDataForCompany]);
+  }, [selectedCompany, companies, fetchDataForCompany]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -261,9 +268,14 @@ const ImportInvoicesPage: React.FC = () => {
       return;
     }
 
+    if (!selectedCompany) {
+      toast.warn('No hay razón social seleccionada.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const response = await importedInvoicesService.bulkUpsert(parsedData);
+      const response = await importedInvoicesService.bulkUpsert(parsedData, selectedCompany);
       if (response.success) {
         toast.success(response.message || 'Facturas importadas con éxito.');
         setParsedData([]);
@@ -295,7 +307,7 @@ const ImportInvoicesPage: React.FC = () => {
                 >
                   <option value="">Seleccionar...</option>
                   {companies.map(c => (
-                    <option key={c._id} value={c.rfc}>{c.name} ({c.rfc})</option>
+                    <option key={c._id} value={c._id}>{c.name} ({c.rfc})</option>
                   ))}
                 </Form.Select>
               </Form.Group>

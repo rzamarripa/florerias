@@ -14,8 +14,8 @@ const router = express.Router();
 
 router.get("/", getAllExpenseConcepts);
 router.get("/all", getAll);
-router.get("/:id", getById);
 router.get("/department/:departmentId", getExpenseConceptsByDepartment);
+router.get("/:id", getById);
 router.post("/", createExpenseConcept);
 router.put("/:id", updateExpenseConcept);
 router.delete("/:id", deleteExpenseConcept);

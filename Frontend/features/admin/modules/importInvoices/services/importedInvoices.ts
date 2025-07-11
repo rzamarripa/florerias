@@ -28,19 +28,21 @@ export const importedInvoicesService = {
   getInvoices: async (params: {
     page?: number;
     limit?: number;
-    rfcReceptor: string;
+    rfcReceptor?: string;
+    companyId?: string;
     estatus?: '0' | '1';
     sortBy?: string;
     order?: 'asc' | 'desc';
   }): Promise<GetInvoicesResponse> => {
     try {
-      const { page = 1, limit = 15, rfcReceptor, estatus, sortBy = 'fechaEmision', order = 'desc' } = params;
+      const { page = 1, limit = 15, rfcReceptor, companyId, estatus, sortBy = 'fechaEmision', order = 'desc' } = params;
       const searchParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        rfcReceptor,
         sortBy,
         order,
+        ...(companyId && { companyId }),
+        ...(rfcReceptor && { rfcReceptor }),
         ...(estatus && { estatus }),
       });
 
@@ -57,9 +59,15 @@ export const importedInvoicesService = {
   },
 
   // Obtener resumen de facturas para una razón social
-  getSummary: async (rfcReceptor: string): Promise<GetSummaryResponse> => {
+  getSummary: async (params: { rfcReceptor?: string; companyId?: string }): Promise<GetSummaryResponse> => {
     try {
-      const response = await apiCall<SummaryData>(`/imported-invoices/summary?rfcReceptor=${rfcReceptor}`);
+      const { rfcReceptor, companyId } = params;
+      const searchParams = new URLSearchParams({
+        ...(companyId && { companyId }),
+        ...(rfcReceptor && { rfcReceptor }),
+      });
+      
+      const response = await apiCall<SummaryData>(`/imported-invoices/summary?${searchParams}`);
       return response as GetSummaryResponse;
     } catch (error: any) {
       return {
@@ -71,11 +79,15 @@ export const importedInvoicesService = {
   },
 
   // Importar facturas en lote desde archivo ZIP
-  bulkUpsert: async (invoices: RawInvoiceData[]): Promise<BulkUpsertResponse> => {
+  bulkUpsert: async (invoices: RawInvoiceData[], companyId?: string): Promise<BulkUpsertResponse> => {
     try {
+      const payload = {
+        invoices,
+        companyId
+      };
       const response = await apiCall<{ inserted: number; updated: number }>('/imported-invoices/bulk-upsert', {
         method: 'POST',
-        body: JSON.stringify(invoices),
+        body: JSON.stringify(payload),
       });
       return response as BulkUpsertResponse;
     } catch (error: any) {
@@ -103,7 +115,8 @@ export const importedInvoicesService = {
 
   // Buscar facturas por filtros avanzados
   search: async (params: {
-    rfcReceptor: string;
+    rfcReceptor?: string;
+    companyId?: string;
     page?: number;
     limit?: number;
     search?: string;
@@ -119,6 +132,7 @@ export const importedInvoicesService = {
         page = 1,
         limit = 15,
         rfcReceptor,
+        companyId,
         search,
         estatus,
         tipoComprobante,
@@ -131,7 +145,8 @@ export const importedInvoicesService = {
       const searchParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        rfcReceptor,
+        ...(companyId && { companyId }),
+        ...(rfcReceptor && { rfcReceptor }),
         ...(search && { search }),
         ...(estatus && { estatus }),
         ...(tipoComprobante && { tipoComprobante }),
@@ -155,7 +170,8 @@ export const importedInvoicesService = {
 
   // Exportar facturas a diferentes formatos
   export: async (params: {
-    rfcReceptor: string;
+    rfcReceptor?: string;
+    companyId?: string;
     format: 'csv' | 'xlsx' | 'pdf';
     filters?: {
       estatus?: '0' | '1';
@@ -165,10 +181,11 @@ export const importedInvoicesService = {
     };
   }): Promise<{ success: boolean; data: Blob | null; message?: string }> => {
     try {
-      const { rfcReceptor, format, filters = {} } = params;
+      const { rfcReceptor, companyId, format, filters = {} } = params;
       const searchParams = new URLSearchParams({
-        rfcReceptor,
         format,
+        ...(companyId && { companyId }),
+        ...(rfcReceptor && { rfcReceptor }),
         ...filters,
       });
 
@@ -195,7 +212,7 @@ export const importedInvoicesService = {
   },
 
   // Obtener estadísticas avanzadas
-  getStatistics: async (rfcReceptor: string, period: 'month' | 'quarter' | 'year' = 'month'): Promise<{
+  getStatistics: async (params: { rfcReceptor?: string; companyId?: string; period?: 'month' | 'quarter' | 'year' }): Promise<{
     success: boolean;
     data: {
       importeAPagarTotal: number;
@@ -207,7 +224,14 @@ export const importedInvoicesService = {
     message?: string;
   }> => {
     try {
-      const response = await apiCall<any>(`/imported-invoices/statistics?rfcReceptor=${rfcReceptor}&period=${period}`);
+      const { rfcReceptor, companyId, period = 'month' } = params;
+      const searchParams = new URLSearchParams({
+        period,
+        ...(companyId && { companyId }),
+        ...(rfcReceptor && { rfcReceptor }),
+      });
+      
+      const response = await apiCall<any>(`/imported-invoices/statistics?${searchParams}`);
       return response;
     } catch (error: any) {
       return {

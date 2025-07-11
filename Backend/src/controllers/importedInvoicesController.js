@@ -19,16 +19,85 @@ const parseDate = (dateString) => {
 
 export const bulkUpsertInvoices = async (req, res) => {
   try {
-    const invoices = req.body;
-    if (!invoices || !Array.isArray(invoices)) {
+    const { invoices, companyId } = req.body;
+    
+    // Mantener compatibilidad con el formato anterior
+    const invoicesArray = Array.isArray(req.body) ? req.body : invoices;
+    
+    if (!invoicesArray || !Array.isArray(invoicesArray)) {
       return res.status(400).json({
         success: false,
-        message: "El cuerpo de la petición debe ser un arreglo de facturas.",
+        message: "El cuerpo de la petición debe contener un arreglo de facturas.",
       });
     }
 
+    // Si se proporciona companyId, usarlo directamente
+    if (companyId) {
+      // Verificar que la empresa exista
+      const company = await Company.findById(companyId);
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: "La empresa especificada no existe.",
+        });
+      }
+
+      const operations = invoicesArray
+        .map((invoice) => {
+          const invoiceData = {
+            uuid: invoice.Uuid,
+            rfcEmisor: invoice.RfcEmisor,
+            nombreEmisor: invoice.NombreEmisor,
+            rfcReceptor: invoice.RfcReceptor,
+            nombreReceptor: invoice.NombreReceptor,
+            rfcProveedorCertificacion: invoice.RfcPac,
+            fechaEmision: parseDate(invoice.FechaEmision),
+            fechaCertificacionSAT: parseDate(invoice.FechaCertificacionSat),
+            importeAPagar:
+              parseFloat(String(invoice.Monto).replace(/[^0-9.-]+/g, "")) || 0,
+            tipoComprobante: invoice.EfectoComprobante,
+            estatus: parseInt(invoice.Estatus, 10),
+            fechaCancelacion: parseDate(invoice.FechaCancelacion),
+            razonSocial: new mongoose.Types.ObjectId(companyId),
+          };
+
+          if (!invoiceData.uuid) {
+            return null;
+          }
+
+          return {
+            updateOne: {
+              filter: { uuid: invoiceData.uuid },
+              update: { $set: invoiceData },
+              upsert: true,
+            },
+          };
+        })
+        .filter((op) => op !== null);
+
+      if (operations.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No hay facturas válidas para procesar.",
+        });
+      }
+
+      const result = await ImportedInvoices.bulkWrite(operations);
+
+      return res.status(201).json({
+        success: true,
+        message: `${result.upsertedCount + result.modifiedCount
+          } facturas procesadas exitosamente.`,
+        data: {
+          inserted: result.upsertedCount,
+          updated: result.modifiedCount,
+        },
+      });
+    }
+
+    // Fallback al método anterior si no se proporciona companyId
     const rfcReceptores = [
-      ...new Set(invoices.map((inv) => inv.RfcReceptor.toUpperCase())),
+      ...new Set(invoicesArray.map((inv) => inv.RfcReceptor.toUpperCase())),
     ];
     const companies = await Company.find({ rfc: { $in: rfcReceptores } });
 
@@ -36,12 +105,12 @@ export const bulkUpsertInvoices = async (req, res) => {
       companies.map((comp) => [comp.rfc.toUpperCase(), comp._id])
     );
 
-    const operations = invoices
+    const operations = invoicesArray
       .map((invoice) => {
         const rfcReceptor = invoice.RfcReceptor.toUpperCase();
-        const companyId = companyMap.get(rfcReceptor);
+        const companyIdFromMap = companyMap.get(rfcReceptor);
 
-        if (!companyId) {
+        if (!companyIdFromMap) {
           return null;
         }
 
@@ -59,7 +128,7 @@ export const bulkUpsertInvoices = async (req, res) => {
           tipoComprobante: invoice.EfectoComprobante,
           estatus: parseInt(invoice.Estatus, 10),
           fechaCancelacion: parseDate(invoice.FechaCancelacion),
-          razonSocial: typeof companyId === 'string' ? new mongoose.Types.ObjectId(companyId) : companyId,
+          razonSocial: typeof companyIdFromMap === 'string' ? new mongoose.Types.ObjectId(companyIdFromMap) : companyIdFromMap,
         };
 
         if (!invoiceData.uuid) {
@@ -108,19 +177,26 @@ export const getInvoices = async (req, res) => {
       page = 1,
       limit = 15,
       rfcReceptor,
+      companyId,
       estatus,
       sortBy = "fechaEmision",
       order = "desc",
     } = req.query;
 
-    if (!rfcReceptor) {
+    // Priorizar companyId sobre rfcReceptor
+    let query = {};
+    if (companyId) {
+      query.razonSocial = new mongoose.Types.ObjectId(companyId);
+    } else if (rfcReceptor) {
+      // Si no hay companyId, buscar por RFC (fallback para compatibilidad)
+      query.rfcReceptor = rfcReceptor.toUpperCase();
+    } else {
       return res.status(400).json({
         success: false,
-        message: "Se requiere un RFC del receptor.",
+        message: "Se requiere un ID de empresa o RFC del receptor.",
       });
     }
 
-    const query = { rfcReceptor: rfcReceptor.toUpperCase() };
     if (estatus && ["0", "1"].includes(estatus)) {
       query.estatus = parseInt(estatus, 10);
     }
@@ -172,16 +248,47 @@ export const getInvoices = async (req, res) => {
 
 export const getInvoicesSummary = async (req, res) => {
   try {
-    const { rfcReceptor } = req.query;
+    const { rfcReceptor, companyId } = req.query;
 
-    if (!rfcReceptor) {
+    // Priorizar companyId sobre rfcReceptor
+    let query = {};
+    if (companyId) {
+      query.razonSocial = new mongoose.Types.ObjectId(companyId);
+    } else if (rfcReceptor) {
+      // Si no hay companyId, buscar por RFC (fallback para compatibilidad)
+      query.rfcReceptor = rfcReceptor.toUpperCase();
+    } else {
       return res.status(400).json({
         success: false,
-        message: "Se requiere un RFC del receptor.",
+        message: "Se requiere un ID de empresa o RFC del receptor.",
       });
     }
 
-    const summaryData = await ImportedInvoices.obtenerResumen(rfcReceptor);
+    // Crear método personalizado para obtener resumen por query
+    const [
+      totalFacturas,
+      facturasPagadas,
+      facturasPendientes,
+      facturasEnviadas,
+      facturasRegistradas,
+      facturasAutorizadas,
+    ] = await Promise.all([
+      ImportedInvoices.countDocuments(query),
+      ImportedInvoices.countDocuments({ ...query, estadoPago: 2 }),
+      ImportedInvoices.countDocuments({ ...query, estadoPago: 0 }),
+      ImportedInvoices.countDocuments({ ...query, estadoPago: 1 }),
+      ImportedInvoices.countDocuments({ ...query, estadoPago: 3 }),
+      ImportedInvoices.countDocuments({ ...query, autorizada: true }),
+    ]);
+
+    const summaryData = {
+      totalFacturas,
+      facturasPagadas,
+      facturasPendientes,
+      facturasEnviadas,
+      facturasRegistradas,
+      facturasAutorizadas,
+    };
 
     res.status(200).json({
       success: true,
@@ -428,6 +535,7 @@ export const getByProviderAndCompany = async (req, res) => {
     const {
       rfcProvider,
       rfcCompany,
+      companyId, // Nuevo parámetro para ID de empresa
       providerIds, // Nuevo parámetro para IDs de proveedores
       startDate,   // Nuevo parámetro para fecha de inicio
       endDate,     // Nuevo parámetro para fecha de fin
@@ -437,14 +545,25 @@ export const getByProviderAndCompany = async (req, res) => {
       order = "desc"
     } = req.query;
 
-    if (!rfcProvider && !rfcCompany && !providerIds) {
-      return res.status(400).json({ success: false, message: "Se requiere al menos rfcProvider, rfcCompany o providerIds" });
+    if (!rfcProvider && !rfcCompany && !companyId && !providerIds) {
+      return res.status(400).json({ success: false, message: "Se requiere al menos rfcProvider, rfcCompany, companyId o providerIds" });
     }
 
-    // Buscar compañía activa por nombre o RFC
+    // Buscar compañía activa por ID, nombre o RFC
     let company;
-    if (rfcCompany) {
-      // Intentar buscar por nombre primero, luego por RFC
+    if (companyId) {
+      // Buscar por ID de empresa (método más confiable)
+      company = await Company.findOne({ _id: companyId, isActive: true });
+      if (!company) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "Empresa no encontrada o inactiva",
+          });
+      }
+    } else if (rfcCompany) {
+      // Fallback: buscar por nombre o RFC
       company = await Company.findOne({
         $or: [
           { name: rfcCompany, isActive: true },
@@ -492,7 +611,13 @@ export const getByProviderAndCompany = async (req, res) => {
     };
 
     if (company) {
-      filter.rfcReceptor = company.rfc;
+      // Si tenemos el ID de la empresa, usar razonSocial para filtrar
+      if (companyId) {
+        filter.razonSocial = company._id;
+      } else {
+        // Fallback: usar RFC para compatibilidad
+        filter.rfcReceptor = company.rfc;
+      }
     }
 
     // Filtrar por proveedores (IDs o RFC)
@@ -518,8 +643,6 @@ export const getByProviderAndCompany = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const sort = { [sortBy]: order === "asc" ? 1 : -1 };
 
-    console.log('Filtro final para la consulta:', filter); // LOG del filtro
-
     // Consulta principal
     const [facturas, total] = await Promise.all([
       ImportedInvoices.find(filter)
@@ -528,8 +651,6 @@ export const getByProviderAndCompany = async (req, res) => {
         .limit(parseInt(limit)),
       ImportedInvoices.countDocuments(filter),
     ]);
-
-    console.log('facturas', facturas);
 
     res.json({
       success: true,
@@ -552,22 +673,34 @@ export const getSummaryByProviderAndCompany = async (req, res) => {
     const {
       rfcProvider,
       rfcCompany,
+      companyId, // Nuevo parámetro para ID de empresa
       providerIds, // Nuevo parámetro para IDs de proveedores
       startDate,   // Nuevo parámetro para fecha de inicio
       endDate      // Nuevo parámetro para fecha de fin
     } = req.query;
 
-    if (!rfcProvider && !rfcCompany && !providerIds) {
+    if (!rfcProvider && !rfcCompany && !companyId && !providerIds) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere al menos un RFC de proveedor, empresa o IDs de proveedores para filtrar.'
+        message: 'Se requiere al menos un RFC de proveedor, empresa, ID de empresa o IDs de proveedores para filtrar.'
       });
     }
 
-    // Buscar compañía activa por nombre o RFC
+    // Buscar compañía activa por ID, nombre o RFC
     let company;
-    if (rfcCompany) {
-      // Intentar buscar por nombre primero, luego por RFC
+    if (companyId) {
+      // Buscar por ID de empresa (método más confiable)
+      company = await Company.findOne({ _id: companyId, isActive: true });
+      if (!company) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "Empresa no encontrada o inactiva",
+          });
+      }
+    } else if (rfcCompany) {
+      // Fallback: buscar por nombre o RFC
       company = await Company.findOne({
         $or: [
           { name: rfcCompany, isActive: true },
@@ -615,7 +748,13 @@ export const getSummaryByProviderAndCompany = async (req, res) => {
     };
 
     if (company) {
-      filter.rfcReceptor = company.rfc;
+      // Si tenemos el ID de la empresa, usar razonSocial para filtrar
+      if (companyId) {
+        filter.razonSocial = company._id;
+      } else {
+        // Fallback: usar RFC para compatibilidad
+        filter.rfcReceptor = company.rfc;
+      }
     }
 
     // Filtrar por proveedores (IDs o RFC)

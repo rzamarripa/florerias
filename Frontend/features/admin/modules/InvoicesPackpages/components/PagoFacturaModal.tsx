@@ -56,13 +56,14 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
         try {
             setLoadingConceptos(true);
             const response = await expenseConceptService.getByDepartment(user.departmentId);
-            if (response.success) {
+            
+            if (response.data && Array.isArray(response.data)) {
                 setConceptosGasto(response.data);
             } else {
                 toast.error('Error al cargar los conceptos de gasto');
             }
         } catch (error) {
-            console.error('Error loading expense concepts:', error);
+            console.error('💥 DEBUG - Error en catch:', error);
             toast.error('Error al cargar los conceptos de gasto');
         } finally {
             setLoadingConceptos(false);
