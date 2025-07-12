@@ -1,34 +1,12 @@
 export interface Budget {
   _id: string;
-  routeId?: {
-    _id: string;
-    name: string;
-    description?: string;
-  };
-  brandId: {
-    _id: string;
-    name: string;
-    description?: string;
-  };
-  companyId: {
-    _id: string;
-    name: string;
-    legalRepresentative: string;
-  };
-  branchId: {
-    _id: string;
-    name: string;
-    address: string;
-  };
-  categoryId: {
-    _id: string;
-    name: string;
-    hasRoutes: boolean;
-  };
+  routeId?: string;
+  brandId: string;
+  companyId: string;
+  branchId: string;
+  categoryId: string;
   assignedAmount: number;
   month: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface BudgetFormData {
@@ -39,4 +17,16 @@ export interface BudgetFormData {
   routeId?: string;
   assignedAmount: number;
   month: string;
+}
+
+export interface BudgetTreeNode {
+  id: string;
+  text: string;
+  type: "category" | "company" | "brand" | "branch" | "route";
+  total?: number;
+  budgetAmount?: number;
+  canAssignBudget?: boolean;
+  hasRoutes?: boolean;
+  entityIds?: Partial<BudgetFormData>;
+  children?: BudgetTreeNode[];
 }

@@ -1,6 +1,6 @@
+import type { User } from "@/features/admin/modules/users/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User } from "@/features/admin/modules/users/types";
 
 interface UserSessionState {
   user: User | null;
@@ -26,6 +26,8 @@ interface UserSessionGetters {
 type UserSessionStore = UserSessionState &
   UserSessionActions &
   UserSessionGetters;
+
+export type { UserSessionStore };
 
 export const useUserSessionStore = create<UserSessionStore>()(
   persist(

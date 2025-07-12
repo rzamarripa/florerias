@@ -1,279 +1,5 @@
 import mongoose from "mongoose";
-import { RsBranchBrand } from "../models/BranchBrands.js";
 import { Budget } from "../models/Budget.js";
-import { RsCompanyBrand } from "../models/CompanyBrands.js";
-import { Route } from "../models/Route.js";
-
-// Obtener companies que tienen marcas en una categoría específica
-export const getCompaniesByCategory = async (req, res) => {
-  try {
-    const { categoryId } = req.params;
-
-    const companyBrandRelations = await RsCompanyBrand.find()
-      .populate("companyId")
-      .populate({
-        path: "brandId",
-        populate: {
-          path: "categoryId",
-          model: "cc_category",
-        },
-      });
-
-    const companies = companyBrandRelations
-      .filter((rel) => rel.brandId?.categoryId?._id.toString() === categoryId)
-      .map((rel) => rel.companyId)
-      .filter(
-        (company, index, self) =>
-          company &&
-          self.findIndex((c) => c._id.toString() === company._id.toString()) ===
-            index
-      );
-
-    res.json({
-      success: true,
-      data: companies,
-      message: "Companies retrieved successfully",
-    });
-  } catch (error) {
-    console.error("Error in getCompaniesByCategory:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error retrieving companies by category",
-      error: error.message,
-    });
-  }
-};
-
-// Obtener marcas por categoría y company
-export const getBrandsByCategoryAndCompany = async (req, res) => {
-  try {
-    const { categoryId, companyId } = req.params;
-
-    const companyBrandRelations = await RsCompanyBrand.find({
-      companyId: companyId,
-    }).populate({
-      path: "brandId",
-      populate: {
-        path: "categoryId",
-        model: "cc_category",
-      },
-    });
-
-    const brands = companyBrandRelations
-      .filter((rel) => rel.brandId?.categoryId?._id.toString() === categoryId)
-      .map((rel) => rel.brandId);
-
-    res.json({
-      success: true,
-      data: brands,
-      message: "Brands retrieved successfully",
-    });
-  } catch (error) {
-    console.error("Error in getBrandsByCategoryAndCompany:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error retrieving brands by category and company",
-      error: error.message,
-    });
-  }
-};
-
-// Obtener sucursales por company y brand
-export const getBranchesByCompanyAndBrand = async (req, res) => {
-  try {
-    const { companyId, brandId } = req.params;
-
-    const branchBrandRelations = await RsBranchBrand.find({
-      brandId: brandId,
-    }).populate({
-      path: "branchId",
-      populate: {
-        path: "companyId",
-        model: "cc_companies",
-      },
-    });
-
-    const branches = branchBrandRelations
-      .filter((rel) => rel.branchId?.companyId?._id.toString() === companyId)
-      .map((rel) => rel.branchId);
-
-    res.json({
-      success: true,
-      data: branches,
-      message: "Branches retrieved successfully",
-    });
-  } catch (error) {
-    console.error("Error in getBranchesByCompanyAndBrand:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error retrieving branches by company and brand",
-      error: error.message,
-    });
-  }
-};
-
-// Obtener rutas por company, brand y branch
-export const getRoutesByCompanyBrandAndBranch = async (req, res) => {
-  try {
-    const { companyId, brandId, branchId } = req.params;
-
-    const routes = await Route.find({
-      companyId: companyId,
-      brandId: brandId,
-      branchId: branchId,
-      status: true,
-    });
-
-    res.json({
-      success: true,
-      data: routes,
-      message: "Routes retrieved successfully",
-    });
-  } catch (error) {
-    console.error("Error in getRoutesByCompanyBrandAndBranch:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error retrieving routes by company, brand and branch",
-      error: error.message,
-    });
-  }
-};
-
-// Función eliminada - reemplazada por selects en cascada
-
-export const getBudgetsByMonth = async (req, res) => {
-  try {
-    const { month } = req.params;
-    const { companyId, categoryId, branchId, routeId, brandId } = req.query;
-
-    if (!/^\d{4}-\d{2}$/.test(month)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid month format. Use YYYY-MM",
-      });
-    }
-
-    if (companyId && categoryId && brandId) {
-      const Category = mongoose.model("cc_category");
-      const category = await Category.findById(categoryId);
-      if (!category) {
-        return res.status(400).json({
-          success: false,
-          message: "Category not found",
-        });
-      }
-      const filter = {
-        companyId,
-        categoryId,
-        brandId,
-        month,
-      };
-      if (category.hasRoutes) {
-        if (!routeId) {
-          return res.status(400).json({
-            success: false,
-            message: "routeId is required for categories with routes",
-          });
-        }
-        filter.routeId = routeId;
-      } else {
-        if (!branchId) {
-          return res.status(400).json({
-            success: false,
-            message: "branchId is required for categories without routes",
-          });
-        }
-        filter.branchId = branchId;
-      }
-      const budgets = await Budget.getBudgetByFilters(filter);
-      return res.json({
-        success: true,
-        data: budgets,
-        message: "Budgets retrieved successfully",
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: [],
-      message: "Filtros insuficientes para obtener presupuesto específico",
-    });
-  } catch (error) {
-    console.error("Error getting budgets by month:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error retrieving budgets by month",
-      error: error.message,
-    });
-  }
-};
-
-export const getBudgetsByCategory = async (req, res) => {
-  try {
-    const { categoryId } = req.params;
-    const { month, companyId, branchId, routeId, brandId } = req.query;
-
-    if (month && !/^\d{4}-\d{2}$/.test(month)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid month format. Use YYYY-MM",
-      });
-    }
-
-    if (companyId && brandId) {
-      const Category = mongoose.model("cc_category");
-      const category = await Category.findById(categoryId);
-      if (!category) {
-        return res.status(400).json({
-          success: false,
-          message: "Category not found",
-        });
-      }
-      const filter = {
-        companyId,
-        categoryId,
-        brandId,
-      };
-      if (month) filter.month = month;
-      if (category.hasRoutes) {
-        if (!routeId) {
-          return res.status(400).json({
-            success: false,
-            message: "routeId is required for categories with routes",
-          });
-        }
-        filter.routeId = routeId;
-      } else {
-        if (!branchId) {
-          return res.status(400).json({
-            success: false,
-            message: "branchId is required for categories without routes",
-          });
-        }
-        filter.branchId = branchId;
-      }
-      const budgets = await Budget.getBudgetByFilters(filter);
-      return res.json({
-        success: true,
-        data: budgets,
-        message: "Budgets retrieved successfully",
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: [],
-      message: "Filtros insuficientes para obtener presupuesto específico",
-    });
-  } catch (error) {
-    console.error("Error getting budgets by category:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error retrieving budgets by category",
-      error: error.message,
-    });
-  }
-};
 
 export const createBudget = async (req, res) => {
   try {
@@ -520,10 +246,9 @@ export const deleteBudget = async (req, res) => {
   }
 };
 
-export const calculateParentTotal = async (req, res) => {
+export const getBudgetTree = async (req, res) => {
   try {
-    const { parentType, parentId } = req.params;
-    const { month } = req.query;
+    const { month, userId } = req.query;
 
     if (!month || !/^\d{4}-\d{2}$/.test(month)) {
       return res.status(400).json({
@@ -532,74 +257,261 @@ export const calculateParentTotal = async (req, res) => {
       });
     }
 
-    const validParentTypes = ["categoryId", "companyId", "branchId", "brandId"];
-    if (!validParentTypes.includes(parentType)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid parent type",
-      });
+    const Category = mongoose.model("cc_category");
+    const Company = mongoose.model("cc_companies");
+    const Brand = mongoose.model("cc_brand");
+    const Branch = mongoose.model("cc_branch");
+    const Route = mongoose.model("cc_route");
+    const RoleVisibility = mongoose.model("ac_user_visibility");
+
+    let visibility = null;
+    if (userId) {
+      visibility = await RoleVisibility.findOne({ userId });
     }
 
-    const total = await Budget.calculateTotalByParent(
-      parentType,
-      parentId,
-      month
-    );
-
-    res.json({
-      success: true,
-      data: total,
-      message: "Parent total calculated successfully",
-    });
-  } catch (error) {
-    console.error("Error calculating parent total:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error calculating parent total",
-      error: error.message,
-    });
-  }
-};
-
-export const getMonthlyBudgetByBranch = async (req, res) => {
-  try {
-    const { branchId, month } = req.params;
-
-    if (!/^\d{4}-\d{2}$/.test(month)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid month format. Use YYYY-MM",
-      });
-    }
-
-    const budgets = await Budget.find({ branchId, month })
-      .populate("routeId")
-      .populate("brandId")
+    const categories = await Category.find({ isActive: true });
+    const budgets = await Budget.find({ month })
+      .populate("categoryId")
       .populate("companyId")
+      .populate("brandId")
       .populate("branchId")
-      .populate("categoryId");
+      .populate("routeId");
 
-    const totalAmount = budgets.reduce(
-      (sum, budget) => sum + budget.assignedAmount,
-      0
-    );
+    const budgetMap = new Map();
+    budgets.forEach((budget) => {
+      const key = budget.routeId
+        ? `route_${budget.routeId._id}`
+        : `branch_${budget.branchId._id}`;
+      budgetMap.set(key, budget);
+    });
+
+    const tree = [];
+
+    for (const category of categories) {
+      const categoryNode = {
+        id: `category_${category._id}`,
+        text: category.name,
+        type: "category",
+        hasRoutes: category.hasRoutes,
+        total: 0,
+        children: [],
+      };
+
+      const companyBrandRelations = await mongoose
+        .model("rs_company_brand")
+        .find()
+        .populate("companyId")
+        .populate({
+          path: "brandId",
+          populate: {
+            path: "categoryId",
+            model: "cc_category",
+          },
+        });
+
+      const relevantRelations = companyBrandRelations.filter(
+        (rel) =>
+          rel.brandId?.categoryId?._id.toString() === category._id.toString()
+      );
+
+      const companyMap = new Map();
+
+      for (const relation of relevantRelations) {
+        const company = relation.companyId;
+        const brand = relation.brandId;
+
+        if (!company || !brand) continue;
+
+        if (visibility) {
+          if (!visibility.hasAccessToCompany(company._id)) continue;
+          if (!visibility.hasAccessToBrand(company._id, brand._id)) continue;
+        }
+
+        if (!companyMap.has(company._id.toString())) {
+          companyMap.set(company._id.toString(), {
+            id: `company_${company._id}`,
+            text: company.name,
+            type: "company",
+            total: 0,
+            children: [],
+          });
+        }
+
+        const companyNode = companyMap.get(company._id.toString());
+
+        if (category.hasRoutes) {
+          const branchBrandRelations = await mongoose
+            .model("rs_branch_brand")
+            .find({
+              brandId: brand._id,
+            })
+            .populate("branchId");
+
+          const relevantBranches = branchBrandRelations.filter(
+            (rel) =>
+              rel.branchId?.companyId?.toString() === company._id.toString()
+          );
+
+          for (const branchRelation of relevantBranches) {
+            const branch = branchRelation.branchId;
+
+            if (!branch || !branch.isActive) continue;
+
+            if (
+              visibility &&
+              !visibility.hasAccessToBranch(company._id, brand._id, branch._id)
+            ) {
+              continue;
+            }
+
+            let branchNode = companyNode.children.find(
+              (child) => child.id === `branch_${branch._id}`
+            );
+
+            if (!branchNode) {
+              branchNode = {
+                id: `branch_${branch._id}`,
+                text: branch.name,
+                type: "branch",
+                total: 0,
+                children: [],
+              };
+              companyNode.children.push(branchNode);
+            }
+
+            let brandNode = branchNode.children.find(
+              (child) => child.id === `brand_${brand._id}`
+            );
+
+            if (!brandNode) {
+              brandNode = {
+                id: `brand_${brand._id}`,
+                text: brand.name,
+                type: "brand",
+                total: 0,
+                children: [],
+              };
+              branchNode.children.push(brandNode);
+            }
+
+            const routes = await Route.find({
+              categoryId: category._id,
+              companyId: company._id,
+              brandId: brand._id,
+              branchId: branch._id,
+              status: true,
+            });
+
+            for (const route of routes) {
+              const budget = budgetMap.get(`route_${route._id}`);
+              const routeNode = {
+                id: `route_${route._id}`,
+                text: route.name,
+                type: "route",
+                budgetAmount: budget ? budget.assignedAmount : 0,
+                canAssignBudget: true,
+                entityIds: {
+                  categoryId: category._id,
+                  companyId: company._id,
+                  brandId: brand._id,
+                  branchId: branch._id,
+                  routeId: route._id,
+                },
+              };
+
+              brandNode.children.push(routeNode);
+              brandNode.total += routeNode.budgetAmount;
+            }
+
+            branchNode.total += brandNode.total;
+          }
+        } else {
+          let brandNode = companyNode.children.find(
+            (child) => child.id === `brand_${brand._id}`
+          );
+
+          if (!brandNode) {
+            brandNode = {
+              id: `brand_${brand._id}`,
+              text: brand.name,
+              type: "brand",
+              total: 0,
+              children: [],
+            };
+            companyNode.children.push(brandNode);
+          }
+
+          const branchBrandRelations = await mongoose
+            .model("rs_branch_brand")
+            .find({
+              brandId: brand._id,
+            })
+            .populate("branchId");
+
+          const relevantBranches = branchBrandRelations.filter(
+            (rel) =>
+              rel.branchId?.companyId?.toString() === company._id.toString()
+          );
+
+          for (const branchRelation of relevantBranches) {
+            const branch = branchRelation.branchId;
+
+            if (!branch || !branch.isActive) continue;
+
+            if (
+              visibility &&
+              !visibility.hasAccessToBranch(company._id, brand._id, branch._id)
+            ) {
+              continue;
+            }
+
+            const budget = budgetMap.get(`branch_${branch._id}`);
+            const branchNode = {
+              id: `branch_${branch._id}`,
+              text: branch.name,
+              type: "branch",
+              budgetAmount: budget ? budget.assignedAmount : 0,
+              canAssignBudget: true,
+              entityIds: {
+                categoryId: category._id,
+                companyId: company._id,
+                brandId: brand._id,
+                branchId: branch._id,
+              },
+            };
+
+            brandNode.children.push(branchNode);
+            brandNode.total += branchNode.budgetAmount;
+          }
+        }
+
+        companyNode.total += companyNode.children.reduce(
+          (sum, child) => sum + child.total,
+          0
+        );
+      }
+
+      categoryNode.children = Array.from(companyMap.values());
+      categoryNode.total = categoryNode.children.reduce(
+        (sum, child) => sum + child.total,
+        0
+      );
+
+      if (categoryNode.children.length > 0) {
+        tree.push(categoryNode);
+      }
+    }
 
     res.json({
       success: true,
-      data: {
-        budgets,
-        totalAmount,
-        branchId,
-        month,
-        count: budgets.length,
-      },
-      message: "Monthly budget by branch retrieved successfully",
+      data: tree,
+      message: "Budget tree retrieved successfully",
     });
   } catch (error) {
-    console.error("Error getting monthly budget by branch:", error);
+    console.error("Error getting budget tree:", error);
     res.status(500).json({
       success: false,
-      message: "Error retrieving monthly budget by branch",
+      message: "Error retrieving budget tree",
       error: error.message,
     });
   }
