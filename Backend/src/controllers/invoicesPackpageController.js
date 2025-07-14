@@ -1186,7 +1186,7 @@ export const enviarPaqueteADireccion = async (req, res) => {
     }
 };
 
-// GET - Obtener presupuesto por compañía, marca, sucursal y mes
+// GET - Obtener presupuesto por compañía, marca, sucursal y mes (original)
 export const getBudgetByCompanyBrandBranch = async (req, res) => {
     try {
         const { companyId, brandId, branchId, month } = req.query;
@@ -1347,5 +1347,92 @@ export const getBudgetByCompanyBrandBranch = async (req, res) => {
             success: false,
             message: error.message || 'Error interno del servidor.'
         });
+    }
+};
+
+// GET - Obtener presupuesto por compañía y mes (específico para dashboard de pagos)
+export const getBudgetByCompanyForDashboard = async (req, res) => {
+    try {
+        const { companyId, month } = req.query;
+
+        if (!companyId) {
+            return res.status(400).json({
+                success: false,
+                message: 'El parámetro companyId es requerido.'
+            });
+        }
+
+        const companyObjectId = new mongoose.Types.ObjectId(companyId);
+        let filtro = { companyId: companyObjectId };
+        if (month) {
+            filtro.month = month;
+        }
+
+        // Buscar todos los presupuestos de la compañía (y mes si aplica)
+        const presupuestos = await Budget.find(filtro);
+        const totalAssignedAmount = presupuestos.reduce((sum, presupuesto) => sum + (presupuesto.assignedAmount || 0), 0);
+
+        // Retornar un presupuesto consolidado
+        const presupuestoConsolidado = {
+            _id: 'consolidado_compania',
+            companyId: companyObjectId,
+            assignedAmount: totalAssignedAmount,
+            month: month || null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        res.status(200).json({
+            success: true,
+            data: [presupuestoConsolidado],
+            message: 'Presupuesto consolidado por compañía.'
+        });
+    } catch (error) {
+        console.error('Error en getBudgetByCompanyForDashboard:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
+    }
+};
+
+// GET - Obtener paquetes enviados para dashboard de pagos con filtros adicionales
+export const getPaquetesEnviadosParaDashboard = async (req, res) => {
+    try {
+        const { companyId, year, month } = req.query;
+        if (!companyId) {
+            return res.status(400).json({ success: false, message: 'El parámetro companyId es requerido.' });
+        }
+        const companyObjectId = new mongoose.Types.ObjectId(companyId);
+        // Buscar relaciones en la tabla relacional para obtener los packageId de la compañía
+        const relations = await InvoicesPackageCompany.find({ companyId: companyObjectId });
+        const packageIds = relations.map(rel => rel.packageId);
+        if (packageIds.length === 0) {
+            return res.status(200).json({ success: true, data: { totalPaquetes: 0, totalPagado: 0, paquetes: [] } });
+        }
+        // Filtro base
+        let filtro = { _id: { $in: packageIds } };
+        // Filtro por año y mes sobre fechaPago
+        if (year && month !== undefined) {
+            const startDate = new Date(parseInt(year), parseInt(month), 1);
+            const endDate = new Date(parseInt(year), parseInt(month) + 1, 0, 23, 59, 59, 999);
+            filtro.fechaPago = { $gte: startDate, $lte: endDate };
+        }
+        const paquetes = await InvoicesPackage.find(filtro)
+            .populate({ path: 'packageCompanyId', populate: ['companyId', 'brandId', 'branchId'] })
+            .sort({ createdAt: -1 });
+        const totalPaquetes = paquetes.length;
+        const totalPagado = paquetes.reduce((sum, paquete) => sum + (paquete.totalPagado || 0), 0);
+        res.status(200).json({
+            success: true,
+            data: {
+                totalPaquetes,
+                totalPagado,
+                paquetes
+            }
+        });
+    } catch (error) {
+        console.error('Error en getPaquetesEnviadosParaDashboard:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 }; 

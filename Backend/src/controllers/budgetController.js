@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Budget } from "../models/Budget.js";
+import { Branch } from "../models/Branch.js";
 
 export const createBudget = async (req, res) => {
   try {
@@ -527,5 +528,26 @@ export const getBudgetTree = async (req, res) => {
       message: "Error retrieving budget tree",
       error: error.message,
     });
+  }
+};
+
+// Nuevo endpoint: obtener presupuesto asignado por sucursal (o todas) para un mes
+export const getBudgetByBranch = async (req, res) => {
+  try {
+    const { companyId, branchId, month } = req.query;
+    if (!companyId || !month) {
+      return res.status(400).json({ success: false, message: 'companyId y month son requeridos' });
+    }
+    const filter = { companyId, month };
+    if (branchId) {
+      filter.branchId = branchId;
+    }
+    // Sumar todos los presupuestos asignados para la(s) sucursal(es) y mes
+    const budgets = await Budget.find(filter);
+    const assignedAmount = budgets.reduce((sum, b) => sum + (b.assignedAmount || 0), 0);
+    res.status(200).json({ success: true, data: { assignedAmount } });
+  } catch (error) {
+    console.error('Error en getBudgetByBranch:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

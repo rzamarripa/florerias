@@ -11,7 +11,9 @@ import {
     getInvoicesPackagesByUsuario,
     getInvoicesPackagesCreatedByUsuario,
     enviarPaqueteADireccion,
-    getBudgetByCompanyBrandBranch
+    getBudgetByCompanyBrandBranch,
+    getBudgetByCompanyForDashboard,
+    getPaquetesEnviadosParaDashboard
 } from '../controllers/invoicesPackpageController.js';
 
 const router = express.Router();
@@ -28,8 +30,14 @@ router.get('/by-usuario', getInvoicesPackagesByUsuario);
 // Obtener paquetes creados por el usuario (sin filtrado de visibilidad)
 router.get('/created-by-usuario', getInvoicesPackagesCreatedByUsuario);
 
+// Obtener paquetes enviados para dashboard de pagos
+router.get('/paquetes-enviados-dashboard', getPaquetesEnviadosParaDashboard);
+
 // Obtener presupuesto por compañía, marca, sucursal y mes
 router.get('/budget', getBudgetByCompanyBrandBranch);
+
+// Obtener presupuesto por compañía y mes (específico para dashboard de pagos)
+router.get('/budget-dashboard', getBudgetByCompanyForDashboard);
 
 // Obtener un paquete específico por ID
 router.get('/:id', getInvoicesPackageById);

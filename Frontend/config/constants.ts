@@ -158,6 +158,11 @@ export const menuItems: MenuItemType[] = [
     icon: Component,
     children: [
       {
+        key: "dashboard-gastos",
+        label: "Dashboard Gastos",
+        url: "/modulos/dashboard-pagos",
+      },
+      {
         key: "importar-metadatos",
         label: "Importar Metadatos",
         url: "/modulos/importar-metadatos",
