@@ -70,12 +70,19 @@ const Budget: React.FC = () => {
           newAmount
         );
         const hasChanged = updatedChildren !== node.children;
-        if (hasChanged) {
+        if (hasChanged && node.total !== undefined) {
           const newTotal = updatedChildren.reduce((sum, child) => {
-            return sum + (child.budgetAmount || child.total || 0);
+            if (child.budgetAmount !== undefined) {
+              return sum + child.budgetAmount;
+            }
+            if (child.total !== undefined) {
+              return sum + child.total;
+            }
+            return sum;
           }, 0);
           return { ...node, children: updatedChildren, total: newTotal };
         }
+        return { ...node, children: updatedChildren };
       }
       return node;
     });
@@ -148,70 +155,60 @@ const Budget: React.FC = () => {
   };
 
   return (
-    <div>
-      <Card className="mb-4">
-        <Card.Header>
-          <h4 className="card-title">Gestión de Presupuestos</h4>
-          <p className="text-muted mb-0">
-            Selecciona el período para ver y asignar presupuestos.
-          </p>
-        </Card.Header>
-        <Card.Body>
-          <Row>
-            <Col md={4}>
-              <Form.Group className="mb-3">
-                <Form.Label>Año *</Form.Label>
-                <Form.Select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                >
-                  <option value="">Selecciona un año...</option>
-                  {generateYearOptions().map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={4}>
-              <Form.Group className="mb-3">
-                <Form.Label>Mes *</Form.Label>
-                <Form.Select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                >
-                  <option value="">Selecciona un mes...</option>
-                  {generateMonthOptions().map((month) => (
-                    <option key={month.value} value={month.value}>
-                      {month.label}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-
-      <Card>
-        <Card.Header>
-          <h5 className="card-title">Árbol de Presupuestos</h5>
-        </Card.Header>
-        <Card.Body>
-          {loading ? (
-            <div className="text-center">
-              <Spinner animation="border" role="status">
-                <span className="visually-hidden">Cargando...</span>
-              </Spinner>
-              <p>Cargando datos...</p>
-            </div>
-          ) : (
-            <BudgetTree data={treeData} onUpdateBudget={handleUpdateBudget} />
-          )}
-        </Card.Body>
-      </Card>
-    </div>
+    <Card>
+      <Card.Header className="p-3 w-100">
+        <Row className="align-items-center justify-content-between w-100">
+          <Col md={6}>
+            <h5 className="card-title">Árbol de Presupuestos</h5>
+          </Col>
+          <Col
+            md={6}
+            className="d-flex justify-content-between align-items-center gap-1"
+          >
+            <Form.Group className="d-flex align-items-center gap-2">
+              <Form.Label className="mb-0">Año: </Form.Label>
+              <Form.Select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+              >
+                <option value="">Selecciona un año...</option>
+                {generateYearOptions().map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="d-flex align-items-center gap-2">
+              <Form.Label className="mb-0">Mes: </Form.Label>
+              <Form.Select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+              >
+                <option value="">Selecciona un mes...</option>
+                {generateMonthOptions().map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+        </Row>
+      </Card.Header>
+      <Card.Body>
+        {loading ? (
+          <div className="text-center">
+            <Spinner animation="border" role="status">
+              <span className="visually-hidden">Cargando...</span>
+            </Spinner>
+            <p>Cargando datos...</p>
+          </div>
+        ) : (
+          <BudgetTree data={treeData} onUpdateBudget={handleUpdateBudget} />
+        )}
+      </Card.Body>
+    </Card>
   );
 };
 

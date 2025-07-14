@@ -420,11 +420,20 @@ export const getBudgetTree = async (req, res) => {
               };
 
               brandNode.children.push(routeNode);
-              brandNode.total += routeNode.budgetAmount;
             }
-
-            branchNode.total += brandNode.total;
+            brandNode.total = brandNode.children.reduce(
+              (sum, child) => sum + (child.budgetAmount || 0),
+              0
+            );
+            branchNode.total = branchNode.children.reduce(
+              (sum, child) => sum + (child.total || 0),
+              0
+            );
           }
+          companyNode.total = companyNode.children.reduce(
+            (sum, child) => sum + (child.total || 0),
+            0
+          );
         } else {
           let brandNode = companyNode.children.find(
             (child) => child.id === `brand_${brand._id}`
@@ -481,21 +490,25 @@ export const getBudgetTree = async (req, res) => {
             };
 
             brandNode.children.push(branchNode);
-            brandNode.total += branchNode.budgetAmount;
           }
+          brandNode.total = brandNode.children.reduce(
+            (sum, child) => sum + (child.budgetAmount || 0),
+            0
+          );
+          companyNode.total = companyNode.children.reduce(
+            (sum, child) => sum + (child.total || 0),
+            0
+          );
         }
-
-        companyNode.total += companyNode.children.reduce(
-          (sum, child) => sum + child.total,
-          0
-        );
       }
 
       categoryNode.children = Array.from(companyMap.values());
       categoryNode.total = categoryNode.children.reduce(
-        (sum, child) => sum + child.total,
+        (sum, child) => sum + (child.total || 0),
         0
       );
+
+      delete categoryNode.total;
 
       if (categoryNode.children.length > 0) {
         tree.push(categoryNode);
