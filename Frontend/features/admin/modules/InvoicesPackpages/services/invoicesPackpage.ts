@@ -151,14 +151,13 @@ export interface InvoicesPackageSummaryResponse {
     };
 }
 
-// Servicio para obtener facturas filtradas por proveedor y empresa
 export const getInvoicesByProviderAndCompany = async (params: {
-    providerIds?: string; // IDs de proveedores separados por coma
+    providerIds?: string;
     rfcProvider?: string;
     rfcCompany?: string;
-    companyId?: string; // ID de empresa (método más confiable)
-    startDate?: string; // Fecha de inicio en formato ISO
-    endDate?: string; // Fecha de fin en formato ISO
+    companyId?: string;
+    startDate?: string;
+    endDate?: string;
     page?: number;
     limit?: number;
     estatus?: string;
@@ -267,6 +266,23 @@ export const updateInvoicesPackage = async (id: string, data: {
     companyId?: string;
     brandId?: string;
     branchId?: string;
+    // Nuevo campo para conceptos de gasto por factura
+    conceptosGasto?: { [invoiceId: string]: string };
+    // Nuevo campo para pagos en efectivo
+    pagosEfectivo?: {
+        _id?: string;
+        importeAPagar: number;
+        expenseConcept: {
+            _id: string;
+            name: string;
+            categoryId?: {
+                _id: string;
+                name: string;
+            };
+        };
+        description?: string;
+        createdAt?: string;
+    }[];
 }): Promise<InvoicesPackageResponse> => {
     const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${id}`, {
         method: "PUT",
@@ -335,7 +351,7 @@ export async function markInvoiceAsPartiallyPaid(invoiceId: string, descripcion:
     return response;
 }
 
-// Servicio para obtener paquetes por usuario (con filtrado de visibilidad)
+// Servicio para obtener paquetes por usuario (con filtrado por departamento y visibilidad)
 export const getInvoicesPackagesByUsuario = async (usuario_id: string): Promise<any> => {
     const response = await apiCall<any>(`/invoices-package/by-usuario?usuario_id=${usuario_id}`);
     return response;

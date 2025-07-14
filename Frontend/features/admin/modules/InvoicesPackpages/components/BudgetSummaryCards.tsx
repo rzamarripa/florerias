@@ -31,31 +31,53 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     selectedYear = new Date().getFullYear(),
     selectedMonth = new Date().getMonth()
 }) => {
-    // Calcular resumen solo de pagos temporales locales
-    const localPaymentsSummary = React.useMemo(() => {
-        let totalTempPagado = 0;
-        let facturasTempPagadas = 0;
+    // Card azul: Facturas en paquetes (sin filtrar por mes) + temporales, usando solo datos de invoices
+    const selectedPaymentsSummary = React.useMemo(() => {
+        let totalPagado = 0;
+        let facturasSeleccionadas = 0;
+        const facturasEnPaquetesSet = new Set<string>();
 
+        // 1. Obtener todos los IDs de facturas en todos los paquetes
+        existingPackages.forEach(paquete => {
+            if (paquete.facturas && Array.isArray(paquete.facturas)) {
+                paquete.facturas.forEach((factura: any) => {
+                    if (factura._id) {
+                        facturasEnPaquetesSet.add(factura._id);
+                    }
+                });
+            }
+        });
+
+        // 2. Sumar facturas del array original que estén en algún paquete y tengan importePagado > 0
+        invoices.forEach(inv => {
+            if (facturasEnPaquetesSet.has(inv._id) && inv.importePagado > 0) {
+                totalPagado += inv.importePagado;
+                facturasSeleccionadas += 1;
+            }
+        });
+
+        // 3. Sumar pagos temporales (aunque no estén en paquetes)
         Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
-            if (payment.tipoPago === 'completo') {
-                // Buscar la factura original para obtener el importe a pagar
-                const invoice = invoices.find(inv => inv._id === invoiceId);
-                if (invoice) {
-                    totalTempPagado += invoice.importeAPagar;
-                    facturasTempPagadas += 1;
+            // Evitar duplicar si ya está en paquete
+            if (!facturasEnPaquetesSet.has(invoiceId)) {
+                if (payment.tipoPago === 'completo') {
+                    const invoice = invoices.find(inv => inv._id === invoiceId);
+                    if (invoice) {
+                        totalPagado += invoice.importeAPagar;
+                        facturasSeleccionadas += 1;
+                    }
+                } else if (payment.tipoPago === 'parcial' && payment.monto) {
+                    totalPagado += payment.monto;
+                    facturasSeleccionadas += 1;
                 }
-            } else if (payment.tipoPago === 'parcial' && payment.monto) {
-                totalTempPagado += payment.monto;
-                // Contar todas las facturas con pagos parciales, sin importar si completan la factura
-                facturasTempPagadas += 1;
             }
         });
 
         return {
-            totalTempPagado,
-            facturasTempPagadas
+            totalPagado,
+            facturasSeleccionadas
         };
-    }, [tempPayments, invoices]);
+    }, [tempPayments, invoices, existingPackages]);
 
     // Calcular total del presupuesto
     const totalBudget = React.useMemo(() => {
@@ -68,7 +90,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
         }, 0);
     }, [budgetData]);
 
-    // Calcular presupuesto utilizado (solo facturas pagadas del mes específico + pagos temporales)
+    // Calcular presupuesto utilizado (suma de importePagado de facturas guardadas + pagos en efectivo + pagos temporales)
     const presupuestoUtilizado = React.useMemo(() => {
         let totalUtilizado = 0;
 
@@ -78,21 +100,34 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
 
             const fechaPago = new Date(paquete.fechaPago);
             const yearPaquete = fechaPago.getFullYear();
-            const monthPaquete = fechaPago.getMonth(); // 0-based month
+            const monthPaquete = fechaPago.getMonth();
 
             return yearPaquete === selectedYear && monthPaquete === selectedMonth;
         });
 
+        // 2. Sumar el importePagado de todas las facturas en paquetes del mes
+        paquetesDelMes.forEach(paquete => {
+            if (paquete.facturas && Array.isArray(paquete.facturas)) {
+                paquete.facturas.forEach((factura: any) => {
+                    if (factura.importePagado > 0) {
+                        totalUtilizado += factura.importePagado;
+                    }
+                });
+            }
+        });
 
+        // 3. Sumar pagos en efectivo de paquetes del mes
+        paquetesDelMes.forEach(paquete => {
+            if (paquete.pagosEfectivo && Array.isArray(paquete.pagosEfectivo)) {
+                paquete.pagosEfectivo.forEach((pagoEfectivo: any) => {
+                    if (pagoEfectivo.importeAPagar > 0) {
+                        totalUtilizado += pagoEfectivo.importeAPagar;
+                    }
+                });
+            }
+        });
 
-        // 2. Sumar el gasto comprometido de paquetes del mes específico
-        // Usamos totalImporteAPagar (todas las facturas) no totalPagado (solo autorizadas)
-        const totalComprometidoDelMes = paquetesDelMes.reduce((acc, paquete) => {
-            return acc + (paquete.totalImporteAPagar || 0);
-        }, 0);
-
-        // 3. Sumar pagos temporales locales (solo si estamos viendo el mes actual)
-        let totalPagosTemporales = 0;
+        // 4. Sumar pagos temporales locales (solo si estamos viendo el mes actual)
         const mesActual = new Date().getMonth();
         const yearActual = new Date().getFullYear();
 
@@ -105,17 +140,13 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
                 if (payment.tipoPago === 'completo') {
                     // Para pago completo, agregar solo la diferencia no pagada
                     const montoPendiente = invoice.importeAPagar - invoice.importePagado;
-                    totalPagosTemporales += Math.max(0, montoPendiente);
+                    totalUtilizado += Math.max(0, montoPendiente);
                 } else if (payment.tipoPago === 'parcial' && payment.monto) {
                     // Para pago parcial, agregar solo el monto adicional
-                    totalPagosTemporales += payment.monto;
+                    totalUtilizado += payment.monto;
                 }
             });
         }
-
-        totalUtilizado = totalComprometidoDelMes + totalPagosTemporales;
-
-
 
         return totalUtilizado;
     }, [existingPackages, tempPayments, invoices, selectedYear, selectedMonth]);
@@ -133,44 +164,44 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     }, [totalBudget, presupuestoUtilizado]);
 
     return (
-        <Row className="g-3">
-            <Col md={3}>
+        <div className="d-flex gap-3 mb-2 w-100 align-items-stretch">
+            <div className="flex-fill" style={{ minWidth: 0 }}>
                 <BudgetStatisticCard
-                    title={`${localPaymentsSummary.facturasTempPagadas} Facturas seleccionadas`}
-                    subtitle="Seleccionadas para pago"
-                    stats={`$${localPaymentsSummary.totalTempPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
-                    icon={<FileText size={24} />}
+                    title={`${selectedPaymentsSummary.facturasSeleccionadas} Facturas pagadas`}
+                    subtitle="Pagos realizados y seleccionados"
+                    stats={`$${selectedPaymentsSummary.totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
+                    icon={<FileText size={16} />}
                     variant="info"
                 />
-            </Col>
-            <Col md={3}>
+            </div>
+            <div className="flex-fill" style={{ minWidth: 0 }}>
                 <BudgetStatisticCard
                     title="Presupuesto del mes"
                     subtitle="Asignado para gastos"
                     stats={`$${totalBudget.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
-                    icon={<Calendar size={24} />}
+                    icon={<Calendar size={16} />}
                     variant="primary"
                 />
-            </Col>
-            <Col md={3}>
+            </div>
+            <div className="flex-fill" style={{ minWidth: 0 }}>
                 <BudgetStatisticCard
                     title="Presupuesto utilizado"
-                    subtitle="Gastado este mes"
+                    subtitle="ImportePagado + temporales"
                     stats={`$${presupuestoUtilizado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
-                    icon={<PieChart size={24} />}
+                    icon={<PieChart size={16} />}
                     variant="warning"
                 />
-            </Col>
-            <Col md={3}>
+            </div>
+            <div className="flex-fill" style={{ minWidth: 0 }}>
                 <BudgetStatisticCard
                     title={saldoPresupuesto.titulo}
                     subtitle={saldoPresupuesto.subtitle}
                     stats={`${saldoPresupuesto.esAFavor ? '+' : ''}$${Math.abs(saldoPresupuesto.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
-                    icon={<Info size={24} />}
+                    icon={<Info size={16} />}
                     variant="secondary"
                 />
-            </Col>
-        </Row>
+            </div>
+        </div>
     );
 };
 

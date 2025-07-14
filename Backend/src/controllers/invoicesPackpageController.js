@@ -173,9 +173,9 @@ export const createInvoicesPackage = async (req, res) => {
         if (Array.isArray(pagosEfectivo) && pagosEfectivo.length > 0) {
             pagosEfectivoEmbebidos = [];
             for (const pago of pagosEfectivo) {
-                // Si el pago ya existe (tiene _id), lo buscamos, si no, lo creamos
+                // Si el pago ya existe (tiene _id y no es temporal), lo buscamos, si no, lo creamos
                 let pagoDoc;
-                if (pago._id) {
+                if (pago._id && typeof pago._id === 'string' && !pago._id.startsWith('temp_')) {
                     pagoDoc = await CashPayment.findById(pago._id);
                 } else {
                     pagoDoc = await CashPayment.create({
@@ -441,7 +441,11 @@ export const updateInvoicesPackage = async (req, res) => {
             // Nuevos campos para la relación con Company, Brand, Branch
             companyId,
             brandId,
-            branchId
+            branchId,
+            // Nuevo campo para conceptos de gasto por factura
+            conceptosGasto,
+            // Nuevo campo para pagos en efectivo
+            pagosEfectivo
         } = req.body;
 
         // Buscar el paquete existente
@@ -551,6 +555,55 @@ export const updateInvoicesPackage = async (req, res) => {
             }
         }
 
+        // Obtener todos los conceptos de gasto involucrados (si se proporcionan)
+        let conceptosGastoMap = {};
+        if (conceptosGasto && Object.keys(conceptosGasto).length > 0) {
+            const conceptosIds = Object.values(conceptosGasto).map(id => new mongoose.Types.ObjectId(id));
+            const conceptosDocs = await ExpenseConcept.find({ _id: { $in: conceptosIds } });
+            conceptosGastoMap = conceptosDocs.reduce((acc, concepto) => {
+                acc[concepto._id.toString()] = {
+                    id: concepto._id,
+                    name: concepto.name,
+                    descripcion: concepto.description
+                };
+                return acc;
+            }, {});
+        }
+
+        // Preparar los pagos en efectivo embebidos con todos sus datos (si se proporcionan)
+        let pagosEfectivoEmbebidos = [];
+        if (Array.isArray(pagosEfectivo) && pagosEfectivo.length > 0) {
+            pagosEfectivoEmbebidos = [];
+            for (const pago of pagosEfectivo) {
+                // Si el pago ya existe (tiene _id y no es temporal), lo buscamos, si no, lo creamos
+                let pagoDoc;
+                if (pago._id && typeof pago._id === 'string' && !pago._id.startsWith('temp_')) {
+                    pagoDoc = await CashPayment.findById(pago._id);
+                } else {
+                    pagoDoc = await CashPayment.create({
+                        importeAPagar: pago.importeAPagar,
+                        expenseConcept: pago.expenseConcept,
+                        description: pago.description,
+                        importePagado: pago.importeAPagar // Guardar como importeAPagar al crear
+                    });
+                }
+                if (!pagoDoc) continue;
+                // Embebe todos los campos relevantes (igual que una factura)
+                const pagoData = pagoDoc.toObject();
+                // Forzar campos de estado iniciales
+                pagoData.autorizada = null;
+                pagoData.estadoPago = 0;
+                pagoData.esCompleta = false;
+                pagoData.pagoRechazado = false;
+                pagoData.registrado = 0;
+                pagoData.pagado = 0;
+                pagoData.descripcionPago = '';
+                pagoData.fechaRevision = new Date();
+                pagoData.importePagado = pagoData.importeAPagar; // SIEMPRE igual al crear
+                pagosEfectivoEmbebidos.push(pagoData);
+            }
+        }
+
         // Actualizar el paquete
         const datosActualizacion = {};
         if (facturas) {
@@ -575,6 +628,14 @@ export const updateInvoicesPackage = async (req, res) => {
                         facturaData.registrado = 1;
                         facturaData.fechaRevision = new Date();
 
+                        // Asignar concepto de gasto si se proporciona para esta factura
+                        if (conceptosGasto && conceptosGasto[factura._id.toString()]) {
+                            const conceptoId = conceptosGasto[factura._id.toString()];
+                            if (conceptosGastoMap[conceptoId]) {
+                                facturaData.conceptoGasto = conceptosGastoMap[conceptoId];
+                            }
+                        }
+
                         // Asegurar que razonSocial tenga la estructura correcta
                         if (facturaData.razonSocial && typeof facturaData.razonSocial === 'object' && facturaData.razonSocial._id) {
                             facturaData.razonSocial = {
@@ -596,13 +657,18 @@ export const updateInvoicesPackage = async (req, res) => {
         if (departamento) datosActualizacion.departamento = departamento;
         if (comentario !== undefined) datosActualizacion.comentario = comentario;
         if (fechaPago) {
-            // La fechaPago ya viene calculada desde el frontend como el jueves de la semana siguiente
-            // Ajustar la hora a las 12:00 UTC para evitar desfases de zona horaria
             const fechaPagoParaGuardar = new Date(fechaPago);
             fechaPagoParaGuardar.setUTCHours(12, 0, 0, 0);
             datosActualizacion.fechaPago = fechaPagoParaGuardar;
         }
         // NO establecer totalImporteAPagar desde frontend - se calculará automáticamente
+
+        // Agregar pagos en efectivo si se proporcionan
+        if (pagosEfectivoEmbebidos.length > 0) {
+            // Agregar los nuevos pagos en efectivo al array existente
+            const pagosEfectivoExistentes = paqueteExistente.pagosEfectivo || [];
+            datosActualizacion.pagosEfectivo = [...pagosEfectivoExistentes, ...pagosEfectivoEmbebidos];
+        }
 
         const paqueteActualizado = await InvoicesPackage.findByIdAndUpdate(
             id,
@@ -610,10 +676,8 @@ export const updateInvoicesPackage = async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        // Siempre recalcular totales para asegurar consistencia
         await paqueteActualizado.actualizarTotales();
 
-        // Actualizar la relación con Company, Brand, Branch si se proporcionan
         if (companyId !== undefined) {
             if (paqueteExistente.packageCompanyId) {
                 // Actualizar relación existente
@@ -841,7 +905,7 @@ export const changeInvoicesPackageStatus = async (req, res) => {
     }
 };
 
-// GET - Obtener paquetes por usuario_id con filtrado por visibilidad
+// GET - Obtener paquetes por usuario_id con filtrado por departamento y visibilidad
 export const getInvoicesPackagesByUsuario = async (req, res) => {
     try {
         const { usuario_id } = req.query;
@@ -852,83 +916,93 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
         // Convertir a ObjectId
         const usuarioObjectId = new mongoose.Types.ObjectId(usuario_id);
 
+        // Obtener el usuario con su departamento
+        const User = mongoose.model('cs_user');
+        const user = await User.findById(usuarioObjectId).populate('departmentId');
 
-
-        // Obtener la visibilidad del usuario
-        const userVisibility = await RoleVisibility.findOne({ userId: usuarioObjectId });
-
-        let packageIds = [];
-
-        if (userVisibility) {
-            // Si el usuario tiene visibilidad configurada, filtrar por sus permisos
-            const { companies, brands, branches } = userVisibility;
-
-            // Construir filtros para la tabla relacional
-            const filterConditions = [];
-
-            // Si tiene acceso a compañías específicas
-            if (companies && companies.length > 0) {
-                filterConditions.push({ companyId: { $in: companies } });
-            }
-
-            // Si tiene acceso a marcas específicas
-            if (brands && brands.length > 0) {
-                const brandConditions = brands.map(brand => ({
-                    companyId: brand.companyId,
-                    brandId: brand.brandId
-                }));
-                filterConditions.push({ $or: brandConditions });
-            }
-
-            // Si tiene acceso a sucursales específicas
-            if (branches && branches.length > 0) {
-                const branchConditions = branches.map(branch => ({
-                    companyId: branch.companyId,
-                    brandId: branch.brandId,
-                    branchId: branch.branchId
-                }));
-                filterConditions.push({ $or: branchConditions });
-            }
-
-            // Si no hay filtros específicos, el usuario no tiene acceso a nada
-            if (filterConditions.length === 0) {
-                return res.status(200).json({ success: true, data: [] });
-            }
-
-            // Buscar paquetes en la tabla relacional que coincidan con la visibilidad
-            const packageRelations = await InvoicesPackageCompany.find({
-                $or: filterConditions
-            });
-
-            packageIds = packageRelations.map(rel => rel.packageId);
-
-            // Si no hay paquetes relacionados, devolver array vacío
-            if (packageIds.length === 0) {
-                return res.status(200).json({ success: true, data: [] });
-            }
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
         }
 
-        // Construir la consulta de paquetes
+        // Obtener el nombre del departamento
+        const departmentName = user.departmentId?.name || '';
+        const isTesoreria = departmentName.toLowerCase() === 'tesorería';
+
         let paquetesQuery = InvoicesPackage.find();
 
-        if (userVisibility && packageIds.length > 0) {
-            // Filtrar por los paquetes que el usuario puede ver
-            paquetesQuery = paquetesQuery.find({
-                $or: [
-                    { _id: { $in: packageIds } },
-                    { usuario_id: usuarioObjectId } // También incluir paquetes creados por el usuario
-                ]
-            });
+        if (isTesoreria) {
+            // Si el departamento es "Tesorería", mostrar paquetes según la visibilidad del usuario
+            const userVisibility = await RoleVisibility.findOne({ userId: usuarioObjectId });
+
+            if (userVisibility) {
+                // Si el usuario tiene visibilidad configurada, filtrar por sus permisos
+                const { companies, brands, branches } = userVisibility;
+
+                // Construir filtros para la tabla relacional
+                const filterConditions = [];
+
+                // Si tiene acceso a compañías específicas
+                if (companies && companies.length > 0) {
+                    filterConditions.push({ companyId: { $in: companies } });
+                }
+
+                // Si tiene acceso a marcas específicas
+                if (brands && brands.length > 0) {
+                    const brandConditions = brands.map(brand => ({
+                        companyId: brand.companyId,
+                        brandId: brand.brandId
+                    }));
+                    filterConditions.push({ $or: brandConditions });
+                }
+
+                // Si tiene acceso a sucursales específicas
+                if (branches && branches.length > 0) {
+                    const branchConditions = branches.map(branch => ({
+                        companyId: branch.companyId,
+                        brandId: branch.brandId,
+                        branchId: branch.branchId
+                    }));
+                    filterConditions.push({ $or: branchConditions });
+                }
+
+                // Si no hay filtros específicos, el usuario no tiene acceso a nada
+                if (filterConditions.length === 0) {
+                    return res.status(200).json({ success: true, data: [] });
+                }
+
+                // Buscar paquetes en la tabla relacional que coincidan con la visibilidad
+                const packageRelations = await InvoicesPackageCompany.find({
+                    $or: filterConditions
+                });
+
+                const packageIds = packageRelations.map(rel => rel.packageId);
+
+                // Si no hay paquetes relacionados, devolver array vacío
+                if (packageIds.length === 0) {
+                    return res.status(200).json({ success: true, data: [] });
+                }
+
+                // Filtrar por los paquetes que el usuario puede ver
+                paquetesQuery = paquetesQuery.find({
+                    _id: { $in: packageIds }
+                });
+            } else {
+                // Si no hay visibilidad configurada para Tesorería, no mostrar nada
+                return res.status(200).json({ success: true, data: [] });
+            }
         } else {
-            // Si no hay visibilidad configurada, mostrar todos los paquetes del usuario
-            paquetesQuery = paquetesQuery.find({ usuario_id: usuarioObjectId });
+            // Si el departamento es diferente a "Tesorería", mostrar solo paquetes del departamento del usuario
+            paquetesQuery = paquetesQuery.find({
+                departamento_id: user.departmentId._id
+            });
         }
 
         const paquetes = await paquetesQuery
             .populate({
                 path: 'packageCompanyId',
                 populate: ['companyId', 'brandId', 'branchId']
-            });
+            })
+            .sort({ createdAt: -1 }); // Ordenar por fecha de creación descendente
 
         // Agregar headers para evitar caché
         res.set({
@@ -1199,25 +1273,53 @@ export const getBudgetByCompanyBrandBranch = async (req, res) => {
         })));
 
         // Determinar qué presupuesto devolver
-        let presupuestoSeleccionado = null;
+        let presupuestosRespuesta = [];
 
         if (!category.hasRoutes) {
             // Si la categoría NO maneja rutas, buscar el presupuesto sin routeId
-            presupuestoSeleccionado = todosLosPresupuestos.find(p => p.routeId === null);
+            const presupuestoSeleccionado = todosLosPresupuestos.find(p => p.routeId === null);
             console.log('getBudgetByCompanyBrandBranch - Categoría SIN rutas, buscando presupuesto sin routeId');
+            if (presupuestoSeleccionado) {
+                presupuestosRespuesta = [presupuestoSeleccionado];
+            }
         } else {
-            // Si la categoría SÍ maneja rutas, tenemos opciones:
-            // 1. Presupuesto general (routeId null) - presupuesto base
-            // 2. Presupuestos específicos por ruta
-            // Por ahora, preferir el presupuesto general si existe, sino tomar el primero
-            presupuestoSeleccionado = todosLosPresupuestos.find(p => p.routeId === null) || todosLosPresupuestos[0];
-            console.log('getBudgetByCompanyBrandBranch - Categoría CON rutas, seleccionando presupuesto:', presupuestoSeleccionado ? (presupuestoSeleccionado.routeId ? 'con ruta específica' : 'general') : 'ninguno');
+            // Si la categoría SÍ maneja rutas, obtener TODOS los presupuestos de rutas
+            // y crear un presupuesto consolidado con la suma total
+            const presupuestosDeRutas = todosLosPresupuestos.filter(p => p.routeId !== null);
+            console.log('getBudgetByCompanyBrandBranch - Categoría CON rutas, presupuestos de rutas encontrados:', presupuestosDeRutas.length);
+
+            if (presupuestosDeRutas.length > 0) {
+                // Calcular la suma total de todos los presupuestos de rutas
+                const totalAssignedAmount = presupuestosDeRutas.reduce((sum, presupuesto) => {
+                    return sum + (presupuesto.assignedAmount || 0);
+                }, 0);
+
+                // Crear un presupuesto consolidado que represente la suma total
+                const presupuestoConsolidado = {
+                    _id: 'consolidado_rutas',
+                    routeId: null, // No tiene ruta específica porque es consolidado
+                    brandId: presupuestosDeRutas[0].brandId,
+                    companyId: presupuestosDeRutas[0].companyId,
+                    branchId: presupuestosDeRutas[0].branchId,
+                    categoryId: presupuestosDeRutas[0].categoryId,
+                    assignedAmount: totalAssignedAmount,
+                    month: presupuestosDeRutas[0].month,
+                    createdAt: presupuestosDeRutas[0].createdAt,
+                    updatedAt: presupuestosDeRutas[0].updatedAt
+                };
+
+                presupuestosRespuesta = [presupuestoConsolidado];
+                console.log('getBudgetByCompanyBrandBranch - Presupuesto consolidado creado con total:', totalAssignedAmount);
+            } else {
+                // Si no hay presupuestos de rutas, buscar presupuesto general
+                const presupuestoGeneral = todosLosPresupuestos.find(p => p.routeId === null);
+                if (presupuestoGeneral) {
+                    presupuestosRespuesta = [presupuestoGeneral];
+                    console.log('getBudgetByCompanyBrandBranch - Usando presupuesto general para categoría con rutas');
+                }
+            }
         }
 
-        // Devolver el presupuesto seleccionado como array (para mantener compatibilidad con frontend)
-        const presupuestosRespuesta = presupuestoSeleccionado ? [presupuestoSeleccionado] : [];
-
-        console.log('getBudgetByCompanyBrandBranch - Presupuesto final seleccionado:', presupuestoSeleccionado);
         console.log('getBudgetByCompanyBrandBranch - Cantidad de presupuestos a devolver:', presupuestosRespuesta.length);
 
         // Agregar headers para evitar caché
