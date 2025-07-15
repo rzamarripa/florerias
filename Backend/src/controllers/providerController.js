@@ -52,8 +52,8 @@ export const getAllProviders = async (req, res) => {
         { description: { $regex: search, $options: "i" } },
       ];
     }
-    if (req.query.status === "true") filters.isActive = true;
-    if (req.query.status === "false") filters.isActive = false;
+    if (req.query.isActive === "true") filters.isActive = true;
+    if (req.query.isActive === "false") filters.isActive = false;
 
     const total = await Provider.countDocuments(filters);
     const providers = await Provider.find(filters)
