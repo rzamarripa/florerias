@@ -3,6 +3,10 @@ import { Brand } from "../models/Brand.js";
 import { Branch } from "../models/Branch.js";
 import { Company } from "../models/Company.js";
 import { Category } from "../models/Category.js";
+import { RoleVisibility } from "../models/RoleVisibility.js";
+import { User } from "../models/User.js";
+import { RsCompanyBrand } from "../models/CompanyBrands.js";
+import { RsBranchBrand } from "../models/BranchBrands.js";
 
 export const getAllRoutes = async (req, res) => {
   try {
@@ -254,4 +258,403 @@ export const getRoutesByCompany = async (req, res) => {
       error: error.message,
     });
   }
-}; 
+};
+
+export const getCategoriesForRoutes = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      const categories = await Category.find({ 
+        isActive: true, 
+        hasRoutes: true 
+      });
+      
+      return res.json({
+        success: true,
+        data: categories,
+        message: "Categories retrieved successfully",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    const visibility = await RoleVisibility.findOne({ userId });
+
+    if (!visibility) {
+      const categories = await Category.find({ 
+        isActive: true, 
+        hasRoutes: true 
+      });
+      
+      return res.json({
+        success: true,
+        data: categories,
+        message: "Categories retrieved successfully",
+      });
+    }
+
+    const structure = await visibility.getHierarchicalStructure();
+    
+    const brandIds = [];
+    Object.entries(structure.companies).forEach(([companyId, company]) => {
+      Object.keys(company.brands).forEach(brandId => {
+        brandIds.push(brandId);
+      });
+    });
+
+    const brandsWithCategories = await Brand.find({
+      _id: { $in: brandIds },
+      categoryId: { $exists: true },
+    }).populate("categoryId");
+
+    const categoryIds = new Set();
+    brandsWithCategories.forEach((brand) => {
+      if (brand.categoryId && brand.categoryId.hasRoutes) {
+        categoryIds.add(brand.categoryId._id.toString());
+      }
+    });
+
+    const categories = await Category.find({
+      _id: { $in: Array.from(categoryIds) },
+      isActive: true,
+      hasRoutes: true,
+    });
+
+    res.json({
+      success: true,
+      data: categories,
+      message: "Categories retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error getting categories for routes:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error getting categories for routes",
+      error: error.message,
+    });
+  }
+};
+
+export const getCompaniesByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { userId } = req.query;
+
+    if (!userId) {
+      const brands = await Brand.find({ 
+        categoryId, 
+        isActive: true 
+      });
+      
+      const brandIds = brands.map(brand => brand._id);
+      const companyBrandRelations = await RsCompanyBrand.find({
+        brandId: { $in: brandIds }
+      }).populate('companyId', 'name legalRepresentative');
+      
+      const companyIds = new Set();
+      companyBrandRelations.forEach(relation => {
+        if (relation.companyId && relation.companyId.isActive !== false) {
+          companyIds.add(relation.companyId._id.toString());
+        }
+      });
+
+      const companies = await Company.find({
+        _id: { $in: Array.from(companyIds) },
+        isActive: true,
+      });
+
+      return res.json({
+        success: true,
+        data: companies,
+        message: "Companies retrieved successfully",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    const visibility = await RoleVisibility.findOne({ userId });
+
+    if (!visibility) {
+      const brands = await Brand.find({ 
+        categoryId, 
+        isActive: true 
+      });
+      
+      const brandIds = brands.map(brand => brand._id);
+      const companyBrandRelations = await RsCompanyBrand.find({
+        brandId: { $in: brandIds }
+      }).populate('companyId', 'name legalRepresentative');
+      
+      const companyIds = new Set();
+      companyBrandRelations.forEach(relation => {
+        if (relation.companyId && relation.companyId.isActive !== false) {
+          companyIds.add(relation.companyId._id.toString());
+        }
+      });
+
+      const companies = await Company.find({
+        _id: { $in: Array.from(companyIds) },
+        isActive: true,
+      });
+
+      return res.json({
+        success: true,
+        data: companies,
+        message: "Companies retrieved successfully",
+      });
+    }
+
+    const structure = await visibility.getHierarchicalStructure();
+    
+    // Primero obtener todos los brandIds de la estructura del usuario
+    const userBrandIds = [];
+    Object.entries(structure.companies).forEach(([companyId, company]) => {
+      Object.keys(company.brands).forEach(brandId => {
+        userBrandIds.push(brandId);
+      });
+    });
+
+    // Obtener brands que pertenecen a la categoría especificada
+    const brandsInCategory = await Brand.find({
+      _id: { $in: userBrandIds },
+      categoryId: categoryId,
+      isActive: true,
+    });
+
+    // Obtener las relaciones company-brand para estos brands
+    const brandIdsInCategory = brandsInCategory.map(brand => brand._id);
+    const companyBrandRelations = await RsCompanyBrand.find({
+      brandId: { $in: brandIdsInCategory }
+    }).populate('companyId', '_id name');
+
+    // Extraer companyIds únicos de esas relaciones
+    const companyIds = new Set();
+    companyBrandRelations.forEach(relation => {
+      if (relation.companyId && relation.companyId.isActive !== false) {
+        companyIds.add(relation.companyId._id.toString());
+      }
+    });
+
+    // Filtrar solo las companies que están en la estructura del usuario
+    const filteredCompanyIds = Array.from(companyIds).filter(companyId => 
+      structure.companies[companyId]
+    );
+
+    const companies = await Company.find({
+      _id: { $in: filteredCompanyIds },
+      isActive: true,
+    });
+
+    res.json({
+      success: true,
+      data: companies,
+      message: "Companies retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error getting companies by category:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error getting companies by category",
+      error: error.message,
+    });
+  }
+};
+
+export const getBrandsByCategoryAndCompany = async (req, res) => {
+  try {
+    const { categoryId, companyId } = req.params;
+    const { userId } = req.query;
+
+    if (!userId) {
+      // Obtener brands a través de las relaciones company-brand
+      const companyBrandRelations = await RsCompanyBrand.find({
+        companyId: companyId
+      }).populate('brandId');
+
+      const brands = companyBrandRelations
+        .filter(relation => 
+          relation.brandId && 
+          relation.brandId.isActive && 
+          relation.brandId.categoryId && 
+          relation.brandId.categoryId.toString() === categoryId
+        )
+        .map(relation => relation.brandId);
+
+      return res.json({
+        success: true,
+        data: brands,
+        message: "Brands retrieved successfully",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    const visibility = await RoleVisibility.findOne({ userId });
+
+    if (!visibility) {
+      // Obtener brands a través de las relaciones company-brand
+      const companyBrandRelations = await RsCompanyBrand.find({
+        companyId: companyId
+      }).populate('brandId');
+
+      const brands = companyBrandRelations
+        .filter(relation => 
+          relation.brandId && 
+          relation.brandId.isActive && 
+          relation.brandId.categoryId && 
+          relation.brandId.categoryId.toString() === categoryId
+        )
+        .map(relation => relation.brandId);
+
+      return res.json({
+        success: true,
+        data: brands,
+        message: "Brands retrieved successfully",
+      });
+    }
+
+    const structure = await visibility.getHierarchicalStructure();
+    
+    const filteredBrands = [];
+    if (structure.companies[companyId]) {
+      Object.entries(structure.companies[companyId].brands).forEach(([brandId, brandData]) => {
+        filteredBrands.push({
+          _id: brandId,
+          name: brandData.name,
+        });
+      });
+    }
+
+    const brandIds = filteredBrands.map(b => b._id);
+    const brands = await Brand.find({
+      _id: { $in: brandIds },
+      categoryId,
+      isActive: true,
+    });
+
+    res.json({
+      success: true,
+      data: brands,
+      message: "Brands retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error getting brands by category and company:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error getting brands by category and company",
+      error: error.message,
+    });
+  }
+};
+
+export const getBranchesByCompanyAndBrand = async (req, res) => {
+  try {
+    const { companyId, brandId } = req.params;
+    const { userId } = req.query;
+
+    if (!userId) {
+      // Obtener sucursales a través de las relaciones branch-brand
+      const branchBrandRelations = await RsBranchBrand.find({
+        brandId: brandId
+      }).populate('branchId');
+
+      const branches = branchBrandRelations
+        .filter(relation => 
+          relation.branchId && 
+          relation.branchId.isActive && 
+          relation.branchId.companyId && 
+          relation.branchId.companyId.toString() === companyId
+        )
+        .map(relation => relation.branchId);
+
+      return res.json({
+        success: true,
+        data: branches,
+        message: "Branches retrieved successfully",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    const visibility = await RoleVisibility.findOne({ userId });
+
+    if (!visibility) {
+      // Obtener sucursales a través de las relaciones branch-brand
+      const branchBrandRelations = await RsBranchBrand.find({
+        brandId: brandId
+      }).populate('branchId');
+
+      const branches = branchBrandRelations
+        .filter(relation => 
+          relation.branchId && 
+          relation.branchId.isActive && 
+          relation.branchId.companyId && 
+          relation.branchId.companyId.toString() === companyId
+        )
+        .map(relation => relation.branchId);
+
+      return res.json({
+        success: true,
+        data: branches,
+        message: "Branches retrieved successfully",
+      });
+    }
+
+    const structure = await visibility.getHierarchicalStructure();
+    
+    const filteredBranches = [];
+    if (structure.companies[companyId] && structure.companies[companyId].brands[brandId]) {
+      Object.entries(structure.companies[companyId].brands[brandId].branches).forEach(([branchId, branchData]) => {
+        filteredBranches.push({
+          _id: branchId,
+          name: branchData.name,
+        });
+      });
+    }
+
+    const branchIds = filteredBranches.map(b => b._id);
+    const branches = await Branch.find({
+      _id: { $in: branchIds },
+      companyId,
+      isActive: true,
+    });
+
+    res.json({
+      success: true,
+      data: branches,
+      message: "Branches retrieved successfully",
+    });
+  } catch (error) {
+    console.error("Error getting branches by company and brand:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error getting branches by company and brand",
+      error: error.message,
+    });
+  }
+};

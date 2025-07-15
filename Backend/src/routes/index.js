@@ -25,6 +25,7 @@ import roleRoutes from "./roleRoutes.js";
 import routeRoutes from "./routeRoutes.js";
 import roleVisibilityRoutes from "./roleVisibilityRoutes.js";
 import stateRoutes from "./stateRoutes.js";
+import structureRoutes from "./structureRoutes.js";
 import userRoutes from "./userRoutes.js";
 import authorizationFolioRoutes from "./authorizationFolioRoutes.js";
 
@@ -57,5 +58,6 @@ router.use("/role-visibility", roleVisibilityRoutes);
 router.use("/cash-payments", cashPaymentRoutes);
 router.use("/authorization-folios", authorizationFolioRoutes);
 router.use("/routes", routeRoutes);
+router.use("/structure", structureRoutes);
 
 export default router;

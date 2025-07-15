@@ -59,6 +59,11 @@ export const menuItems: MenuItemType[] = [
         label: "Rutas",
         url: "/catalogos/rutas",
       },
+      {
+        key: "estructura",
+        label: "Estructura",
+        url: "/catalogos/estructura",
+      },
 
       {
         key: "departamentos",

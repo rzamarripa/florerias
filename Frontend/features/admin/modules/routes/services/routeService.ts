@@ -149,15 +149,13 @@ class RouteService {
     }
   }
 
-  // Nuevos métodos para selects en cascada (mismo patrón que budgetService)
-  async getCategories(): Promise<ApiResponse<Category[]>> {
+  // Nuevos métodos para selects en cascada con visibilidad de usuario
+  async getCategories(userId?: string): Promise<ApiResponse<Category[]>> {
     try {
-      const response = await apiCall<Category[]>("/categories/all");
-      if (response.success) {
-        // Filtrar solo las categorías con hasRoutes === true
-        response.data = response.data.filter(category => category.hasRoutes);
-      }
-      return response;
+      const url = userId 
+        ? `/routes/selects/categories?userId=${userId}`
+        : "/routes/selects/categories";
+      return await apiCall<Category[]>(url);
     } catch (error: any) {
       return {
         success: false,
@@ -168,12 +166,14 @@ class RouteService {
   }
 
   async getCompaniesByCategory(
-    categoryId: string
+    categoryId: string,
+    userId?: string
   ): Promise<ApiResponse<Company[]>> {
     try {
-      return await apiCall<Company[]>(
-        `/budget/companies/category/${categoryId}`
-      );
+      const url = userId 
+        ? `/routes/selects/companies/category/${categoryId}?userId=${userId}`
+        : `/routes/selects/companies/category/${categoryId}`;
+      return await apiCall<Company[]>(url);
     } catch (error: any) {
       return {
         success: false,
@@ -185,12 +185,14 @@ class RouteService {
 
   async getBrandsByCategoryAndCompany(
     categoryId: string,
-    companyId: string
+    companyId: string,
+    userId?: string
   ): Promise<ApiResponse<Brand[]>> {
     try {
-      return await apiCall<Brand[]>(
-        `/budget/brands/category/${categoryId}/company/${companyId}`
-      );
+      const url = userId 
+        ? `/routes/selects/brands/category/${categoryId}/company/${companyId}?userId=${userId}`
+        : `/routes/selects/brands/category/${categoryId}/company/${companyId}`;
+      return await apiCall<Brand[]>(url);
     } catch (error: any) {
       return {
         success: false,
@@ -203,12 +205,14 @@ class RouteService {
 
   async getBranchesByCompanyAndBrand(
     companyId: string,
-    brandId: string
+    brandId: string,
+    userId?: string
   ): Promise<ApiResponse<Branch[]>> {
     try {
-      return await apiCall<Branch[]>(
-        `/budget/branches/company/${companyId}/brand/${brandId}`
-      );
+      const url = userId 
+        ? `/routes/selects/branches/company/${companyId}/brand/${brandId}?userId=${userId}`
+        : `/routes/selects/branches/company/${companyId}/brand/${brandId}`;
+      return await apiCall<Branch[]>(url);
     } catch (error: any) {
       return {
         success: false,
