@@ -26,6 +26,7 @@ const Page = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
   const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
+  const [branchBudget, setBranchBudget] = useState<number | undefined>(undefined);
 
   const [paquetesEnviadosData, setPaquetesEnviadosData] = useState<PaquetesEnviadosResponse>({
     totalPaquetes: 0,
@@ -118,37 +119,27 @@ const Page = () => {
 
   // Función para consultar presupuesto de sucursal específica (completamente independiente)
   const consultarPresupuestoSucursal = useCallback(async (branchId: string, companyId: string) => {
-    console.log('consultarPresupuestoSucursal - Iniciando:', { branchId, companyId });
-    
     if (!branchId || !companyId) {
-      console.log('consultarPresupuestoSucursal - Parámetros inválidos');
+      setBranchBudget(undefined);
       return;
     }
 
     // Evitar consultas duplicadas usando solo branchId y companyId
     const queryKey = `${branchId}-${companyId}`;
     if (lastSucursalQuery.current === queryKey) {
-      console.log('consultarPresupuestoSucursal - Consulta duplicada, saltando');
       return;
     }
     lastSucursalQuery.current = queryKey;
 
     try {
       const monthFormatted = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
-      console.log('consultarPresupuestoSucursal - Mes formateado:', monthFormatted);
       
       const branchBrandIds = getBranchBrandIds(branchId, companyId);
       if (!branchBrandIds) {
         toast.error('No se pudo obtener la información de la sucursal seleccionada');
+        setBranchBudget(undefined);
         return;
       }
-
-      console.log('consultarPresupuestoSucursal - Haciendo petición API:', {
-        companyId,
-        brandId: branchBrandIds.brandId,
-        branchId: branchBrandIds.branchId,
-        month: monthFormatted
-      });
 
       const response = await getBudgetByBranchBrand({
         companyId: companyId,
@@ -157,10 +148,11 @@ const Page = () => {
         month: monthFormatted
       });
 
-      console.log('consultarPresupuestoSucursal - Respuesta recibida:', response);
-
       // Calcular sumatoria total
       const totalPresupuesto = response.reduce((sum, item) => sum + item.assignedAmount, 0);
+
+      // Actualizar el estado del presupuesto de la sucursal
+      setBranchBudget(totalPresupuesto);
 
       // Console.log con desglose
       console.log(`Presupuesto para ${branchBrandIds.branchName}:`);
@@ -175,6 +167,7 @@ const Page = () => {
     } catch (error) {
       console.error('Error al consultar presupuesto de sucursal:', error);
       toast.error('Error al consultar el presupuesto de la sucursal');
+      setBranchBudget(undefined);
     }
   }, [selectedYear, selectedMonth]); // Solo depende de año/mes, no de selectedBranch/selectedCompany
 
@@ -194,13 +187,9 @@ const Page = () => {
 
   // Efecto para consultar presupuesto de sucursal solo cuando cambie la selección de sucursal
   useEffect(() => {
-    console.log('useEffect sucursal - Ejecutándose:', { selectedBranch, selectedCompany });
-    
     if (selectedBranch && selectedCompany) {
-      console.log('useEffect sucursal - Condiciones cumplidas, programando consulta');
       // Usar setTimeout para evitar bloqueos en el render y hacer la consulta independiente
       const timeoutId = setTimeout(() => {
-        console.log('useEffect sucursal - Ejecutando consulta después del timeout');
         consultarPresupuestoSucursal(selectedBranch, selectedCompany);
       }, 100);
       
@@ -212,41 +201,33 @@ const Page = () => {
     const companyId = event.target.value;
     setSelectedCompany(companyId);
     setSelectedBranch('');
+    setBranchBudget(undefined); // Limpiar presupuesto de sucursal
     lastSucursalQuery.current = ''; // Reset query cache
   };
 
   const handleBranchChange = (branchId: string) => {
     setSelectedBranch(branchId);
+    
+    // Limpiar el presupuesto de sucursal si se deselecciona
+    if (!branchId) {
+      setBranchBudget(undefined);
+      lastSucursalQuery.current = '';
+    }
   };
 
   // Función para obtener brandId y branchId de la selección
   const getBranchBrandIds = (selectedBrandId: string, companyId: string) => {
     if (!visibilityStructure || !selectedBrandId || !companyId) {
-      console.log('getBranchBrandIds - Validación fallida:', {
-        hasVisibilityStructure: !!visibilityStructure,
-        selectedBrandId,
-        companyId
-      });
       return null;
     }
-
-    console.log('getBranchBrandIds - Buscando branch:', {
-      selectedBrandId,
-      companyId,
-      branches: visibilityStructure.branches,
-      totalBranches: visibilityStructure.branches.length
-    });
 
     const branch = visibilityStructure.branches.find(
       b => b.brandId === selectedBrandId && b.companyId === companyId
     );
 
     if (!branch) {
-      console.log('getBranchBrandIds - Branch no encontrada');
       return null;
     }
-
-    console.log('getBranchBrandIds - Branch encontrada:', branch);
 
     return {
       brandId: selectedBrandId,
@@ -333,6 +314,7 @@ const Page = () => {
         selectedCompany={selectedCompany}
         selectedBranch={selectedBranch}
         onBranchChange={handleBranchChange}
+        branchBudget={branchBudget}
       />
     </Container>
   )
