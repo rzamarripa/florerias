@@ -149,7 +149,7 @@ const Budget: React.FC = () => {
 
   return (
     <div>
-      <Card className="mb-4">
+      {/* <Card className="mb-4">
         <Card.Header>
           <h4 className="card-title">Gestión de Presupuestos</h4>
           <p className="text-muted mb-0">
@@ -192,11 +192,45 @@ const Budget: React.FC = () => {
             </Col>
           </Row>
         </Card.Body>
-      </Card>
+      </Card> */}
 
       <Card>
         <Card.Header>
           <h5 className="card-title">Árbol de Presupuestos</h5>
+          <Row>
+            <Col md={4}>
+              <Form.Group className="mb-3">
+                <Form.Label>Año *</Form.Label>
+                <Form.Select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                >
+                  <option value="">Selecciona un año...</option>
+                  {generateYearOptions().map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group className="mb-3">
+                <Form.Label>Mes *</Form.Label>
+                <Form.Select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                >
+                  <option value="">Selecciona un mes...</option>
+                  {generateMonthOptions().map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+          </Row>
         </Card.Header>
         <Card.Body>
           {loading ? (

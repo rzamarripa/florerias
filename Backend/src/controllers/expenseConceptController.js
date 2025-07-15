@@ -94,9 +94,9 @@ export const createExpenseConcept = async (req, res) => {
       isActive: true,
     });
 
-    const populatedConcept = await ExpenseConcept.findById(
-      newConcept._id
-    ).populate("categoryId", "name").populate("departmentId", "name");
+    const populatedConcept = await ExpenseConcept.findById(newConcept._id)
+      .populate("categoryId", "name")
+      .populate("departmentId", "name");
 
     res.status(201).json({
       success: true,
@@ -128,7 +128,9 @@ export const updateExpenseConcept = async (req, res) => {
         departmentId,
       },
       { new: true }
-    ).populate("categoryId", "name").populate("departmentId", "name");
+    )
+      .populate("categoryId", "name")
+      .populate("departmentId", "name");
 
     if (!updatedConcept) {
       return res.status(404).json({
@@ -213,18 +215,21 @@ export const getExpenseConceptsByDepartment = async (req, res) => {
 
     const concepts = await ExpenseConcept.find({
       departmentId: departmentId,
-      isActive: true
+      isActive: true,
     })
       .select("_id name description categoryId departmentId")
       .populate("categoryId", "name")
       .populate("departmentId", "name")
       .sort({ name: 1 });
 
+    console.log("concepts", concepts);
+
     res.status(200).json({
       success: true,
       data: concepts,
     });
   } catch (error) {
+    console.log("error", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
