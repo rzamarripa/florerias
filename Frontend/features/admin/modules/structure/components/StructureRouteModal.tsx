@@ -1,35 +1,41 @@
 import React, { useEffect, useState } from "react";
 import { Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
-import { routeService } from "../services/routeService";
-import { Route, RouteFormData } from "../types";
+import { routeService } from "../../routes/services/routeService";
+import { RouteFormData } from "../../routes/types";
 import {
   useUserSessionStore,
   UserSessionStore,
 } from "@/stores/userSessionStore";
 
-interface RouteModalProps {
+interface StructureRouteModalProps {
   show: boolean;
   onHide: () => void;
-  editingRoute?: Route | null;
   onRouteSaved: () => void;
+  categoryId: string;
+  companyId: string;
+  brandId: string;
+  branchId: string;
 }
 
-const RouteModal: React.FC<RouteModalProps> = ({
+const StructureRouteModal: React.FC<StructureRouteModalProps> = ({
   show,
   onHide,
-  editingRoute,
   onRouteSaved,
+  categoryId,
+  companyId,
+  brandId,
+  branchId,
 }) => {
   const user = useUserSessionStore((state: UserSessionStore) => state.user);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<RouteFormData>({
     name: "",
     description: "",
-    categoryId: "",
-    brandId: "",
-    companyId: "",
-    branchId: "",
+    categoryId: categoryId,
+    brandId: brandId,
+    companyId: companyId,
+    branchId: branchId,
     status: true,
   });
 
@@ -39,77 +45,24 @@ const RouteModal: React.FC<RouteModalProps> = ({
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Cargar categorías al abrir el modal
   useEffect(() => {
     if (show) {
-      loadCategories();
-    }
-  }, [show]);
-
-  // Cargar datos en cascada
-  useEffect(() => {
-    if (formData.categoryId) {
-      loadCompanies();
-      resetSelections(["company", "brand", "branch"]);
-    }
-  }, [formData.categoryId]);
-
-  useEffect(() => {
-    if (formData.categoryId && formData.companyId) {
-      loadBrands();
-      resetSelections(["brand", "branch"]);
-    }
-  }, [formData.categoryId, formData.companyId]);
-
-  useEffect(() => {
-    if (formData.companyId && formData.brandId) {
-      loadBranches();
-      resetSelections(["branch"]);
-    }
-  }, [formData.companyId, formData.brandId]);
-
-  useEffect(() => {
-    if (editingRoute) {
-      setFormData({
-        name: editingRoute.name,
-        description: editingRoute.description || "",
-        categoryId: editingRoute.categoryId?._id || "",
-        brandId: editingRoute.brandId._id,
-        companyId: editingRoute.companyId._id,
-        branchId: editingRoute.branchId._id,
-        status: editingRoute.status,
-      });
-    } else {
       setFormData({
         name: "",
         description: "",
-        categoryId: "",
-        brandId: "",
-        companyId: "",
-        branchId: "",
+        categoryId: categoryId,
+        brandId: brandId,
+        companyId: companyId,
+        branchId: branchId,
         status: true,
       });
-    }
-  }, [editingRoute, show]);
 
-  const resetSelections = (selections: string[]) => {
-    const newFormData = { ...formData };
-
-    if (selections.includes("company")) {
-      newFormData.companyId = "";
-      setCompanies([]);
+      loadCategories();
+      loadCompanies();
+      loadBrands();
+      loadBranches();
     }
-    if (selections.includes("brand")) {
-      newFormData.brandId = "";
-      setBrands([]);
-    }
-    if (selections.includes("branch")) {
-      newFormData.branchId = "";
-      setBranches([]);
-    }
-
-    setFormData(newFormData);
-  };
+  }, [show, categoryId, companyId, brandId, branchId]);
 
   const loadCategories = async () => {
     try {
@@ -128,12 +81,12 @@ const RouteModal: React.FC<RouteModalProps> = ({
   };
 
   const loadCompanies = async () => {
-    if (!formData.categoryId) return;
+    if (!categoryId) return;
 
     try {
       setLoading(true);
       const response = await routeService.getCompaniesByCategory(
-        formData.categoryId,
+        categoryId,
         user?._id
       );
       if (response.success) {
@@ -149,13 +102,13 @@ const RouteModal: React.FC<RouteModalProps> = ({
   };
 
   const loadBrands = async () => {
-    if (!formData.categoryId || !formData.companyId) return;
+    if (!categoryId || !companyId) return;
 
     try {
       setLoading(true);
       const response = await routeService.getBrandsByCategoryAndCompany(
-        formData.categoryId,
-        formData.companyId,
+        categoryId,
+        companyId,
         user?._id
       );
       if (response.success) {
@@ -171,13 +124,13 @@ const RouteModal: React.FC<RouteModalProps> = ({
   };
 
   const loadBranches = async () => {
-    if (!formData.companyId || !formData.brandId) return;
+    if (!companyId || !brandId) return;
 
     try {
       setLoading(true);
       const response = await routeService.getBranchesByCompanyAndBrand(
-        formData.companyId,
-        formData.brandId,
+        companyId,
+        brandId,
         user?._id
       );
       if (response.success) {
@@ -195,36 +148,21 @@ const RouteModal: React.FC<RouteModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !formData.name ||
-      !formData.categoryId ||
-      !formData.brandId ||
-      !formData.companyId ||
-      !formData.branchId
-    ) {
-      toast.error("Todos los campos obligatorios deben estar completos");
+    if (!formData.name) {
+      toast.error("El nombre es obligatorio");
       return;
     }
 
     try {
       setIsSubmitting(true);
-      let response;
-      if (editingRoute) {
-        response = await routeService.updateRoute(editingRoute._id, formData);
-      } else {
-        response = await routeService.createRoute(formData);
-      }
+      const response = await routeService.createRoute(formData);
 
       if (!response.success) {
         toast.error(response.message || "Error al guardar ruta");
         return;
       }
 
-      toast.success(
-        editingRoute
-          ? "Ruta actualizada correctamente"
-          : "Ruta creada correctamente"
-      );
+      toast.success("Ruta creada correctamente");
       onHide();
       onRouteSaved();
     } catch (error: any) {
@@ -243,7 +181,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
   return (
     <Modal show={show} onHide={handleCancel} size="lg" centered>
       <Modal.Header closeButton>
-        <Modal.Title>{editingRoute ? "Editar Ruta" : "Nueva Ruta"}</Modal.Title>
+        <Modal.Title>Nueva Ruta</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Form onSubmit={handleSubmit}>
@@ -278,17 +216,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Unidad de Negocio *</Form.Label>
-                <Form.Select
-                  value={formData.categoryId}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      categoryId: e.target.value,
-                    });
-                  }}
-                  required
-                  disabled={loading}
-                >
+                <Form.Select value={formData.categoryId} disabled={true}>
                   <option value="">Selecciona una opción…</option>
                   {categories.map((c) => (
                     <option key={c._id} value={c._id}>
@@ -296,22 +224,16 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     </option>
                   ))}
                 </Form.Select>
+                <Form.Text className="text-muted">
+                  La unidad de negocio se selecciona automáticamente desde la
+                  estructura
+                </Form.Text>
               </Form.Group>
             </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Razón Social *</Form.Label>
-                <Form.Select
-                  value={formData.companyId}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      companyId: e.target.value,
-                    });
-                  }}
-                  required
-                  disabled={loading || !formData.categoryId}
-                >
+                <Form.Select value={formData.companyId} disabled={true}>
                   <option value="">Selecciona una opción…</option>
                   {companies.map((c) => (
                     <option key={c._id} value={c._id}>
@@ -319,6 +241,10 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     </option>
                   ))}
                 </Form.Select>
+                <Form.Text className="text-muted">
+                  La razón social se selecciona automáticamente desde la
+                  estructura
+                </Form.Text>
               </Form.Group>
             </Col>
           </Row>
@@ -326,17 +252,7 @@ const RouteModal: React.FC<RouteModalProps> = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Marca *</Form.Label>
-                <Form.Select
-                  value={formData.brandId}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      brandId: e.target.value,
-                    });
-                  }}
-                  required
-                  disabled={loading || !formData.companyId}
-                >
+                <Form.Select value={formData.brandId} disabled={true}>
                   <option value="">Selecciona una opción…</option>
                   {brands.map((b) => (
                     <option key={b._id} value={b._id}>
@@ -344,19 +260,15 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     </option>
                   ))}
                 </Form.Select>
+                <Form.Text className="text-muted">
+                  La marca se selecciona automáticamente desde la estructura
+                </Form.Text>
               </Form.Group>
             </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Sucursal *</Form.Label>
-                <Form.Select
-                  value={formData.branchId}
-                  onChange={(e) => {
-                    setFormData({ ...formData, branchId: e.target.value });
-                  }}
-                  required
-                  disabled={loading || !formData.brandId}
-                >
+                <Form.Select value={formData.branchId} disabled={true}>
                   <option value="">Selecciona una opción…</option>
                   {branches.map((b) => (
                     <option key={b._id} value={b._id}>
@@ -364,6 +276,9 @@ const RouteModal: React.FC<RouteModalProps> = ({
                     </option>
                   ))}
                 </Form.Select>
+                <Form.Text className="text-muted">
+                  La sucursal se selecciona automáticamente desde la estructura
+                </Form.Text>
               </Form.Group>
             </Col>
           </Row>
@@ -376,10 +291,8 @@ const RouteModal: React.FC<RouteModalProps> = ({
               {isSubmitting ? (
                 <>
                   <Spinner animation="border" size="sm" className="me-2" />
-                  {editingRoute ? "Actualizando..." : "Creando..."}
+                  Creando...
                 </>
-              ) : editingRoute ? (
-                "Actualizar"
               ) : (
                 "Crear"
               )}
@@ -394,4 +307,4 @@ const RouteModal: React.FC<RouteModalProps> = ({
   );
 };
 
-export default RouteModal;
+export default StructureRouteModal;
