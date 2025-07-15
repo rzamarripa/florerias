@@ -17,13 +17,15 @@ interface OrdersStaticsProps {
   selectedCompany: string;
   selectedBranch: string;
   onBranchChange: (branchId: string) => void;
+  branchBudget?: number; // Presupuesto de la sucursal seleccionada
 }
 
 const OrdersStatics: React.FC<OrdersStaticsProps> = ({ 
   visibilityStructure, 
   selectedCompany, 
   selectedBranch, 
-  onBranchChange 
+  onBranchChange,
+  branchBudget
 }) => {
   // Filtrar sucursales y marcas basado en la compañía seleccionada
   const filteredBranches = visibilityStructure?.branches.filter(
@@ -52,16 +54,15 @@ const OrdersStatics: React.FC<OrdersStaticsProps> = ({
       <Col xs={12}>
         <Card>
           <CardHeader className="border-dashed card-tabs d-flex align-items-center">
-            <div className="flex-grow-1">
-              <CardTitle as="h4">Estadisticas Totales</CardTitle>
-            </div>
-            <div className="d-flex align-items-center gap-3">
-              {/* Select de sucursales */}
+            <div className="flex-grow-1 d-flex align-items-center gap-3">
+              <CardTitle as="h4" className="mb-0">Estadisticas Totales</CardTitle>
+              
+              {/* Select de sucursales movido al header */}
               <Form.Select
                 size="sm"
                 value={selectedBranch}
                 onChange={(e) => onBranchChange(e.target.value)}
-                style={{ minWidth: '250px' }}
+                style={{ maxWidth: '250px' }}
                 disabled={!selectedCompany}
               >
                 <option value="">Todas las sucursales</option>
@@ -71,32 +72,40 @@ const OrdersStatics: React.FC<OrdersStaticsProps> = ({
                   </option>
                 ))}
               </Form.Select>
-              
-              <Nav variant="tabs" defaultActiveKey="monthly-ct" className="card-header-tabs nav-bordered">
-                <NavItem>
-                  <NavLink eventKey="today-ct">
-                    <TbHome className="d-md-none d-block" />
-                    <span className="d-none d-md-block">Hoy</span>
-                  </NavLink>
-                </NavItem>
-                <NavItem>
-                  <NavLink eventKey="monthly-ct">
-                    <TbUserCircle className="d-md-none d-block" />
-                    <span className="d-none d-md-block">Mensual</span>
-                  </NavLink>
-                </NavItem>
-                <NavItem>
-                  <NavLink eventKey="annual-ct">
-                    <TbSettings className="d-md-none d-block" />
-                    <span className="d-none d-md-block">Anual</span>
-                  </NavLink>
-                </NavItem>
-              </Nav>
             </div>
+            
+            <Nav variant="tabs" defaultActiveKey="monthly-ct" className="card-header-tabs nav-bordered">
+              <NavItem>
+                <NavLink eventKey="today-ct">
+                  <TbHome className="d-md-none d-block" />
+                  <span className="d-none d-md-block">Hoy</span>
+                </NavLink>
+              </NavItem>
+              <NavItem>
+                <NavLink eventKey="monthly-ct">
+                  <TbUserCircle className="d-md-none d-block" />
+                  <span className="d-none d-md-block">Mensual</span>
+                </NavLink>
+              </NavItem>
+              <NavItem>
+                <NavLink eventKey="annual-ct">
+                  <TbSettings className="d-md-none d-block" />
+                  <span className="d-none d-md-block">Anual</span>
+                </NavLink>
+              </NavItem>
+            </Nav>
           </CardHeader>
           <CardBody className="p-0">
             <Row className="g-0">
               <Col xxl={8} className="border-end border-dashed">
+                {/* Presupuesto de la sucursal dentro del área de la gráfica */}
+                {selectedBranch && branchBudget !== undefined && (
+                  <div className=" border-bottom border-dashed bg-light-subtle">
+                    <h3 className="text-primary mb-0 text-center">
+                      Presupuesto: ${branchBudget.toLocaleString()}
+                    </h3>
+                  </div>
+                )}
 
                 <OrdersChart />
 

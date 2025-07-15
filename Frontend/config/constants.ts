@@ -16,6 +16,11 @@ export const menuItems: MenuItemType[] = [
     icon: LayoutDashboard,
     children: [
       {
+        key: "dashboard-pagos",
+        label: "Dashboard Pagos",
+        url: "/dashboard/dashboard-pagos",
+      },
+      {
         key: "dashboard-gastos",
         label: "Dashboard Gastos",
         url: "/dashboard/gastos",
@@ -162,11 +167,6 @@ export const menuItems: MenuItemType[] = [
     label: "Módulos",
     icon: Component,
     children: [
-      {
-        key: "dashboard-gastos",
-        label: "Dashboard Gastos",
-        url: "/modulos/dashboard-pagos",
-      },
       {
         key: "importar-metadatos",
         label: "Importar Metadatos",
