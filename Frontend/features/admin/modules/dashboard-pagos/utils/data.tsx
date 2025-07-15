@@ -64,7 +64,7 @@ export const cardData: CardData[] = [
     metric: 'Presupuesto asignado del período',
     targetValue: 0,
     prefix: '$',
-    suffix: 'K'
+    suffix: ''
   },
   {
     title: 'Paquetes Enviados',

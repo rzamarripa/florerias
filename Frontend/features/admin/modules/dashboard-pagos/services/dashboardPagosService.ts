@@ -182,4 +182,22 @@ export const getBudgetByBranch = async (params: {
   });
   const response = await apiCall<{ assignedAmount: number }>(`/budget/by-branch?${queryParams}`);
   return response.data?.assignedAmount || 0;
+};
+
+// Función para obtener presupuesto por sucursal-marca (basado en la lógica del Budget page)
+export const getBudgetByBranchBrand = async (params: {
+  companyId: string;
+  brandId: string;
+  branchId: string;
+  month: string;
+}): Promise<BudgetItem[]> => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value.toString());
+    }
+  });
+
+  const response = await apiCall<BudgetItem[]>(`/invoices-package/budget?${queryParams}`);
+  return response.data || [];
 }; 

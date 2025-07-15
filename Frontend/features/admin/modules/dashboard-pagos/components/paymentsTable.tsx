@@ -1,14 +1,52 @@
 import React from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { Button, Card, CardBody, CardHeader, CardTitle, Col, Nav, NavItem, NavLink, ProgressBar, Row } from 'react-bootstrap'
+import { Button, Card, CardBody, CardHeader, CardTitle, Col, Nav, NavItem, NavLink, ProgressBar, Row, Form } from 'react-bootstrap'
 import { TbDownload, TbHome, TbSend2, TbSettings, TbUserCircle } from 'react-icons/tb'
 
 import { ordersStatsData } from '../utils/data'
+import { VisibilityBranch, VisibilityBrand } from '../services/dashboardPagosService'
 
 const OrdersChart = dynamic(() => import('../utils/chart').then((mod) => mod.OrdersChart))
 
-const OrdersStatics = () => {
+interface OrdersStaticsProps {
+  visibilityStructure: {
+    branches: VisibilityBranch[];
+    brands: VisibilityBrand[];
+  } | null;
+  selectedCompany: string;
+  selectedBranch: string;
+  onBranchChange: (branchId: string) => void;
+}
+
+const OrdersStatics: React.FC<OrdersStaticsProps> = ({ 
+  visibilityStructure, 
+  selectedCompany, 
+  selectedBranch, 
+  onBranchChange 
+}) => {
+  // Filtrar sucursales y marcas basado en la compañía seleccionada
+  const filteredBranches = visibilityStructure?.branches.filter(
+    branch => branch.companyId === selectedCompany
+  ) || [];
+
+  const filteredBrands = visibilityStructure?.brands.filter(
+    brand => brand.companyId === selectedCompany
+  ) || [];
+
+  // Crear opciones únicas combinando sucursal-marca
+  const branchBrandOptions = filteredBranches.map(branch => {
+    const brand = filteredBrands.find(b => b._id === branch.brandId);
+    return {
+      id: branch.brandId, // Usar brandId como ID
+      displayName: `${branch.name} - ${brand?.name || 'Marca no encontrada'}`,
+      branchId: branch._id,
+      brandId: branch.brandId,
+      branchName: branch.name,
+      brandName: brand?.name || 'Marca no encontrada'
+    };
+  });
+
   return (
     <Row>
       <Col xs={12}>
@@ -17,26 +55,44 @@ const OrdersStatics = () => {
             <div className="flex-grow-1">
               <CardTitle as="h4">Estadisticas Totales</CardTitle>
             </div>
-            <Nav variant="tabs" defaultActiveKey="monthly-ct" className="card-header-tabs nav-bordered">
-              <NavItem>
-                <NavLink eventKey="today-ct">
-                  <TbHome className="d-md-none d-block" />
-                  <span className="d-none d-md-block">Hoy</span>
-                </NavLink>
-              </NavItem>
-              <NavItem>
-                <NavLink eventKey="monthly-ct">
-                  <TbUserCircle className="d-md-none d-block" />
-                  <span className="d-none d-md-block">Mensual</span>
-                </NavLink>
-              </NavItem>
-              <NavItem>
-                <NavLink eventKey="annual-ct">
-                  <TbSettings className="d-md-none d-block" />
-                  <span className="d-none d-md-block">Anual</span>
-                </NavLink>
-              </NavItem>
-            </Nav>
+            <div className="d-flex align-items-center gap-3">
+              {/* Select de sucursales */}
+              <Form.Select
+                size="sm"
+                value={selectedBranch}
+                onChange={(e) => onBranchChange(e.target.value)}
+                style={{ minWidth: '250px' }}
+                disabled={!selectedCompany}
+              >
+                <option value="">Todas las sucursales</option>
+                {branchBrandOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.displayName}
+                  </option>
+                ))}
+              </Form.Select>
+              
+              <Nav variant="tabs" defaultActiveKey="monthly-ct" className="card-header-tabs nav-bordered">
+                <NavItem>
+                  <NavLink eventKey="today-ct">
+                    <TbHome className="d-md-none d-block" />
+                    <span className="d-none d-md-block">Hoy</span>
+                  </NavLink>
+                </NavItem>
+                <NavItem>
+                  <NavLink eventKey="monthly-ct">
+                    <TbUserCircle className="d-md-none d-block" />
+                    <span className="d-none d-md-block">Mensual</span>
+                  </NavLink>
+                </NavItem>
+                <NavItem>
+                  <NavLink eventKey="annual-ct">
+                    <TbSettings className="d-md-none d-block" />
+                    <span className="d-none d-md-block">Anual</span>
+                  </NavLink>
+                </NavItem>
+              </Nav>
+            </div>
           </CardHeader>
           <CardBody className="p-0">
             <Row className="g-0">
