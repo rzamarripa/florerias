@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Container, Row, Col, Form, Card, CardBody } from 'react-bootstrap'
 import { toast } from 'react-toastify'
 import EcomStats from './components/paymentsCard'
@@ -7,6 +7,7 @@ import {
   getBudgetByCompanyForDashboard, 
   getUserVisibilityForSelects,
   getPaquetesEnviados,
+  getBudgetByBranchBrand,
   BudgetItem,
   PaquetesEnviadosResponse,
   UserVisibilityStructure,
@@ -17,57 +18,40 @@ import { useUserSessionStore } from '@/stores/userSessionStore'
 const Page = () => {
   const { user } = useUserSessionStore();
   
-  // Estados para los selects
   const [companies, setCompanies] = useState<VisibilityCompany[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('');
+  const [selectedBranch, setSelectedBranch] = useState<string>('');
 
-  // Estados para el período
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
-  // Estado para el presupuesto
   const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
 
-  // Estado para los paquetes enviados
   const [paquetesEnviadosData, setPaquetesEnviadosData] = useState<PaquetesEnviadosResponse>({
     totalPaquetes: 0,
     totalPagado: 0,
     paquetes: []
   });
 
-  // Estado para la estructura de visibilidad (solo para obtener compañías)
-  const [, setVisibilityStructure] = useState<UserVisibilityStructure | null>(null);
+  const [visibilityStructure, setVisibilityStructure] = useState<UserVisibilityStructure | null>(null);
 
-  // Declaración de los meses del año
+  // Usar useRef para evitar re-renders innecesarios en la consulta de sucursal
+  const lastSucursalQuery = useRef<string>('');
+
   const months: string[] = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
 
-  // Cargar visibilidad cuando el usuario esté disponible
+  // Cargar estructura de visibilidad solo una vez cuando el usuario esté disponible
   useEffect(() => {
     if (user?._id) {
       loadUserVisibilityStructure();
     }
   }, [user?._id]);
 
-  // Efecto para consultar presupuesto cuando se seleccione la compañía o cambien mes/año
-  useEffect(() => {
-    if (selectedCompany) {
-      consultarPresupuesto();
-    } else {
-      setBudgetData([]);
-    }
-  }, [selectedCompany, selectedYear, selectedMonth]);
-
-  // Efecto para consultar paquetes enviados cuando cambien los filtros
-  useEffect(() => {
-    if (user?._id && selectedCompany) {
-      consultarPaquetesEnviados();
-    }
-  }, [user?._id, selectedCompany, selectedYear, selectedMonth]);
-
-  const loadUserVisibilityStructure = async () => {
+  // Función para cargar estructura de visibilidad
+  const loadUserVisibilityStructure = useCallback(async () => {
     if (!user?._id) return;
 
     try {
@@ -78,22 +62,16 @@ const Page = () => {
       console.error('Error cargando estructura de visibilidad:', err);
       toast.error('Error al cargar la estructura de visibilidad');
     }
-  };
+  }, [user?._id]);
 
-  const handleCompanyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const companyId = event.target.value;
-    setSelectedCompany(companyId);
-  };
-
-  // Función para consultar el presupuesto cuando se seleccione la compañía
-  const consultarPresupuesto = async () => {
+  // Función para consultar presupuesto principal
+  const consultarPresupuesto = useCallback(async () => {
     if (!selectedCompany) {
       setBudgetData([]);
       return;
     }
 
     try {
-      // Construir el mes en formato YYYY-MM
       const monthFormatted = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
 
       const response = await getBudgetByCompanyForDashboard({
@@ -101,17 +79,22 @@ const Page = () => {
         month: monthFormatted
       });
 
-      // Guardar el presupuesto en el estado - response ya es el array directamente
       setBudgetData(response || []);
+
+      // Calcular suma total de todos los presupuestos de la compañía
+      const totalPresupuesto = response.reduce((sum, item) => sum + item.assignedAmount, 0);
+
+      // Mostrar toast con el total
+      toast.success(`Presupuesto total de la compañía: $${totalPresupuesto.toLocaleString()}`);
 
     } catch (error) {
       console.error('Error al consultar presupuesto:', error);
       setBudgetData([]);
     }
-  };
+  }, [selectedCompany, selectedYear, selectedMonth]);
 
-  // Función para consultar los paquetes enviados
-  const consultarPaquetesEnviados = async () => {
+  // Función para consultar paquetes enviados
+  const consultarPaquetesEnviados = useCallback(async () => {
     if (!user?._id || !selectedCompany) return;
 
     try {
@@ -131,11 +114,156 @@ const Page = () => {
         paquetes: []
       });
     }
+  }, [user?._id, selectedCompany, selectedYear, selectedMonth]);
+
+  // Función para consultar presupuesto de sucursal específica (completamente independiente)
+  const consultarPresupuestoSucursal = useCallback(async (branchId: string, companyId: string) => {
+    console.log('consultarPresupuestoSucursal - Iniciando:', { branchId, companyId });
+    
+    if (!branchId || !companyId) {
+      console.log('consultarPresupuestoSucursal - Parámetros inválidos');
+      return;
+    }
+
+    // Evitar consultas duplicadas usando solo branchId y companyId
+    const queryKey = `${branchId}-${companyId}`;
+    if (lastSucursalQuery.current === queryKey) {
+      console.log('consultarPresupuestoSucursal - Consulta duplicada, saltando');
+      return;
+    }
+    lastSucursalQuery.current = queryKey;
+
+    try {
+      const monthFormatted = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
+      console.log('consultarPresupuestoSucursal - Mes formateado:', monthFormatted);
+      
+      const branchBrandIds = getBranchBrandIds(branchId, companyId);
+      if (!branchBrandIds) {
+        toast.error('No se pudo obtener la información de la sucursal seleccionada');
+        return;
+      }
+
+      console.log('consultarPresupuestoSucursal - Haciendo petición API:', {
+        companyId,
+        brandId: branchBrandIds.brandId,
+        branchId: branchBrandIds.branchId,
+        month: monthFormatted
+      });
+
+      const response = await getBudgetByBranchBrand({
+        companyId: companyId,
+        brandId: branchBrandIds.brandId,
+        branchId: branchBrandIds.branchId,
+        month: monthFormatted
+      });
+
+      console.log('consultarPresupuestoSucursal - Respuesta recibida:', response);
+
+      // Calcular sumatoria total
+      const totalPresupuesto = response.reduce((sum, item) => sum + item.assignedAmount, 0);
+
+      // Console.log con desglose
+      console.log(`Presupuesto para ${branchBrandIds.branchName}:`);
+      response.forEach(item => {
+        const routeInfo = item.routeId ? ` → ${item.routeId.name}` : '';
+        console.log(`  ${branchBrandIds.branchName}${routeInfo}: $${item.assignedAmount.toLocaleString()}`);
+      });
+
+      // Mostrar toast con total
+      toast.success(`Presupuesto total para ${branchBrandIds.branchName}: $${totalPresupuesto.toLocaleString()}`);
+
+    } catch (error) {
+      console.error('Error al consultar presupuesto de sucursal:', error);
+      toast.error('Error al consultar el presupuesto de la sucursal');
+    }
+  }, [selectedYear, selectedMonth]); // Solo depende de año/mes, no de selectedBranch/selectedCompany
+
+  // Efecto para consultar presupuesto principal cuando cambien los filtros principales
+  useEffect(() => {
+    if (selectedCompany) {
+      consultarPresupuesto();
+    }
+  }, [selectedCompany, selectedYear, selectedMonth]);
+
+  // Efecto para consultar paquetes enviados cuando cambien los filtros principales
+  useEffect(() => {
+    if (user?._id && selectedCompany) {
+      consultarPaquetesEnviados();
+    }
+  }, [user?._id, selectedCompany, selectedYear, selectedMonth]);
+
+  // Efecto para consultar presupuesto de sucursal solo cuando cambie la selección de sucursal
+  useEffect(() => {
+    console.log('useEffect sucursal - Ejecutándose:', { selectedBranch, selectedCompany });
+    
+    if (selectedBranch && selectedCompany) {
+      console.log('useEffect sucursal - Condiciones cumplidas, programando consulta');
+      // Usar setTimeout para evitar bloqueos en el render y hacer la consulta independiente
+      const timeoutId = setTimeout(() => {
+        console.log('useEffect sucursal - Ejecutando consulta después del timeout');
+        consultarPresupuestoSucursal(selectedBranch, selectedCompany);
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedBranch, selectedCompany, consultarPresupuestoSucursal]); // Incluir consultarPresupuestoSucursal como dependencia
+
+  const handleCompanyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const companyId = event.target.value;
+    setSelectedCompany(companyId);
+    setSelectedBranch('');
+    lastSucursalQuery.current = ''; // Reset query cache
   };
+
+  const handleBranchChange = (branchId: string) => {
+    setSelectedBranch(branchId);
+  };
+
+  // Función para obtener brandId y branchId de la selección
+  const getBranchBrandIds = (selectedBrandId: string, companyId: string) => {
+    if (!visibilityStructure || !selectedBrandId || !companyId) {
+      console.log('getBranchBrandIds - Validación fallida:', {
+        hasVisibilityStructure: !!visibilityStructure,
+        selectedBrandId,
+        companyId
+      });
+      return null;
+    }
+
+    console.log('getBranchBrandIds - Buscando branch:', {
+      selectedBrandId,
+      companyId,
+      branches: visibilityStructure.branches,
+      totalBranches: visibilityStructure.branches.length
+    });
+
+    const branch = visibilityStructure.branches.find(
+      b => b.brandId === selectedBrandId && b.companyId === companyId
+    );
+
+    if (!branch) {
+      console.log('getBranchBrandIds - Branch no encontrada');
+      return null;
+    }
+
+    console.log('getBranchBrandIds - Branch encontrada:', branch);
+
+    return {
+      brandId: selectedBrandId,
+      branchId: branch._id,
+      branchName: branch.name
+    };
+  };
+
+  // Memoizar las props de los cards para evitar re-renders innecesarios
+  const cardsProps = useMemo(() => ({
+    budgetData,
+    paquetesEnviadosData,
+    selectedCompany
+  }), [budgetData, paquetesEnviadosData, selectedCompany]);
 
   return (
     <Container fluid>
-      {/* Filtros */}
       <Card className="mb-3 border-0 shadow-sm">
         <CardBody className="p-3">
           <h4 className="mb-3 text-primary fw-bold">Seleccione los filtros para calcular presupuesto</h4>
@@ -198,15 +326,14 @@ const Page = () => {
         </CardBody>
       </Card>
 
-      {/* Cards de estadísticas */}
-      <EcomStats 
-        budgetData={budgetData}
-        paquetesEnviadosData={paquetesEnviadosData}
-        selectedCompany={selectedCompany}
-      />
+      <EcomStats {...cardsProps} />
       
-      {/* Tabla de gráficos */}
-      <OrdersStatics />
+      <OrdersStatics 
+        visibilityStructure={visibilityStructure}
+        selectedCompany={selectedCompany}
+        selectedBranch={selectedBranch}
+        onBranchChange={handleBranchChange}
+      />
     </Container>
   )
 }
