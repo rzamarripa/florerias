@@ -39,7 +39,7 @@ const BudgetTree: React.FC<BudgetTreeProps> = ({ data, onUpdateBudget }) => {
   };
 
   return (
-    <div className="border rounded p-3" style={{ overflowY: "auto" }}>
+    <div className="border rounded p-3 overflow-auto">
       {data.map((node) => (
         <BudgetNode
           key={node.id}

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Budget } from "../models/Budget.js";
+import { Branch } from "../models/Branch.js";
 
 export const createBudget = async (req, res) => {
   try {
@@ -420,11 +421,20 @@ export const getBudgetTree = async (req, res) => {
               };
 
               brandNode.children.push(routeNode);
-              brandNode.total += routeNode.budgetAmount;
             }
-
-            branchNode.total += brandNode.total;
+            brandNode.total = brandNode.children.reduce(
+              (sum, child) => sum + (child.budgetAmount || 0),
+              0
+            );
+            branchNode.total = branchNode.children.reduce(
+              (sum, child) => sum + (child.total || 0),
+              0
+            );
           }
+          companyNode.total = companyNode.children.reduce(
+            (sum, child) => sum + (child.total || 0),
+            0
+          );
         } else {
           let brandNode = companyNode.children.find(
             (child) => child.id === `brand_${brand._id}`
@@ -481,21 +491,25 @@ export const getBudgetTree = async (req, res) => {
             };
 
             brandNode.children.push(branchNode);
-            brandNode.total += branchNode.budgetAmount;
           }
+          brandNode.total = brandNode.children.reduce(
+            (sum, child) => sum + (child.budgetAmount || 0),
+            0
+          );
+          companyNode.total = companyNode.children.reduce(
+            (sum, child) => sum + (child.total || 0),
+            0
+          );
         }
-
-        companyNode.total += companyNode.children.reduce(
-          (sum, child) => sum + child.total,
-          0
-        );
       }
 
       categoryNode.children = Array.from(companyMap.values());
       categoryNode.total = categoryNode.children.reduce(
-        (sum, child) => sum + child.total,
+        (sum, child) => sum + (child.total || 0),
         0
       );
+
+      delete categoryNode.total;
 
       if (categoryNode.children.length > 0) {
         tree.push(categoryNode);
@@ -514,5 +528,26 @@ export const getBudgetTree = async (req, res) => {
       message: "Error retrieving budget tree",
       error: error.message,
     });
+  }
+};
+
+// Nuevo endpoint: obtener presupuesto asignado por sucursal (o todas) para un mes
+export const getBudgetByBranch = async (req, res) => {
+  try {
+    const { companyId, branchId, month } = req.query;
+    if (!companyId || !month) {
+      return res.status(400).json({ success: false, message: 'companyId y month son requeridos' });
+    }
+    const filter = { companyId, month };
+    if (branchId) {
+      filter.branchId = branchId;
+    }
+    // Sumar todos los presupuestos asignados para la(s) sucursal(es) y mes
+    const budgets = await Budget.find(filter);
+    const assignedAmount = budgets.reduce((sum, b) => sum + (b.assignedAmount || 0), 0);
+    res.status(200).json({ success: true, data: { assignedAmount } });
+  } catch (error) {
+    console.error('Error en getBudgetByBranch:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

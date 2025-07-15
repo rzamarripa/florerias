@@ -791,7 +791,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 {/* Estatus */}
                                 <div className="d-flex align-items-center">
                                     <span className="fw-semibold text-muted me-2">Estatus actual:</span>
@@ -812,7 +812,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                                         </div>
                                         <div className="text-muted" style={{ fontSize: '1rem' }}>
                                             {packageCompanyInfo.brandId && (
-                                                
+
                                                 <span className="me-3">
                                                     Marca:
                                                     <i className="bi bi-tag me-1"></i>
@@ -887,29 +887,13 @@ const NewPackpageDetailsPage: React.FC = () => {
                                 </div>
                                 <div className="col-md-3">
                                     <div className="d-flex align-items-center">
-                                        <div className="me-3" style={{ fontSize: '1.5rem', color: '#6f42c1' }}>
-                                            <i className="bi bi-calculator"></i>
-                                        </div>
-                                        <div>
-                                            <div className="fw-bold" style={{ color: '#6f42c1' }}>Total del paquete</div>
-                                            <div className="text-muted small">
-                                                {calcularTotalesFacturas().cantidad + calcularTotalesPagosEfectivo().cantidad} elementos
-                                            </div>
-                                            <div className="fw-bold text-primary">
-                                                ${(calcularTotalesFacturas().total + calcularTotalesPagosEfectivo().total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-md-3">
-                                    <div className="d-flex align-items-center">
                                         <div className="me-3" style={{ fontSize: '1.5rem', color: '#fd7e14' }}>
                                             <i className="bi bi-credit-card"></i>
                                         </div>
                                         <div>
-                                            <div className="fw-bold text-warning">Total pagado</div>
+                                            <div className="fw-bold text-warning">Total a pagar</div>
                                             <div className="text-muted small">
-                                                Importes procesados
+                                                Suma de importes pagados
                                             </div>
                                             <div className="fw-bold text-success">
                                                 ${(calcularTotalesFacturas().pagado + calcularTotalesPagosEfectivo().pagado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}

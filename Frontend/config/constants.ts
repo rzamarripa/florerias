@@ -59,6 +59,11 @@ export const menuItems: MenuItemType[] = [
         label: "Rutas",
         url: "/catalogos/rutas",
       },
+      {
+        key: "estructura",
+        label: "Estructura",
+        url: "/catalogos/estructura",
+      },
 
       {
         key: "departamentos",
@@ -157,6 +162,11 @@ export const menuItems: MenuItemType[] = [
     label: "Módulos",
     icon: Component,
     children: [
+      {
+        key: "dashboard-gastos",
+        label: "Dashboard Gastos",
+        url: "/modulos/dashboard-pagos",
+      },
       {
         key: "importar-metadatos",
         label: "Importar Metadatos",

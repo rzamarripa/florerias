@@ -45,6 +45,9 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
     const loadPackages = () => {
         if (show && user?._id) {
             setLoading(true);
+            // La lógica de filtrado se maneja en el backend:
+            // - Si el departamento del usuario es "Tesorería": muestra paquetes según la visibilidad del usuario (RoleVisibility)
+            // - Si el departamento es diferente a "Tesorería": muestra solo paquetes del departamento del usuario
             getInvoicesPackagesByUsuario(user._id)
                 .then(paquetes => {
                     if (Array.isArray(paquetes?.data)) {
@@ -228,7 +231,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                     <th>Autorización</th>
                                     <th>Total Facturas</th>
                                     <th>Pagado</th>
-                                    <th>Saldo</th>
+                                    <th>Total a pagar</th>
                                     <th>Fecha Pago</th>
                                     <th>Fecha Creación</th>
                                     <th className='text-center'>Acciones</th>
@@ -236,9 +239,13 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                             </thead>
                             <tbody>
                                 {filteredPackages.map((pkg) => {
-                                    const saldo = pkg.totalImporteAPagar - pkg.totalPagado;
-                                    const porcentajePagado = pkg.totalImporteAPagar > 0
-                                        ? Math.round((pkg.totalPagado / pkg.totalImporteAPagar) * 100)
+                                    // Sumar importeAPagar de facturas y pagos en efectivo
+                                    const totalFacturasAPagar = Array.isArray(pkg.facturas) ? pkg.facturas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0) : 0;
+                                    const totalPagosEfectivoAPagar = Array.isArray(pkg.pagosEfectivo) ? pkg.pagosEfectivo.reduce((sum, p) => sum + (p.importeAPagar || 0), 0) : 0;
+                                    const totalAPagar = totalFacturasAPagar + totalPagosEfectivoAPagar;
+                                    const saldo = totalAPagar - pkg.totalPagado;
+                                    const porcentajePagado = totalAPagar > 0
+                                        ? Math.round((pkg.totalPagado / totalAPagar) * 100)
                                         : 0;
                                     return (
                                         <tr key={pkg._id}>
@@ -293,8 +300,8 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                                 </div>
                                             </td>
                                             <td>
-                                                <span className={saldo > 0 ? 'text-warning' : 'text-success'}>
-                                                    {formatCurrency(saldo)}
+                                                <span className={totalAPagar > 0 ? 'text-warning' : 'text-success'}>
+                                                    {formatCurrency(totalAPagar)}
                                                 </span>
                                             </td>
                                             <td>

@@ -18,42 +18,39 @@ const BudgetStatisticCard: React.FC<BudgetStatisticCardProps> = ({ title, subtit
 
     return (
         <Card
-            className={`border-0 shadow-sm`}
+            className="border-0 shadow-sm p-0 m-0"
             style={{
-                borderRadius: 16,
-                minHeight: 110,
+                borderRadius: 10,
+                minHeight: 60,
                 background:
                     variant === 'info'
                         ? 'linear-gradient(135deg, #5fd0d6 0%, #38c0d4 100%)'
-                    : variant === 'primary'
-                        ? 'linear-gradient(135deg, #7eb6f8 0%, #3c83f6 100%)'
-                    : variant === 'warning'
-                        ? 'linear-gradient(135deg, #ffe082 0%, #ffd54f 100%)'
-                    : variant === 'secondary'
-                        ? 'linear-gradient(135deg, #b0b4b9 0%, #868f96 100%)'
-                    : '#f8fafc',
+                        : variant === 'primary'
+                            ? 'linear-gradient(135deg, #7eb6f8 0%, #3c83f6 100%)'
+                            : variant === 'warning'
+                                ? 'linear-gradient(135deg, #ffe082 0%, #ffd54f 100%)'
+                                : variant === 'secondary'
+                                    ? 'linear-gradient(135deg, #b0b4b9 0%, #868f96 100%)'
+                                    : '#f8fafc',
             }}
         >
-            <CardBody style={{ minHeight: 90, position: 'relative', padding: '1.25rem 1.25rem 1rem 1.25rem' }}>
-                <div className="d-flex flex-column justify-content-between h-100">
+            <CardBody style={{ minHeight: 40, position: 'relative', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
+                <div className="d-flex flex-column justify-content-between h-100 p-0 m-0 space-x-1">
                     <div>
-                        <h3 className="mb-1 text-white">
+                        <h5 className="mb-0 text-white fw-bold" style={{ fontSize: '1rem', lineHeight: '1.1' }}>
                             {isNumber ? (
                                 <CountUp prefix={prefix} suffix={suffix} duration={1} end={endValue} separator="," />
                             ) : (
                                 stats
                             )}
-                        </h3>
-                        <div className="d-flex align-items-center mb-1">
-                            <span className="me-2" style={{
-                                color: '#fff',
-                                opacity: 0.95
-                            }}>
+                        </h5>
+                        <div className="d-flex align-items-center mb-0 mt-1">
+                            <span className="me-1" style={{ color: '#fff', opacity: 0.95, fontSize: 16, display: 'flex', alignItems: 'center' }}>
                                 {icon}
                             </span>
-                            <span className="fw-bold text-white">{title}</span>
+                            <span className="fw-bold text-white" style={{ fontSize: '0.85rem' }}>{title}</span>
                         </div>
-                        <div className="text-white-50 small">{subtitle}</div>
+                        <div className="text-white-50 small" style={{ fontSize: '0.75rem' }}>{subtitle}</div>
                     </div>
                 </div>
             </CardBody>
