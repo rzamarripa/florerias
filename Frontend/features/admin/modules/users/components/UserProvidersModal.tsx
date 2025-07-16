@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { Button, Modal, Table, Form } from "react-bootstrap";
+import React, { useEffect, useState, useRef } from "react";
+import { Button, Modal, Table, Form, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
+import { X } from "lucide-react";
 import { providersService } from "../services/providers";
 import { usersService } from "../services/users";
 import { Provider, User, UserProvider } from "../types";
@@ -24,50 +25,90 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
   children,
 }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
-  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
+  const [searchText, setSearchText] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<Provider[]>([]);
+  const [selectedProviders, setSelectedProviders] = useState<Provider[]>([]);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [userProviders, setUserProviders] = useState<UserProvider[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [loadingUserProviders, setLoadingUserProviders] = useState<boolean>(false);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 15,
-    total: 0,
-    pages: 0,
-  });
+  const [loadingUserProviders, setLoadingUserProviders] =
+    useState<boolean>(false);
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (showModal) {
-      loadProviders();
       loadUserProviders();
     }
   }, [showModal]);
 
   useEffect(() => {
-    if (showModal) {
-      loadProviders();
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
-  }, [pagination.page]);
 
-  const loadProviders = async () => {
+    if (searchText.trim().length >= 1) {
+      searchTimeoutRef.current = setTimeout(() => {
+        searchProviders();
+        setShowDropdown(true);
+      }, 500);
+    } else {
+      setSearchResults([]);
+      setShowDropdown(false);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchText, userProviders, selectedProviders]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const searchProviders = async () => {
     try {
-      setLoading(true);
+      setSearchLoading(true);
       const response = await providersService.getAll({
-        page: pagination.page,
-        limit: pagination.limit,
+        search: searchText,
         isActive: true,
+        limit: 50,
       });
+
       if (response.success && response.data) {
-        setProviders(response.data);
-        if (response.pagination) {
-          setPagination(response.pagination);
-        }
+        const assignedProviderIds = userProviders.map(
+          (up) => up.providerId._id
+        );
+        const selectedProviderIds = selectedProviders.map((p) => p._id);
+        const availableProviders = response.data.filter(
+          (provider) =>
+            !assignedProviderIds.includes(provider._id) &&
+            !selectedProviderIds.includes(provider._id)
+        );
+        setSearchResults(availableProviders);
       }
     } catch (error) {
-      console.error("Error loading providers:", error);
-      toast.error("Error al cargar los proveedores");
+      console.error("Error searching providers:", error);
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
     }
   };
 
@@ -75,11 +116,9 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
     try {
       setLoadingUserProviders(true);
       const response = await usersService.getUserProviders(user._id);
+
       if (response.success && response.data) {
-        const providerIds = response.data.map(
-          (userProvider: UserProvider) => userProvider.providerId._id
-        );
-        setSelectedProviders(providerIds);
+        setUserProviders(response.data);
       }
     } catch (error) {
       console.error("Error loading user providers:", error);
@@ -95,49 +134,107 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
 
   const handleCloseModal = () => {
     setShowModal(false);
+    setSearchText("");
+    setSearchResults([]);
     setSelectedProviders([]);
-    setSelectedProviderId("");
-    setPagination({ ...pagination, page: 1 });
-  };
-
-  const handleAddProvider = () => {
-    if (selectedProviderId && !selectedProviders.includes(selectedProviderId)) {
-      setSelectedProviders([...selectedProviders, selectedProviderId]);
-      setSelectedProviderId("");
+    setShowDropdown(false);
+    setUserProviders([]);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
   };
 
-  const handleRemoveProvider = (providerId: string) => {
-    setSelectedProviders(selectedProviders.filter(id => id !== providerId));
+  const handleProviderSelect = (provider: Provider) => {
+    setSelectedProviders([...selectedProviders, provider]);
+    setSearchText("");
+    setSearchResults([]);
+    setShowDropdown(false);
+    inputRef.current?.focus();
   };
 
-  const handleSave = async () => {
+  const handleRemoveSelectedProvider = (providerId: string) => {
+    setSelectedProviders(selectedProviders.filter((p) => p._id !== providerId));
+  };
+
+  const handleAddSelectedProviders = async () => {
+    if (selectedProviders.length === 0) return;
+
     try {
       setLoading(true);
+      const currentProviderIds = userProviders.map((up) => up.providerId._id);
+      const newProviderIds = selectedProviders.map((p) => p._id);
+      const allProviderIds = [...currentProviderIds, ...newProviderIds];
+
       const response = await usersService.assignProviders(
         user._id,
-        selectedProviders
+        allProviderIds
       );
+
       if (response.success) {
-        toast.success("Proveedores asignados correctamente");
+        const newUserProviders: UserProvider[] = selectedProviders.map(
+          (provider) => ({
+            _id: `temp_${provider._id}_${Date.now()}`,
+            userId: user._id,
+            providerId: {
+              _id: provider._id,
+              commercialName: provider.commercialName,
+              businessName: provider.businessName,
+              contactName: provider.contactName,
+              isActive: provider.isActive,
+            },
+            createdAt: new Date().toISOString(),
+          })
+        );
+
+        setUserProviders([...userProviders, ...newUserProviders]);
+        setSelectedProviders([]);
+
+        toast.success(
+          `${newProviderIds.length} proveedor(es) agregado(s) correctamente`
+        );
         onProvidersSaved?.();
-        handleCloseModal();
       } else {
-        toast.error(response.message || "Error al asignar proveedores");
+        toast.error(response.message || "Error al agregar proveedores");
       }
     } catch (error) {
-      console.error("Error saving providers:", error);
-      toast.error("Error al guardar los proveedores");
+      console.error("Error adding providers:", error);
+      toast.error("Error al agregar los proveedores");
     } finally {
       setLoading(false);
     }
   };
 
-  const getSelectedProvidersData = () => {
-    return selectedProviders.map(providerId => {
-      const provider = providers.find(p => p._id === providerId);
-      return provider || { _id: providerId, commercialName: "Cargando...", businessName: "", contactName: "" };
-    });
+  const handleRemoveUserProvider = async (providerId: string) => {
+    try {
+      setLoading(true);
+
+      const response = await usersService.removeProvider(user._id, providerId);
+
+      if (response.success) {
+        setUserProviders(
+          userProviders.filter((up) => up.providerId._id !== providerId)
+        );
+        toast.success("Proveedor eliminado correctamente");
+        onProvidersSaved?.();
+      } else {
+        toast.error(response.message || "Error al eliminar proveedor");
+      }
+    } catch (error) {
+      console.error("Error removing provider:", error);
+      toast.error("Error al eliminar el proveedor");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchText(e.target.value);
+  };
+
+  const handleInputFocus = () => {
+    if (searchResults.length > 0) {
+      setShowDropdown(true);
+    }
   };
 
   return (
@@ -167,33 +264,130 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
         </Modal.Header>
 
         <Modal.Body className="px-4 py-2">
-          <div className="row mb-3">
-            <div className="col-md-8">
-              <Form.Select
-                value={selectedProviderId}
-                onChange={(e) => setSelectedProviderId(e.target.value)}
-                disabled={loading}
+          <div className="mb-3">
+            <Form.Label className="text-dark mb-2">
+              Buscar y Seleccionar Proveedores:
+            </Form.Label>
+
+            <div className="position-relative">
+              <div
+                className="border rounded p-2 d-flex flex-wrap align-items-center gap-2"
+                style={{ minHeight: "42px" }}
               >
-                <option value="">Seleccionar proveedor...</option>
-                {providers
-                  .filter(provider => !selectedProviders.includes(provider._id))
-                  .map((provider) => (
-                    <option key={provider._id} value={provider._id}>
-                      {provider.commercialName} - {provider.businessName}
-                    </option>
-                  ))}
-              </Form.Select>
+                {selectedProviders.map((provider) => (
+                  <Badge
+                    key={provider._id}
+                    bg="primary"
+                    className="d-flex align-items-center gap-1 px-2 py-1 flex-shrink-0"
+                    style={{
+                      fontSize: "0.875rem",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span>{provider.commercialName}</span>
+                    <X
+                      size={14}
+                      className="cursor-pointer"
+                      onClick={() => handleRemoveSelectedProvider(provider._id)}
+                      style={{ cursor: "pointer" }}
+                    />
+                  </Badge>
+                ))}
+
+                <Form.Control
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Buscar proveedores..."
+                  value={searchText}
+                  onChange={handleSearchTextChange}
+                  onFocus={handleInputFocus}
+                  disabled={loading}
+                  className="border-0 p-0"
+                  style={{
+                    boxShadow: "none",
+                    minWidth: "150px",
+                    flex: "1 1 auto",
+                  }}
+                />
+              </div>
+
+              {showDropdown && (
+                <div
+                  ref={dropdownRef}
+                  className="position-absolute w-100 bg-white border rounded shadow-lg"
+                  style={{
+                    top: "100%",
+                    zIndex: 1050,
+                    maxHeight: "200px",
+                    overflowY: "auto",
+                  }}
+                >
+                  {searchLoading ? (
+                    <div className="p-3 text-center">
+                      <div
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                      >
+                        <span className="visually-hidden">Buscando...</span>
+                      </div>
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="p-3 text-muted text-center">
+                      {searchText.length < 1
+                        ? "Escriba para buscar"
+                        : "No hay resultados"}
+                    </div>
+                  ) : (
+                    searchResults.map((provider) => (
+                      <div
+                        key={provider._id}
+                        className="p-2 cursor-pointer border-bottom hover-bg-light"
+                        onClick={() => handleProviderSelect(provider)}
+                        style={{ cursor: "pointer" }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.backgroundColor = "#f8f9fa")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.backgroundColor = "")
+                        }
+                      >
+                        <div className="fw-medium">
+                          {provider.commercialName}
+                        </div>
+                        <small className="text-muted">
+                          {provider.businessName}
+                        </small>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-            <div className="col-md-4">
-              <Button
-                variant="outline-primary"
-                onClick={handleAddProvider}
-                disabled={!selectedProviderId || loading}
-                className="w-100"
-              >
-                Agregar
-              </Button>
-            </div>
+
+            {selectedProviders.length > 0 && (
+              <div className="mt-2">
+                <Button
+                  variant="primary"
+                  onClick={handleAddSelectedProviders}
+                  disabled={loading}
+                  className="d-flex align-items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <div
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                      >
+                        <span className="visually-hidden">Agregando...</span>
+                      </div>
+                      Agregando...
+                    </>
+                  ) : (
+                    `Agregar ${selectedProviders.length} proveedor(es)`
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="table-responsive" style={{ maxHeight: "400px" }}>
@@ -214,29 +408,35 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
                         className="spinner-border spinner-border-sm"
                         role="status"
                       >
-                        <span className="visually-hidden">Cargando proveedores asignados...</span>
+                        <span className="visually-hidden">
+                          Cargando proveedores asignados...
+                        </span>
                       </div>
                     </td>
                   </tr>
-                ) : selectedProviders.length === 0 ? (
+                ) : userProviders.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="text-center py-3 text-muted">
                       No hay proveedores asignados
                     </td>
                   </tr>
                 ) : (
-                  getSelectedProvidersData().map((provider) => (
-                    <tr key={provider._id}>
-                      <td>{provider.commercialName}</td>
-                      <td>{provider.businessName}</td>
-                      <td>{provider.contactName}</td>
+                  userProviders.map((userProvider) => (
+                    <tr key={userProvider._id}>
+                      <td>{userProvider.providerId.commercialName}</td>
+                      <td>{userProvider.providerId.businessName}</td>
+                      <td>{userProvider.providerId.contactName}</td>
                       <td>
                         <Button
                           variant="outline-danger"
                           size="sm"
-                          onClick={() => handleRemoveProvider(provider._id)}
+                          onClick={() =>
+                            handleRemoveUserProvider(
+                              userProvider.providerId._id
+                            )
+                          }
                           disabled={loading}
-                          title="Remover proveedor"
+                          title="Eliminar proveedor"
                         >
                           ×
                         </Button>
@@ -249,18 +449,15 @@ const UserProvidersModal: React.FC<UserProvidersModalProps> = ({
           </div>
 
           <div className="mt-3 text-muted small">
-            {selectedProviders.length > 0 && (
-              <span>Proveedores asignados: {selectedProviders.length}</span>
+            {userProviders.length > 0 && (
+              <span>Proveedores asignados: {userProviders.length}</span>
             )}
           </div>
         </Modal.Body>
 
         <Modal.Footer className="border-0 pt-2 pb-3">
           <Button variant="light" onClick={handleCloseModal} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={handleSave} disabled={loading}>
-            {loading ? "Guardando..." : "Guardar"}
+            Cerrar
           </Button>
         </Modal.Footer>
       </Modal>
