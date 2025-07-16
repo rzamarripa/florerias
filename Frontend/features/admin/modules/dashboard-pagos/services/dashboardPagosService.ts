@@ -201,3 +201,33 @@ export const getBudgetByBranchBrand = async (params: {
   const response = await apiCall<BudgetItem[]>(`/invoices-package/budget?${queryParams}`);
   return response.data || [];
 }; 
+
+// Función para obtener presupuestos por sucursal para el dashboard de pagos
+export const getBudgetByBranchesForDashboard = async (params: {
+  companyId: string;
+  brandIds: string[];
+  month: string;
+  userId?: string;
+}): Promise<any[]> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('companyId', params.companyId);
+    queryParams.append('brandIds', params.brandIds.join(','));
+    queryParams.append('month', params.month);
+    if (params.userId) {
+      queryParams.append('userId', params.userId);
+    }
+    
+    const response = await apiCall<any[]>(`/budget/by-company-branches?${queryParams}`);
+    console.log('Respuesta del endpoint:', response.data);
+    
+    if (!response.data) {
+      return [];
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo presupuestos por sucursal:', error);
+    return [];
+  }
+};

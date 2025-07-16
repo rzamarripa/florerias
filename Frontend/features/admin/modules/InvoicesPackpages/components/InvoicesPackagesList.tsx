@@ -45,18 +45,35 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
     const loadPackages = () => {
         if (show && user?._id) {
             setLoading(true);
+            
+            // Log temporal para debuggear el departamento del usuario
+            console.log("=== DEBUG USUARIO ===");
+            console.log("Usuario completo:", user);
+            console.log("Department ID:", user?.departmentId);
+            console.log("Department name:", user?.department);
+            console.log("=========================");
+            
             // La lógica de filtrado se maneja en el backend:
             // - Si el departamento del usuario es "Tesorería": muestra paquetes según la visibilidad del usuario (RoleVisibility)
             // - Si el departamento es diferente a "Tesorería": muestra solo paquetes del departamento del usuario
             getInvoicesPackagesByUsuario(user._id)
                 .then(paquetes => {
+                    let paquetesFiltrados = [];
+                    
                     if (Array.isArray(paquetes?.data)) {
-                        setPackages(paquetes.data);
+                        paquetesFiltrados = paquetes.data;
                     } else if (Array.isArray(paquetes)) {
-                        setPackages(paquetes);
+                        paquetesFiltrados = paquetes;
                     } else {
-                        setPackages([]);
+                        paquetesFiltrados = [];
                     }
+
+                    // Filtro adicional para usuarios de Tesorería: excluir paquetes con estatus "Borrador"
+                    if (user?.department === 'Tesorería') {
+                        paquetesFiltrados = paquetesFiltrados.filter((pkg: InvoicesPackage) => pkg.estatus !== 'Borrador');
+                    }
+
+                    setPackages(paquetesFiltrados);
                 })
                 .catch((error) => {
                     toast.error('Error al cargar los paquetes de facturas');
@@ -243,7 +260,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                     const totalFacturasAPagar = Array.isArray(pkg.facturas) ? pkg.facturas.reduce((sum, f) => sum + (f.importeAPagar || 0), 0) : 0;
                                     const totalPagosEfectivoAPagar = Array.isArray(pkg.pagosEfectivo) ? pkg.pagosEfectivo.reduce((sum, p) => sum + (p.importeAPagar || 0), 0) : 0;
                                     const totalAPagar = totalFacturasAPagar + totalPagosEfectivoAPagar;
-                                    const saldo = totalAPagar - pkg.totalPagado;
                                     const porcentajePagado = totalAPagar > 0
                                         ? Math.round((pkg.totalPagado / totalAPagar) * 100)
                                         : 0;

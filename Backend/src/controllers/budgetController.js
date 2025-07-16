@@ -551,3 +551,165 @@ export const getBudgetByBranch = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Nuevo endpoint: obtener presupuestos por sucursal para una compañía específica
+export const getBudgetByCompanyForBranches = async (req, res) => {
+  try {
+    const { companyId, brandIds, month, userId } = req.query;
+
+    if (!companyId || !brandIds || !month) {
+      return res.status(400).json({
+        success: false,
+        message: "companyId, brandIds y month son requeridos"
+      });
+    }
+
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "Formato de mes inválido. Use YYYY-MM"
+      });
+    }
+
+    const Category = mongoose.model("cc_category");
+    const Brand = mongoose.model("cc_brand");
+    const Branch = mongoose.model("cc_branch");
+    const Route = mongoose.model("cc_route");
+    const RoleVisibility = mongoose.model("ac_user_visibility");
+
+    // Obtener visibilidad del usuario si se proporciona
+    let visibility = null;
+    if (userId) {
+      visibility = await RoleVisibility.findOne({ userId });
+    }
+
+    // Convertir brandIds de string a array
+    const brandIdsArray = brandIds.split(',');
+
+    // Array para almacenar cada combinación sucursal-marca como elemento separado
+    const branchBudgetResults = [];
+
+    // Procesar cada marca
+    for (const brandId of brandIdsArray) {
+      // Obtener la marca específica
+      const brand = await Brand.findById(brandId).populate("categoryId");
+      if (!brand) {
+        console.warn(`Marca no encontrada: ${brandId}`);
+        continue;
+      }
+
+      // Obtener la categoría de la marca
+      const category = brand.categoryId;
+      if (!category) {
+        console.warn(`La marca ${brand.name} no tiene categoría asignada`);
+        continue;
+      }
+
+      // Verificar visibilidad del usuario para la marca
+      if (visibility) {
+        if (!visibility.hasAccessToBrand(companyId, brandId)) {
+          console.warn(`Usuario no tiene acceso a la marca: ${brand.name}`);
+          continue;
+        }
+      }
+
+      // Obtener relaciones branch-brand para esta marca específica
+      const branchBrandRelations = await mongoose
+        .model("rs_branch_brand")
+        .find({
+          brandId: brand._id,
+        })
+        .populate("branchId");
+
+      // Filtrar sucursales que pertenezcan a la compañía
+      const relevantBranches = branchBrandRelations.filter(
+        (rel) =>
+          rel.branchId?.companyId?.toString() === companyId
+      );
+
+      // Procesar cada sucursal
+      for (const branchRelation of relevantBranches) {
+        const branch = branchRelation.branchId;
+
+        if (!branch || !branch.isActive) continue;
+
+        // Verificar visibilidad de la sucursal
+        if (
+          visibility &&
+          !visibility.hasAccessToBranch(companyId, brandId, branch._id)
+        ) {
+          continue;
+        }
+
+        let branchAmount = 0;
+
+        if (category.hasRoutes) {
+          // Si la categoría maneja rutas, obtener todas las rutas de esta sucursal-marca
+          const routes = await Route.find({
+            categoryId: category._id,
+            companyId: companyId,
+            brandId: brand._id,
+            branchId: branch._id,
+            status: true,
+          });
+
+          // Sumar presupuestos de todas las rutas
+          for (const route of routes) {
+            const budget = await Budget.findOne({
+              routeId: route._id,
+              month: month
+            });
+            
+            if (budget) {
+              branchAmount += budget.assignedAmount || 0;
+            }
+          }
+        } else {
+          // Si no maneja rutas, obtener presupuesto directo de la sucursal
+          const budget = await Budget.findOne({
+            companyId: companyId,
+            brandId: brand._id,
+            branchId: branch._id,
+            categoryId: category._id,
+            month: month,
+            routeId: null
+          });
+          
+          if (budget) {
+            branchAmount = budget.assignedAmount || 0;
+          }
+        }
+
+        // Agregar cada combinación sucursal-marca como elemento separado
+        if (branchAmount > 0) {
+          branchBudgetResults.push({
+            branchId: {
+              _id: branch._id.toString(),
+              name: branch.name
+            },
+            brandId: {
+              _id: brandId,
+              name: brand.name
+            },
+            assignedAmount: branchAmount,
+            hasRoutes: category.hasRoutes
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: branchBudgetResults,
+      message: "Presupuestos por sucursal obtenidos exitosamente"
+    });
+
+  } catch (error) {
+    console.error("Error obteniendo presupuestos por sucursal:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error obteniendo presupuestos por sucursal",
+      error: error.message
+    });
+  }
+};

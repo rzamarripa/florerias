@@ -13,41 +13,23 @@ export const getAll = async (req, res) => {
   }
 };
 
+// GET - Obtener todas las razones sociales activas
 export const getAllCompanies = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const search = req.query.search || "";
-
-    const filters = {};
-    if (search) {
-      filters.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { legalRepresentative: { $regex: search, $options: "i" } },
-        { rfc: { $regex: search, $options: "i" } },
-        { address: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const total = await Company.countDocuments(filters);
-    const companies = await Company.find(filters)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const companies = await Company.find({ isActive: true })
+      .select('_id name rfc legalRepresentative')
+      .sort({ name: 1 });
 
     res.status(200).json({
       success: true,
       data: companies,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error al obtener razones sociales:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+    });
   }
 };
 

@@ -3,6 +3,7 @@ import { TbArrowDown, TbArrowUp, TbBolt } from 'react-icons/tb'
 import { EChartsOption } from 'echarts'
 
 import { getColor } from '@/utils/color-utils'
+import { InvoicesPackage } from '../services/dashboardPagosService'
 
 import product1 from '@/assets/images/products/1.png'
 import product2 from '@/assets/images/products/2.png'
@@ -325,35 +326,35 @@ export const getEchartOptions = (): EChartsOption => {
   })
 }
 
-export const getOrdersStatsOptions = (): EChartsOption => {
-  const category = [];
-  const today = new Date();
-  const completedOrders = [];
-  const processingOrders = [];
-  const cancelledOrders = [];
-
-  for (let i = -14; i <= 0; i++) {
-    const currentDate = new Date();
-    currentDate.setDate(today.getDate() + i);
-
-    // Format: 03 May 25
-    const formattedDate = currentDate.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: 'short',
-      year: '2-digit'
-    });
-    category.push(formattedDate);
-
-    const completed = Math.floor(Math.random() * 200);
-    const processing = Math.floor(Math.random() * 150);
-    const cancelled = Math.floor(Math.random() * 50);
-
-    completedOrders.push(completed);
-    processingOrders.push(processing);
-    cancelledOrders.push(cancelled);
+export const getOrdersStatsOptions = (
+  packages: InvoicesPackage[],
+  selectedCompany?: string,
+  totalCompanyBudget?: number,
+  selectedYear?: number,
+  selectedMonth?: number,
+  filteredBranches?: any[],
+  filteredBrands?: any[],
+  branchBudgetData?: any[]
+): EChartsOption => {
+  
+  if (!branchBudgetData || branchBudgetData.length === 0) {
+    return {
+      xAxis: { data: [] },
+      yAxis: {},
+      series: []
+    };
   }
 
-  return ({
+  // Crear etiquetas que incluyan sucursal y marca
+  const category: string[] = branchBudgetData.map((item) => 
+    `${item.branchId.name} - ${item.brandId.name}`
+  );
+  const processingOrders: number[] = branchBudgetData.map((item) => item.assignedAmount);
+
+  // Calcular el presupuesto total de todas las sucursales para el eje Y
+  const totalBudget = branchBudgetData.reduce((sum, item) => sum + item.assignedAmount, 0);
+
+  return {
     tooltip: {
       trigger: 'axis',
       padding: [8, 15],
@@ -367,32 +368,26 @@ export const getOrdersStatsOptions = (): EChartsOption => {
       shadowColor: "rgba(76, 76, 92, 0.15)",
       shadowOffsetX: 0,
       shadowOffsetY: 1,
-      formatter: function (params:any) {
-        const rawDate = new Date();
-        rawDate.setDate(today.getDate() - 14 + params[0].dataIndex);
-
-        const formattedDate = rawDate.toLocaleDateString('es-ES', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric'
-        });
-
-        const seriesInfo = params.map((item:any) => {
-          return `${item.marker} ${item.seriesName}: <span class="fw-bold">${item.value}</span> Órdenes`;
-        }).join('<br/>');
-
-        return `<div class="mb-1 text-body">${formattedDate}</div>${seriesInfo}`;
+      formatter: function (params: any) {
+        const item = params[0];
+        const branchName = item.name || 'Sucursal - Marca';
+        const percentage = totalBudget ? ((item.value / totalBudget) * 100).toFixed(1) : 0;
+        const budgetData = branchBudgetData[item.dataIndex];
+        const hasRoutes = budgetData?.hasRoutes ? ' (Con Rutas)' : ' (Sin Rutas)';
+        
+        return `<div class="mb-1 text-body">${branchName}${hasRoutes}</div>` +
+          `${item.marker} Presupuesto: <span class="fw-bold">$${item.value.toLocaleString()}</span> (${percentage}% del total)`;
       }
     },
     legend: {
-      data: ['Completado', 'Procesando', 'Cancelado'],
+      data: ['Presupuesto por Sucursal-Marca'],
       top: 15,
       textStyle: {
         color: getColor("body-color")
       }
     },
     textStyle: {
-      fontFamily: getComputedStyle(document.body).fontFamily
+      fontFamily: typeof document !== 'undefined' ? getComputedStyle(document.body).fontFamily : undefined
     },
     xAxis: {
       data: category,
@@ -404,7 +399,9 @@ export const getOrdersStatsOptions = (): EChartsOption => {
       },
       axisLabel: {
         show: true,
-        color: getColor("secondary-color")
+        color: '#333333',
+        rotate: 45,
+        fontSize: 12
       },
       splitLine: {
         lineStyle: {
@@ -415,15 +412,20 @@ export const getOrdersStatsOptions = (): EChartsOption => {
     },
     yAxis: {
       axisLine: {
+        show: true,
         lineStyle: {
-          type: 'dashed',
+          type: 'solid',
           color: getColor("border-color")
         }
       },
       axisLabel: {
         show: true,
-        color: getColor("secondary-color")
+        color: '#333333',
+        formatter: function(value: number) {
+          return `$${(value / 1000).toFixed(0)}K`;
+        }
       },
+      max: totalBudget, // Usar el presupuesto total de todas las sucursales
       splitLine: {
         show: false,
         lineStyle: {
@@ -435,25 +437,13 @@ export const getOrdersStatsOptions = (): EChartsOption => {
     grid: {
       left: 25,
       right: 25,
-      bottom: 25,
+      bottom: 10, // Reducir espacio inferior
       top: 60,
       containLabel: true
     },
     series: [
       {
-        name: 'Completado',
-        type: 'line',
-        smooth: true,
-        itemStyle: {
-          color: getColor("success")
-        },
-        showAllSymbol: true,
-        symbol: 'emptyCircle',
-        symbolSize: 5,
-        data: completedOrders
-      },
-      {
-        name: 'Procesando',
+        name: 'Presupuesto por Sucursal-Marca',
         type: 'bar',
         barWidth: 14,
         itemStyle: {
@@ -461,20 +451,10 @@ export const getOrdersStatsOptions = (): EChartsOption => {
           color: getColor("secondary")
         },
         data: processingOrders
-      },
-      {
-        name: 'Cancelado',
-        type: 'bar',
-        barWidth: 14,
-        itemStyle: {
-          borderRadius: [5, 5, 0, 0],
-          color: "#bbcae14d"
-        },
-        data: cancelledOrders
       }
     ]
-  })
-}
+  };
+};
 
 export const getWorldMapOptions = () => {
   return ({

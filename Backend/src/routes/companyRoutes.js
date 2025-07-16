@@ -1,20 +1,10 @@
 import express from "express";
-import {
-  activeCompany,
-  createCompany,
-  deleteCompany,
-  getAll,
-  getAllCompanies,
-  updateCompany,
-} from "../controllers/companyController.js";
+import { protect } from "../middleware/auth.js";
+import { getAllCompanies } from "../controllers/companyController.js";
 
 const router = express.Router();
 
-router.get("/", getAllCompanies);
-router.get("/all", getAll);
-router.post("/", createCompany);
-router.put("/:id", updateCompany);
-router.put("/:id/active", activeCompany);
-router.delete("/:id/delete", deleteCompany);
+// GET - Obtener todas las razones sociales activas
+router.get("/all", protect, getAllCompanies);
 
 export default router;
