@@ -7,11 +7,8 @@ import logo from "@/assets/images/logo.png";
 const AppLogo = () => {
   return (
     <>
-      <Link href="" className="logo-dark">
-        <Image src={logoDark} alt="dark logo" height="32" />
-      </Link>
       <Link href="" className="logo-light">
-        <Image src={logo} alt="logo" height="32" />
+        <Image src={logo} alt="logo" height="100" />
       </Link>
     </>
   );

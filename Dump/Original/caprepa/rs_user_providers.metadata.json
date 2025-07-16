@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"userId":{"$numberInt":"1"},"providerId":{"$numberInt":"1"}},"name":"userId_1_providerId_1","background":true,"unique":true}],"uuid":"90ef40556ed14e6ab3c89d91faf283d0","collectionName":"rs_user_providers","type":"collection"}

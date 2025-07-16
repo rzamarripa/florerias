@@ -61,5 +61,6 @@ router.use("/authorization-folios", authorizationFolioRoutes);
 router.use("/scheduled-payments", scheduledPaymentRoutes);
 router.use("/routes", routeRoutes);
 router.use("/structure", structureRoutes);
+router.use("/bank-movements", bankMovementRoutes);
 
 export default router;

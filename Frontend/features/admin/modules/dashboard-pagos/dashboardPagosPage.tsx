@@ -18,7 +18,7 @@ import { useUserSessionStore } from '@/stores/userSessionStore'
 
 const Page = () => {
   const { user } = useUserSessionStore();
-  
+
   const [companies, setCompanies] = useState<VisibilityCompany[]>([]);
   const [brands, setBrands] = useState<VisibilityBrand[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('');
@@ -28,19 +28,31 @@ const Page = () => {
   const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
   const [branchBudgetData, setBranchBudgetData] = useState<BudgetItem[]>([]);
 
-  const [paquetesEnviadosData, setPaquetesEnviadosData] = useState<PaquetesEnviadosResponse>({
-    totalPaquetes: 0,
-    totalPagado: 0,
-    paquetes: []
-  });
+  const [paquetesEnviadosData, setPaquetesEnviadosData] =
+    useState<PaquetesEnviadosResponse>({
+      totalPaquetes: 0,
+      totalPagado: 0,
+      paquetes: [],
+    });
 
-  const [visibilityStructure, setVisibilityStructure] = useState<UserVisibilityStructure | null>(null);
+  const [visibilityStructure, setVisibilityStructure] =
+    useState<UserVisibilityStructure | null>(null);
 
 
 
   const months: string[] = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
   ];
 
   // Cargar estructura de visibilidad solo una vez cuando el usuario esté disponible
@@ -60,8 +72,8 @@ const Page = () => {
       setCompanies(response?.companies || []);
       setBrands(response?.brands || []);
     } catch (err) {
-      console.error('Error cargando estructura de visibilidad:', err);
-      toast.error('Error al cargar la estructura de visibilidad');
+      console.error("Error cargando estructura de visibilidad:", err);
+      toast.error("Error al cargar la estructura de visibilidad");
     }
   }, [user?._id]);
 
@@ -73,23 +85,29 @@ const Page = () => {
     }
 
     try {
-      const monthFormatted = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
+      const monthFormatted = `${selectedYear}-${(selectedMonth + 1)
+        .toString()
+        .padStart(2, "0")}`;
 
       const response = await getBudgetByCompanyForDashboard({
         companyId: selectedCompany,
-        month: monthFormatted
+        month: monthFormatted,
       });
 
       setBudgetData(response || []);
 
       // Calcular suma total de todos los presupuestos de la compañía
-      const totalPresupuesto = response.reduce((sum, item) => sum + item.assignedAmount, 0);
+      const totalPresupuesto = response.reduce(
+        (sum, item) => sum + item.assignedAmount,
+        0
+      );
 
       // Mostrar toast con el total
-      toast.success(`Presupuesto total de la compañía: $${totalPresupuesto.toLocaleString()}`);
-
+      toast.success(
+        `Presupuesto total de la compañía: $${totalPresupuesto.toLocaleString()}`
+      );
     } catch (error) {
-      console.error('Error al consultar presupuesto:', error);
+      console.error("Error al consultar presupuesto:", error);
       setBudgetData([]);
     }
   }, [selectedCompany, selectedYear, selectedMonth]);
@@ -103,17 +121,17 @@ const Page = () => {
         usuario_id: user._id,
         companyId: selectedCompany || undefined,
         year: selectedYear,
-        month: selectedMonth
+        month: selectedMonth,
       });
 
 
       setPaquetesEnviadosData(response);
     } catch (error) {
-      console.error('Error al consultar paquetes enviados:', error);
+      console.error("Error al consultar paquetes enviados:", error);
       setPaquetesEnviadosData({
         totalPaquetes: 0,
         totalPagado: 0,
-        paquetes: []
+        paquetes: [],
       });
     }
   }, [user?._id, selectedCompany, selectedYear, selectedMonth]);
@@ -186,18 +204,23 @@ const Page = () => {
   };
 
   // Memoizar las props de los cards para evitar re-renders innecesarios
-  const cardsProps = useMemo(() => ({
-    budgetData,
-    paquetesEnviadosData,
-    selectedCompany
-  }), [budgetData, paquetesEnviadosData, selectedCompany]);
+  const cardsProps = useMemo(
+    () => ({
+      budgetData,
+      paquetesEnviadosData,
+      selectedCompany,
+    }),
+    [budgetData, paquetesEnviadosData, selectedCompany]
+  );
 
   return (
     <Container fluid>
       <Card className="mb-3 border-0 shadow-sm">
         <CardBody className="p-3">
-          <h4 className="mb-3 text-primary fw-bold">Seleccione los filtros para calcular presupuesto</h4>
-          
+          <h4 className="mb-3 text-primary fw-bold">
+            Seleccione los filtros para calcular presupuesto
+          </h4>
+
           <Row className="mb-3">
             <Col md={2}>
               <Form.Group>
@@ -239,10 +262,7 @@ const Page = () => {
                 >
                   <option value="">Selecciona una razón social...</option>
                   {companies.map((company) => (
-                    <option
-                      key={company._id}
-                      value={company._id}
-                    >
+                    <option key={company._id} value={company._id}>
                       {company.name}
                     </option>
                   ))}
@@ -258,8 +278,8 @@ const Page = () => {
       </Card>
 
       <EcomStats {...cardsProps} />
-      
-      <OrdersStatics 
+
+      <OrdersStatics
         visibilityStructure={visibilityStructure}
         selectedCompany={selectedCompany}
         totalCompanyBudget={budgetData.reduce((sum, item) => sum + item.assignedAmount, 0)}
@@ -269,7 +289,7 @@ const Page = () => {
         branchBudgetData={branchBudgetData}
       />
     </Container>
-  )
-}
+  );
+};
 
-export default Page
+export default Page;
