@@ -16,9 +16,9 @@ export const menuItems: MenuItemType[] = [
     icon: LayoutDashboard,
     children: [
       {
-        key: "dashboard-pagos",
-        label: "Dashboard Pagos",
-        url: "/dashboard/dashboard-pagos",
+        key: "dashboard-presupuestos",
+        label: "Dashboard Presupuestos",
+        url: "/dashboard/dashboard-presupuestos",
       },
       {
         key: "dashboard-gastos",
