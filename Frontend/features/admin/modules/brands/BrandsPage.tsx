@@ -131,7 +131,7 @@ const BrandPage: React.FC = () => {
                 <tr>
                   <th>#</th>
                   <th>Logo</th>
-                  <th>Categoría</th>
+                  <th>Unidad de Negocio</th>
                   <th>Nombre</th>
                   <th>Razones Sociales</th>
                   <th>Descripción</th>

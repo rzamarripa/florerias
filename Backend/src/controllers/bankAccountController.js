@@ -60,13 +60,15 @@ export const getBankAccountById = async (req, res) => {
 
 export const createBankAccount = async (req, res) => {
   try {
-    const { company, bank, accountNumber, clabe, branch } = req.body;
+    const { company, bank, accountNumber, clabe, branch, initialBalance, currentBalance } = req.body;
     const newBankAccount = await BankAccount.create({
       company,
       bank,
       accountNumber: accountNumber.trim(),
       clabe: clabe.trim(),
       branch: branch?.trim() || "",
+      initialBalance: initialBalance || 0,
+      currentBalance: currentBalance || initialBalance || 0,
       isActive: true,
     });
     res.status(201).json({
@@ -82,7 +84,7 @@ export const createBankAccount = async (req, res) => {
 export const updateBankAccount = async (req, res) => {
   try {
     const { id } = req.params;
-    const { company, bank, accountNumber, clabe, branch } = req.body;
+    const { company, bank, accountNumber, clabe, branch, initialBalance, currentBalance } = req.body;
     const updatedBankAccount = await BankAccount.findByIdAndUpdate(
       id,
       {
@@ -91,6 +93,8 @@ export const updateBankAccount = async (req, res) => {
         accountNumber: accountNumber.trim(),
         clabe: clabe.trim(),
         branch: branch?.trim() || "",
+        initialBalance: initialBalance || 0,
+        currentBalance: currentBalance || 0,
       },
       { new: true }
     );
@@ -182,13 +186,13 @@ export const getBankAccountsByCompany = async (req, res) => {
       });
     }
 
-    const bankAccounts = await BankAccount.find({ 
-      companyId: companyId,
-      isActive: true 
+    const bankAccounts = await BankAccount.find({
+      company: companyId,
+      isActive: true
     })
-    .populate('bankId', 'name')
-    .select('_id accountNumber accountType bankId')
-    .sort({ accountNumber: 1 });
+      .populate('bank', 'name')
+      .select('_id accountNumber clabe branch bank')
+      .sort({ accountNumber: 1 });
 
     res.status(200).json({
       success: true,

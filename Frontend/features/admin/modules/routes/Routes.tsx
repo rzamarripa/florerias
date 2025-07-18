@@ -56,28 +56,6 @@ const Routes: React.FC = () => {
 
   return (
     <div>
-      <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex align-items-center">
-            <div>
-              <h4 className="card-title">Gestión de Rutas</h4>
-              <p className="text-muted mb-0">
-                Administra las rutas de distribución por unidad de negocio, marca, empresa y
-                sucursal.
-              </p>
-            </div>
-          </div>
-          <div className="ms-auto">
-            <Button
-              variant="primary"
-              onClick={handleNewRoute}
-              disabled={loading}
-            >
-              Nueva Ruta
-            </Button>
-          </div>
-        </Card.Header>
-      </Card>
 
       <RouteModal
         show={showForm}
@@ -89,6 +67,15 @@ const Routes: React.FC = () => {
       <Card>
         <Card.Header>
           <h5 className="card-title">Lista de Rutas</h5>
+          <div className="ms-auto">
+            <Button
+              variant="primary"
+              onClick={handleNewRoute}
+              disabled={loading}
+            >
+              Nueva Ruta
+            </Button>
+          </div>
         </Card.Header>
         <Card.Body>
           {loading ? (
@@ -130,9 +117,8 @@ const Routes: React.FC = () => {
                       <td>{route.branchId.name}</td>
                       <td>
                         <span
-                          className={`badge ${
-                            route.status ? "bg-success" : "bg-danger"
-                          }`}
+                          className={`badge ${route.status ? "bg-success" : "bg-danger"
+                            }`}
                         >
                           {route.status ? "Activo" : "Inactivo"}
                         </span>

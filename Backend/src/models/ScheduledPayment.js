@@ -18,7 +18,6 @@ const scheduledPaymentSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "cc_invoices_package",
     required: true,
-    index: true,
   },
   scheduledDate: {
     type: Date,

@@ -68,7 +68,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       if (mode === "edit" && company) {
         const res = await companiesService.update(company._id, data);
         if (!res.success) {
-          throw new Error("No se pudo actualizar la empresa");
+          throw new Error("No se pudo actualizar la razón social");
         }
         toast.success(res.message);
         onCompanySaved();
@@ -77,7 +77,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       }
       const res = await companiesService.create(data);
       if (!res.success) {
-        throw new Error("No se pudo crear la empresa");
+        throw new Error("No se pudo crear la razón social");
       }
       onCompanySaved();
       handleClose();
@@ -96,7 +96,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     setValue("rfc", value);
   };
 
-  const defaultButtonProps = getModalButtonStyles("Empresa");
+  const defaultButtonProps = getModalButtonStyles("Razón Social");
   const currentButtonConfig = defaultButtonProps[mode];
   const finalButtonProps = { ...currentButtonConfig };
 
@@ -116,19 +116,19 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       <Modal centered show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>
-            {mode === "edit" ? "Editar empresa" : "Agregar empresa"}
+            {mode === "edit" ? "Editar razón social" : "Agregar razón social"}
           </Modal.Title>
         </Modal.Header>
 
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Modal.Body>
             <Form.Group className="mb-3">
-              <Form.Label>Nombre de la empresa</Form.Label>
+              <Form.Label>Nombre de la razón social</Form.Label>
               <Form.Control
                 type="text"
                 {...register("name")}
                 isInvalid={!!errors.name}
-                placeholder="Ingrese el nombre de la empresa"
+                placeholder="Ingrese el nombre de la razón social"
               />
               <Form.Control.Feedback type="invalid">
                 {errors.name?.message}
@@ -190,8 +190,8 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
               {loading
                 ? "Guardando..."
                 : mode === "edit"
-                ? "Guardar cambios"
-                : "Agregar"}
+                  ? "Guardar cambios"
+                  : "Agregar"}
             </Button>
           </Modal.Footer>
         </Form>

@@ -279,9 +279,10 @@ const InvoicesPackageSchema = new mongoose.Schema(
           "Rechazado",
           "Pagado",
           "Cancelado",
+          "Programado",
         ],
         message:
-          "El estatus debe ser uno de: Borrador, Enviado, Aprobado, Rechazado, Pagado, Cancelado",
+          "El estatus debe ser uno de: Borrador, Enviado, Aprobado, Rechazado, Pagado, Cancelado, Programado",
       },
       default: "Borrador",
       index: true,

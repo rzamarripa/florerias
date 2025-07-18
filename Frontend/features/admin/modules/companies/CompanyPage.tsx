@@ -46,7 +46,7 @@ const CompaniesPage: React.FC = () => {
         setPagination(response.pagination);
       }
     } catch (err) {
-      console.error("Error fetching companies:", err);
+      console.error("Error fetching razones sociales:", err);
     } finally {
       setLoading(false);
     }
@@ -157,7 +157,7 @@ const CompaniesPage: React.FC = () => {
               <div className="position-relative" style={{ maxWidth: 400 }}>
                 <Form.Control
                   type="search"
-                  placeholder="Buscar empresas..."
+                  placeholder="Buscar razones sociales..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="shadow-none px-4"
@@ -202,7 +202,7 @@ const CompaniesPage: React.FC = () => {
                           <span className="visually-hidden">Cargando...</span>
                         </div>
                         <p className="text-muted mb-0 small">
-                          Cargando empresas...
+                          Cargando razones sociales...
                         </p>
                       </div>
                     </td>
@@ -233,8 +233,8 @@ const CompaniesPage: React.FC = () => {
                       <td>
                         <span
                           className={`badge fs-6 ${company.isActive
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
+                            ? "bg-success bg-opacity-10 text-success"
+                            : "bg-danger bg-opacity-10 text-danger"
                             }`}
                         >
                           {company.isActive ? "Activo" : "Inactivo"}

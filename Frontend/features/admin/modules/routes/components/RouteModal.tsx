@@ -368,6 +368,9 @@ const RouteModal: React.FC<RouteModalProps> = ({
             </Col>
           </Row>
           <div className="d-flex gap-2">
+            <Button type="button" className="btn-light" onClick={handleCancel}>
+              Cancelar
+            </Button>
             <Button
               type="submit"
               variant="primary"
@@ -383,9 +386,6 @@ const RouteModal: React.FC<RouteModalProps> = ({
               ) : (
                 "Crear"
               )}
-            </Button>
-            <Button type="button" variant="secondary" onClick={handleCancel}>
-              Cancelar
             </Button>
           </div>
         </Form>

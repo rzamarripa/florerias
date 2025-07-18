@@ -2,10 +2,39 @@ import { Company } from "../models/Company.js";
 
 export const getAll = async (req, res) => {
   try {
-    const companies = await Company.find({}).sort({ createdAt: -1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const filters = {};
+
+    if (req.query.search) {
+      filters.$or = [
+        { name: { $regex: req.query.search, $options: "i" } },
+        { legalRepresentative: { $regex: req.query.search, $options: "i" } },
+        { rfc: { $regex: req.query.search, $options: "i" } },
+      ];
+    }
+
+    if (req.query.isActive !== undefined) {
+      filters.isActive = req.query.isActive === "true";
+    }
+
+    const companies = await Company.find(filters)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await Company.countDocuments(filters);
 
     res.status(200).json({
       success: true,
+      count: companies.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
       data: companies,
     });
   } catch (error) {

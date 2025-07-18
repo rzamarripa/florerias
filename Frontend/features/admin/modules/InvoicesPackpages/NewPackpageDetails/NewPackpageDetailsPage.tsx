@@ -51,7 +51,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     const [todosLosFolios, setTodosLosFolios] = useState<AuthorizationFolio[]>([]);
     const [folioValidado, setFolioValidado] = useState<AuthorizationFolio | null>(null);
     const [packageCompanyInfo, setPackageCompanyInfo] = useState<PackageCompanyInfo | null>(null);
-    
+
     // Estados para el modal de programación de pagos
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [companies, setCompanies] = useState<Company[]>([]);
@@ -121,16 +121,16 @@ const NewPackpageDetailsPage: React.FC = () => {
     // Función para formatear el mes de la fecha de pago
     const getMonthFromPaymentDate = () => {
         if (!packpage?.fechaPago) return 'Mes no disponible';
-        
+
         const fechaPago = new Date(packpage.fechaPago);
         const monthNames = [
             'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
             'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
         ];
-        
+
         const monthName = monthNames[fechaPago.getMonth()];
         const year = fechaPago.getFullYear();
-        
+
         return `Mes de ${monthName} ${year}`;
     };
 
@@ -343,6 +343,12 @@ const NewPackpageDetailsPage: React.FC = () => {
             return;
         }
 
+        // Si el paquete está programado, generar reporte
+        if (paqueteProgramado) {
+            await handleGenerarReporte();
+            return;
+        }
+
         // Si el paquete ya está enviado, manejar programación de pago
         if (paqueteEnviado) {
             await handleProgramarPago();
@@ -436,6 +442,28 @@ const NewPackpageDetailsPage: React.FC = () => {
         }
     };
 
+    // Función para generar reporte cuando el paquete está programado
+    const handleGenerarReporte = async () => {
+        if (!packpage?._id) {
+            toast.error('No se puede generar el reporte. ID del paquete no encontrado.');
+            return;
+        }
+
+        try {
+            // Aquí puedes implementar la lógica para generar el reporte
+            // Por ejemplo, abrir una nueva ventana con el reporte o descargar un PDF
+            toast.info('Función de generación de reporte en desarrollo');
+
+            // Ejemplo de implementación:
+            // const reportUrl = `/api/invoices-package/${packpage._id}/report`;
+            // window.open(reportUrl, '_blank');
+
+        } catch (error) {
+            console.error('Error al generar reporte:', error);
+            toast.error('Error al generar el reporte');
+        }
+    };
+
     const enviarPaqueteATesoreria = async (folioParaCanjear?: AuthorizationFolio) => {
         if (!packpage?._id) return;
 
@@ -526,19 +554,25 @@ const NewPackpageDetailsPage: React.FC = () => {
     // Verificar si el paquete está enviado
     const paqueteEnviado = packpage?.estatus === 'Enviado';
 
+    // Verificar si el paquete está programado
+    const paqueteProgramado = packpage?.estatus === 'Programado';
+
     // Determinar si el botón debe estar deshabilitado
     const botonDeshabilitado = () => {
-        if (paqueteEnviado) {
+        if (paqueteProgramado) {
+            // Si el paquete está programado, solo se habilita para usuarios de tesorería
+            return !esUsuarioTesorería;
+        } else if (paqueteEnviado) {
             // Si el paquete está enviado, solo se habilita para usuarios de tesorería
             return !esUsuarioTesorería;
         } else {
-            // Si el paquete no está enviado, aplicar las validaciones normales
+            // Si el paquete no está enviado ni programado, aplicar las validaciones normales
             return !puedeEnviarADireccion || packpage?.estatus !== 'Borrador' || (verificarExcesoPresupuesto().excede && foliosAutorizados.length === 0) || esUsuarioTesorería;
         }
     };
 
     // Determinar el texto del botón
-    const textoBoton = paqueteEnviado ? 'Programar Pago' : 'Enviar a Tesorería';
+    const textoBoton = paqueteProgramado ? 'Generar Reporte' : (paqueteEnviado ? 'Programar Pago' : 'Enviar a Tesorería');
 
     // Función para calcular el total de visualización (autorizadas + pendientes)
     const calcularTotalVisualizacion = () => {
@@ -885,9 +919,15 @@ const NewPackpageDetailsPage: React.FC = () => {
                             variant="primary"
                             onClick={handleEnviarADireccion}
                             disabled={botonDeshabilitado()}
-                            title={esUsuarioTesorería && !paqueteEnviado ? "Los usuarios de Tesorería no pueden enviar paquetes a Tesorería" : ""}
+                            title={
+                                paqueteProgramado && !esUsuarioTesorería
+                                    ? "Solo usuarios de Tesorería pueden generar reportes"
+                                    : esUsuarioTesorería && !paqueteEnviado && !paqueteProgramado
+                                        ? "Los usuarios de Tesorería no pueden enviar paquetes a Tesorería"
+                                        : ""
+                            }
                         >
-                            <i className="bi bi-send me-1"></i>
+                            <i className={`bi ${paqueteProgramado ? 'bi-file-earmark-text' : 'bi-send'} me-1`}></i>
                             {textoBoton}
                         </Button>
                     </div>
@@ -1076,7 +1116,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                             <div>
                                 <div className="fw-bold">Usuario de Tesorería</div>
                                 <div className="text-muted">
-                                    Como usuario del departamento de Tesorería, no puedes enviar paquetes a Tesorería. 
+                                    Como usuario del departamento de Tesorería, no puedes enviar paquetes a Tesorería.
                                     Esta función está disponible solo para usuarios de otros departamentos.
                                 </div>
                             </div>

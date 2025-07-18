@@ -57,8 +57,20 @@ export const getAllCompanies = async (): Promise<Company[]> => {
 
 // Servicio para obtener cuentas bancarias por companyId
 export const getBankAccountsByCompany = async (companyId: string): Promise<BankAccount[]> => {
-  const response = await apiCall<BankAccount[]>(`/bank-accounts/by-company/${companyId}`);
-  return response.data || [];
+  const response = await apiCall<any[]>(`/bank-accounts/by-company/${companyId}`);
+
+  // Transformar la respuesta del backend para que coincida con la interfaz BankAccount
+  const transformedBankAccounts = (response.data || []).map(account => ({
+    _id: account._id,
+    accountNumber: account.accountNumber,
+    accountType: 'Cuenta Corriente', // Valor por defecto ya que no existe en el modelo backend
+    bankId: {
+      _id: account.bank._id,
+      name: account.bank.name
+    }
+  }));
+
+  return transformedBankAccounts;
 };
 
 // Servicio para programar un pago

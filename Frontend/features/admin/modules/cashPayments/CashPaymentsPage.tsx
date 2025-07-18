@@ -136,7 +136,7 @@ const CashPaymentsPage: React.FC = () => {
                     <Card.Header className="border-light d-flex justify-content-between align-items-center py-3">
                         <div className="fw-bold fs-5">Pagos en efectivo</div>
                         <Button variant="primary" onClick={() => { setModalOpen(true); setEditingPayment(null); }}>
-                            + Agregar gasto en efectivo
+                            + Agregar pago en efectivo
                         </Button>
                     </Card.Header>
                     <div className="table-responsive shadow-sm">
@@ -187,7 +187,7 @@ const CashPaymentsPage: React.FC = () => {
                                                     if (p.pagoRechazado === true) {
                                                         return <span className="badge bg-danger bg-opacity-10 text-danger">Rechazado</span>;
                                                     }
-                                                    
+
                                                     let text = '';
                                                     let variant = '';
                                                     switch (p.estadoPago) {
