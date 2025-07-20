@@ -29,6 +29,8 @@ import stateRoutes from "./stateRoutes.js";
 import structureRoutes from "./structureRoutes.js";
 import userRoutes from "./userRoutes.js";
 import authorizationFolioRoutes from "./authorizationFolioRoutes.js";
+import scheduledPaymentRoutes from "./scheduledPaymentRoutes.js";
+import bankMovementRoutes from "./bankMovementRoutes.js";
 
 const router = Router();
 
@@ -59,7 +61,8 @@ router.use("/log-import-bank-movements", logImportBankMovementsRoutes);
 router.use("/role-visibility", roleVisibilityRoutes);
 router.use("/cash-payments", cashPaymentRoutes);
 router.use("/authorization-folios", authorizationFolioRoutes);
+router.use("/scheduled-payments", scheduledPaymentRoutes);
 router.use("/routes", routeRoutes);
 router.use("/structure", structureRoutes);
-
+router.use("/bank-movements", bankMovementRoutes);
 export default router;

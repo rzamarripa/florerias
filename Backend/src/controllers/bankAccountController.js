@@ -60,13 +60,15 @@ export const getBankAccountById = async (req, res) => {
 
 export const createBankAccount = async (req, res) => {
   try {
-    const { company, bank, accountNumber, clabe, branch } = req.body;
+    const { company, bank, accountNumber, clabe, branch, initialBalance, currentBalance } = req.body;
     const newBankAccount = await BankAccount.create({
       company,
       bank,
       accountNumber: accountNumber.trim(),
       clabe: clabe.trim(),
       branch: branch?.trim() || "",
+      initialBalance: initialBalance || 0,
+      currentBalance: currentBalance || initialBalance || 0,
       isActive: true,
     });
     res.status(201).json({
@@ -82,7 +84,7 @@ export const createBankAccount = async (req, res) => {
 export const updateBankAccount = async (req, res) => {
   try {
     const { id } = req.params;
-    const { company, bank, accountNumber, clabe, branch } = req.body;
+    const { company, bank, accountNumber, clabe, branch, initialBalance, currentBalance } = req.body;
     const updatedBankAccount = await BankAccount.findByIdAndUpdate(
       id,
       {
@@ -91,6 +93,8 @@ export const updateBankAccount = async (req, res) => {
         accountNumber: accountNumber.trim(),
         clabe: clabe.trim(),
         branch: branch?.trim() || "",
+        initialBalance: initialBalance || 0,
+        currentBalance: currentBalance || 0,
       },
       { new: true }
     );
@@ -167,5 +171,38 @@ export const getActiveBankAccountsCount = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET - Obtener cuentas bancarias por companyId
+export const getBankAccountsByCompany = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'companyId es requerido',
+      });
+    }
+
+    const bankAccounts = await BankAccount.find({
+      company: companyId,
+      isActive: true
+    })
+      .populate('bank', 'name')
+      .select('_id accountNumber clabe branch bank')
+      .sort({ accountNumber: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: bankAccounts,
+    });
+  } catch (error) {
+    console.error('Error al obtener cuentas bancarias:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+    });
   }
 };

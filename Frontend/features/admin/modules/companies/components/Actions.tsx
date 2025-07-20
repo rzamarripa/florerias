@@ -46,7 +46,7 @@ export const Actions = ({
       {company.isActive ? (
         <button
           className="btn btn-light btn-icon btn-sm rounded-circle"
-          title="Desactivar empresa"
+          title="Desactivar razón social"
           onClick={(e) => {
             e.preventDefault();
             onToggleStatus(company);
@@ -58,7 +58,7 @@ export const Actions = ({
       ) : (
         <button
           className="btn btn-light btn-icon btn-sm rounded-circle"
-          title="Activar empresa"
+          title="Activar razón social"
           onClick={(e) => {
             e.preventDefault();
             onToggleStatus(company);

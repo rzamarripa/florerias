@@ -179,6 +179,7 @@ export const getInvoicesByProviderAndCompany = async (params: {
 
 // Servicio para obtener resumen de facturas por proveedor y empresa
 export const getInvoicesSummaryByProviderAndCompany = async (params: {
+    providerIds?: string; // IDs de proveedores separados por coma
     rfcProvider?: string;
     rfcCompany?: string;
     companyId?: string; // ID de empresa (método más confiable)

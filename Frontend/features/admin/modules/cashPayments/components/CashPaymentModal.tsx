@@ -41,13 +41,13 @@ interface CashPaymentModalProps {
     departmentId?: string;
 }
 
-export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({ 
-    show, 
-    onHide, 
-    onSuccess, 
-    loading, 
-    payment, 
-    departmentId 
+export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
+    show,
+    onHide,
+    onSuccess,
+    loading,
+    payment,
+    departmentId
 }) => {
     const [expenseConcepts, setExpenseConcepts] = useState<any[]>([]);
     const [loadingConcepts, setLoadingConcepts] = useState(false);
@@ -108,7 +108,7 @@ export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
 
     const onSubmit = async (data: CashPaymentFormData) => {
         setSubmitError(null);
-        
+
         if (isEditing) {
             // Si es edición, usar el flujo original
             try {
@@ -138,53 +138,53 @@ export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
 
     const handleSelectPackage = async (pkg: Package) => {
         if (!formData) return;
-        
+
         setStepLoading(true);
         setSubmitError(null);
-        
+
         try {
             await createCashPaymentInPackage({
                 ...formData,
                 packageId: pkg._id
             });
-            
+
             setCreatedPackageId(pkg._id);
             setCreatedPackageFolio(pkg.folio);
             setIsNewPackage(false);
             setStep(3);
-            
+
             // Llamar onSuccess para actualizar la lista en el componente padre
             await onSuccess(formData);
         } catch (e: any) {
             setSubmitError(e?.message || 'Error al agregar el pago al paquete');
         }
-        
+
         setStepLoading(false);
     };
 
     const handleCreatePackage = async (packageData: PackageData) => {
         if (!formData) return;
-        
+
         setStepLoading(true);
         setSubmitError(null);
-        
+
         try {
             const response = await createPackageWithCashPayment({
                 cashPayment: formData,
                 packageData
             });
-            
+
             setCreatedPackageId((response.data as any)?._id);
             setCreatedPackageFolio((response.data as any)?.folio);
             setIsNewPackage(true);
             setStep(3);
-            
+
             // Llamar onSuccess para actualizar la lista en el componente padre
             await onSuccess(formData);
         } catch (e: any) {
             setSubmitError(e?.message || 'Error al crear el paquete con el pago');
         }
-        
+
         setStepLoading(false);
     };
 
@@ -253,7 +253,7 @@ export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
                                 </Col>
                                 <Col md={12}>
                                     <Form.Group>
-                                        <Form.Label className="text-dark mb-1">Descripción del gasto</Form.Label>
+                                        <Form.Label className="text-dark mb-1">Descripción del pago</Form.Label>
                                         <Form.Control
                                             as="textarea"
                                             rows={2}
@@ -293,7 +293,7 @@ export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
                     </Modal.Footer>
                 </div>
             )}
-            
+
             {step === 2 && (
                 <div>
                     <Modal.Header closeButton>
@@ -318,7 +318,7 @@ export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
                     </Modal.Body>
                 </div>
             )}
-            
+
             {step === 3 && (
                 <div>
                     <Modal.Header closeButton>

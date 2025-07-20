@@ -154,7 +154,7 @@ const InvoicesPackagePage: React.FC = () => {
 
     // Cargar facturas automáticamente cuando cambie el año o mes
     useEffect(() => {
-        if ((selectedProviders.length > 0 || selectedCompany) && !loadingInvoices) {
+        if (selectedCompany && selectedBrand && selectedBranch && !loadingInvoices) {
             handleSearch();
         }
     }, [selectedYear, selectedMonth]);
@@ -382,16 +382,25 @@ const InvoicesPackagePage: React.FC = () => {
     };
 
     const handleSearch = async () => {
-        if (selectedProviders.length === 0 && !selectedCompany) {
-            toast.warn('Selecciona al menos un proveedor o una razón social para buscar');
+        if (!selectedCompany || !selectedBrand || !selectedBranch) {
+            toast.warn('Selecciona razón social, marca y sucursal para buscar');
             return;
         }
         try {
             setLoadingInvoices(true);
-            // Obtener los IDs de los proveedores seleccionados
-            const providerIdsParam = selectedProviders.join(',');
+
+            // Determinar qué proveedores usar para el filtro
+            let providerIdsParam = '';
+            if (selectedProviders.length > 0) {
+                // Si hay proveedores seleccionados, usar esos
+                providerIdsParam = selectedProviders.join(',');
+            } else {
+                // Si no hay proveedores seleccionados, usar todos los proveedores de visibilidad del usuario
+                providerIdsParam = userProviders.map(up => up.providerId._id).join(',');
+            }
 
             console.log('🔍 PACKAGES: Ejecutando handleSearch con companyId:', selectedCompany);
+            console.log('🔍 PACKAGES: Proveedores para filtro:', providerIdsParam);
 
             // Calcular fechas de inicio y fin del mes seleccionado
             const startDate = new Date(selectedYear, selectedMonth, 1);
@@ -411,6 +420,7 @@ const InvoicesPackagePage: React.FC = () => {
                     order: 'desc'
                 }),
                 getInvoicesSummaryByProviderAndCompany({
+                    providerIds: providerIdsParam,
                     companyId: selectedCompany,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString()
@@ -453,13 +463,20 @@ const InvoicesPackagePage: React.FC = () => {
     const handlePageChange = async (page: number) => {
         setCurrentPage(page);
 
-        if (selectedProviders.length === 0 && !selectedCompany) return;
+        if (!selectedCompany || !selectedBrand || !selectedBranch) return;
 
         try {
             setLoadingInvoices(true);
 
-            // Obtener los IDs de los proveedores seleccionados
-            const providerIdsParam = selectedProviders.join(',');
+            // Determinar qué proveedores usar para el filtro (misma lógica que handleSearch)
+            let providerIdsParam = '';
+            if (selectedProviders.length > 0) {
+                // Si hay proveedores seleccionados, usar esos
+                providerIdsParam = selectedProviders.join(',');
+            } else {
+                // Si no hay proveedores seleccionados, usar todos los proveedores de visibilidad del usuario
+                providerIdsParam = userProviders.map(up => up.providerId._id).join(',');
+            }
 
             // Calcular fechas de inicio y fin del mes seleccionado
             const startDate = new Date(selectedYear, selectedMonth, 1);
@@ -865,9 +882,15 @@ const InvoicesPackagePage: React.FC = () => {
                                         label: `${userProvider.providerId.commercialName} - ${userProvider.providerId.businessName}`,
                                     }))}
                                     onChange={setSelectedProviders}
-                                    placeholder="Selecciona uno o más proveedores..."
+                                    placeholder="Selecciona uno o más proveedores (o deja vacío para usar todos)..."
                                     isSearchable
                                 />
+                                {selectedProviders.length === 0 && selectedCompany && selectedBrand && selectedBranch && (
+                                    <small className="text-info">
+                                        <i className="bi bi-info-circle me-1"></i>
+                                        Se usarán todos los proveedores de tu visibilidad
+                                    </small>
+                                )}
                             </Form.Group>
                         </Col>
                         <Col md={4} className="mb-0">
@@ -877,6 +900,7 @@ const InvoicesPackagePage: React.FC = () => {
                                     onClick={handleSearch}
                                     size="sm"
                                     className="py-1 px-2"
+                                    disabled={!selectedCompany || !selectedBrand || !selectedBranch}
                                 >
                                     <i className="bi bi-search me-2"></i>Buscar
                                 </Button>
@@ -885,6 +909,7 @@ const InvoicesPackagePage: React.FC = () => {
                                     onClick={() => setShowCashPaymentModal(true)}
                                     size="sm"
                                     className="py-1 px-2"
+                                    disabled={!selectedCompany || !selectedBrand || !selectedBranch}
                                 >
                                     <i className="bi bi-cash me-2"></i>Pagar en efectivo
                                 </Button>
@@ -900,12 +925,12 @@ const InvoicesPackagePage: React.FC = () => {
                 </Card.Header>
                 <Card.Body className="p-2 pb-1">
 
-                    {Object.keys(tempPayments).length === 0 ? (
+                    {Object.keys(tempPayments).length === 0 && tempCashPayments.length === 0 ? (
                         <div className="text-center py-3">
                             <i className="bi bi-info-circle display-6 text-muted mb-2"></i>
                             <h6 className="text-muted mb-1 fs-7">No hay pagos registrados</h6>
                             <p className="text-muted small mb-0">
-                                Registra al menos un pago de factura para poder crear o actualizar paquetes
+                                Registra al menos un pago de factura o pago en efectivo para poder crear o actualizar paquetes
                             </p>
                         </div>
                     ) : (

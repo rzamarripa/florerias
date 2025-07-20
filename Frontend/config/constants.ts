@@ -16,9 +16,9 @@ export const menuItems: MenuItemType[] = [
     icon: LayoutDashboard,
     children: [
       {
-        key: "dashboard-pagos",
-        label: "Dashboard Pagos",
-        url: "/dashboard/dashboard-pagos",
+        key: "dashboard-presupuestos",
+        label: "Dashboard Presupuestos",
+        url: "/dashboard/presupuestos",
       },
       {
         key: "dashboard-gastos",
@@ -123,9 +123,9 @@ export const menuItems: MenuItemType[] = [
         url: "/modulos/paquetes-facturas/listado-paquetes",
       },
       {
-        key: "historialPaquetes",
-        label: "Historial de Paquetes",
-        url: "/paquetes/historialPaquetes",
+        key: "pagosEfectivo",
+        label: "Pagos en Efectivo",
+        url: "/modulos/pagos-efectivo",
       },
     ],
   },
@@ -138,11 +138,6 @@ export const menuItems: MenuItemType[] = [
         key: "asignarPresupuesto",
         label: "Asignar Presupuesto",
         url: "/presupuestos/asignar-presupuesto",
-      },
-      {
-        key: "historialPresupuestos",
-        label: "Historial de Presupuestos",
-        url: "/presupuestos/historialPresupuestos",
       },
     ],
   },
@@ -168,20 +163,10 @@ export const menuItems: MenuItemType[] = [
         url: "/modulos/importar-metadatos",
       },
       {
-        key: "paquetes-facturas",
-        label: "Paquetes de Facturas",
-        url: "/modulos/paquetes-facturas",
-      },
-      {
         key: "importar-movimientos-bancario",
         label: "Importar Movimientos Bancarios",
         url: "/herramientas/importar-movimientos-bancarios",
-      },
-      {
-        key: "pagos-efectivo",
-        label: "Pagos en Efectivo",
-        url: "/modulos/pagos-efectivo",
-      },
+      }
     ],
   },
 ];

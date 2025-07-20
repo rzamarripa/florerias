@@ -281,7 +281,7 @@ const BrandModal: React.FC<BrandModalProps> = ({
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Categoría</Form.Label>
+              <Form.Label>Unidad de Negocio</Form.Label>
               <Form.Select
                 {...register("category")}
                 isInvalid={!!errors.category}
@@ -361,8 +361,8 @@ const BrandModal: React.FC<BrandModalProps> = ({
               {loading
                 ? "Guardando..."
                 : mode === "edit"
-                ? "Actualizar"
-                : "Guardar"}
+                  ? "Actualizar"
+                  : "Guardar"}
             </Button>
           </Modal.Footer>
         </Form>

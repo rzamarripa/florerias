@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Container, Row, Col, Form, Card, CardBody } from 'react-bootstrap'
 import { toast } from 'react-toastify'
 import EcomStats from './components/paymentsCard'
@@ -7,41 +7,52 @@ import {
   getBudgetByCompanyForDashboard, 
   getUserVisibilityForSelects,
   getPaquetesEnviados,
-  getBudgetByBranchBrand,
+  getBudgetByBranchesForDashboard,
   BudgetItem,
   PaquetesEnviadosResponse,
   UserVisibilityStructure,
-  VisibilityCompany
+  VisibilityCompany,
+  VisibilityBrand
 } from './services/dashboardPagosService'
 import { useUserSessionStore } from '@/stores/userSessionStore'
 
 const Page = () => {
   const { user } = useUserSessionStore();
-  
-  const [companies, setCompanies] = useState<VisibilityCompany[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<string>('');
-  const [selectedBranch, setSelectedBranch] = useState<string>('');
 
+  const [companies, setCompanies] = useState<VisibilityCompany[]>([]);
+  const [brands, setBrands] = useState<VisibilityBrand[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
   const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
-  const [branchBudget, setBranchBudget] = useState<number | undefined>(undefined);
+  const [branchBudgetData, setBranchBudgetData] = useState<BudgetItem[]>([]);
 
-  const [paquetesEnviadosData, setPaquetesEnviadosData] = useState<PaquetesEnviadosResponse>({
-    totalPaquetes: 0,
-    totalPagado: 0,
-    paquetes: []
-  });
+  const [paquetesEnviadosData, setPaquetesEnviadosData] =
+    useState<PaquetesEnviadosResponse>({
+      totalPaquetes: 0,
+      totalPagado: 0,
+      paquetes: [],
+    });
 
-  const [visibilityStructure, setVisibilityStructure] = useState<UserVisibilityStructure | null>(null);
+  const [visibilityStructure, setVisibilityStructure] =
+    useState<UserVisibilityStructure | null>(null);
 
-  // Usar useRef para evitar re-renders innecesarios en la consulta de sucursal
-  const lastSucursalQuery = useRef<string>('');
+
 
   const months: string[] = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
   ];
 
   // Cargar estructura de visibilidad solo una vez cuando el usuario esté disponible
@@ -59,9 +70,10 @@ const Page = () => {
       const response = await getUserVisibilityForSelects(user._id);
       setVisibilityStructure(response);
       setCompanies(response?.companies || []);
+      setBrands(response?.brands || []);
     } catch (err) {
-      console.error('Error cargando estructura de visibilidad:', err);
-      toast.error('Error al cargar la estructura de visibilidad');
+      console.error("Error cargando estructura de visibilidad:", err);
+      toast.error("Error al cargar la estructura de visibilidad");
     }
   }, [user?._id]);
 
@@ -73,23 +85,29 @@ const Page = () => {
     }
 
     try {
-      const monthFormatted = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
+      const monthFormatted = `${selectedYear}-${(selectedMonth + 1)
+        .toString()
+        .padStart(2, "0")}`;
 
       const response = await getBudgetByCompanyForDashboard({
         companyId: selectedCompany,
-        month: monthFormatted
+        month: monthFormatted,
       });
 
       setBudgetData(response || []);
 
       // Calcular suma total de todos los presupuestos de la compañía
-      const totalPresupuesto = response.reduce((sum, item) => sum + item.assignedAmount, 0);
+      const totalPresupuesto = response.reduce(
+        (sum, item) => sum + item.assignedAmount,
+        0
+      );
 
       // Mostrar toast con el total
-      toast.success(`Presupuesto total de la compañía: $${totalPresupuesto.toLocaleString()}`);
-
+      toast.success(
+        `Presupuesto total de la compañía: $${totalPresupuesto.toLocaleString()}`
+      );
     } catch (error) {
-      console.error('Error al consultar presupuesto:', error);
+      console.error("Error al consultar presupuesto:", error);
       setBudgetData([]);
     }
   }, [selectedCompany, selectedYear, selectedMonth]);
@@ -103,73 +121,47 @@ const Page = () => {
         usuario_id: user._id,
         companyId: selectedCompany || undefined,
         year: selectedYear,
-        month: selectedMonth
+        month: selectedMonth,
       });
+
 
       setPaquetesEnviadosData(response);
     } catch (error) {
-      console.error('Error al consultar paquetes enviados:', error);
+      console.error("Error al consultar paquetes enviados:", error);
       setPaquetesEnviadosData({
         totalPaquetes: 0,
         totalPagado: 0,
-        paquetes: []
+        paquetes: [],
       });
     }
   }, [user?._id, selectedCompany, selectedYear, selectedMonth]);
 
-  // Función para consultar presupuesto de sucursal específica (completamente independiente)
-  const consultarPresupuestoSucursal = useCallback(async (branchId: string, companyId: string) => {
-    if (!branchId || !companyId) {
-      setBranchBudget(undefined);
+  // Función para consultar presupuestos por sucursal
+  const consultarPresupuestosPorSucursal = useCallback(async () => {
+    if (!selectedCompany || !user?._id || !selectedMonth || !selectedYear) {
+      setBranchBudgetData([]);
       return;
     }
-
-    // Evitar consultas duplicadas usando solo branchId y companyId
-    const queryKey = `${branchId}-${companyId}`;
-    if (lastSucursalQuery.current === queryKey) {
-      return;
-    }
-    lastSucursalQuery.current = queryKey;
-
     try {
       const monthFormatted = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`;
       
-      const branchBrandIds = getBranchBrandIds(branchId, companyId);
-      if (!branchBrandIds) {
-        toast.error('No se pudo obtener la información de la sucursal seleccionada');
-        setBranchBudget(undefined);
-        return;
-      }
-
-      const response = await getBudgetByBranchBrand({
-        companyId: companyId,
-        brandId: branchBrandIds.brandId,
-        branchId: branchBrandIds.branchId,
-        month: monthFormatted
+      // Obtener todas las marcas de la compañía seleccionada
+      const companyBrands = brands.filter(brand => brand.companyId === selectedCompany);
+      
+      const response = await getBudgetByBranchesForDashboard({
+        companyId: selectedCompany,
+        brandIds: companyBrands.map(brand => brand._id),
+        month: monthFormatted,
+        userId: user._id
       });
-
-      // Calcular sumatoria total
-      const totalPresupuesto = response.reduce((sum, item) => sum + item.assignedAmount, 0);
-
-      // Actualizar el estado del presupuesto de la sucursal
-      setBranchBudget(totalPresupuesto);
-
-      // Console.log con desglose
-      console.log(`Presupuesto para ${branchBrandIds.branchName}:`);
-      response.forEach(item => {
-        const routeInfo = item.routeId ? ` → ${item.routeId.name}` : '';
-        console.log(`  ${branchBrandIds.branchName}${routeInfo}: $${item.assignedAmount.toLocaleString()}`);
-      });
-
-      // Mostrar toast con total
-      toast.success(`Presupuesto total para ${branchBrandIds.branchName}: $${totalPresupuesto.toLocaleString()}`);
-
+      setBranchBudgetData(response || []);
     } catch (error) {
-      console.error('Error al consultar presupuesto de sucursal:', error);
-      toast.error('Error al consultar el presupuesto de la sucursal');
-      setBranchBudget(undefined);
+      console.error('Error al consultar presupuestos por sucursal:', error);
+      setBranchBudgetData([]);
     }
-  }, [selectedYear, selectedMonth]); // Solo depende de año/mes, no de selectedBranch/selectedCompany
+  }, [selectedCompany, brands, selectedYear, selectedMonth, user?._id]);
+
+
 
   // Efecto para consultar presupuesto principal cuando cambien los filtros principales
   useEffect(() => {
@@ -185,70 +177,50 @@ const Page = () => {
     }
   }, [user?._id, selectedCompany, selectedYear, selectedMonth]);
 
-  // Efecto para consultar presupuesto de sucursal solo cuando cambie la selección de sucursal
+  // Efecto para consultar presupuestos por sucursal cuando cambien los filtros principales
   useEffect(() => {
-    if (selectedBranch && selectedCompany) {
-      // Usar setTimeout para evitar bloqueos en el render y hacer la consulta independiente
-      const timeoutId = setTimeout(() => {
-        consultarPresupuestoSucursal(selectedBranch, selectedCompany);
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
+    if (selectedCompany && visibilityStructure) {
+      consultarPresupuestosPorSucursal();
+    } else if (selectedCompany && !visibilityStructure) {
+      // Si no hay estructura de visibilidad pero sí hay compañía seleccionada, limpiar datos
+      setBranchBudgetData([]);
     }
-  }, [selectedBranch, selectedCompany, consultarPresupuestoSucursal]); // Incluir consultarPresupuestoSucursal como dependencia
+  }, [selectedCompany, selectedYear, selectedMonth, visibilityStructure, consultarPresupuestosPorSucursal]);
 
   const handleCompanyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const companyId = event.target.value;
     setSelectedCompany(companyId);
-    setSelectedBranch('');
-    setBranchBudget(undefined); // Limpiar presupuesto de sucursal
-    lastSucursalQuery.current = ''; // Reset query cache
-  };
-
-  const handleBranchChange = (branchId: string) => {
-    setSelectedBranch(branchId);
     
-    // Limpiar el presupuesto de sucursal si se deselecciona
-    if (!branchId) {
-      setBranchBudget(undefined);
-      lastSucursalQuery.current = '';
+    // Limpiar datos anteriores inmediatamente al cambiar de razón social
+    if (companyId !== selectedCompany) {
+      setBranchBudgetData([]);
+      setBudgetData([]);
+      setPaquetesEnviadosData({
+        totalPaquetes: 0,
+        totalPagado: 0,
+        paquetes: []
+      });
     }
-  };
-
-  // Función para obtener brandId y branchId de la selección
-  const getBranchBrandIds = (selectedBrandId: string, companyId: string) => {
-    if (!visibilityStructure || !selectedBrandId || !companyId) {
-      return null;
-    }
-
-    const branch = visibilityStructure.branches.find(
-      b => b.brandId === selectedBrandId && b.companyId === companyId
-    );
-
-    if (!branch) {
-      return null;
-    }
-
-    return {
-      brandId: selectedBrandId,
-      branchId: branch._id,
-      branchName: branch.name
-    };
   };
 
   // Memoizar las props de los cards para evitar re-renders innecesarios
-  const cardsProps = useMemo(() => ({
-    budgetData,
-    paquetesEnviadosData,
-    selectedCompany
-  }), [budgetData, paquetesEnviadosData, selectedCompany]);
+  const cardsProps = useMemo(
+    () => ({
+      budgetData,
+      paquetesEnviadosData,
+      selectedCompany,
+    }),
+    [budgetData, paquetesEnviadosData, selectedCompany]
+  );
 
   return (
     <Container fluid>
       <Card className="mb-3 border-0 shadow-sm">
         <CardBody className="p-3">
-          <h4 className="mb-3 text-primary fw-bold">Seleccione los filtros para calcular presupuesto</h4>
-          
+          <h4 className="mb-3 text-primary fw-bold">
+            Seleccione los filtros para calcular presupuesto
+          </h4>
+
           <Row className="mb-3">
             <Col md={2}>
               <Form.Group>
@@ -280,9 +252,6 @@ const Page = () => {
                 </Form.Select>
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
             <Col md={6}>
               <Form.Group>
                 <Form.Label className="mb-1">Razón Social:</Form.Label>
@@ -293,10 +262,7 @@ const Page = () => {
                 >
                   <option value="">Selecciona una razón social...</option>
                   {companies.map((company) => (
-                    <option
-                      key={company._id}
-                      value={company._id}
-                    >
+                    <option key={company._id} value={company._id}>
                       {company.name}
                     </option>
                   ))}
@@ -304,20 +270,26 @@ const Page = () => {
               </Form.Group>
             </Col>
           </Row>
+
+          <Row>
+            
+          </Row>
         </CardBody>
       </Card>
 
       <EcomStats {...cardsProps} />
-      
-      <OrdersStatics 
+
+      <OrdersStatics
         visibilityStructure={visibilityStructure}
         selectedCompany={selectedCompany}
-        selectedBranch={selectedBranch}
-        onBranchChange={handleBranchChange}
-        branchBudget={branchBudget}
+        totalCompanyBudget={budgetData.reduce((sum, item) => sum + item.assignedAmount, 0)}
+        paquetes={paquetesEnviadosData.paquetes}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        branchBudgetData={branchBudgetData}
       />
     </Container>
-  )
-}
+  );
+};
 
-export default Page
+export default Page;

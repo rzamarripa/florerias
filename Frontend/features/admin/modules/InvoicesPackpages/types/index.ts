@@ -139,7 +139,7 @@ export interface CashPaymentEmbedded {
 export interface InvoicesPackage {
   _id: string;
   facturas: ImportedInvoice[];
-  estatus: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado';
+  estatus: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado' | 'Programado';
   usuario_id: string;
   fechaCreacion: string;
   departamento_id: number;
@@ -187,7 +187,7 @@ export interface CreateInvoicesPackageRequest {
 
 export interface UpdateInvoicesPackageRequest {
   facturas?: string[];
-  estatus?: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado';
+  estatus?: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado' | 'Programado';
   departamento_id?: number;
   departamento?: string;
   comentario?: string;

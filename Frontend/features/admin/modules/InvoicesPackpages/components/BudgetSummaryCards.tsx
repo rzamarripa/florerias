@@ -186,7 +186,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
             <div className="flex-fill" style={{ minWidth: 0 }}>
                 <BudgetStatisticCard
                     title="Presupuesto utilizado"
-                    subtitle="ImportePagado + temporales"
+                    subtitle="Importe pagado + pagos seleccionados"
                     stats={`$${presupuestoUtilizado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
                     icon={<PieChart size={16} />}
                     variant="warning"

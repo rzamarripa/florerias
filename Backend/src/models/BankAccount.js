@@ -26,6 +26,14 @@ const bankAccountSchema = new Schema({
     type: String,
     trim: true,
   },
+  initialBalance: {
+    type: Number,
+    default: 0,
+  },
+  currentBalance: {
+    type: Number,
+    default: 0,
+  },
   isActive: {
     type: Boolean,
     default: true,

@@ -129,7 +129,7 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
                         </Col>
                         <Col md={12}>
                             <Form.Group>
-                                <Form.Label className="text-dark mb-1">Descripción del gasto</Form.Label>
+                                <Form.Label className="text-dark mb-1">Descripción del pago</Form.Label>
                                 <Form.Control
                                     as="textarea"
                                     rows={2}

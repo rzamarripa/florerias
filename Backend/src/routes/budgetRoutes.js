@@ -4,13 +4,15 @@ import {
   deleteBudget,
   getBudgetTree,
   updateBudget,
-  getBudgetByBranch
+  getBudgetByBranch,
+  getBudgetByCompanyForBranches
 } from "../controllers/budgetController.js";
 
 const router = express.Router();
 
 router.get("/tree", getBudgetTree);
 router.get("/by-branch", getBudgetByBranch);
+router.get("/by-company-branches", getBudgetByCompanyForBranches);
 
 router.post("/", createBudget);
 router.put("/:id", updateBudget);

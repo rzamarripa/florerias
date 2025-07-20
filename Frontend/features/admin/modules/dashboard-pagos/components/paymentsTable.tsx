@@ -1,11 +1,11 @@
 import React from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { Button, Card, CardBody, CardHeader, CardTitle, Col, Nav, NavItem, NavLink, ProgressBar, Row, Form } from 'react-bootstrap'
+import { Button, Card, CardBody, CardHeader, CardTitle, Col, Nav, NavItem, NavLink, ProgressBar, Row } from 'react-bootstrap'
 import { TbDownload, TbHome, TbSend2, TbSettings, TbUserCircle } from 'react-icons/tb'
 
 import { ordersStatsData } from '../utils/data'
-import { VisibilityBranch, VisibilityBrand } from '../services/dashboardPagosService'
+import { VisibilityBranch, VisibilityBrand, InvoicesPackage } from '../services/dashboardPagosService'
 
 const OrdersChart = dynamic(() => import('../utils/chart').then((mod) => mod.OrdersChart))
 
@@ -15,18 +15,25 @@ interface OrdersStaticsProps {
     brands: VisibilityBrand[];
   } | null;
   selectedCompany: string;
-  selectedBranch: string;
-  onBranchChange: (branchId: string) => void;
-  branchBudget?: number; // Presupuesto de la sucursal seleccionada
+  totalCompanyBudget?: number; // Presupuesto total de la razón social
+  paquetes?: InvoicesPackage[]; // Datos de los paquetes para la gráfica
+  selectedYear?: number;
+  selectedMonth?: number;
+  branchBudgetData?: any[]; // Datos de presupuestos por sucursal
 }
 
 const OrdersStatics: React.FC<OrdersStaticsProps> = ({ 
   visibilityStructure, 
   selectedCompany, 
-  selectedBranch, 
-  onBranchChange,
-  branchBudget
+  totalCompanyBudget,
+  paquetes = [],
+  selectedYear,
+  selectedMonth,
+  branchBudgetData
 }) => {
+
+
+
   // Filtrar sucursales y marcas basado en la compañía seleccionada
   const filteredBranches = visibilityStructure?.branches.filter(
     branch => branch.companyId === selectedCompany
@@ -36,19 +43,6 @@ const OrdersStatics: React.FC<OrdersStaticsProps> = ({
     brand => brand.companyId === selectedCompany
   ) || [];
 
-  // Crear opciones únicas combinando sucursal-marca
-  const branchBrandOptions = filteredBranches.map(branch => {
-    const brand = filteredBrands.find(b => b._id === branch.brandId);
-    return {
-      id: branch.brandId, // Usar brandId como ID
-      displayName: `${branch.name} - ${brand?.name || 'Marca no encontrada'}`,
-      branchId: branch._id,
-      brandId: branch.brandId,
-      branchName: branch.name,
-      brandName: brand?.name || 'Marca no encontrada'
-    };
-  });
-
   return (
     <Row>
       <Col xs={12}>
@@ -56,22 +50,6 @@ const OrdersStatics: React.FC<OrdersStaticsProps> = ({
           <CardHeader className="border-dashed card-tabs d-flex align-items-center">
             <div className="flex-grow-1 d-flex align-items-center gap-3">
               <CardTitle as="h4" className="mb-0">Estadisticas Totales</CardTitle>
-              
-              {/* Select de sucursales movido al header */}
-              <Form.Select
-                size="sm"
-                value={selectedBranch}
-                onChange={(e) => onBranchChange(e.target.value)}
-                style={{ maxWidth: '250px' }}
-                disabled={!selectedCompany}
-              >
-                <option value="">Todas las sucursales</option>
-                {branchBrandOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.displayName}
-                  </option>
-                ))}
-              </Form.Select>
             </div>
             
             <Nav variant="tabs" defaultActiveKey="monthly-ct" className="card-header-tabs nav-bordered">
@@ -98,16 +76,25 @@ const OrdersStatics: React.FC<OrdersStaticsProps> = ({
           <CardBody className="p-0">
             <Row className="g-0">
               <Col xxl={8} className="border-end border-dashed">
-                {/* Presupuesto de la sucursal dentro del área de la gráfica */}
-                {selectedBranch && branchBudget !== undefined && (
+                {/* Presupuesto total de la razón social dentro del área de la gráfica */}
+                {totalCompanyBudget !== undefined && (
                   <div className=" border-bottom border-dashed bg-light-subtle">
                     <h3 className="text-primary mb-0 text-center">
-                      Presupuesto: ${branchBudget.toLocaleString()}
+                      Presupuesto Total: ${totalCompanyBudget.toLocaleString()}
                     </h3>
                   </div>
                 )}
 
-                <OrdersChart />
+                <OrdersChart 
+                  paquetes={paquetes} 
+                  selectedCompany={selectedCompany}
+                  totalCompanyBudget={totalCompanyBudget} 
+                  selectedYear={selectedYear} 
+                  selectedMonth={selectedMonth}
+                  filteredBranches={filteredBranches}
+                  filteredBrands={filteredBrands}
+                  branchBudgetData={branchBudgetData}
+                />
 
               </Col>
               <Col xxl={4}>

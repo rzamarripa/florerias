@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, Table, Button, Badge, Spinner, Alert, Modal, Form } from 'react-bootstrap';
 import { getInvoicesPackageById, ImportedInvoice, InvoicesPackage, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion, createAuthorizationFolio, CreateAuthorizationFolioRequest, getAuthorizationFoliosByPackage, getAuthorizationFolioByNumber, AuthorizationFolio, redeemAuthorizationFolio, getPackageCompanyInfo, PackageCompanyInfo } from '../services/invoicesPackpage';
+import { getAllCompanies, getBankAccountsByCompany, schedulePayment, Company, BankAccount } from '../services/scheduledPayment';
 import { getBudgetByCompanyBrandBranch, BudgetItem } from '../services/budget';
 import { BsClipboard } from 'react-icons/bs';
 import { toast } from 'react-toastify';
@@ -51,6 +52,16 @@ const NewPackpageDetailsPage: React.FC = () => {
     const [folioValidado, setFolioValidado] = useState<AuthorizationFolio | null>(null);
     const [packageCompanyInfo, setPackageCompanyInfo] = useState<PackageCompanyInfo | null>(null);
 
+    // Estados para el modal de programación de pagos
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+    const [selectedCompanyId, setSelectedCompanyId] = useState('');
+    const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
+    const [loadingCompanies, setLoadingCompanies] = useState(false);
+    const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
+    const [schedulingPayment, setSchedulingPayment] = useState(false);
+
     const { user } = useUserSessionStore();
 
     useEffect(() => {
@@ -63,12 +74,11 @@ const NewPackpageDetailsPage: React.FC = () => {
 
     // Función para obtener el presupuesto del mes
     const loadBudgetData = async () => {
-        if (!packpage?.companyInfo) {
+        if (!packpage?.companyInfo || !packpage?.fechaPago) {
             return;
         }
 
         const { companyId, brandId, branchId } = packpage.companyInfo;
-
 
         if (!companyId || !brandId || !branchId) {
             return;
@@ -87,8 +97,11 @@ const NewPackpageDetailsPage: React.FC = () => {
             const brandIdStr = toString(brandId);
             const branchIdStr = toString(branchId);
 
-            // Usar marzo 2025 que es donde existe el presupuesto
-            const monthFormatted = "2025-03";
+            // Obtener el mes y año de la fecha de pago del paquete
+            const fechaPago = new Date(packpage.fechaPago);
+            const year = fechaPago.getFullYear();
+            const month = String(fechaPago.getMonth() + 1).padStart(2, '0');
+            const monthFormatted = `${year}-${month}`;
 
             const response = await getBudgetByCompanyBrandBranch({
                 companyId: companyIdStr,
@@ -103,6 +116,22 @@ const NewPackpageDetailsPage: React.FC = () => {
             console.error('❌ Error al consultar presupuesto del paquete:', error);
             setBudgetData([]);
         }
+    };
+
+    // Función para formatear el mes de la fecha de pago
+    const getMonthFromPaymentDate = () => {
+        if (!packpage?.fechaPago) return 'Mes no disponible';
+
+        const fechaPago = new Date(packpage.fechaPago);
+        const monthNames = [
+            'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+        ];
+
+        const monthName = monthNames[fechaPago.getMonth()];
+        const year = fechaPago.getFullYear();
+
+        return `Mes de ${monthName} ${year}`;
     };
 
     // Función para cargar la información de compañía/marca/sucursal
@@ -314,6 +343,18 @@ const NewPackpageDetailsPage: React.FC = () => {
             return;
         }
 
+        // Si el paquete está programado, generar reporte
+        if (paqueteProgramado) {
+            await handleGenerarReporte();
+            return;
+        }
+
+        // Si el paquete ya está enviado, manejar programación de pago
+        if (paqueteEnviado) {
+            await handleProgramarPago();
+            return;
+        }
+
         // Verificar si hay exceso de presupuesto
         const excesoInfo = verificarExcesoPresupuesto();
         if (excesoInfo.excede) {
@@ -329,6 +370,98 @@ const NewPackpageDetailsPage: React.FC = () => {
 
         // Si no hay exceso, enviar directamente
         await enviarPaqueteATesoreria();
+    };
+
+    const handleProgramarPago = async () => {
+        if (!packpage?._id) {
+            toast.error('No se puede programar el pago. ID no encontrado.');
+            return;
+        }
+
+        try {
+            setLoadingCompanies(true);
+            const companiesData = await getAllCompanies();
+            setCompanies(companiesData);
+            setShowScheduleModal(true);
+        } catch (error) {
+            console.error('Error al cargar razones sociales:', error);
+            toast.error('Error al cargar las razones sociales');
+        } finally {
+            setLoadingCompanies(false);
+        }
+    };
+
+    const handleCompanyChange = async (companyId: string) => {
+        setSelectedCompanyId(companyId);
+        setSelectedBankAccountId('');
+        setBankAccounts([]);
+
+        if (!companyId) return;
+
+        try {
+            setLoadingBankAccounts(true);
+            const bankAccountsData = await getBankAccountsByCompany(companyId);
+            setBankAccounts(bankAccountsData);
+        } catch (error) {
+            console.error('Error al cargar cuentas bancarias:', error);
+            toast.error('Error al cargar las cuentas bancarias');
+        } finally {
+            setLoadingBankAccounts(false);
+        }
+    };
+
+    const handleSchedulePayment = async () => {
+        if (!packpage?._id || !selectedCompanyId || !selectedBankAccountId) {
+            toast.error('Por favor complete todos los campos requeridos');
+            return;
+        }
+
+        try {
+            setSchedulingPayment(true);
+            const response = await schedulePayment({
+                packageId: packpage._id,
+                companyId: selectedCompanyId,
+                bankAccountId: selectedBankAccountId,
+            });
+
+            if (response.success) {
+                toast.success('Pago programado exitosamente');
+                setPackpage(prev => prev ? { ...prev, estatus: 'Programado' } : null);
+                setShowScheduleModal(false);
+                setSelectedCompanyId('');
+                setSelectedBankAccountId('');
+                setBankAccounts([]);
+            } else {
+                toast.error(response.message || 'Error al programar el pago');
+            }
+        } catch (error) {
+            console.error('Error al programar pago:', error);
+            toast.error('Error al programar el pago');
+        } finally {
+            setSchedulingPayment(false);
+        }
+    };
+
+    // Función para generar reporte cuando el paquete está programado
+    const handleGenerarReporte = async () => {
+        if (!packpage?._id) {
+            toast.error('No se puede generar el reporte. ID del paquete no encontrado.');
+            return;
+        }
+
+        try {
+            // Aquí puedes implementar la lógica para generar el reporte
+            // Por ejemplo, abrir una nueva ventana con el reporte o descargar un PDF
+            toast.info('Función de generación de reporte en desarrollo');
+
+            // Ejemplo de implementación:
+            // const reportUrl = `/api/invoices-package/${packpage._id}/report`;
+            // window.open(reportUrl, '_blank');
+
+        } catch (error) {
+            console.error('Error al generar reporte:', error);
+            toast.error('Error al generar el reporte');
+        }
     };
 
     const enviarPaqueteATesoreria = async (folioParaCanjear?: AuthorizationFolio) => {
@@ -414,6 +547,32 @@ const NewPackpageDetailsPage: React.FC = () => {
     const puedeEnviarADireccion = packpage && packpage.facturas &&
         packpage.facturas.length > 0 &&
         packpage.facturas.every((factura: ImportedInvoice) => factura.autorizada !== null);
+
+    // Verificar si el usuario es de tesorería
+    const esUsuarioTesorería = user?.department?.toLowerCase() === 'tesorería';
+
+    // Verificar si el paquete está enviado
+    const paqueteEnviado = packpage?.estatus === 'Enviado';
+
+    // Verificar si el paquete está programado
+    const paqueteProgramado = packpage?.estatus === 'Programado';
+
+    // Determinar si el botón debe estar deshabilitado
+    const botonDeshabilitado = () => {
+        if (paqueteProgramado) {
+            // Si el paquete está programado, solo se habilita para usuarios de tesorería
+            return !esUsuarioTesorería;
+        } else if (paqueteEnviado) {
+            // Si el paquete está enviado, solo se habilita para usuarios de tesorería
+            return !esUsuarioTesorería;
+        } else {
+            // Si el paquete no está enviado ni programado, aplicar las validaciones normales
+            return !puedeEnviarADireccion || packpage?.estatus !== 'Borrador' || (verificarExcesoPresupuesto().excede && foliosAutorizados.length === 0) || esUsuarioTesorería;
+        }
+    };
+
+    // Determinar el texto del botón
+    const textoBoton = paqueteProgramado ? 'Generar Reporte' : (paqueteEnviado ? 'Programar Pago' : 'Enviar a Tesorería');
 
     // Función para calcular el total de visualización (autorizadas + pendientes)
     const calcularTotalVisualizacion = () => {
@@ -759,10 +918,17 @@ const NewPackpageDetailsPage: React.FC = () => {
                         <Button
                             variant="primary"
                             onClick={handleEnviarADireccion}
-                            disabled={!puedeEnviarADireccion || packpage.estatus !== 'Borrador' || (verificarExcesoPresupuesto().excede && foliosAutorizados.length === 0)}
+                            disabled={botonDeshabilitado()}
+                            title={
+                                paqueteProgramado && !esUsuarioTesorería
+                                    ? "Solo usuarios de Tesorería pueden generar reportes"
+                                    : esUsuarioTesorería && !paqueteEnviado && !paqueteProgramado
+                                        ? "Los usuarios de Tesorería no pueden enviar paquetes a Tesorería"
+                                        : ""
+                            }
                         >
-                            <i className="bi bi-send me-1"></i>
-                            Enviar a Tesorería
+                            <i className={`bi ${paqueteProgramado ? 'bi-file-earmark-text' : 'bi-send'} me-1`}></i>
+                            {textoBoton}
                         </Button>
                     </div>
 
@@ -845,7 +1011,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                                         <div>
                                             <div className="fw-bold text-danger">Presupuesto</div>
                                             <div className="text-muted small">
-                                                Mes de marzo
+                                                {getMonthFromPaymentDate()}
                                             </div>
                                             <div className="fw-bold text-danger">
                                                 ${calcularPresupuestoTotal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
@@ -940,6 +1106,22 @@ const NewPackpageDetailsPage: React.FC = () => {
                             </Alert>
                         );
                     })()}
+
+                    {/* Alerta para usuarios de tesorería */}
+                    {esUsuarioTesorería && !paqueteEnviado && (
+                        <Alert variant="info" className="mb-3 d-flex align-items-center">
+                            <div className="me-3" style={{ fontSize: '1.5rem', color: '#0c5460' }}>
+                                <i className="bi bi-info-circle-fill"></i>
+                            </div>
+                            <div>
+                                <div className="fw-bold">Usuario de Tesorería</div>
+                                <div className="text-muted">
+                                    Como usuario del departamento de Tesorería, no puedes enviar paquetes a Tesorería.
+                                    Esta función está disponible solo para usuarios de otros departamentos.
+                                </div>
+                            </div>
+                        </Alert>
+                    )}
                 </div>
             )}
 
@@ -1118,6 +1300,116 @@ const NewPackpageDetailsPage: React.FC = () => {
                             </>
                         ) : (
                             'Validar y Enviar'
+                        )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Modal para programación de pagos */}
+            <Modal show={showScheduleModal} onHide={() => {
+                setShowScheduleModal(false);
+                setSelectedCompanyId('');
+                setSelectedBankAccountId('');
+                setBankAccounts([]);
+            }} centered size="lg">
+                <Modal.Header closeButton>
+                    <Modal.Title className="d-flex align-items-center">
+                        <div className="me-3" style={{ fontSize: '1.5rem', color: '#0d6efd' }}>
+                            <i className="bi bi-calendar-check"></i>
+                        </div>
+                        <div>
+                            <div className="fw-bold">Programar Pago</div>
+                            <div className="text-muted small">Seleccione la razón social y cuenta bancaria</div>
+                        </div>
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <div className="mb-3">
+                        <Alert variant="info">
+                            <i className="bi bi-info-circle me-2"></i>
+                            <strong>Paquete Folio: {packpage?.folio}</strong><br />
+                            <span className="text-muted">Total a pagar: ${(calcularTotalesFacturas().pagado + calcularTotalesPagosEfectivo().pagado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                        </Alert>
+                    </div>
+                    <Form>
+                        <Form.Group className="mb-3">
+                            <Form.Label>
+                                Razón Social <span className="text-danger">*</span>
+                            </Form.Label>
+                            <Form.Select
+                                value={selectedCompanyId}
+                                onChange={(e) => handleCompanyChange(e.target.value)}
+                                disabled={loadingCompanies}
+                            >
+                                <option value="">Seleccione una razón social...</option>
+                                {companies.map((company) => (
+                                    <option key={company._id} value={company._id}>
+                                        {company.name} - {company.rfc}
+                                    </option>
+                                ))}
+                            </Form.Select>
+                            {loadingCompanies && (
+                                <div className="mt-2">
+                                    <Spinner animation="border" size="sm" className="me-2" />
+                                    Cargando razones sociales...
+                                </div>
+                            )}
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>
+                                Cuenta Bancaria <span className="text-danger">*</span>
+                            </Form.Label>
+                            <Form.Select
+                                value={selectedBankAccountId}
+                                onChange={(e) => setSelectedBankAccountId(e.target.value)}
+                                disabled={!selectedCompanyId || loadingBankAccounts}
+                            >
+                                <option value="">Seleccione una cuenta bancaria...</option>
+                                {bankAccounts.map((account) => (
+                                    <option key={account._id} value={account._id}>
+                                        {account.bankId.name} - {account.accountNumber} ({account.accountType})
+                                    </option>
+                                ))}
+                            </Form.Select>
+                            {loadingBankAccounts && (
+                                <div className="mt-2">
+                                    <Spinner animation="border" size="sm" className="me-2" />
+                                    Cargando cuentas bancarias...
+                                </div>
+                            )}
+                            {!selectedCompanyId && (
+                                <Form.Text className="text-muted">
+                                    Primero seleccione una razón social para ver las cuentas bancarias disponibles.
+                                </Form.Text>
+                            )}
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => {
+                        setShowScheduleModal(false);
+                        setSelectedCompanyId('');
+                        setSelectedBankAccountId('');
+                        setBankAccounts([]);
+                    }}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={handleSchedulePayment}
+                        disabled={schedulingPayment || !selectedCompanyId || !selectedBankAccountId}
+                    >
+                        {schedulingPayment ? (
+                            <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Programando...
+                            </>
+                        ) : (
+                            <>
+                                <i className="bi bi-calendar-check me-2"></i>
+                                Programar Pago
+                            </>
                         )}
                     </Button>
                 </Modal.Footer>
