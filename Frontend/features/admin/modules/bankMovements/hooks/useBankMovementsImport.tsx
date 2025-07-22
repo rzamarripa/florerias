@@ -237,9 +237,23 @@ export function useBankMovementsImport() {
         Array.isArray(accountsRes.data)
       ) {
         setBankAccounts(accountsRes.data);
+
+        const updatedAccount = accountsRes.data.find(
+          (acc) => acc._id === importConfig.selectedBankAccount
+        );
+        if (updatedAccount) {
+          setConciliationData((prev) => ({
+            ...prev,
+            saldoInicialCuenta: updatedAccount.currentBalance,
+          }));
+        }
       }
 
       setImportConfig((prev) => ({ ...prev, file: null }));
+      setPreviewData([]);
+      setPreviewHeaders([]);
+
+      setActiveTab("configuracion");
     } else {
       toast.error(res?.message || "Error al importar movimientos");
     }
