@@ -285,7 +285,8 @@ export const processQuery = async (req, res) => {
       ],
       temperature: 0.1,
       maxTokens: 1000,
-      maxRetries: 2
+      maxRetries: 2,
+      maxSteps: 7
     });
 
     let queryResults;

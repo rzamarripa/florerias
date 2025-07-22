@@ -10,7 +10,6 @@ import {
 } from "../types/validation";
 import {
   processMovementsWithCalculatedBalance,
-  validateBalances,
   validateConciliation,
 } from "../services/validationService";
 import { getParser } from "../parsers";
@@ -163,18 +162,14 @@ export function useBankMovementsImport() {
           cargoPrimeraFila,
         } = processMovementsWithCalculatedBalance(parsedData);
 
-        const saldosInicialesCoinciden = validateBalances(
-          conciliationData.saldoInicialCuenta,
-          saldoInicialArchivo,
-          abonoPrimeraFila,
-          cargoPrimeraFila
-        );
+        const saldosInicialesCoinciden =
+          Math.abs(
+            (conciliationData.saldoInicialCuenta ?? 0) - saldoInicialArchivo
+          ) < 0.01;
 
         const balancesCuadran = validateConciliation(
           conciliationData.saldoInicialCuenta,
-          saldoFinalCalculado,
-          abonoPrimeraFila,
-          cargoPrimeraFila
+          saldoInicialArchivo
         );
 
         setConciliationData((prev) => ({
@@ -233,7 +228,6 @@ export function useBankMovementsImport() {
         position: "top-right",
       });
 
-      // Refrescar la lista de cuentas bancarias para mostrar el saldo actualizado
       const accountsRes = await bankMovementsService.getBankAccounts(
         importConfig.selectedCompany
       );

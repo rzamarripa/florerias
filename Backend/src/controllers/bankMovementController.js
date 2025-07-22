@@ -4,7 +4,7 @@ import { LogImportBankMovements } from "../models/LogImportBankMovements.js";
 
 export const importBankMovements = async (req, res) => {
   try {
-    const { company, bankAccount, movimientos } = req.body;
+    const { company, bankAccount, movimientos, finalBalance } = req.body;
 
     if (!company || !bankAccount || !Array.isArray(movimientos)) {
       return res
@@ -49,7 +49,11 @@ export const importBankMovements = async (req, res) => {
         count: docs.length,
       });
       
-      const saldoFinalCalculado = docs[docs.length - 1].saldo;
+      // Use finalBalance from frontend instead of calculating from array
+      const saldoFinalCalculado = finalBalance !== undefined && finalBalance !== null 
+        ? Number(finalBalance) 
+        : docs[docs.length - 1].saldo;
+        
       await BankAccount.findByIdAndUpdate(bankAccount, {
         currentBalance: saldoFinalCalculado,
       });
