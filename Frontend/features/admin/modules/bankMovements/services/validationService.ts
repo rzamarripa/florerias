@@ -29,7 +29,7 @@ export function processMovementsWithCalculatedBalance(
   const ultimoMovimiento = parsedData[parsedData.length - 1];
 
   const saldoFinalArchivo = primerMovimiento.saldo;
-  const saldoInicialArchivo = ultimoMovimiento.saldo;
+  const saldoInicialArchivo = ultimoMovimiento.saldo - ultimoMovimiento.abono + ultimoMovimiento.cargo;
 
   const dataConSaldoCalculado = parsedData.map((mov) => {
     return {
@@ -107,7 +107,7 @@ export function validarYCalcularSaldos(
   const primerMovimiento = movimientos[0];
   const ultimoMovimiento = movimientos[movimientos.length - 1];
 
-  const saldoInicialArchivo = round2(ultimoMovimiento.saldo);
+  const saldoInicialArchivo = round2(ultimoMovimiento.saldo - ultimoMovimiento.abono + ultimoMovimiento.cargo);
   const saldoFinalArchivo = round2(primerMovimiento.saldo);
 
   const totalAbonos = movimientos.reduce((acc, mov) => acc + (Number(mov.abono) || 0), 0);

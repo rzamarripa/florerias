@@ -6,16 +6,32 @@ export interface ChatMessage {
   timestamp?: Date;
 }
 
+export interface ChatEvaluation {
+  requiresDatabase: boolean;
+  reasoning: string;
+}
+
+export interface ChatExecution {
+  totalSteps: number;
+  steps: Array<{
+    step: number;
+    explanation: string;
+    resultCount: number;
+  }>;
+  finalResults?: any;
+}
+
 export interface ChatQueryRequest {
   message: string;
   conversationHistory?: ChatMessage[];
 }
 
 export interface ChatQueryResponse {
-  query: string;
-  results: any;
+  type: 'direct' | 'database';
   response: string;
-  resultCount: number;
+  evaluation: ChatEvaluation;
+  requiresDatabase: boolean;
+  execution?: ChatExecution;
 }
 
 export interface ChatContext {
