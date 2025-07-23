@@ -184,7 +184,6 @@ export async function generateDirectResponse(message, conversationHistory = []) 
     ],
     temperature: 0.3,
     maxTokens: 1500,
-    maxSteps: 1,
     maxRetries: 2
   });
 

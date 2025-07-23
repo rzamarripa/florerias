@@ -17,8 +17,6 @@ const ConciliationCards: React.FC<ConciliationCardsProps> = ({
     saldoInicialCalculado,
     saldoFinalCalculado,
     saldoFinalReportado,
-    abonoPrimeraFila,
-    cargoPrimeraFila,
     balancesCuadran,
     saldosInicialesCoinciden,
   } = conciliationData;
@@ -51,28 +49,9 @@ const ConciliationCards: React.FC<ConciliationCardsProps> = ({
             {saldoInicialCuenta !== null &&
             saldosInicialesCoinciden !== null ? (
               <p className="mb-0 d-flex justify-content-between">
-                <span className="text-nowrap text-muted">
-                  Saldo Registrado:{" "}
-                  <span
-                    className={`fw-bold ${
-                      saldosInicialesCoinciden ? "text-success" : "text-danger"
-                    }`}
-                  >
-                    {saldosInicialesCoinciden ? "Coincide" : "No Coincide"}
-                  </span>
-                </span>
+                <span className="text-muted">Saldo Actual</span>
                 <span className="fw-bold text-end">
-                  Saldo Actual: {formatMoney(saldoInicialCuenta ?? 0)}
-                  <br />
-                  (+) Abono: {formatMoney(abonoPrimeraFila ?? 0)}
-                  <br />
-                  (-) Cargo: {formatMoney(cargoPrimeraFila ?? 0)}
-                  <br />
-                  {formatMoney(
-                    (saldoInicialCuenta ?? 0) +
-                      (abonoPrimeraFila ?? 0) -
-                      (cargoPrimeraFila ?? 0)
-                  )}
+                  {formatMoney(saldoInicialCuenta ?? 0)}
                 </span>
               </p>
             ) : (
