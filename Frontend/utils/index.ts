@@ -19,12 +19,3 @@ export const formatMoney = (val: any) => {
     currency: "MXN",
   });
 };
-
-export const formatDate = (val: any) => {
-  if (val === null || val === undefined) return "";
-  return new Date(val).toLocaleDateString("es-MX", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};

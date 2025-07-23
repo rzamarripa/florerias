@@ -95,3 +95,24 @@
 @import "plugins/treeview";
 @import "plugins/typehead";
 @import "plugins/wizard";
+
+// Custom animations for chat components
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.6;
+  }
+}
