@@ -187,7 +187,7 @@ export interface CreateInvoicesPackageRequest {
 
 export interface UpdateInvoicesPackageRequest {
   facturas?: string[];
-  estatus?: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado' | 'Programado';
+  estatus?: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado' | 'Programado' | 'PorFondear' | 'Generado';
   departamento_id?: number;
   departamento?: string;
   comentario?: string;

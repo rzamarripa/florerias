@@ -43,10 +43,7 @@ const PresupuestoTotalCard: React.FC<{ budgetData: any[]; selectedCompany?: stri
         </CardHeader>
         <CardBody className="d-flex flex-column justify-content-center p-3 h-100">
           <div className="d-flex justify-content-between align-items-center text-nowrap">
-            <div className="flex-grow-1">
-              <DonutChart />
-            </div>
-            <div className="text-end">
+            <div className="text-start">
               <h3 className="mb-2 fw-normal">
                 {cardData[0]?.prefix}<CountUpClient duration={1} end={totalBudget} />{cardData[0]?.suffix}
               </h3>
@@ -108,23 +105,39 @@ const PagosRealizadosCard: React.FC<{ paquetesEnviadosData: PaquetesEnviadosResp
     const totalPagadoAmbosEnviados = datosEnviados.totalPagadoFacturasEnviados + datosEnviados.totalPagadoEfectivoEnviados;
     let totalPagadoMostrarEnviados: number;
     let donutDataEnviados: any[];
-    
+
     if (filtroEnviados === null) {
       totalPagadoMostrarEnviados = totalPagadoAmbosEnviados;
       const efectivoPercent = totalPagadoAmbosEnviados > 0 ? datosEnviados.totalPagadoEfectivoEnviados : 0;
       const facturasPercent = totalPagadoAmbosEnviados > 0 ? datosEnviados.totalPagadoFacturasEnviados : 0;
-      donutDataEnviados = [
-        { value: efectivoPercent, name: 'Efectivo', itemStyle: { color: filtroColors.efectivo } },
-        { value: facturasPercent, name: 'Facruras', itemStyle: { color: filtroColors.facturas } },
-      ];
+
+      // Si no hay filtro seleccionado y el total es 0, mostrar gris
+      if (totalPagadoAmbosEnviados === 0) {
+        donutDataEnviados = [
+          { value: 1, name: '', itemStyle: { color: '#e5e7eb' } }
+        ];
+      } else {
+        donutDataEnviados = [
+          { value: efectivoPercent, name: 'Efectivo', itemStyle: { color: filtroColors.efectivo } },
+          { value: facturasPercent, name: 'Facruras', itemStyle: { color: filtroColors.facturas } },
+        ];
+      }
     } else {
       totalPagadoMostrarEnviados = filtroEnviados === 'facturas' ? datosEnviados.totalPagadoFacturasEnviados : datosEnviados.totalPagadoEfectivoEnviados;
-      donutDataEnviados = [
-        { value: totalPagadoMostrarEnviados, name: filtroLabels[filtroEnviados], itemStyle: { color: filtroColors[filtroEnviados] } },
-        { value: Math.max(0, totalPagadoAmbosEnviados - totalPagadoMostrarEnviados), name: '', itemStyle: { color: '#e5e7eb' } },
-      ];
+
+      // Si el filtro seleccionado tiene 0%, mostrar gris
+      if (totalPagadoMostrarEnviados === 0) {
+        donutDataEnviados = [
+          { value: 1, name: '', itemStyle: { color: '#e5e7eb' } }
+        ];
+      } else {
+        donutDataEnviados = [
+          { value: totalPagadoMostrarEnviados, name: filtroLabels[filtroEnviados], itemStyle: { color: filtroColors[filtroEnviados] } },
+          { value: Math.max(0, totalPagadoAmbosEnviados - totalPagadoMostrarEnviados), name: '', itemStyle: { color: '#e5e7eb' } },
+        ];
+      }
     }
-    
+
     const porcentajeEnviados = totalPagadoAmbosEnviados > 0 ? Math.round((totalPagadoMostrarEnviados / totalPagadoAmbosEnviados) * 100) : 0;
 
     return {
@@ -143,43 +156,43 @@ const PagosRealizadosCard: React.FC<{ paquetesEnviadosData: PaquetesEnviadosResp
           <Badge bg={cardData[1].badgeColor} className={`bg-opacity-10 text-${cardData[1].badgeColor}`}>{cardData[1].badgeText}</Badge>
         </CardHeader>
         <CardBody className="d-flex flex-row align-items-center justify-content-center p-3 h-100 " style={{ minHeight: 90, maxHeight: 100 }}>
-          <div style={{ position: 'relative', width: 60, height: 60, marginBottom: 0,marginRight: 30, }}>
+          <div style={{ position: 'relative', width: 60, height: 60, marginBottom: 0, marginRight: 30, }}>
             <DonutChartCustom data={cardEnviados.donutDataEnviados} porcentaje={cardEnviados.porcentajeEnviados} />
           </div>
-          <div className="d-flex flex-column justify-content-center align-items-start gap-1 my-2" style={{ fontSize: 13,marginRight: 15 }}>
+          <div className="d-flex flex-column justify-content-center align-items-start gap-1 my-2" style={{ fontSize: 13, marginRight: 15, marginTop: 10 }}>
             <div className="d-flex flex-column align-items-start gap-2 mb-2">
-              <div 
+              <div
                 className="d-flex align-items-center gap-1 cursor-pointer"
                 onClick={() => setFiltroEnviados(null)}
                 style={{ cursor: 'pointer' }}
               >
-                <TbSquareFilled style={{ 
-                  color: filtroEnviados === null ? '#6c757d' : '#e5e7eb', 
-                  fontSize: 14 
+                <TbSquareFilled style={{
+                  color: filtroEnviados === null ? '#6c757d' : '#e5e7eb',
+                  fontSize: 14
                 }} />
                 <small style={{ color: filtroEnviados === null ? '#333' : '#9ca3af' }}>Ambos</small>
               </div>
-              <div 
+              <div
                 className="d-flex align-items-center gap-1 cursor-pointer"
                 onClick={() => setFiltroEnviados('efectivo')}
                 style={{ cursor: 'pointer' }}
               >
-                <TbSquareFilled style={{ 
-                  color: filtroEnviados === 'efectivo' ? filtroColors.efectivo : '#e5e7eb', 
-                  fontSize: 14 
+                <TbSquareFilled style={{
+                  color: filtroEnviados === 'efectivo' ? filtroColors.efectivo : '#e5e7eb',
+                  fontSize: 14
                 }} />
                 <small style={{ color: filtroEnviados === 'efectivo' ? filtroColors.efectivo : '#9ca3af' }}>
                   {filtroLabels.efectivo} ({datosEnviados.countEfectivoEnviados})
                 </small>
               </div>
-              <div 
+              <div
                 className="d-flex align-items-center gap-1 cursor-pointer"
                 onClick={() => setFiltroEnviados('facturas')}
                 style={{ cursor: 'pointer' }}
               >
-                <TbSquareFilled style={{ 
-                  color: filtroEnviados === 'facturas' ? filtroColors.facturas : '#e5e7eb', 
-                  fontSize: 14 
+                <TbSquareFilled style={{
+                  color: filtroEnviados === 'facturas' ? filtroColors.facturas : '#e5e7eb',
+                  fontSize: 14
                 }} />
                 <small style={{ color: filtroEnviados === 'facturas' ? filtroColors.facturas : '#9ca3af' }}>
                   {filtroLabels.facturas} ({datosEnviados.countFacturasEnviados})
@@ -188,12 +201,12 @@ const PagosRealizadosCard: React.FC<{ paquetesEnviadosData: PaquetesEnviadosResp
             </div>
           </div>
           <div className="d-flex flex-column justify-content-center align-items-center gap-1" style={{ marginLeft: 15 }}>
-          <div className="mb-1 ">
-            <span className="fw-bold" style={{ fontSize: 16 }}>{datosEnviados.totalPaquetesEnviados} paquetes</span>
-          </div>
-          <div>
-            <span className="fw-bold text-primary" style={{ fontSize: 18 }}>${cardEnviados.totalPagadoMostrarEnviados.toFixed(2)}</span>
-          </div>
+            <div className="mb-1 ">
+              <span className="fw-bold" style={{ fontSize: 16 }}>{datosEnviados.totalPaquetesEnviados} paquetes</span>
+            </div>
+            <div>
+              <span className="fw-bold text-primary" style={{ fontSize: 18 }}>${cardEnviados.totalPagadoMostrarEnviados.toFixed(2)}</span>
+            </div>
           </div>
         </CardBody>
       </Card>
@@ -206,18 +219,23 @@ PagosRealizadosCard.displayName = 'PagosRealizadosCard';
 const PagosTransitoCard: React.FC<{ paquetesEnviadosData: PaquetesEnviadosResponse }> = React.memo(({ paquetesEnviadosData }) => {
   const [filtroBorrador, setFiltroBorrador] = useState<FiltroTipoPago>(null);
 
+  // --- MODIFICACIÓN DATOS BORRADOR ---
   const datosBorrador = useMemo(() => {
     let totalPagadoFacturasBorrador = 0;
     let totalPagadoEfectivoBorrador = 0;
     let countFacturasBorrador = 0;
     let countEfectivoBorrador = 0;
     let totalPaquetesBorrador = 0;
+    // Cambia: suma solo el importeAPagar del paquete
+    let totalPendientePaquetesBorrador = 0;
 
     paquetesEnviadosData.paquetes.forEach(paquete => {
       if (paquete.estatus === 'Borrador') {
         totalPaquetesBorrador++;
+        totalPendientePaquetesBorrador += paquete.totalImporteAPagar || 0;
         if (Array.isArray(paquete.facturas)) {
           paquete.facturas.forEach(factura => {
+            // Pagado solo si autorizada
             if (factura.autorizada === true) {
               totalPagadoFacturasBorrador += factura.importePagado || 0;
               countFacturasBorrador++;
@@ -226,6 +244,7 @@ const PagosTransitoCard: React.FC<{ paquetesEnviadosData: PaquetesEnviadosRespon
         }
         if (Array.isArray(paquete.pagosEfectivo)) {
           paquete.pagosEfectivo.forEach(pago => {
+            // Pagado solo si autorizada
             if (pago.autorizada === true) {
               totalPagadoEfectivoBorrador += pago.importePagado || 0;
               countEfectivoBorrador++;
@@ -240,38 +259,58 @@ const PagosTransitoCard: React.FC<{ paquetesEnviadosData: PaquetesEnviadosRespon
       totalPagadoEfectivoBorrador,
       countFacturasBorrador,
       countEfectivoBorrador,
-      totalPaquetesBorrador
+      totalPaquetesBorrador,
+      totalPendientePaquetesBorrador
     };
   }, [paquetesEnviadosData.paquetes]);
 
   const cardBorrador = useMemo(() => {
     const totalPagadoAmbosBorrador = datosBorrador.totalPagadoFacturasBorrador + datosBorrador.totalPagadoEfectivoBorrador;
+    // Cambia: usa el totalPendientePaquetesBorrador
+    const totalPendienteAmbosBorrador = datosBorrador.totalPendientePaquetesBorrador;
     let totalPagadoMostrarBorrador: number;
     let donutDataBorrador: any[];
-    
+
     if (filtroBorrador === null) {
       totalPagadoMostrarBorrador = totalPagadoAmbosBorrador;
       const efectivoPercent = totalPagadoAmbosBorrador > 0 ? datosBorrador.totalPagadoEfectivoBorrador : 0;
       const facturasPercent = totalPagadoAmbosBorrador > 0 ? datosBorrador.totalPagadoFacturasBorrador : 0;
-      donutDataBorrador = [
-        { value: efectivoPercent, name: 'Efectivo', itemStyle: { color: filtroColors.efectivo } },
-        { value: facturasPercent, name: 'Facruras', itemStyle: { color: filtroColors.facturas } },
-      ];
+
+      // Si no hay filtro seleccionado y el total es 0, mostrar gris
+      if (totalPagadoAmbosBorrador === 0) {
+        donutDataBorrador = [
+          { value: 1, name: '', itemStyle: { color: '#e5e7eb' } }
+        ];
+      } else {
+        donutDataBorrador = [
+          { value: efectivoPercent, name: 'Efectivo', itemStyle: { color: filtroColors.efectivo } },
+          { value: facturasPercent, name: 'Facruras', itemStyle: { color: filtroColors.facturas } },
+        ];
+      }
     } else {
       totalPagadoMostrarBorrador = filtroBorrador === 'facturas' ? datosBorrador.totalPagadoFacturasBorrador : datosBorrador.totalPagadoEfectivoBorrador;
-      donutDataBorrador = [
-        { value: totalPagadoMostrarBorrador, name: filtroLabels[filtroBorrador], itemStyle: { color: filtroColors[filtroBorrador] } },
-        { value: Math.max(0, totalPagadoAmbosBorrador - totalPagadoMostrarBorrador), name: '', itemStyle: { color: '#e5e7eb' } },
-      ];
+
+      // Si el filtro seleccionado tiene 0%, mostrar gris
+      if (totalPagadoMostrarBorrador === 0) {
+        donutDataBorrador = [
+          { value: 1, name: '', itemStyle: { color: '#e5e7eb' } }
+        ];
+      } else {
+        donutDataBorrador = [
+          { value: totalPagadoMostrarBorrador, name: filtroLabels[filtroBorrador], itemStyle: { color: filtroColors[filtroBorrador] } },
+          { value: Math.max(0, totalPagadoAmbosBorrador - totalPagadoMostrarBorrador), name: '', itemStyle: { color: '#e5e7eb' } },
+        ];
+      }
     }
-    
+
     const porcentajeBorrador = totalPagadoAmbosBorrador > 0 ? Math.round((totalPagadoMostrarBorrador / totalPagadoAmbosBorrador) * 100) : 0;
 
     return {
       totalPagadoMostrarBorrador,
       donutDataBorrador,
       porcentajeBorrador,
-      totalPagadoAmbosBorrador
+      totalPagadoAmbosBorrador,
+      totalPendienteAmbosBorrador
     };
   }, [datosBorrador, filtroBorrador]);
 
@@ -283,43 +322,43 @@ const PagosTransitoCard: React.FC<{ paquetesEnviadosData: PaquetesEnviadosRespon
           <Badge bg={cardData[2].badgeColor} className={`bg-opacity-10 text-${cardData[2].badgeColor}`}>{cardData[2].badgeText}</Badge>
         </CardHeader>
         <CardBody className="d-flex flex-row align-items-center justify-content-center p-3 h-100 " style={{ minHeight: 90, maxHeight: 100 }}>
-          <div style={{ position: 'relative', width: 60, height: 60, marginBottom: 0,marginRight: 15}}>
+          <div style={{ position: 'relative', width: 60, height: 60, marginBottom: 0, marginRight: 15 }}>
             <DonutChartCustom data={cardBorrador.donutDataBorrador} porcentaje={cardBorrador.porcentajeBorrador} />
           </div>
-          <div className="d-flex flex-column justify-content-center align-items-start gap-1 my-2" style={{ fontSize: 13,marginRight: 15 }}>
+          <div className="d-flex flex-column justify-content-center align-items-start gap-1 my-2" style={{ fontSize: 13, marginRight: 15, marginTop: 10 }}>
             <div className="d-flex flex-column align-items-start gap-2 mb-2">
-              <div 
+              <div
                 className="d-flex align-items-center gap-1 cursor-pointer"
                 onClick={() => setFiltroBorrador(null)}
                 style={{ cursor: 'pointer' }}
               >
-                <TbSquareFilled style={{ 
-                  color: filtroBorrador === null ? '#6c757d' : '#e5e7eb', 
-                  fontSize: 14 
+                <TbSquareFilled style={{
+                  color: filtroBorrador === null ? '#6c757d' : '#e5e7eb',
+                  fontSize: 14
                 }} />
                 <small style={{ color: filtroBorrador === null ? '#333' : '#9ca3af' }}>Ambos</small>
               </div>
-              <div 
+              <div
                 className="d-flex align-items-center gap-1 cursor-pointer"
                 onClick={() => setFiltroBorrador('efectivo')}
                 style={{ cursor: 'pointer' }}
               >
-                <TbSquareFilled style={{ 
-                  color: filtroBorrador === 'efectivo' ? filtroColors.efectivo : '#e5e7eb', 
-                  fontSize: 14 
+                <TbSquareFilled style={{
+                  color: filtroBorrador === 'efectivo' ? filtroColors.efectivo : '#e5e7eb',
+                  fontSize: 14
                 }} />
                 <small style={{ color: filtroBorrador === 'efectivo' ? filtroColors.efectivo : '#9ca3af' }}>
                   {filtroLabels.efectivo} ({datosBorrador.countEfectivoBorrador})
                 </small>
               </div>
-              <div 
+              <div
                 className="d-flex align-items-center gap-1 cursor-pointer"
                 onClick={() => setFiltroBorrador('facturas')}
                 style={{ cursor: 'pointer' }}
               >
-                <TbSquareFilled style={{ 
-                  color: filtroBorrador === 'facturas' ? filtroColors.facturas : '#e5e7eb', 
-                  fontSize: 14 
+                <TbSquareFilled style={{
+                  color: filtroBorrador === 'facturas' ? filtroColors.facturas : '#e5e7eb',
+                  fontSize: 14
                 }} />
                 <small style={{ color: filtroBorrador === 'facturas' ? filtroColors.facturas : '#9ca3af' }}>
                   {filtroLabels.facturas} ({datosBorrador.countFacturasBorrador})
@@ -328,12 +367,12 @@ const PagosTransitoCard: React.FC<{ paquetesEnviadosData: PaquetesEnviadosRespon
             </div>
           </div>
           <div className="d-flex flex-column justify-content-center align-items-center gap-1" style={{ marginLeft: 15 }}>
-          <div className="mb-1 ">
-            <span className="fw-bold" style={{ fontSize: 16 }}>{datosBorrador.totalPaquetesBorrador} paquetes</span>
-          </div>
-          <div>
-            <span className="fw-bold text-primary" style={{ fontSize: 18 }}>${cardBorrador.totalPagadoMostrarBorrador.toFixed(2)}</span>
-          </div>
+            <div className="mb-1 ">
+              <span className="fw-bold" style={{ fontSize: 16 }}>{datosBorrador.totalPaquetesBorrador} paquetes</span>
+            </div>
+            <div>
+              <span className="fw-bold text-primary" style={{ fontSize: 18 }}>${cardBorrador.totalPendienteAmbosBorrador.toFixed(2)}</span>
+            </div>
           </div>
         </CardBody>
       </Card>
@@ -377,23 +416,35 @@ const SaldoCard: React.FC<{ budgetData: any[]; paquetesEnviadosData: PaquetesEnv
     };
   }, [paquetesEnviadosData.paquetes]);
 
+  // --- MODIFICACIÓN SALDO ---
   const datosBorrador = useMemo(() => {
     let totalPagadoFacturasBorrador = 0;
     let totalPagadoEfectivoBorrador = 0;
+    let countFacturasBorrador = 0;
+    let countEfectivoBorrador = 0;
+    let totalPaquetesBorrador = 0;
+    // Cambia: suma solo el totalImporteAPagar del paquete
+    let totalPendientePaquetesBorrador = 0;
 
     paquetesEnviadosData.paquetes.forEach(paquete => {
       if (paquete.estatus === 'Borrador') {
+        totalPaquetesBorrador++;
+        totalPendientePaquetesBorrador += paquete.totalImporteAPagar || 0;
         if (Array.isArray(paquete.facturas)) {
           paquete.facturas.forEach(factura => {
+            // Pagado solo si autorizada
             if (factura.autorizada === true) {
               totalPagadoFacturasBorrador += factura.importePagado || 0;
+              countFacturasBorrador++;
             }
           });
         }
         if (Array.isArray(paquete.pagosEfectivo)) {
           paquete.pagosEfectivo.forEach(pago => {
+            // Pagado solo si autorizada
             if (pago.autorizada === true) {
               totalPagadoEfectivoBorrador += pago.importePagado || 0;
+              countEfectivoBorrador++;
             }
           });
         }
@@ -402,19 +453,26 @@ const SaldoCard: React.FC<{ budgetData: any[]; paquetesEnviadosData: PaquetesEnv
 
     return {
       totalPagadoFacturasBorrador,
-      totalPagadoEfectivoBorrador
+      totalPagadoEfectivoBorrador,
+      countFacturasBorrador,
+      countEfectivoBorrador,
+      totalPaquetesBorrador,
+      totalPendientePaquetesBorrador
     };
   }, [paquetesEnviadosData.paquetes]);
 
   const saldoData = useMemo(() => {
-    const totalGastosRealizados = (datosEnviados.totalPagadoFacturasEnviados + datosEnviados.totalPagadoEfectivoEnviados) + 
-                                 (datosBorrador.totalPagadoFacturasBorrador + datosBorrador.totalPagadoEfectivoBorrador);
-    const saldo = totalBudget - totalGastosRealizados;
+    // Gastos realizados (pagados)
+    const totalGastosRealizados = (datosEnviados.totalPagadoFacturasEnviados + datosEnviados.totalPagadoEfectivoEnviados);
+    // Gastos en tránsito (pendientes)
+    const totalPendienteTransito = datosBorrador.totalPendientePaquetesBorrador;
+    // El saldo ahora descuenta ambos
+    const saldo = totalBudget - totalGastosRealizados - totalPendienteTransito;
     const esSaldoPositivo = saldo >= 0;
     const porcentajeDisponible = totalBudget > 0 ? ((saldo / totalBudget) * 100) : 0;
-    
+
     const donutDataPresupuesto = [
-      { value: totalGastosRealizados, name: 'Gastado', itemStyle: { color: '#ef4444' } },
+      { value: totalGastosRealizados + totalPendienteTransito, name: 'Gastado', itemStyle: { color: '#ef4444' } },
       { value: Math.max(0, saldo), name: 'Disponible', itemStyle: { color: '#22c55e' } }
     ];
 
@@ -438,21 +496,21 @@ const SaldoCard: React.FC<{ budgetData: any[]; paquetesEnviadosData: PaquetesEnv
         <CardBody>
           <div className="d-flex justify-content-between align-items-center text-nowrap">
             <div className="d-flex align-items-center">
-            <div className="flex-grow-1">
-              <DonutChartCustom data={saldoData.donutDataPresupuesto} porcentaje={saldoData.porcentajeDisponible} />
-            </div>
-            <div className="d-flex flex-column align-items-center justify-content-center" style={{ marginLeft: 15 }}>
-              <div className="d-flex flex-column gap-1 mb-2">
-                <div className="d-flex align-items-center gap-1">
-                  <TbSquareFilled style={{ color: '#ef4444', fontSize: 12 }} />
-                  <small className="text-muted">Gastado</small>
-                </div>
-                <div className="d-flex align-items-center gap-1">
-                  <TbSquareFilled style={{ color: '#22c55e', fontSize: 12 }} />
-                  <small className="text-muted">Disponible</small>
+              <div className="flex-grow-1">
+                <DonutChartCustom data={saldoData.donutDataPresupuesto} porcentaje={saldoData.porcentajeDisponible} />
+              </div>
+              <div className="d-flex flex-column align-items-center justify-content-center" style={{ marginLeft: 15 }}>
+                <div className="d-flex flex-column gap-1 mb-2">
+                  <div className="d-flex align-items-center gap-1">
+                    <TbSquareFilled style={{ color: '#ef4444', fontSize: 12 }} />
+                    <small className="text-muted">Gastado</small>
+                  </div>
+                  <div className="d-flex align-items-center gap-1">
+                    <TbSquareFilled style={{ color: '#22c55e', fontSize: 12 }} />
+                    <small className="text-muted">Disponible</small>
+                  </div>
                 </div>
               </div>
-            </div>
             </div>
             <div className="text-end">
               <h3 className="mb-2 fw-normal">
@@ -472,8 +530,8 @@ const SaldoCard: React.FC<{ budgetData: any[]; paquetesEnviadosData: PaquetesEnv
 });
 SaldoCard.displayName = 'SaldoCard';
 
-const EcomStats: React.FC<EcomStatsProps> = React.memo(({ 
-  budgetData = [], 
+const EcomStats: React.FC<EcomStatsProps> = React.memo(({
+  budgetData = [],
   paquetesEnviadosData = {
     totalPaquetes: 0,
     totalPagado: 0,

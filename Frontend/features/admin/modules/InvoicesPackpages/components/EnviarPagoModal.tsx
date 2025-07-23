@@ -602,7 +602,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({ show, onClose, factur
                 </>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="secondary" onClick={onCancel || onClose}>Cerrar</Button>
+                <Button variant="light" onClick={onCancel || onClose}>Cerrar</Button>
                 <Button
                     variant="primary"
                     onClick={handleGuardar}

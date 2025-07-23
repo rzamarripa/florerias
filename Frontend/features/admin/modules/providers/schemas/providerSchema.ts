@@ -76,6 +76,45 @@ export const providerSchema = z.object({
     .nullable()
     .transform(val => val === null ? undefined : val),
 
+  // Nuevos campos para relación con cuentas bancarias
+  bank: z
+    .string()
+    .min(24, "ID de banco inválido")
+    .max(24, "ID de banco inválido"),
+
+  bankAccountId: z
+    .string()
+    .min(24, "ID de cuenta bancaria inválido")
+    .max(24, "ID de cuenta bancaria inválido")
+    .optional(),
+
+  accountNumber: z
+    .string()
+    .min(1, "El número de cuenta es requerido")
+    .max(20, "El número de cuenta no puede exceder 20 caracteres")
+    .regex(/^[0-9]+$/, "El número de cuenta solo puede contener números")
+    .trim(),
+
+  clabe: z
+    .string()
+    .min(1, "La CLABE es requerida")
+    .length(18, "La CLABE debe tener exactamente 18 dígitos")
+    .regex(/^[0-9]+$/, "La CLABE solo puede contener números")
+    .trim(),
+
+  referencia: z
+    .string()
+    .min(1, "La referencia bancaria es requerida")
+    .max(50, "La referencia bancaria no puede exceder 50 caracteres")
+    .regex(/^[A-Z0-9]+$/, "La referencia bancaria solo puede contener letras mayúsculas y números")
+    .trim()
+    .toUpperCase(),
+
+  sucursal: z
+    .string()
+    .min(24, "ID de sucursal inválido")
+    .max(24, "ID de sucursal inválido"),
+
   isActive: z.boolean().default(true),
 });
 

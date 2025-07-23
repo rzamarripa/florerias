@@ -2,6 +2,8 @@ import { Provider } from "../models/Provider.js";
 import { Country } from "../models/Country.js";
 import { State } from "../models/State.js";
 import { Municipality } from "../models/Municipality.js";
+import { Bank } from "../models/Bank.js";
+import { Branch } from "../models/Branch.js";
 
 export const getAll = async (req, res) => {
   try {
@@ -11,10 +13,12 @@ export const getAll = async (req, res) => {
 
     const total = await Provider.countDocuments({});
     const providers = await Provider.find({})
-      .select("_id commercialName businessName rfc contactName countryId stateId municipalityId address phone email description isActive createdAt updatedAt")
+      .select("_id commercialName businessName rfc contactName countryId stateId municipalityId address phone email description bank accountNumber clabe referencia sucursal isActive createdAt updatedAt")
       .populate("countryId", "_id name")
       .populate("stateId", "_id name")
       .populate("municipalityId", "_id name")
+      .populate("bank", "_id name")
+      .populate("sucursal", "_id name")
       .sort({ commercialName: 1 })
       .skip(skip)
       .limit(limit);
@@ -50,6 +54,7 @@ export const getAllProviders = async (req, res) => {
         { contactName: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
+        { referencia: { $regex: search, $options: "i" } },
       ];
     }
     if (req.query.isActive === "true") filters.isActive = true;
@@ -60,6 +65,8 @@ export const getAllProviders = async (req, res) => {
       .populate("countryId", "_id name")
       .populate("stateId", "_id name")
       .populate("municipalityId", "_id name")
+      .populate("bank", "_id name")
+      .populate("sucursal", "_id name")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -93,9 +100,15 @@ export const createProvider = async (req, res) => {
       phone,
       email,
       description,
+      bank,
+      accountNumber,
+      clabe,
+      referencia,
+      sucursal,
       isActive,
     } = req.body;
 
+    // Validaciones existentes
     const country = await Country.findOne({ _id: countryId, isActive: true });
     if (!country) {
       return res.status(400).json({ success: false, message: "Selected country does not exist or is not active" });
@@ -107,6 +120,23 @@ export const createProvider = async (req, res) => {
     const municipality = await Municipality.findOne({ _id: municipalityId, stateId, isActive: true });
     if (!municipality) {
       return res.status(400).json({ success: false, message: "Selected municipality does not exist or does not belong to the selected state" });
+    }
+
+    // Validaciones para los nuevos campos
+    const bankExists = await Bank.findOne({ _id: bank, isActive: true });
+    if (!bankExists) {
+      return res.status(400).json({ success: false, message: "Selected bank does not exist or is not active" });
+    }
+
+    const branchExists = await Branch.findOne({ _id: sucursal, isActive: true });
+    if (!branchExists) {
+      return res.status(400).json({ success: false, message: "Selected branch does not exist or is not active" });
+    }
+
+    // Verificar que la referencia sea única
+    const existingReference = await Provider.findOne({ referencia: referencia.toUpperCase() });
+    if (existingReference) {
+      return res.status(400).json({ success: false, message: "La referencia bancaria ya existe" });
     }
 
     const newProvider = await Provider.create({
@@ -121,6 +151,11 @@ export const createProvider = async (req, res) => {
       phone,
       email,
       description,
+      bank,
+      accountNumber,
+      clabe,
+      referencia: referencia.toUpperCase(),
+      sucursal,
       isActive,
     });
 
@@ -149,9 +184,15 @@ export const updateProvider = async (req, res) => {
       phone,
       email,
       description,
+      bank,
+      accountNumber,
+      clabe,
+      referencia,
+      sucursal,
       isActive,
     } = req.body;
 
+    // Validaciones existentes
     const country = await Country.findOne({ _id: countryId, isActive: true });
     if (!country) {
       return res.status(400).json({ success: false, message: "Selected country does not exist or is not active" });
@@ -163,6 +204,28 @@ export const updateProvider = async (req, res) => {
     const municipality = await Municipality.findOne({ _id: municipalityId, stateId, isActive: true });
     if (!municipality) {
       return res.status(400).json({ success: false, message: "Selected municipality does not exist or does not belong to the selected state" });
+    }
+
+    // Validaciones para los nuevos campos
+    const bankExists = await Bank.findOne({ _id: bank, isActive: true });
+    if (!bankExists) {
+      return res.status(400).json({ success: false, message: "Selected bank does not exist or is not active" });
+    }
+
+    const branchExists = await Branch.findOne({ _id: sucursal, isActive: true });
+    if (!branchExists) {
+      return res.status(400).json({ success: false, message: "Selected branch does not exist or is not active" });
+    }
+
+    // Verificar que la referencia sea única (excluyendo el proveedor actual)
+    if (referencia) {
+      const existingReference = await Provider.findOne({
+        referencia: referencia.toUpperCase(),
+        _id: { $ne: id }
+      });
+      if (existingReference) {
+        return res.status(400).json({ success: false, message: "La referencia bancaria ya existe" });
+      }
     }
 
     const updateData = {
@@ -177,7 +240,13 @@ export const updateProvider = async (req, res) => {
       phone,
       email,
       description,
+      bank,
+      accountNumber,
+      clabe,
+      sucursal,
     };
+
+    if (referencia) updateData.referencia = referencia.toUpperCase();
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const updatedProvider = await Provider.findByIdAndUpdate(id, updateData, { new: true });
@@ -256,6 +325,83 @@ export const getMunicipalitiesByStateId = async (req, res) => {
       .select("_id name")
       .sort({ name: 1 });
     res.status(200).json({ success: true, data: municipalities });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getAllBanks = async (req, res) => {
+  try {
+    const banks = await Bank.find({ isActive: true })
+      .select("_id name")
+      .sort({ name: 1 });
+    res.status(200).json({ success: true, data: banks });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getAllBranches = async (req, res) => {
+  try {
+    const branches = await Branch.find({ isActive: true })
+      .select("_id name")
+      .sort({ name: 1 });
+    res.status(200).json({ success: true, data: branches });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET - Obtener proveedores por RFCs
+export const getProvidersByRfcs = async (req, res) => {
+  try {
+    const { rfcs } = req.query;
+
+    if (!rfcs) {
+      return res.status(400).json({
+        success: false,
+        message: 'El parámetro rfcs es requerido (separado por comas)',
+      });
+    }
+
+    // Convertir string de RFCs a array
+    const rfcArray = rfcs.split(',').map(rfc => rfc.trim().toUpperCase());
+
+    const providers = await Provider.find({
+      rfc: { $in: rfcArray },
+      isActive: true
+    })
+      .select('_id commercialName businessName rfc contactName bank accountNumber clabe referencia sucursal')
+      .populate('bank', '_id name')
+      .populate('sucursal', '_id name')
+      .sort({ commercialName: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: providers,
+    });
+  } catch (error) {
+    console.error('Error al obtener proveedores por RFCs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+    });
+  }
+};
+
+export const getBankAccountsByBank = async (req, res) => {
+  try {
+    const { bankId } = req.params;
+    const { BankAccount } = await import("../models/BankAccount.js");
+
+    const bankAccounts = await BankAccount.find({
+      bank: bankId,
+      isActive: true
+    })
+      .select("_id accountNumber clabe")
+      .sort({ accountNumber: 1 });
+
+    res.status(200).json({ success: true, data: bankAccounts });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

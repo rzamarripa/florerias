@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, Table, Button, Badge, Spinner, Alert, Modal, Form } from 'react-bootstrap';
-import { getInvoicesPackageById, ImportedInvoice, InvoicesPackage, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion, createAuthorizationFolio, CreateAuthorizationFolioRequest, getAuthorizationFoliosByPackage, getAuthorizationFolioByNumber, AuthorizationFolio, redeemAuthorizationFolio, getPackageCompanyInfo, PackageCompanyInfo } from '../services/invoicesPackpage';
+import { getInvoicesPackageById, ImportedInvoice, InvoicesPackage, toggleFacturaAutorizada, getInvoiceById, enviarPaqueteADireccion, createAuthorizationFolio, CreateAuthorizationFolioRequest, getAuthorizationFoliosByPackage, getAuthorizationFolioByNumber, AuthorizationFolio, redeemAuthorizationFolio, getPackageCompanyInfo, PackageCompanyInfo, getUserById, UserInfo } from '../services/invoicesPackpage';
 import { getAllCompanies, getBankAccountsByCompany, schedulePayment, Company, BankAccount } from '../services/scheduledPayment';
 import { getBudgetByCompanyBrandBranch, BudgetItem } from '../services/budget';
 import { BsClipboard } from 'react-icons/bs';
@@ -11,6 +11,7 @@ import { useUserSessionStore } from '@/stores';
 import { formatDate } from 'date-fns';
 import CashPaymentsInPackageTable from "../../cashPayments/components/CashPaymentsInPackageTable";
 import { authorizeCashPaymentInPackage, rejectCashPaymentInPackage } from "../../cashPayments/services/cashPayments";
+import PackageTimeline from "../components/timeline/PackageTimeline";
 
 // Estilos para mostrar borde solo en hover
 const actionButtonStyles = `
@@ -37,6 +38,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     const router = useRouter();
     const packpageId = searchParams.get('packpageId');
     const invoiceId = searchParams.get('invoiceId');
+    const shouldRefreshTimeline = searchParams.get('refreshTimeline') === 'true';
     const [packpage, setPackpage] = useState<InvoicesPackage | null>(null);
     const [singleInvoice, setSingleInvoice] = useState<ImportedInvoice | null>(null);
     const [loading, setLoading] = useState(true);
@@ -51,6 +53,9 @@ const NewPackpageDetailsPage: React.FC = () => {
     const [todosLosFolios, setTodosLosFolios] = useState<AuthorizationFolio[]>([]);
     const [folioValidado, setFolioValidado] = useState<AuthorizationFolio | null>(null);
     const [packageCompanyInfo, setPackageCompanyInfo] = useState<PackageCompanyInfo | null>(null);
+    const [showTimeline, setShowTimeline] = useState(false);
+    const [packageCreator, setPackageCreator] = useState<UserInfo | null>(null);
+    const [timelineRefreshTrigger, setTimelineRefreshTrigger] = useState(0);
 
     // Estados para el modal de programación de pagos
     const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -149,12 +154,33 @@ const NewPackpageDetailsPage: React.FC = () => {
         }
     };
 
+    // Función para cargar la información del usuario que creó el paquete
+    const loadPackageCreator = async () => {
+        if (!packpage?.usuario_id) {
+            return;
+        }
+
+        try {
+            const userInfo = await getUserById(packpage.usuario_id);
+            setPackageCreator(userInfo);
+        } catch (error) {
+            console.error('Error al cargar información del creador del paquete:', error);
+            setPackageCreator(null);
+        }
+    };
+
+    // Función para actualizar el timeline
+    const refreshTimeline = () => {
+        setTimelineRefreshTrigger(prev => prev + 1);
+    };
+
     // Cargar presupuesto cuando se cargue el paquete
     useEffect(() => {
         if (packpage) {
             loadBudgetData();
             loadFoliosAutorizados();
             loadPackageCompanyInfo();
+            loadPackageCreator();
         }
     }, [packpage]);
 
@@ -431,6 +457,9 @@ const NewPackpageDetailsPage: React.FC = () => {
                 setSelectedCompanyId('');
                 setSelectedBankAccountId('');
                 setBankAccounts([]);
+
+                // Actualizar timeline
+                refreshTimeline();
             } else {
                 toast.error(response.message || 'Error al programar el pago');
             }
@@ -458,6 +487,9 @@ const NewPackpageDetailsPage: React.FC = () => {
             // const reportUrl = `/api/invoices-package/${packpage._id}/report`;
             // window.open(reportUrl, '_blank');
 
+            // Actualizar timeline
+            refreshTimeline();
+
         } catch (error) {
             console.error('Error al generar reporte:', error);
             toast.error('Error al generar el reporte');
@@ -474,6 +506,9 @@ const NewPackpageDetailsPage: React.FC = () => {
                 setPackpage(prev => prev ? { ...prev, estatus: 'Enviado' } : null);
                 setShowFolioModal(false);
                 setFolioIngresado('');
+
+                // Actualizar timeline
+                refreshTimeline();
 
                 // Si se utilizó un folio de autorización, canjearlo
                 const folioACanjear = folioParaCanjear || folioValidado;
@@ -543,10 +578,25 @@ const NewPackpageDetailsPage: React.FC = () => {
         }
     };
 
-    // Verificar si se puede enviar a dirección (todas las facturas procesadas)
-    const puedeEnviarADireccion = packpage && packpage.facturas &&
-        packpage.facturas.length > 0 &&
-        packpage.facturas.every((factura: ImportedInvoice) => factura.autorizada !== null);
+    // Función para verificar si hay pagos pendientes (facturas o pagos en efectivo)
+    const hayPagosPendientes = () => {
+        // Verificar facturas pendientes
+        const facturasPendientes = packpage?.facturas?.some((factura: ImportedInvoice) =>
+            factura.autorizada === null || factura.autorizada === undefined
+        ) || false;
+
+        // Verificar pagos en efectivo pendientes
+        const pagosEfectivoPendientes = packpage?.pagosEfectivo?.some((pago: any) =>
+            pago.autorizada === null || pago.autorizada === undefined
+        ) || false;
+
+        return facturasPendientes || pagosEfectivoPendientes;
+    };
+
+    // Verificar si se puede enviar a dirección (todas las facturas y pagos en efectivo procesados)
+    const puedeEnviarADireccion = packpage &&
+        ((packpage.facturas && packpage.facturas.length > 0) || (packpage.pagosEfectivo && packpage.pagosEfectivo.length > 0)) &&
+        !hayPagosPendientes();
 
     // Verificar si el usuario es de tesorería
     const esUsuarioTesorería = user?.department?.toLowerCase() === 'tesorería';
@@ -567,7 +617,13 @@ const NewPackpageDetailsPage: React.FC = () => {
             return !esUsuarioTesorería;
         } else {
             // Si el paquete no está enviado ni programado, aplicar las validaciones normales
-            return !puedeEnviarADireccion || packpage?.estatus !== 'Borrador' || (verificarExcesoPresupuesto().excede && foliosAutorizados.length === 0) || esUsuarioTesorería;
+            // Para paquetes en estado Borrador, solo verificar que no haya pagos pendientes
+            if (packpage?.estatus === 'Borrador') {
+                return hayPagosPendientes() || (verificarExcesoPresupuesto().excede && foliosAutorizados.length === 0) || esUsuarioTesorería;
+            } else {
+                // Para otros estados, usar la lógica original
+                return !puedeEnviarADireccion || (verificarExcesoPresupuesto().excede && foliosAutorizados.length === 0) || esUsuarioTesorería;
+            }
         }
     };
 
@@ -757,6 +813,9 @@ const NewPackpageDetailsPage: React.FC = () => {
             await authorizeCashPaymentInPackage(packpage._id, pagoId);
             await reloadPackpage();
             toast.success("Pago autorizado correctamente");
+
+            // Actualizar timeline
+            refreshTimeline();
         } catch {
             toast.error("Error al autorizar el pago");
         }
@@ -771,6 +830,9 @@ const NewPackpageDetailsPage: React.FC = () => {
             await rejectCashPaymentInPackage(packpage._id, pagoId);
             await reloadPackpage();
             toast.success("Pago rechazado correctamente");
+
+            // Actualizar timeline
+            refreshTimeline();
         } catch {
             toast.error("Error al rechazar el pago");
         }
@@ -915,31 +977,37 @@ const NewPackpageDetailsPage: React.FC = () => {
                                 Paquete Folio: <span className="text-primary">{packpage.folio}</span>
                             </h3>
                         </div>
-                        <Button
-                            variant="primary"
-                            onClick={handleEnviarADireccion}
-                            disabled={botonDeshabilitado()}
-                            title={
-                                paqueteProgramado && !esUsuarioTesorería
-                                    ? "Solo usuarios de Tesorería pueden generar reportes"
-                                    : esUsuarioTesorería && !paqueteEnviado && !paqueteProgramado
-                                        ? "Los usuarios de Tesorería no pueden enviar paquetes a Tesorería"
-                                        : ""
-                            }
-                        >
-                            <i className={`bi ${paqueteProgramado ? 'bi-file-earmark-text' : 'bi-send'} me-1`}></i>
-                            {textoBoton}
-                        </Button>
+                        {!(packpage.estatus === 'Borrador' && hayPagosPendientes()) && (
+                            <Button
+                                variant="primary"
+                                onClick={handleEnviarADireccion}
+                                disabled={botonDeshabilitado()}
+                                title={
+                                    paqueteProgramado && !esUsuarioTesorería
+                                        ? "Solo usuarios de Tesorería pueden generar reportes"
+                                        : esUsuarioTesorería && !paqueteEnviado && !paqueteProgramado
+                                            ? "Los usuarios de Tesorería no pueden enviar paquetes a Tesorería"
+                                            : ""
+                                }
+                            >
+                                <i className={`bi ${paqueteProgramado ? 'bi-file-earmark-text' : 'bi-send'} me-1`}></i>
+                                {textoBoton}
+                            </Button>
+                        )}
                     </div>
 
                     <div className=" text-md" style={{ fontSize: '0.8rem' }}>
-                        {user?.username && (
+                        {packageCreator ? (
                             <div>
-                                <p className='mb-0 fw-bold'>Usuario: <span className="fw-semibold text-uppercase">{user.profile.fullName}</span></p>
+                                <p className='mb-0 fw-bold'>Creado por: <span className="fw-semibold text-uppercase">{packageCreator.profile.fullName}</span></p>
+                                <p className='mb-2 fw-bold'>Departamento:{packpage.departamento && <span className="fw-semibold text-uppercase "> {packpage.departamento}</span>}</p>
+                            </div>
+                        ) : (
+                            <div>
+                                <p className='mb-0 fw-bold'>Creado por: <span className="fw-semibold text-uppercase">Cargando...</span></p>
                                 <p className='mb-2 fw-bold'>Departamento:{packpage.departamento && <span className="fw-semibold text-uppercase "> {packpage.departamento}</span>}</p>
                             </div>
                         )}
-
                     </div>
                     {/* Comentario, estatus y empresa */}
                     <Card className="mb-2 border-0 shadow-sm bg-light">
@@ -1106,22 +1174,6 @@ const NewPackpageDetailsPage: React.FC = () => {
                             </Alert>
                         );
                     })()}
-
-                    {/* Alerta para usuarios de tesorería */}
-                    {esUsuarioTesorería && !paqueteEnviado && (
-                        <Alert variant="info" className="mb-3 d-flex align-items-center">
-                            <div className="me-3" style={{ fontSize: '1.5rem', color: '#0c5460' }}>
-                                <i className="bi bi-info-circle-fill"></i>
-                            </div>
-                            <div>
-                                <div className="fw-bold">Usuario de Tesorería</div>
-                                <div className="text-muted">
-                                    Como usuario del departamento de Tesorería, no puedes enviar paquetes a Tesorería.
-                                    Esta función está disponible solo para usuarios de otros departamentos.
-                                </div>
-                            </div>
-                        </Alert>
-                    )}
                 </div>
             )}
 
@@ -1242,9 +1294,42 @@ const NewPackpageDetailsPage: React.FC = () => {
                     />
                 </div>
             </div>
+            {/* Timeline - se muestra cuando showTimeline es true */}
+            {showTimeline && (
+                <div className="mt-4">
+                    <Card className="shadow-sm border-0">
+                        <Card.Header className="bg-light">
+                            <div className="d-flex justify-content-between align-items-center">
+                                <h5 className="mb-0 fw-bold">
+                                    <i className="bi bi-clock-history me-2"></i>
+                                    Timeline del Paquete
+                                </h5>
+                                <Button
+                                    variant="outline-secondary"
+                                    size="sm"
+                                    onClick={() => setShowTimeline(false)}
+                                >
+                                    <i className="bi bi-x-lg"></i>
+                                </Button>
+                            </div>
+                        </Card.Header>
+                        <Card.Body>
+                            <PackageTimeline packageId={packpage?._id} refreshTrigger={timelineRefreshTrigger} />
+                        </Card.Body>
+                    </Card>
+                </div>
+            )}
+
             <div className="mt-4">
                 <Button variant="secondary" onClick={() => router.back()}>Cerrar</Button>
-                <Button variant="outline-secondary" className="ms-2">Mostrar Timeline</Button>
+                <Button
+                    variant="outline-secondary"
+                    className="ms-2"
+                    onClick={() => setShowTimeline(!showTimeline)}
+                >
+                    <i className={`bi ${showTimeline ? 'bi-eye-slash' : 'bi-clock-history'} me-1`}></i>
+                    {showTimeline ? 'Ocultar Timeline' : 'Mostrar Timeline'}
+                </Button>
             </div>
 
             {/* Modal para ingreso de folio de autorización */}
@@ -1387,7 +1472,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                     </Form>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => {
+                    <Button variant="light" onClick={() => {
                         setShowScheduleModal(false);
                         setSelectedCompanyId('');
                         setSelectedBankAccountId('');

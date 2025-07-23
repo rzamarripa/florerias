@@ -34,6 +34,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
   const [bank, setBank] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [clabe, setClabe] = useState("");
+  const [claveBanxico, setClaveBanxico] = useState("");
   const [branch, setBranch] = useState("");
   const [initialBalance, setInitialBalance] = useState<number | string>("");
   const [currentBalance, setCurrentBalance] = useState<number | string>("");
@@ -55,6 +56,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
         setBank(editingBankAccount.bank?._id || "");
         setAccountNumber(editingBankAccount.accountNumber || "");
         setClabe(editingBankAccount.clabe || "");
+        setClaveBanxico(editingBankAccount.claveBanxico || "");
         setBranch(editingBankAccount.branch || "");
         setInitialBalance(editingBankAccount.initialBalance || 0);
         setCurrentBalance(editingBankAccount.currentBalance || 0);
@@ -70,6 +72,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
     setBank("");
     setAccountNumber("");
     setClabe("");
+    setClaveBanxico("");
     setBranch("");
     setInitialBalance("");
     setCurrentBalance("");
@@ -90,6 +93,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
       bank,
       accountNumber,
       clabe,
+      claveBanxico: claveBanxico || undefined,
       branch: branch || undefined,
       initialBalance: Number(initialBalance),
       currentBalance: Number(currentBalance),
@@ -116,8 +120,7 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
 
       if (response && response.success) {
         toast.success(
-          `Cuenta bancaria ${
-            mode === "create" ? "creada" : "actualizada"
+          `Cuenta bancaria ${mode === "create" ? "creada" : "actualizada"
           } correctamente.`
         );
         onBankAccountSaved?.();
@@ -125,18 +128,16 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
       } else {
         toast.error(
           response?.message ||
-            `Error al ${
-              mode === "create" ? "crear" : "actualizar"
-            } la cuenta bancaria.`
+          `Error al ${mode === "create" ? "crear" : "actualizar"
+          } la cuenta bancaria.`
         );
       }
     } catch (error: any) {
       console.error("Error submitting form:", error);
       toast.error(
         error.message ||
-          `Ocurrió un error al ${
-            mode === "create" ? "crear" : "actualizar"
-          } la cuenta.`
+        `Ocurrió un error al ${mode === "create" ? "crear" : "actualizar"
+        } la cuenta.`
       );
     } finally {
       setIsSubmitting(false);
@@ -207,6 +208,15 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
                 required
                 minLength={18}
                 maxLength={18}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Clave Banxico (Opcional)</Form.Label>
+              <Form.Control
+                type="text"
+                value={claveBanxico}
+                onChange={(e) => setClaveBanxico(e.target.value)}
               />
             </Form.Group>
 

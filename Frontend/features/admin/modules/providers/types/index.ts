@@ -5,6 +5,12 @@ export interface Location {
   name: string;
 }
 
+export interface BankAccount {
+  _id: string;
+  accountNumber: string;
+  clabe: string;
+}
+
 export interface Provider {
   _id: string;
   commercialName: string;
@@ -18,6 +24,12 @@ export interface Provider {
   phone: string;
   email: string;
   description?: string;
+  // Nuevos campos para relación con cuentas bancarias
+  bank: Location;
+  accountNumber: string;
+  clabe: string;
+  referencia: string;
+  sucursal: Location;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -35,6 +47,12 @@ export type CreateProviderRequest = {
   phone: string;
   email: string;
   description?: string;
+  // Nuevos campos para relación con cuentas bancarias
+  bank: string;
+  accountNumber: string;
+  clabe: string;
+  referencia: string;
+  sucursal: string;
   isActive: boolean;
 }
 

@@ -96,6 +96,17 @@ export interface UserVisibilityStructure {
   hasFullAccess: boolean;
 }
 
+// Tipos para la relación paquete-sucursal/marca
+export interface PackageCompanyRelation {
+  _id: string;
+  packageId: string;
+  companyId: string;
+  brandId?: string;
+  branchId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Función para obtener presupuesto por compañía, marca, sucursal y mes
 export const getBudgetByCompanyBrandBranch = async (params: {
   companyId: string;
@@ -144,17 +155,17 @@ export const getPaquetesEnviados = async (params: {
   month?: number;
 }): Promise<PaquetesEnviadosResponse> => {
   const queryParams = new URLSearchParams();
-  
+
   // Agregar usuario_id como parámetro obligatorio
   queryParams.append('usuario_id', params.usuario_id);
-  
+
   // Agregar filtros opcionales
   if (params.companyId) queryParams.append('companyId', params.companyId);
   if (params.year) queryParams.append('year', params.year.toString());
   if (params.month !== undefined) queryParams.append('month', params.month.toString());
 
   const response = await apiCall<PaquetesEnviadosResponse>(`/invoices-package/paquetes-enviados-dashboard?${queryParams}`);
-  
+
   return response.data || {
     totalPaquetes: 0,
     totalPagado: 0,
@@ -166,7 +177,7 @@ export const getPaquetesEnviados = async (params: {
 export const getUserVisibilityForSelects = async (userId: string): Promise<UserVisibilityStructure> => {
   const response = await apiCall<UserVisibilityStructure>(`/role-visibility/${userId}/selects`);
   return response.data;
-}; 
+};
 
 // Obtener presupuesto asignado por sucursal (o todas) para un mes
 export const getBudgetByBranch = async (params: {
@@ -200,7 +211,7 @@ export const getBudgetByBranchBrand = async (params: {
 
   const response = await apiCall<BudgetItem[]>(`/invoices-package/budget?${queryParams}`);
   return response.data || [];
-}; 
+};
 
 // Función para obtener presupuestos por sucursal para el dashboard de pagos
 export const getBudgetByBranchesForDashboard = async (params: {
@@ -217,10 +228,10 @@ export const getBudgetByBranchesForDashboard = async (params: {
     if (params.userId) {
       queryParams.append('userId', params.userId);
     }
-    
+
     const response = await apiCall<any[]>(`/budget/by-company-branches?${queryParams}`);
     console.log('Respuesta del endpoint:', response.data);
-    
+
     if (!response.data) {
       return [];
     }
@@ -228,6 +239,20 @@ export const getBudgetByBranchesForDashboard = async (params: {
     return response.data;
   } catch (error) {
     console.error('Error obteniendo presupuestos por sucursal:', error);
+    return [];
+  }
+};
+
+// Función para obtener las relaciones paquete-sucursal/marca
+export const getPackageCompanyRelations = async (packageIds: string[]): Promise<PackageCompanyRelation[]> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('packageIds', packageIds.join(','));
+
+    const response = await apiCall<PackageCompanyRelation[]>(`/invoices-package/package-company-relations?${queryParams}`);
+    return response.data || [];
+  } catch (error) {
+    console.error('Error obteniendo relaciones paquete-sucursal/marca:', error);
     return [];
   }
 };

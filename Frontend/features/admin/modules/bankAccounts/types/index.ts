@@ -4,6 +4,7 @@ export interface BankAccount {
   bank: { _id: string; name: string };
   accountNumber: string;
   clabe: string;
+  claveBanxico?: string;
   branch: string;
   initialBalance: number;
   currentBalance: number;

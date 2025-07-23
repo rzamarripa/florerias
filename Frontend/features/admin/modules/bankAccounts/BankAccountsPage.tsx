@@ -195,31 +195,34 @@ const BankAccountsPage: React.FC = () => {
                         <th className="text-center" style={{ width: "5%" }}>
                           #
                         </th>
-                        <th className="text-center" style={{ width: "20%" }}>
+                        <th className="text-center" style={{ width: "18%" }}>
                           Razón Social
                         </th>
-                        <th className="text-center" style={{ width: "15%" }}>
+                        <th className="text-center" style={{ width: "12%" }}>
                           Banco
                         </th>
-                        <th className="text-center" style={{ width: "15%" }}>
+                        <th className="text-center" style={{ width: "12%" }}>
                           Número de cuenta
                         </th>
-                        <th className="text-center" style={{ width: "15%" }}>
+                        <th className="text-center" style={{ width: "12%" }}>
                           Clabe
                         </th>
                         <th className="text-center" style={{ width: "10%" }}>
+                          Clave Banxico
+                        </th>
+                        <th className="text-center" style={{ width: "8%" }}>
                           Saldo Inicial
                         </th>
-                        <th className="text-center" style={{ width: "10%" }}>
+                        <th className="text-center" style={{ width: "8%" }}>
                           Saldo Actual
                         </th>
-                        <th className="text-center" style={{ width: "15%" }}>
+                        <th className="text-center" style={{ width: "10%" }}>
                           Sucursal
                         </th>
-                        <th className="text-center" style={{ width: "10%" }}>
+                        <th className="text-center" style={{ width: "8%" }}>
                           Estado
                         </th>
-                        <th className="text-center" style={{ width: "10%" }}>
+                        <th className="text-center" style={{ width: "8%" }}>
                           Acciones
                         </th>
                       </tr>
@@ -242,6 +245,7 @@ const BankAccountsPage: React.FC = () => {
                             {account.accountNumber}
                           </td>
                           <td className="text-center">{account.clabe}</td>
+                          <td className="text-center">{account.claveBanxico || "N/A"}</td>
                           <td className="text-center">
                             {new Intl.NumberFormat("es-MX", {
                               style: "currency",
@@ -257,11 +261,10 @@ const BankAccountsPage: React.FC = () => {
                           <td className="text-center">{account.branch}</td>
                           <td className="text-center">
                             <span
-                              className={`badge fs-6 ${
-                                account.isActive
-                                  ? "bg-success bg-opacity-10 text-success"
-                                  : "bg-danger bg-opacity-10 text-danger"
-                              }`}
+                              className={`badge fs-6 ${account.isActive
+                                ? "bg-success bg-opacity-10 text-success"
+                                : "bg-danger bg-opacity-10 text-danger"
+                                }`}
                             >
                               {account.isActive ? "Activo" : "Inactivo"}
                             </span>

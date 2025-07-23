@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Button, Card, CardBody, CardHeader, CardTitle, Col, Nav, NavItem, NavLink, ProgressBar, Row } from 'react-bootstrap'
 import { TbDownload, TbHome, TbSend2, TbSettings, TbUserCircle } from 'react-icons/tb'
 
 import { ordersStatsData } from '../utils/data'
-import { VisibilityBranch, VisibilityBrand, InvoicesPackage } from '../services/dashboardPagosService'
+import { VisibilityBranch, VisibilityBrand, InvoicesPackage, PackageCompanyRelation, getPackageCompanyRelations } from '../services/dashboardPagosService'
 
 const OrdersChart = dynamic(() => import('../utils/chart').then((mod) => mod.OrdersChart))
 
@@ -22,17 +22,39 @@ interface OrdersStaticsProps {
   branchBudgetData?: any[]; // Datos de presupuestos por sucursal
 }
 
-const OrdersStatics: React.FC<OrdersStaticsProps> = ({ 
-  visibilityStructure, 
-  selectedCompany, 
+const OrdersStatics: React.FC<OrdersStaticsProps> = ({
+  visibilityStructure,
+  selectedCompany,
   totalCompanyBudget,
   paquetes = [],
   selectedYear,
   selectedMonth,
   branchBudgetData
 }) => {
+  const [packageRelations, setPackageRelations] = useState<PackageCompanyRelation[]>([]);
 
+  // Obtener las relaciones paquete-sucursal/marca
+  const loadPackageRelations = useCallback(async () => {
+    if (!paquetes || paquetes.length === 0) {
+      setPackageRelations([]);
+      return;
+    }
 
+    try {
+      const packageIds = paquetes.map(paquete => paquete._id);
+      const relations = await getPackageCompanyRelations(packageIds);
+      console.log('relations', relations);
+      setPackageRelations(relations);
+    } catch (error) {
+      console.error('Error cargando relaciones paquete-sucursal/marca:', error);
+      setPackageRelations([]);
+    }
+  }, [paquetes]);
+
+  // Cargar relaciones cuando cambien los paquetes
+  useEffect(() => {
+    loadPackageRelations();
+  }, [loadPackageRelations]);
 
   // Filtrar sucursales y marcas basado en la compañía seleccionada
   const filteredBranches = visibilityStructure?.branches.filter(
@@ -51,7 +73,7 @@ const OrdersStatics: React.FC<OrdersStaticsProps> = ({
             <div className="flex-grow-1 d-flex align-items-center gap-3">
               <CardTitle as="h4" className="mb-0">Estadisticas Totales</CardTitle>
             </div>
-            
+
             <Nav variant="tabs" defaultActiveKey="monthly-ct" className="card-header-tabs nav-bordered">
               <NavItem>
                 <NavLink eventKey="today-ct">
@@ -85,15 +107,16 @@ const OrdersStatics: React.FC<OrdersStaticsProps> = ({
                   </div>
                 )}
 
-                <OrdersChart 
-                  paquetes={paquetes} 
+                <OrdersChart
+                  paquetes={paquetes}
                   selectedCompany={selectedCompany}
-                  totalCompanyBudget={totalCompanyBudget} 
-                  selectedYear={selectedYear} 
+                  totalCompanyBudget={totalCompanyBudget}
+                  selectedYear={selectedYear}
                   selectedMonth={selectedMonth}
                   filteredBranches={filteredBranches}
                   filteredBrands={filteredBrands}
                   branchBudgetData={branchBudgetData}
+                  packageRelations={packageRelations}
                 />
 
               </Col>
@@ -139,7 +162,7 @@ const OrdersStatics: React.FC<OrdersStaticsProps> = ({
                           <p className="text-muted mb-2">
                             <span>{title}</span>
                           </p>
-                          <ProgressBar now={progress} variant="secondary" style={{ height: '0.25rem' }}  aria-label={title} />
+                          <ProgressBar now={progress} variant="secondary" style={{ height: '0.25rem' }} aria-label={title} />
                         </CardBody>
                       </Card>
                     </Col>

@@ -170,6 +170,8 @@ const ProvidersPage: React.FC = () => {
                       <th>RFC</th>
                       <th>Razón social</th>
                       <th>Contacto</th>
+                      <th>Información Bancaria</th>
+                      <th>Sucursal</th>
                       <th className="text-center">Estatus</th>
                       <th className="text-center">Acciones</th>
                     </tr>
@@ -193,6 +195,17 @@ const ProvidersPage: React.FC = () => {
                             <small className="text-muted">{provider.phone}</small>
                             <small className="text-muted">{provider.email}</small>
                           </div>
+                        </td>
+                        <td>
+                          <div className="d-flex flex-column">
+                            <span className="fw-medium">{provider.bank?.name}</span>
+                            <small className="text-muted">Cuenta: {provider.accountNumber}</small>
+                            <small className="text-muted">CLABE: {provider.clabe}</small>
+                            <small className="text-muted">Ref: {provider.referencia}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="fw-medium">{provider.sucursal?.name}</span>
                         </td>
                         <td className="text-center">
                           <span

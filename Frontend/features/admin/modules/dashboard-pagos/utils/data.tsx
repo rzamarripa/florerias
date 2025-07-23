@@ -321,8 +321,8 @@ export const getEchartOptions = (): EChartsOption => {
               index === 0
                 ? getColor("primary")
                 : index === 1
-                ? getColor("secondary")
-                : "#bbcae14d",
+                  ? getColor("secondary")
+                  : "#bbcae14d",
           },
         })),
       },
@@ -338,9 +338,10 @@ export const getOrdersStatsOptions = (
   selectedMonth?: number,
   filteredBranches?: any[],
   filteredBrands?: any[],
-  branchBudgetData?: any[]
+  branchBudgetData?: any[],
+  packageRelations?: any[]
 ): EChartsOption => {
-  
+
   if (!branchBudgetData || branchBudgetData.length === 0) {
     return {
       xAxis: { data: [] },
@@ -350,13 +351,51 @@ export const getOrdersStatsOptions = (
   }
 
   // Crear etiquetas que incluyan sucursal y marca
-  const category: string[] = branchBudgetData.map((item) => 
+  const category: string[] = branchBudgetData.map((item) =>
     `${item.branchId.name} - ${item.brandId.name}`
   );
   const processingOrders: number[] = branchBudgetData.map((item) => item.assignedAmount);
 
+  // Calcular el gastado por sucursal-marca
+  const gastadoPorSucursal: number[] = branchBudgetData.map((budgetItem) => {
+    const branchId = budgetItem.branchId._id;
+    const brandId = budgetItem.brandId._id;
+
+    console.log('Buscando para sucursal-marca:', budgetItem.branchId.name, '-', budgetItem.brandId.name);
+    console.log('branchId:', branchId, 'brandId:', brandId);
+
+    // Filtrar paquetes que correspondan a esta sucursal-marca
+    // Corregir: las relaciones tienen branchId y brandId como objetos, no strings
+    const paquetesRelacionados = packageRelations?.filter(relation =>
+      relation.branchId?._id === branchId && relation.brandId?._id === brandId
+    ) || [];
+
+    console.log('Paquetes relacionados encontrados:', paquetesRelacionados.length);
+
+    // Obtener los IDs de los paquetes relacionados
+    const packageIds = paquetesRelacionados.map(relation => relation.packageId);
+
+    console.log('Package IDs:', packageIds);
+
+    // Filtrar paquetes por estatus "Borrador" o "Enviado" y sumar totalImporteAPagar
+    const paquetesFiltrados = packages.filter(paquete =>
+      packageIds.includes(paquete._id) &&
+      (paquete.estatus === 'Borrador' || paquete.estatus === 'Enviado')
+    );
+
+    console.log('Paquetes filtrados por estatus:', paquetesFiltrados.length);
+    console.log('Paquetes filtrados:', paquetesFiltrados.map(p => ({ id: p._id, estatus: p.estatus, totalImporteAPagar: p.totalImporteAPagar })));
+
+    const gastado = paquetesFiltrados.reduce((sum, paquete) => sum + (paquete.totalImporteAPagar || 0), 0);
+
+    console.log('Total gastado para esta sucursal-marca:', gastado);
+
+    return gastado;
+  });
+
   // Calcular el presupuesto total de todas las sucursales para el eje Y
   const totalBudget = branchBudgetData.reduce((sum, item) => sum + item.assignedAmount, 0);
+  const maxGastado = Math.max(...gastadoPorSucursal, totalBudget);
 
   return {
     tooltip: {
@@ -373,18 +412,22 @@ export const getOrdersStatsOptions = (
       shadowOffsetX: 0,
       shadowOffsetY: 1,
       formatter: function (params: any) {
-        const item = params[0];
-        const branchName = item.name || 'Sucursal - Marca';
-        const percentage = totalBudget ? ((item.value / totalBudget) * 100).toFixed(1) : 0;
-        const budgetData = branchBudgetData[item.dataIndex];
+        const presupuestoItem = params[0];
+        const gastadoItem = params[1];
+        const branchName = presupuestoItem.name || 'Sucursal - Marca';
+        const presupuesto = presupuestoItem.value;
+        const gastado = gastadoItem ? gastadoItem.value : 0;
+        const percentage = totalBudget ? ((presupuesto / totalBudget) * 100).toFixed(1) : 0;
+        const budgetData = branchBudgetData[presupuestoItem.dataIndex];
         const hasRoutes = budgetData?.hasRoutes ? ' (Con Rutas)' : ' (Sin Rutas)';
-        
+
         return `<div class="mb-1 text-body">${branchName}${hasRoutes}</div>` +
-          `${item.marker} Presupuesto: <span class="fw-bold">$${item.value.toLocaleString()}</span> (${percentage}% del total)`;
+          `${presupuestoItem.marker} Presupuesto: <span class="fw-bold">$${presupuesto.toLocaleString()}</span> (${percentage}% del total)<br/>` +
+          `${gastadoItem ? gastadoItem.marker + ' Gastado: <span class="fw-bold">$' + gastado.toLocaleString() + '</span>' : ''}`;
       }
     },
     legend: {
-      data: ['Presupuesto por Sucursal-Marca'],
+      data: ['Presupuesto por Sucursal-Marca', 'Gastado por Sucursal-Marca'],
       top: 15,
       textStyle: {
         color: getColor("body-color"),
@@ -425,11 +468,11 @@ export const getOrdersStatsOptions = (
       axisLabel: {
         show: true,
         color: '#333333',
-        formatter: function(value: number) {
+        formatter: function (value: number) {
           return `$${(value / 1000).toFixed(0)}K`;
         }
       },
-      max: totalBudget, // Usar el presupuesto total de todas las sucursales
+      max: maxGastado, // Usar el máximo entre presupuesto y gastado
       splitLine: {
         show: false,
         lineStyle: {
@@ -455,6 +498,16 @@ export const getOrdersStatsOptions = (
           color: getColor("secondary"),
         },
         data: processingOrders
+      },
+      {
+        name: 'Gastado por Sucursal-Marca',
+        type: 'bar',
+        barWidth: 14,
+        itemStyle: {
+          borderRadius: [5, 5, 0, 0],
+          color: '#6c757d', // Color gris
+        },
+        data: gastadoPorSucursal
       }
     ]
   };

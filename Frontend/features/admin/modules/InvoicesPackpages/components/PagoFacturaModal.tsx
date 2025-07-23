@@ -3,6 +3,7 @@ import { Modal, Button, Form } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import { expenseConceptService } from '../../expenseConcepts/services/expenseConcepts';
+import { InfoIcon } from 'lucide-react';
 
 interface ExpenseConcept {
     _id: string;
@@ -56,7 +57,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
         try {
             setLoadingConceptos(true);
             const response = await expenseConceptService.getByDepartment(user.departmentId);
-            
+
             if (response.data && Array.isArray(response.data)) {
                 setConceptosGasto(response.data);
             } else {
@@ -126,7 +127,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
             <Modal.Body className="text-center p-4">
                 <div className="mb-3 d-flex justify-content-center">
                     <div className="border border-info rounded-circle d-flex align-items-center justify-content-center" style={{ width: 48, height: 48 }}>
-                        <i className="bi bi-info-lg text-info fs-2"></i>
+                        <InfoIcon className="text-info" size={24} />
                     </div>
                 </div>
                 <h4 className="fw-bold mb-2">
@@ -179,15 +180,15 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
                     />
                 </Form.Group>
                 <div className="d-flex justify-content-center gap-2 mt-3">
+                    <Button variant="light" onClick={handleClose} disabled={loading}>
+                        Cancel
+                    </Button>
                     <Button
-                        className="bg-primary border-0 px-4"
+                        variant="primary"
                         onClick={handleOk}
                         disabled={loading}
                     >
-                        {loading ? 'Procesando...' : 'OK'}
-                    </Button>
-                    <Button variant="secondary" onClick={handleClose} disabled={loading}>
-                        Cancel
+                        {loading ? 'Procesando...' : 'Guardar'}
                     </Button>
                 </div>
             </Modal.Body>

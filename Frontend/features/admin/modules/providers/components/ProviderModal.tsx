@@ -5,11 +5,14 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { getModalButtonStyles } from "../../../../../utils/modalButtonStyles";
 import { providerSchema, ProviderFormData } from "../schemas/providerSchema";
-import { Provider, Location } from "../types";
+import { Provider, Location, BankAccount } from "../types";
 import {
   getAllCountries,
   getStatesByCountry,
   getMunicipalitiesByState,
+  getAllBanks,
+  getAllBranches,
+  getBankAccountsByBank,
   createProvider,
   updateProvider,
 } from "../services/providers";
@@ -38,9 +41,15 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
   const [countries, setCountries] = useState<Location[]>([]);
   const [states, setStates] = useState<Location[]>([]);
   const [municipalities, setMunicipalities] = useState<Location[]>([]);
+  const [banks, setBanks] = useState<Location[]>([]);
+  const [branches, setBranches] = useState<Location[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(false);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
 
   const {
     control,
@@ -63,6 +72,12 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
       phone: "",
       email: "",
       description: "",
+      bank: "",
+      bankAccountId: "",
+      accountNumber: "",
+      clabe: "",
+      referencia: "",
+      sucursal: "",
       isActive: true,
     },
     mode: "onChange",
@@ -70,10 +85,15 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
 
   const countrySelected = watch("countryId");
   const stateSelected = watch("stateId");
+  const bankSelected = watch("bank");
 
   useEffect(() => {
     if (showModal) {
       setLoadingCountries(true);
+      setLoadingBanks(true);
+      setLoadingBranches(true);
+
+      // Cargar países
       getAllCountries()
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
@@ -81,6 +101,24 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
           }
         })
         .finally(() => setLoadingCountries(false));
+
+      // Cargar bancos
+      getAllBanks()
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setBanks(res.data);
+          }
+        })
+        .finally(() => setLoadingBanks(false));
+
+      // Cargar sucursales
+      getAllBranches()
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setBranches(res.data);
+          }
+        })
+        .finally(() => setLoadingBranches(false));
 
       if (isEditing && editingProvider) {
         setValue("commercialName", editingProvider.commercialName);
@@ -94,6 +132,11 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
         setValue("phone", editingProvider.phone);
         setValue("email", editingProvider.email);
         setValue("description", editingProvider.description || "");
+        setValue("bank", editingProvider.bank._id);
+        setValue("accountNumber", editingProvider.accountNumber);
+        setValue("clabe", editingProvider.clabe);
+        setValue("referencia", editingProvider.referencia);
+        setValue("sucursal", editingProvider.sucursal._id);
         setValue("isActive", editingProvider.isActive);
 
         // Cargar estados del país seleccionado
@@ -115,6 +158,16 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
             }
           })
           .finally(() => setLoadingMunicipalities(false));
+
+        // Cargar cuentas bancarias del banco seleccionado
+        setLoadingBankAccounts(true);
+        getBankAccountsByBank(editingProvider.bank._id)
+          .then((res) => {
+            if (res.success && Array.isArray(res.data)) {
+              setBankAccounts(res.data);
+            }
+          })
+          .finally(() => setLoadingBankAccounts(false));
       } else {
         reset();
       }
@@ -153,6 +206,24 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
         .finally(() => setLoadingMunicipalities(false));
     }
   }, [stateSelected, setValue, isEditing]);
+
+  useEffect(() => {
+    if (bankSelected) {
+      setLoadingBankAccounts(true);
+      setBankAccounts([]);
+      setValue("bankAccountId", "");
+      setValue("accountNumber", "");
+      setValue("clabe", "");
+
+      getBankAccountsByBank(bankSelected)
+        .then((res) => {
+          if (res.success && Array.isArray(res.data)) {
+            setBankAccounts(res.data);
+          }
+        })
+        .finally(() => setLoadingBankAccounts(false));
+    }
+  }, [bankSelected, setValue]);
 
   const handleOpenModal = () => {
     setShowModal(true);
@@ -263,7 +334,7 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                   )}
                 />
               </div>
-              <div className="col-md-12">
+              <div className="col-md-6">
                 <Controller
                   name="contactName"
                   control={control}
@@ -401,6 +472,164 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                   )}
                 />
               </div>
+
+              {/* Nuevos campos para información bancaria */}
+              <div className="col-12">
+                <h6 className="text-primary mb-3">Información Bancaria</h6>
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="bank"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Banco *</Form.Label>
+                      <Form.Select
+                        {...field}
+                        isInvalid={!!errors.bank}
+                        disabled={loadingBanks}
+                      >
+                        <option value="">Seleccionar banco</option>
+                        {banks.map((bank) => (
+                          <option key={bank._id} value={bank._id}>
+                            {bank.name}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      <Form.Control.Feedback type="invalid">
+                        {errors.bank?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="bankAccountId"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Cuenta bancaria *</Form.Label>
+                      <Form.Select
+                        {...field}
+                        isInvalid={!!errors.bankAccountId}
+                        disabled={loadingBankAccounts || !bankSelected}
+                        onChange={(e) => {
+                          field.onChange(e.target.value);
+                          // Autocompletar accountNumber y clabe cuando se selecciona una cuenta
+                          if (e.target.value) {
+                            const selectedAccount = bankAccounts.find(acc => acc._id === e.target.value);
+                            if (selectedAccount) {
+                              setValue("accountNumber", selectedAccount.accountNumber);
+                              setValue("clabe", selectedAccount.clabe);
+                            }
+                          } else {
+                            setValue("accountNumber", "");
+                            setValue("clabe", "");
+                          }
+                        }}
+                      >
+                        <option value="">Seleccionar cuenta</option>
+                        {bankAccounts.map((account) => (
+                          <option key={account._id} value={account._id}>
+                            {account.accountNumber} - CLABE: {account.clabe}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      <Form.Control.Feedback type="invalid">
+                        {errors.bankAccountId?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="accountNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Número de cuenta *</Form.Label>
+                      <Form.Control
+                        {...field}
+                        isInvalid={!!errors.accountNumber}
+                        placeholder="Se autocompletará al seleccionar cuenta"
+                        readOnly
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.accountNumber?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="clabe"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>CLABE *</Form.Label>
+                      <Form.Control
+                        {...field}
+                        isInvalid={!!errors.clabe}
+                        placeholder="Se autocompletará al seleccionar cuenta"
+                        readOnly
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.clabe?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="referencia"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Referencia bancaria *</Form.Label>
+                      <Form.Control
+                        {...field}
+                        isInvalid={!!errors.referencia}
+                        placeholder="Ej: REF123456"
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        {errors.referencia?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+              <div className="col-md-6">
+                <Controller
+                  name="sucursal"
+                  control={control}
+                  render={({ field }) => (
+                    <Form.Group>
+                      <Form.Label>Sucursal *</Form.Label>
+                      <Form.Select
+                        {...field}
+                        isInvalid={!!errors.sucursal}
+                        disabled={loadingBranches}
+                      >
+                        <option value="">Seleccionar sucursal</option>
+                        {branches.map((branch) => (
+                          <option key={branch._id} value={branch._id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      <Form.Control.Feedback type="invalid">
+                        {errors.sucursal?.message}
+                      </Form.Control.Feedback>
+                    </Form.Group>
+                  )}
+                />
+              </div>
+
               <div className="col-12">
                 <Controller
                   name="description"

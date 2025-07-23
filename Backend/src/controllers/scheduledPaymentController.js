@@ -1,5 +1,6 @@
 import { ScheduledPayment } from "../models/ScheduledPayment.js";
 import { InvoicesPackage } from "../models/InvoicesPackpage.js";
+import timelineService from "../services/timelineService.js";
 
 // POST - Programar un pago
 export const schedulePayment = async (req, res) => {
@@ -55,6 +56,13 @@ export const schedulePayment = async (req, res) => {
     // Actualizar el estatus del paquete a "Programado"
     invoicePackage.estatus = 'Programado';
     await invoicePackage.save();
+
+    // Registrar el cambio de estatus en el timeline
+    await timelineService.registerStatusChange(
+      userId,           // userId del usuario autenticado
+      packageId,        // packageId
+      'programado'      // nuevo status
+    );
 
     res.status(201).json({
       success: true,

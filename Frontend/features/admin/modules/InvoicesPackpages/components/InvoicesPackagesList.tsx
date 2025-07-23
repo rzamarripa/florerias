@@ -18,11 +18,13 @@ import { useRouter } from 'next/navigation';
 import {
     getInvoicesPackagesByUsuario,
     InvoicesPackage,
-    deleteInvoicesPackage
+    deleteInvoicesPackage,
+    requestFunding
 } from '../services/invoicesPackpage';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import PackpageActions from './PackpageActions';
 import EnviarPagoModal from './EnviarPagoModal';
+import FundingRequestModal from './FundingRequestModal';
 import { formatDate } from 'date-fns';
 
 interface InvoicesPackagesListProps {
@@ -39,27 +41,21 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
     const [showEnviarPagoModal, setShowEnviarPagoModal] = useState(false);
     const [paqueteExistenteSeleccionado, setPaqueteExistenteSeleccionado] = useState<InvoicesPackage | null>(null);
     const [facturasProcesadas, setFacturasProcesadas] = useState<any[]>([]);
+    const [showFundingModal, setShowFundingModal] = useState(false);
     const { user } = useUserSessionStore();
     const router = useRouter();
 
     const loadPackages = () => {
         if (show && user?._id) {
             setLoading(true);
-            
-            // Log temporal para debuggear el departamento del usuario
-            console.log("=== DEBUG USUARIO ===");
-            console.log("Usuario completo:", user);
-            console.log("Department ID:", user?.departmentId);
-            console.log("Department name:", user?.department);
-            console.log("=========================");
-            
+
             // La lógica de filtrado se maneja en el backend:
             // - Si el departamento del usuario es "Tesorería": muestra paquetes según la visibilidad del usuario (RoleVisibility)
             // - Si el departamento es diferente a "Tesorería": muestra solo paquetes del departamento del usuario
             getInvoicesPackagesByUsuario(user._id)
                 .then(paquetes => {
                     let paquetesFiltrados = [];
-                    
+
                     if (Array.isArray(paquetes?.data)) {
                         paquetesFiltrados = paquetes.data;
                     } else if (Array.isArray(paquetes)) {
@@ -111,6 +107,8 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
         setShowEnviarPagoModal(true);
     };
 
+
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'Borrador':
@@ -125,6 +123,12 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                 return <span className="badge bg-primary bg-opacity-10 text-primary fw-bold py-2 px-3">Pagada</span>;
             case 'Cancelado':
                 return <span className="badge bg-danger bg-opacity-10 text-danger fw-bold py-2 px-3">Cancelado</span>;
+            case 'Programado':
+                return <span className="badge bg-warning bg-opacity-10 text-warning fw-bold py-2 px-3">Programado</span>;
+            case 'PorFondear':
+                return <span className="badge bg-dark bg-opacity-10 text-dark fw-bold py-2 px-3">Por Fondear</span>;
+            case 'Fondeado':
+                return <span className="badge bg-success bg-opacity-10 text-success fw-bold py-2 px-3">Fondeado</span>;
             default:
                 return <span className="badge bg-light text-dark fw-bold py-2 px-3">{status}</span>;
         }
@@ -194,6 +198,14 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                             </Form.Group>
                         </Col>
                         <Col md={6} className="text-end">
+                            <Button
+                                variant="secondary"
+                                className="me-2"
+                                onClick={() => setShowFundingModal(true)}
+                            >
+                                <i className="bi bi-cash-coin me-2"></i>
+                                Generar Reporte
+                            </Button>
                             <Button
                                 variant="primary"
                                 onClick={() => router.push('/modulos/paquetes-facturas')}
@@ -344,6 +356,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                                             <td>
                                                 <PackpageActions
                                                     packpageId={pkg._id}
+                                                    packageStatus={pkg.estatus}
                                                     onEdit={() => handleEdit(pkg)}
                                                     onDelete={() => { setSelectedPackpageId(pkg._id); setShowDeleteModal(true); }}
                                                     loadingDelete={deletingId === pkg._id}
@@ -405,6 +418,15 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({ show = true
                     setPaqueteExistenteSeleccionado(null);
                     setFacturasProcesadas([]);
                     loadPackages();
+                }}
+            />
+
+            <FundingRequestModal
+                show={showFundingModal}
+                onClose={() => setShowFundingModal(false)}
+                onSuccess={() => {
+                    setShowFundingModal(false);
+                    loadPackages(); // Recargar la lista después del fondeo
                 }}
             />
         </Container>

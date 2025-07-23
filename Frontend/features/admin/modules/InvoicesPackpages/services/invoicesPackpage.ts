@@ -29,7 +29,7 @@ export interface InvoicesPackage {
     _id: string;
     facturas: ImportedInvoice[];
     packageCompanyId?: string;
-    estatus: string;
+    estatus: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Pagado' | 'Cancelado' | 'Programado' | 'PorFondear' | 'Generado';
     usuario_id: string;
     fechaCreacion: string;
     departamento_id: string;
@@ -354,7 +354,12 @@ export async function markInvoiceAsPartiallyPaid(invoiceId: string, descripcion:
 
 // Servicio para obtener paquetes por usuario (con filtrado por departamento y visibilidad)
 export const getInvoicesPackagesByUsuario = async (usuario_id: string): Promise<any> => {
-    const response = await apiCall<any>(`/invoices-package/by-usuario?usuario_id=${usuario_id}`);
+    const response = await apiCall<any>(`/invoices-package/by-usuario?usuario_id=${usuario_id}`, {
+        headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        }
+    });
     return response;
 };
 
@@ -534,4 +539,417 @@ export const getPackageCompanyInfo = async (packageId: string): Promise<PackageC
         console.error('Error al obtener información de compañía del paquete:', error);
         return null;
     }
+};
+
+// Servicio para solicitar fondeo
+export const requestFunding = async (companyId: string, bankAccountId: string, packageIds?: string[]): Promise<{ success: boolean; message: string; data?: any }> => {
+    try {
+        const response = await apiCall<any>(`/invoices-package/request-funding`, {
+            method: "POST",
+            body: JSON.stringify({ companyId, bankAccountId, packageIds }),
+        });
+        return {
+            success: response.success,
+            message: response.message,
+            data: response.data
+        };
+    } catch (error: any) {
+        console.error('Error al solicitar fondeo:', error);
+        throw new Error(error?.message || 'Error al solicitar el fondeo');
+    }
+};
+
+// Servicio para obtener paquetes por fondear (para preview)
+export const getPackagesToFund = async (companyId: string, bankAccountId: string): Promise<{ packages: any[], total: number }> => {
+    try {
+        const response = await apiCall<any>(`/invoices-package/packages-to-fund?companyId=${companyId}&bankAccountId=${bankAccountId}`);
+        return response.data || { packages: [], total: 0 };
+    } catch (error: any) {
+        console.error('Error al obtener paquetes por fondear:', error);
+        return { packages: [], total: 0 };
+    }
+};
+
+// Servicio para generar reporte (cambiar estatus a PorFondear)
+export const generatePackageReport = async (packageId: string): Promise<{ success: boolean; message: string; data?: InvoicesPackage }> => {
+    try {
+        const response = await apiCall<InvoicesPackage>(`/invoices-package/${packageId}/generate-report`, {
+            method: "POST",
+        });
+        return {
+            success: response.success,
+            message: response.message,
+            data: response.data
+        };
+    } catch (error: any) {
+        console.error('Error al generar reporte del paquete:', error);
+        throw new Error(error?.message || 'Error al generar el reporte del paquete');
+    }
+};
+
+// Servicio para actualizar múltiples paquetes a estatus "Generado"
+export const updatePackagesToGenerated = async (packageIds: string[]): Promise<{ success: boolean; message: string; data?: any }> => {
+    try {
+        const response = await apiCall<any>('/invoices-package/update-to-generated', {
+            method: "POST",
+            body: JSON.stringify({ packageIds }),
+        });
+        return {
+            success: response.success,
+            message: response.message,
+            data: response.data
+        };
+    } catch (error: any) {
+        console.error('Error al actualizar paquetes a estatus "Generado":', error);
+        throw new Error(error?.message || 'Error al actualizar el estatus de los paquetes');
+    }
+};
+
+// Interfaz para la información del usuario
+export interface UserInfo {
+    _id: string;
+    username: string;
+    email: string;
+    phone: string;
+    profile: {
+        name: string;
+        lastName: string;
+        fullName: string;
+        path?: string;
+        estatus: boolean;
+        image?: {
+            data: string;
+            contentType: string;
+        };
+    };
+    departmentId: string;
+    department?: string;
+    role?: {
+        _id: string;
+        name: string;
+        description?: string;
+    };
+    createdAt: string;
+    updatedAt?: string;
+}
+
+// Servicio para obtener información de un usuario por ID
+export const getUserById = async (userId: string): Promise<UserInfo | null> => {
+    try {
+        const response = await apiCall<UserInfo>(`/users/${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error al obtener información del usuario:', error);
+        return null;
+    }
+};
+
+export interface Provider {
+    _id: string;
+    commercialName: string;
+    businessName: string;
+    rfc: string;
+    contactName: string;
+    bank: {
+        _id: string;
+        name: string;
+    };
+    accountNumber: string;
+    clabe: string;
+    referencia: string;
+    sucursal: {
+        _id: string;
+        name: string;
+    };
+}
+
+export const getProvidersByRfcs = async (rfcs: string[]): Promise<Provider[]> => {
+    try {
+        const rfcsString = rfcs.join(',');
+        const response = await apiCall<Provider[]>(`/providers/by-rfcs?rfcs=${rfcsString}`);
+        return response.data || [];
+    } catch (error) {
+        console.error('Error al obtener proveedores por RFCs:', error);
+        return [];
+    }
+};
+
+export interface ReportRow {
+    cuentaCargo: string;
+    cuentaAbono: string;
+    bancoReceptor: string;
+    beneficiario: string;
+    sucursal: string;
+    importe: number;
+    plazaBanxico: string;
+    concepto: string;
+    estadoCuentaFiscal: string;
+    rfc: string;
+    iva: number;
+    referenciaOrdenante: string;
+    formaAplicacion: string;
+    fechaAplicacion: string;
+    emailBeneficiario: string;
+}
+
+export const generateExcelReport = async (data: ReportRow[], fileName: string = 'reporte_pagos.xlsx') => {
+    const ExcelJS = require('exceljs');
+
+    // Crear el workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Reporte de Pagos');
+
+    // Configurar anchos de columna - Auto-ajuste al contenido
+    worksheet.columns = [
+        { header: '', key: 'col1', width: 18 }, // CUENTA DE CARGO
+        { header: '', key: 'col2', width: 18 }, // CUENTA DE ABONO
+        { header: '', key: 'col3', width: 25 }, // BANCO RECEPTOR
+        { header: '', key: 'col4', width: 35 }, // BENEFICIARIO
+        { header: '', key: 'col5', width: 25 }, // SUCURSAL
+        { header: '', key: 'col6', width: 15 }, // IMPORTE
+        { header: '', key: 'col7', width: 20 }, // PLAZA BANXICO
+        { header: '', key: 'col8', width: 30 }, // CONCEPTO
+        { header: '', key: 'col9', width: 25 }, // ESTADO DE CUENTA FISCAL
+        { header: '', key: 'col10', width: 18 }, // RFC
+        { header: '', key: 'col11', width: 12 }, // IVA
+        { header: '', key: 'col12', width: 25 }, // REFERENCIA ORDENANTE
+        { header: '', key: 'col13', width: 25 }, // FORMA DE APLICACIÓN
+        { header: '', key: 'col14', width: 18 }, // FECHA DE APLICACIÓN
+        { header: '', key: 'col15', width: 30 }  // EMAIL BENEFICIARIO
+    ];
+
+    // Fila 1: OBLIGATORIO - Solo en columna A con borde
+    const row1 = worksheet.addRow(['OBLIGATORIO', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    row1.eachCell((cell: any, colNumber: any) => {
+        if (colNumber === 1) { // Solo columna A
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFF0000' } // Rojo
+            };
+            cell.font = {
+                name: 'Arial',
+                size: 10,
+                color: { argb: 'FFFFFFFF' }, // Blanco
+                bold: true
+            };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
+        }
+    });
+
+    // Fila 2: OPCIONAL - Solo en columna A con borde
+    const row2 = worksheet.addRow(['OPCIONAL', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    row2.eachCell((cell: any, colNumber: any) => {
+        if (colNumber === 1) { // Solo columna A
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFFFFF' } // Blanco
+            };
+            cell.font = {
+                name: 'Arial',
+                size: 10,
+                color: { argb: 'FF000000' }, // Negro
+                bold: true
+            };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
+        }
+    });
+
+    // Fila 3: Tipo de transferencia - Solo en celda D3 con fondo gris
+    const row3 = worksheet.addRow(['', '', '', 'Interbancaria con comprobante fiscal (con email)', '', '', '', '', '', '', '', '', '', '', '']);
+    row3.eachCell((cell: any, colNumber: any) => {
+        if (colNumber === 4) { // Solo columna D
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFD3D3D3' } // Gris claro
+            };
+            cell.font = {
+                name: 'Arial',
+                size: 10,
+                color: { argb: 'FF000000' } // Negro
+            };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
+        }
+    });
+
+    // Fila 4: Banco (Santander) - En columna D con fondo rojo en C4:E4
+    const row4 = worksheet.addRow(['', '', '', 'Santander', '', '', '', '', '', '', '', '', '', '', '']);
+    row4.eachCell((cell: any, colNumber: any) => {
+        if (colNumber >= 3 && colNumber <= 5) { // Columnas C, D, E
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFF0000' } // Rojo
+            };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
+
+            if (colNumber === 4) { // Solo la columna D tiene el texto
+                cell.font = {
+                    name: 'Arial',
+                    size: 12,
+                    color: { argb: 'FFFFFFFF' }, // Blanco
+                    bold: true
+                };
+                cell.alignment = {
+                    horizontal: 'center',
+                    vertical: 'middle'
+                };
+            }
+        }
+    });
+
+    // Fila 5: Enlaces - En columnas C y E con fondo rojo
+    const row5 = worksheet.addRow(['', '', 'Anexo-Catalogo de Bancos', '', 'CATÁLOGO DE CÓDIGOS DE PLAZAS', '', '', '', '', '', '', '', '', '', '']);
+    row5.eachCell((cell: any, colNumber: any) => {
+        if (colNumber >= 3 && colNumber <= 5) { // Columnas C, D, E
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFF0000' } // Rojo
+            };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
+
+            if (colNumber === 3 || colNumber === 5) { // Columnas C y E tienen los enlaces
+                cell.font = {
+                    name: 'Arial',
+                    size: 10,
+                    color: { argb: 'FF0000FF' }, // Azul
+                    underline: true
+                };
+            }
+        }
+    });
+
+    // Fila 6: Vacía - Sin bordes
+    const row6 = worksheet.addRow(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+
+    // Fila 7: Encabezados de la tabla
+    const headers = ['CUENTA DE CARGO', 'CUENTA DE ABONO', 'BANCO RECEPTOR', 'BENEFICIARIO', 'SUCURSAL', 'IMPORTE', 'PLAZA BANXICO', 'CONCEPTO', 'ESTADO DE CUENTA FISCAL', 'RFC', 'IVA', 'REFERENCIA ORDENANTE', 'FORMA DE APLICACIÓN', 'FECHA DE APLICACIÓN', 'EMAIL BENEFICIARIO'];
+    const headerRow = worksheet.addRow(headers);
+    headerRow.eachCell((cell: any) => {
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFF0000' } // Rojo
+        };
+        cell.font = {
+            name: 'Arial',
+            size: 10,
+            color: { argb: 'FFFFFFFF' }, // Blanco
+            bold: true
+        };
+        cell.alignment = {
+            horizontal: 'center',
+            vertical: 'middle'
+        };
+        cell.border = {
+            top: { style: 'thick', color: { argb: 'FF000000' } },
+            bottom: { style: 'thick', color: { argb: 'FF000000' } },
+            left: { style: 'thick', color: { argb: 'FF000000' } },
+            right: { style: 'thick', color: { argb: 'FF000000' } }
+        };
+    });
+
+    // Agregar datos
+    data.forEach(row => {
+        const dataRow = worksheet.addRow([
+            row.cuentaCargo,
+            row.cuentaAbono,
+            row.bancoReceptor,
+            row.beneficiario,
+            row.sucursal,
+            row.importe,
+            row.plazaBanxico,
+            row.concepto,
+            row.estadoCuentaFiscal,
+            row.rfc,
+            row.iva,
+            row.referenciaOrdenante,
+            row.formaAplicacion,
+            row.fechaAplicacion,
+            row.emailBeneficiario
+        ]);
+
+        dataRow.eachCell((cell: any, colNumber: any) => {
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFFFFF' } // Blanco
+            };
+            cell.font = {
+                name: 'Arial',
+                size: 10,
+                color: { argb: 'FF000000' } // Negro
+            };
+            cell.border = {
+                top: { style: 'thick', color: { argb: 'FF000000' } },
+                bottom: { style: 'thick', color: { argb: 'FF000000' } },
+                left: { style: 'thick', color: { argb: 'FF000000' } },
+                right: { style: 'thick', color: { argb: 'FF000000' } }
+            };
+
+            // Formato de moneda para IMPORTE (columna 6) e IVA (columna 11)
+            if (colNumber === 6 || colNumber === 11) {
+                cell.numFmt = '$#,##0.00';
+            }
+        });
+    });
+
+    // Configurar altos de fila
+    worksheet.getRow(1).height = 20; // OBLIGATORIO
+    worksheet.getRow(2).height = 20; // OPCIONAL
+    worksheet.getRow(3).height = 20; // Tipo de transferencia
+    worksheet.getRow(4).height = 25; // Banco
+    worksheet.getRow(5).height = 20; // Enlaces
+    worksheet.getRow(6).height = 10; // Vacía
+    worksheet.getRow(7).height = 25; // Encabezados
+
+    // Auto-ajustar columnas al contenido
+    worksheet.columns.forEach((column: any) => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const columnLength = cell.value ? cell.value.toString().length : 10;
+            if (columnLength > maxLength) {
+                maxLength = columnLength;
+            }
+        });
+        column.width = Math.min(Math.max(maxLength + 2, 12), 50); // Mínimo 12, máximo 50
+    });
+
+    // Generar y descargar el archivo
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    window.URL.revokeObjectURL(url);
 }; 

@@ -59,6 +59,34 @@ const providerSchema = new Schema({
     trim: true,
     default: "",
   },
+  // Nuevos campos para relación con cuentas bancarias
+  bank: {
+    type: Schema.Types.ObjectId,
+    ref: "cc_bank",
+    required: true,
+  },
+  accountNumber: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  clabe: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  referencia: {
+    type: String,
+    required: true,
+    trim: true,
+    unique: true,
+    uppercase: true,
+  },
+  sucursal: {
+    type: Schema.Types.ObjectId,
+    ref: "cc_branch",
+    required: true,
+  },
   isActive: {
     type: Boolean,
     default: true,
@@ -72,6 +100,9 @@ const providerSchema = new Schema({
     default: Date.now,
   },
 });
+
+// Índice único para el campo referencia
+providerSchema.index({ referencia: 1 }, { unique: true });
 
 providerSchema.pre("save", function (next) {
   this.updatedAt = new Date();

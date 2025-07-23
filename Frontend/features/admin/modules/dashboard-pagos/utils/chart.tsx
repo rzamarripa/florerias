@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import { useIsClient } from "usehooks-ts";
 
 import { getEchartOptions, getOrdersStatsOptions, getWorldMapOptions } from "./data";
-import { InvoicesPackage } from '../services/dashboardPagosService';
+import { InvoicesPackage, PackageCompanyRelation } from '../services/dashboardPagosService';
 
 const EChartClient = dynamic(() => import("@/components/common/EChartClient"), { ssr: false });
 const BaseVectorMap = dynamic(() => import("@/components/common/maps/BaseVectorMap"), { ssr: false });
@@ -32,17 +32,27 @@ interface OrdersChartProps {
   filteredBranches?: any[];
   filteredBrands?: any[];
   branchBudgetData?: any[]; // Datos de presupuestos por sucursal
+  packageRelations?: PackageCompanyRelation[]; // Relaciones paquete-sucursal/marca
 }
 
-export const OrdersChart: React.FC<OrdersChartProps> = ({ paquetes = [], selectedCompany, totalCompanyBudget, selectedYear, selectedMonth, filteredBranches = [], filteredBrands = [], branchBudgetData }) => {
-
+export const OrdersChart: React.FC<OrdersChartProps> = ({
+  paquetes = [],
+  selectedCompany,
+  totalCompanyBudget,
+  selectedYear,
+  selectedMonth,
+  filteredBranches = [],
+  filteredBrands = [],
+  branchBudgetData,
+  packageRelations = []
+}) => {
 
   // Solo renderizar la gráfica si tenemos los datos necesarios
   if (!selectedCompany || !branchBudgetData || branchBudgetData.length === 0) {
     return (
       <div style={{ height: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p className="text-muted">
-          {!selectedCompany 
+          {!selectedCompany
             ? "Selecciona una razón social para ver los presupuestos de las sucursales"
             : "No hay datos de presupuesto disponibles para esta razón social"
           }
@@ -50,11 +60,21 @@ export const OrdersChart: React.FC<OrdersChartProps> = ({ paquetes = [], selecte
       </div>
     );
   }
-  
+
   return (
     <EChartClient
       extensions={[LineChart, TooltipComponent, CanvasRenderer]}
-      getOptions={() => getOrdersStatsOptions(paquetes, selectedCompany, totalCompanyBudget, selectedYear, selectedMonth, filteredBranches, filteredBrands, branchBudgetData)}
+      getOptions={() => getOrdersStatsOptions(
+        paquetes,
+        selectedCompany,
+        totalCompanyBudget,
+        selectedYear,
+        selectedMonth,
+        filteredBranches,
+        filteredBrands,
+        branchBudgetData,
+        packageRelations
+      )}
       style={{ height: 500 }}
     />
   )

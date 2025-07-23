@@ -7,6 +7,7 @@ import { CashPayment } from "../models/CashPayment.js";
 import { Budget } from "../models/Budget.js";
 import { Brand } from "../models/Brand.js";
 import { Company } from "../models/Company.js";
+import timelineService from "../services/timelineService.js";
 
 import mongoose from "mongoose";
 
@@ -248,6 +249,13 @@ export const createInvoicesPackage = async (req, res) => {
             paqueteGuardado.packageCompanyId = packageCompanyId;
             await paqueteGuardado.save();
         }
+
+        // Registrar la creación del paquete en el timeline (estatus borrador)
+        await timelineService.registerStatusChange(
+            req.user._id, // userId del usuario autenticado
+            paqueteGuardado._id, // packageId
+            'borrador'       // estatus inicial
+        );
 
         // Obtener el paquete con las facturas embebidas
         const paqueteCompleto = await InvoicesPackage.findById(paqueteGuardado._id)
@@ -1171,6 +1179,19 @@ export const enviarPaqueteADireccion = async (req, res) => {
         paquete.estatus = 'Enviado';
         await paquete.save();
 
+        // Registrar el cambio de estatus en el timeline
+        console.log('🔄 Registrando cambio de estatus a "enviado":', {
+            userId: req.user._id,
+            packageId: paquete._id,
+            status: 'enviado'
+        });
+
+        await timelineService.registerStatusChange(
+            req.user._id, // userId del usuario autenticado
+            paquete._id,  // packageId
+            'enviado'     // nuevo status
+        );
+
         res.status(200).json({
             success: true,
             message: `Paquete enviado a dirección correctamente. ${facturasAutorizadas.length} facturas autorizadas procesadas. ${facturasRechazadas.length} facturas rechazadas reseteadas a su estado original.`,
@@ -1434,5 +1455,356 @@ export const getPaquetesEnviadosParaDashboard = async (req, res) => {
     } catch (error) {
         console.error('Error en getPaquetesEnviadosParaDashboard:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST - Generar reporte (cambiar estatus a PorFondear)
+export const generatePackageReport = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const paquete = await InvoicesPackage.findById(id);
+        if (!paquete) {
+            return res.status(404).json({
+                success: false,
+                message: 'Paquete de facturas no encontrado.'
+            });
+        }
+
+        // Verificar que el paquete esté en estatus "Programado"
+        if (paquete.estatus !== 'Programado') {
+            return res.status(400).json({
+                success: false,
+                message: 'Solo se pueden generar reportes para paquetes con estatus "Programado".'
+            });
+        }
+
+        // Cambiar el estatus a "PorFondear"
+        paquete.estatus = 'PorFondear';
+        await paquete.save();
+
+        // Registrar el cambio de estatus en el timeline
+        if (req.user && req.user._id) {
+            await timelineService.registerStatusChange(
+                req.user._id, // userId del usuario autenticado
+                paquete._id,   // packageId
+                'PorFondear'   // nuevo estatus
+            );
+        }
+
+        // Obtener el paquete actualizado
+        const paqueteActualizado = await InvoicesPackage.findById(id)
+            .populate({
+                path: 'packageCompanyId',
+                populate: ['companyId', 'brandId', 'branchId']
+            });
+
+        res.status(200).json({
+            success: true,
+            message: 'Reporte generado correctamente. Paquete listo para fondear.',
+            data: paqueteActualizado
+        });
+
+    } catch (error) {
+        console.error('Error generating package report:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
+    }
+};
+
+// POST - Solicitar fondeo para paquetes de una razón social y cuenta bancaria
+export const requestFunding = async (req, res) => {
+    try {
+        const { companyId, bankAccountId, packageIds } = req.body;
+
+        if (!companyId || !bankAccountId) {
+            return res.status(400).json({
+                success: false,
+                message: 'companyId y bankAccountId son requeridos.'
+            });
+        }
+
+        // Importar modelos necesarios
+        const { ScheduledPayment } = await import('../models/ScheduledPayment.js');
+        const { BankAccount } = await import('../models/BankAccount.js');
+
+        // Buscar todos los pagos programados para esta combinación
+        const scheduledPayments = await ScheduledPayment.find({
+            companyId,
+            bankAccountId
+        }).populate('packageId');
+
+        // Filtrar los paquetes según los criterios
+        let packagesToFund;
+        if (packageIds && Array.isArray(packageIds) && packageIds.length > 0) {
+            // Si se especifican packageIds, usar solo esos
+            packagesToFund = scheduledPayments.filter(sp =>
+                sp.packageId &&
+                sp.packageId.estatus === 'PorFondear' &&
+                packageIds.includes(sp.packageId._id.toString())
+            );
+        } else {
+            // Si no se especifican, usar todos los "PorFondear" (comportamiento anterior)
+            packagesToFund = scheduledPayments.filter(sp =>
+                sp.packageId && sp.packageId.estatus === 'PorFondear'
+            );
+        }
+
+        if (packagesToFund.length === 0) {
+            const message = packageIds && packageIds.length > 0
+                ? 'No se encontraron paquetes válidos para fondear con los IDs especificados.'
+                : 'No hay paquetes por fondear para esta razón social y cuenta bancaria.';
+            return res.status(400).json({
+                success: false,
+                message: message
+            });
+        }
+
+        // Calcular el total a fondear
+        const totalToFund = packagesToFund.reduce((sum, sp) => {
+            return sum + (sp.packageId.totalPagado || 0);
+        }, 0);
+
+        // Obtener la cuenta bancaria
+        const bankAccount = await BankAccount.findById(bankAccountId);
+        if (!bankAccount) {
+            return res.status(404).json({
+                success: false,
+                message: 'Cuenta bancaria no encontrada.'
+            });
+        }
+
+        // Verificar que hay suficiente saldo inicial
+        // Actualizar solo el currentBalance de la cuenta bancaria
+        bankAccount.currentBalance -= totalToFund;
+        await bankAccount.save();
+
+        // Cambiar el estatus de todos los paquetes a "Fondeado" y registrar en timeline
+        for (const sp of packagesToFund) {
+            const packageId = sp.packageId._id;
+
+            // Cambiar estatus del paquete
+            await InvoicesPackage.findByIdAndUpdate(packageId, { estatus: 'Fondeado' });
+
+            // Registrar en timeline
+            if (req.user && req.user._id) {
+                await timelineService.registerStatusChange(
+                    req.user._id,
+                    packageId,
+                    'Fondeado'
+                );
+            }
+
+            packageIds.push(packageId);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Fondeo completado exitosamente. ${packagesToFund.length} paquetes fondeados.`,
+            data: {
+                totalFunded: totalToFund,
+                packagesCount: packagesToFund.length,
+                packageIds: packageIds,
+                newCurrentBalance: bankAccount.currentBalance,
+                initialBalance: bankAccount.initialBalance
+            }
+        });
+
+    } catch (error) {
+        console.error('Error requesting funding:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
+    }
+};
+
+// GET - Obtener paquetes por fondear para preview
+export const getPackagesToFund = async (req, res) => {
+    try {
+        const { companyId, bankAccountId } = req.query;
+
+        if (!companyId || !bankAccountId) {
+            return res.status(400).json({
+                success: false,
+                message: 'companyId y bankAccountId son requeridos.'
+            });
+        }
+
+        // Importar modelo necesario
+        const { ScheduledPayment } = await import('../models/ScheduledPayment.js');
+
+        // Buscar todos los pagos programados para esta combinación
+        const scheduledPayments = await ScheduledPayment.find({
+            companyId,
+            bankAccountId
+        }).populate('packageId');
+
+        // Filtrar solo los paquetes con estatus "Programado"
+        const packagesToFund = scheduledPayments.filter(sp =>
+            sp.packageId && sp.packageId.estatus === 'Programado'
+        );
+
+        // Calcular el total
+        const total = packagesToFund.reduce((sum, sp) => {
+            return sum + (sp.packageId.totalPagado || 0);
+        }, 0);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                packages: packagesToFund.map(sp => ({
+                    _id: sp.packageId._id,
+                    folio: sp.packageId.folio,
+                    totalPagado: sp.packageId.totalPagado,
+                    departamento: sp.packageId.departamento,
+                    fechaPago: sp.packageId.fechaPago,
+                    facturas: sp.packageId.facturas || []
+                })),
+                total: total,
+                count: packagesToFund.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error getting packages to fund:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
+    }
+};
+
+// GET - Obtener relaciones paquete-sucursal/marca
+export const getPackageCompanyRelations = async (req, res) => {
+    try {
+        const { packageIds } = req.query;
+
+        if (!packageIds) {
+            return res.status(400).json({
+                success: false,
+                message: 'packageIds es requerido.'
+            });
+        }
+
+        // Convertir packageIds de string a array
+        const packageIdsArray = packageIds.split(',');
+
+        // Validar que todos los IDs sean ObjectIds válidos
+        const validPackageIds = packageIdsArray.filter(id => {
+            return mongoose.Types.ObjectId.isValid(id);
+        });
+
+        if (validPackageIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se proporcionaron IDs de paquetes válidos.'
+            });
+        }
+
+        // Buscar las relaciones en la colección rs_invoices_packages_companies
+        const relations = await InvoicesPackageCompany.find({
+            packageId: { $in: validPackageIds }
+        }).populate([
+            {
+                path: 'companyId',
+                select: '_id name'
+            },
+            {
+                path: 'brandId',
+                select: '_id name'
+            },
+            {
+                path: 'branchId',
+                select: '_id name'
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: relations
+        });
+
+    } catch (error) {
+        console.error('Error getting package company relations:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
+    }
+};
+
+// POST - Actualizar estatus de múltiples paquetes a "Generado"
+export const updatePackagesToGenerated = async (req, res) => {
+    try {
+        const { packageIds } = req.body;
+
+        if (!packageIds || !Array.isArray(packageIds) || packageIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'packageIds es requerido y debe ser un array no vacío.'
+            });
+        }
+
+        // Validar que todos los IDs sean ObjectIds válidos
+        const validPackageIds = packageIds.filter(id => {
+            return mongoose.Types.ObjectId.isValid(id);
+        });
+
+        if (validPackageIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se proporcionaron IDs de paquetes válidos.'
+            });
+        }
+
+        // Buscar los paquetes existentes
+        const packages = await InvoicesPackage.find({
+            _id: { $in: validPackageIds }
+        });
+
+        if (packages.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontraron paquetes con los IDs proporcionados.'
+            });
+        }
+
+        // Actualizar el estatus de todos los paquetes a "Generado"
+        const updatePromises = packages.map(async (paquete) => {
+            paquete.estatus = 'Generado';
+            await paquete.save();
+
+            // Registrar el cambio de estatus en el timeline
+            if (req.user && req.user._id) {
+                await timelineService.registerStatusChange(
+                    req.user._id,
+                    paquete._id,
+                    'Generado'
+                );
+            }
+
+            return paquete._id;
+        });
+
+        await Promise.all(updatePromises);
+
+        res.status(200).json({
+            success: true,
+            message: `${packages.length} paquetes actualizados a estatus "Generado" exitosamente.`,
+            data: {
+                updatedCount: packages.length,
+                packageIds: packages.map(p => p._id)
+            }
+        });
+
+    } catch (error) {
+        console.error('Error updating packages to generated status:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
     }
 }; 

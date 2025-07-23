@@ -6,12 +6,19 @@ import { FaRegEye } from 'react-icons/fa';
 
 interface PackpageActionsProps {
   packpageId: string;
+  packageStatus?: string;
   onEdit?: () => void;
   onDelete?: () => void;
   loadingDelete?: boolean;
 }
 
-const PackpageActions: React.FC<PackpageActionsProps> = ({ packpageId, onEdit, onDelete, loadingDelete }) => {
+const PackpageActions: React.FC<PackpageActionsProps> = ({
+  packpageId,
+  packageStatus,
+  onEdit,
+  onDelete,
+  loadingDelete
+}) => {
   const router = useRouter();
 
   return (
@@ -25,6 +32,9 @@ const PackpageActions: React.FC<PackpageActionsProps> = ({ packpageId, onEdit, o
       >
         <FaRegEye size={16} />
       </Button>
+
+
+
       <Button
         variant="light"
         size="sm"

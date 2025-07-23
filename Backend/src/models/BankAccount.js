@@ -22,6 +22,11 @@ const bankAccountSchema = new Schema({
     required: true,
     trim: true,
   },
+  claveBanxico: {
+    type: String,
+    required: false,
+    trim: true,
+  },
   branch: {
     type: String,
     trim: true,

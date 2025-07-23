@@ -29,7 +29,7 @@ const CreatedPackpageModal: React.FC<CreatedPackpageModalProps> = ({ show, onClo
                         Ver paquete creado
                     </Button>
                     <Button
-                        variant="secondary"
+                        variant="light"
                         size="lg"
                         onClick={onViewList}
                     >

@@ -11,6 +11,8 @@ export interface BankAccount {
   _id: string;
   accountNumber: string;
   accountType: string;
+  currentBalance?: number;
+  claveBanxico?: string;
   bankId: {
     _id: string;
     name: string;
@@ -64,6 +66,8 @@ export const getBankAccountsByCompany = async (companyId: string): Promise<BankA
     _id: account._id,
     accountNumber: account.accountNumber,
     accountType: 'Cuenta Corriente', // Valor por defecto ya que no existe en el modelo backend
+    currentBalance: account.currentBalance || 0,
+    claveBanxico: account.claveBanxico || '',
     bankId: {
       _id: account.bank._id,
       name: account.bank.name

@@ -12,6 +12,7 @@ export const getAllBankAccounts = async (req, res) => {
       filters.$or = [
         { accountNumber: { $regex: search, $options: "i" } },
         { clabe: { $regex: search, $options: "i" } },
+        { claveBanxico: { $regex: search, $options: "i" } },
         { branch: { $regex: search, $options: "i" } },
       ];
     }
@@ -60,12 +61,13 @@ export const getBankAccountById = async (req, res) => {
 
 export const createBankAccount = async (req, res) => {
   try {
-    const { company, bank, accountNumber, clabe, branch, initialBalance, currentBalance } = req.body;
+    const { company, bank, accountNumber, clabe, claveBanxico, branch, initialBalance, currentBalance } = req.body;
     const newBankAccount = await BankAccount.create({
       company,
       bank,
       accountNumber: accountNumber.trim(),
       clabe: clabe.trim(),
+      claveBanxico: claveBanxico?.trim() || "",
       branch: branch?.trim() || "",
       initialBalance: initialBalance || 0,
       currentBalance: currentBalance || initialBalance || 0,
@@ -84,7 +86,7 @@ export const createBankAccount = async (req, res) => {
 export const updateBankAccount = async (req, res) => {
   try {
     const { id } = req.params;
-    const { company, bank, accountNumber, clabe, branch, initialBalance, currentBalance } = req.body;
+    const { company, bank, accountNumber, clabe, claveBanxico, branch, initialBalance, currentBalance } = req.body;
     const updatedBankAccount = await BankAccount.findByIdAndUpdate(
       id,
       {
@@ -92,6 +94,7 @@ export const updateBankAccount = async (req, res) => {
         bank,
         accountNumber: accountNumber.trim(),
         clabe: clabe.trim(),
+        claveBanxico: claveBanxico?.trim() || "",
         branch: branch?.trim() || "",
         initialBalance: initialBalance || 0,
         currentBalance: currentBalance || 0,
@@ -191,7 +194,7 @@ export const getBankAccountsByCompany = async (req, res) => {
       isActive: true
     })
       .populate('bank', 'name')
-      .select('_id accountNumber clabe branch bank')
+      .select('_id accountNumber clabe claveBanxico branch bank currentBalance')
       .sort({ accountNumber: 1 });
 
     res.status(200).json({

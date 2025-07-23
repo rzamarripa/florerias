@@ -272,7 +272,7 @@ export const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
                         </Form>
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button variant="secondary" onClick={handleCloseModal}>
+                        <Button variant="light" onClick={handleCloseModal}>
                             Cancelar
                         </Button>
                         <Button
