@@ -39,6 +39,7 @@ const BankModal: React.FC<BankModalProps> = ({
     resolver: zodResolver(bankSchema),
     defaultValues: {
       name: "",
+      bankNumber: 0,
     },
     mode: "onChange",
   });
@@ -47,9 +48,11 @@ const BankModal: React.FC<BankModalProps> = ({
     if (showModal) {
       if (isEditing && editingBank) {
         setValue("name", editingBank.name);
+        setValue("bankNumber", editingBank.bankNumber);
       } else {
         reset({
           name: "",
+          bankNumber: 0,
         });
       }
     }
@@ -68,6 +71,7 @@ const BankModal: React.FC<BankModalProps> = ({
     try {
       const bankData: BankFormData = {
         name: data.name.trim(),
+        bankNumber: data.bankNumber,
       };
 
       let response;
@@ -90,15 +94,14 @@ const BankModal: React.FC<BankModalProps> = ({
       }
     } catch (error: any) {
       console.error("Error in bank operation:", error);
-      let errorMessage = `Error al ${
-        isEditing ? "actualizar" : "crear"
-      } el banco`;
+      let errorMessage = `Error al ${isEditing ? "actualizar" : "crear"
+        } el banco`;
       if (
         error.response?.status === 400 &&
         error.response.data?.message?.toLowerCase().includes("already exists")
       ) {
         errorMessage =
-          "Ya existe un banco con ese nombre (sin importar acentos o mayúsculas).";
+          "Ya existe un banco con ese nombre o número (sin importar acentos o mayúsculas).";
       } else if (error.response?.status === 404) {
         errorMessage = "Banco no encontrado";
       } else if (error.response?.status >= 500) {
@@ -157,6 +160,31 @@ const BankModal: React.FC<BankModalProps> = ({
               </Form.Control.Feedback>
               <Form.Text className="text-muted">
                 Escribe el nombre del banco que deseas agregar al sistema
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>
+                Número de Banco <span className="text-danger">*</span>
+              </Form.Label>
+              <Controller
+                name="bankNumber"
+                control={control}
+                render={({ field }) => (
+                  <Form.Control
+                    type="number"
+                    placeholder="123"
+                    isInvalid={!!errors.bankNumber}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  />
+                )}
+              />
+              <Form.Control.Feedback type="invalid">
+                {errors.bankNumber?.message}
+              </Form.Control.Feedback>
+              <Form.Text className="text-muted">
+                Ingresa un número de 3 dígitos para identificar al banco
               </Form.Text>
             </Form.Group>
           </Modal.Body>

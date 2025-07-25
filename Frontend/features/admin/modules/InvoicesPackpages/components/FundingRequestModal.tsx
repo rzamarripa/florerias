@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert, Spinner, Table } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { getAllCompanies, getBankAccountsByCompany, Company, BankAccount } from '../services/scheduledPayment';
-import { requestFunding, getPackagesToFund, getProvidersByRfcs, Provider, generateExcelReport, ReportRow, updatePackagesToGenerated } from '../services/invoicesPackpage';
+import { requestFunding, getPackagesToFund, getProvidersByRfcs, Provider, updatePackagesToGenerated } from '../services/invoicesPackpage';
+import { generateBankReport, SantanderReportRow, AfirmeReportRow } from '../services/bankReports';
 import Multiselect from '@/components/forms/Multiselect';
 
 interface FundingRequestModalProps {
@@ -164,96 +165,128 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({ show, onClose
 
             // Obtener datos de la cuenta bancaria seleccionada
             const selectedBankAccount = bankAccounts.find(acc => acc._id === selectedBankAccountId);
-
-            // Generar datos para el reporte Excel
-            const reportData: ReportRow[] = [];
+            const bankName = selectedBankAccount?.bankId?.name || '';
 
             console.log('Procesando paquetes para reporte...');
             console.log('Cuenta bancaria seleccionada:', selectedBankAccount);
+            console.log('Banco detectado:', bankName);
 
-            selectedPackagesWithProviders.forEach(pkg => {
-                console.log(`Procesando paquete ${pkg.folio}:`);
-                console.log('- Facturas:', pkg.facturas?.length || 0);
-                console.log('- Proveedores:', pkg.providers?.length || 0);
+            // Función helper para convertir valores a números
+            const toNumber = (value: any): number => {
+                if (typeof value === 'number') return value;
+                if (typeof value === 'string') return parseFloat(value) || 0;
 
-                // Procesar cada factura del paquete
-                pkg.facturas?.forEach((factura: any, index: number) => {
-                    // Función helper para convertir valores a números
-                    const toNumber = (value: any): number => {
-                        if (typeof value === 'number') return value;
-                        if (typeof value === 'string') return parseFloat(value) || 0;
-
-                        // Manejar objetos con formato $numberDecimal de MongoDB
-                        if (typeof value === 'object' && value !== null) {
-                            if (value.$numberDecimal) {
-                                return parseFloat(value.$numberDecimal) || 0;
-                            }
-                            if (value._bsontype === 'Decimal128') {
-                                return parseFloat(value.toString()) || 0;
-                            }
-                        }
-
-                        return 0;
-                    };
-
-                    const importePagado = toNumber(factura.importePagado);
-
-                    console.log(`  Factura ${index + 1}:`);
-                    console.log(`    - RFC Emisor: ${factura.rfcEmisor}`);
-                    console.log(`    - Importe Pagado (original): ${factura.importePagado}`);
-                    console.log(`    - Importe Pagado (convertido): ${importePagado}`);
-                    console.log(`    - UUID: ${factura.uuid}`);
-
-                    // Buscar el proveedor correspondiente a esta factura
-                    const provider = pkg.providers?.find((p: Provider) => p.rfc === factura.rfcEmisor);
-
-                    console.log(`    - Proveedor encontrado:`, provider ? 'SÍ' : 'NO');
-                    if (provider) {
-                        console.log(`    - Nombre proveedor: ${provider.commercialName}`);
-                        console.log(`    - RFC proveedor: ${provider.rfc}`);
+                // Manejar objetos con formato $numberDecimal de MongoDB
+                if (typeof value === 'object' && value !== null) {
+                    if (value.$numberDecimal) {
+                        return parseFloat(value.$numberDecimal) || 0;
                     }
-
-                    if (provider && importePagado > 0) {
-                        const iva = importePagado * 0.16; // 16% de IVA
-
-                        const reportRow = {
-                            cuentaCargo: selectedBankAccount?.accountNumber || '',
-                            cuentaAbono: provider.accountNumber || '',
-                            bancoReceptor: provider.bank?.name || '',
-                            beneficiario: provider.commercialName || '',
-                            sucursal: provider.sucursal?.name || '',
-                            importe: importePagado,
-                            plazaBanxico: selectedBankAccount?.claveBanxico || '',
-                            concepto: factura.descripcionPago || `Pago factura ${factura.uuid}`,
-                            estadoCuentaFiscal: estadoCuentaFiscal,
-                            rfc: provider.rfc || '',
-                            iva: iva,
-                            referenciaOrdenante: factura._id || '', // ID de la factura
-                            formaAplicacion: '1', // Siempre 1
-                            fechaAplicacion: '', // Vacío por ahora
-                            emailBeneficiario: '' // Vacío por ahora
-                        };
-
-                        reportData.push(reportRow);
-                        console.log(`    - ✅ Fila agregada al reporte`);
-                    } else {
-                        if (!provider) {
-                            console.log(`    - ❌ No se encontró proveedor para RFC: ${factura.rfcEmisor}`);
-                        }
-                        if (importePagado <= 0) {
-                            console.log(`    - ❌ Importe pagado es 0 o menor: ${importePagado}`);
-                        }
+                    if (value._bsontype === 'Decimal128') {
+                        return parseFloat(value.toString()) || 0;
                     }
+                }
+
+                return 0;
+            };
+
+            // Generar datos según el banco
+            let reportData: any[] = [];
+
+            if (bankName.toLowerCase() === 'santander') {
+                // Estructura para Santander
+                const santanderData: SantanderReportRow[] = [];
+
+                selectedPackagesWithProviders.forEach(pkg => {
+                    console.log(`Procesando paquete ${pkg.folio} para Santander:`);
+                    console.log('- Facturas:', pkg.facturas?.length || 0);
+                    console.log('- Proveedores:', pkg.providers?.length || 0);
+
+                    // Procesar cada factura del paquete
+                    pkg.facturas?.forEach((factura: any, index: number) => {
+                        const importePagado = toNumber(factura.importePagado);
+
+                        console.log(`  Factura ${index + 1}:`);
+                        console.log(`    - RFC Emisor: ${factura.rfcEmisor}`);
+                        console.log(`    - Importe Pagado: ${importePagado}`);
+
+                        // Buscar el proveedor correspondiente a esta factura
+                        const provider = pkg.providers?.find((p: Provider) => p.rfc === factura.rfcEmisor);
+
+                        if (provider && importePagado > 0) {
+                            const iva = importePagado * 0.16; // 16% de IVA
+
+                            const reportRow: SantanderReportRow = {
+                                cuentaCargo: selectedBankAccount?.accountNumber || '',
+                                cuentaAbono: provider.accountNumber || '',
+                                bancoReceptor: provider.bank?.name || '',
+                                beneficiario: provider.commercialName || '',
+                                sucursal: provider.sucursal?.name || '',
+                                importe: importePagado,
+                                plazaBanxico: selectedBankAccount?.claveBanxico || '',
+                                concepto: factura.descripcionPago || `Pago factura ${factura.uuid}`,
+                                estadoCuentaFiscal: estadoCuentaFiscal,
+                                rfc: provider.rfc || '',
+                                iva: iva,
+                                referenciaOrdenante: factura._id || '',
+                                formaAplicacion: '1',
+                                fechaAplicacion: '',
+                                emailBeneficiario: ''
+                            };
+
+                            santanderData.push(reportRow);
+                            console.log(`    - ✅ Fila agregada al reporte Santander`);
+                        }
+                    });
                 });
-            });
+
+                reportData = santanderData;
+            } else if (bankName.toLowerCase() === 'afirme') {
+                // Estructura para Afirme
+                const afirmeData: AfirmeReportRow[] = [];
+
+                selectedPackagesWithProviders.forEach(pkg => {
+                    console.log(`Procesando paquete ${pkg.folio} para Afirme:`);
+                    console.log('- Facturas:', pkg.facturas?.length || 0);
+                    console.log('- Proveedores:', pkg.providers?.length || 0);
+
+                    // Procesar cada factura del paquete
+                    pkg.facturas?.forEach((factura: any, index: number) => {
+                        const importePagado = toNumber(factura.importePagado);
+
+                        console.log(`  Factura ${index + 1}:`);
+                        console.log(`    - RFC Emisor: ${factura.rfcEmisor}`);
+                        console.log(`    - Importe Pagado: ${importePagado}`);
+
+                        // Buscar el proveedor correspondiente a esta factura
+                        const provider = pkg.providers?.find((p: Provider) => p.rfc === factura.rfcEmisor);
+
+                        if (provider && importePagado > 0) {
+                            const reportRow: AfirmeReportRow = {
+                                nombreBeneficiario: provider.commercialName || '',
+                                tipoCuenta: '40', // Hardcodeado como especificaste
+                                cuentaDestino: provider.accountNumber || '',
+                                numeroBanco: selectedBankAccount?.bankId?.bankNumber?.toString() || '',
+                                correoElectronico: '' // Vacío como especificaste
+                            };
+
+                            afirmeData.push(reportRow);
+                            console.log(`    - ✅ Fila agregada al reporte Afirme`);
+                        }
+                    });
+                });
+
+                reportData = afirmeData;
+            } else {
+                throw new Error(`Banco no soportado: ${bankName}`);
+            }
 
             console.log('Total de filas generadas para el reporte:', reportData.length);
 
             // Generar el reporte Excel
             if (reportData.length > 0) {
-                const fileName = `reporte_pagos_${new Date().toISOString().split('T')[0]}.xlsx`;
-                await generateExcelReport(reportData, fileName);
-                toast.success(`Reporte Excel generado con ${reportData.length} registros`);
+                const fileName = `reporte_${bankName.toLowerCase()}_${new Date().toISOString().split('T')[0]}.xlsx`;
+                await generateBankReport(bankName, reportData, fileName);
+                toast.success(`Reporte Excel de ${bankName} generado con ${reportData.length} registros`);
 
                 // Actualizar el estatus de los paquetes seleccionados a "Generado"
                 try {

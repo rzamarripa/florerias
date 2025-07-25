@@ -3,7 +3,7 @@ import { Bank } from "../models/Bank.js";
 export const getAll = async (req, res) => {
   try {
     const banks = await Bank.find({ isActive: true })
-      .select("_id name")
+      .select("_id name bankNumber")
       .sort({ name: 1 });
 
     res.status(200).json({
@@ -24,7 +24,10 @@ export const getAllBanks = async (req, res) => {
 
     const filters = {};
     if (search) {
-      filters.$or = [{ name: { $regex: search, $options: "i" } }];
+      filters.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { bankNumber: { $regex: search, $options: "i" } }
+      ];
     }
 
     const total = await Bank.countDocuments(filters);
@@ -52,7 +55,7 @@ export const getById = async (req, res) => {
   try {
     const { id } = req.params;
     const bank = await Bank.findOne({ _id: id, isActive: true }).select(
-      "_id name"
+      "_id name bankNumber"
     );
     if (!bank) {
       return res
@@ -67,8 +70,12 @@ export const getById = async (req, res) => {
 
 export const createBank = async (req, res) => {
   try {
-    const { name } = req.body;
-    const newBank = await Bank.create({ name: name.trim(), isActive: true });
+    const { name, bankNumber } = req.body;
+    const newBank = await Bank.create({
+      name: name.trim(),
+      bankNumber: parseInt(bankNumber),
+      isActive: true
+    });
     res.status(201).json({
       success: true,
       data: newBank,
@@ -89,10 +96,13 @@ export const createBank = async (req, res) => {
 export const updateBank = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, bankNumber } = req.body;
     const updatedBank = await Bank.findByIdAndUpdate(
       id,
-      { name: name.trim() },
+      {
+        name: name.trim(),
+        bankNumber: parseInt(bankNumber)
+      },
       { new: true }
     );
     if (!updatedBank) {

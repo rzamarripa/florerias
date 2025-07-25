@@ -105,7 +105,7 @@ const BanksPage: React.FC = () => {
                 <div className="position-relative" style={{ maxWidth: 400 }}>
                   <Form.Control
                     type="search"
-                    placeholder="Buscar bancos..."
+                    placeholder="Buscar por nombre o número de banco..."
                     value={searchTerm}
                     onChange={handleSearchChange}
                     className="shadow-none px-4"
@@ -140,10 +140,13 @@ const BanksPage: React.FC = () => {
                   >
                     <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                       <tr>
-                        <th style={{ width: "10%" }}>
+                        <th style={{ width: "8%" }}>
                           #
                         </th>
-                        <th style={{ width: "50%" }}>
+                        <th style={{ width: "15%" }}>
+                          NÚMERO
+                        </th>
+                        <th style={{ width: "37%" }}>
                           NOMBRE
                         </th>
                         <th className="text-center" style={{ width: "20%" }}>
@@ -166,14 +169,19 @@ const BanksPage: React.FC = () => {
                           </td>
                           <td>
                             <span className="fw-medium text-dark">
+                              {bank.bankNumber}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="fw-medium text-dark">
                               {bank.name}
                             </span>
                           </td>
                           <td className="text-center">
                             <span
                               className={`badge fs-6 ${bank.isActive
-                                  ? "bg-success bg-opacity-10 text-success"
-                                  : "bg-danger bg-opacity-10 text-danger"
+                                ? "bg-success bg-opacity-10 text-success"
+                                : "bg-danger bg-opacity-10 text-danger"
                                 }`}
                             >
                               {bank.isActive ? "Activo" : "Inactivo"}
