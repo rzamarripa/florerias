@@ -122,27 +122,17 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
       );
       const packages = result.packages || [];
       setPackagesPreview(packages);
-      setSelectedPackageIds([]); // Limpiar selección al cargar nuevos paquetes
+      setSelectedPackageIds([]);
 
-      // Obtener proveedores para cada paquete
       const packagesWithProvidersData = await Promise.all(
         packages.map(async (pkg) => {
-          // Extraer RFCs únicos de las facturas del paquete
           const rfcs = [
             ...new Set(pkg.facturas?.map((f: any) => f.rfcEmisor) || []),
           ].filter((rfc): rfc is string => typeof rfc === "string");
 
-          console.log(`Paquete ${pkg.folio} - RFCs encontrados:`, rfcs);
-          console.log(`Paquete ${pkg.folio} - Facturas:`, pkg.facturas);
-
-          // Obtener proveedores por RFCs solo si hay RFCs válidos
           let providers: Provider[] = [];
           if (rfcs.length > 0) {
-            console.log(`Llamando endpoint para RFCs:`, rfcs);
             providers = await getProvidersByRfcs(rfcs);
-            console.log(`Proveedores obtenidos para ${pkg.folio}:`, providers);
-          } else {
-            console.log(`No hay RFCs válidos para el paquete ${pkg.folio}`);
           }
 
           return {
@@ -180,41 +170,19 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
     try {
       setRequestingFunding(true);
 
-      // Log de los paquetes seleccionados
-      console.log(
-        "Paquetes seleccionados para generar reporte:",
-        selectedPackageIds
-      );
-      console.log("Razón social ID:", selectedCompanyId);
-      console.log("Cuenta bancaria ID:", selectedBankAccountId);
-
-      // Log de paquetes con sus proveedores relacionados
       const selectedPackagesWithProviders = packagesWithProviders.filter(
         (pkg) => selectedPackageIds.includes(pkg._id)
       );
-      selectedPackagesWithProviders.forEach((pkg) => {
-        console.log(`Paquete ID: ${pkg._id} - Proveedores:`, pkg.providers);
-      });
 
-      // Log del estado de cuenta fiscal
-      console.log("Estado de cuenta fiscal:", estadoCuentaFiscal);
-
-      // Obtener datos de la cuenta bancaria seleccionada
       const selectedBankAccount = bankAccounts.find(
         (acc) => acc._id === selectedBankAccountId
       );
       const bankName = selectedBankAccount?.bankId?.name || "";
 
-      console.log("Procesando paquetes para reporte...");
-      console.log("Cuenta bancaria seleccionada:", selectedBankAccount);
-      console.log("Banco detectado:", bankName);
-
-      // Función helper para convertir valores a números
       const toNumber = (value: any): number => {
         if (typeof value === "number") return value;
         if (typeof value === "string") return parseFloat(value) || 0;
 
-        // Manejar objetos con formato $numberDecimal de MongoDB
         if (typeof value === "object" && value !== null) {
           if (value.$numberDecimal) {
             return parseFloat(value.$numberDecimal) || 0;
@@ -227,27 +195,15 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
         return 0;
       };
 
-      // Generar datos según el banco
       let reportData: any[] = [];
 
       if (bankName.toLowerCase() === "santander") {
-        // Estructura para Santander
         const santanderData: SantanderReportRow[] = [];
 
         selectedPackagesWithProviders.forEach((pkg) => {
-          console.log(`Procesando paquete ${pkg.folio} para Santander:`);
-          console.log("- Facturas:", pkg.facturas?.length || 0);
-          console.log("- Proveedores:", pkg.providers?.length || 0);
-
-          // Procesar cada factura del paquete
-          pkg.facturas?.forEach((factura: any, index: number) => {
+          pkg.facturas?.forEach((factura: any) => {
             const importePagado = toNumber(factura.importePagado);
 
-            console.log(`  Factura ${index + 1}:`);
-            console.log(`    - RFC Emisor: ${factura.rfcEmisor}`);
-            console.log(`    - Importe Pagado: ${importePagado}`);
-
-            // Buscar el proveedor correspondiente a esta factura
             const provider = pkg.providers?.find(
               (p: Provider) => p.rfc === factura.rfcEmisor
             );
@@ -275,30 +231,18 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
               };
 
               santanderData.push(reportRow);
-              console.log(`    - ✅ Fila agregada al reporte Santander`);
             }
           });
         });
 
         reportData = santanderData;
       } else if (bankName.toLowerCase() === "afirme") {
-        // Estructura para Afirme
         const afirmeData: AfirmeReportRow[] = [];
 
         selectedPackagesWithProviders.forEach((pkg) => {
-          console.log(`Procesando paquete ${pkg.folio} para Afirme:`);
-          console.log("- Facturas:", pkg.facturas?.length || 0);
-          console.log("- Proveedores:", pkg.providers?.length || 0);
-
-          // Procesar cada factura del paquete
-          pkg.facturas?.forEach((factura: any, index: number) => {
+          pkg.facturas?.forEach((factura: any) => {
             const importePagado = toNumber(factura.importePagado);
 
-            console.log(`  Factura ${index + 1}:`);
-            console.log(`    - RFC Emisor: ${factura.rfcEmisor}`);
-            console.log(`    - Importe Pagado: ${importePagado}`);
-
-            // Buscar el proveedor correspondiente a esta factura
             const provider = pkg.providers?.find(
               (p: Provider) => p.rfc === factura.rfcEmisor
             );
@@ -306,15 +250,14 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
             if (provider && importePagado > 0) {
               const reportRow: AfirmeReportRow = {
                 nombreBeneficiario: provider.commercialName || "",
-                tipoCuenta: "40", // Hardcodeado como especificaste
+                tipoCuenta: "40",
                 cuentaDestino: provider.accountNumber || "",
                 numeroBanco:
                   selectedBankAccount?.bankId?.bankNumber?.toString() || "",
-                correoElectronico: "", // Vacío como especificaste
+                correoElectronico: "",
               };
 
               afirmeData.push(reportRow);
-              console.log(`    - ✅ Fila agregada al reporte Afirme`);
             }
           });
         });
@@ -323,11 +266,6 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
       } else {
         throw new Error(`Banco no soportado: ${bankName}`);
       }
-
-      console.log(
-        "Total de filas generadas para el reporte:",
-        reportData.length
-      );
 
       if (reportData.length > 0) {
         const fileName = `reporte_${bankName.toLowerCase()}_${

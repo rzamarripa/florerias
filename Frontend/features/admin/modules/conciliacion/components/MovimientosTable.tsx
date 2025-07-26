@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, Table, Form } from "react-bootstrap";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -9,15 +9,15 @@ import { formatCurrency } from "@/utils";
 
 interface MovimientosTableProps {
   movimientos: MovimientoBancario[];
+  selectedMovimiento: string;
   onMovimientoSelect: (movimientoId: string) => void;
 }
 
 export default function MovimientosTable({
   movimientos,
+  selectedMovimiento,
   onMovimientoSelect,
 }: MovimientosTableProps) {
-  const [selectedMovimiento, setSelectedMovimiento] = useState<string>("");
-
   return (
     <Card>
       <Card.Header>
@@ -46,7 +46,6 @@ export default function MovimientosTable({
                 onClick={() => {
                   const newSelected =
                     selectedMovimiento === movimiento._id ? "" : movimiento._id;
-                  setSelectedMovimiento(newSelected);
                   onMovimientoSelect(newSelected);
                 }}
               >

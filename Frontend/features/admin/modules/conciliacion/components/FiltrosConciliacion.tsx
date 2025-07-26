@@ -47,7 +47,7 @@ export default function FiltrosConciliacion({
     }
   }, [selectedCompany]);
 
-  useEffect(() => {
+  const handleFiltersUpdate = () => {
     if (selectedCompany && selectedBankAccount && selectedDate) {
       onFiltersChange({
         companyId: selectedCompany,
@@ -55,7 +55,11 @@ export default function FiltrosConciliacion({
         fecha: selectedDate,
       });
     }
-  }, [selectedCompany, selectedBankAccount, selectedDate, onFiltersChange]);
+  };
+
+  const handleManualLoad = () => {
+    handleFiltersUpdate();
+  };
 
   const loadCompanies = async () => {
     try {
@@ -136,7 +140,14 @@ export default function FiltrosConciliacion({
           />
         </Form.Group>
       </Col>
-      <Col md={3} className="d-flex align-items-end">
+      <Col md={3} className="d-flex align-items-end gap-2">
+        <Button
+          variant="outline-primary"
+          onClick={handleManualLoad}
+          disabled={!selectedCompany || !selectedBankAccount || loading}
+        >
+          Cargar Datos
+        </Button>
         <Button
           variant="primary"
           onClick={handleConciliar}

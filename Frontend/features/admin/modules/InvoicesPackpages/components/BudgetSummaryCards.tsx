@@ -16,7 +16,6 @@ interface BudgetSummaryCardsProps {
   };
   invoices?: any[];
   budgetData?: BudgetItem[];
-  // Nuevos props para calcular presupuesto utilizado por mes
   existingPackages?: any[];
   selectedYear?: number;
   selectedMonth?: number;
@@ -30,13 +29,11 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   selectedYear = new Date().getFullYear(),
   selectedMonth = new Date().getMonth(),
 }) => {
-  // Card azul: Facturas en paquetes (sin filtrar por mes) + temporales, usando solo datos de invoices
   const selectedPaymentsSummary = React.useMemo(() => {
     let totalPagado = 0;
     let facturasSeleccionadas = 0;
     const facturasEnPaquetesSet = new Set<string>();
 
-    // 1. Obtener todos los IDs de facturas en todos los paquetes
     existingPackages.forEach((paquete) => {
       if (paquete.facturas && Array.isArray(paquete.facturas)) {
         paquete.facturas.forEach((factura: any) => {
@@ -47,7 +44,6 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       }
     });
 
-    // 2. Sumar facturas del array original que estén en algún paquete y tengan importePagado > 0
     invoices.forEach((inv) => {
       if (facturasEnPaquetesSet.has(inv._id) && inv.importePagado > 0) {
         totalPagado += inv.importePagado;
@@ -55,9 +51,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       }
     });
 
-    // 3. Sumar pagos temporales (aunque no estén en paquetes)
     Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
-      // Evitar duplicar si ya está en paquete
       if (!facturasEnPaquetesSet.has(invoiceId)) {
         if (payment.tipoPago === "completo") {
           const invoice = invoices.find((inv) => inv._id === invoiceId);
@@ -78,7 +72,6 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     };
   }, [tempPayments, invoices, existingPackages]);
 
-  // Calcular total del presupuesto
   const totalBudget = React.useMemo(() => {
     if (!Array.isArray(budgetData)) {
       return 0;
@@ -89,11 +82,9 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     }, 0);
   }, [budgetData]);
 
-  // Calcular presupuesto utilizado (suma de importePagado de facturas guardadas + pagos en efectivo + pagos temporales)
   const presupuestoUtilizado = React.useMemo(() => {
     let totalUtilizado = 0;
 
-    // 1. Filtrar paquetes del mes específico del presupuesto
     const paquetesDelMes = existingPackages.filter((paquete) => {
       if (!paquete.fechaPago) return false;
 
@@ -104,7 +95,6 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       return yearPaquete === selectedYear && monthPaquete === selectedMonth;
     });
 
-    // 2. Sumar el importePagado de todas las facturas en paquetes del mes
     paquetesDelMes.forEach((paquete) => {
       if (paquete.facturas && Array.isArray(paquete.facturas)) {
         paquete.facturas.forEach((factura: any) => {
@@ -115,7 +105,6 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       }
     });
 
-    // 3. Sumar pagos en efectivo de paquetes del mes
     paquetesDelMes.forEach((paquete) => {
       if (paquete.pagosEfectivo && Array.isArray(paquete.pagosEfectivo)) {
         paquete.pagosEfectivo.forEach((pagoEfectivo: any) => {
@@ -126,22 +115,18 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       }
     });
 
-    // 4. Sumar pagos temporales locales (solo si estamos viendo el mes actual)
     const mesActual = new Date().getMonth();
     const yearActual = new Date().getFullYear();
 
-    // Solo incluir pagos temporales si estamos viendo el mes actual
     if (selectedYear === yearActual && selectedMonth === mesActual) {
       Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
         const invoice = invoices.find((inv) => inv._id === invoiceId);
         if (!invoice) return;
 
         if (payment.tipoPago === "completo") {
-          // Para pago completo, agregar solo la diferencia no pagada
           const montoPendiente = invoice.importeAPagar - invoice.importePagado;
           totalUtilizado += Math.max(0, montoPendiente);
         } else if (payment.tipoPago === "parcial" && payment.monto) {
-          // Para pago parcial, agregar solo el monto adicional
           totalUtilizado += payment.monto;
         }
       });
@@ -150,7 +135,6 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     return totalUtilizado;
   }, [existingPackages, tempPayments, invoices, selectedYear, selectedMonth]);
 
-  // Calcular saldo
   const saldoPresupuesto = React.useMemo(() => {
     const saldo = totalBudget - presupuestoUtilizado;
 

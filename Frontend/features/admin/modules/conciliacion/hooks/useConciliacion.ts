@@ -14,6 +14,8 @@ export const useConciliacion = () => {
   const [conciliacionesPendientes, setConciliacionesPendientes] = useState<Conciliacion[]>([]);
   const [facturasRestantes, setFacturasRestantes] = useState<Factura[]>([]);
   const [movimientosRestantes, setMovimientosRestantes] = useState<MovimientoBancario[]>([]);
+  const [selectedFactura, setSelectedFactura] = useState<string>('');
+  const [selectedMovimiento, setSelectedMovimiento] = useState<string>('');
 
   const loadData = useCallback(async (filters: {
     companyId: string;
@@ -41,13 +43,20 @@ export const useConciliacion = () => {
       if (movimientosResponse.success) {
         setMovimientos(movimientosResponse.data);
       }
-    } catch (error) {
-      console.error('Error loading data:', error);
+    } catch {
       setFacturas([]);
       setMovimientos([]);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const handleFacturaSelect = useCallback((facturaId: string) => {
+    setSelectedFactura(prev => prev === facturaId ? '' : facturaId);
+  }, []);
+
+  const handleMovimientoSelect = useCallback((movimientoId: string) => {
+    setSelectedMovimiento(prev => prev === movimientoId ? '' : movimientoId);
   }, []);
 
   const handleConciliarAutomatico = async (filters: {
@@ -78,8 +87,7 @@ export const useConciliacion = () => {
           await handleCerrarConciliacion();
         }
       }
-    } catch (error) {
-      console.error('Error en conciliación automática:', error);
+    } catch {
       alert('Error en la conciliación automática');
     } finally {
       setLoading(false);
@@ -114,10 +122,10 @@ export const useConciliacion = () => {
       if (response.success) {
         alert(response.message);
         resetModal();
-        // Note: We don't auto-reload data here. Parent should handle it via onFiltersChange
+        setSelectedFactura('');
+        setSelectedMovimiento('');
       }
-    } catch (error) {
-      console.error('Error cerrando conciliación:', error);
+    } catch {
       alert('Error al cerrar la conciliación');
     } finally {
       setLoading(false);
@@ -139,7 +147,11 @@ export const useConciliacion = () => {
     conciliacionesPendientes,
     facturasRestantes,
     movimientosRestantes,
+    selectedFactura,
+    selectedMovimiento,
     loadData,
+    handleFacturaSelect,
+    handleMovimientoSelect,
     handleConciliarAutomatico,
     handleConciliacionManual,
     handleCerrarConciliacion,

@@ -1,6 +1,5 @@
 import { InvoicesPackage } from "../models/InvoicesPackpage.js";
 import { BankMovement } from "../models/BankMovement.js";
-import { ImportedInvoices } from "../models/ImportedInvoices.js";
 import { InvoicesPackageCompany } from "../models/InvoicesPackpageCompany.js";
 import mongoose from "mongoose";
 
@@ -308,16 +307,6 @@ export const cerrarConciliacion = async (req, res) => {
               'facturas.$.comentarioConciliacion': comentario || `Conciliación ${tipo}`,
               'facturas.$.fechaConciliacion': new Date()
             }
-          },
-          { session }
-        );
-
-        await ImportedInvoices.findByIdAndUpdate(
-          facturaId,
-          {
-            coinciliado: true,
-            comentarioConciliacion: comentario || `Conciliación ${tipo}`,
-            fechaConciliacion: new Date()
           },
           { session }
         );

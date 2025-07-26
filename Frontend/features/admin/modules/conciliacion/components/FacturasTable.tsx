@@ -1,21 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, Table, Form } from "react-bootstrap";
 import { Factura } from "../types";
 import { formatCurrency } from "@/utils";
 
 interface FacturasTableProps {
   facturas: Factura[];
+  selectedFactura: string;
   onFacturaSelect: (facturaId: string) => void;
 }
 
 export default function FacturasTable({
   facturas,
+  selectedFactura,
   onFacturaSelect,
 }: FacturasTableProps) {
-  const [selectedFactura, setSelectedFactura] = useState<string>("");
-
   return (
     <Card>
       <Card.Header>
@@ -44,7 +44,6 @@ export default function FacturasTable({
                 onClick={() => {
                   const newSelected =
                     selectedFactura === factura._id ? "" : factura._id;
-                  setSelectedFactura(newSelected);
                   onFacturaSelect(newSelected);
                 }}
               >

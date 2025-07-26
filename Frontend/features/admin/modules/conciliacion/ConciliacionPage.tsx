@@ -19,7 +19,11 @@ export default function ConciliacionPage() {
     conciliacionesPendientes,
     facturasRestantes,
     movimientosRestantes,
+    selectedFactura,
+    selectedMovimiento,
     loadData,
+    handleFacturaSelect,
+    handleMovimientoSelect,
     handleConciliarAutomatico,
     handleConciliacionManual,
     handleCerrarConciliacion,
@@ -45,14 +49,6 @@ export default function ConciliacionPage() {
     handleConciliarAutomatico(filters);
   };
 
-  const handleFacturaSelect = () => {
-    // Tables handle their own selection now
-  };
-
-  const handleMovimientoSelect = () => {
-    // Tables handle their own selection now
-  };
-
   return (
     <div className="container-fluid">
       <Row className="mb-4">
@@ -72,6 +68,7 @@ export default function ConciliacionPage() {
           <Col md={6}>
             <FacturasTable
               facturas={facturas}
+              selectedFactura={selectedFactura}
               onFacturaSelect={handleFacturaSelect}
             />
           </Col>
@@ -79,6 +76,7 @@ export default function ConciliacionPage() {
           <Col md={6}>
             <MovimientosTable
               movimientos={movimientos}
+              selectedMovimiento={selectedMovimiento}
               onMovimientoSelect={handleMovimientoSelect}
             />
           </Col>
