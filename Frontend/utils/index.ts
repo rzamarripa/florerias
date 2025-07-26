@@ -19,3 +19,10 @@ export const formatMoney = (val: any) => {
     currency: "MXN",
   });
 };
+
+export const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+    }).format(amount);
+  };

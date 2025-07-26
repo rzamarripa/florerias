@@ -6,7 +6,7 @@ import {
   ValidationResult,
 } from "../types/validation";
 import { formatMoney } from "@/utils";
-import ConciliationCards from "./ConciliationCards";
+import MatchingCards from "./MatchingCards";
 import MovementsTable from "./MovementsTable";
 
 interface ResultsTabProps {
@@ -40,7 +40,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 
   return (
     <>
-      <ConciliationCards conciliationData={conciliationData} />
+      <MatchingCards conciliationData={conciliationData} />
 
       <div className="my-4">
         {conciliationData.balancesCuadran === false && (

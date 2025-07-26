@@ -5,13 +5,11 @@ import CountUp from "react-countup";
 import { ConciliationData } from "../types/validation";
 import { formatMoney } from "@/utils";
 
-interface ConciliationCardsProps {
+interface MatchingCardsProps {
   conciliationData: ConciliationData;
 }
 
-const ConciliationCards: React.FC<ConciliationCardsProps> = ({
-  conciliationData,
-}) => {
+const MatchingCards: React.FC<MatchingCardsProps> = ({ conciliationData }) => {
   const {
     saldoInicialCuenta,
     saldoInicialCalculado,
@@ -69,7 +67,7 @@ const ConciliationCards: React.FC<ConciliationCardsProps> = ({
           } bg-opacity-10 shadow-none mb-0`}
         >
           <Card.Body>
-            <h5 title="Resultado de la Conciliación">Conciliación</h5>
+            <h5 title="Resultado de la Conciliación">Match:</h5>
             <div className="d-flex align-items-center gap-2 my-3">
               <div className="avatar-md flex-shrink-0">
                 <span
@@ -131,4 +129,4 @@ const ConciliationCards: React.FC<ConciliationCardsProps> = ({
   );
 };
 
-export default ConciliationCards;
+export default MatchingCards;

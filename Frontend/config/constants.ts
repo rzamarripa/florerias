@@ -166,6 +166,11 @@ export const menuItems: MenuItemType[] = [
         key: "importar-movimientos-bancario",
         label: "Importar Movimientos Bancarios",
         url: "/herramientas/importar-movimientos-bancarios",
+      },
+      {
+        key: "conciliacion",
+        label: "Conciliación",
+        url: "/modulos/conciliacion",
       }
     ],
   },

@@ -1,0 +1,132 @@
+export interface Factura {
+  _id: string;
+  uuid: string;
+  nombreEmisor: string;
+  importeAPagar: number;
+  numeroReferencia?: string;
+  packageFolio: string;
+  fechaEmision: string;
+  coinciliado?: boolean;
+  packageId?: string;
+  folio?: string;
+}
+
+export interface MovimientoBancario {
+  _id: string;
+  fecha: string;
+  concepto: string;
+  referencia?: string;
+  cargo: number;
+  abono: number;
+  saldo: number;
+  numeroReferencia?: string;
+  coinciliado?: boolean;
+  company?: {
+    name: string;
+  };
+  bankAccount?: {
+    accountNumber: string;
+    clabe: string;
+  };
+}
+
+export interface Company {
+  _id: string;
+  name: string;
+  legalRepresentative?: string;
+  rfc?: string;
+  address?: string;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export interface BankAccount {
+  _id: string;
+  accountNumber: string;
+  clabe: string;
+  claveBanxico?: string;
+  branch?: string;
+  currentBalance?: number;
+  bank: {
+    _id: string;
+    name: string;
+  };
+}
+
+export interface Conciliacion {
+  facturaId: string;
+  movimientoId: string;
+  comentario?: string;
+  tipo: 'automatica' | 'manual';
+}
+
+export interface ConciliacionMatch {
+  factura: Factura;
+  movimiento: MovimientoBancario;
+}
+
+export interface ConciliacionAutomaticaResponse {
+  coincidencias: ConciliacionMatch[];
+  facturasNoCoinciden: Factura[];
+  movimientosNoCoinciden: MovimientoBancario[];
+  totalCoincidencias: number;
+}
+
+export interface GetFacturasResponse {
+  success: boolean;
+  data: Factura[];
+  message?: string;
+}
+
+export interface GetMovimientosResponse {
+  success: boolean;
+  data: MovimientoBancario[];
+  message?: string;
+}
+
+export interface GetCompaniesResponse {
+  success: boolean;
+  data: Company[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface GetBankAccountsResponse {
+  success: boolean;
+  data: BankAccount[];
+  message?: string;
+}
+
+export interface ConciliacionAutomaticaRequest {
+  companyId: string;
+  bankAccountId: string;
+  fecha: string;
+}
+
+export interface ConciliacionManualRequest {
+  facturaId: string;
+  movimientoId: string;
+  comentario?: string;
+}
+
+export interface CerrarConciliacionRequest {
+  conciliaciones: Conciliacion[];
+}
+
+export interface CerrarConciliacionResponse {
+  success: boolean;
+  data: {
+    procesadas: {
+      facturaId: string;
+      movimientoId: string;
+      tipo: string;
+      comentario?: string;
+    }[];
+    totalProcesadas: number;
+  };
+  message: string;
+} 

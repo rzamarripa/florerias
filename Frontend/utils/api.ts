@@ -62,8 +62,6 @@ export const apiCall = async <T>(
       )),
   };
 
-  console.debug("Headers de la petición:", headers);
-
   const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${url}`, {
     ...options,
     headers,

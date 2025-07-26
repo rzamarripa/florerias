@@ -36,6 +36,26 @@ const bankMovementSchema = new Schema({
     type: String,
     required: false,
   },
+  numeroReferencia: {
+    type: String,
+    required: false,
+    trim: true,
+    index: true,
+  },
+  coinciliado: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  comentarioConciliacion: {
+    type: String,
+    required: false,
+    trim: true,
+  },
+  fechaConciliacion: {
+    type: Date,
+    required: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

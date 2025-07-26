@@ -255,6 +255,26 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     ref: 'cc_expense_concept',
     default: null,
     index: true
+  },
+  numeroReferencia: {
+    type: String,
+    required: false,
+    trim: true,
+    index: true,
+  },
+  coinciliado: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  comentarioConciliacion: {
+    type: String,
+    required: false,
+    trim: true,
+  },
+  fechaConciliacion: {
+    type: Date,
+    required: false,
   }
 }, {
   timestamps: true,
