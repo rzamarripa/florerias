@@ -29,25 +29,37 @@ export const getFacturasParaConciliacion = async (req, res) => {
       });
     }
 
-    const paquetes = await InvoicesPackage.find({
-      _id: { $in: packageIds },
-      estatus: 'Generado',
-      createdAt: { $gte: fechaFiltro, $lte: fechaFin }
-    });
-
-    let facturas = [];
-    for (const paquete of paquetes) {
-      for (const factura of paquete.facturas) {
-        if (!factura.coinciliado) {
-          facturas.push({
-            ...factura.toObject(),
-            packageId: paquete._id,
-            folio: paquete.folio,
-            packageFolio: paquete.folio
-          });
+    const facturas = await InvoicesPackage.aggregate([
+      {
+        $match: {
+          _id: { $in: packageIds },
+          estatus: 'Generado',
+          createdAt: { $gte: fechaFiltro, $lte: fechaFin }
+        }
+      },
+      {
+        $unwind: '$facturas'
+      },
+      {
+        $match: {
+          'facturas.coinciliado': { $ne: true }
+        }
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [
+              '$facturas',
+              {
+                packageId: '$_id',
+                folio: '$folio',
+                packageFolio: '$folio'
+              }
+            ]
+          }
         }
       }
-    }
+    ]);
 
     facturas.sort((a, b) => {
       const refA = a.numeroReferencia || '';
@@ -61,7 +73,6 @@ export const getFacturasParaConciliacion = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error obteniendo facturas para conciliación:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Error interno del servidor.'
@@ -100,7 +111,6 @@ export const getMovimientosBancariosParaConciliacion = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error obteniendo movimientos bancarios para conciliación:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Error interno del servidor.'
@@ -127,23 +137,36 @@ export const conciliacionAutomatica = async (req, res) => {
     const relations = await InvoicesPackageCompany.find({ companyId });
     const packageIds = relations.map(rel => rel.packageId);
 
-    const paquetes = await InvoicesPackage.find({
-      _id: { $in: packageIds },
-      estatus: 'Generado',
-      createdAt: { $gte: fechaFiltro, $lte: fechaFin }
-    });
-
-    let facturas = [];
-    for (const paquete of paquetes) {
-      for (const factura of paquete.facturas) {
-        if (!factura.coinciliado && factura.numeroReferencia) {
-          facturas.push({
-            ...factura.toObject(),
-            packageId: paquete._id
-          });
+    const facturas = await InvoicesPackage.aggregate([
+      {
+        $match: {
+          _id: { $in: packageIds },
+          estatus: 'Generado',
+          createdAt: { $gte: fechaFiltro, $lte: fechaFin }
+        }
+      },
+      {
+        $unwind: '$facturas'
+      },
+      {
+        $match: {
+          'facturas.coinciliado': { $ne: true },
+          'facturas.numeroReferencia': { $exists: true, $ne: null, $ne: '' }
+        }
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [
+              '$facturas',
+              {
+                packageId: '$_id'
+              }
+            ]
+          }
         }
       }
-    }
+    ]);
 
     const movimientos = await BankMovement.find({
       bankAccount: bankAccountId,
@@ -190,7 +213,6 @@ export const conciliacionAutomatica = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en conciliación automática:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Error interno del servidor.'
@@ -261,7 +283,6 @@ export const conciliacionManual = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en conciliación manual:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Error interno del servidor.'
@@ -338,7 +359,6 @@ export const cerrarConciliacion = async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error cerrando conciliación:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Error interno del servidor.'
