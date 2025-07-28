@@ -3,6 +3,8 @@ export interface Factura {
   uuid: string;
   nombreEmisor: string;
   importeAPagar: number;
+  importePagado: number;
+  totalPagado?: number;
   numeroReferencia?: string;
   packageFolio: string;
   fechaEmision: string;
@@ -13,21 +15,23 @@ export interface Factura {
 
 export interface MovimientoBancario {
   _id: string;
+  company: {
+    _id: string;
+    name: string;
+  };
+  bankAccount: {
+    _id: string;
+    accountNumber: string;
+    clabe: string;
+  };
   fecha: string;
   concepto: string;
   referencia?: string;
   cargo: number;
   abono: number;
   saldo: number;
-  numeroReferencia?: string;
-  coinciliado?: boolean;
-  company?: {
-    name: string;
-  };
-  bankAccount?: {
-    accountNumber: string;
-    clabe: string;
-  };
+  coinciliado: boolean;
+  createdAt: string;
 }
 
 export interface Company {

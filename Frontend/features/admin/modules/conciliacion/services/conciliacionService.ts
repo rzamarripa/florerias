@@ -22,11 +22,12 @@ export const conciliacionService = {
   },
 
   getMovimientosParaConciliacion: async (
+    companyId: string,
     bankAccountId: string,
     fecha: string
   ): Promise<GetMovimientosResponse> => {
     const response = await apiCall<GetMovimientosResponse["data"]>(
-      `/conciliacion/movimientos?bankAccountId=${bankAccountId}&fecha=${fecha}`
+      `/conciliacion/movimientos?companyId=${companyId}&bankAccountId=${bankAccountId}&fecha=${fecha}`
     );
     return response;
   },

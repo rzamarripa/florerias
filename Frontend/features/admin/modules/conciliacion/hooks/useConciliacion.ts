@@ -31,6 +31,7 @@ export const useConciliacion = () => {
           filters.fecha
         ),
         conciliacionService.getMovimientosParaConciliacion(
+          filters.companyId,
           filters.bankAccountId,
           filters.fecha
         )

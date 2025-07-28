@@ -56,6 +56,10 @@ const bankMovementSchema = new Schema({
   },
 });
 
+// Índices compuestos para optimizar las consultas de conciliación
+bankMovementSchema.index({ company: 1, bankAccount: 1, fecha: 1 });
+bankMovementSchema.index({ coinciliado: 1, fecha: 1 });
+
 const BankMovement = mongoose.model("cc_bank_movement", bankMovementSchema);
 
 export { BankMovement };

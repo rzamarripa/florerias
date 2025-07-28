@@ -16,6 +16,7 @@ export default function FacturasTable({
   selectedFactura,
   onFacturaSelect,
 }: FacturasTableProps) {
+  console.log("facturas", facturas);
   return (
     <Card>
       <Card.Header>
@@ -27,7 +28,6 @@ export default function FacturasTable({
           <thead>
             <tr>
               <th></th>
-              <th>Referencia</th>
               <th>Emisor</th>
               <th>Importe</th>
               <th>Folio</th>
@@ -55,11 +55,10 @@ export default function FacturasTable({
                     onChange={() => {}}
                   />
                 </td>
-                <td>{factura.numeroReferencia || "N/A"}</td>
                 <td className="text-truncate" style={{ maxWidth: "150px" }}>
                   {factura.nombreEmisor}
                 </td>
-                <td>{formatCurrency(factura.importeAPagar)}</td>
+                <td>{formatCurrency(factura.importePagado )}</td>
                 <td>{factura.packageFolio}</td>
               </tr>
             ))}

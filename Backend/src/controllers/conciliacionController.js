@@ -1,6 +1,6 @@
 import { InvoicesPackage } from "../models/InvoicesPackpage.js";
 import { BankMovement } from "../models/BankMovement.js";
-import { InvoicesPackageCompany } from "../models/InvoicesPackpageCompany.js";
+import { ScheduledPayment } from "../models/ScheduledPayment.js";
 import mongoose from "mongoose";
 
 export const getFacturasParaConciliacion = async (req, res) => {
@@ -14,13 +14,25 @@ export const getFacturasParaConciliacion = async (req, res) => {
       });
     }
 
-    const fechaFiltro = fecha ? new Date(fecha) : new Date();
-    fechaFiltro.setHours(0, 0, 0, 0);
-    const fechaFin = new Date(fechaFiltro);
-    fechaFin.setHours(23, 59, 59, 999);
-
-    const relations = await InvoicesPackageCompany.find({ companyId });
-    const packageIds = relations.map(rel => rel.packageId);
+    let fechaFiltro, fechaFin;
+    
+    if (fecha) {
+      // Crear la fecha en la zona horaria local para evitar problemas de UTC
+      const [year, month, day] = fecha.split('-').map(Number);
+      fechaFiltro = new Date(year, month - 1, day, 0, 0, 0, 0);
+      fechaFin = new Date(year, month - 1, day, 23, 59, 59, 999);
+    } else {
+      fechaFiltro = new Date();
+      fechaFiltro.setHours(0, 0, 0, 0);
+      fechaFin = new Date(fechaFiltro);
+      fechaFin.setHours(23, 59, 59, 999);
+    }
+    const scheduledPayments = await ScheduledPayment.find({
+      companyId,
+      bankAccountId,
+      scheduledDate: { $gte: fechaFiltro, $lte: fechaFin }
+    });
+    const packageIds = scheduledPayments.map(sp => sp.packageId);
 
     if (packageIds.length === 0) {
       return res.status(200).json({
@@ -33,8 +45,7 @@ export const getFacturasParaConciliacion = async (req, res) => {
       {
         $match: {
           _id: { $in: packageIds },
-          estatus: 'Generado',
-          createdAt: { $gte: fechaFiltro, $lte: fechaFin }
+          estatus: 'Generado'
         }
       },
       {
@@ -46,6 +57,11 @@ export const getFacturasParaConciliacion = async (req, res) => {
         }
       },
       {
+        $addFields: {
+          'facturas.importePagado': { $toDouble: '$facturas.importePagado' }
+        }
+      },
+      {
         $replaceRoot: {
           newRoot: {
             $mergeObjects: [
@@ -53,7 +69,8 @@ export const getFacturasParaConciliacion = async (req, res) => {
               {
                 packageId: '$_id',
                 folio: '$folio',
-                packageFolio: '$folio'
+                packageFolio: '$folio',
+                importeAPagar: '$totalPagado'
               }
             ]
           }
@@ -66,7 +83,6 @@ export const getFacturasParaConciliacion = async (req, res) => {
       const refB = b.numeroReferencia || '';
       return refA.localeCompare(refB);
     });
-
     res.status(200).json({
       success: true,
       data: facturas
@@ -82,28 +98,53 @@ export const getFacturasParaConciliacion = async (req, res) => {
 
 export const getMovimientosBancariosParaConciliacion = async (req, res) => {
   try {
-    const { bankAccountId, fecha } = req.query;
+    const { companyId, bankAccountId, fecha } = req.query;
 
-    if (!bankAccountId) {
+    if (!companyId || !bankAccountId) {
       return res.status(400).json({
         success: false,
-        message: 'bankAccountId es requerido.'
+        message: 'companyId y bankAccountId son requeridos.'
       });
     }
 
-    const fechaFiltro = fecha ? new Date(fecha) : new Date();
-    fechaFiltro.setHours(0, 0, 0, 0);
-    const fechaFin = new Date(fechaFiltro);
-    fechaFin.setHours(23, 59, 59, 999);
+    let fechaFiltro, fechaFin;
+    
+    if (fecha) {
+      // Crear la fecha en la zona horaria local para evitar problemas de UTC
+      const [year, month, day] = fecha.split('-').map(Number);
+      fechaFiltro = new Date(year, month - 1, day, 0, 0, 0, 0);
+      fechaFin = new Date(year, month - 1, day, 23, 59, 59, 999);
+    } else {
+      fechaFiltro = new Date();
+      fechaFiltro.setHours(0, 0, 0, 0);
+      fechaFin = new Date(fechaFiltro);
+      fechaFin.setHours(23, 59, 59, 999);
+    }
 
-    const movimientos = await BankMovement.find({
+    console.log("Buscando movimientos con filtros:", {
+      company: companyId,
       bankAccount: bankAccountId,
-      fecha: { $gte: fechaFiltro, $lte: fechaFin },
-      coinciliado: { $ne: true }
+      fechaFiltro,
+      fechaFin
+    });
+
+    // Usar $expr y $dateToString para comparar solo fecha sin hora
+    const movimientos = await BankMovement.find({
+      company: companyId,
+      bankAccount: bankAccountId,
+      coinciliado: { $ne: true },
+      $expr: {
+        $eq: [
+          { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
+          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } }
+        ]
+      }
     })
     .populate('company', 'name')
     .populate('bankAccount', 'accountNumber clabe')
-    .sort({ numeroReferencia: 1 });
+    .sort({ fecha: 1 });
+
+    console.log("Movimientos encontrados:", JSON.stringify(movimientos, null, 2));
 
     res.status(200).json({
       success: true,
@@ -129,20 +170,32 @@ export const conciliacionAutomatica = async (req, res) => {
       });
     }
 
-    const fechaFiltro = fecha ? new Date(fecha) : new Date();
-    fechaFiltro.setHours(0, 0, 0, 0);
-    const fechaFin = new Date(fechaFiltro);
-    fechaFin.setHours(23, 59, 59, 999);
+    let fechaFiltro, fechaFin;
+    
+    if (fecha) {
+      // Crear la fecha en la zona horaria local para evitar problemas de UTC
+      const [year, month, day] = fecha.split('-').map(Number);
+      fechaFiltro = new Date(year, month - 1, day, 0, 0, 0, 0);
+      fechaFin = new Date(year, month - 1, day, 23, 59, 59, 999);
+    } else {
+      fechaFiltro = new Date();
+      fechaFiltro.setHours(0, 0, 0, 0);
+      fechaFin = new Date(fechaFiltro);
+      fechaFin.setHours(23, 59, 59, 999);
+    }
 
-    const relations = await InvoicesPackageCompany.find({ companyId });
-    const packageIds = relations.map(rel => rel.packageId);
+    const scheduledPayments = await ScheduledPayment.find({
+      companyId,
+      bankAccountId,
+      scheduledDate: { $gte: fechaFiltro, $lte: fechaFin }
+    });
+    const packageIds = scheduledPayments.map(sp => sp.packageId);
 
     const facturas = await InvoicesPackage.aggregate([
       {
         $match: {
           _id: { $in: packageIds },
-          estatus: 'Generado',
-          createdAt: { $gte: fechaFiltro, $lte: fechaFin }
+          estatus: 'Generado'
         }
       },
       {
@@ -155,12 +208,18 @@ export const conciliacionAutomatica = async (req, res) => {
         }
       },
       {
+        $addFields: {
+          'facturas.importePagado': { $toDouble: '$facturas.importePagado' }
+        }
+      },
+      {
         $replaceRoot: {
           newRoot: {
             $mergeObjects: [
               '$facturas',
               {
-                packageId: '$_id'
+                packageId: '$_id',
+                importeAPagar: '$totalPagado'
               }
             ]
           }
@@ -169,12 +228,18 @@ export const conciliacionAutomatica = async (req, res) => {
     ]);
 
     const movimientos = await BankMovement.find({
+      company: companyId,
       bankAccount: bankAccountId,
-      fecha: { $gte: fechaFiltro, $lte: fechaFin },
       coinciliado: { $ne: true },
-      numeroReferencia: { $exists: true, $ne: null, $ne: '' }
+      numeroReferencia: { $exists: true, $ne: null, $ne: '' },
+      $expr: {
+        $eq: [
+          { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
+          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } }
+        ]
+      }
     });
-
+    console.log("movimientos", movimientos);
     const coincidencias = [];
     const facturasNoCoinciden = [];
     const movimientosNoCoinciden = [];

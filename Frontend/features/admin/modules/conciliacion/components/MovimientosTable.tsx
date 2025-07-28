@@ -29,7 +29,6 @@ export default function MovimientosTable({
           <thead>
             <tr>
               <th></th>
-              <th>Referencia</th>
               <th>Concepto</th>
               <th>Abono</th>
               <th>Fecha</th>
@@ -56,11 +55,6 @@ export default function MovimientosTable({
                     checked={selectedMovimiento === movimiento._id}
                     onChange={() => {}}
                   />
-                </td>
-                <td>
-                  {movimiento.numeroReferencia ||
-                    movimiento.referencia ||
-                    "N/A"}
                 </td>
                 <td className="text-truncate" style={{ maxWidth: "150px" }}>
                   {movimiento.concepto}
