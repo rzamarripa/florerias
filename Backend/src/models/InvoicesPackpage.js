@@ -233,6 +233,12 @@ const InvoicesPackageSchema = new mongoose.Schema(
           type: Date,
           required: false,
         },
+        referenciaConciliacion: {
+          type: String,
+          required: false,
+          trim: true,
+          index: true,
+        },
         createdAt: {
           type: Date,
           default: Date.now,

@@ -31,6 +31,7 @@ export default function FacturasTable({
               <th>Emisor</th>
               <th>Importe</th>
               <th>Folio</th>
+              <th>Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -58,8 +59,25 @@ export default function FacturasTable({
                 <td className="text-truncate" style={{ maxWidth: "150px" }}>
                   {factura.nombreEmisor}
                 </td>
-                <td>{formatCurrency(factura.importePagado )}</td>
+                <td>{formatCurrency(factura.importePagado)}</td>
                 <td>{factura.packageFolio}</td>
+                <td>
+                  {factura.coinciliado ? (
+                    <div>
+                      <small className="text-success">✅ Conciliada</small>
+                      {factura.referenciaConciliacion && (
+                        <div>
+                          <small className="text-muted">
+                            Ref:{" "}
+                            {factura.referenciaConciliacion.substring(0, 8)}...
+                          </small>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <small className="text-warning">⏳ Pendiente</small>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -39,7 +39,7 @@ const bankMovementSchema = new Schema({
   coinciliado: {
     type: Boolean,
     default: false,
-    index: true,
+    index: true,  
   },
   comentarioConciliacion: {
     type: String,
@@ -50,16 +50,18 @@ const bankMovementSchema = new Schema({
     type: Date,
     required: false,
   },
+  referenciaConciliacion: {
+    type: String,
+    required: false,
+    trim: true,
+    index: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
-
-// Índices compuestos para optimizar las consultas de conciliación
-bankMovementSchema.index({ company: 1, bankAccount: 1, fecha: 1 });
-bankMovementSchema.index({ coinciliado: 1, fecha: 1 });
-
+  
 const BankMovement = mongoose.model("cc_bank_movement", bankMovementSchema);
 
 export { BankMovement };

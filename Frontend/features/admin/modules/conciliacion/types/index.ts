@@ -9,6 +9,7 @@ export interface Factura {
   packageFolio: string;
   fechaEmision: string;
   coinciliado?: boolean;
+  referenciaConciliacion?: string;
   packageId?: string;
   folio?: string;
 }
@@ -31,6 +32,7 @@ export interface MovimientoBancario {
   abono: number;
   saldo: number;
   coinciliado: boolean;
+  referenciaConciliacion?: string;
   createdAt: string;
 }
 
@@ -61,12 +63,14 @@ export interface Conciliacion {
   facturaId: string;
   movimientoId: string;
   comentario?: string;
+  referenciaConciliacion?: string;
   tipo: 'automatica' | 'manual';
 }
 
 export interface ConciliacionMatch {
   factura: Factura;
   movimiento: MovimientoBancario;
+  referenciaConciliacion: string;
 }
 
 export interface ConciliacionAutomaticaResponse {
@@ -114,6 +118,12 @@ export interface ConciliacionAutomaticaRequest {
 export interface ConciliacionManualRequest {
   facturaId: string;
   movimientoId: string;
+  comentario?: string;
+}
+
+export interface ConciliacionDirectaRequest {
+  facturaId: string;
+  movimientoIds: string[];
   comentario?: string;
 }
 

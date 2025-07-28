@@ -2,6 +2,7 @@ import { InvoicesPackage } from "../models/InvoicesPackpage.js";
 import { BankMovement } from "../models/BankMovement.js";
 import { ScheduledPayment } from "../models/ScheduledPayment.js";
 import mongoose from "mongoose";
+import { randomUUID } from "crypto";
 
 export const getFacturasParaConciliacion = async (req, res) => {
   try {
@@ -251,9 +252,11 @@ export const conciliacionAutomatica = async (req, res) => {
       );
 
       if (movimientoCoincidente) {
+        const referenciaConciliacion = randomUUID();
         coincidencias.push({
           factura: factura,
-          movimiento: movimientoCoincidente
+          movimiento: movimientoCoincidente,
+          referenciaConciliacion: referenciaConciliacion
         });
         const index = movimientos.indexOf(movimientoCoincidente);
         if (index > -1) {
@@ -333,11 +336,14 @@ export const conciliacionManual = async (req, res) => {
       });
     }
 
+    const referenciaConciliacion = randomUUID();
+    
     const conciliacion = {
       facturaId: facturaId,
       movimientoId: movimientoId,
       comentario: comentario || 'Conciliación manual',
       fechaConciliacion: new Date(),
+      referenciaConciliacion: referenciaConciliacion,
       tipo: 'manual'
     };
 
@@ -346,6 +352,116 @@ export const conciliacionManual = async (req, res) => {
       data: conciliacion,
       message: 'Conciliación manual registrada exitosamente.'
     });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error interno del servidor.'
+    });
+  }
+};
+
+export const conciliacionDirecta = async (req, res) => {
+  try {
+    const { facturaId, movimientoIds, comentario } = req.body;
+
+    if (!facturaId || !movimientoIds || !Array.isArray(movimientoIds) || movimientoIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'facturaId y al menos un movimientoId son requeridos.'
+      });
+    }
+
+    // Verificar que la factura existe y no está conciliada
+    const paquetes = await InvoicesPackage.find({
+      'facturas._id': facturaId,
+      estatus: 'Generado'
+    });
+
+    if (paquetes.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Factura no encontrada en paquetes con estatus Generado.'
+      });
+    }
+
+    const paquete = paquetes[0];
+    const factura = paquete.facturas.find(f => f._id.toString() === facturaId);
+
+    if (factura.coinciliado) {
+      return res.status(400).json({
+        success: false,
+        message: 'La factura ya está conciliada.'
+      });
+    }
+
+    // Verificar que todos los movimientos existen y no están conciliados
+    const movimientos = await BankMovement.find({
+      _id: { $in: movimientoIds },
+      coinciliado: { $ne: true }
+    });
+
+    if (movimientos.length !== movimientoIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Algunos movimientos no existen o ya están conciliados.'
+      });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const fechaConciliacion = new Date();
+      const comentarioConciliacion = comentario || 'Conciliación directa';
+      const referenciaConciliacion = randomUUID();
+
+      // Marcar la factura como conciliada
+      await InvoicesPackage.updateOne(
+        { 'facturas._id': facturaId },
+        { 
+          $set: { 
+            'facturas.$.coinciliado': true,
+            'facturas.$.comentarioConciliacion': comentarioConciliacion,
+            'facturas.$.fechaConciliacion': fechaConciliacion,
+            'facturas.$.referenciaConciliacion': referenciaConciliacion
+          }
+        },
+        { session }
+      );
+
+      // Marcar todos los movimientos como conciliados
+      await BankMovement.updateMany(
+        { _id: { $in: movimientoIds } },
+        { 
+          coinciliado: true,
+          comentarioConciliacion: comentarioConciliacion,
+          fechaConciliacion: fechaConciliacion,
+          referenciaConciliacion: referenciaConciliacion
+        },
+        { session }
+      );
+
+      await session.commitTransaction();
+
+      res.status(200).json({
+        success: true,
+        data: {
+          facturaId,
+          movimientoIds,
+          comentario: comentarioConciliacion,
+          fechaConciliacion,
+          referenciaConciliacion
+        },
+        message: `Conciliación realizada exitosamente. 1 factura conciliada con ${movimientoIds.length} movimientos.`
+      });
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
 
   } catch (error) {
     res.status(500).json({
@@ -373,14 +489,18 @@ export const cerrarConciliacion = async (req, res) => {
       const procesadas = [];
 
       for (const conciliacion of conciliaciones) {
-        const { facturaId, movimientoId, comentario, tipo } = conciliacion;
+        const { facturaId, movimientoId, comentario, tipo, referenciaConciliacion } = conciliacion;
+        
+        // Si no hay referencia en la conciliación, generar una nueva
+        const referenciaFinal = referenciaConciliacion || randomUUID();
 
         await BankMovement.findByIdAndUpdate(
           movimientoId,
           { 
             coinciliado: true,
             comentarioConciliacion: comentario || `Conciliación ${tipo}`,
-            fechaConciliacion: new Date()
+            fechaConciliacion: new Date(),
+            referenciaConciliacion: referenciaFinal
           },
           { session }
         );
@@ -391,7 +511,8 @@ export const cerrarConciliacion = async (req, res) => {
             $set: { 
               'facturas.$.coinciliado': true,
               'facturas.$.comentarioConciliacion': comentario || `Conciliación ${tipo}`,
-              'facturas.$.fechaConciliacion': new Date()
+              'facturas.$.fechaConciliacion': new Date(),
+              'facturas.$.referenciaConciliacion': referenciaFinal
             }
           },
           { session }

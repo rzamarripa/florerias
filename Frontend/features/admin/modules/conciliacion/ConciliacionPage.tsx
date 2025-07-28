@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Row, Col } from "react-bootstrap";
+import { Row, Col, Button, Spinner, Alert } from "react-bootstrap";
 import {
   FiltrosConciliacion,
   FacturasTable,
@@ -21,11 +21,14 @@ export default function ConciliacionPage() {
     movimientosRestantes,
     selectedFactura,
     selectedMovimiento,
+    selectedMovimientos,
     loadData,
     handleFacturaSelect,
     handleMovimientoSelect,
+    handleMovimientosSelect,
     handleConciliarAutomatico,
     handleConciliacionManual,
+    handleConciliacionDirecta,
     handleCerrarConciliacion,
     resetModal,
   } = useConciliacion();
@@ -49,6 +52,19 @@ export default function ConciliacionPage() {
     handleConciliarAutomatico(filters);
   };
 
+  const handleConciliarDirectamente = () => {
+    if (!selectedFactura) {
+      alert("Debe seleccionar una factura");
+      return;
+    }
+    if (selectedMovimientos.length === 0) {
+      alert("Debe seleccionar al menos un movimiento bancario");
+      return;
+    }
+
+    handleConciliacionDirecta(selectedFactura, selectedMovimientos);
+  };
+
   return (
     <div className="container-fluid">
       <Row className="mb-4">
@@ -64,23 +80,60 @@ export default function ConciliacionPage() {
       />
 
       {hasData && (
-        <Row>
-          <Col md={6}>
-            <FacturasTable
-              facturas={facturas}
-              selectedFactura={selectedFactura}
-              onFacturaSelect={handleFacturaSelect}
-            />
-          </Col>
+        <>
+          <Row>
+            <Col md={6}>
+              <FacturasTable
+                facturas={facturas}
+                selectedFactura={selectedFactura}
+                onFacturaSelect={handleFacturaSelect}
+              />
+            </Col>
 
-          <Col md={6}>
-            <MovimientosTable
-              movimientos={movimientos}
-              selectedMovimiento={selectedMovimiento}
-              onMovimientoSelect={handleMovimientoSelect}
-            />
-          </Col>
-        </Row>
+            <Col md={6}>
+              <MovimientosTable
+                movimientos={movimientos}
+                selectedMovimiento={selectedMovimiento}
+                selectedMovimientos={selectedMovimientos}
+                onMovimientoSelect={handleMovimientoSelect}
+                onMovimientosSelect={handleMovimientosSelect}
+              />
+            </Col>
+          </Row>
+
+          {(selectedFactura || selectedMovimientos.length > 0) && (
+            <Row className="mt-3">
+              <Col>
+                <Alert variant="info">
+                  Seleccionados: {selectedFactura ? "1 factura" : "0 facturas"}{" "}
+                  y {selectedMovimientos.length} movimientos
+                </Alert>
+              </Col>
+            </Row>
+          )}
+
+          {selectedFactura && selectedMovimientos.length > 0 && (
+            <Row className="mt-2">
+              <Col>
+                <Button
+                  variant="success"
+                  onClick={handleConciliarDirectamente}
+                  disabled={loading}
+                  size="lg"
+                >
+                  {loading ? (
+                    <>
+                      <Spinner animation="border" size="sm" className="me-2" />
+                      Conciliando...
+                    </>
+                  ) : (
+                    "Conciliar Selección"
+                  )}
+                </Button>
+              </Col>
+            </Row>
+          )}
+        </>
       )}
 
       <ConciliacionManualModal

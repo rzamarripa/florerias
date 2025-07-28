@@ -4,6 +4,7 @@ import {
   getMovimientosBancariosParaConciliacion,
   conciliacionAutomatica,
   conciliacionManual,
+  conciliacionDirecta,
   cerrarConciliacion
 } from '../controllers/conciliacionController.js';
 import { protect } from '../middleware/auth.js';
@@ -15,6 +16,7 @@ router.get('/movimientos', protect, getMovimientosBancariosParaConciliacion);
 
 router.post('/automatica', protect, conciliacionAutomatica);
 router.post('/manual', protect, conciliacionManual);
+router.post('/directa', protect, conciliacionDirecta);
 router.post('/cerrar', protect, cerrarConciliacion);
 
 export default router; 

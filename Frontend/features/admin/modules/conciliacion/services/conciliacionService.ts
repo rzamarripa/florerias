@@ -5,6 +5,7 @@ import {
   ConciliacionAutomaticaRequest,
   ConciliacionAutomaticaResponse,
   ConciliacionManualRequest,
+  ConciliacionDirectaRequest,
   CerrarConciliacionRequest,
   CerrarConciliacionResponse,
 } from "../types";
@@ -49,6 +50,16 @@ export const conciliacionService = {
     data: ConciliacionManualRequest
   ): Promise<{ success: boolean; data: any; message: string }> => {
     const response = await apiCall<any>("/conciliacion/manual", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return response;
+  },
+
+  conciliacionDirecta: async (
+    data: ConciliacionDirectaRequest
+  ): Promise<{ success: boolean; data: any; message: string }> => {
+    const response = await apiCall<any>("/conciliacion/directa", {
       method: "POST",
       body: JSON.stringify(data),
     });
