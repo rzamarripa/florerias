@@ -69,7 +69,35 @@ export const apiCall = async <T>(
     headers,
   });
 
-  const data = await response.json();
+  // Verificar el tipo de contenido antes de intentar parsear JSON
+  const contentType = response.headers.get("content-type");
+  let data;
+
+  if (contentType && contentType.includes("application/json")) {
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error("Error parsing JSON response:", jsonError);
+      throw new Error("Respuesta del servidor no es JSON válido");
+    }
+  } else {
+    // Si no es JSON, leer como texto
+    const textData = await response.text();
+    console.error("Respuesta no-JSON recibida:", {
+      status: response.status,
+      statusText: response.statusText,
+      contentType,
+      data: textData,
+    });
+
+    // Intentar crear un objeto de error estructurado
+    data = {
+      success: false,
+      message:
+        textData || `Error HTTP ${response.status}: ${response.statusText}`,
+      data: null,
+    };
+  }
 
   if (!response.ok) {
     console.error("Error en la petición:", {
@@ -77,6 +105,14 @@ export const apiCall = async <T>(
       statusText: response.statusText,
       data,
     });
+
+    // Manejo especial para errores 429
+    if (response.status === 429) {
+      throw new Error(
+        "Demasiadas peticiones. Por favor, espera un momento antes de intentar nuevamente."
+      );
+    }
+
     throw new Error(data.message || "Error en la operación");
   }
 
