@@ -15,8 +15,8 @@ const bankSchema = new Schema({
       validator: function (v) {
         return v.toString().length === 3;
       },
-      message: 'El número del banco debe tener exactamente 3 dígitos'
-    }
+      message: "El número del banco debe tener exactamente 3 dígitos",
+    },
   },
   isActive: {
     type: Boolean,
@@ -37,13 +37,6 @@ bankSchema.index(
   {
     unique: true,
     collation: { locale: "es", strength: 2 },
-  }
-);
-
-bankSchema.index(
-  { bankNumber: 1 },
-  {
-    unique: true,
   }
 );
 

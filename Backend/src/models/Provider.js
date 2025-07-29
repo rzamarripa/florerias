@@ -101,9 +101,6 @@ const providerSchema = new Schema({
   },
 });
 
-// Índice único para el campo referencia
-providerSchema.index({ referencia: 1 }, { unique: true });
-
 providerSchema.pre("save", function (next) {
   this.updatedAt = new Date();
   next();
