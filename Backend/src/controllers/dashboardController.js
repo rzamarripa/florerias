@@ -15,8 +15,7 @@ export const getImportStatusByAccount = async (req, res) => {
       .populate("bank", "name");
 
     const importLogs = await LogImportBankMovements.find({
-      createdAt: { $gte: startOfWeek, $lte: endOfWeek },
-      status: "completed",
+      importedAt: { $gte: startOfWeek, $lte: endOfWeek },
     });
 
     const importStatusByAccount = bankAccounts.map((account) => {
@@ -27,7 +26,7 @@ export const getImportStatusByAccount = async (req, res) => {
 
       accountLogs.forEach((log) => {
         const dayOfWeek =
-          moment(log.createdAt).tz("America/Mazatlan").isoWeekday() - 1;
+          moment(log.importedAt).tz("America/Mazatlan").isoWeekday() - 1;
         dailyStatus[dayOfWeek] = true;
       });
 

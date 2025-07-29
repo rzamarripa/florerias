@@ -5,20 +5,16 @@ import CountUp from "react-countup";
 import { ConciliationData } from "../types/validation";
 import { formatMoney } from "@/utils";
 
-interface ConciliationCardsProps {
+interface MatchingCardsProps {
   conciliationData: ConciliationData;
 }
 
-const ConciliationCards: React.FC<ConciliationCardsProps> = ({
-  conciliationData,
-}) => {
+const MatchingCards: React.FC<MatchingCardsProps> = ({ conciliationData }) => {
   const {
     saldoInicialCuenta,
     saldoInicialCalculado,
     saldoFinalCalculado,
     saldoFinalReportado,
-    abonoPrimeraFila,
-    cargoPrimeraFila,
     balancesCuadran,
     saldosInicialesCoinciden,
   } = conciliationData;
@@ -51,28 +47,9 @@ const ConciliationCards: React.FC<ConciliationCardsProps> = ({
             {saldoInicialCuenta !== null &&
             saldosInicialesCoinciden !== null ? (
               <p className="mb-0 d-flex justify-content-between">
-                <span className="text-nowrap text-muted">
-                  Saldo Registrado:{" "}
-                  <span
-                    className={`fw-bold ${
-                      saldosInicialesCoinciden ? "text-success" : "text-danger"
-                    }`}
-                  >
-                    {saldosInicialesCoinciden ? "Coincide" : "No Coincide"}
-                  </span>
-                </span>
+                <span className="text-muted">Saldo Actual</span>
                 <span className="fw-bold text-end">
-                  Saldo Actual: {formatMoney(saldoInicialCuenta ?? 0)}
-                  <br />
-                  (+) Abono: {formatMoney(abonoPrimeraFila ?? 0)}
-                  <br />
-                  (-) Cargo: {formatMoney(cargoPrimeraFila ?? 0)}
-                  <br />
-                  {formatMoney(
-                    (saldoInicialCuenta ?? 0) +
-                      (abonoPrimeraFila ?? 0) -
-                      (cargoPrimeraFila ?? 0)
-                  )}
+                  {formatMoney(saldoInicialCuenta ?? 0)}
                 </span>
               </p>
             ) : (
@@ -90,7 +67,7 @@ const ConciliationCards: React.FC<ConciliationCardsProps> = ({
           } bg-opacity-10 shadow-none mb-0`}
         >
           <Card.Body>
-            <h5 title="Resultado de la Conciliación">Conciliación</h5>
+            <h5 title="Resultado de la Conciliación">Match:</h5>
             <div className="d-flex align-items-center gap-2 my-3">
               <div className="avatar-md flex-shrink-0">
                 <span
@@ -152,4 +129,4 @@ const ConciliationCards: React.FC<ConciliationCardsProps> = ({
   );
 };
 
-export default ConciliationCards;
+export default MatchingCards;

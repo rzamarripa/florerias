@@ -44,7 +44,6 @@ export const processQuery = async (req, res) => {
       });
     }
 
-    console.log(`🗃️ DATABASE query path`);
     const queryExecution = await executeComplexQuery(message, conversationHistory);
     
     if (!queryExecution.success) {
@@ -199,25 +198,25 @@ export const getChatContext = async (req, res) => {
       if (contextInfo && contextInfo.totalBudgets > 0) {
         const aiPrompt = `Genera 5 preguntas ejemplo prácticas para un sistema de gestión empresarial CAPREPA.
 
-Datos disponibles:
-- ${contextInfo.totalBudgets} presupuestos registrados
-- Meses: ${contextInfo.monthsAvailable.join(', ')}
-- Total: $${contextInfo.totalAmount.toLocaleString()}
+          Datos disponibles:
+          - ${contextInfo.totalBudgets} presupuestos registrados
+          - Meses: ${contextInfo.monthsAvailable.join(', ')}
+          - Total: $${contextInfo.totalAmount.toLocaleString()}
 
-Genera preguntas útiles para:
-- Contadores
-- Gerentes 
-- Administradores
-- Personal de finanzas
+          Genera preguntas útiles para:
+          - Contadores
+          - Gerentes 
+          - Administradores
+          - Personal de finanzas
 
-Requisitos:
-1. Preguntas en ESPAÑOL
-2. Enfoque en análisis financiero y presupuestario
-3. Usar meses reales: ${contextInfo.monthsAvailable.slice(0, 3).join(', ')}
-4. Prácticas para toma de decisiones empresariales
-5. Sin términos técnicos de bases de datos
+          Requisitos:
+          1. Preguntas en ESPAÑOL
+          2. Enfoque en análisis financiero y presupuestario
+          3. Usar meses reales: ${contextInfo.monthsAvailable.slice(0, 3).join(', ')}
+          4. Prácticas para toma de decisiones empresariales
+          5. Sin términos técnicos de bases de datos
 
-Devuelve JSON array de strings.`;
+          Devuelve JSON array de strings.`;
 
         const exampleResult = await streamText({
           model: openai('gpt-4o-mini'),

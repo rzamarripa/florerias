@@ -70,9 +70,6 @@ async function executeMongoQuery(queryStr) {
     let targetCollection = Budget;
     let cleanQuery = queryStr;
     
-    // ESSENTIAL LOG: Show what query we're executing
-    console.log(`🔧 EXECUTING QUERY: ${queryStr}`);
-    
     for (const [collectionName, model] of Object.entries(collectionMap)) {
       if (queryStr.includes(`db.${collectionName}.`) && model) {
         targetCollection = model;
@@ -134,21 +131,8 @@ async function executeMongoQuery(queryStr) {
       }
     }
 
-    // ESSENTIAL LOG: Show query results
-    if (Array.isArray(result)) {
-      console.log(`📊 RESULT: Found ${result.length} documents`);
-      if (result.length > 0) {
-        console.log(`📊 FIRST RESULT: ${JSON.stringify(result[0], null, 2)}`);
-      }
-    } else if (typeof result === 'number') {
-      console.log(`📊 RESULT: Count = ${result}`);
-    } else {
-      console.log(`📊 RESULT: ${JSON.stringify(result, null, 2)}`);
-    }
-      
     return result;
   } catch (error) {
-    console.log(`❌ QUERY ERROR: ${error.message}`);
     throw new Error(`Query execution failed: ${error.message}`);
   }
 }
@@ -184,7 +168,6 @@ export async function generateDirectResponse(message, conversationHistory = []) 
     ],
     temperature: 0.3,
     maxTokens: 1500,
-    maxSteps: 1,
     maxRetries: 2
   });
 
@@ -214,7 +197,6 @@ export async function executeComplexQuery(message, conversationHistory = []) {
         });
       }
 
-      // Add previous results context for better next query generation
       const lastResult = allResults[allResults.length - 1];
       if (lastResult && lastResult.results) {
         contextualMessages.push({
@@ -224,7 +206,6 @@ export async function executeComplexQuery(message, conversationHistory = []) {
       }
     }
 
-    // Improve current query context with specific instructions
     let queryContext = currentQuery;
     if (stepCount > 1 && allResults.length > 0) {
       const lastResult = allResults[allResults.length - 1];

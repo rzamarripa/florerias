@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 
 const ImportedInvoicesSchema = new mongoose.Schema({
-  // UUID del folio fiscal (identificador único del CFDI)
   uuid: {
     type: String,
     required: true,
@@ -11,8 +10,6 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     match: [/^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i, 'Formato de UUID inválido'],
     index: true
   },
-
-  // RFC del emisor de la factura
   rfcEmisor: {
     type: String,
     required: true,
@@ -20,24 +17,18 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     uppercase: true,
     match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Formato de RFC inválido'],
   },
-
-  // Razón social o nombre del emisor
   nombreEmisor: {
     type: String,
     required: true,
     trim: true,
     maxLength: 254
   },
-
-  // Referencia a la empresa en el sistema
   razonSocial: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'cc_companies',
     required: true,
     index: true
   },
-
-  // RFC del receptor de la factura
   rfcReceptor: {
     type: String,
     required: true,
@@ -45,16 +36,12 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     uppercase: true,
     match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Formato de RFC inválido'],
   },
-
-  // Razón social o nombre del receptor
   nombreReceptor: {
     type: String,
     required: true,
     trim: true,
     maxLength: 254
   },
-
-  // RFC del Proveedor Autorizado de Certificación (PAC)
   rfcProveedorCertificacion: {
     type: String,
     required: true,
@@ -62,29 +49,21 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     uppercase: true,
     match: [/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/, 'Formato de RFC del PAC inválido']
   },
-
-  // Fecha de emisión del comprobante
   fechaEmision: {
     type: Date,
     required: true,
     index: true
   },
-
-  // Fecha de timbrado/certificación por el SAT
   fechaCertificacionSAT: {
     type: Date,
     required: true,
     index: true
-  },
-
-  // Fecha de cancelación del comprobante
+  },  
   fechaCancelacion: {
     type: Date,
     default: null,
     index: true
   },
-
-  // Importe a pagar (monto original de la factura)
   importeAPagar: {
     type: mongoose.Schema.Types.Decimal128,
     required: true,
@@ -93,8 +72,6 @@ const ImportedInvoicesSchema = new mongoose.Schema({
       return value ? parseFloat(value.toString()) : 0;
     }
   },
-
-  // Tipo de comprobante fiscal
   tipoComprobante: {
     type: String,
     required: true,
@@ -104,8 +81,6 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     },
     index: true
   },
-
-  // Estatus del comprobante
   estatus: {
     type: Number,
     required: true,
@@ -116,38 +91,28 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     default: 1,
     index: true
   },
-
-  // Folio del comprobante
   folio: {
     type: String,
     trim: true,
     maxLength: 50,
     index: true
   },
-
-  // Serie del comprobante
   serie: {
     type: String,
     trim: true,
     maxLength: 50,
     index: true
   },
-
-  // Forma de pago (código SAT)
   formaPago: {
     type: String,
     trim: true,
     maxLength: 10
   },
-
-  // Método de pago (PUE, PPD, etc.)
   metodoPago: {
     type: String,
     trim: true,
     maxLength: 10
   },
-
-  // Importe ya pagado
   importePagado: {
     type: mongoose.Schema.Types.Decimal128,
     min: 0,
@@ -156,8 +121,6 @@ const ImportedInvoicesSchema = new mongoose.Schema({
       return value ? parseFloat(value.toString()) : 0;
     }
   },
-
-  // Estado del pago (null=Pendiente de autorización, 0=Pendiente, 1=Enviado a pago, 2=Pagado, 3=Registrado)
   estadoPago: {
     type: Number,
     enum: {
@@ -167,41 +130,29 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     default: 0,
     index: true
   },
-
-  // Si la factura está completa
   esCompleta: {
     type: Boolean,
     default: false
   },
-
-  // Descripción del pago
   descripcionPago: {
     type: String,
     trim: true,
     maxLength: 500
   },
-
-  // Si está autorizada (null = pendiente, true = autorizada, false = rechazada)
   autorizada: {
     type: Boolean,
     default: null,
     required: false
   },
-
-  // Si el pago fue rechazado (no se puede volver a autorizar hasta que se vuelva a pagar)
   pagoRechazado: {
     type: Boolean,
     default: false
   },
-
-  // Fecha de revisión
   fechaRevision: {
     type: Date,
     default: null,
     index: true
   },
-
-  // Si está registrado (0 = No, 1 = Sí)
   registrado: {
     type: Number,
     enum: {
@@ -210,8 +161,6 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     },
     default: 0
   },
-
-  // Si está pagado (0 = No, 1 = Sí)
   pagado: {
     type: Number,
     enum: {
@@ -220,42 +169,32 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     },
     default: 0
   },
-
-  // Estatus de la factura (texto descriptivo)
   fiestatus: {
     type: String,
     trim: true,
     maxLength: 50,
     default: 'Activo'
   },
-
-  // Si la factura está registrada en un paquete
   estaRegistrada: {
     type: Boolean,
     default: false
   },
-
-  // Motivo del descuento
   motivoDescuento: {
     type: String,
     trim: true,
     maxLength: 500,
     default: ''
   },
-
-  // Porcentaje de descuento aplicado
   descuento: {
     type: Number,
     default: 0
   },
-
-  // Referencia al concepto de gasto (opcional, se asigna al generar pago)
   conceptoGasto: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'cc_expense_concept',
     default: null,
     index: true
-  }
+  },
 }, {
   timestamps: true,
   collection: 'cc_imported_invoices',
@@ -278,7 +217,6 @@ ImportedInvoicesSchema.index({ rfcReceptor: 1, estatus: 1, fechaEmision: -1 });
 
 ImportedInvoicesSchema.index({ rfcReceptor: 1, nombreEmisor: 1 });
 
-// Índices adicionales para los nuevos campos
 ImportedInvoicesSchema.index({ folio: 1, serie: 1 });
 ImportedInvoicesSchema.index({ estadoPago: 1, estatus: 1 });
 ImportedInvoicesSchema.index({ fechaRevision: -1 });
@@ -306,7 +244,6 @@ ImportedInvoicesSchema.virtual('estaVigente').get(function () {
   return this.estatus === 1;
 });
 
-// Métodos virtuales actualizados
 ImportedInvoicesSchema.virtual('estaPagada').get(function () {
   return this.estadoPago === 2;
 });
@@ -339,7 +276,6 @@ ImportedInvoicesSchema.virtual('descripcionEstadoPago').get(function () {
   return estados[this.estadoPago] || 'Desconocido';
 });
 
-// Métodos de instancia actualizados
 ImportedInvoicesSchema.methods.cancelar = function (fechaCancelacion = new Date()) {
   this.estatus = 0;
   this.fechaCancelacion = fechaCancelacion;
@@ -375,14 +311,13 @@ ImportedInvoicesSchema.methods.marcarComoRegistrada = function () {
 ImportedInvoicesSchema.methods.registrarPagoParcial = function (importePagado) {
   this.importePagado = importePagado;
   if (this.importePagado >= this.importeAPagar) {
-    this.estadoPago = 2; // Pagado
+    this.estadoPago = 2;
   } else {
-    this.estadoPago = 1; // Enviado a pago (para pagos parciales)
+    this.estadoPago = 1;
   }
   return this.save();
 };
 
-// Métodos estáticos
 ImportedInvoicesSchema.statics.buscarPorRFC = function (rfc, esEmisor = true) {
   const campo = esEmisor ? 'rfcEmisor' : 'rfcReceptor';
   return this.find({ [campo]: rfc.toUpperCase() });
@@ -475,26 +410,22 @@ ImportedInvoicesSchema.pre('save', function (next) {
     this.fechaCancelacion = null;
   }
 
-  // Establecer importeAPagar por defecto si no está definido
   if (this.importeAPagar === undefined || this.importeAPagar === null) {
     this.importeAPagar = 0;
   }
 
-  // Establecer importePagado por defecto si no está definido
   if (this.importePagado === undefined || this.importePagado === null) {
     this.importePagado = 0;
   }
 
-  // Validar que importePagado no exceda el importeAPagar
   if (this.importePagado > this.importeAPagar) {
     this.importePagado = this.importeAPagar;
   }
 
-  // Actualizar estadoPago basado en importePagado
   if (this.importePagado >= this.importeAPagar && this.importeAPagar > 0) {
-    this.estadoPago = 2; // Pagado
+    this.estadoPago = 2;
   } else if (this.estadoPago === 2 && this.importePagado < this.importeAPagar) {
-    this.estadoPago = 0; // Volver a pendiente si se reduce el pago
+    this.estadoPago = 0;
   }
 
   next();

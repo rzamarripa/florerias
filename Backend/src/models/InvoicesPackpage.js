@@ -213,6 +213,32 @@ const InvoicesPackageSchema = new mongoose.Schema(
             required: false,
           },
         },
+        numeroReferencia: {
+          type: String,
+          required: false,
+          trim: true,
+          index: true,
+        },
+        coinciliado: {
+          type: Boolean,
+          default: false,
+          index: true,
+        },
+        comentarioConciliacion: {
+          type: String,
+          required: false,
+          trim: true,
+        },
+        fechaConciliacion: {
+          type: Date,
+          required: false,
+        },
+        referenciaConciliacion: {
+          type: String,
+          required: false,
+          trim: true,
+          index: true,
+        },
         createdAt: {
           type: Date,
           default: Date.now,

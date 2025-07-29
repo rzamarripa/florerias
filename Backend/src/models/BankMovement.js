@@ -36,12 +36,32 @@ const bankMovementSchema = new Schema({
     type: String,
     required: false,
   },
+  coinciliado: {
+    type: Boolean,
+    default: false,
+    index: true,  
+  },
+  comentarioConciliacion: {
+    type: String,
+    required: false,
+    trim: true,
+  },
+  fechaConciliacion: {
+    type: Date,
+    required: false,
+  },
+  referenciaConciliacion: {
+    type: String,
+    required: false,
+    trim: true,
+    index: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
-
+  
 const BankMovement = mongoose.model("cc_bank_movement", bankMovementSchema);
 
 export { BankMovement };

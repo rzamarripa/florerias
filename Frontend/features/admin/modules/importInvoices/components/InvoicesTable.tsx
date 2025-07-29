@@ -1,7 +1,8 @@
-import React from 'react';
-import { Card, Spinner, Table } from 'react-bootstrap';
-import { FileText, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ImportedInvoice, Pagination } from '../types';
+import React from "react";
+import { Card, Spinner, Table } from "react-bootstrap";
+import { FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { ImportedInvoice, Pagination } from "../types";
+import { formatCurrency } from "@/utils";
 
 interface InvoicesTableProps {
   invoices: ImportedInvoice[];
@@ -11,7 +12,12 @@ interface InvoicesTableProps {
   isPreview?: boolean;
 }
 
-const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loading, onPageChange, isPreview = false }) => {
+const InvoicesTable: React.FC<InvoicesTableProps> = ({
+  invoices,
+  pagination,
+  loading,
+  onPageChange,
+}) => {
   if (loading) {
     return (
       <div className="text-center my-5">
@@ -27,45 +33,40 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
         <Card.Body>
           <FileText size={48} className="text-muted mb-3" />
           <h5 className="text-muted">No hay facturas para mostrar</h5>
-          <p className="text-muted">Seleccione una Razón Social para ver sus facturas o importe un nuevo archivo.</p>
+          <p className="text-muted">
+            Seleccione una Razón Social para ver sus facturas o importe un nuevo
+            archivo.
+          </p>
         </Card.Body>
       </Card>
     );
   }
 
-  const formatCurrency = (value: number | any) => {
-    const numberValue = Number(value);
-    if (isNaN(numberValue)) {
-      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(0);
-    }
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    }).format(numberValue);
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("es-MX", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
   };
 
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  }
-
-  // Función para generar los números de página a mostrar
   const getPageNumbers = () => {
     const { page, pages } = pagination;
-    const delta = 2; // Número de páginas a mostrar antes y después de la página actual
+    const delta = 2;
     const range = [];
     const rangeWithDots = [];
 
-    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
+    for (
+      let i = Math.max(2, page - delta);
+      i <= Math.min(pages - 1, page + delta);
+      i++
+    ) {
       range.push(i);
     }
 
     if (page - delta > 2) {
-      rangeWithDots.push(1, '...');
+      rangeWithDots.push(1, "...");
     } else {
       rangeWithDots.push(1);
     }
@@ -73,7 +74,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
     rangeWithDots.push(...range);
 
     if (page + delta < pages - 1) {
-      rangeWithDots.push('...', pages);
+      rangeWithDots.push("...", pages);
     } else if (pages > 1) {
       rangeWithDots.push(pages);
     }
@@ -108,21 +109,30 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
                   <span className="fw-medium">{invoice.nombreEmisor}</span>
                 </td>
                 <td>
-                  <span className="font-monospace text-muted">{invoice.rfcEmisor}</span>
+                  <span className="font-monospace text-muted">
+                    {invoice.rfcEmisor}
+                  </span>
                 </td>
-                <td className="text-muted">{formatDate(invoice.fechaEmision)}</td>
+                <td className="text-muted">
+                  {formatDate(invoice.fechaEmision)}
+                </td>
                 <td className="text-center">
                   <span
-                    className={`badge fs-6 ${invoice.estatus === 1
-                      ? "bg-success bg-opacity-10 text-success"
-                      : "bg-danger bg-opacity-10 text-danger"
-                      }`}
+                    className={`badge fs-6 ${
+                      invoice.estatus === 1
+                        ? "bg-success bg-opacity-10 text-success"
+                        : "bg-danger bg-opacity-10 text-danger"
+                    }`}
                   >
                     {invoice.estatus === 1 ? "Vigente" : "Cancelado"}
                   </span>
                 </td>
-                <td className="text-muted">{formatDate(invoice.fechaCancelacion)}</td>
-                <td className="text-end fw-medium">{formatCurrency(Number(invoice.importeAPagar))}</td>
+                <td className="text-muted">
+                  {formatDate(invoice.fechaCancelacion)}
+                </td>
+                <td className="text-end fw-medium">
+                  {formatCurrency(Number(invoice.importeAPagar))}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -145,14 +155,15 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
 
               {getPageNumbers().map((pageNum, index) => (
                 <React.Fragment key={index}>
-                  {pageNum === '...' ? (
+                  {pageNum === "..." ? (
                     <span className="px-2 text-muted">...</span>
                   ) : (
                     <button
-                      className={`btn btn-sm ${pageNum === pagination.page
-                        ? 'btn-primary'
-                        : 'btn-outline-primary'
-                        }`}
+                      className={`btn btn-sm ${
+                        pageNum === pagination.page
+                          ? "btn-primary"
+                          : "btn-outline-primary"
+                      }`}
                       onClick={() => onPageChange(pageNum as number)}
                     >
                       {pageNum}
@@ -177,4 +188,4 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({ invoices, pagination, loa
   );
 };
 
-export default InvoicesTable; 
+export default InvoicesTable;

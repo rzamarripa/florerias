@@ -16,6 +16,7 @@ export interface BankAccount {
   bankId: {
     _id: string;
     name: string;
+    bankNumber?: number;
   };
 }
 
@@ -70,7 +71,8 @@ export const getBankAccountsByCompany = async (companyId: string): Promise<BankA
     claveBanxico: account.claveBanxico || '',
     bankId: {
       _id: account.bank._id,
-      name: account.bank.name
+      name: account.bank.name,
+      bankNumber: account.bank.bankNumber
     }
   }));
 
