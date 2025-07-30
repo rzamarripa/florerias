@@ -21,12 +21,6 @@ export const menuItems: MenuItemType[] = [
         url: "/dashboard/presupuestos",
       },
       {
-        key: "dashboard-gastos",
-        label: "Dashboard Gastos",
-        url: "/dashboard/gastos",
-        parentKey: "dashboard",
-      },
-      {
         key: "dashboard-conciliacion",
         label: "Dashboard Conciliación",
         url: "/dashboard/conciliacion",
@@ -171,7 +165,7 @@ export const menuItems: MenuItemType[] = [
         key: "conciliacion",
         label: "Conciliación",
         url: "/modulos/conciliacion",
-      }
+      },
     ],
   },
 ];

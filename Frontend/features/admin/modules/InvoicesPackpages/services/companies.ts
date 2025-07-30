@@ -6,4 +6,4 @@ export const companiesService = {
     const response = await apiCall<Company[]>("/companies/all");
     return response;
   },
-}; 
+};

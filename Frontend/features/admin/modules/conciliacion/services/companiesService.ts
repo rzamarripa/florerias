@@ -3,7 +3,9 @@ import { GetCompaniesResponse } from "../types";
 
 export const companiesService = {
   getAllCompanies: async (): Promise<GetCompaniesResponse> => {
-    const response = await apiCall<GetCompaniesResponse["data"]>("/companies?limit=100");
+    const response = await apiCall<GetCompaniesResponse["data"]>(
+      "/companies?limit=100"
+    );
     return response;
   },
-}; 
+};

@@ -1,5 +1,11 @@
-import { apiCall } from '@/utils/api';
-import { ImportedInvoice, SummaryData, RawInvoiceData, Pagination } from '../types';
+import { apiCall } from "@/utils/api";
+import { env } from "@/config/env";
+import {
+  ImportedInvoice,
+  SummaryData,
+  RawInvoiceData,
+  Pagination,
+} from "../types";
 
 export interface GetInvoicesResponse {
   success: boolean;
@@ -30,12 +36,20 @@ export const importedInvoicesService = {
     limit?: number;
     rfcReceptor?: string;
     companyId?: string;
-    estatus?: '0' | '1';
+    estatus?: "0" | "1";
     sortBy?: string;
-    order?: 'asc' | 'desc';
+    order?: "asc" | "desc";
   }): Promise<GetInvoicesResponse> => {
     try {
-      const { page = 1, limit = 15, rfcReceptor, companyId, estatus, sortBy = 'fechaEmision', order = 'desc' } = params;
+      const {
+        page = 1,
+        limit = 15,
+        rfcReceptor,
+        companyId,
+        estatus,
+        sortBy = "fechaEmision",
+        order = "desc",
+      } = params;
       const searchParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -46,69 +60,90 @@ export const importedInvoicesService = {
         ...(estatus && { estatus }),
       });
 
-      const response = await apiCall<ImportedInvoice[]>(`/imported-invoices?${searchParams}`);
+      const response = await apiCall<ImportedInvoice[]>(
+        `/imported-invoices?${searchParams}`
+      );
       return response as GetInvoicesResponse;
     } catch (error: any) {
       return {
         success: false,
         message: error.message,
         data: [],
-        pagination: { total: 0, page: 1, pages: 0, limit: 15 }
+        pagination: { total: 0, page: 1, pages: 0, limit: 15 },
       };
     }
   },
 
   // Obtener resumen de facturas para una razón social
-  getSummary: async (params: { rfcReceptor?: string; companyId?: string }): Promise<GetSummaryResponse> => {
+  getSummary: async (params: {
+    rfcReceptor?: string;
+    companyId?: string;
+  }): Promise<GetSummaryResponse> => {
     try {
       const { rfcReceptor, companyId } = params;
       const searchParams = new URLSearchParams({
         ...(companyId && { companyId }),
         ...(rfcReceptor && { rfcReceptor }),
       });
-      
-      const response = await apiCall<SummaryData>(`/imported-invoices/summary?${searchParams}`);
+
+      const response = await apiCall<SummaryData>(
+        `/imported-invoices/summary?${searchParams}`
+      );
       return response as GetSummaryResponse;
     } catch (error: any) {
       return {
         success: false,
         message: error.message,
-        data: { totalFacturas: 0, facturasCanceladas: 0, proveedoresUnicos: 0 }
+        data: { totalFacturas: 0, facturasCanceladas: 0, proveedoresUnicos: 0 },
       };
     }
   },
 
   // Importar facturas en lote desde archivo ZIP
-  bulkUpsert: async (invoices: RawInvoiceData[], companyId?: string): Promise<BulkUpsertResponse> => {
+  bulkUpsert: async (
+    invoices: RawInvoiceData[],
+    companyId?: string
+  ): Promise<BulkUpsertResponse> => {
     try {
       const payload = {
         invoices,
-        companyId
+        companyId,
       };
-      const response = await apiCall<{ inserted: number; updated: number }>('/imported-invoices/bulk-upsert', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const response = await apiCall<{ inserted: number; updated: number }>(
+        "/imported-invoices/bulk-upsert",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
       return response as BulkUpsertResponse;
     } catch (error: any) {
       return {
         success: false,
         message: error.message,
-        data: { inserted: 0, updated: 0 }
+        data: { inserted: 0, updated: 0 },
       };
     }
   },
 
   // Obtener una factura específica por ID
-  getById: async (id: string): Promise<{ success: boolean; data: ImportedInvoice | null; message?: string }> => {
+  getById: async (
+    id: string
+  ): Promise<{
+    success: boolean;
+    data: ImportedInvoice | null;
+    message?: string;
+  }> => {
     try {
-      const response = await apiCall<ImportedInvoice>(`/imported-invoices/${id}`);
+      const response = await apiCall<ImportedInvoice>(
+        `/imported-invoices/${id}`
+      );
       return response;
     } catch (error: any) {
       return {
         success: false,
         message: error.message,
-        data: null
+        data: null,
       };
     }
   },
@@ -120,8 +155,8 @@ export const importedInvoicesService = {
     page?: number;
     limit?: number;
     search?: string;
-    estatus?: '0' | '1';
-    tipoComprobante?: 'I' | 'E' | 'P';
+    estatus?: "0" | "1";
+    tipoComprobante?: "I" | "E" | "P";
     startDate?: string;
     endDate?: string;
     minAmount?: number;
@@ -139,7 +174,7 @@ export const importedInvoicesService = {
         startDate,
         endDate,
         minAmount,
-        maxAmount
+        maxAmount,
       } = params;
 
       const searchParams = new URLSearchParams({
@@ -156,14 +191,16 @@ export const importedInvoicesService = {
         ...(maxAmount && { maxAmount: maxAmount.toString() }),
       });
 
-      const response = await apiCall<ImportedInvoice[]>(`/imported-invoices/search?${searchParams}`);
+      const response = await apiCall<ImportedInvoice[]>(
+        `/imported-invoices/search?${searchParams}`
+      );
       return response as GetInvoicesResponse;
     } catch (error: any) {
       return {
         success: false,
         message: error.message,
         data: [],
-        pagination: { total: 0, page: 1, pages: 0, limit: 15 }
+        pagination: { total: 0, page: 1, pages: 0, limit: 15 },
       };
     }
   },
@@ -172,10 +209,10 @@ export const importedInvoicesService = {
   export: async (params: {
     rfcReceptor?: string;
     companyId?: string;
-    format: 'csv' | 'xlsx' | 'pdf';
+    format: "csv" | "xlsx" | "pdf";
     filters?: {
-      estatus?: '0' | '1';
-      tipoComprobante?: 'I' | 'E' | 'P';
+      estatus?: "0" | "1";
+      tipoComprobante?: "I" | "E" | "P";
       startDate?: string;
       endDate?: string;
     };
@@ -189,15 +226,18 @@ export const importedInvoicesService = {
         ...filters,
       });
 
-      const response = await fetch(`/api/v1/imported-invoices/export?${searchParams}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await fetch(
+        `${env.NEXT_PUBLIC_API_URL}/api/v1/imported-invoices/export?${searchParams}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Error al exportar las facturas');
+        throw new Error("Error al exportar las facturas");
       }
 
       const blob = await response.blob();
@@ -206,44 +246,64 @@ export const importedInvoicesService = {
       return {
         success: false,
         message: error.message,
-        data: null
+        data: null,
       };
     }
   },
 
   // Obtener estadísticas avanzadas
-  getStatistics: async (params: { rfcReceptor?: string; companyId?: string; period?: 'month' | 'quarter' | 'year' }): Promise<{
+  getStatistics: async (params: {
+    rfcReceptor?: string;
+    companyId?: string;
+    period?: "month" | "quarter" | "year";
+  }): Promise<{
     success: boolean;
     data: {
       importeAPagarTotal: number;
       importeAPagarPromedio: number;
-      topProviders: Array<{ name: string; count: number; importeAPagar: number }>;
-      tipoComprobanteDistribution: Array<{ type: string; count: number; importeAPagar: number }>;
-      monthlyTrend: Array<{ month: string; count: number; importeAPagar: number }>;
+      topProviders: Array<{
+        name: string;
+        count: number;
+        importeAPagar: number;
+      }>;
+      tipoComprobanteDistribution: Array<{
+        type: string;
+        count: number;
+        importeAPagar: number;
+      }>;
+      monthlyTrend: Array<{
+        month: string;
+        count: number;
+        importeAPagar: number;
+      }>;
     } | null;
     message?: string;
   }> => {
     try {
-      const { rfcReceptor, companyId, period = 'month' } = params;
+      const { rfcReceptor, companyId, period = "month" } = params;
       const searchParams = new URLSearchParams({
         period,
         ...(companyId && { companyId }),
         ...(rfcReceptor && { rfcReceptor }),
       });
-      
-      const response = await apiCall<any>(`/imported-invoices/statistics?${searchParams}`);
+
+      const response = await apiCall<any>(
+        `/imported-invoices/statistics?${searchParams}`
+      );
       return response;
     } catch (error: any) {
       return {
         success: false,
         message: error.message,
-        data: null
+        data: null,
       };
     }
   },
 
   // Validar archivo antes de importar
-  validateFile: async (invoices: RawInvoiceData[]): Promise<{
+  validateFile: async (
+    invoices: RawInvoiceData[]
+  ): Promise<{
     success: boolean;
     data: {
       valid: number;
@@ -253,8 +313,8 @@ export const importedInvoicesService = {
     message?: string;
   }> => {
     try {
-      const response = await apiCall<any>('/imported-invoices/validate', {
-        method: 'POST',
+      const response = await apiCall<any>("/imported-invoices/validate", {
+        method: "POST",
         body: JSON.stringify(invoices),
       });
       return response;
@@ -262,20 +322,22 @@ export const importedInvoicesService = {
       return {
         success: false,
         message: error.message,
-        data: null
+        data: null,
       };
     }
   },
 
   // Eliminar facturas en lote
-  bulkDelete: async (invoiceIds: string[]): Promise<{
+  bulkDelete: async (
+    invoiceIds: string[]
+  ): Promise<{
     success: boolean;
     message: string;
     data: { deleted: number; failed: number };
   }> => {
     try {
-      const response = await apiCall<any>('/imported-invoices/bulk-delete', {
-        method: 'DELETE',
+      const response = await apiCall<any>("/imported-invoices/bulk-delete", {
+        method: "DELETE",
         body: JSON.stringify({ invoiceIds }),
       });
       return response;
@@ -283,7 +345,7 @@ export const importedInvoicesService = {
       return {
         success: false,
         message: error.message,
-        data: { deleted: 0, failed: invoiceIds.length }
+        data: { deleted: 0, failed: invoiceIds.length },
       };
     }
   },
@@ -299,17 +361,20 @@ export const importedInvoicesService = {
     data: { updated: number; failed: number };
   }> => {
     try {
-      const response = await apiCall<any>('/imported-invoices/bulk-update-status', {
-        method: 'PUT',
-        body: JSON.stringify(params),
-      });
+      const response = await apiCall<any>(
+        "/imported-invoices/bulk-update-status",
+        {
+          method: "PUT",
+          body: JSON.stringify(params),
+        }
+      );
       return response;
     } catch (error: any) {
       return {
         success: false,
         message: error.message,
-        data: { updated: 0, failed: params.invoiceIds.length }
+        data: { updated: 0, failed: params.invoiceIds.length },
       };
     }
   },
-}; 
+};

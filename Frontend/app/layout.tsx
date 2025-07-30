@@ -25,7 +25,7 @@ const roboto = Roboto({
 
 export const metadata: Metadata = {
   title: "Caprepa",
-  description: "Sistema de Control de Gastos",
+  description: "Sistema de Control de Egresos",
   icons: [favicon.src],
 };
 
@@ -35,9 +35,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${roboto.variable} ${openSans.variable}`}>
-      <head>
-      </head>
+    <html
+      lang="en"
+      data-skin="modern"
+      data-bs-theme="light"
+      data-menu-color="gradient"
+      data-topbar-color="light"
+      data-layout-position="fixed"
+      data-sidenav-size="default"
+      data-sidenav-user="true"
+    >
+      <head></head>
       <body>
         <AppWrapper>{children}</AppWrapper>
       </body>

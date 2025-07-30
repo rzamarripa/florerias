@@ -46,7 +46,7 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
       });
       if (response.success && response.data) {
         setProviders(response.data);
-        if ('pagination' in response && response.pagination) {
+        if ("pagination" in response && response.pagination) {
           setPagination(response.pagination);
         }
       }
@@ -84,12 +84,16 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
     const range = [];
     const rangeWithDots = [];
 
-    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
+    for (
+      let i = Math.max(2, page - delta);
+      i <= Math.min(pages - 1, page + delta);
+      i++
+    ) {
       range.push(i);
     }
 
     if (page - delta > 2) {
-      rangeWithDots.push(1, '...');
+      rangeWithDots.push(1, "...");
     } else {
       rangeWithDots.push(1);
     }
@@ -97,7 +101,7 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
     rangeWithDots.push(...range);
 
     if (page + delta < pages - 1) {
-      rangeWithDots.push('...', pages);
+      rangeWithDots.push("...", pages);
     } else if (pages > 1) {
       rangeWithDots.push(pages);
     }
@@ -151,10 +155,11 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
                       <td>{userProvider.providerId.contactName}</td>
                       <td>
                         <span
-                          className={`badge fs-6 ${userProvider.providerId.isActive
-                            ? "bg-success bg-opacity-10 text-success"
-                            : "bg-danger bg-opacity-10 text-danger"
-                            }`}
+                          className={`badge fs-6 ${
+                            userProvider.providerId.isActive
+                              ? "bg-success bg-opacity-10 text-success"
+                              : "bg-danger bg-opacity-10 text-danger"
+                          }`}
                         >
                           {userProvider.providerId.isActive
                             ? "Activo"
@@ -205,7 +210,7 @@ const UserProvidersList: React.FC<UserProvidersListProps> = ({
 
                   {getPageNumbers().map((pageNum, index) => (
                     <React.Fragment key={index}>
-                      {pageNum === '...' ? (
+                      {pageNum === "..." ? (
                         <span className="px-2 text-muted">...</span>
                       ) : (
                         <Button

@@ -59,28 +59,34 @@ export const getAllCompanies = async (): Promise<Company[]> => {
 };
 
 // Servicio para obtener cuentas bancarias por companyId
-export const getBankAccountsByCompany = async (companyId: string): Promise<BankAccount[]> => {
-  const response = await apiCall<any[]>(`/bank-accounts/by-company/${companyId}`);
+export const getBankAccountsByCompany = async (
+  companyId: string
+): Promise<BankAccount[]> => {
+  const response = await apiCall<any[]>(
+    `/bank-accounts/by-company/${companyId}`
+  );
 
   // Transformar la respuesta del backend para que coincida con la interfaz BankAccount
-  const transformedBankAccounts = (response.data || []).map(account => ({
+  const transformedBankAccounts = (response.data || []).map((account) => ({
     _id: account._id,
     accountNumber: account.accountNumber,
-    accountType: 'Cuenta Corriente', // Valor por defecto ya que no existe en el modelo backend
+    accountType: "Cuenta Corriente", // Valor por defecto ya que no existe en el modelo backend
     currentBalance: account.currentBalance || 0,
-    claveBanxico: account.claveBanxico || '',
+    claveBanxico: account.claveBanxico || "",
     bankId: {
       _id: account.bank._id,
       name: account.bank.name,
-      bankNumber: account.bank.bankNumber
-    }
+      bankNumber: account.bank.bankNumber,
+    },
   }));
 
   return transformedBankAccounts;
 };
 
 // Servicio para programar un pago
-export const schedulePayment = async (data: SchedulePaymentRequest): Promise<ApiResponse<ScheduledPayment>> => {
+export const schedulePayment = async (
+  data: SchedulePaymentRequest
+): Promise<ApiResponse<ScheduledPayment>> => {
   const response = await apiCall<ScheduledPayment>("/scheduled-payments", {
     method: "POST",
     body: JSON.stringify(data),
@@ -89,11 +95,15 @@ export const schedulePayment = async (data: SchedulePaymentRequest): Promise<Api
 };
 
 // Servicio para obtener pago programado por paquete
-export const getScheduledPaymentByPackage = async (packageId: string): Promise<ScheduledPayment | null> => {
+export const getScheduledPaymentByPackage = async (
+  packageId: string
+): Promise<ScheduledPayment | null> => {
   try {
-    const response = await apiCall<ScheduledPayment>(`/scheduled-payments/by-package/${packageId}`);
+    const response = await apiCall<ScheduledPayment>(
+      `/scheduled-payments/by-package/${packageId}`
+    );
     return response.data;
   } catch {
     return null;
   }
-}; 
+};

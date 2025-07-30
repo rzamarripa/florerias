@@ -1,15 +1,18 @@
 import { apiCall } from "@/utils/api";
-import { 
-  StructureTreeNode, 
-  CreateBrandData, 
-  CreateBranchData, 
-  CreateRouteData
+import { env } from "@/config/env";
+import {
+  StructureTreeNode,
+  CreateBrandData,
+  CreateBranchData,
+  CreateRouteData,
 } from "../types";
 
 export const structureService = {
   getStructureTree: async (userId?: string): Promise<StructureTreeNode[]> => {
     const params = userId ? `?userId=${userId}` : "";
-    const response = await apiCall<StructureTreeNode[]>(`/structure/tree${params}`);
+    const response = await apiCall<StructureTreeNode[]>(
+      `/structure/tree${params}`
+    );
     return response.data || [];
   },
 
@@ -20,7 +23,7 @@ export const structureService = {
     formData.append("description", data.description || "");
     formData.append("rsCompanies", JSON.stringify([data.companyId]));
 
-    const response = await fetch("/api/brands", {
+    const response = await fetch(`${env.NEXT_PUBLIC_API_URL}/api/brands`, {
       method: "POST",
       body: formData,
     });
@@ -78,7 +81,7 @@ export const structureService = {
   getDefaultCountry: async (): Promise<any> => {
     const response = await apiCall<any[]>("/countries");
     const countries = response.data || [];
-    return countries.find(c => c.name === "México") || countries[0];
+    return countries.find((c) => c.name === "México") || countries[0];
   },
 
   getStatesByCountry: async (countryId: string): Promise<any[]> => {
@@ -90,4 +93,4 @@ export const structureService = {
     const response = await apiCall<any[]>(`/municipalities/state/${stateId}`);
     return response.data || [];
   },
-}; 
+};

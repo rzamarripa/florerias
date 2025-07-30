@@ -1,4 +1,4 @@
-import { PackageSearch, Store } from "lucide-react";
+import { PackageSearch, Store, UserCheck, UserPlus } from "lucide-react";
 import React, { useState } from "react";
 import { Spinner } from "react-bootstrap";
 import { BsCheck2 } from "react-icons/bs";
@@ -107,7 +107,7 @@ const UserActions: React.FC<UserActionsProps> = ({
           title: "Asignar proveedores",
         }}
       >
-        <Store size={16} />
+        <UserPlus size={16} />
       </UserProvidersModal>
 
       <button
@@ -115,7 +115,7 @@ const UserActions: React.FC<UserActionsProps> = ({
         title="Ver proveedores asignados"
         onClick={() => setShowProvidersList(true)}
       >
-        <PackageSearch size={16} />
+        <UserCheck size={16} />
       </button>
 
       <UserProvidersList

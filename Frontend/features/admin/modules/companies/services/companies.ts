@@ -34,7 +34,7 @@ export const companiesService = {
   },
 
   getAllActive: async () => {
-    return await apiCall<Company[]>('/companies/all');
+    return await apiCall<Company[]>("/companies/all");
   },
 
   create: async (data: Omit<Company, "_id" | "createdAt" | "isActive">) => {
