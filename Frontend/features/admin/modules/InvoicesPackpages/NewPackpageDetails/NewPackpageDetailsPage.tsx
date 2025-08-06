@@ -1373,7 +1373,11 @@ const NewPackpageDetailsPage: React.FC = () => {
                       </div>
                       <div className="fw-bold text-danger">
                         $
-                        {calcularPresupuestoTotal().toLocaleString("es-MX", {
+                        {(
+                          calcularPresupuestoTotal() -
+                          (calcularTotalesFacturas().total +
+                            calcularTotalesPagosEfectivo().total)
+                        ).toLocaleString("es-MX", {
                           minimumFractionDigits: 2,
                         })}
                       </div>
@@ -1571,9 +1575,8 @@ const NewPackpageDetailsPage: React.FC = () => {
                     <th>Emisor RFC</th>
                     <th>Estatus</th>
                     <th>Estatus Aut.</th>
-                    <th className="text-center">Total</th>
-                    <th className="text-center">Saldo</th>
-                    <th className="text-center">A Pagar</th>
+                    <th className="text-center">Importe a pagar</th>
+                    <th className="text-center">Total pagado</th>
                     <th className=" text-center">Acción</th>
                   </tr>
                 </thead>
@@ -1648,15 +1651,6 @@ const NewPackpageDetailsPage: React.FC = () => {
                         </td>
                         <td className="text-end">
                           $
-                          {(
-                            toNumber(factura.importeAPagar) -
-                            toNumber(factura.importePagado)
-                          ).toLocaleString("es-MX", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td className="text-end">
-                          $
                           {toNumber(factura.importePagado).toLocaleString(
                             "es-MX",
                             { minimumFractionDigits: 2 }
@@ -1718,13 +1712,6 @@ const NewPackpageDetailsPage: React.FC = () => {
                       {calcularTotalVisualizacion().toLocaleString("es-MX", {
                         minimumFractionDigits: 2,
                       })}
-                    </td>
-                    <td className="text-end" colSpan={1}>
-                      $
-                      {(
-                        calcularTotalVisualizacion() -
-                        calcularTotalPagadoVisualizacion()
-                      ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                     </td>
                     <td className="text-end" colSpan={1}>
                       $
