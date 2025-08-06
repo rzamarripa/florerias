@@ -90,10 +90,10 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
             <tr>
               <th className="text-center">#</th>
               <th>Proveedor</th>
-              <th>RFC Emisor</th>
-              <th>Fecha Emisión</th>
+              <th className="text-center">RFC Emisor</th>
+              <th className="text-center">Fecha Emisión</th>
               <th className="text-center">Estatus</th>
-              <th>Fecha Cancelación</th>
+              <th className="text-center">Fecha Cancelación</th>
               <th className="text-end">Importe</th>
             </tr>
           </thead>
@@ -108,12 +108,12 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                 <td>
                   <span className="fw-medium">{invoice.nombreEmisor}</span>
                 </td>
-                <td>
+                <td className="text-center">
                   <span className="font-monospace text-muted">
                     {invoice.rfcEmisor}
                   </span>
                 </td>
-                <td className="text-muted">
+                <td className="text-muted text-center ">
                   {formatDate(invoice.fechaEmision)}
                 </td>
                 <td className="text-center">
@@ -127,8 +127,10 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                     {invoice.estatus === 1 ? "Vigente" : "Cancelado"}
                   </span>
                 </td>
-                <td className="text-muted">
-                  {formatDate(invoice.fechaCancelacion)}
+                <td className="text-muted text-center">
+                  {!invoice.fechaCancelacion
+                    ? formatDate(invoice.fechaCancelacion)
+                    : "-"}
                 </td>
                 <td className="text-end fw-medium">
                   {formatCurrency(Number(invoice.importeAPagar))}

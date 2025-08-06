@@ -83,8 +83,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                   <th>Descripción</th>
                   <th>Estatus</th>
                   <th>Estatus Aut.</th>
-                  <th className="text-center">Importe a pagar</th>
-                  <th className="text-center">Total pagado</th>
+                  <th className="text-end">Importe a pagar</th>
                   {showActions && <th className="text-center">Acción</th>}
                 </tr>
               </thead>
@@ -131,12 +130,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                           : "Pago Rechazado"}
                       </span>
                     </td>
-                    <td className="text-end">
-                      $
-                      {getNumber(pago.importeAPagar).toLocaleString("es-MX", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </td>
+
                     <td className="text-end">
                       $
                       {getNumber(pago.importePagado).toLocaleString("es-MX", {

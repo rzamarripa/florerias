@@ -11,15 +11,15 @@ export const getFacturasParaConciliacion = async (req, res) => {
     if (!companyId || !bankAccountId) {
       return res.status(400).json({
         success: false,
-        message: 'companyId y bankAccountId son requeridos.'
+        message: "companyId y bankAccountId son requeridos.",
       });
     }
 
     let fechaFiltro, fechaFin;
-    
+
     if (fecha) {
       // Crear la fecha en la zona horaria local para evitar problemas de UTC
-      const [year, month, day] = fecha.split('-').map(Number);
+      const [year, month, day] = fecha.split("-").map(Number);
       fechaFiltro = new Date(year, month - 1, day, 0, 0, 0, 0);
       fechaFin = new Date(year, month - 1, day, 23, 59, 59, 999);
     } else {
@@ -31,14 +31,14 @@ export const getFacturasParaConciliacion = async (req, res) => {
     const scheduledPayments = await ScheduledPayment.find({
       companyId,
       bankAccountId,
-      scheduledDate: { $gte: fechaFiltro, $lte: fechaFin }
+      scheduledDate: { $gte: fechaFiltro, $lte: fechaFin },
     });
-    const packageIds = scheduledPayments.map(sp => sp.packageId);
+    const packageIds = scheduledPayments.map((sp) => sp.packageId);
 
     if (packageIds.length === 0) {
       return res.status(200).json({
         success: true,
-        data: []
+        data: [],
       });
     }
 
@@ -46,53 +46,52 @@ export const getFacturasParaConciliacion = async (req, res) => {
       {
         $match: {
           _id: { $in: packageIds },
-          estatus: 'Generado'
-        }
+          estatus: "Generado",
+        },
       },
       {
-        $unwind: '$facturas'
+        $unwind: "$facturas",
       },
       {
         $match: {
-          'facturas.coinciliado': { $ne: true }
-        }
+          "facturas.coinciliado": { $ne: true },
+        },
       },
       {
         $addFields: {
-          'facturas.importePagado': { $toDouble: '$facturas.importePagado' }
-        }
+          "facturas.importePagado": { $toDouble: "$facturas.importePagado" },
+        },
       },
       {
         $replaceRoot: {
           newRoot: {
             $mergeObjects: [
-              '$facturas',
+              "$facturas",
               {
-                packageId: '$_id',
-                folio: '$folio',
-                packageFolio: '$folio',
-                importeAPagar: '$totalPagado'
-              }
-            ]
-          }
-        }
-      }
+                packageId: "$_id",
+                folio: "$folio",
+                packageFolio: "$folio",
+                importeAPagar: "$totalPagado",
+              },
+            ],
+          },
+        },
+      },
     ]);
 
     facturas.sort((a, b) => {
-      const refA = a.numeroReferencia || '';
-      const refB = b.numeroReferencia || '';
+      const refA = a.numeroReferencia || "";
+      const refB = b.numeroReferencia || "";
       return refA.localeCompare(refB);
     });
     res.status(200).json({
       success: true,
-      data: facturas
+      data: facturas,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.'
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
@@ -104,15 +103,15 @@ export const getMovimientosBancariosParaConciliacion = async (req, res) => {
     if (!companyId || !bankAccountId) {
       return res.status(400).json({
         success: false,
-        message: 'companyId y bankAccountId son requeridos.'
+        message: "companyId y bankAccountId son requeridos.",
       });
     }
 
     let fechaFiltro, fechaFin;
-    
+
     if (fecha) {
       // Crear la fecha en la zona horaria local para evitar problemas de UTC
-      const [year, month, day] = fecha.split('-').map(Number);
+      const [year, month, day] = fecha.split("-").map(Number);
       fechaFiltro = new Date(year, month - 1, day, 0, 0, 0, 0);
       fechaFin = new Date(year, month - 1, day, 23, 59, 59, 999);
     } else {
@@ -130,23 +129,22 @@ export const getMovimientosBancariosParaConciliacion = async (req, res) => {
       $expr: {
         $eq: [
           { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
-          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } }
-        ]
-      }
+          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } },
+        ],
+      },
     })
-    .populate('company', 'name')
-    .populate('bankAccount', 'accountNumber clabe')
-    .sort({ fecha: 1 });
+      .populate("company", "name")
+      .populate("bankAccount", "accountNumber clabe")
+      .sort({ fecha: 1 });
 
     res.status(200).json({
       success: true,
-      data: movimientos
+      data: movimientos,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.'
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
@@ -158,15 +156,15 @@ export const conciliacionAutomatica = async (req, res) => {
     if (!companyId || !bankAccountId) {
       return res.status(400).json({
         success: false,
-        message: 'companyId y bankAccountId son requeridos.'
+        message: "companyId y bankAccountId son requeridos.",
       });
     }
 
     let fechaFiltro, fechaFin;
-    
+
     if (fecha) {
       // Crear la fecha en la zona horaria local para evitar problemas de UTC
-      const [year, month, day] = fecha.split('-').map(Number);
+      const [year, month, day] = fecha.split("-").map(Number);
       fechaFiltro = new Date(year, month - 1, day, 0, 0, 0, 0);
       fechaFin = new Date(year, month - 1, day, 23, 59, 59, 999);
     } else {
@@ -179,57 +177,57 @@ export const conciliacionAutomatica = async (req, res) => {
     const scheduledPayments = await ScheduledPayment.find({
       companyId,
       bankAccountId,
-      scheduledDate: { $gte: fechaFiltro, $lte: fechaFin }
+      scheduledDate: { $gte: fechaFiltro, $lte: fechaFin },
     });
-    const packageIds = scheduledPayments.map(sp => sp.packageId);
+    const packageIds = scheduledPayments.map((sp) => sp.packageId);
 
     const facturas = await InvoicesPackage.aggregate([
       {
         $match: {
           _id: { $in: packageIds },
-          estatus: 'Generado'
-        }
+          estatus: "Generado",
+        },
       },
       {
-        $unwind: '$facturas'
+        $unwind: "$facturas",
       },
       {
         $match: {
-          'facturas.coinciliado': { $ne: true },
-          'facturas.numeroReferencia': { $exists: true, $ne: null, $ne: '' }
-        }
+          "facturas.coinciliado": { $ne: true },
+          "facturas.numeroReferencia": { $exists: true, $ne: null, $ne: "" },
+        },
       },
       {
         $addFields: {
-          'facturas.importePagado': { $toDouble: '$facturas.importePagado' }
-        }
+          "facturas.importePagado": { $toDouble: "$facturas.importePagado" },
+        },
       },
       {
         $replaceRoot: {
           newRoot: {
             $mergeObjects: [
-              '$facturas',
+              "$facturas",
               {
-                packageId: '$_id',
-                importeAPagar: '$totalPagado'
-              }
-            ]
-          }
-        }
-      }
+                packageId: "$_id",
+                importeAPagar: "$totalPagado",
+              },
+            ],
+          },
+        },
+      },
     ]);
 
     const movimientos = await BankMovement.find({
       company: companyId,
       bankAccount: bankAccountId,
       coinciliado: { $ne: true },
-      numeroReferencia: { $exists: true, $ne: null, $ne: '' },
+      numeroReferencia: { $exists: true, $ne: null, $ne: "" },
       $expr: {
         $eq: [
           { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
-          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } }
-        ]
-      }
+          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } },
+        ],
+      },
     });
     console.log("movimientos", movimientos);
     const coincidencias = [];
@@ -237,9 +235,10 @@ export const conciliacionAutomatica = async (req, res) => {
     const movimientosNoCoinciden = [];
 
     for (const factura of facturas) {
-      const movimientoCoincidente = movimientos.find(mov => 
-        mov.numeroReferencia === factura.numeroReferencia &&
-        Math.abs(mov.abono - factura.importeAPagar) < 0.01
+      const movimientoCoincidente = movimientos.find(
+        (mov) =>
+          mov.numeroReferencia === factura.numeroReferencia &&
+          Math.abs(mov.abono - factura.importeAPagar) < 0.01
       );
 
       if (movimientoCoincidente) {
@@ -247,7 +246,7 @@ export const conciliacionAutomatica = async (req, res) => {
         coincidencias.push({
           factura: factura,
           movimiento: movimientoCoincidente,
-          referenciaConciliacion: referenciaConciliacion
+          referenciaConciliacion: referenciaConciliacion,
         });
         const index = movimientos.indexOf(movimientoCoincidente);
         if (index > -1) {
@@ -266,15 +265,14 @@ export const conciliacionAutomatica = async (req, res) => {
         coincidencias: coincidencias,
         facturasNoCoinciden: facturasNoCoinciden,
         movimientosNoCoinciden: movimientosNoCoinciden,
-        totalCoincidencias: coincidencias.length
+        totalCoincidencias: coincidencias.length,
       },
-      message: `Se encontraron ${coincidencias.length} coincidencias automáticas.`
+      message: `Se encontraron ${coincidencias.length} coincidencias automáticas.`,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.'
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
@@ -286,7 +284,7 @@ export const conciliacionManual = async (req, res) => {
     if (!facturaId || !movimientoId) {
       return res.status(400).json({
         success: false,
-        message: 'facturaId y movimientoId son requeridos.'
+        message: "facturaId y movimientoId son requeridos.",
       });
     }
 
@@ -294,60 +292,61 @@ export const conciliacionManual = async (req, res) => {
     if (!movimiento) {
       return res.status(404).json({
         success: false,
-        message: 'Movimiento bancario no encontrado.'
+        message: "Movimiento bancario no encontrado.",
       });
     }
 
     if (movimiento.coinciliado) {
       return res.status(400).json({
         success: false,
-        message: 'El movimiento bancario ya está conciliado.'
+        message: "El movimiento bancario ya está conciliado.",
       });
     }
 
     const paquetes = await InvoicesPackage.find({
-      'facturas._id': facturaId,
-      estatus: 'Generado'
+      "facturas._id": facturaId,
+      estatus: "Generado",
     });
 
     if (paquetes.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Factura no encontrada en paquetes con estatus Generado.'
+        message: "Factura no encontrada en paquetes con estatus Generado.",
       });
     }
 
     const paquete = paquetes[0];
-    const factura = paquete.facturas.find(f => f._id.toString() === facturaId);
+    const factura = paquete.facturas.find(
+      (f) => f._id.toString() === facturaId
+    );
 
     if (factura.coinciliado) {
       return res.status(400).json({
         success: false,
-        message: 'La factura ya está conciliada.'
+        message: "La factura ya está conciliada.",
       });
     }
 
     const referenciaConciliacion = randomUUID();
-    
+
     const conciliacion = {
       facturaId: facturaId,
       movimientoId: movimientoId,
-      comentario: comentario || 'Conciliación manual',
+      comentario: comentario || "Conciliación manual",
       fechaConciliacion: new Date(),
       referenciaConciliacion: referenciaConciliacion,
-      tipo: 'manual'
+      tipo: "manual",
     };
 
     res.status(200).json({
       success: true,
       data: conciliacion,
-      message: 'Conciliación manual registrada exitosamente.'
+      message: "Conciliación manual registrada exitosamente.",
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.'
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
@@ -356,46 +355,53 @@ export const conciliacionDirecta = async (req, res) => {
   try {
     const { facturaId, movimientoIds, comentario } = req.body;
 
-    if (!facturaId || !movimientoIds || !Array.isArray(movimientoIds) || movimientoIds.length === 0) {
+    if (
+      !facturaId ||
+      !movimientoIds ||
+      !Array.isArray(movimientoIds) ||
+      movimientoIds.length === 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'facturaId y al menos un movimientoId son requeridos.'
+        message: "facturaId y al menos un movimientoId son requeridos.",
       });
     }
 
     // Verificar que la factura existe y no está conciliada
     const paquetes = await InvoicesPackage.find({
-      'facturas._id': facturaId,
-      estatus: 'Generado'
+      "facturas._id": facturaId,
+      estatus: "Generado",
     });
 
     if (paquetes.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Factura no encontrada en paquetes con estatus Generado.'
+        message: "Factura no encontrada en paquetes con estatus Generado.",
       });
     }
 
     const paquete = paquetes[0];
-    const factura = paquete.facturas.find(f => f._id.toString() === facturaId);
+    const factura = paquete.facturas.find(
+      (f) => f._id.toString() === facturaId
+    );
 
     if (factura.coinciliado) {
       return res.status(400).json({
         success: false,
-        message: 'La factura ya está conciliada.'
+        message: "La factura ya está conciliada.",
       });
     }
 
     // Verificar que todos los movimientos existen y no están conciliados
     const movimientos = await BankMovement.find({
       _id: { $in: movimientoIds },
-      coinciliado: { $ne: true }
+      coinciliado: { $ne: true },
     });
 
     if (movimientos.length !== movimientoIds.length) {
       return res.status(400).json({
         success: false,
-        message: 'Algunos movimientos no existen o ya están conciliados.'
+        message: "Algunos movimientos no existen o ya están conciliados.",
       });
     }
 
@@ -404,19 +410,19 @@ export const conciliacionDirecta = async (req, res) => {
 
     try {
       const fechaConciliacion = new Date();
-      const comentarioConciliacion = comentario || 'Conciliación directa';
+      const comentarioConciliacion = comentario || "Conciliación directa";
       const referenciaConciliacion = randomUUID();
 
       // Marcar la factura como conciliada
       await InvoicesPackage.updateOne(
-        { 'facturas._id': facturaId },
-        { 
-          $set: { 
-            'facturas.$.coinciliado': true,
-            'facturas.$.comentarioConciliacion': comentarioConciliacion,
-            'facturas.$.fechaConciliacion': fechaConciliacion,
-            'facturas.$.referenciaConciliacion': referenciaConciliacion
-          }
+        { "facturas._id": facturaId },
+        {
+          $set: {
+            "facturas.$.coinciliado": true,
+            "facturas.$.comentarioConciliacion": comentarioConciliacion,
+            "facturas.$.fechaConciliacion": fechaConciliacion,
+            "facturas.$.referenciaConciliacion": referenciaConciliacion,
+          },
         },
         { session }
       );
@@ -424,11 +430,11 @@ export const conciliacionDirecta = async (req, res) => {
       // Marcar todos los movimientos como conciliados
       await BankMovement.updateMany(
         { _id: { $in: movimientoIds } },
-        { 
+        {
           coinciliado: true,
           comentarioConciliacion: comentarioConciliacion,
           fechaConciliacion: fechaConciliacion,
-          referenciaConciliacion: referenciaConciliacion
+          referenciaConciliacion: referenciaConciliacion,
         },
         { session }
       );
@@ -442,22 +448,20 @@ export const conciliacionDirecta = async (req, res) => {
           movimientoIds,
           comentario: comentarioConciliacion,
           fechaConciliacion,
-          referenciaConciliacion
+          referenciaConciliacion,
         },
-        message: `Conciliación realizada exitosamente. 1 factura conciliada con ${movimientoIds.length} movimientos.`
+        message: `Conciliación realizada exitosamente. 1 factura conciliada con ${movimientoIds.length} movimientos.`,
       });
-
     } catch (error) {
       await session.abortTransaction();
       throw error;
     } finally {
       session.endSession();
     }
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.'
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
@@ -466,10 +470,14 @@ export const cerrarConciliacion = async (req, res) => {
   try {
     const { conciliaciones } = req.body;
 
-    if (!conciliaciones || !Array.isArray(conciliaciones) || conciliaciones.length === 0) {
+    if (
+      !conciliaciones ||
+      !Array.isArray(conciliaciones) ||
+      conciliaciones.length === 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Se requiere al menos una conciliación para cerrar.'
+        message: "Se requiere al menos una conciliación para cerrar.",
       });
     }
 
@@ -480,30 +488,37 @@ export const cerrarConciliacion = async (req, res) => {
       const procesadas = [];
 
       for (const conciliacion of conciliaciones) {
-        const { facturaId, movimientoId, comentario, tipo, referenciaConciliacion } = conciliacion;
-        
+        const {
+          facturaId,
+          movimientoId,
+          comentario,
+          tipo,
+          referenciaConciliacion,
+        } = conciliacion;
+
         const referenciaFinal = referenciaConciliacion || randomUUID();
 
         await BankMovement.findByIdAndUpdate(
           movimientoId,
-          { 
+          {
             coinciliado: true,
             comentarioConciliacion: comentario || `Conciliación ${tipo}`,
             fechaConciliacion: new Date(),
-            referenciaConciliacion: referenciaFinal
+            referenciaConciliacion: referenciaFinal,
           },
           { session }
         );
 
         await InvoicesPackage.updateOne(
-          { 'facturas._id': facturaId },
-          { 
-            $set: { 
-              'facturas.$.coinciliado': true,
-              'facturas.$.comentarioConciliacion': comentario || `Conciliación ${tipo}`,
-              'facturas.$.fechaConciliacion': new Date(),
-              'facturas.$.referenciaConciliacion': referenciaFinal
-            }
+          { "facturas._id": facturaId },
+          {
+            $set: {
+              "facturas.$.coinciliado": true,
+              "facturas.$.comentarioConciliacion":
+                comentario || `Conciliación ${tipo}`,
+              "facturas.$.fechaConciliacion": new Date(),
+              "facturas.$.referenciaConciliacion": referenciaFinal,
+            },
           },
           { session }
         );
@@ -512,7 +527,7 @@ export const cerrarConciliacion = async (req, res) => {
           facturaId,
           movimientoId,
           tipo,
-          comentario
+          comentario,
         });
       }
 
@@ -522,22 +537,20 @@ export const cerrarConciliacion = async (req, res) => {
         success: true,
         data: {
           procesadas: procesadas,
-          totalProcesadas: procesadas.length
+          totalProcesadas: procesadas.length,
         },
-        message: `Conciliación cerrada exitosamente. ${procesadas.length} registros procesados.`
+        message: `Conciliación cerrada exitosamente. ${procesadas.length} registros procesados.`,
       });
-
     } catch (error) {
       await session.abortTransaction();
       throw error;
     } finally {
       session.endSession();
     }
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.'
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
@@ -549,21 +562,22 @@ export const getProviderGroupsParaConciliacion = async (req, res) => {
     if (!companyId || !bankAccountId) {
       return res.status(400).json({
         success: false,
-        message: 'companyId y bankAccountId son requeridos.'
+        message: "companyId y bankAccountId son requeridos.",
       });
     }
 
     let fechaFiltro;
-    
+
     if (fecha) {
-      const [year, month, day] = fecha.split('-').map(Number);
+      const [year, month, day] = fecha.split("-").map(Number);
       fechaFiltro = new Date(year, month - 1, day, 0, 0, 0, 0);
     } else {
       fechaFiltro = new Date();
       fechaFiltro.setHours(0, 0, 0, 0);
     }
 
-    const PaymentsByProvider = (await import("../models/PaymentsByProvider.js")).PaymentsByProvider;
+    const PaymentsByProvider = (await import("../models/PaymentsByProvider.js"))
+      .PaymentsByProvider;
 
     const providerGroups = await PaymentsByProvider.find({
       companyId: new mongoose.Types.ObjectId(companyId),
@@ -572,37 +586,42 @@ export const getProviderGroupsParaConciliacion = async (req, res) => {
       $expr: {
         $eq: [
           { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } }
-        ]
-      }
+          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } },
+        ],
+      },
     }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
-      data: providerGroups
+      data: providerGroups,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.'
+      message: error.message || "Error interno del servidor.",
     });
   }
 };
 
 export const conciliacionDirectaProvider = async (req, res) => {
   try {
+    console.log("conciliacionDirectaProvider", req.body);
     const { providerGroupId, movimientoIds, comentario } = req.body;
 
-    if (!providerGroupId || !movimientoIds || !Array.isArray(movimientoIds) || movimientoIds.length === 0) {
+    if (
+      !providerGroupId ||
+      !movimientoIds ||
+      !Array.isArray(movimientoIds) ||
+      movimientoIds.length === 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'providerGroupId y movimientoIds son requeridos.'
+        message: "providerGroupId y movimientoIds son requeridos.",
       });
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // const session = await mongoose.startSession();
+    // session.startTransaction();
 
     try {
       const referenciaConciliacion = randomUUID();
@@ -611,22 +630,25 @@ export const conciliacionDirectaProvider = async (req, res) => {
       for (const movimientoId of movimientoIds) {
         await BankMovement.findByIdAndUpdate(
           movimientoId,
-          { 
+          {
             coinciliado: true,
-            comentarioConciliacion: comentario || 'Conciliación directa por proveedor',
+            comentarioConciliacion:
+              comentario || "Conciliación directa por proveedor",
             fechaConciliacion: new Date(),
-            referenciaConciliacion
-          },
-          { session }
+            referenciaConciliacion,
+          }
+          //{ session }
         );
       }
 
       // Obtener el provider group y sus facturas
-      const PaymentsByProvider = (await import("../models/PaymentsByProvider.js")).PaymentsByProvider;
+      const PaymentsByProvider = (
+        await import("../models/PaymentsByProvider.js")
+      ).PaymentsByProvider;
       const providerGroup = await PaymentsByProvider.findById(providerGroupId);
 
       if (!providerGroup) {
-        throw new Error('Provider group no encontrado');
+        throw new Error("Provider group no encontrado");
       }
 
       const facturaIds = providerGroup.facturas || [];
@@ -634,42 +656,42 @@ export const conciliacionDirectaProvider = async (req, res) => {
       // Marcar todas las facturas del provider group como conciliadas
       for (const facturaId of facturaIds) {
         await InvoicesPackage.updateOne(
-          { 'facturas._id': facturaId },
-          { 
-            $set: { 
-              'facturas.$.coinciliado': true,
-              'facturas.$.comentarioConciliacion': comentario || 'Conciliación directa por proveedor',
-              'facturas.$.fechaConciliacion': new Date(),
-              'facturas.$.referenciaConciliacion': referenciaConciliacion
-            }
-          },
-          { session }
+          { "facturas._id": facturaId },
+          {
+            $set: {
+              "facturas.$.coinciliado": true,
+              "facturas.$.comentarioConciliacion":
+                comentario || "Conciliación directa por proveedor",
+              "facturas.$.fechaConciliacion": new Date(),
+              "facturas.$.referenciaConciliacion": referenciaConciliacion,
+            },
+          }
+          //{ session }
         );
       }
 
-      await session.commitTransaction();
+      //await session.commitTransaction();
 
       res.status(200).json({
         success: true,
         data: {
           providerGroupId,
           movimientoIds,
-          referenciaConciliacion
+          referenciaConciliacion,
         },
-        message: `Conciliación directa por proveedor realizada exitosamente. ${facturaIds.length} facturas conciliadas con ${movimientoIds.length} movimientos.`
+        message: `Conciliación directa por proveedor realizada exitosamente. ${facturaIds.length} facturas conciliadas con ${movimientoIds.length} movimientos.`,
       });
-
     } catch (error) {
-      await session.abortTransaction();
+      console.log("error", error);
+      //await session.abortTransaction();
       throw error;
     } finally {
-      session.endSession();
+      //session.endSession();
     }
-
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || 'Error interno del servidor.'
+      message: error.message || "Error interno del servidor.",
     });
   }
-}; 
+};

@@ -47,6 +47,7 @@ import {
   rejectCashPaymentInPackage,
 } from "../../cashPayments/services/cashPayments";
 import PackageTimeline from "../components/timeline/PackageTimeline";
+import { LucideChevronDown, LucideChevronUp } from "lucide-react";
 
 // Estilos para mostrar borde solo en hover
 const actionButtonStyles = `
@@ -1373,13 +1374,15 @@ const NewPackpageDetailsPage: React.FC = () => {
                       </div>
                       <div className="fw-bold text-danger">
                         $
-                        {(
-                          calcularPresupuestoTotal() -
-                          (calcularTotalesFacturas().total +
-                            calcularTotalesPagosEfectivo().total)
-                        ).toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                        })}
+                        {calcularPresupuestoTotal()
+                          ? (
+                              calcularPresupuestoTotal() -
+                              (calcularTotalesFacturas().total +
+                                calcularTotalesPagosEfectivo().total)
+                            ).toLocaleString("es-MX", {
+                              minimumFractionDigits: 2,
+                            })
+                          : "0.00"}
                       </div>
                     </div>
                   </div>
@@ -1399,7 +1402,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                       </div>
                       <div className="fw-bold text-primary">
                         $
-                        {calcularTotalesFacturas().total.toLocaleString(
+                        {calcularTotalPagadoVisualizacion().toLocaleString(
                           "es-MX",
                           { minimumFractionDigits: 2 }
                         )}
@@ -1448,7 +1451,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                       <div className="fw-bold text-success">
                         $
                         {(
-                          calcularTotalesFacturas().total +
+                          calcularTotalPagadoVisualizacion() +
                           calcularTotalesPagosEfectivo().total
                         ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </div>
@@ -1575,8 +1578,8 @@ const NewPackpageDetailsPage: React.FC = () => {
                     <th>Emisor RFC</th>
                     <th>Estatus</th>
                     <th>Estatus Aut.</th>
+                    <th className="text-center">Valor Factura</th>
                     <th className="text-center">Importe a pagar</th>
-                    <th className="text-center">Total pagado</th>
                     <th className=" text-center">Acción</th>
                   </tr>
                 </thead>
@@ -1747,16 +1750,18 @@ const NewPackpageDetailsPage: React.FC = () => {
           <Card className="shadow-sm border-0">
             <Card.Header className="bg-light">
               <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0 fw-bold">
+                <h5 className="mb-0 fw-bold me-4">
                   <i className="bi bi-clock-history me-2"></i>
                   Timeline del Paquete
                 </h5>
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={() => setShowTimeline(false)}
-                >
-                  <i className="bi bi-x-lg"></i>
+                <Button size="sm" onClick={() => setShowTimeline(false)}>
+                  {showTimeline ? (
+                    <LucideChevronUp className="me-1" />
+                  ) : (
+                    <LucideChevronDown className="me-1" />
+                  )}
+
+                  {showTimeline ? "Ocultar Timeline" : "Mostrar Timeline"}
                 </Button>
               </div>
             </Card.Header>

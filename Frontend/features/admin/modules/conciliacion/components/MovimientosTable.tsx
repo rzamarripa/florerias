@@ -58,6 +58,7 @@ export default function MovimientosTable({
                 />
               </th>
               <th>Concepto</th>
+              <th>Cargo</th>
               <th>Abono</th>
               <th>Fecha</th>
               <th>Estado</th>
@@ -87,6 +88,7 @@ export default function MovimientosTable({
                 <td className="text-truncate" style={{ maxWidth: "150px" }}>
                   {movimiento.concepto}
                 </td>
+                <td>{formatCurrency(movimiento.cargo)}</td>
                 <td>{formatCurrency(movimiento.abono)}</td>
                 <td>
                   {format(new Date(movimiento.fecha), "dd/MM/yyyy", {

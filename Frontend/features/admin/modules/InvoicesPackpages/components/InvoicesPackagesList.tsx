@@ -321,7 +321,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                   <th>Departamento</th>
                   <th>Comentario</th>
                   <th>Estatus</th>
-                  <th>Autorización</th>
                   <th>Total Facturas</th>
                   <th>Total A Pagar</th>
                   <th>Fecha Pago</th>
@@ -373,18 +372,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                       </td>
                       <td>{getStatusBadge(pkg.estatus)}</td>
                       <td>
-                        {(() => {
-                          const authStatus = getAutorizacionStatus(pkg);
-                          return (
-                            <span
-                              className={`badge bg-${authStatus.variant} bg-opacity-10 text-${authStatus.variant} fw-bold py-2 px-3`}
-                            >
-                              {authStatus.texto}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td>
                         <div className="">
                           <Badge
                             bg="primary"
@@ -425,9 +412,9 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                         </div>
                       </td>
                       <td>
-                        <small className=" ">
+                        <div className="fw-bold mb-1">
                           {formatDate(pkg.createdAt.toString(), "dd/MM/yyyy")}
-                        </small>
+                        </div>
                       </td>
                       <td>
                         <PackpageActions
