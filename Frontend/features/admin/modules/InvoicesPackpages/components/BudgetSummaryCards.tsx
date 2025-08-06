@@ -32,36 +32,51 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   const selectedPaymentsSummary = React.useMemo(() => {
     let totalPagado = 0;
     let facturasSeleccionadas = 0;
-    const facturasEnPaquetesSet = new Set<string>();
-
-    existingPackages.forEach((paquete) => {
-      if (paquete.facturas && Array.isArray(paquete.facturas)) {
-        paquete.facturas.forEach((factura: any) => {
-          if (factura._id) {
-            facturasEnPaquetesSet.add(factura._id);
-          }
-        });
-      }
-    });
 
     invoices.forEach((inv) => {
-      if (facturasEnPaquetesSet.has(inv._id) && inv.importePagado > 0) {
-        totalPagado += inv.importePagado;
-        facturasSeleccionadas += 1;
+      const fechaEmision = new Date(inv.fechaEmision);
+      const yearFactura = fechaEmision.getFullYear();
+      const monthFactura = fechaEmision.getMonth();
+
+      if (yearFactura === selectedYear && monthFactura === selectedMonth) {
+        const isInPackage = existingPackages.some((paquete) =>
+          paquete.facturas?.some((factura: any) => factura._id === inv._id)
+        );
+        const hasTempPayment = tempPayments[inv._id];
+        const isProcessed = inv.estaRegistrada && inv.autorizada !== false;
+        const isAuthorized = inv.estaRegistrada && inv.autorizada === true;
+
+        if (
+          (isInPackage || isProcessed || isAuthorized || hasTempPayment) &&
+          inv.importePagado > 0
+        ) {
+          totalPagado += inv.importePagado;
+          facturasSeleccionadas += 1;
+        }
       }
     });
 
     Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
-      if (!facturasEnPaquetesSet.has(invoiceId)) {
-        if (payment.tipoPago === "completo") {
-          const invoice = invoices.find((inv) => inv._id === invoiceId);
-          if (invoice) {
-            totalPagado += invoice.importeAPagar;
-            facturasSeleccionadas += 1;
+      const invoice = invoices.find((inv) => inv._id === invoiceId);
+      if (invoice) {
+        const fechaEmision = new Date(invoice.fechaEmision);
+        const yearFactura = fechaEmision.getFullYear();
+        const monthFactura = fechaEmision.getMonth();
+
+        if (yearFactura === selectedYear && monthFactura === selectedMonth) {
+          const isInPackage = existingPackages.some((paquete) =>
+            paquete.facturas?.some((factura: any) => factura._id === invoiceId)
+          );
+
+          if (!isInPackage) {
+            if (payment.tipoPago === "completo") {
+              totalPagado += invoice.importeAPagar;
+              facturasSeleccionadas += 1;
+            } else if (payment.tipoPago === "parcial" && payment.monto) {
+              totalPagado += payment.monto;
+              facturasSeleccionadas += 1;
+            }
           }
-        } else if (payment.tipoPago === "parcial" && payment.monto) {
-          totalPagado += payment.monto;
-          facturasSeleccionadas += 1;
         }
       }
     });
@@ -70,7 +85,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       totalPagado,
       facturasSeleccionadas,
     };
-  }, [tempPayments, invoices, existingPackages]);
+  }, [tempPayments, invoices, existingPackages, selectedYear, selectedMonth]);
 
   const totalBudget = React.useMemo(() => {
     if (!Array.isArray(budgetData)) {

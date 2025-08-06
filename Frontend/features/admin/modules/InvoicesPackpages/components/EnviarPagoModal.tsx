@@ -756,6 +756,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                 onReject={() => {}} // No hay rechazo en el modal
                 loading={false}
                 packageStatus="Borrador"
+                showActions={false}
               />
             </div>
           </div>
@@ -772,10 +773,15 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         <Button
           variant="primary"
           onClick={handleGuardar}
-          disabled={facturasLocal.length === 0 || isSubmitting}
+          disabled={
+            (facturasLocal.length === 0 &&
+              (!tempCashPayments || tempCashPayments.length === 0)) ||
+            isSubmitting
+          }
           title={
-            facturasLocal.length === 0
-              ? "No hay facturas nuevas para agregar al paquete"
+            facturasLocal.length === 0 &&
+            (!tempCashPayments || tempCashPayments.length === 0)
+              ? "No hay facturas o pagos en efectivo para agregar al paquete"
               : isSubmitting
               ? "Procesando..."
               : ""

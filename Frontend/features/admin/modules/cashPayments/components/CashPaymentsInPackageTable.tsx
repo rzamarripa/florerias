@@ -9,6 +9,7 @@ interface CashPaymentsInPackageTableProps {
   onReject: (pagoId: string) => void;
   loading?: boolean;
   packageStatus?: string;
+  showActions?: boolean;
 }
 
 // Estilos para mostrar borde solo en hover (igual que en la tabla de facturas)
@@ -47,6 +48,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
   onReject,
   loading,
   packageStatus,
+  showActions = true,
 }) => {
   // Función para calcular el total de importeAPagar
   const calcularTotalImporteAPagar = () =>
@@ -83,7 +85,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                   <th>Estatus Aut.</th>
                   <th className="text-center">Importe a pagar</th>
                   <th className="text-center">Total pagado</th>
-                  <th className="text-center">Acción</th>
+                  {showActions && <th className="text-center">Acción</th>}
                 </tr>
               </thead>
               <tbody>
@@ -141,48 +143,50 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                         minimumFractionDigits: 2,
                       })}
                     </td>
-                    <td className="text-center">
-                      <div className="d-flex justify-content-center align-items-center">
-                        <Button
-                          variant="outline-success"
-                          size="sm"
-                          className="fw-bold text-success me-1 action-button-hover-border"
-                          title="Autorizar pago"
-                          onClick={() => onAuthorize(pago._id)}
-                          disabled={
-                            loading ||
-                            pago.autorizada === true ||
-                            packageStatus !== "Borrador"
-                          }
-                        >
-                          Sí{" "}
-                          <span
-                            style={{ fontWeight: "bold", fontSize: "1.1em" }}
+                    {showActions && (
+                      <td className="text-center">
+                        <div className="d-flex justify-content-center align-items-center">
+                          <Button
+                            variant="outline-success"
+                            size="sm"
+                            className="fw-bold text-success me-1 action-button-hover-border"
+                            title="Autorizar pago"
+                            onClick={() => onAuthorize(pago._id)}
+                            disabled={
+                              loading ||
+                              pago.autorizada === true ||
+                              packageStatus !== "Borrador"
+                            }
                           >
-                            ✓
-                          </span>
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          className="fw-bold text-danger me-1 action-button-hover-border"
-                          title="Rechazar pago"
-                          onClick={() => onReject(pago._id)}
-                          disabled={
-                            loading ||
-                            pago.autorizada === false ||
-                            packageStatus !== "Borrador"
-                          }
-                        >
-                          No{" "}
-                          <span
-                            style={{ fontWeight: "bold", fontSize: "1.1em" }}
+                            Sí{" "}
+                            <span
+                              style={{ fontWeight: "bold", fontSize: "1.1em" }}
+                            >
+                              ✓
+                            </span>
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            className="fw-bold text-danger me-1 action-button-hover-border"
+                            title="Rechazar pago"
+                            onClick={() => onReject(pago._id)}
+                            disabled={
+                              loading ||
+                              pago.autorizada === false ||
+                              packageStatus !== "Borrador"
+                            }
                           >
-                            ✗
-                          </span>
-                        </Button>
-                      </div>
-                    </td>
+                            No{" "}
+                            <span
+                              style={{ fontWeight: "bold", fontSize: "1.1em" }}
+                            >
+                              ✗
+                            </span>
+                          </Button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {/* Fila de totales - exactamente igual que en la tabla de facturas */}
@@ -202,7 +206,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                       minimumFractionDigits: 2,
                     })}
                   </td>
-                  <td></td>
+                  {showActions && <td></td>}
                 </tr>
               </tbody>
             </Table>

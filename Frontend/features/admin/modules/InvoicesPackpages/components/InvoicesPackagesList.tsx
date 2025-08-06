@@ -323,8 +323,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                   <th>Estatus</th>
                   <th>Autorización</th>
                   <th>Total Facturas</th>
-                  <th>Pagado</th>
-                  <th>Total a pagar</th>
+                  <th>Total A Pagar</th>
                   <th>Fecha Pago</th>
                   <th>Fecha Creación</th>
                   <th className="text-center">Acciones</th>
@@ -407,15 +406,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                             {porcentajePagado}% pagado
                           </small>
                         </div>
-                      </td>
-                      <td>
-                        <span
-                          className={
-                            totalAPagar > 0 ? "text-warning" : "text-success"
-                          }
-                        >
-                          {formatCurrency(totalAPagar)}
-                        </span>
                       </td>
                       <td>
                         <div>
