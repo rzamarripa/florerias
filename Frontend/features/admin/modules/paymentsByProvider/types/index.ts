@@ -8,15 +8,18 @@ export interface PaymentByProvider {
   companyProvider: string;
   bankNumber: string;
   debitedBankAccount: string;
+  companyId: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   totalInvoices?: number;
+  facturas?: string[];
 }
 
 export interface GroupInvoicesRequest {
   packageIds: string[];
   bankAccountId: string;
+  companyId: string;
 }
 
 export interface GroupInvoicesResponse {

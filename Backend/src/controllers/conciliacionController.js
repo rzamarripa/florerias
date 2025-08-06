@@ -122,13 +122,6 @@ export const getMovimientosBancariosParaConciliacion = async (req, res) => {
       fechaFin.setHours(23, 59, 59, 999);
     }
 
-    console.log("Buscando movimientos con filtros:", {
-      company: companyId,
-      bankAccount: bankAccountId,
-      fechaFiltro,
-      fechaFin
-    });
-
     // Usar $expr y $dateToString para comparar solo fecha sin hora
     const movimientos = await BankMovement.find({
       company: companyId,
@@ -144,8 +137,6 @@ export const getMovimientosBancariosParaConciliacion = async (req, res) => {
     .populate('company', 'name')
     .populate('bankAccount', 'accountNumber clabe')
     .sort({ fecha: 1 });
-
-    console.log("Movimientos encontrados:", JSON.stringify(movimientos, null, 2));
 
     res.status(200).json({
       success: true,
@@ -491,7 +482,6 @@ export const cerrarConciliacion = async (req, res) => {
       for (const conciliacion of conciliaciones) {
         const { facturaId, movimientoId, comentario, tipo, referenciaConciliacion } = conciliacion;
         
-        // Si no hay referencia en la conciliación, generar una nueva
         const referenciaFinal = referenciaConciliacion || randomUUID();
 
         await BankMovement.findByIdAndUpdate(
@@ -535,6 +525,138 @@ export const cerrarConciliacion = async (req, res) => {
           totalProcesadas: procesadas.length
         },
         message: `Conciliación cerrada exitosamente. ${procesadas.length} registros procesados.`
+      });
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error interno del servidor.'
+    });
+  }
+};
+
+export const getProviderGroupsParaConciliacion = async (req, res) => {
+  try {
+    const { companyId, bankAccountId, fecha } = req.query;
+
+    if (!companyId || !bankAccountId) {
+      return res.status(400).json({
+        success: false,
+        message: 'companyId y bankAccountId son requeridos.'
+      });
+    }
+
+    let fechaFiltro;
+    
+    if (fecha) {
+      const [year, month, day] = fecha.split('-').map(Number);
+      fechaFiltro = new Date(year, month - 1, day, 0, 0, 0, 0);
+    } else {
+      fechaFiltro = new Date();
+      fechaFiltro.setHours(0, 0, 0, 0);
+    }
+
+    const PaymentsByProvider = (await import("../models/PaymentsByProvider.js")).PaymentsByProvider;
+
+    const providerGroups = await PaymentsByProvider.find({
+      companyId: new mongoose.Types.ObjectId(companyId),
+      debitedBankAccount: new mongoose.Types.ObjectId(bankAccountId),
+      isActive: true,
+      $expr: {
+        $eq: [
+          { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } }
+        ]
+      }
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: providerGroups
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error interno del servidor.'
+    });
+  }
+};
+
+export const conciliacionDirectaProvider = async (req, res) => {
+  try {
+    const { providerGroupId, movimientoIds, comentario } = req.body;
+
+    if (!providerGroupId || !movimientoIds || !Array.isArray(movimientoIds) || movimientoIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'providerGroupId y movimientoIds son requeridos.'
+      });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const referenciaConciliacion = randomUUID();
+
+      // Marcar movimientos bancarios como conciliados
+      for (const movimientoId of movimientoIds) {
+        await BankMovement.findByIdAndUpdate(
+          movimientoId,
+          { 
+            coinciliado: true,
+            comentarioConciliacion: comentario || 'Conciliación directa por proveedor',
+            fechaConciliacion: new Date(),
+            referenciaConciliacion
+          },
+          { session }
+        );
+      }
+
+      // Obtener el provider group y sus facturas
+      const PaymentsByProvider = (await import("../models/PaymentsByProvider.js")).PaymentsByProvider;
+      const providerGroup = await PaymentsByProvider.findById(providerGroupId);
+
+      if (!providerGroup) {
+        throw new Error('Provider group no encontrado');
+      }
+
+      const facturaIds = providerGroup.facturas || [];
+
+      // Marcar todas las facturas del provider group como conciliadas
+      for (const facturaId of facturaIds) {
+        await InvoicesPackage.updateOne(
+          { 'facturas._id': facturaId },
+          { 
+            $set: { 
+              'facturas.$.coinciliado': true,
+              'facturas.$.comentarioConciliacion': comentario || 'Conciliación directa por proveedor',
+              'facturas.$.fechaConciliacion': new Date(),
+              'facturas.$.referenciaConciliacion': referenciaConciliacion
+            }
+          },
+          { session }
+        );
+      }
+
+      await session.commitTransaction();
+
+      res.status(200).json({
+        success: true,
+        data: {
+          providerGroupId,
+          movimientoIds,
+          referenciaConciliacion
+        },
+        message: `Conciliación directa por proveedor realizada exitosamente. ${facturaIds.length} facturas conciliadas con ${movimientoIds.length} movimientos.`
       });
 
     } catch (error) {

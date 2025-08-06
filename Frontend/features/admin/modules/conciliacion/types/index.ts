@@ -143,4 +143,34 @@ export interface CerrarConciliacionResponse {
     totalProcesadas: number;
   };
   message: string;
+}
+
+export interface ProviderGroup {
+  _id: string;
+  groupingFolio: string;
+  totalAmount: number;
+  providerRfc: string;
+  providerName: string;
+  branchName: string;
+  companyProvider: string;
+  bankNumber: string;
+  debitedBankAccount: string;
+  companyId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  totalInvoices?: number;
+  facturas: string[];
+}
+
+export interface GetProviderGroupsResponse {
+  success: boolean;
+  data: ProviderGroup[];
+  message?: string;
+}
+
+export interface ConciliacionDirectaProviderRequest {
+  providerGroupId: string;
+  movimientoIds: string[];
+  comentario?: string;
 } 

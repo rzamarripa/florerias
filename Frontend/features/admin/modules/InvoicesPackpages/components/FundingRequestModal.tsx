@@ -367,6 +367,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
       const result = await groupInvoicesByProvider({
         packageIds: selectedPackageIds,
         bankAccountId: selectedBankAccountId,
+        companyId: selectedCompanyId,
       });
       console.log("result", result);
       if (!result.success) {

@@ -8,6 +8,8 @@ import {
   ConciliacionDirectaRequest,
   CerrarConciliacionRequest,
   CerrarConciliacionResponse,
+  GetProviderGroupsResponse,
+  ConciliacionDirectaProviderRequest,
 } from "../types";
 
 export const conciliacionService = {
@@ -29,6 +31,17 @@ export const conciliacionService = {
   ): Promise<GetMovimientosResponse> => {
     const response = await apiCall<GetMovimientosResponse["data"]>(
       `/conciliacion/movimientos?companyId=${companyId}&bankAccountId=${bankAccountId}&fecha=${fecha}`
+    );
+    return response;
+  },
+
+  getProviderGroupsParaConciliacion: async (
+    companyId: string,
+    bankAccountId: string,
+    fecha: string
+  ): Promise<GetProviderGroupsResponse> => {
+    const response = await apiCall<GetProviderGroupsResponse["data"]>(
+      `/conciliacion/provider-groups?companyId=${companyId}&bankAccountId=${bankAccountId}&fecha=${fecha}`
     );
     return response;
   },
@@ -60,6 +73,16 @@ export const conciliacionService = {
     data: ConciliacionDirectaRequest
   ): Promise<{ success: boolean; data: any; message: string }> => {
     const response = await apiCall<any>("/conciliacion/directa", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return response;
+  },
+
+  conciliacionDirectaProvider: async (
+    data: ConciliacionDirectaProviderRequest
+  ): Promise<{ success: boolean; data: any; message: string }> => {
+    const response = await apiCall<any>("/conciliacion/directa-provider", {
       method: "POST",
       body: JSON.stringify(data),
     });

@@ -158,7 +158,7 @@ export const paymentsByProviderController = {
   groupInvoicesByProvider: async (req, res) => {
     try {
       console.log("Iniciando groupInvoicesByProvider con datos:", req.body);
-      const { packageIds, bankAccountId } = req.body;
+      const { packageIds, bankAccountId, companyId } = req.body;
 
       if (!packageIds || !Array.isArray(packageIds) || packageIds.length === 0) {
         console.log("Error: packageIds inválidos:", packageIds);
@@ -173,6 +173,14 @@ export const paymentsByProviderController = {
         return res.status(400).json({
           success: false,
           message: "Se requiere ID de cuenta bancaria",
+        });
+      }
+
+      if (!companyId) {
+        console.log("Error: companyId faltante");
+        return res.status(400).json({
+          success: false,
+          message: "Se requiere ID de empresa",
         });
       }
 
@@ -252,13 +260,33 @@ export const paymentsByProviderController = {
               const group = providerGroups.get(rfcEmisor);
               console.log("Grupo encontrado:", group);
 
-              const amountToAdd = factura.importePagado && factura.importePagado.$numberDecimal
-                ? parseFloat(factura.importePagado.$numberDecimal)
-                : factura.importeAPagar && factura.importeAPagar.$numberDecimal
-                ? parseFloat(factura.importeAPagar.$numberDecimal)
-                : 0;
+              // Mejorar el cálculo del importe
+              let amountToAdd = 0;
+              
+              if (factura.importePagado) {
+                if (typeof factura.importePagado === 'number') {
+                  amountToAdd = factura.importePagado;
+                } else if (factura.importePagado.$numberDecimal) {
+                  amountToAdd = parseFloat(factura.importePagado.$numberDecimal);
+                } else if (typeof factura.importePagado === 'string') {
+                  amountToAdd = parseFloat(factura.importePagado);
+                }
+              } else if (factura.importeAPagar) {
+                if (typeof factura.importeAPagar === 'number') {
+                  amountToAdd = factura.importeAPagar;
+                } else if (factura.importeAPagar.$numberDecimal) {
+                  amountToAdd = parseFloat(factura.importeAPagar.$numberDecimal);
+                } else if (typeof factura.importeAPagar === 'string') {
+                  amountToAdd = parseFloat(factura.importeAPagar);
+                }
+              }
+
+              console.log(`Factura ${factura.folio || factura._id}: importePagado=${factura.importePagado}, importeAPagar=${factura.importeAPagar}, amountToAdd=${amountToAdd}`);
+              
               group.totalAmount += amountToAdd;
               group.invoices.push(factura);
+              
+              console.log(`Total acumulado para ${rfcEmisor}: ${group.totalAmount}`);
             }
           });
         }
@@ -266,9 +294,20 @@ export const paymentsByProviderController = {
         // Procesar pagos en efectivo (si aplica)
         if (pkg.pagosEfectivo && Array.isArray(pkg.pagosEfectivo)) {
           pkg.pagosEfectivo.forEach(pago => {
-            const cashAmount = pago.importePagado && pago.importePagado.$numberDecimal
-              ? parseFloat(pago.importePagado.$numberDecimal)
-              : 0;
+            let cashAmount = 0;
+            
+            if (pago.importePagado) {
+              if (typeof pago.importePagado === 'number') {
+                cashAmount = pago.importePagado;
+              } else if (pago.importePagado.$numberDecimal) {
+                cashAmount = parseFloat(pago.importePagado.$numberDecimal);
+              } else if (typeof pago.importePagado === 'string') {
+                cashAmount = parseFloat(pago.importePagado);
+              }
+            }
+            
+            console.log(`Pago efectivo: importePagado=${pago.importePagado}, cashAmount=${cashAmount}`);
+            
             if (cashAmount > 0) {
               // Para pagos en efectivo, usar un RFC especial o agrupar por concepto
               const rfcKey = `EFECTIVO_${pago.expenseConcept?.name || 'SIN_CONCEPTO'}`;
@@ -305,6 +344,8 @@ export const paymentsByProviderController = {
       const createdPayments = [];
 
       for (const [rfc, group] of providerGroups) {
+        console.log(`Guardando grupo ${rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
+        
         if (group.isCashPayment) {
           // Para pagos en efectivo, crear registro especial
           const cashPayment = new PaymentsByProvider({
@@ -315,6 +356,8 @@ export const paymentsByProviderController = {
             companyProvider: 'Pago en Efectivo',
             bankNumber: '00000', // Número especial para pagos en efectivo
             debitedBankAccount: bankAccount._id,
+            companyId: companyId,
+            facturas: group.invoices.map(invoice => invoice._id),
           });
           
           await cashPayment.save();
@@ -338,6 +381,8 @@ export const paymentsByProviderController = {
 
             const bankNumber = bankNumberRecord ? bankNumberRecord.bankNumber : '00000';
 
+            console.log(`Guardando proveedor ${provider.rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
+            
             const payment = new PaymentsByProvider({
               totalAmount: group.totalAmount,
               providerRfc: provider.rfc,
@@ -346,6 +391,8 @@ export const paymentsByProviderController = {
               companyProvider: provider.businessName,
               bankNumber: bankNumber,
               debitedBankAccount: bankAccount._id,
+              companyId: companyId,
+              facturas: group.invoices.map(invoice => invoice._id),
             });
 
             await payment.save();

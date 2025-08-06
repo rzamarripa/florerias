@@ -48,16 +48,25 @@ export default function FiltrosConciliacion({
   }, [selectedCompany]);
 
   const handleFiltersUpdate = () => {
+    console.log("handleFiltersUpdate - Valores:", {
+      selectedCompany,
+      selectedBankAccount,
+      selectedDate,
+    });
     if (selectedCompany && selectedBankAccount && selectedDate) {
+      console.log("handleFiltersUpdate - Llamando a onFiltersChange");
       onFiltersChange({
         companyId: selectedCompany,
         bankAccountId: selectedBankAccount,
         fecha: selectedDate,
       });
+    } else {
+      console.log("handleFiltersUpdate - No se cumplen las condiciones");
     }
   };
 
   const handleManualLoad = () => {
+    console.log("handleManualLoad - Botón presionado");
     handleFiltersUpdate();
   };
 

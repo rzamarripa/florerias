@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Row, Col, Button, Spinner, Alert } from "react-bootstrap";
 import {
   FiltrosConciliacion,
-  FacturasTable,
+  ProviderGroupsTable,
   MovimientosTable,
   ConciliacionManualModal,
 } from "./components";
@@ -12,18 +12,18 @@ import { useConciliacion } from "./hooks/useConciliacion";
 
 export default function ConciliacionPage() {
   const {
-    facturas,
+    providerGroups,
     movimientos,
     loading,
     showModal,
     conciliacionesPendientes,
-    facturasRestantes,
+    providerGroupsRestantes,
     movimientosRestantes,
-    selectedFactura,
+    selectedProviderGroups,
     selectedMovimiento,
     selectedMovimientos,
     loadData,
-    handleFacturaSelect,
+    handleProviderGroupSelect,
     handleMovimientoSelect,
     handleMovimientosSelect,
     handleConciliarAutomatico,
@@ -53,8 +53,8 @@ export default function ConciliacionPage() {
   };
 
   const handleConciliarDirectamente = () => {
-    if (!selectedFactura) {
-      alert("Debe seleccionar una factura");
+    if (selectedProviderGroups.length === 0) {
+      alert("Debe seleccionar al menos un proveedor agrupado");
       return;
     }
     if (selectedMovimientos.length === 0) {
@@ -62,7 +62,7 @@ export default function ConciliacionPage() {
       return;
     }
 
-    handleConciliacionDirecta(selectedFactura, selectedMovimientos);
+    handleConciliacionDirecta(selectedProviderGroups, selectedMovimientos);
   };
 
   return (
@@ -83,10 +83,10 @@ export default function ConciliacionPage() {
         <>
           <Row>
             <Col md={6}>
-              <FacturasTable
-                facturas={facturas}
-                selectedFactura={selectedFactura}
-                onFacturaSelect={handleFacturaSelect}
+              <ProviderGroupsTable
+                providerGroups={providerGroups}
+                selectedProviderGroups={selectedProviderGroups}
+                onProviderGroupSelect={handleProviderGroupSelect}
               />
             </Col>
 
@@ -101,45 +101,51 @@ export default function ConciliacionPage() {
             </Col>
           </Row>
 
-          {(selectedFactura || selectedMovimientos.length > 0) && (
+          {(selectedProviderGroups.length > 0 ||
+            selectedMovimientos.length > 0) && (
             <Row className="mt-3">
               <Col>
                 <Alert variant="info">
-                  Seleccionados: {selectedFactura ? "1 factura" : "0 facturas"}{" "}
-                  y {selectedMovimientos.length} movimientos
+                  Seleccionados: {selectedProviderGroups.length} proveedores
+                  agrupados y {selectedMovimientos.length} movimientos
                 </Alert>
               </Col>
             </Row>
           )}
 
-          {selectedFactura && selectedMovimientos.length > 0 && (
-            <Row className="mt-2">
-              <Col>
-                <Button
-                  variant="success"
-                  onClick={handleConciliarDirectamente}
-                  disabled={loading}
-                  size="lg"
-                >
-                  {loading ? (
-                    <>
-                      <Spinner animation="border" size="sm" className="me-2" />
-                      Conciliando...
-                    </>
-                  ) : (
-                    "Conciliar Selección"
-                  )}
-                </Button>
-              </Col>
-            </Row>
-          )}
+          {selectedProviderGroups.length > 0 &&
+            selectedMovimientos.length > 0 && (
+              <Row className="mt-2">
+                <Col>
+                  <Button
+                    variant="success"
+                    onClick={handleConciliarDirectamente}
+                    disabled={loading}
+                    size="lg"
+                  >
+                    {loading ? (
+                      <>
+                        <Spinner
+                          animation="border"
+                          size="sm"
+                          className="me-2"
+                        />
+                        Conciliando...
+                      </>
+                    ) : (
+                      "Conciliar Selección"
+                    )}
+                  </Button>
+                </Col>
+              </Row>
+            )}
         </>
       )}
 
       <ConciliacionManualModal
         show={showModal}
         onHide={resetModal}
-        facturasRestantes={facturasRestantes}
+        providerGroupsRestantes={providerGroupsRestantes}
         movimientosRestantes={movimientosRestantes}
         conciliacionesPendientes={conciliacionesPendientes}
         loading={loading}

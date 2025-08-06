@@ -11,18 +11,18 @@ import {
   Button,
   Spinner,
 } from "react-bootstrap";
-import { Factura, MovimientoBancario, Conciliacion } from "../types";
+import { ProviderGroup, MovimientoBancario, Conciliacion } from "../types";
 import { formatCurrency } from "@/utils";
 
 interface ConciliacionManualModalProps {
   show: boolean;
   onHide: () => void;
-  facturasRestantes: Factura[];
+  providerGroupsRestantes: ProviderGroup[];
   movimientosRestantes: MovimientoBancario[];
   conciliacionesPendientes: Conciliacion[];
   loading: boolean;
   onConciliarManual: (
-    facturaId: string,
+    providerGroupId: string,
     movimientoId: string,
     comentario: string
   ) => void;
@@ -32,27 +32,28 @@ interface ConciliacionManualModalProps {
 export default function ConciliacionManualModal({
   show,
   onHide,
-  facturasRestantes,
+  providerGroupsRestantes,
   movimientosRestantes,
   conciliacionesPendientes,
   loading,
   onConciliarManual,
   onCerrarConciliacion,
 }: ConciliacionManualModalProps) {
-  const [selectedFactura, setSelectedFactura] = useState<string>("");
+  const [selectedProviderGroup, setSelectedProviderGroup] =
+    useState<string>("");
   const [selectedMovimiento, setSelectedMovimiento] = useState<string>("");
   const [comentario, setComentario] = useState<string>("");
 
   const handleConciliarManual = () => {
-    if (!selectedFactura || !selectedMovimiento) {
+    if (!selectedProviderGroup || !selectedMovimiento) {
       alert(
-        "Debe seleccionar una factura y un movimiento para conciliar manualmente."
+        "Debe seleccionar un proveedor agrupado y un movimiento para conciliar manualmente."
       );
       return;
     }
 
-    onConciliarManual(selectedFactura, selectedMovimiento, comentario);
-    setSelectedFactura("");
+    onConciliarManual(selectedProviderGroup, selectedMovimiento, comentario);
+    setSelectedProviderGroup("");
     setSelectedMovimiento("");
     setComentario("");
   };
@@ -78,7 +79,7 @@ export default function ConciliacionManualModal({
 
         <Row className="mb-3">
           <Col md={6}>
-            <h6>Facturas Restantes ({facturasRestantes.length})</h6>
+            <h6>Proveedores Restantes ({providerGroupsRestantes.length})</h6>
             <div
               style={{
                 maxHeight: "200px",
@@ -88,30 +89,46 @@ export default function ConciliacionManualModal({
               }}
             >
               <Table striped hover size="sm" className="mb-0">
+                <thead>
+                  <tr>
+                    <th>Proveedor</th>
+                    <th>Total</th>
+                    <th>Facturas</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {facturasRestantes.map((factura) => (
+                  {providerGroupsRestantes.map((providerGroup) => (
                     <tr
-                      key={factura._id}
+                      key={providerGroup._id}
                       className={
-                        selectedFactura === factura._id ? "table-active" : ""
+                        selectedProviderGroup === providerGroup._id
+                          ? "table-active"
+                          : ""
                       }
                       style={{ cursor: "pointer" }}
                       onClick={() =>
-                        setSelectedFactura(
-                          selectedFactura === factura._id ? "" : factura._id
+                        setSelectedProviderGroup(
+                          selectedProviderGroup === providerGroup._id
+                            ? ""
+                            : providerGroup._id
                         )
                       }
                     >
                       <td>
                         <Form.Check
                           type="radio"
-                          name="facturaManual"
-                          checked={selectedFactura === factura._id}
+                          name="providerGroupManual"
+                          checked={selectedProviderGroup === providerGroup._id}
                           onChange={() => {}}
                         />
                       </td>
-                      <td>{factura.numeroReferencia || "N/A"}</td>
-                      <td>{formatCurrency(factura.importeAPagar)}</td>
+                      <td>{providerGroup.providerName}</td>
+                      <td>{formatCurrency(providerGroup.totalAmount)}</td>
+                      <td>
+                        <span className="badge bg-info">
+                          {providerGroup.totalInvoices}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -155,11 +172,7 @@ export default function ConciliacionManualModal({
                           onChange={() => {}}
                         />
                       </td>
-                      <td>
-                        {movimiento.numeroReferencia ||
-                          movimiento.referencia ||
-                          "N/A"}
-                      </td>
+                      <td>{movimiento.referencia || "N/A"}</td>
                       <td>{formatCurrency(movimiento.abono)}</td>
                     </tr>
                   ))}
@@ -189,7 +202,7 @@ export default function ConciliacionManualModal({
             <Button
               variant="secondary"
               onClick={handleConciliarManual}
-              disabled={!selectedFactura || !selectedMovimiento}
+              disabled={!selectedProviderGroup || !selectedMovimiento}
               className="me-2"
             >
               Conciliar Selección

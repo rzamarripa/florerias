@@ -46,10 +46,19 @@ const paymentsByProviderSchema = new Schema({
     ref: 'BankAccount',
     required: true,
   },
+  companyId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Company',
+    required: true,
+  },
   isActive: {
     type: Boolean,
     default: true,
   },
+  facturas: [{
+    type: Schema.Types.ObjectId,
+    ref: 'InvoicesPackage'
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

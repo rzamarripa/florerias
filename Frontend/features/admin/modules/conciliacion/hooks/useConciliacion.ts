@@ -1,20 +1,20 @@
 import { useState, useCallback } from 'react';
 import { 
-  Factura, 
+  ProviderGroup, 
   MovimientoBancario, 
   Conciliacion
 } from '../types';
 import { conciliacionService } from '../services';
 
 export const useConciliacion = () => {
-  const [facturas, setFacturas] = useState<Factura[]>([]);
+  const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([]);
   const [movimientos, setMovimientos] = useState<MovimientoBancario[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [conciliacionesPendientes, setConciliacionesPendientes] = useState<Conciliacion[]>([]);
-  const [facturasRestantes, setFacturasRestantes] = useState<Factura[]>([]);
+  const [providerGroupsRestantes, setProviderGroupsRestantes] = useState<ProviderGroup[]>([]);
   const [movimientosRestantes, setMovimientosRestantes] = useState<MovimientoBancario[]>([]);
-  const [selectedFactura, setSelectedFactura] = useState<string>('');
+  const [selectedProviderGroups, setSelectedProviderGroups] = useState<string[]>([]);
   const [selectedMovimiento, setSelectedMovimiento] = useState<string>('');
   const [selectedMovimientos, setSelectedMovimientos] = useState<string[]>([]);
   const [currentFilters, setCurrentFilters] = useState<{
@@ -29,16 +29,14 @@ export const useConciliacion = () => {
     fecha: string;
   }) => {
     setLoading(true);
-    // Reset selections when loading new data
-    setSelectedFactura('');
+    setSelectedProviderGroups([]);
     setSelectedMovimiento('');
     setSelectedMovimientos([]);
-    // Save current filters for reloading
     setCurrentFilters(filters);
     
     try {
-      const [facturasResponse, movimientosResponse] = await Promise.all([
-        conciliacionService.getFacturasParaConciliacion(
+      const [providerGroupsResponse, movimientosResponse] = await Promise.all([
+        conciliacionService.getProviderGroupsParaConciliacion(
           filters.companyId,
           filters.bankAccountId,
           filters.fecha
@@ -50,23 +48,29 @@ export const useConciliacion = () => {
         )
       ]);
 
-      if (facturasResponse.success) {
-        setFacturas(facturasResponse.data);
+      if (providerGroupsResponse.success) {
+        setProviderGroups(providerGroupsResponse.data);
       }
 
       if (movimientosResponse.success) {
         setMovimientos(movimientosResponse.data);
       }
     } catch {
-      setFacturas([]);
+      setProviderGroups([]);
       setMovimientos([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const handleFacturaSelect = useCallback((facturaId: string) => {
-    setSelectedFactura(prev => prev === facturaId ? '' : facturaId);
+  const handleProviderGroupSelect = useCallback((providerGroupId: string) => {
+    setSelectedProviderGroups(prev => {
+      if (prev.includes(providerGroupId)) {
+        return prev.filter(id => id !== providerGroupId);
+      } else {
+        return [...prev, providerGroupId];
+      }
+    });
   }, []);
 
   const handleMovimientoSelect = useCallback((movimientoId: string) => {
@@ -93,7 +97,7 @@ export const useConciliacion = () => {
       const response = await conciliacionService.conciliacionAutomatica(filters);
 
       if (response.success) {
-        const { coincidencias, facturasNoCoinciden, movimientosNoCoinciden } = response.data;
+        const { coincidencias, movimientosNoCoinciden } = response.data;
         
         setConciliacionesPendientes(coincidencias.map(c => ({
           facturaId: c.factura._id,
@@ -103,10 +107,12 @@ export const useConciliacion = () => {
           tipo: 'automatica' as const
         })));
 
-        setFacturasRestantes(facturasNoCoinciden);
+        setProviderGroupsRestantes(providerGroups.filter(pg => 
+          !coincidencias.some(c => pg.facturas?.includes(c.factura._id))
+        ));
         setMovimientosRestantes(movimientosNoCoinciden);
 
-        if (facturasNoCoinciden.length > 0 || movimientosNoCoinciden.length > 0) {
+        if (providerGroupsRestantes.length > 0 || movimientosNoCoinciden.length > 0) {
           setShowModal(true);
         } else {
           await handleCerrarConciliacion();
@@ -119,42 +125,50 @@ export const useConciliacion = () => {
     }
   };
 
-  const handleConciliacionManual = (facturaId: string, movimientoId: string, comentario: string) => {
-    const nuevaConciliacion: Conciliacion = {
+  const handleConciliacionManual = (providerGroupId: string, movimientoId: string, comentario: string) => {
+    const providerGroup = providerGroups.find(pg => pg._id === providerGroupId);
+    if (!providerGroup) return;
+
+    const nuevasConciliaciones: Conciliacion[] = providerGroup.facturas.map(facturaId => ({
       facturaId,
       movimientoId,
       comentario: comentario || 'Conciliación manual',
       tipo: 'manual'
-    };
+    }));
 
-    setConciliacionesPendientes([...conciliacionesPendientes, nuevaConciliacion]);
-    setFacturasRestantes(facturasRestantes.filter(f => f._id !== facturaId));
+    setConciliacionesPendientes([...conciliacionesPendientes, ...nuevasConciliaciones]);
+    setProviderGroupsRestantes(providerGroupsRestantes.filter(pg => pg._id !== providerGroupId));
     setMovimientosRestantes(movimientosRestantes.filter(m => m._id !== movimientoId));
   };
 
-  const handleConciliacionDirecta = useCallback(async (facturaId: string, movimientoIds: string[], comentario?: string) => {
-    if (!facturaId || movimientoIds.length === 0) {
-      alert('Debe seleccionar una factura y al menos un movimiento bancario');
+  const handleConciliacionDirecta = useCallback(async (providerGroupIds: string[], movimientoIds: string[], comentario?: string) => {
+    if (providerGroupIds.length === 0 || movimientoIds.length === 0) {
+      alert('Debe seleccionar al menos un proveedor agrupado y un movimiento bancario');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await conciliacionService.conciliacionDirecta({
-        facturaId,
-        movimientoIds,
-        comentario: comentario || 'Conciliación directa'
-      });
+      const promises = providerGroupIds.map(providerGroupId =>
+        conciliacionService.conciliacionDirectaProvider({
+          providerGroupId,
+          movimientoIds,
+          comentario: comentario || 'Conciliación directa'
+        })
+      );
 
-      if (response.success) {
-        alert(response.message || 'Conciliación realizada exitosamente');
-        // Reset selections
-        setSelectedFactura('');
+      const responses = await Promise.all(promises);
+      const allSuccess = responses.every(response => response.success);
+
+      if (allSuccess) {
+        alert('Conciliación realizada exitosamente');
+        setSelectedProviderGroups([]);
         setSelectedMovimientos([]);
-        // Reload data to reflect changes
         if (currentFilters) {
           await loadData(currentFilters);
         }
+      } else {
+        alert('Algunas conciliaciones fallaron');
       }
     } catch {
       alert('Error al realizar la conciliación');
@@ -178,7 +192,7 @@ export const useConciliacion = () => {
       if (response.success) {
         alert(response.message);
         resetModal();
-        setSelectedFactura('');
+        setSelectedProviderGroups([]);
         setSelectedMovimiento('');
         setSelectedMovimientos([]);
       }
@@ -192,23 +206,23 @@ export const useConciliacion = () => {
   const resetModal = () => {
     setShowModal(false);
     setConciliacionesPendientes([]);
-    setFacturasRestantes([]);
+    setProviderGroupsRestantes([]);
     setMovimientosRestantes([]);
   };
 
   return {
-    facturas,
+    providerGroups,
     movimientos,
     loading,
     showModal,
     conciliacionesPendientes,
-    facturasRestantes,
+    providerGroupsRestantes,
     movimientosRestantes,
-    selectedFactura,
+    selectedProviderGroups,
     selectedMovimiento,
     selectedMovimientos,
     loadData,
-    handleFacturaSelect,
+    handleProviderGroupSelect,
     handleMovimientoSelect,
     handleMovimientosSelect,
     handleConciliarAutomatico,
