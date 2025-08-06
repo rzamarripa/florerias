@@ -1439,13 +1439,13 @@ const NewPackpageDetailsPage: React.FC = () => {
                     <div>
                       <div className="fw-bold text-warning">Total a pagar</div>
                       <div className="text-muted small">
-                        Suma de importes pagados
+                        Suma de importes a pagar
                       </div>
                       <div className="fw-bold text-success">
                         $
                         {(
-                          calcularTotalesFacturas().pagado +
-                          calcularTotalesPagosEfectivo().pagado
+                          calcularTotalesFacturas().total +
+                          calcularTotalesPagosEfectivo().total
                         ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </div>
                     </div>
@@ -1904,8 +1904,8 @@ const NewPackpageDetailsPage: React.FC = () => {
               <span className="text-muted">
                 Total a pagar: $
                 {(
-                  calcularTotalesFacturas().pagado +
-                  calcularTotalesPagosEfectivo().pagado
+                  calcularTotalesFacturas().total +
+                  calcularTotalesPagosEfectivo().total
                 ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
               </span>
             </Alert>

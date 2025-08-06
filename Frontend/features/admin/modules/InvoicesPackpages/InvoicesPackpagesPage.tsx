@@ -1293,8 +1293,8 @@ const InvoicesPackagePage: React.FC = () => {
                               <>
                                 <div className="d-flex gap-1 w-100">
                                   <Button
-                                    variant="light"
-                                    className="d-flex align-items-center justify-content-center w-100 py-1 border-2 border-success text-success"
+                                    variant="success"
+                                    className="d-flex align-items-center justify-content-center w-100 py-1"
                                     onClick={() => {
                                       setTipoPagoModal("completo");
                                       setSaldoModal(saldo);
@@ -1302,14 +1302,12 @@ const InvoicesPackagePage: React.FC = () => {
                                       setShowPagoModal(true);
                                     }}
                                   >
-                                    <i className="bi bi-check2 text-success me-1"></i>
-                                    <span className="text-success fw-bold">
-                                      Completa
-                                    </span>
+                                    <i className="bi bi-check2 me-1"></i>
+                                    <span className="fw-bold">Completa</span>
                                   </Button>
                                   <Button
-                                    variant="light"
-                                    className="d-flex align-items-center justify-content-center w-100 py-1 border-2 border-warning text-warning"
+                                    variant="warning"
+                                    className="d-flex align-items-center justify-content-center w-100 py-1"
                                     onClick={() => {
                                       setTipoPagoModal("parcial");
                                       setSaldoModal(saldo);
@@ -1317,25 +1315,21 @@ const InvoicesPackagePage: React.FC = () => {
                                       setShowPagoModal(true);
                                     }}
                                   >
-                                    <i className="bi bi-dash text-warning me-1"></i>
-                                    <span className="text-warning fw-bold">
-                                      Parcial
-                                    </span>
+                                    <i className="bi bi-dash me-1"></i>
+                                    <span className="fw-bold">Parcial</span>
                                   </Button>
                                 </div>
                                 <Button
-                                  variant="light"
-                                  className="d-flex align-items-center justify-content-center w-100 py-1 border-2 border-info text-info"
+                                  variant="secondary"
+                                  className="d-flex align-items-center justify-content-center w-100 py-1"
                                   onClick={() => {
                                     setDescuentoSaldo(saldo);
                                     setDescuentoInvoiceId(invoice._id);
                                     setShowDescuentoModal(true);
                                   }}
                                 >
-                                  <i className="bi bi-gem text-info me-1"></i>
-                                  <span className="text-info fw-bold">
-                                    Descuento
-                                  </span>
+                                  <i className="bi bi-gem me-1"></i>
+                                  <span className="fw-bold">Descuento</span>
                                 </Button>
                               </>
                             )}
