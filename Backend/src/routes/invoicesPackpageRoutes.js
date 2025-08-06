@@ -18,7 +18,8 @@ import {
     requestFunding,
     getPackagesToFund,
     getPackageCompanyRelations,
-    updatePackagesToGenerated
+    updatePackagesToGenerated,
+    toggleInvoicesPackageActive
 } from '../controllers/invoicesPackpageController.js';
 import packageTimelineController from '../controllers/packageTimelineController.js';
 import { protect } from '../middleware/auth.js';
@@ -72,6 +73,9 @@ router.delete('/:id', deleteInvoicesPackage);
 
 // Cambiar estatus de un paquete
 router.patch('/:id/status', changeInvoicesPackageStatus);
+
+// Cambiar estado activo de un paquete
+router.patch('/:id/toggle-active', protect, toggleInvoicesPackageActive);
 
 // Enviar paquete a dirección
 router.post('/:id/enviar-direccion', protect, enviarPaqueteADireccion);

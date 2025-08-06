@@ -96,6 +96,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
     paqueteExistente?.comentario || ""
   );
   const [facturasLocal, setFacturasLocal] = useState<FacturaProcesada[]>([]);
+  const [pagosEfectivoLocal, setPagosEfectivoLocal] = useState<any[]>([]);
   const [fechaCalculada, setFechaCalculada] = useState<string>("");
   const [copied, setCopied] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"facturas" | "pagosEfectivo">(
@@ -142,6 +143,15 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
 
     setFacturasLocal(facturasConEstado);
   }, [facturas, paqueteExistente, tempPayments]);
+
+  useEffect(() => {
+    const pagosEfectivoExistentes = paqueteExistente?.pagosEfectivo || [];
+    const pagosEfectivoCombinados = [
+      ...pagosEfectivoExistentes,
+      ...(tempCashPayments || []),
+    ];
+    setPagosEfectivoLocal(pagosEfectivoCombinados);
+  }, [paqueteExistente, tempCashPayments]);
 
   useEffect(() => {
     if (paqueteExistente?.fechaPago) {
@@ -212,7 +222,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
 
       return sum + importePagadoCalculado;
     }, 0) +
-    (tempCashPayments?.reduce(
+    (pagosEfectivoLocal.reduce(
       (sum, payment) => sum + payment.importeAPagar,
       0
     ) || 0);
@@ -267,15 +277,15 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
 
   // Función para calcular totales de pagos en efectivo (igual que en el detalle del paquete)
   const calcularTotalesPagosEfectivo = () => {
-    if (!tempCashPayments || tempCashPayments.length === 0)
+    if (!pagosEfectivoLocal || pagosEfectivoLocal.length === 0)
       return { total: 0, pagado: 0, pendiente: 0, cantidad: 0 };
 
-    const total = tempCashPayments.reduce(
+    const total = pagosEfectivoLocal.reduce(
       (sum, p) => sum + toNumber(p.importeAPagar),
       0
     );
     // Para pagos temporales, el importe pagado es igual al importe a pagar (se pagan completos)
-    const pagado = tempCashPayments.reduce(
+    const pagado = pagosEfectivoLocal.reduce(
       (sum, p) => sum + toNumber(p.importeAPagar),
       0
     );
@@ -285,7 +295,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       total,
       pagado,
       pendiente,
-      cantidad: tempCashPayments.length,
+      cantidad: pagosEfectivoLocal.length,
     };
   };
 
@@ -353,7 +363,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       });
 
       // Preparar pagos en efectivo para enviar
-      const pagosEfectivoParaEnviar = (tempCashPayments || []).map((p) => {
+      const pagosEfectivoParaEnviar = pagosEfectivoLocal.map((p) => {
         if (!p._id || p._id.startsWith("temp_")) {
           // Es un pago temporal, no enviar el _id
           return {
@@ -751,7 +761,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
               id="pagosEfectivo"
             >
               <CashPaymentsInPackageTable
-                pagos={tempCashPayments || []}
+                pagos={pagosEfectivoLocal}
                 onAuthorize={() => {}} // No hay autorización en el modal
                 onReject={() => {}} // No hay rechazo en el modal
                 loading={false}

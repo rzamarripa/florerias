@@ -373,6 +373,11 @@ const InvoicesPackageSchema = new mongoose.Schema(
       min: 1,
       default: 0,
     },
+    active: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
   },
   {
     timestamps: true,

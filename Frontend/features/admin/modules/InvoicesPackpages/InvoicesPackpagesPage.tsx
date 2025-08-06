@@ -10,7 +10,6 @@ import {
   Table,
   ButtonGroup,
   Spinner,
-  Modal,
 } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { BsClipboard } from "react-icons/bs";
@@ -107,8 +106,6 @@ const InvoicesPackagePage: React.FC = () => {
   );
 
   const [showCashPaymentModal, setShowCashPaymentModal] = useState(false);
-  const [showCashPaymentConfirmModal, setShowCashPaymentConfirmModal] =
-    useState(false);
 
   const [tempPayments, setTempPayments] = useState<{
     [invoiceId: string]: {
@@ -783,6 +780,7 @@ const InvoicesPackagePage: React.FC = () => {
       <div className="row gx-1 gy-1 mb-1">
         <BudgetSummaryCards
           tempPayments={tempPayments}
+          tempCashPayments={tempCashPayments}
           invoices={invoices}
           budgetData={budgetData}
           existingPackages={existingPackages}
@@ -1629,42 +1627,9 @@ const InvoicesPackagePage: React.FC = () => {
 
           handleAddTempCashPayment(tempCashPayment);
           setShowCashPaymentModal(false);
-          setShowCashPaymentConfirmModal(true);
         }}
         departmentId={user?.departmentId || undefined}
       />
-
-      <Modal
-        show={showCashPaymentConfirmModal}
-        onHide={() => setShowCashPaymentConfirmModal(false)}
-        centered
-        size="sm"
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>
-            <i className="bi bi-check-circle text-success me-2"></i>
-            Pago agregado temporalmente
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="text-center">
-          <i className="bi bi-cash-coin display-4 text-success mb-3"></i>
-          <h6>Pago en efectivo agregado al estado temporal</h6>
-          <p className="text-muted mb-4">
-            El pago se incluirá cuando envíes el paquete de facturas
-          </p>
-        </Modal.Body>
-        <Modal.Footer className="justify-content-center">
-          <Button
-            variant="primary"
-            onClick={() => {
-              setShowCashPaymentConfirmModal(false);
-            }}
-          >
-            <i className="bi bi-check me-2"></i>
-            Entendido
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </Container>
   );
 };

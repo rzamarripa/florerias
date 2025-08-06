@@ -42,6 +42,7 @@ export interface InvoicesPackage {
     totalFacturas: number;
     createdAt: string;
     updatedAt: string;
+    active: boolean;
     // Array de pagos en efectivo embebidos
     pagosEfectivo?: CashPaymentEmbedded[];
     // Información de la relación Company, Brand, Branch
@@ -316,6 +317,15 @@ export const changeInvoicesPackageStatus = async (id: string, estatus: string): 
     const response = await apiCall<any>(`/invoices-package/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ estatus }),
+    });
+    return response;
+};
+
+// Servicio para cambiar estado activo de un paquete
+export const toggleInvoicesPackageActive = async (id: string, active: boolean): Promise<any> => {
+    const response = await apiCall<any>(`/invoices-package/${id}/toggle-active`, {
+        method: "PATCH",
+        body: JSON.stringify({ active }),
     });
     return response;
 };
@@ -702,7 +712,7 @@ export interface ReportRow {
 }
 
 export const generateExcelReport = async (data: ReportRow[], fileName: string = 'reporte_pagos.xlsx') => {
-    const ExcelJS = require('exceljs');
+    const ExcelJS = await import('exceljs');
 
     // Crear el workbook
     const workbook = new ExcelJS.Workbook();
@@ -857,7 +867,7 @@ export const generateExcelReport = async (data: ReportRow[], fileName: string = 
     });
 
     // Fila 6: Vacía - Sin bordes
-    const row6 = worksheet.addRow(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    worksheet.addRow(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
 
     // Fila 7: Encabezados de la tabla
     const headers = ['CUENTA DE CARGO', 'CUENTA DE ABONO', 'BANCO RECEPTOR', 'BENEFICIARIO', 'SUCURSAL', 'IMPORTE', 'PLAZA BANXICO', 'CONCEPTO', 'ESTADO DE CUENTA FISCAL', 'RFC', 'IVA', 'REFERENCIA ORDENANTE', 'FORMA DE APLICACIÓN', 'FECHA DE APLICACIÓN', 'EMAIL BENEFICIARIO'];

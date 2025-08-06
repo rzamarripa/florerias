@@ -113,6 +113,7 @@ const NewPackpageDetailsPage: React.FC = () => {
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
   const [schedulingPayment, setSchedulingPayment] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
   const { user } = useUserSessionStore();
 
@@ -464,6 +465,13 @@ const NewPackpageDetailsPage: React.FC = () => {
       await handleProgramarPago();
       return;
     }
+
+    // Mostrar modal de confirmación antes de enviar
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmarEnvio = async () => {
+    setShowConfirmationModal(false);
 
     // Verificar si hay exceso de presupuesto
     const excesoInfo = verificarExcesoPresupuesto();
@@ -1854,6 +1862,42 @@ const NewPackpageDetailsPage: React.FC = () => {
             ) : (
               "Validar y Enviar"
             )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal de confirmación para enviar a tesorería */}
+      <Modal
+        show={showConfirmationModal}
+        onHide={() => setShowConfirmationModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Confirmar envío</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="text-center">
+            <div className="mb-3">
+              <i
+                className="bi bi-question-circle text-primary"
+                style={{ fontSize: "3rem" }}
+              ></i>
+            </div>
+            <h5 className="fw-bold">
+              ¿Estás seguro de enviar el paquete a tesorería?
+            </h5>
+            <p className="text-muted">Esta acción no se puede deshacer.</p>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="d-flex justify-content-between">
+          <Button
+            variant="light"
+            onClick={() => setShowConfirmationModal(false)}
+          >
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={handleConfirmarEnvio}>
+            Aceptar
           </Button>
         </Modal.Footer>
       </Modal>

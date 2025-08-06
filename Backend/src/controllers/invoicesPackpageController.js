@@ -1807,4 +1807,65 @@ export const updatePackagesToGenerated = async (req, res) => {
             message: error.message || 'Error interno del servidor.'
         });
     }
+};
+
+// PATCH - Cambiar estado activo de un paquete
+export const toggleInvoicesPackageActive = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { active } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de paquete inválido.'
+            });
+        }
+
+        const paquete = await InvoicesPackage.findById(id);
+
+        if (!paquete) {
+            return res.status(404).json({
+                success: false,
+                message: 'Paquete no encontrado.'
+            });
+        }
+
+        // Validar que no se pueda desactivar paquetes con estatus "Generado" o "Programado"
+        if (active === false && (paquete.estatus === 'Generado' || paquete.estatus === 'Programado')) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se puede desactivar un paquete con estatus "Generado" o "Programado".'
+            });
+        }
+
+        paquete.active = active;
+        await paquete.save();
+
+        // Registrar el cambio en el timeline
+        if (req.user && req.user._id) {
+            await timelineService.registerStatusChange(
+                req.user._id,
+                paquete._id,
+                active ? 'Activado' : 'Desactivado'
+            );
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Paquete ${active ? 'activado' : 'desactivado'} exitosamente.`,
+            data: {
+                _id: paquete._id,
+                active: paquete.active,
+                estatus: paquete.estatus
+            }
+        });
+
+    } catch (error) {
+        console.error('Error toggling package active status:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error interno del servidor.'
+        });
+    }
 }; 

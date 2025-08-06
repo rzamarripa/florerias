@@ -14,6 +14,20 @@ interface BudgetSummaryCardsProps {
       conceptoGasto?: string;
     };
   };
+  tempCashPayments?: {
+    _id: string;
+    importeAPagar: number;
+    expenseConcept: {
+      _id: string;
+      name: string;
+      categoryId?: {
+        _id: string;
+        name: string;
+      };
+    };
+    description?: string;
+    createdAt: string;
+  }[];
   invoices?: any[];
   budgetData?: BudgetItem[];
   existingPackages?: any[];
@@ -23,6 +37,7 @@ interface BudgetSummaryCardsProps {
 
 const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   tempPayments = {},
+  tempCashPayments = [],
   invoices = [],
   budgetData = [],
   existingPackages = [],
@@ -32,6 +47,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   const selectedPaymentsSummary = React.useMemo(() => {
     let totalPagado = 0;
     let facturasSeleccionadas = 0;
+    let pagosEfectivoSeleccionados = 0;
 
     invoices.forEach((inv) => {
       const fechaEmision = new Date(inv.fechaEmision);
@@ -81,11 +97,44 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       }
     });
 
+    existingPackages.forEach((paquete) => {
+      if (paquete.fechaPago) {
+        const fechaPago = new Date(paquete.fechaPago);
+        const yearPago = fechaPago.getFullYear();
+        const monthPago = fechaPago.getMonth();
+
+        if (yearPago === selectedYear && monthPago === selectedMonth) {
+          if (paquete.pagosEfectivo && Array.isArray(paquete.pagosEfectivo)) {
+            paquete.pagosEfectivo.forEach((pagoEfectivo: any) => {
+              if (pagoEfectivo.importeAPagar > 0) {
+                totalPagado += pagoEfectivo.importeAPagar;
+                pagosEfectivoSeleccionados += 1;
+              }
+            });
+          }
+        }
+      }
+    });
+
+    tempCashPayments.forEach((pagoEfectivo) => {
+      totalPagado += pagoEfectivo.importeAPagar;
+      pagosEfectivoSeleccionados += 1;
+    });
+
     return {
       totalPagado,
       facturasSeleccionadas,
+      pagosEfectivoSeleccionados,
+      totalElementos: facturasSeleccionadas + pagosEfectivoSeleccionados,
     };
-  }, [tempPayments, invoices, existingPackages, selectedYear, selectedMonth]);
+  }, [
+    tempPayments,
+    tempCashPayments,
+    invoices,
+    existingPackages,
+    selectedYear,
+    selectedMonth,
+  ]);
 
   const totalBudget = React.useMemo(() => {
     if (!Array.isArray(budgetData)) {
@@ -165,8 +214,8 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     <div className="d-flex gap-3 mb-2 w-100 align-items-stretch">
       <div className="flex-fill" style={{ minWidth: 0 }}>
         <BudgetStatisticCard
-          title={`${selectedPaymentsSummary.facturasSeleccionadas} Facturas pagadas`}
-          subtitle="Pagos realizados y seleccionados"
+          title={`${selectedPaymentsSummary.totalElementos} Pagos Realizados`}
+          subtitle={`${selectedPaymentsSummary.facturasSeleccionadas} facturas + ${selectedPaymentsSummary.pagosEfectivoSeleccionados} pagos en efectivo`}
           stats={`$${selectedPaymentsSummary.totalPagado.toLocaleString(
             "es-MX",
             { minimumFractionDigits: 2 }

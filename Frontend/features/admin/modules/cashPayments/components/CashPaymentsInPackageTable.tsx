@@ -90,7 +90,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
               <tbody>
                 {pagos.map((pago, idx) => (
                   <tr
-                    key={pago._id}
+                    key={`${pago._id}-${idx}`}
                     className={idx % 2 === 1 ? "bg-pink bg-opacity-25" : ""}
                   >
                     <td>{idx + 1}</td>

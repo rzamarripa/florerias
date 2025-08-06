@@ -47,6 +47,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
     useState<InvoicesPackage | null>(null);
   const [facturasProcesadas, setFacturasProcesadas] = useState<any[]>([]);
   const [showFundingModal, setShowFundingModal] = useState(false);
+  const [loadingToggle, setLoadingToggle] = useState<string | null>(null);
   const { user } = useUserSessionStore();
   const router = useRouter();
 
@@ -107,6 +108,14 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
     const todasLasFacturas = packpage.facturas || [];
     setFacturasProcesadas(todasLasFacturas);
     setShowEnviarPagoModal(true);
+  };
+
+  const handleToggleActive = (packpageId: string) => {
+    setLoadingToggle(packpageId);
+    setTimeout(() => {
+      setLoadingToggle(null);
+      loadPackages();
+    }, 1000);
   };
 
   const getStatusBadge = (status: string) => {
@@ -321,7 +330,9 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                   <th>Departamento</th>
                   <th>Comentario</th>
                   <th>Estatus</th>
-                  <th>Total Facturas</th>
+                  <th>Estado</th>
+                  <th>Autorización</th>
+                  <th>Pagos Totales</th>
                   <th>Total A Pagar</th>
                   <th>Fecha Pago</th>
                   <th>Fecha Creación</th>
@@ -372,12 +383,35 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                       </td>
                       <td>{getStatusBadge(pkg.estatus)}</td>
                       <td>
+                        <span
+                          className={`badge bg-${
+                            pkg.active ? "success" : "secondary"
+                          } bg-opacity-10 text-${
+                            pkg.active ? "success" : "secondary"
+                          } fw-bold py-2 px-3`}
+                        >
+                          {pkg.active ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td>
+                        {(() => {
+                          const authStatus = getAutorizacionStatus(pkg);
+                          return (
+                            <span
+                              className={`badge bg-${authStatus.variant} bg-opacity-10 text-${authStatus.variant} fw-bold py-2 px-3`}
+                            >
+                              {authStatus.texto}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td>
                         <div className="">
                           <Badge
                             bg="primary"
                             className="badge bg-primary bg-opacity-10 text-primary fw-bold py-2 px-2"
                           >
-                            {pkg.totalFacturas} facturas
+                            {pkg.totalFacturas} pagos
                           </Badge>
                           <br />
                           <small className="text-muted"></small>
@@ -421,11 +455,9 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                           packpageId={pkg._id}
                           packageStatus={pkg.estatus}
                           onEdit={() => handleEdit(pkg)}
-                          onDelete={() => {
-                            setSelectedPackpageId(pkg._id);
-                            setShowDeleteModal(true);
-                          }}
-                          loadingDelete={deletingId === pkg._id}
+                          onToggleActive={() => handleToggleActive(pkg._id)}
+                          active={pkg.active}
+                          loadingToggle={loadingToggle === pkg._id}
                         />
                       </td>
                     </tr>
