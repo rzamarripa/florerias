@@ -1,15 +1,23 @@
 "use client";
 
-import { FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  FileText,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Hash,
+} from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, Form, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 import BankActions from "./components/Actions";
 import BankModal from "./components/BankModal";
 import { banksService } from "./services/banks";
 import { Bank } from "./types";
 
 const BanksPage: React.FC = () => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -74,12 +82,16 @@ const BanksPage: React.FC = () => {
     const range = [];
     const rangeWithDots = [];
 
-    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
+    for (
+      let i = Math.max(2, page - delta);
+      i <= Math.min(pages - 1, page + delta);
+      i++
+    ) {
       range.push(i);
     }
 
     if (page - delta > 2) {
-      rangeWithDots.push(1, '...');
+      rangeWithDots.push(1, "...");
     } else {
       rangeWithDots.push(1);
     }
@@ -87,7 +99,7 @@ const BanksPage: React.FC = () => {
     rangeWithDots.push(...range);
 
     if (page + delta < pages - 1) {
-      rangeWithDots.push('...', pages);
+      rangeWithDots.push("...", pages);
     } else if (pages > 1) {
       rangeWithDots.push(pages);
     }
@@ -123,7 +135,20 @@ const BanksPage: React.FC = () => {
                 </div>
               </div>
 
-              <BankModal mode="create" onBankSaved={handleBankSaved} />
+              <div className="d-flex align-items-center gap-2">
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  className="d-flex align-items-center gap-1"
+                  onClick={() =>
+                    router.push("/catalogos/bancos/numeros-de-banco")
+                  }
+                >
+                  <Hash size={16} />
+                  Números de Banco
+                </Button>
+                <BankModal mode="create" onBankSaved={handleBankSaved} />
+              </div>
             </div>
 
             <div className="table-responsive shadow-sm">
@@ -140,15 +165,9 @@ const BanksPage: React.FC = () => {
                   >
                     <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                       <tr>
-                        <th style={{ width: "8%" }}>
-                          #
-                        </th>
-                        <th style={{ width: "15%" }}>
-                          NÚMERO
-                        </th>
-                        <th style={{ width: "37%" }}>
-                          NOMBRE
-                        </th>
+                        <th style={{ width: "8%" }}>#</th>
+                        <th style={{ width: "15%" }}>NÚMERO</th>
+                        <th style={{ width: "37%" }}>NOMBRE</th>
                         <th className="text-center" style={{ width: "20%" }}>
                           ESTADO
                         </th>
@@ -179,10 +198,11 @@ const BanksPage: React.FC = () => {
                           </td>
                           <td className="text-center">
                             <span
-                              className={`badge fs-6 ${bank.isActive
-                                ? "bg-success bg-opacity-10 text-success"
-                                : "bg-danger bg-opacity-10 text-danger"
-                                }`}
+                              className={`badge fs-6 ${
+                                bank.isActive
+                                  ? "bg-success bg-opacity-10 text-success"
+                                  : "bg-danger bg-opacity-10 text-danger"
+                              }`}
                             >
                               {bank.isActive ? "Activo" : "Inactivo"}
                             </span>
@@ -230,7 +250,7 @@ const BanksPage: React.FC = () => {
 
                   {getPageNumbers().map((pageNum, index) => (
                     <React.Fragment key={index}>
-                      {pageNum === '...' ? (
+                      {pageNum === "..." ? (
                         <span className="px-2 text-muted">...</span>
                       ) : (
                         <Button

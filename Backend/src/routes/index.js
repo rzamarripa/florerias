@@ -2,6 +2,8 @@ import { Router } from "express";
 
 import bankAccountRoutes from "./bankAccountRoutes.js";
 import bankRoutes from "./bankRoutes.js";
+import bankNumberRoutes from "./bankNumberRoutes.js";
+import paymentsByProviderRoutes from "./paymentsByProviderRoutes.js";
 import branchRoutes from "./branchRoutes.js";
 import brandRoutes from "./brandRoutes.js";
 import budgetRoutes from "./budgetRoutes.js";
@@ -54,6 +56,8 @@ router.use("/providers", providerRoutes);
 router.use("/departments", departmentRoutes);
 router.use("/banks", bankRoutes);
 router.use("/bank-accounts", bankAccountRoutes);
+router.use("/bank-numbers", bankNumberRoutes);
+router.use("/payments-by-provider", paymentsByProviderRoutes);
 router.use("/imported-invoices", importedInvoicesRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/invoices-package", invoicesPackageRoutes);

@@ -101,6 +101,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   const [activeTab, setActiveTab] = useState<"facturas" | "pagosEfectivo">(
     "facturas"
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useUserSessionStore();
 
   useEffect(() => {
@@ -289,6 +290,9 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   };
 
   const handleGuardar = async () => {
+    if (isSubmitting) return; // Prevenir múltiples ejecuciones
+
+    setIsSubmitting(true);
     try {
       if (!user) {
         toast.error("No hay usuario logueado");
@@ -352,8 +356,12 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       const pagosEfectivoParaEnviar = (tempCashPayments || []).map((p) => {
         if (!p._id || p._id.startsWith("temp_")) {
           // Es un pago temporal, no enviar el _id
-          const { _id, ...rest } = p;
-          return rest;
+          return {
+            importeAPagar: p.importeAPagar,
+            expenseConcept: p.expenseConcept,
+            description: p.description,
+            createdAt: p.createdAt,
+          };
         }
         // Es un pago ya existente
         return p;
@@ -400,6 +408,8 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
     } catch (error) {
       console.error("Error al guardar el paquete:", error);
       toast.error("Error al guardar el paquete");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -411,7 +421,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       centered
       backdrop="static"
     >
-      <Modal.Header closeButton>
+      <Modal.Header closeButton={!isSubmitting}>
         <Modal.Title>
           {paqueteExistente
             ? `Editar Paquete de Facturas - Folio: ${paqueteExistente.folio}`
@@ -752,20 +762,37 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         </>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="light" onClick={onCancel || onClose}>
+        <Button
+          variant="light"
+          onClick={onCancel || onClose}
+          disabled={isSubmitting}
+        >
           Cerrar
         </Button>
         <Button
           variant="primary"
           onClick={handleGuardar}
-          disabled={facturasLocal.length === 0}
+          disabled={facturasLocal.length === 0 || isSubmitting}
           title={
             facturasLocal.length === 0
               ? "No hay facturas nuevas para agregar al paquete"
+              : isSubmitting
+              ? "Procesando..."
               : ""
           }
         >
-          Guardar
+          {isSubmitting ? (
+            <>
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              Procesando...
+            </>
+          ) : (
+            "Guardar"
+          )}
         </Button>
       </Modal.Footer>
     </Modal>

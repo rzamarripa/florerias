@@ -97,6 +97,8 @@ export const apiCall = async <T>(
     };
   }
 
+
+
   if (!response.ok) {
     console.error("Error en la petición:", {
       status: response.status,

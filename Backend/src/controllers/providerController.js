@@ -357,7 +357,10 @@ export const getProvidersByRfcs = async (req, res) => {
   try {
     const { rfcs } = req.query;
 
+    console.log('getProvidersByRfcs llamado con rfcs:', rfcs);
+
     if (!rfcs) {
+      console.log('Error: parámetro rfcs faltante');
       return res.status(400).json({
         success: false,
         message: 'El parámetro rfcs es requerido (separado por comas)',
@@ -366,6 +369,7 @@ export const getProvidersByRfcs = async (req, res) => {
 
     // Convertir string de RFCs a array
     const rfcArray = rfcs.split(',').map(rfc => rfc.trim().toUpperCase());
+    console.log('RFCs procesados:', rfcArray);
 
     const providers = await Provider.find({
       rfc: { $in: rfcArray },
@@ -375,6 +379,9 @@ export const getProvidersByRfcs = async (req, res) => {
       .populate('bank', '_id name')
       .populate('sucursal', '_id name')
       .sort({ commercialName: 1 });
+
+    console.log('Proveedores encontrados:', providers.length);
+    console.log('Proveedores:', providers.map(p => ({ rfc: p.rfc, name: p.commercialName })));
 
     res.status(200).json({
       success: true,

@@ -123,8 +123,8 @@ export const generateSantanderReport = async (data: SantanderReportRow[], fileNa
         }
     });
 
-    // Fila 4: Banco (Santander) - En columna D con fondo rojo en C4:E4
-    const row4 = worksheet.addRow(['', '', '', 'Santander', '', '', '', '', '', '', '', '', '', '', '']);
+    // Fila 4: Banco (Banorte) - En columna D con fondo rojo en C4:E4
+    const row4 = worksheet.addRow(['', '', '', 'Banorte', '', '', '', '', '', '', '', '', '', '', '']);
     row4.eachCell((cell: any, colNumber: any) => {
         if (colNumber >= 3 && colNumber <= 5) { // Columnas C, D, E
             cell.fill = {
@@ -412,7 +412,7 @@ export const generateBankReport = async (
     const finalFileName = fileName || defaultFileName;
 
     switch (bankName.toLowerCase()) {
-        case 'santander':
+        case 'banorte':
             await generateSantanderReport(data, finalFileName);
             break;
         case 'afirme':

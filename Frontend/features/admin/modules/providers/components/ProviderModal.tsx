@@ -5,14 +5,13 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { getModalButtonStyles } from "../../../../../utils/modalButtonStyles";
 import { providerSchema, ProviderFormData } from "../schemas/providerSchema";
-import { Provider, Location, BankAccount } from "../types";
+import { Provider, Location } from "../types";
 import {
   getAllCountries,
   getStatesByCountry,
   getMunicipalitiesByState,
   getAllBanks,
   getAllBranches,
-  getBankAccountsByBank,
   createProvider,
   updateProvider,
 } from "../services/providers";
@@ -43,13 +42,11 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
   const [municipalities, setMunicipalities] = useState<Location[]>([]);
   const [banks, setBanks] = useState<Location[]>([]);
   const [branches, setBranches] = useState<Location[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(false);
   const [loadingBanks, setLoadingBanks] = useState(false);
   const [loadingBranches, setLoadingBranches] = useState(false);
-  const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
 
   const {
     control,
@@ -73,7 +70,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
       email: "",
       description: "",
       bank: "",
-      bankAccountId: "",
       accountNumber: "",
       clabe: "",
       referencia: "",
@@ -85,7 +81,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
 
   const countrySelected = watch("countryId");
   const stateSelected = watch("stateId");
-  const bankSelected = watch("bank");
 
   useEffect(() => {
     if (showModal) {
@@ -93,7 +88,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
       setLoadingBanks(true);
       setLoadingBranches(true);
 
-      // Cargar países
       getAllCountries()
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
@@ -102,7 +96,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
         })
         .finally(() => setLoadingCountries(false));
 
-      // Cargar bancos
       getAllBanks()
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
@@ -111,7 +104,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
         })
         .finally(() => setLoadingBanks(false));
 
-      // Cargar sucursales
       getAllBranches()
         .then((res) => {
           if (res.success && Array.isArray(res.data)) {
@@ -139,7 +131,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
         setValue("sucursal", editingProvider.sucursal._id);
         setValue("isActive", editingProvider.isActive);
 
-        // Cargar estados del país seleccionado
         setLoadingStates(true);
         getStatesByCountry(editingProvider.countryId._id)
           .then((res) => {
@@ -149,7 +140,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
           })
           .finally(() => setLoadingStates(false));
 
-        // Cargar municipios del estado seleccionado
         setLoadingMunicipalities(true);
         getMunicipalitiesByState(editingProvider.stateId._id)
           .then((res) => {
@@ -158,16 +148,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
             }
           })
           .finally(() => setLoadingMunicipalities(false));
-
-        // Cargar cuentas bancarias del banco seleccionado
-        setLoadingBankAccounts(true);
-        getBankAccountsByBank(editingProvider.bank._id)
-          .then((res) => {
-            if (res.success && Array.isArray(res.data)) {
-              setBankAccounts(res.data);
-            }
-          })
-          .finally(() => setLoadingBankAccounts(false));
       } else {
         reset();
       }
@@ -207,24 +187,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
     }
   }, [stateSelected, setValue, isEditing]);
 
-  useEffect(() => {
-    if (bankSelected) {
-      setLoadingBankAccounts(true);
-      setBankAccounts([]);
-      setValue("bankAccountId", "");
-      setValue("accountNumber", "");
-      setValue("clabe", "");
-
-      getBankAccountsByBank(bankSelected)
-        .then((res) => {
-          if (res.success && Array.isArray(res.data)) {
-            setBankAccounts(res.data);
-          }
-        })
-        .finally(() => setLoadingBankAccounts(false));
-    }
-  }, [bankSelected, setValue]);
-
   const handleOpenModal = () => {
     setShowModal(true);
   };
@@ -256,7 +218,7 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
         }
       }
     } catch (error) {
-      const action = isEditing ? 'actualizar' : 'crear';
+      const action = isEditing ? "actualizar" : "crear";
       toast.error(`Error al ${action} el proveedor`);
       console.error(`Error ${action} proveedor:`, error);
     }
@@ -279,7 +241,9 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
       </Button>
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>{isEditing ? "Editar proveedor" : "Nuevo proveedor"}</Modal.Title>
+          <Modal.Title>
+            {isEditing ? "Editar proveedor" : "Nuevo proveedor"}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={onSubmit}>
@@ -291,7 +255,10 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Nombre comercial *</Form.Label>
-                      <Form.Control {...field} isInvalid={!!errors.commercialName} />
+                      <Form.Control
+                        {...field}
+                        isInvalid={!!errors.commercialName}
+                      />
                       <Form.Control.Feedback type="invalid">
                         {errors.commercialName?.message}
                       </Form.Control.Feedback>
@@ -306,7 +273,10 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Razón social *</Form.Label>
-                      <Form.Control {...field} isInvalid={!!errors.businessName} />
+                      <Form.Control
+                        {...field}
+                        isInvalid={!!errors.businessName}
+                      />
                       <Form.Control.Feedback type="invalid">
                         {errors.businessName?.message}
                       </Form.Control.Feedback>
@@ -325,7 +295,9 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                         {...field}
                         isInvalid={!!errors.rfc}
                         placeholder="Ej: ABC123456789"
-                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.toUpperCase())
+                        }
                       />
                       <Form.Control.Feedback type="invalid">
                         {errors.rfc?.message}
@@ -341,7 +313,10 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Nombre contacto *</Form.Label>
-                      <Form.Control {...field} isInvalid={!!errors.contactName} />
+                      <Form.Control
+                        {...field}
+                        isInvalid={!!errors.contactName}
+                      />
                       <Form.Control.Feedback type="invalid">
                         {errors.contactName?.message}
                       </Form.Control.Feedback>
@@ -415,7 +390,10 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                       >
                         <option value="">Seleccionar ciudad</option>
                         {municipalities.map((municipality) => (
-                          <option key={municipality._id} value={municipality._id}>
+                          <option
+                            key={municipality._id}
+                            value={municipality._id}
+                          >
                             {municipality.name}
                           </option>
                         ))}
@@ -473,7 +451,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                 />
               </div>
 
-              {/* Nuevos campos para información bancaria */}
               <div className="col-12">
                 <h6 className="text-primary mb-3">Información Bancaria</h6>
               </div>
@@ -505,46 +482,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
               </div>
               <div className="col-md-6">
                 <Controller
-                  name="bankAccountId"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Group>
-                      <Form.Label>Cuenta bancaria *</Form.Label>
-                      <Form.Select
-                        {...field}
-                        isInvalid={!!errors.bankAccountId}
-                        disabled={loadingBankAccounts || !bankSelected}
-                        onChange={(e) => {
-                          field.onChange(e.target.value);
-                          // Autocompletar accountNumber y clabe cuando se selecciona una cuenta
-                          if (e.target.value) {
-                            const selectedAccount = bankAccounts.find(acc => acc._id === e.target.value);
-                            if (selectedAccount) {
-                              setValue("accountNumber", selectedAccount.accountNumber);
-                              setValue("clabe", selectedAccount.clabe);
-                            }
-                          } else {
-                            setValue("accountNumber", "");
-                            setValue("clabe", "");
-                          }
-                        }}
-                      >
-                        <option value="">Seleccionar cuenta</option>
-                        {bankAccounts.map((account) => (
-                          <option key={account._id} value={account._id}>
-                            {account.accountNumber} - CLABE: {account.clabe}
-                          </option>
-                        ))}
-                      </Form.Select>
-                      <Form.Control.Feedback type="invalid">
-                        {errors.bankAccountId?.message}
-                      </Form.Control.Feedback>
-                    </Form.Group>
-                  )}
-                />
-              </div>
-              <div className="col-md-6">
-                <Controller
                   name="accountNumber"
                   control={control}
                   render={({ field }) => (
@@ -553,8 +490,7 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                       <Form.Control
                         {...field}
                         isInvalid={!!errors.accountNumber}
-                        placeholder="Se autocompletará al seleccionar cuenta"
-                        readOnly
+                        placeholder="Ingrese el número de cuenta"
                       />
                       <Form.Control.Feedback type="invalid">
                         {errors.accountNumber?.message}
@@ -573,8 +509,8 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                       <Form.Control
                         {...field}
                         isInvalid={!!errors.clabe}
-                        placeholder="Se autocompletará al seleccionar cuenta"
-                        readOnly
+                        placeholder="18 dígitos"
+                        maxLength={18}
                       />
                       <Form.Control.Feedback type="invalid">
                         {errors.clabe?.message}
@@ -594,7 +530,9 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                         {...field}
                         isInvalid={!!errors.referencia}
                         placeholder="Ej: REF123456"
-                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.toUpperCase())
+                        }
                       />
                       <Form.Control.Feedback type="invalid">
                         {errors.referencia?.message}
@@ -637,7 +575,12 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Descripción</Form.Label>
-                      <Form.Control as="textarea" rows={2} {...field} isInvalid={!!errors.description} />
+                      <Form.Control
+                        as="textarea"
+                        rows={2}
+                        {...field}
+                        isInvalid={!!errors.description}
+                      />
                       <Form.Control.Feedback type="invalid">
                         {errors.description?.message}
                       </Form.Control.Feedback>
@@ -676,14 +619,14 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
           >
             Cancelar
           </Button>
-          <Button
-            variant="primary"
-            onClick={onSubmit}
-            disabled={isSubmitting}
-          >
+          <Button variant="primary" onClick={onSubmit} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                <span
+                  className="spinner-border spinner-border-sm me-1"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 Guardando...
               </>
             ) : (

@@ -227,6 +227,14 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
     );
   });
 
+  // Verificar si el usuario es de tesorería
+  const esUsuarioTesorería = user?.department?.toLowerCase() === "tesorería";
+
+  // Verificar si hay paquetes programados para habilitar el botón de generar reporte
+  const hayPaquetesProgramados = packages.some(
+    (pkg) => pkg.estatus === "Programado"
+  );
+
   if (!show) return null;
 
   return (
@@ -249,14 +257,16 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
               </Form.Group>
             </Col>
             <Col md={6} className="text-end">
-              <Button
-                variant="secondary"
-                className="me-2"
-                onClick={() => setShowFundingModal(true)}
-              >
-                <i className="bi bi-cash-coin me-2"></i>
-                Generar Reporte
-              </Button>
+              {esUsuarioTesorería && hayPaquetesProgramados && (
+                <Button
+                  variant="secondary"
+                  className="me-2"
+                  onClick={() => setShowFundingModal(true)}
+                >
+                  <i className="bi bi-cash-coin me-2"></i>
+                  Generar Reporte
+                </Button>
+              )}
               <Button
                 variant="primary"
                 onClick={() => router.push("/modulos/paquetes-facturas")}

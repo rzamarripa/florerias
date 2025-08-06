@@ -76,17 +76,10 @@ export const providerSchema = z.object({
     .nullable()
     .transform(val => val === null ? undefined : val),
 
-  // Nuevos campos para relación con cuentas bancarias
   bank: z
     .string()
     .min(24, "ID de banco inválido")
     .max(24, "ID de banco inválido"),
-
-  bankAccountId: z
-    .string()
-    .min(24, "ID de cuenta bancaria inválido")
-    .max(24, "ID de cuenta bancaria inválido")
-    .optional(),
 
   accountNumber: z
     .string()

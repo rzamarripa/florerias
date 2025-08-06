@@ -1,4 +1,6 @@
 import { AuthorizationFolio } from '../models/AuthorizationFolio.js';
+import { User } from '../models/User.js';
+import { InvoicesPackage } from '../models/InvoicesPackpage.js';
 import mongoose from 'mongoose';
 
 // Create a new AuthorizationFolio
@@ -189,6 +191,184 @@ export const getAuthorizationFoliosByPackage = async (req, res) => {
             message: 'Error al obtener los folios del paquete', 
             error: error.message,
             data: []
+        });
+    }
+};
+
+// Get pending authorization folios
+export const getPendingAuthorizationFolios = async (req, res) => {
+    try {
+        // Buscar folios pendientes y autorizados, excluyendo canjeados
+        const folios = await AuthorizationFolio.find({ 
+            estatus: { $in: ['pendiente', 'autorizado'] }
+        }).sort({ createdAt: -1 });
+        
+        res.set({
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+        
+        res.json({
+            success: true,
+            data: folios,
+            message: `${folios.length} folios encontrados (pendientes y autorizados)`
+        });
+    } catch (error) {
+        console.error('Error al obtener folios:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Error al obtener los folios', 
+            error: error.message,
+            data: []
+        });
+    }
+};
+
+// Get pending and authorized authorization folios with user and package info
+export const getAuthorizationFoliosWithUserInfo = async (req, res) => {
+    try {
+        console.log('🔍 Buscando folios pendientes y autorizados...');
+        
+        // Primero buscar todos los folios para debug
+        const allFolios = await AuthorizationFolio.find({});
+        console.log(`📊 Total de folios en BD: ${allFolios.length}`);
+        console.log('📋 Estatus de folios:', allFolios.map(f => ({ folio: f.folio, estatus: f.estatus })));
+        
+        // Buscar folios pendientes y autorizados, excluyendo canjeados
+        const folios = await AuthorizationFolio.find({ 
+            estatus: { $in: ['pendiente', 'autorizado'] }
+        }).sort({ createdAt: -1 });
+        
+        console.log(`✅ Folios pendientes y autorizados encontrados: ${folios.length}`);
+        
+        // Populate user and package information
+        const foliosWithInfo = await Promise.all(
+            folios.map(async (folio) => {
+                const folioObj = folio.toObject();
+                
+                // Get user info
+                try {
+                    const user = await User.findById(folio.usuario_id).select('profile');
+                    folioObj.usuario = user;
+                    console.log(`👤 Usuario encontrado para folio ${folio.folio}:`, user?.profile?.fullName || 'No encontrado');
+                } catch (error) {
+                    console.error('Error al obtener usuario:', error);
+                    folioObj.usuario = null;
+                }
+                
+                // Get package info
+                try {
+                    const packpage = await InvoicesPackage.findById(folio.paquete_id).select('folio departamento comentario');
+                    folioObj.paquete = packpage;
+                    console.log(`📦 Paquete encontrado para folio ${folio.folio}:`, packpage?.folio || 'No encontrado');
+                } catch (error) {
+                    console.error('Error al obtener paquete:', error);
+                    folioObj.paquete = null;
+                }
+                
+                return folioObj;
+            })
+        );
+        
+        res.set({
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+        
+        res.json({
+            success: true,
+            data: foliosWithInfo,
+            message: `${foliosWithInfo.length} folios encontrados (pendientes y autorizados)`
+        });
+    } catch (error) {
+        console.error('❌ Error al obtener folios con información de usuario:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Error al obtener los folios con información de usuario', 
+            error: error.message,
+            data: []
+        });
+    }
+};
+
+// Authorize a folio
+export const authorizeFolio = async (req, res) => {
+    try {
+        const folio = await AuthorizationFolio.findById(req.params.id);
+        if (!folio) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Folio de autorización no encontrado',
+                data: null
+            });
+        }
+        
+        if (folio.estatus === 'canjeado') {
+            return res.status(400).json({ 
+                success: false,
+                message: 'No se puede autorizar un folio que ya ha sido canjeado.',
+                data: null
+            });
+        }
+        
+        folio.estatus = 'autorizado';
+        folio.fechaFolioAutorizacion = new Date();
+        await folio.save();
+        
+        res.json({
+            success: true,
+            data: folio,
+            message: 'Folio autorizado correctamente'
+        });
+    } catch (error) {
+        console.error('Error al autorizar folio:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Error al autorizar el folio', 
+            error: error.message,
+            data: null
+        });
+    }
+};
+
+// Reject a folio
+export const rejectFolio = async (req, res) => {
+    try {
+        const folio = await AuthorizationFolio.findById(req.params.id);
+        if (!folio) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Folio de autorización no encontrado',
+                data: null
+            });
+        }
+        
+        if (folio.estatus === 'canjeado') {
+            return res.status(400).json({ 
+                success: false,
+                message: 'No se puede rechazar un folio que ya ha sido canjeado.',
+                data: null
+            });
+        }
+        
+        folio.estatus = 'rechazado';
+        folio.fechaFolioAutorizacion = new Date();
+        await folio.save();
+        
+        res.json({
+            success: true,
+            data: folio,
+            message: 'Folio rechazado correctamente'
+        });
+    } catch (error) {
+        console.error('Error al rechazar folio:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Error al rechazar el folio', 
+            error: error.message,
+            data: null
         });
     }
 }; 

@@ -665,9 +665,18 @@ export interface Provider {
 
 export const getProvidersByRfcs = async (rfcs: string[]): Promise<Provider[]> => {
     try {
+        console.log('getProvidersByRfcs llamado con RFCs:', rfcs);
         const rfcsString = rfcs.join(',');
+        console.log('RFCs string para URL:', rfcsString);
+        
         const response = await apiCall<Provider[]>(`/providers/by-rfcs?rfcs=${rfcsString}`);
-        return response.data || [];
+        console.log('Respuesta del backend:', response);
+        
+        const providers = response.data || [];
+        console.log('Proveedores retornados:', providers.length);
+        console.log('Datos de proveedores:', providers);
+        
+        return providers;
     } catch (error) {
         console.error('Error al obtener proveedores por RFCs:', error);
         return [];

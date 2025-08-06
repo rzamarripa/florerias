@@ -1,5 +1,5 @@
 import { apiCall } from "@/utils/api";
-import { ApiResponse, Provider, CreateProviderRequest, GetProvidersParams, Location, BankAccount } from "../types";
+import { ApiResponse, Provider, CreateProviderRequest, GetProvidersParams, Location } from "../types";
 
 const API_BASE = "/providers";
 const API_COUNTRIES = "/countries";
@@ -60,8 +60,4 @@ export async function getAllBanks(): Promise<ApiResponse<Location[]>> {
 
 export async function getAllBranches(): Promise<ApiResponse<Location[]>> {
   return apiCall(`${API_BASE}/branches`);
-}
-
-export async function getBankAccountsByBank(bankId: string): Promise<ApiResponse<BankAccount[]>> {
-  return apiCall(`${API_BASE}/bank-accounts/by-bank/${bankId}`);
 } 
