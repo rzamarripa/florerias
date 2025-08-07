@@ -82,7 +82,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                   <th>Concepto de Gasto</th>
                   <th>Descripción</th>
                   <th>Estatus</th>
-                  <th>Estatus Aut.</th>
+                  {showActions && <th>Estatus Aut.</th>}
                   <th className="text-end">Importe a pagar</th>
                   {showActions && <th className="text-center">Acción</th>}
                 </tr>
@@ -121,15 +121,17 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                         </Badge>
                       )}
                     </td>
-                    <td>
-                      <span className="text-primary">
-                        {pago.autorizada === null
-                          ? "Pendiente"
-                          : pago.autorizada === true
-                          ? "Autorizado"
-                          : "Pago Rechazado"}
-                      </span>
-                    </td>
+                    {showActions && (
+                      <td>
+                        <span className="text-primary">
+                          {pago.autorizada === null
+                            ? "Pendiente"
+                            : pago.autorizada === true
+                            ? "Autorizado"
+                            : "Pago Rechazado"}
+                        </span>
+                      </td>
+                    )}
 
                     <td className="text-end">
                       $
@@ -185,7 +187,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                 ))}
                 {/* Fila de totales - exactamente igual que en la tabla de facturas */}
                 <tr className="fw-bold text-left">
-                  <td className="text-end" colSpan={5}>
+                  <td className="text-end" colSpan={showActions ? 5 : 4}>
                     Total a pagar
                   </td>
                   <td className="text-end">

@@ -97,7 +97,6 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   );
   const [facturasLocal, setFacturasLocal] = useState<FacturaProcesada[]>([]);
   const [pagosEfectivoLocal, setPagosEfectivoLocal] = useState<any[]>([]);
-  const [fechaCalculada, setFechaCalculada] = useState<string>("");
   const [copied, setCopied] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"facturas" | "pagosEfectivo">(
     "facturas"
@@ -106,21 +105,14 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   const { user } = useUserSessionStore();
 
   useEffect(() => {
-    // IDs de facturas completamente pagadas que ya están en el paquete existente
-    const idsCompletamentePagadas = paqueteExistente
+    // Si es un paquete existente, mostrar todas las facturas del paquete
+    // Si es un nuevo paquete, mostrar las facturas pasadas como prop
+    const facturasAMostrar = paqueteExistente
       ? paqueteExistente.facturas
-          .filter((f: any) => f.importePagado >= f.importeAPagar)
-          .map((f: any) => f._id)
-      : [];
-
-    // Filtrar facturas: solo excluir las que están completamente pagadas en el paquete existente
-    // Las facturas con pago parcial pueden ser registradas nuevamente
-    const facturasFiltradas = facturas.filter(
-      (f) => !idsCompletamentePagadas.includes(f._id)
-    );
+      : facturas;
 
     // Agrega la propiedad guardada a cada factura
-    const facturasConEstado = facturasFiltradas.map((f) => {
+    const facturasConEstado = facturasAMostrar.map((f: any) => {
       // Calcular el importe pagado considerando pagos temporales
       let importePagadoCalculado = f.importePagado;
       if (tempPayments && tempPayments[f._id]) {
@@ -135,7 +127,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
 
       return {
         ...f,
-        guardada: idsCompletamentePagadas.includes(f._id),
+        guardada: paqueteExistente ? true : false,
         completamentePagada: importePagadoCalculado >= f.importeAPagar,
         importePagado: importePagadoCalculado, // Actualizar el importe pagado con los pagos temporales
       };
@@ -159,8 +151,6 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       const fechaOriginal = new Date(paqueteExistente.fechaPago);
       const fechaFormateada = fechaOriginal.toISOString().split("T")[0];
       setFechaPago(fechaFormateada);
-      const fechaCalculada = getNextThursdayOfWeek(fechaFormateada);
-      setFechaCalculada(fechaCalculada.toISOString().split("T")[0]);
       setComentario(paqueteExistente.comentario || "");
     } else if (show && isNewPackage) {
       // Si es un nuevo paquete, precargar con la fecha calculada (jueves de la semana siguiente)
@@ -168,26 +158,13 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       const fechaCalculada = getNextThursdayOfWeek(today);
       const fechaCalculadaStr = fechaCalculada.toISOString().split("T")[0];
       setFechaPago(fechaCalculadaStr);
-      setFechaCalculada(fechaCalculadaStr);
       setComentario("");
     } else if (show && !isNewPackage && !paqueteExistente) {
       // Si está en modo edición pero no hay paquete existente, resetear
       setFechaPago("");
-      setFechaCalculada("");
       setComentario("");
     }
   }, [paqueteExistente, show, isNewPackage]);
-
-  // Calcular la fecha del jueves de la semana siguiente cuando cambie la fecha de pago
-  useEffect(() => {
-    if (fechaPago) {
-      // Recalcular siempre que cambie la fecha de pago (tanto para paquetes nuevos como existentes)
-      const fechaCalculada = getNextThursdayOfWeek(fechaPago);
-      setFechaCalculada(fechaCalculada.toISOString().split("T")[0]);
-    } else {
-      setFechaCalculada("");
-    }
-  }, [fechaPago]);
 
   const handleRemoveFactura = (id: string) => {
     setFacturasLocal((prev) => prev.filter((f) => f._id !== id));
@@ -341,13 +318,11 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
             );
           }
         }
-
-        toast.success("Pagos temporales procesados correctamente");
       }
 
       // PASO 2: Crear o actualizar paquete de facturas (POST)
-      // Usar la fecha calculada (jueves de la semana siguiente) en lugar de la fecha seleccionada
-      const fechaPagoParaGuardar = fechaCalculada || fechaPago;
+      // Usar la fecha seleccionada por el usuario
+      const fechaPagoParaGuardar = fechaPago;
 
       // Preparar conceptos de gasto para cada factura
       const conceptosGasto: { [invoiceId: string]: string } = {};
@@ -451,12 +426,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                   value={fechaPago}
                   onChange={(e) => {
                     const selectedDate = e.target.value;
-                    const calculated = getNextThursdayOfWeek(selectedDate);
-                    const calculatedStr = calculated
-                      .toISOString()
-                      .split("T")[0];
-                    setFechaPago(calculatedStr);
-                    setFechaCalculada(calculatedStr);
+                    setFechaPago(selectedDate);
                   }}
                 />
               </Form.Group>

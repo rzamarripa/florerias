@@ -27,6 +27,11 @@ const budgetSchema = new Schema({
     ref: "cc_category",
     required: true,
   },
+  expenseConceptId: {
+    type: Schema.Types.ObjectId,
+    ref: "cc_expense_concept",
+    required: true,
+  },
   assignedAmount: {
     type: Number,
     required: true,
@@ -59,6 +64,7 @@ budgetSchema.index(
     brandId: 1,
     companyId: 1,
     categoryId: 1,
+    expenseConceptId: 1,
     month: 1,
   },
   {
@@ -74,6 +80,7 @@ budgetSchema.index(
     companyId: 1,
     branchId: 1,
     categoryId: 1,
+    expenseConceptId: 1,
     month: 1,
   },
   {
@@ -93,6 +100,7 @@ budgetSchema.pre("save", async function (next) {
       branchId: this.branchId,
       brandId: this.brandId,
       routeId: this.routeId,
+      expenseConceptId: this.expenseConceptId,
     });
     next();
   } catch (error) {
@@ -107,6 +115,7 @@ budgetSchema.statics.validateBudgetData = async function (budgetData) {
   const RsBranchBrand = mongoose.model("rs_branch_brand");
   const Route = mongoose.model("cc_route");
   const Branch = mongoose.model("cc_branch");
+  const ExpenseConcept = mongoose.model("cc_expense_concept");
 
   // Validar que la categoría existe
   const category = await Category.findById(budgetData.categoryId);
@@ -158,6 +167,12 @@ budgetSchema.statics.validateBudgetData = async function (budgetData) {
     throw new Error("The brand is not associated with the specified branch");
   }
 
+  // Validar que el concepto de gasto existe
+  const expenseConcept = await ExpenseConcept.findById(budgetData.expenseConceptId).populate('categoryId');
+  if (!expenseConcept) {
+    throw new Error("Expense concept not found");
+  }
+
   if (category.hasRoutes) {
     if (!budgetData.routeId) {
       throw new Error("RouteId is required when category hasRoutes is true");
@@ -200,7 +215,14 @@ budgetSchema.statics.getBudgetByFilters = async function (filters) {
     .populate("brandId")
     .populate("companyId")
     .populate("branchId")
-    .populate("categoryId");
+    .populate("categoryId")
+    .populate({
+      path: "expenseConceptId",
+      populate: {
+        path: "categoryId",
+        model: "cc_expense_concept_category"
+      }
+    });
 };
 
 budgetSchema.statics.getBudgetsByMonth = async function (month) {
@@ -209,7 +231,14 @@ budgetSchema.statics.getBudgetsByMonth = async function (month) {
     .populate("brandId")
     .populate("companyId")
     .populate("branchId")
-    .populate("categoryId");
+    .populate("categoryId")
+    .populate({
+      path: "expenseConceptId",
+      populate: {
+        path: "categoryId",
+        model: "cc_expense_concept_category"
+      }
+    });
 };
 
 budgetSchema.statics.getBudgetsByCategory = async function (categoryId, month) {
@@ -221,7 +250,14 @@ budgetSchema.statics.getBudgetsByCategory = async function (categoryId, month) {
     .populate("brandId")
     .populate("companyId")
     .populate("branchId")
-    .populate("categoryId");
+    .populate("categoryId")
+    .populate({
+      path: "expenseConceptId",
+      populate: {
+        path: "categoryId",
+        model: "cc_expense_concept_category"
+      }
+    });
 };
 
 budgetSchema.statics.calculateTotalByParent = async function (

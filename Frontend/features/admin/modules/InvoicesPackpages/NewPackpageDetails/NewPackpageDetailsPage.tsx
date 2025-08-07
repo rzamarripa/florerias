@@ -36,7 +36,12 @@ import {
   Company,
   BankAccount,
 } from "../services/scheduledPayment";
-import { getBudgetByCompanyBrandBranch, BudgetItem } from "../services/budget";
+import { 
+  getBudgetByCompanyBrandBranch, 
+  BudgetItem, 
+  validatePackageBudgetByExpenseConcept,
+  BudgetValidationResult 
+} from "../services/budget";
 import { BsClipboard } from "react-icons/bs";
 import { toast } from "react-toastify";
 import { useUserSessionStore } from "@/stores";
@@ -85,6 +90,7 @@ const NewPackpageDetailsPage: React.FC = () => {
     "facturas"
   );
   const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
+  const [budgetValidationData, setBudgetValidationData] = useState<BudgetValidationResult | null>(null);
   const [solicitandoFolio, setSolicitandoFolio] = useState(false);
   const [showFolioModal, setShowFolioModal] = useState(false);
   const [folioIngresado, setFolioIngresado] = useState("");
@@ -171,6 +177,21 @@ const NewPackpageDetailsPage: React.FC = () => {
     }
   };
 
+  // Función para validar presupuesto por concepto de gasto
+  const loadBudgetValidationData = async () => {
+    if (!packpage?._id) {
+      return;
+    }
+
+    try {
+      const response = await validatePackageBudgetByExpenseConcept(packpage._id);
+      setBudgetValidationData(response);
+    } catch (error) {
+      console.error("❌ Error al validar presupuesto por concepto de gasto:", error);
+      setBudgetValidationData(null);
+    }
+  };
+
   // Función para formatear el mes de la fecha de pago
   const getMonthFromPaymentDate = () => {
     if (!packpage?.fechaPago) return "Mes no disponible";
@@ -242,6 +263,7 @@ const NewPackpageDetailsPage: React.FC = () => {
   useEffect(() => {
     if (packpage) {
       loadBudgetData();
+      loadBudgetValidationData();
       loadFoliosAutorizados();
       loadPackageCompanyInfo();
       loadPackageCreator();
@@ -466,21 +488,25 @@ const NewPackpageDetailsPage: React.FC = () => {
       return;
     }
 
-    // Mostrar modal de confirmación antes de enviar
-    setShowConfirmationModal(true);
-  };
-
-  const handleConfirmarEnvio = async () => {
-    setShowConfirmationModal(false);
-
     // Verificar si hay exceso de presupuesto
     const excesoInfo = verificarExcesoPresupuesto();
     if (excesoInfo.excede) {
-      // Si hay exceso pero existen folios autorizados, abrir modal
-      if (foliosAutorizados.length > 0) {
+      // Si hay exceso, verificar si hay folios pendientes o autorizados
+      const folioMasReciente = todosLosFolios.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+
+      if (
+        folioMasReciente &&
+        (folioMasReciente.estatus === "pendiente" ||
+          folioMasReciente.estatus === "autorizado")
+      ) {
+        // Si hay folio pendiente o autorizado, mostrar modal de folio directamente
         setShowFolioModal(true);
         return;
-      } else {
+      } else if (foliosAutorizados.length === 0) {
+        // Si no hay folios autorizados, mostrar error
         toast.error(
           "No se puede enviar el paquete. Presupuesto excedido y no hay folios autorizados."
         );
@@ -488,7 +514,12 @@ const NewPackpageDetailsPage: React.FC = () => {
       }
     }
 
-    // Si no hay exceso, enviar directamente
+    // Si no hay exceso o hay folios autorizados, mostrar modal de confirmación
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmarEnvio = async () => {
+    setShowConfirmationModal(false);
     await enviarPaqueteATesoreria();
   };
 
@@ -589,12 +620,23 @@ const NewPackpageDetailsPage: React.FC = () => {
     }
   };
 
-  const enviarPaqueteATesoreria = async (
-    folioParaCanjear?: AuthorizationFolio
-  ) => {
+  const enviarPaqueteATesoreria = async () => {
     if (!packpage?._id) return;
 
     try {
+      // Si hay un folio validado, canjearlo primero
+      if (folioValidado) {
+        try {
+          await redeemAuthorizationFolio(folioValidado._id);
+          await loadFoliosAutorizados(); // Recargar folios para actualizar estado
+        } catch (error) {
+          console.error("Error al canjear folio:", error);
+          toast.error("Error al canjear el folio de autorización");
+          return;
+        }
+      }
+
+      // Enviar el paquete
       const result = await enviarPaqueteADireccion(packpage._id);
       if (
         result &&
@@ -606,27 +648,10 @@ const NewPackpageDetailsPage: React.FC = () => {
         setPackpage((prev) => (prev ? { ...prev, estatus: "Enviado" } : null));
         setShowFolioModal(false);
         setFolioIngresado("");
+        setFolioValidado(null); // Limpiar el folio validado
 
         // Actualizar timeline
         refreshTimeline();
-
-        // Si se utilizó un folio de autorización, canjearlo
-        const folioACanjear = folioParaCanjear || folioValidado;
-        if (folioACanjear) {
-          try {
-            await redeemAuthorizationFolio(folioACanjear._id);
-            toast.success(
-              `Folio ${folioACanjear.folio} canjeado correctamente`
-            );
-            setFolioValidado(null); // Limpiar el folio validado
-            await loadFoliosAutorizados(); // Recargar folios para actualizar estado
-          } catch (error) {
-            console.error("Error al canjear folio:", error);
-            toast.warning(
-              "Paquete enviado pero hubo un error al canjear el folio"
-            );
-          }
-        }
       } else {
         toast.error("Error al enviar el paquete a tesorería");
       }
@@ -638,11 +663,15 @@ const NewPackpageDetailsPage: React.FC = () => {
   const handleValidarYEnviar = async () => {
     const folioValido = await validarFolioIngresado();
     if (folioValido) {
-      // Obtener el folio validado para pasarlo directamente
+      // Obtener el folio validado y guardarlo para usarlo en la confirmación
       const folioValidadoActual = await getAuthorizationFolioByNumber(
         folioIngresado.trim()
       );
-      await enviarPaqueteATesoreria(folioValidadoActual || undefined);
+      setFolioValidado(folioValidadoActual);
+
+      // Cerrar modal de folio y mostrar modal de confirmación
+      setShowFolioModal(false);
+      setShowConfirmationModal(true);
     }
   };
 
@@ -658,12 +687,25 @@ const NewPackpageDetailsPage: React.FC = () => {
       const now = new Date();
       const folioNumber = `AUTH-${packpage.folio}-${now.getTime()}`;
 
+      // Construir motivo detallado
+      let motivo = "";
+      
+      if (excesoInfo.excedePresupuestoTotal) {
+        motivo += `Exceso de presupuesto total por $${excesoInfo.diferencia.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
+      }
+
+      if (excesoInfo.excedePresupuestoConcepto && excesoInfo.validacionConcepto) {
+        const conceptosExcedidos = excesoInfo.validacionConcepto.validaciones.filter(v => v.excede);
+        if (motivo) motivo += ". ";
+        motivo += `${conceptosExcedidos.length} concepto(s) de gasto exceden su presupuesto: `;
+        motivo += conceptosExcedidos.map(c => 
+          `${c.concepto.categoryName} - ${c.concepto.name} (exceso: $${c.diferencia.toLocaleString("es-MX", { minimumFractionDigits: 2 })})`
+        ).join(", ");
+      }
+
       const folioData: CreateAuthorizationFolioRequest = {
         paquete_id: packpage._id,
-        motivo: `Exceso de presupuesto por $${excesoInfo.diferencia.toLocaleString(
-          "es-MX",
-          { minimumFractionDigits: 2 }
-        )}`,
+        motivo,
         usuario_id: user._id,
         fecha: now.toISOString(),
         fechaFolioAutorizacion: now.toISOString(),
@@ -858,17 +900,26 @@ const NewPackpageDetailsPage: React.FC = () => {
     }, 0);
   };
 
-  // Función para verificar si el presupuesto se excede
+  // Función para verificar si el presupuesto se excede (validación tradicional + por concepto)
   const verificarExcesoPresupuesto = () => {
     const presupuestoTotal = calcularPresupuestoTotal();
     const totalPagadoPaquete =
       calcularTotalesFacturas().pagado + calcularTotalesPagosEfectivo().pagado;
 
+    // Validación tradicional (presupuesto total)
+    const excedePresupuestoTotal = totalPagadoPaquete > presupuestoTotal;
+    
+    // Validación por concepto de gasto
+    const excedePresupuestoConcepto = budgetValidationData?.requiereAutorizacion || false;
+
     return {
       presupuestoTotal,
       totalPagadoPaquete,
-      excede: totalPagadoPaquete > presupuestoTotal,
+      excede: excedePresupuestoTotal || excedePresupuestoConcepto,
+      excedePresupuestoTotal,
+      excedePresupuestoConcepto,
       diferencia: totalPagadoPaquete - presupuestoTotal,
+      validacionConcepto: budgetValidationData,
     };
   };
 
@@ -883,12 +934,31 @@ const NewPackpageDetailsPage: React.FC = () => {
 
     // Si hay exceso pero no hay folios, mostrar alerta de exceso
     if (todosLosFolios.length === 0) {
+      let titulo = "Presupuesto excedido";
+      let mensaje = "Por favor solicite un folio de autorización.";
+      let detalles: string[] = [];
+
+      if (excesoInfo.excedePresupuestoTotal) {
+        detalles.push(`Presupuesto total del mes excedido por $${excesoInfo.diferencia.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`);
+      }
+
+      if (excesoInfo.excedePresupuestoConcepto && excesoInfo.validacionConcepto) {
+        const conceptosExcedidos = excesoInfo.validacionConcepto.validaciones.filter(v => v.excede);
+        detalles.push(`${conceptosExcedidos.length} concepto(s) de gasto exceden su presupuesto`);
+        
+        if (excesoInfo.validacionConcepto.resumen.totalExceso > 0) {
+          detalles.push(`Exceso total por conceptos: $${excesoInfo.validacionConcepto.resumen.totalExceso.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`);
+        }
+      }
+
       return {
         tipo: "exceso",
         variant: "warning",
-        titulo: "Presupuesto total del mes excedido",
-        mensaje: "Por favor solicite un folio de autorización.",
+        titulo,
+        mensaje,
+        detalles,
         diferencia: excesoInfo.diferencia,
+        validacionConcepto: excesoInfo.validacionConcepto,
       };
     }
 
@@ -1410,7 +1480,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                       </div>
                       <div className="fw-bold text-primary">
                         $
-                        {calcularTotalPagadoVisualizacion().toLocaleString(
+                        {calcularTotalVisualizacion().toLocaleString(
                           "es-MX",
                           { minimumFractionDigits: 2 }
                         )}
@@ -1459,7 +1529,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                       <div className="fw-bold text-success">
                         $
                         {(
-                          calcularTotalPagadoVisualizacion() +
+                          calcularTotalVisualizacion() +
                           calcularTotalesPagosEfectivo().total
                         ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </div>
@@ -1511,7 +1581,15 @@ const NewPackpageDetailsPage: React.FC = () => {
                     <div className="fw-bold">{mensajeFolio.titulo}</div>
                     <div className="text-muted">
                       {mensajeFolio.mensaje}
-                      {mensajeFolio.diferencia && (
+                      {mensajeFolio.detalles && mensajeFolio.detalles.length > 0 && (
+                        <>
+                          <br />
+                          {mensajeFolio.detalles.map((detalle, index) => (
+                            <div key={index}>• {detalle}</div>
+                          ))}
+                        </>
+                      )}
+                      {!mensajeFolio.detalles && mensajeFolio.diferencia && (
                         <>
                           <br />
                           Exceso: $
@@ -1748,6 +1826,7 @@ const NewPackpageDetailsPage: React.FC = () => {
             pagos={packpage?.pagosEfectivo || []}
             onAuthorize={handleAuthorizeCashPayment}
             onReject={handleRejectCashPayment}
+            loading={false}
             packageStatus={packpage?.estatus}
           />
         </div>

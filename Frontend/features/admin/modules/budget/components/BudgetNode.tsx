@@ -42,6 +42,8 @@ const BudgetNode: React.FC<BudgetNodeProps> = ({
         return "🏪";
       case "route":
         return "🚗";
+      case "expense_concept":
+        return "💰";
       default:
         return "📁";
     }

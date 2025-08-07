@@ -213,7 +213,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
     if (facturasPendientes.length > 0) {
       return {
         tipo: "pendientes",
-        texto: "Hay facturas pendientes",
+        texto: "Hay pagos pendientes",
         variant: "warning",
       };
     }

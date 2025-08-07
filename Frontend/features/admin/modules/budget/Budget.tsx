@@ -97,7 +97,8 @@ const Budget: React.FC = () => {
       !node.entityIds.categoryId ||
       !node.entityIds.companyId ||
       !node.entityIds.brandId ||
-      !node.entityIds.branchId
+      !node.entityIds.branchId ||
+      !node.entityIds.expenseConceptId
     ) {
       toast.error("Faltan datos de la entidad para guardar el presupuesto.");
       return;
@@ -109,6 +110,7 @@ const Budget: React.FC = () => {
       branchId: node.entityIds.branchId,
       brandId: node.entityIds.brandId,
       routeId: node.entityIds.routeId,
+      expenseConceptId: node.entityIds.expenseConceptId,
       assignedAmount: newAmount,
       month: `${selectedYear}-${selectedMonth}`,
     };

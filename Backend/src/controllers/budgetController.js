@@ -43,6 +43,7 @@ export const createBudget = async (req, res) => {
       brandId: budgetData.brandId,
       companyId: budgetData.companyId,
       categoryId: budgetData.categoryId,
+      expenseConceptId: budgetData.expenseConceptId,
       month: budgetData.month,
     };
 
@@ -63,7 +64,14 @@ export const createBudget = async (req, res) => {
         .populate("brandId")
         .populate("companyId")
         .populate("branchId")
-        .populate("categoryId");
+        .populate("categoryId")
+        .populate({
+          path: "expenseConceptId",
+          populate: {
+            path: "categoryId",
+            model: "cc_expense_concept_category"
+          }
+        });
 
       return res.json({
         success: true,
@@ -76,6 +84,7 @@ export const createBudget = async (req, res) => {
       brandId: budgetData.brandId,
       companyId: budgetData.companyId,
       categoryId: budgetData.categoryId,
+      expenseConceptId: budgetData.expenseConceptId,
       assignedAmount: budgetData.assignedAmount,
       month: budgetData.month,
     };
@@ -112,7 +121,14 @@ export const createBudget = async (req, res) => {
       .populate("brandId")
       .populate("companyId")
       .populate("branchId")
-      .populate("categoryId");
+      .populate("categoryId")
+      .populate({
+        path: "expenseConceptId",
+        populate: {
+          path: "categoryId",
+          model: "cc_expense_concept_category"
+        }
+      });
 
     res.status(201).json({
       success: true,
@@ -176,6 +192,7 @@ export const updateBudget = async (req, res) => {
           updateData.branchId !== undefined
             ? updateData.branchId
             : currentBudget.branchId,
+        expenseConceptId: updateData.expenseConceptId || currentBudget.expenseConceptId,
       };
 
       try {
@@ -196,7 +213,14 @@ export const updateBudget = async (req, res) => {
       .populate("brandId")
       .populate("companyId")
       .populate("branchId")
-      .populate("categoryId");
+      .populate("categoryId")
+      .populate({
+        path: "expenseConceptId",
+        populate: {
+          path: "categoryId",
+          model: "cc_expense_concept_category"
+        }
+      });
 
     if (!budget) {
       return res.status(404).json({
@@ -264,6 +288,7 @@ export const getBudgetTree = async (req, res) => {
     const Branch = mongoose.model("cc_branch");
     const Route = mongoose.model("cc_route");
     const RoleVisibility = mongoose.model("ac_user_visibility");
+    const ExpenseConcept = mongoose.model("cc_expense_concept");
 
     let visibility = null;
     if (userId) {
@@ -271,18 +296,29 @@ export const getBudgetTree = async (req, res) => {
     }
 
     const categories = await Category.find({ isActive: true });
+    const expenseConcepts = await ExpenseConcept.find({ isActive: true }).populate({
+      path: "categoryId",
+      model: "cc_expense_concept_category"
+    });
     const budgets = await Budget.find({ month })
       .populate("categoryId")
       .populate("companyId")
       .populate("brandId")
       .populate("branchId")
-      .populate("routeId");
+      .populate("routeId")
+      .populate({
+        path: "expenseConceptId",
+        populate: {
+          path: "categoryId",
+          model: "cc_expense_concept_category"
+        }
+      });
 
     const budgetMap = new Map();
     budgets.forEach((budget) => {
       const key = budget.routeId
-        ? `route_${budget.routeId._id}`
-        : `branch_${budget.branchId._id}`;
+        ? `route_${budget.routeId._id}_expense_${budget.expenseConceptId._id}`
+        : `branch_${budget.branchId._id}_expense_${budget.expenseConceptId._id}`;
       budgetMap.set(key, budget);
     });
 
@@ -404,26 +440,44 @@ export const getBudgetTree = async (req, res) => {
             });
 
             for (const route of routes) {
-              const budget = budgetMap.get(`route_${route._id}`);
               const routeNode = {
                 id: `route_${route._id}`,
                 text: route.name,
                 type: "route",
-                budgetAmount: budget ? budget.assignedAmount : 0,
-                canAssignBudget: true,
-                entityIds: {
-                  categoryId: category._id,
-                  companyId: company._id,
-                  brandId: brand._id,
-                  branchId: branch._id,
-                  routeId: route._id,
-                },
+                total: 0,
+                children: [],
               };
+
+              // Agregar conceptos de gasto como hijos de cada ruta
+              for (const expenseConcept of expenseConcepts) {
+                const budget = budgetMap.get(`route_${route._id}_expense_${expenseConcept._id}`);
+                const expenseConceptNode = {
+                  id: `route_${route._id}_expense_${expenseConcept._id}`,
+                  text: `${expenseConcept.categoryId.name} - ${expenseConcept.name}`,
+                  type: "expense_concept",
+                  budgetAmount: budget ? budget.assignedAmount : 0,
+                  canAssignBudget: true,
+                  entityIds: {
+                    categoryId: category._id,
+                    companyId: company._id,
+                    brandId: brand._id,
+                    branchId: branch._id,
+                    routeId: route._id,
+                    expenseConceptId: expenseConcept._id,
+                  },
+                };
+                routeNode.children.push(expenseConceptNode);
+              }
+
+              routeNode.total = routeNode.children.reduce(
+                (sum, child) => sum + (child.budgetAmount || 0),
+                0
+              );
 
               brandNode.children.push(routeNode);
             }
             brandNode.total = brandNode.children.reduce(
-              (sum, child) => sum + (child.budgetAmount || 0),
+              (sum, child) => sum + (child.total || 0),
               0
             );
             branchNode.total = branchNode.children.reduce(
@@ -475,25 +529,43 @@ export const getBudgetTree = async (req, res) => {
               continue;
             }
 
-            const budget = budgetMap.get(`branch_${branch._id}`);
             const branchNode = {
               id: `branch_${branch._id}`,
               text: branch.name,
               type: "branch",
-              budgetAmount: budget ? budget.assignedAmount : 0,
-              canAssignBudget: true,
-              entityIds: {
-                categoryId: category._id,
-                companyId: company._id,
-                brandId: brand._id,
-                branchId: branch._id,
-              },
+              total: 0,
+              children: [],
             };
+
+            // Agregar conceptos de gasto como hijos de cada sucursal (para categorías sin rutas)
+            for (const expenseConcept of expenseConcepts) {
+              const budget = budgetMap.get(`branch_${branch._id}_expense_${expenseConcept._id}`);
+              const expenseConceptNode = {
+                id: `branch_${branch._id}_expense_${expenseConcept._id}`,
+                text: `${expenseConcept.categoryId.name} - ${expenseConcept.name}`,
+                type: "expense_concept",
+                budgetAmount: budget ? budget.assignedAmount : 0,
+                canAssignBudget: true,
+                entityIds: {
+                  categoryId: category._id,
+                  companyId: company._id,
+                  brandId: brand._id,
+                  branchId: branch._id,
+                  expenseConceptId: expenseConcept._id,
+                },
+              };
+              branchNode.children.push(expenseConceptNode);
+            }
+
+            branchNode.total = branchNode.children.reduce(
+              (sum, child) => sum + (child.budgetAmount || 0),
+              0
+            );
 
             brandNode.children.push(branchNode);
           }
           brandNode.total = brandNode.children.reduce(
-            (sum, child) => sum + (child.budgetAmount || 0),
+            (sum, child) => sum + (child.total || 0),
             0
           );
           companyNode.total = companyNode.children.reduce(
@@ -549,6 +621,205 @@ export const getBudgetByBranch = async (req, res) => {
   } catch (error) {
     console.error('Error en getBudgetByBranch:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Nuevo endpoint: validar presupuesto por concepto de gasto para un paquete
+export const validatePackageBudgetByExpenseConcept = async (req, res) => {
+  try {
+    const { packageId } = req.params;
+
+    if (!packageId) {
+      return res.status(400).json({
+        success: false,
+        message: "packageId es requerido"
+      });
+    }
+
+    // Obtener el paquete con toda su información
+    const InvoicesPackage = mongoose.model("cc_invoices_package");
+    const InvoicesPackageCompany = mongoose.model("rs_invoices_packages_companies");
+    const ImportedInvoices = mongoose.model("cc_imported_invoices");
+    const CashPayment = mongoose.model("cc_cash_payment");
+    const ExpenseConcept = mongoose.model("cc_expense_concept");
+
+    const packageData = await InvoicesPackage.findById(packageId);
+
+    if (!packageData) {
+      return res.status(404).json({
+        success: false,
+        message: "Paquete no encontrado"
+      });
+    }
+
+    // Obtener la información de compañía/marca/sucursal del paquete
+    const packageCompanyInfo = await InvoicesPackageCompany.findByPackageId(packageId);
+    
+    if (!packageCompanyInfo) {
+      return res.status(404).json({
+        success: false,
+        message: "Información de compañía del paquete no encontrada"
+      });
+    }
+
+    // Obtener el mes del paquete
+    const fechaPago = new Date(packageData.fechaPago);
+    const year = fechaPago.getFullYear();
+    const month = String(fechaPago.getMonth() + 1).padStart(2, "0");
+    const monthFormatted = `${year}-${month}`;
+
+    // Obtener todas las facturas del paquete con sus conceptos de gasto
+    const facturas = await ImportedInvoices.find({
+      _id: { $in: packageData.facturas }
+    }).populate('conceptoGasto');
+
+    // Obtener todos los pagos en efectivo del paquete con sus conceptos de gasto
+    const pagosEfectivo = await CashPayment.find({
+      _id: { $in: packageData.pagosEfectivo || [] }
+    }).populate('expenseConcept');
+
+    // Agrupar pagos por concepto de gasto
+    const pagosPorConcepto = new Map();
+
+    // Procesar facturas
+    facturas.forEach(factura => {
+      if (factura.conceptoGasto && factura.autorizada === true) {
+        const conceptoId = factura.conceptoGasto._id.toString();
+        if (!pagosPorConcepto.has(conceptoId)) {
+          pagosPorConcepto.set(conceptoId, {
+            concepto: factura.conceptoGasto,
+            totalPagado: 0,
+            pagos: []
+          });
+        }
+        const conceptoData = pagosPorConcepto.get(conceptoId);
+        conceptoData.totalPagado += factura.importePagado || 0;
+        conceptoData.pagos.push({
+          tipo: 'factura',
+          id: factura._id,
+          monto: factura.importePagado || 0,
+          descripcion: factura.nombreEmisor
+        });
+      }
+    });
+
+    // Procesar pagos en efectivo
+    pagosEfectivo.forEach(pago => {
+      if (pago.expenseConcept && pago.autorizada === true) {
+        const conceptoId = pago.expenseConcept._id.toString();
+        if (!pagosPorConcepto.has(conceptoId)) {
+          pagosPorConcepto.set(conceptoId, {
+            concepto: pago.expenseConcept,
+            totalPagado: 0,
+            pagos: []
+          });
+        }
+        const conceptoData = pagosPorConcepto.get(conceptoId);
+        conceptoData.totalPagado += pago.importePagado || 0;
+        conceptoData.pagos.push({
+          tipo: 'efectivo',
+          id: pago._id,
+          monto: pago.importePagado || 0,
+          descripcion: pago.description || 'Pago en efectivo'
+        });
+      }
+    });
+
+    // Validar cada concepto contra su presupuesto
+    const validaciones = [];
+    let requiereAutorizacion = false;
+
+    for (const [conceptoId, data] of pagosPorConcepto) {
+      // Buscar el presupuesto específico para este concepto
+      // Buscar presupuesto según si la categoría tiene rutas o no
+      const Category = mongoose.model("cc_category");
+      const categoria = await Category.findById(data.concepto.categoryId);
+      
+      let presupuesto = null;
+      
+      if (categoria && categoria.hasRoutes) {
+        // Si tiene rutas, buscar en todas las rutas de la sucursal/marca
+        const Route = mongoose.model("cc_route");
+        const routes = await Route.find({
+          categoryId: categoria._id,
+          companyId: packageCompanyInfo.companyId._id,
+          brandId: packageCompanyInfo.brandId._id,
+          branchId: packageCompanyInfo.branchId._id,
+          status: true,
+        });
+
+        let totalPresupuesto = 0;
+        for (const route of routes) {
+          const budget = await Budget.findOne({
+            routeId: route._id,
+            expenseConceptId: conceptoId,
+            month: monthFormatted
+          });
+          if (budget) {
+            totalPresupuesto += budget.assignedAmount || 0;
+          }
+        }
+        presupuesto = totalPresupuesto;
+      } else {
+        // Si no tiene rutas, buscar directo en la sucursal
+        const budget = await Budget.findOne({
+          companyId: packageCompanyInfo.companyId._id,
+          brandId: packageCompanyInfo.brandId._id,
+          branchId: packageCompanyInfo.branchId._id,
+          categoryId: data.concepto.categoryId,
+          expenseConceptId: conceptoId,
+          month: monthFormatted,
+          routeId: null
+        });
+        presupuesto = budget ? budget.assignedAmount || 0 : 0;
+      }
+
+      const excede = data.totalPagado > presupuesto;
+      if (excede) {
+        requiereAutorizacion = true;
+      }
+
+      validaciones.push({
+        concepto: {
+          _id: data.concepto._id,
+          name: data.concepto.name,
+          categoryName: data.concepto.categoryId?.name || 'N/A'
+        },
+        presupuestoAsignado: presupuesto,
+        totalPagado: data.totalPagado,
+        diferencia: data.totalPagado - presupuesto,
+        excede: excede,
+        pagos: data.pagos
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        packageId: packageId,
+        month: monthFormatted,
+        requiereAutorizacion,
+        validaciones,
+        resumen: {
+          conceptosValidados: validaciones.length,
+          conceptosExcedidos: validaciones.filter(v => v.excede).length,
+          totalExceso: validaciones
+            .filter(v => v.excede)
+            .reduce((sum, v) => sum + v.diferencia, 0)
+        }
+      },
+      message: requiereAutorizacion 
+        ? "Algunos conceptos exceden su presupuesto asignado" 
+        : "Todos los conceptos están dentro del presupuesto"
+    });
+
+  } catch (error) {
+    console.error("Error en validatePackageBudgetByExpenseConcept:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al validar presupuesto por concepto de gasto",
+      error: error.message
+    });
   }
 };
 

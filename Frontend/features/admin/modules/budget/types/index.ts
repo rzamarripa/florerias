@@ -5,6 +5,7 @@ export interface Budget {
   companyId: string;
   branchId: string;
   categoryId: string;
+  expenseConceptId: string;
   assignedAmount: number;
   month: string;
 }
@@ -15,6 +16,7 @@ export interface BudgetFormData {
   branchId: string;
   brandId: string;
   routeId?: string;
+  expenseConceptId: string;
   assignedAmount: number;
   month: string;
 }
@@ -22,7 +24,7 @@ export interface BudgetFormData {
 export interface BudgetTreeNode {
   id: string;
   text: string;
-  type: "category" | "company" | "brand" | "branch" | "route";
+  type: "category" | "company" | "brand" | "branch" | "route" | "expense_concept";
   total?: number;
   budgetAmount?: number;
   canAssignBudget?: boolean;
