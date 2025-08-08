@@ -94,7 +94,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
   const [budgetData, setBudgetData] =
     useState<BudgetByExpenseConceptResult | null>(null);
   const [loadingBudget, setLoadingBudget] = useState(false);
-  const [exceedsbudget, setExceedsBudget] = useState(false);
   const { user } = useUserSessionStore();
 
   useEffect(() => {
@@ -108,7 +107,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
       loadBudgetData();
     } else {
       setBudgetData(null);
-      setExceedsBudget(false);
     }
   }, [conceptoGasto, companyId, brandId, branchId, selectedYear, selectedMonth]);
 
@@ -182,40 +180,17 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
 
       setBudgetData(adjustedBudgetInfo);
 
-      const montoAPagar = tipoPago === "completo" ? saldo : Number(monto) || 0;
-      const excede = montoAPagar >= adjustedBudgetInfo.availableBudget;
-        
-      if (excede && montoAPagar > 0) {
-        toast.warning("Presupuesto excedido. Se requerirá un folio de autorización");
-      }
-      
-      setExceedsBudget(excede);
     } catch (error) {
       console.error(
         "Error al cargar información de presupuesto:",
         error
       );
       setBudgetData(null);
-      setExceedsBudget(false);
     } finally {
       setLoadingBudget(false);
     }
   };
 
-  useEffect(() => {
-    if (budgetData) {
-      const montoAPagar = tipoPago === "completo" ? saldo : Number(monto) || 0;
-      const excede = montoAPagar >= budgetData.availableBudget;
-
-      if (excede && !exceedsbudget && montoAPagar > 0) {
-        toast.warning(
-          "Presupuesto excedido. Se requerirá un folio de autorización"
-        );
-      }
-
-      setExceedsBudget(excede);
-    }
-  }, [monto, tipoPago, saldo, budgetData, exceedsbudget]);
 
   const handleOk = async () => {
     if (!invoiceId) {
@@ -241,6 +216,16 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
     if (tipoPago === "parcial" && Number(monto) > saldo) {
       toast.error("El monto no puede exceder el saldo disponible");
       return;
+    }
+
+    // Validación de presupuesto al momento de guardar
+    if (budgetData) {
+      const montoAPagar = tipoPago === "completo" ? saldo : Number(monto) || 0;
+      const excede = montoAPagar >= budgetData.availableBudget;
+      
+      if (excede && montoAPagar > 0) {
+        toast.warning("Presupuesto excedido. Se requerirá un folio de autorización");
+      }
     }
 
     try {
@@ -271,7 +256,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
     setMonto("");
     setConceptoGasto("");
     setBudgetData(null);
-    setExceedsBudget(false);
     onClose();
   };
 
