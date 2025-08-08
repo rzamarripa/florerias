@@ -17,6 +17,8 @@ interface CashPaymentModalSimpleProps {
     companyId?: string;
     brandId?: string;
     branchId?: string;
+    selectedYear?: number;
+    selectedMonth?: number;
 }
 
 export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
@@ -27,7 +29,9 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
     departmentId,
     companyId,
     brandId,
-    branchId
+    branchId,
+    selectedYear = new Date().getFullYear(),
+    selectedMonth = new Date().getMonth()
 }) => {
     const [expenseConcepts, setExpenseConcepts] = useState<any[]>([]);
     const [loadingConcepts, setLoadingConcepts] = useState(false);
@@ -82,7 +86,7 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
             setBudgetData(null);
             setExceedsBudget(false);
         }
-    }, [watchedValues.expenseConcept, companyId, brandId, branchId]);
+    }, [watchedValues.expenseConcept, companyId, brandId, branchId, selectedYear, selectedMonth]);
 
     // Verificar exceso de presupuesto cuando cambia el monto
     useEffect(() => {
@@ -119,8 +123,8 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
 
         try {
             setLoadingBudget(true);
-            const currentDate = new Date();
-            const month = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+            // Usar el año y mes seleccionados en lugar de la fecha actual
+            const month = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
             
             const budgetInfo = await getBudgetByExpenseConcept({
                 expenseConceptId: watchedValues.expenseConcept,

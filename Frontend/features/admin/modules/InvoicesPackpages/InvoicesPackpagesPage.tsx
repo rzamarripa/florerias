@@ -1602,6 +1602,8 @@ const InvoicesPackagePage: React.FC = () => {
         companyId={selectedCompany}
         brandId={selectedBrand}
         branchId={selectedBranch}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
         onSuccess={(cashPaymentData) => {
           const concept = expenseConcepts.find(
             (c) => c._id === cashPaymentData.expenseConcept
