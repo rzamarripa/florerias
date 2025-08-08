@@ -49,29 +49,28 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     let facturasSeleccionadas = 0;
     let pagosEfectivoSeleccionados = 0;
 
-    invoices.forEach((inv) => {
-      const fechaEmision = new Date(inv.fechaEmision);
-      const yearFactura = fechaEmision.getFullYear();
-      const monthFactura = fechaEmision.getMonth();
-
-      if (yearFactura === selectedYear && monthFactura === selectedMonth) {
-        const isInPackage = existingPackages.some((paquete) =>
-          paquete.facturas?.some((factura: any) => factura._id === inv._id)
-        );
-        const hasTempPayment = tempPayments[inv._id];
-        const isProcessed = inv.estaRegistrada && inv.autorizada !== false;
-        const isAuthorized = inv.estaRegistrada && inv.autorizada === true;
-
-        if (
-          (isInPackage || isProcessed || isAuthorized || hasTempPayment) &&
-          inv.importePagado > 0
-        ) {
-          totalPagado += inv.importePagado;
-          facturasSeleccionadas += 1;
-        }
+    console.log(
+      "🔍 BudgetSummaryCards - Calculando SOLO pagos temporales (por realizar):",
+      {
+        selectedYear,
+        selectedMonth,
+        tempPaymentsCount: Object.keys(tempPayments).length,
+        tempCashPaymentsCount: tempCashPayments.length,
+        invoicesCount: invoices.length,
+        existingPackagesCount: existingPackages.length,
+        note: "SOLO temporales - IGNORANDO paquetes existentes",
       }
-    });
+    );
 
+    // SOLO contar pagos temporales (los que estás agregando para crear el paquete)
+    // NO contar pagos ya procesados o guardados
+
+    console.log(
+      "🔍 BudgetSummaryCards - Pagos en efectivo temporales disponibles:",
+      tempCashPayments
+    );
+
+    // Procesar pagos temporales de facturas (IGNORAR paquetes existentes)
     Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
       const invoice = invoices.find((inv) => inv._id === invoiceId);
       if (invoice) {
@@ -80,53 +79,68 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
         const monthFactura = fechaEmision.getMonth();
 
         if (yearFactura === selectedYear && monthFactura === selectedMonth) {
-          const isInPackage = existingPackages.some((paquete) =>
-            paquete.facturas?.some((factura: any) => factura._id === invoiceId)
-          );
-
-          if (!isInPackage) {
-            if (payment.tipoPago === "completo") {
-              totalPagado += invoice.importeAPagar;
-              facturasSeleccionadas += 1;
-            } else if (payment.tipoPago === "parcial" && payment.monto) {
-              totalPagado += payment.monto;
-              facturasSeleccionadas += 1;
-            }
-          }
-        }
-      }
-    });
-
-    existingPackages.forEach((paquete) => {
-      if (paquete.fechaPago) {
-        const fechaPago = new Date(paquete.fechaPago);
-        const yearPago = fechaPago.getFullYear();
-        const monthPago = fechaPago.getMonth();
-
-        if (yearPago === selectedYear && monthPago === selectedMonth) {
-          if (paquete.pagosEfectivo && Array.isArray(paquete.pagosEfectivo)) {
-            paquete.pagosEfectivo.forEach((pagoEfectivo: any) => {
-              if (pagoEfectivo.importeAPagar > 0) {
-                totalPagado += pagoEfectivo.importeAPagar;
-                pagosEfectivoSeleccionados += 1;
+          // NO verificar si está en paquete existente - solo contar temporales
+          if (payment.tipoPago === "completo") {
+            totalPagado += invoice.importeAPagar;
+            facturasSeleccionadas += 1;
+            console.log(
+              "🔍 BudgetSummaryCards - Pago completo temporal agregado:",
+              {
+                invoiceId,
+                amount: invoice.importeAPagar,
+                totalPagado,
               }
-            });
+            );
+          } else if (payment.tipoPago === "parcial" && payment.monto) {
+            totalPagado += payment.monto;
+            facturasSeleccionadas += 1;
+            console.log(
+              "🔍 BudgetSummaryCards - Pago parcial temporal agregado:",
+              {
+                invoiceId,
+                amount: payment.monto,
+                totalPagado,
+              }
+            );
           }
         }
       }
     });
 
+    // NO contar pagos de paquetes existentes - solo temporales
+
+    // Procesar pagos en efectivo temporales
     tempCashPayments.forEach((pagoEfectivo) => {
+      // Los pagos en efectivo temporales se cuentan para el mes seleccionado
+      // ya que son pagos que se están agregando para ese período
       totalPagado += pagoEfectivo.importeAPagar;
       pagosEfectivoSeleccionados += 1;
+      console.log(
+        "🔍 BudgetSummaryCards - Pago en efectivo temporal agregado:",
+        {
+          pagoId: pagoEfectivo._id,
+          amount: pagoEfectivo.importeAPagar,
+          concept: pagoEfectivo.expenseConcept?.name,
+          totalPagado,
+          selectedYear,
+          selectedMonth,
+        }
+      );
     });
 
-    return {
+    const resultado = {
       totalPagado,
       facturasSeleccionadas,
       pagosEfectivoSeleccionados,
       totalElementos: facturasSeleccionadas + pagosEfectivoSeleccionados,
     };
+
+    console.log(
+      "🔍 BudgetSummaryCards - Resumen SOLO de pagos temporales (por realizar):",
+      resultado
+    );
+
+    return resultado;
   }, [
     tempPayments,
     tempCashPayments,
@@ -165,7 +179,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     <div className="d-flex gap-3 mb-2 w-100 align-items-stretch">
       <div className="flex-fill" style={{ minWidth: 0 }}>
         <BudgetStatisticCard
-          title={`${selectedPaymentsSummary.totalElementos} Pagos Realizados`}
+          title={`${selectedPaymentsSummary.totalElementos} Pagos por Realizar`}
           subtitle={`${selectedPaymentsSummary.facturasSeleccionadas} facturas + ${selectedPaymentsSummary.pagosEfectivoSeleccionados} pagos en efectivo`}
           stats={`$${selectedPaymentsSummary.totalPagado.toLocaleString(
             "es-MX",
