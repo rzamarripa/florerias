@@ -827,7 +827,96 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
         presupuesto = budget ? budget.assignedAmount || 0 : 0;
       }
 
-      const excede = data.totalPagado > presupuesto;
+      // AGREGAR: Buscar todos los pagos ya autorizados del mes para este concepto de gasto
+      // en la misma compañía/marca/sucursal
+      let totalPagadoEnElMes = data.totalPagado; // Empezar con los pagos del paquete actual
+
+      // 1. Buscar facturas ya autorizadas del mes con este concepto de gasto
+      const facturasAutorizadas = await ImportedInvoices.find({
+        conceptoGasto: conceptoId,
+        fechaRevision: {
+          $gte: new Date(year, month - 1, 1),
+          $lte: new Date(year, month, 0, 23, 59, 59)
+        },
+        autorizada: true,
+        estadoPago: { $in: [2, 3] }, // Pagado o Registrado
+        razonSocial: packageCompanyInfo.companyId._id
+      });
+
+      // Sumar importes de facturas autorizadas (que no estén en el paquete actual)
+      const facturasDelPaqueteIds = packageData.facturas.map(f => f._id.toString());
+      facturasAutorizadas.forEach(factura => {
+        if (!facturasDelPaqueteIds.includes(factura._id.toString())) {
+          totalPagadoEnElMes += factura.importePagado || 0;
+        }
+      });
+
+      // 2. Buscar pagos en efectivo ya autorizados del mes con este concepto
+      const pagosEfectivoAutorizados = await CashPayment.find({
+        expenseConcept: conceptoId,
+        createdAt: {
+          $gte: new Date(year, month - 1, 1),
+          $lte: new Date(year, month, 0, 23, 59, 59)
+        },
+        autorizada: true,
+        // Aquí deberías agregar filtros por companyId/brandId/branchId si están disponibles en el modelo
+      });
+
+      // Sumar importes de pagos en efectivo autorizados (que no estén en el paquete actual)
+      const pagosEfectivoDelPaqueteIds = (packageData.pagosEfectivo || []).map(p => p._id.toString());
+      pagosEfectivoAutorizados.forEach(pago => {
+        if (!pagosEfectivoDelPaqueteIds.includes(pago._id.toString())) {
+          totalPagadoEnElMes += pago.importeAPagar || 0;
+        }
+      });
+
+      // 3. Buscar otros paquetes ya autorizados del mes que contengan pagos con este concepto
+      const otrosPaquetesDelMes = await InvoicesPackage.find({
+        _id: { $ne: packageId }, // Excluir el paquete actual
+        fechaPago: {
+          $gte: new Date(year, month - 1, 1),
+          $lte: new Date(year, month, 0, 23, 59, 59)
+        },
+        estatus: "Autorizado"
+      });
+
+      // Sumar pagos de otros paquetes autorizados
+      for (const otroPaquete of otrosPaquetesDelMes) {
+        // Verificar que el paquete sea de la misma compañía/marca/sucursal
+        const otroPaqueteCompanyInfo = await InvoicesPackageCompany.findByPackageId(otroPaquete._id);
+        
+        if (otroPaqueteCompanyInfo && 
+            otroPaqueteCompanyInfo.companyId._id.toString() === packageCompanyInfo.companyId._id.toString() &&
+            otroPaqueteCompanyInfo.brandId._id.toString() === packageCompanyInfo.brandId._id.toString() &&
+            otroPaqueteCompanyInfo.branchId._id.toString() === packageCompanyInfo.branchId._id.toString()) {
+          
+          // Sumar facturas del paquete con este concepto
+          if (otroPaquete.facturas && Array.isArray(otroPaquete.facturas)) {
+            otroPaquete.facturas.forEach(facturaEmbebida => {
+              if (facturaEmbebida.conceptoGasto && 
+                  facturaEmbebida.conceptoGasto.id &&
+                  facturaEmbebida.conceptoGasto.id.toString() === conceptoId &&
+                  facturaEmbebida.autorizada === true) {
+                totalPagadoEnElMes += facturaEmbebida.importePagado || 0;
+              }
+            });
+          }
+
+          // Sumar pagos en efectivo del paquete con este concepto
+          if (otroPaquete.pagosEfectivo && Array.isArray(otroPaquete.pagosEfectivo)) {
+            otroPaquete.pagosEfectivo.forEach(pagoEmbebido => {
+              if (pagoEmbebido.expenseConcept && 
+                  pagoEmbebido.expenseConcept._id &&
+                  pagoEmbebido.expenseConcept._id.toString() === conceptoId &&
+                  pagoEmbebido.autorizada === true) {
+                totalPagadoEnElMes += pagoEmbebido.importeAPagar || 0;
+              }
+            });
+          }
+        }
+      }
+
+      const excede = totalPagadoEnElMes > presupuesto;
       if (excede) {
         requiereAutorizacion = true;
       }
@@ -839,8 +928,9 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
           categoryName: data.concepto.categoryId?.name || "N/A",
         },
         presupuestoAsignado: presupuesto,
-        totalPagado: data.totalPagado,
-        diferencia: data.totalPagado - presupuesto,
+        totalPagado: totalPagadoEnElMes, // Usar el total del mes completo
+        totalPaqueteActual: data.totalPagado, // Mantener referencia del paquete actual
+        diferencia: totalPagadoEnElMes - presupuesto,
         excede: excede,
         pagos: data.pagos,
       });
