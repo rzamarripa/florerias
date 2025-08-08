@@ -69,15 +69,12 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
   const [exceedsbudget, setExceedsBudget] = useState(false);
   const { user } = useUserSessionStore();
 
-  // Cargar conceptos de gasto cuando se abre el modal
   useEffect(() => {
     if (show && user?.departmentId) {
       loadConceptosGasto();
     }
   }, [show, user?.departmentId]);
 
-
-  // Cargar información de presupuesto cuando se selecciona un concepto
   useEffect(() => {
     if (conceptoGasto && companyId && brandId && branchId) {
       loadBudgetData();
@@ -114,7 +111,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
 
     try {
       setLoadingBudget(true);
-      // Usar el año y mes seleccionados en lugar de la fecha actual
       const month = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
 
       const budgetInfo = await getBudgetByExpenseConcept({
@@ -127,11 +123,9 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
 
       setBudgetData(budgetInfo);
 
-      // Verificar si el monto del pago excede el presupuesto disponible
       const montoAPagar = tipoPago === "completo" ? saldo : Number(monto) || 0;
       const excede = montoAPagar >= budgetInfo.availableBudget;
-      
-      // Mostrar toast inmediatamente si hay exceso
+        
       if (excede && montoAPagar > 0) {
         toast.warning("Presupuesto excedido. Se requerirá un folio de autorización");
       }
@@ -149,14 +143,12 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
     }
   };
 
-  // Verificar exceso de presupuesto cuando cambia el monto
   useEffect(() => {
     if (budgetData) {
       const montoAPagar = tipoPago === "completo" ? saldo : Number(monto) || 0;
       const excede = montoAPagar >= budgetData.availableBudget;
 
       if (excede && !exceedsbudget && montoAPagar > 0) {
-        // Solo mostrar toast cuando cambia de no excedido a excedido
         toast.warning(
           "Presupuesto excedido. Se requerirá un folio de autorización"
         );
@@ -195,7 +187,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
     try {
       setLoading(true);
 
-      // Solo guardar en estado local, SIN hacer llamadas al backend
       onSuccess(
         invoiceId,
         tipoPago,
@@ -246,7 +237,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
           <span className="fw-medium">${saldo.toLocaleString()}</span>
         </div>
 
-        {/* Select de Concepto de Gasto */}
         <Form.Group className="mb-2">
           <Form.Label>
             Concepto de Gasto <span className="text-danger">*</span>
@@ -273,7 +263,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
           )}
         </Form.Group>
 
-        {/* Información de Presupuesto */}
         {loadingBudget && (
           <div className="text-center mb-3">
             <Spinner animation="border" size="sm" className="me-2" />
@@ -314,7 +303,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
                 </div>
               </div>
 
-              {/* Mostrar cuánto quedará después del pago */}
               {budgetData &&
                 (tipoPago === "completo" || (monto && Number(monto) > 0)) && (
                   <div className="mt-2 pt-2 border-top">
