@@ -78,6 +78,9 @@ const InvoicesPackagePage: React.FC = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Nuevo estado para el presupuesto realmente utilizado
+  const [realBudgetUsed, setRealBudgetUsed] = useState<number>(0);
+
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [tipoPagoModal, setTipoPagoModal] = useState<"completo" | "parcial">(
     "completo"
@@ -488,6 +491,65 @@ const InvoicesPackagePage: React.FC = () => {
           ? packagesResponse
           : []
       );
+
+      // Calcular el presupuesto realmente utilizado
+      let totalRealBudgetUsed = 0;
+
+      // Sumar pagos ya procesados de las facturas del mes seleccionado
+      if (invoicesResponse && invoicesResponse.data) {
+        invoicesResponse.data.forEach((invoice: any) => {
+          const fechaEmision = new Date(invoice.fechaEmision);
+          const yearFactura = fechaEmision.getFullYear();
+          const monthFactura = fechaEmision.getMonth();
+
+          // Solo considerar facturas del mes seleccionado
+          if (yearFactura === selectedYear && monthFactura === selectedMonth) {
+            if (invoice.importePagado > 0) {
+              totalRealBudgetUsed += invoice.importePagado;
+            }
+          }
+        });
+      }
+
+      // Sumar pagos ya procesados de paquetes existentes del mes seleccionado
+      if (Array.isArray(packagesResponse?.data)) {
+        packagesResponse.data.forEach((pkg: any) => {
+          if (pkg.facturas && Array.isArray(pkg.facturas)) {
+            pkg.facturas.forEach((factura: any) => {
+              const fechaEmision = new Date(factura.fechaEmision);
+              const yearFactura = fechaEmision.getFullYear();
+              const monthFactura = fechaEmision.getMonth();
+
+              // Solo considerar facturas del mes seleccionado
+              if (
+                yearFactura === selectedYear &&
+                monthFactura === selectedMonth
+              ) {
+                if (factura.importePagado > 0) {
+                  totalRealBudgetUsed += factura.importePagado;
+                }
+              }
+            });
+          }
+        });
+      }
+
+      setRealBudgetUsed(totalRealBudgetUsed);
+
+      console.log("🔍 Presupuesto realmente utilizado calculado:", {
+        totalRealBudgetUsed,
+        selectedYear,
+        selectedMonth,
+        invoicesCount: invoicesResponse?.data?.length || 0,
+        packagesCount: Array.isArray(packagesResponse?.data)
+          ? packagesResponse.data.length
+          : 0,
+        message: `Presupuesto utilizado para ${
+          selectedMonth + 1
+        }/${selectedYear}: $${totalRealBudgetUsed.toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        })}`,
+      });
     } catch (error) {
       console.error("Error en la búsqueda:", error);
       toast.error("Error al realizar la búsqueda");
@@ -776,6 +838,7 @@ const InvoicesPackagePage: React.FC = () => {
           existingPackages={existingPackages}
           selectedYear={selectedYear}
           selectedMonth={selectedMonth}
+          realBudgetUsed={realBudgetUsed}
         />
       </div>
 

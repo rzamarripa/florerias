@@ -33,6 +33,8 @@ interface BudgetSummaryCardsProps {
   existingPackages?: any[];
   selectedYear?: number;
   selectedMonth?: number;
+  // Nueva prop para el presupuesto realmente utilizado
+  realBudgetUsed?: number;
 }
 
 const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
@@ -43,6 +45,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   existingPackages = [],
   selectedYear = new Date().getFullYear(),
   selectedMonth = new Date().getMonth(),
+  realBudgetUsed = 0,
 }) => {
   const selectedPaymentsSummary = React.useMemo(() => {
     let totalPagado = 0;
@@ -160,9 +163,15 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     }, 0);
   }, [budgetData]);
 
-  const presupuestoUtilizado = React.useMemo(() => {
+  // Presupuesto temporal (solo pagos por realizar)
+  const presupuestoTemporal = React.useMemo(() => {
     return selectedPaymentsSummary.totalPagado;
   }, [selectedPaymentsSummary]);
+
+  // Presupuesto realmente utilizado (incluye pagos ya procesados + temporales)
+  const presupuestoUtilizado = React.useMemo(() => {
+    return realBudgetUsed + presupuestoTemporal;
+  }, [realBudgetUsed, presupuestoTemporal]);
 
   const saldoPresupuesto = React.useMemo(() => {
     const saldo = totalBudget - presupuestoUtilizado;
@@ -203,7 +212,19 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       <div className="flex-fill" style={{ minWidth: 0 }}>
         <BudgetStatisticCard
           title="Presupuesto utilizado"
-          subtitle="Importe pagado + pagos seleccionados"
+          subtitle={`${
+            realBudgetUsed > 0
+              ? `$${realBudgetUsed.toLocaleString("es-MX", {
+                  minimumFractionDigits: 2,
+                })} ya procesados`
+              : "Sin pagos procesados"
+          } + ${
+            presupuestoTemporal > 0
+              ? `$${presupuestoTemporal.toLocaleString("es-MX", {
+                  minimumFractionDigits: 2,
+                })} por realizar`
+              : "Sin pagos por realizar"
+          }`}
           stats={`$${presupuestoUtilizado.toLocaleString("es-MX", {
             minimumFractionDigits: 2,
           })}`}

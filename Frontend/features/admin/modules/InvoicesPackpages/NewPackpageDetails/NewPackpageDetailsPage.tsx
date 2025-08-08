@@ -164,15 +164,12 @@ const NewPackpageDetailsPage: React.FC = () => {
       const month = String(fechaPago.getMonth() + 1).padStart(2, "0");
       const monthFormatted = `${year}-${month}`;
 
-
-
       const response = await getBudgetByCompanyBrandBranch({
         companyId: companyIdStr,
         brandId: brandIdStr,
         branchId: branchIdStr,
         month: monthFormatted,
       });
-
 
       setBudgetData(response || []);
     } catch (error) {
@@ -922,7 +919,6 @@ const NewPackpageDetailsPage: React.FC = () => {
       return acc + (budget.assignedAmount || 0);
     }, 0);
 
-
     return total;
   };
 
@@ -1090,9 +1086,8 @@ const NewPackpageDetailsPage: React.FC = () => {
           ) || [];
 
         // Recalcular totales correctamente
-        const facturasAutorizadas = prev.facturas?.filter(
-          (f) => f.autorizada === true
-        ) || [];
+        const facturasAutorizadas =
+          prev.facturas?.filter((f) => f.autorizada === true) || [];
         const pagosEfectivoAutorizados = pagosActualizados.filter(
           (p) => p.autorizada === true
         );
@@ -1155,9 +1150,8 @@ const NewPackpageDetailsPage: React.FC = () => {
           ) || [];
 
         // Recalcular totales correctamente
-        const facturasAutorizadas = prev.facturas?.filter(
-          (f) => f.autorizada === true
-        ) || [];
+        const facturasAutorizadas =
+          prev.facturas?.filter((f) => f.autorizada === true) || [];
         const pagosEfectivoAutorizados = pagosActualizados.filter(
           (p) => p.autorizada === true
         );
@@ -1517,7 +1511,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                       <i className="bi bi-wallet2"></i>
                     </div>
                     <div>
-                      <div className="fw-bold text-danger">Presupuesto</div>
+                      <div className="fw-bold text-danger">Presupuestos123</div>
                       <div className="text-muted small">
                         {getMonthFromPaymentDate()}
                       </div>
@@ -1551,9 +1545,10 @@ const NewPackpageDetailsPage: React.FC = () => {
                       </div>
                       <div className="fw-bold text-primary">
                         $
-                        {calcularTotalVisualizacion().toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                        })}
+                        {calcularTotalPagadoVisualizacion().toLocaleString(
+                          "es-MX",
+                          { minimumFractionDigits: 2 }
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1599,7 +1594,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                       <div className="fw-bold text-success">
                         $
                         {(
-                          calcularTotalVisualizacion() +
+                          calcularTotalPagadoVisualizacion() +
                           calcularTotalesPagosEfectivo().total
                         ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </div>

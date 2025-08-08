@@ -93,7 +93,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
               <th className="text-center">RFC Emisor</th>
               <th className="text-center">Fecha Emisión</th>
               <th className="text-center">Estatus</th>
-              <th className="text-center">Fecha Cancelación</th>
+              {/* <th className="text-center">Fecha Cancelación</th> */}
               <th className="text-end">Importe</th>
             </tr>
           </thead>
@@ -127,11 +127,11 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                     {invoice.estatus === 1 ? "Vigente" : "Cancelado"}
                   </span>
                 </td>
-                <td className="text-muted text-center">
+                {/* <td className="text-muted text-center">
                   {!invoice.fechaCancelacion
                     ? formatDate(invoice.fechaCancelacion)
                     : "-"}
-                </td>
+                </td> */}
                 <td className="text-end fw-medium">
                   {formatCurrency(Number(invoice.importeAPagar))}
                 </td>
