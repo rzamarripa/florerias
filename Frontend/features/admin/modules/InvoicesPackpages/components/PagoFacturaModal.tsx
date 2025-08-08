@@ -35,6 +35,31 @@ interface PagoFacturaModalProps {
   branchId?: string;
   selectedYear?: number;
   selectedMonth?: number;
+  tempPayments?: {
+    [invoiceId: string]: {
+      tipoPago: "completo" | "parcial";
+      descripcion: string;
+      monto?: number;
+      originalImportePagado: number;
+      originalSaldo: number;
+      conceptoGasto?: string;
+    };
+  };
+  tempCashPayments?: {
+    _id: string;
+    importeAPagar: number;
+    expenseConcept: {
+      _id: string;
+      name: string;
+      categoryId?: {
+        _id: string;
+        name: string;
+      };
+    };
+    description?: string;
+    createdAt: string;
+  }[];
+  invoices?: any[];
   onSuccess: (
     invoiceId: string,
     tipoPago: "completo" | "parcial",
@@ -55,6 +80,9 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
   branchId,
   selectedYear = new Date().getFullYear(),
   selectedMonth = new Date().getMonth(),
+  tempPayments = {},
+  tempCashPayments = [],
+  invoices = [],
   onSuccess,
 }) => {
   const [descripcion, setDescripcion] = useState("");
@@ -121,10 +149,41 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
         month,
       });
 
-      setBudgetData(budgetInfo);
+      // Calcular el gasto adicional del estado local que aún no se ha enviado
+      let localSpent = 0;
+      
+      // Sumar pagos temporales de facturas para el mismo concepto
+      Object.entries(tempPayments).forEach(([invoiceIdKey, payment]) => {
+        if (payment.conceptoGasto === conceptoGasto) {
+          if (payment.tipoPago === "completo") {
+            const invoice = invoices.find((inv: any) => inv._id === invoiceIdKey);
+            if (invoice) {
+              localSpent += invoice.importeAPagar - invoice.importePagado;
+            }
+          } else if (payment.tipoPago === "parcial" && payment.monto) {
+            localSpent += payment.monto;
+          }
+        }
+      });
+      
+      // Sumar pagos en efectivo temporales para el mismo concepto
+      tempCashPayments.forEach((cashPayment) => {
+        if (cashPayment.expenseConcept._id === conceptoGasto) {
+          localSpent += cashPayment.importeAPagar;
+        }
+      });
+
+      // Ajustar el presupuesto disponible considerando el estado local
+      const adjustedBudgetInfo = {
+        ...budgetInfo,
+        totalSpent: budgetInfo.totalSpent + localSpent,
+        availableBudget: budgetInfo.availableBudget - localSpent
+      };
+
+      setBudgetData(adjustedBudgetInfo);
 
       const montoAPagar = tipoPago === "completo" ? saldo : Number(monto) || 0;
-      const excede = montoAPagar >= budgetInfo.availableBudget;
+      const excede = montoAPagar >= adjustedBudgetInfo.availableBudget;
         
       if (excede && montoAPagar > 0) {
         toast.warning("Presupuesto excedido. Se requerirá un folio de autorización");

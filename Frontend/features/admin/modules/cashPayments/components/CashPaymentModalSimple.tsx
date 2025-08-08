@@ -19,6 +19,31 @@ interface CashPaymentModalSimpleProps {
     branchId?: string;
     selectedYear?: number;
     selectedMonth?: number;
+    tempPayments?: {
+        [invoiceId: string]: {
+            tipoPago: "completo" | "parcial";
+            descripcion: string;
+            monto?: number;
+            originalImportePagado: number;
+            originalSaldo: number;
+            conceptoGasto?: string;
+        };
+    };
+    tempCashPayments?: {
+        _id: string;
+        importeAPagar: number;
+        expenseConcept: {
+            _id: string;
+            name: string;
+            categoryId?: {
+                _id: string;
+                name: string;
+            };
+        };
+        description?: string;
+        createdAt: string;
+    }[];
+    invoices?: any[];
 }
 
 export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
@@ -31,7 +56,10 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
     brandId,
     branchId,
     selectedYear = new Date().getFullYear(),
-    selectedMonth = new Date().getMonth()
+    selectedMonth = new Date().getMonth(),
+    tempPayments = {},
+    tempCashPayments = [],
+    invoices = []
 }) => {
     const [expenseConcepts, setExpenseConcepts] = useState<any[]>([]);
     const [loadingConcepts, setLoadingConcepts] = useState(false);
@@ -123,7 +151,6 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
 
         try {
             setLoadingBudget(true);
-            // Usar el año y mes seleccionados en lugar de la fecha actual
             const month = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
             
             const budgetInfo = await getBudgetByExpenseConcept({
@@ -134,13 +161,43 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
                 month
             });
 
-            setBudgetData(budgetInfo);
+            // Calcular el gasto adicional del estado local que aún no se ha enviado
+            let localSpent = 0;
             
-            // Verificar si el monto excede el presupuesto disponible
+            // Sumar pagos temporales de facturas para el mismo concepto
+            Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
+                if (payment.conceptoGasto === watchedValues.expenseConcept) {
+                    if (payment.tipoPago === "completo") {
+                        const invoice = invoices.find((inv: any) => inv._id === invoiceId);
+                        if (invoice) {
+                            localSpent += invoice.importeAPagar - invoice.importePagado;
+                        }
+                    } else if (payment.tipoPago === "parcial" && payment.monto) {
+                        localSpent += payment.monto;
+                    }
+                }
+            });
+            
+            // Sumar pagos en efectivo temporales para el mismo concepto
+            tempCashPayments.forEach((cashPayment) => {
+                if (cashPayment.expenseConcept._id === watchedValues.expenseConcept) {
+                    localSpent += cashPayment.importeAPagar;
+                }
+            });
+
+            // Ajustar el presupuesto disponible considerando el estado local
+            const adjustedBudgetInfo = {
+                ...budgetInfo,
+                totalSpent: budgetInfo.totalSpent + localSpent,
+                availableBudget: budgetInfo.availableBudget - localSpent
+            };
+
+            setBudgetData(adjustedBudgetInfo);
+            
+            // Verificar si el monto excede el presupuesto disponible ajustado
             const montoAPagar = Number(watchedValues.importeAPagar || 0);
-            const excede = montoAPagar >= budgetInfo.availableBudget;
+            const excede = montoAPagar >= adjustedBudgetInfo.availableBudget;
             
-            // Mostrar toast inmediatamente si hay exceso
             if (excede && montoAPagar > 0) {
                 toast.warning('Presupuesto excedido. Se requerirá un folio de autorización');
             }

@@ -12,7 +12,7 @@ import {
   Spinner,
 } from "react-bootstrap";
 import { toast } from "react-toastify";
-import { BsCash, BsClipboard, BsSearch } from "react-icons/bs";
+import { BsCash, BsClipboard } from "react-icons/bs";
 import BudgetSummaryCards from "./components/BudgetSummaryCards";
 import {
   userProvidersService,
@@ -1577,6 +1577,9 @@ const InvoicesPackagePage: React.FC = () => {
         branchId={selectedBranch}
         selectedYear={selectedYear}
         selectedMonth={selectedMonth}
+        tempPayments={tempPayments}
+        tempCashPayments={tempCashPayments}
+        invoices={invoices}
         onSuccess={handleTempPayment}
       />
 
@@ -1667,6 +1670,9 @@ const InvoicesPackagePage: React.FC = () => {
         branchId={selectedBranch}
         selectedYear={selectedYear}
         selectedMonth={selectedMonth}
+        tempPayments={tempPayments}
+        tempCashPayments={tempCashPayments}
+        invoices={invoices}
         onSuccess={(cashPaymentData) => {
           const concept = expenseConcepts.find(
             (c) => c._id === cashPaymentData.expenseConcept
