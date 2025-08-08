@@ -90,7 +90,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
               <tbody>
                 {pagos.map((pago, idx) => (
                   <tr
-                    key={`${pago._id}-${idx}`}
+                    key={pago._id}
                     className={idx % 2 === 1 ? "bg-pink bg-opacity-25" : ""}
                   >
                     <td>{idx + 1}</td>
@@ -169,7 +169,7 @@ const CashPaymentsInPackageTable: React.FC<CashPaymentsInPackageTableProps> = ({
                             onClick={() => onReject(pago._id)}
                             disabled={
                               loading ||
-                              pago.autorizada === false ||
+                              (pago.autorizada === false && pago.pagoRechazado === true) ||
                               packageStatus !== "Borrador"
                             }
                           >

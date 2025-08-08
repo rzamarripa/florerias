@@ -572,30 +572,33 @@ export const updateInvoicesPackage = async (req, res) => {
         (facturaId) => !facturasActualesIds.includes(facturaId.toString())
       );
 
-      // Verificar que las facturas completamente pagadas no estén ya en el paquete
-      const facturasCompletamentePagadas = facturasExistentes.filter(
-        (f) => f.importePagado >= f.importeAPagar
-      );
-      const facturasCompletamentePagadasEnPaquete =
-        paqueteExistente.facturas.filter((facturaEmbebida) => {
-          const factura = facturasExistentes.find(
-            (f) => f._id.toString() === facturaEmbebida._id.toString()
-          );
-          return factura && factura.importePagado >= factura.importeAPagar;
-        });
+      // Permitir actualizar facturas existentes (pagos parciales acumulativos)
+      // Solo rechazar si se intenta agregar exactamente las mismas facturas sin cambios en importePagado
+      const facturasYaEnPaqueteConMismoImporte = facturas.filter((facturaId) => {
+        const facturaIdStr = facturaId.toString();
+        const yaEstaEnPaquete = facturasActualesIds.includes(facturaIdStr);
+        
+        if (!yaEstaEnPaquete) return false;
 
-      const facturasCompletamentePagadasDuplicadas =
-        facturasCompletamentePagadas.filter((f) =>
-          facturasCompletamentePagadasEnPaquete.some(
-            (fe) => fe._id.toString() === f._id.toString()
-          )
+        // Verificar si el importePagado es diferente (permitir actualizaciones)
+        const facturaEnPaquete = paqueteExistente.facturas.find(
+          (f) => f._id.toString() === facturaIdStr
+        );
+        const facturaNueva = facturasExistentes.find(
+          (f) => f._id.toString() === facturaIdStr
         );
 
-      if (facturasCompletamentePagadasDuplicadas.length > 0) {
+        if (!facturaEnPaquete || !facturaNueva) return false;
+
+        // Si el importePagado es diferente, permitir la actualización
+        return facturaEnPaquete.importePagado === facturaNueva.importePagado;
+      });
+
+      if (facturasYaEnPaqueteConMismoImporte.length > 0) {
         return res.status(400).json({
           success: false,
           message:
-            "No se pueden agregar facturas completamente pagadas que ya están en el paquete.",
+            "No se pueden agregar facturas que ya están en el paquete sin cambios en el monto pagado.",
         });
       }
 
@@ -709,13 +712,47 @@ export const updateInvoicesPackage = async (req, res) => {
         (f) => !facturasActualesIds.includes(f.toString())
       );
 
-      if (facturasNuevas.length > 0) {
-        // Obtener los datos completos de las nuevas facturas
-        const nuevasFacturasEmbebidas = facturasExistentes
-          .filter((f) => facturasNuevas.includes(f._id.toString()))
-          .map((factura) => {
-            const facturaData = factura.toObject();
-            facturaData._id = factura._id;
+      if (facturas && facturas.length > 0) {
+        // En lugar de solo agregar facturas nuevas, manejar tanto actualizaciones como nuevas facturas
+        const facturasActualizadas = [...paqueteExistente.facturas];
+
+        // Procesar cada factura en la solicitud
+        for (const facturaId of facturas) {
+          const facturaIdStr = facturaId.toString();
+          const facturaExistente = facturasExistentes.find(
+            (f) => f._id.toString() === facturaIdStr
+          );
+
+          if (!facturaExistente) continue;
+
+          // Verificar si la factura ya existe en el paquete
+          const indiceFacturaEnPaquete = facturasActualizadas.findIndex(
+            (f) => f._id.toString() === facturaIdStr
+          );
+
+          if (indiceFacturaEnPaquete >= 0) {
+            // La factura ya existe en el paquete - actualizar su importePagado
+            facturasActualizadas[indiceFacturaEnPaquete] = {
+              ...facturasActualizadas[indiceFacturaEnPaquete],
+              importePagado: facturaExistente.importePagado,
+              autorizada: null, // Resetear a pendiente para nueva autorización
+              estadoPago: 0,
+              esCompleta: false,
+              pagoRechazado: false,
+              fechaRevision: new Date(),
+            };
+
+            // Asignar concepto de gasto si se proporciona para esta factura
+            if (conceptosGasto && conceptosGasto[facturaIdStr]) {
+              const conceptoId = conceptosGasto[facturaIdStr];
+              if (conceptosGastoMap[conceptoId]) {
+                facturasActualizadas[indiceFacturaEnPaquete].conceptoGasto = conceptosGastoMap[conceptoId];
+              }
+            }
+          } else {
+            // La factura es nueva - agregarla al paquete
+            const facturaData = facturaExistente.toObject();
+            facturaData._id = facturaExistente._id;
 
             // FORZAR que autorizada sea null (pendiente) al agregar al paquete
             facturaData.autorizada = null;
@@ -727,8 +764,8 @@ export const updateInvoicesPackage = async (req, res) => {
             facturaData.fechaRevision = new Date();
 
             // Asignar concepto de gasto si se proporciona para esta factura
-            if (conceptosGasto && conceptosGasto[factura._id.toString()]) {
-              const conceptoId = conceptosGasto[factura._id.toString()];
+            if (conceptosGasto && conceptosGasto[facturaIdStr]) {
+              const conceptoId = conceptosGasto[facturaIdStr];
               if (conceptosGastoMap[conceptoId]) {
                 facturaData.conceptoGasto = conceptosGastoMap[conceptoId];
               }
@@ -747,14 +784,11 @@ export const updateInvoicesPackage = async (req, res) => {
               };
             }
 
-            return facturaData;
-          });
+            facturasActualizadas.push(facturaData);
+          }
+        }
 
-        // Agregar las nuevas facturas embebidas al array existente
-        datosActualizacion.facturas = [
-          ...paqueteExistente.facturas,
-          ...nuevasFacturasEmbebidas,
-        ];
+        datosActualizacion.facturas = facturasActualizadas;
       }
     }
     if (estatus) datosActualizacion.estatus = estatus;

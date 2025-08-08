@@ -685,59 +685,96 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
     const monthFormatted = `${year}-${month}`;
 
     // Obtener todas las facturas del paquete con sus conceptos de gasto
-    const facturas = await ImportedInvoices.find({
-      _id: { $in: packageData.facturas },
+    // También obtener las facturas originales de la BD para comparar pagos previos
+    const facturasIds = packageData.facturas.map((f) => f._id);
+    const facturasOriginales = await ImportedInvoices.find({
+      _id: { $in: facturasIds },
     }).populate("conceptoGasto");
 
+    // Crear un mapa de facturas embebidas del paquete para acceso rápido
+    const facturasEmbebidas = new Map();
+    packageData.facturas.forEach((factura) => {
+      facturasEmbebidas.set(factura._id.toString(), factura);
+    });
+
     // Obtener todos los pagos en efectivo del paquete con sus conceptos de gasto
-    const pagosEfectivo = await CashPayment.find({
-      _id: { $in: packageData.pagosEfectivo || [] },
-    }).populate("expenseConcept");
+    const pagosEfectivoIds = (packageData.pagosEfectivo || []).map((p) => p._id);
+    const pagosEfectivoOriginales = pagosEfectivoIds.length > 0 
+      ? await CashPayment.find({
+          _id: { $in: pagosEfectivoIds },
+        }).populate("expenseConcept")
+      : [];
+
+    // Crear un mapa de pagos en efectivo embebidos del paquete para acceso rápido
+    const pagosEfectivoEmbebidos = new Map();
+    (packageData.pagosEfectivo || []).forEach((pago) => {
+      pagosEfectivoEmbebidos.set(pago._id.toString(), pago);
+    });
 
     // Agrupar pagos por concepto de gasto
     const pagosPorConcepto = new Map();
 
-    // Procesar facturas
-    facturas.forEach((factura) => {
-      if (factura.conceptoGasto && factura.autorizada === true) {
-        const conceptoId = factura.conceptoGasto._id.toString();
-        if (!pagosPorConcepto.has(conceptoId)) {
-          pagosPorConcepto.set(conceptoId, {
-            concepto: factura.conceptoGasto,
-            totalPagado: 0,
-            pagos: [],
+    // Procesar facturas - considerar tanto el pago previo como el nuevo pago temporal
+    facturasOriginales.forEach((facturaOriginal) => {
+      if (facturaOriginal.conceptoGasto) {
+        const conceptoId = facturaOriginal.conceptoGasto._id.toString();
+        const facturaEmbebida = facturasEmbebidas.get(facturaOriginal._id.toString());
+        
+        // Solo procesar si la factura está autorizada EN EL PAQUETE o si no está rechazada
+        if (facturaEmbebida && facturaEmbebida.autorizada !== false) {
+          if (!pagosPorConcepto.has(conceptoId)) {
+            pagosPorConcepto.set(conceptoId, {
+              concepto: facturaOriginal.conceptoGasto,
+              totalPagado: 0,
+              pagos: [],
+            });
+          }
+          
+          const conceptoData = pagosPorConcepto.get(conceptoId);
+          
+          // Usar el importePagado de la factura embebida (que incluye el pago temporal)
+          const montoPagado = facturaEmbebida.importePagado || 0;
+          
+          conceptoData.totalPagado += montoPagado;
+          conceptoData.pagos.push({
+            tipo: "factura",
+            id: facturaOriginal._id,
+            monto: montoPagado,
+            descripcion: facturaOriginal.nombreEmisor,
           });
         }
-        const conceptoData = pagosPorConcepto.get(conceptoId);
-        conceptoData.totalPagado += factura.importePagado || 0;
-        conceptoData.pagos.push({
-          tipo: "factura",
-          id: factura._id,
-          monto: factura.importePagado || 0,
-          descripcion: factura.nombreEmisor,
-        });
       }
     });
 
-    // Procesar pagos en efectivo
-    pagosEfectivo.forEach((pago) => {
-      if (pago.expenseConcept && pago.autorizada === true) {
-        const conceptoId = pago.expenseConcept._id.toString();
-        if (!pagosPorConcepto.has(conceptoId)) {
-          pagosPorConcepto.set(conceptoId, {
-            concepto: pago.expenseConcept,
-            totalPagado: 0,
-            pagos: [],
+    // Procesar pagos en efectivo - usar la misma lógica que las facturas
+    pagosEfectivoOriginales.forEach((pagoOriginal) => {
+      if (pagoOriginal.expenseConcept) {
+        const conceptoId = pagoOriginal.expenseConcept._id.toString();
+        const pagoEmbebido = pagosEfectivoEmbebidos.get(pagoOriginal._id.toString());
+        
+        // Solo procesar si el pago está autorizado EN EL PAQUETE o si no está rechazado
+        if (pagoEmbebido && pagoEmbebido.autorizada !== false) {
+          if (!pagosPorConcepto.has(conceptoId)) {
+            pagosPorConcepto.set(conceptoId, {
+              concepto: pagoOriginal.expenseConcept,
+              totalPagado: 0,
+              pagos: [],
+            });
+          }
+          
+          const conceptoData = pagosPorConcepto.get(conceptoId);
+          
+          // Usar el importePagado del pago embebido
+          const montoPagado = pagoEmbebido.importePagado || 0;
+          
+          conceptoData.totalPagado += montoPagado;
+          conceptoData.pagos.push({
+            tipo: "efectivo",
+            id: pagoOriginal._id,
+            monto: montoPagado,
+            descripcion: pagoOriginal.description || "Pago en efectivo",
           });
         }
-        const conceptoData = pagosPorConcepto.get(conceptoId);
-        conceptoData.totalPagado += pago.importePagado || 0;
-        conceptoData.pagos.push({
-          tipo: "efectivo",
-          id: pago._id,
-          monto: pago.importePagado || 0,
-          descripcion: pago.description || "Pago en efectivo",
-        });
       }
     });
 
@@ -992,6 +1029,195 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error obteniendo presupuestos por sucursal",
+      error: error.message,
+    });
+  }
+};
+
+// Nuevo endpoint: obtener presupuesto específico por concepto de gasto
+export const getBudgetByExpenseConcept = async (req, res) => {
+  try {
+    const { 
+      expenseConceptId, 
+      companyId, 
+      brandId, 
+      branchId, 
+      month 
+    } = req.query;
+
+    console.log('🔍 DEBUG Backend - getBudgetByExpenseConcept llamado con:', {
+      expenseConceptId,
+      companyId,
+      brandId,
+      branchId,
+      month
+    });
+
+    if (!expenseConceptId || !companyId || !brandId || !branchId || !month) {
+      return res.status(400).json({
+        success: false,
+        message: "expenseConceptId, companyId, brandId, branchId y month son requeridos",
+      });
+    }
+
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "Formato de mes inválido. Use YYYY-MM",
+      });
+    }
+
+    const ExpenseConcept = mongoose.model("cc_expense_concept");
+    const Category = mongoose.model("cc_category");
+    const Route = mongoose.model("cc_route");
+
+    // Obtener el concepto de gasto
+    const expenseConcept = await ExpenseConcept.findById(expenseConceptId).populate('categoryId');
+    
+    console.log('📊 DEBUG - ExpenseConcept encontrado:', {
+      found: !!expenseConcept,
+      expenseConceptName: expenseConcept?.name,
+      categoryId: expenseConcept?.categoryId
+    });
+    
+    if (!expenseConcept) {
+      return res.status(404).json({
+        success: false,
+        message: "Concepto de gasto no encontrado",
+      });
+    }
+
+    // Buscar presupuestos directamente por expenseConceptId
+    // Primero intentar buscar con rutas
+    let budgets = await Budget.find({
+      companyId: companyId,
+      brandId: brandId,
+      branchId: branchId,
+      expenseConceptId: expenseConceptId,
+      month: month,
+      routeId: { $ne: null }
+    }).populate('routeId');
+
+    console.log('🔍 DEBUG - Presupuestos con rutas encontrados:', budgets.length);
+
+    let totalBudget = 0;
+    let budgetDetails = [];
+
+    if (budgets.length > 0) {
+      // Hay presupuestos con rutas
+      for (const budget of budgets) {
+        totalBudget += budget.assignedAmount || 0;
+        budgetDetails.push({
+          routeId: budget.routeId._id,
+          routeName: budget.routeId.name,
+          assignedAmount: budget.assignedAmount || 0,
+        });
+      }
+    } else {
+      // Buscar presupuesto sin rutas (directo en sucursal)
+      const budget = await Budget.findOne({
+        companyId: companyId,
+        brandId: brandId,
+        branchId: branchId,
+        expenseConceptId: expenseConceptId,
+        month: month,
+        routeId: null,
+      });
+
+      console.log('🔍 DEBUG - Presupuesto sin rutas encontrado:', !!budget);
+
+      if (budget) {
+        totalBudget = budget.assignedAmount || 0;
+        budgetDetails.push({
+          branchId: branchId,
+          assignedAmount: budget.assignedAmount || 0,
+        });
+      }
+    }
+
+    // Calcular cuánto se ha gastado del presupuesto en el mes actual
+    const ImportedInvoices = mongoose.model("cc_imported_invoices");
+    const InvoicesPackage = mongoose.model("cc_invoices_package");
+    
+    // Obtener rango de fechas del mes
+    const [year, monthNum] = month.split('-');
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 0, 23, 59, 59);
+
+    let totalSpent = 0;
+
+    // 1. Buscar facturas ya autorizadas con este concepto de gasto en el mes
+    const invoicesWithConcept = await ImportedInvoices.find({
+      conceptoGasto: expenseConceptId,
+      fechaRevision: {
+        $gte: startDate,
+        $lte: endDate
+      },
+      autorizada: true,
+      estadoPago: { $in: [2, 3] } // Pagado o Registrado
+    });
+
+    totalSpent += invoicesWithConcept.reduce((sum, invoice) => {
+      return sum + (invoice.importePagado || 0);
+    }, 0);
+
+    // 2. Buscar paquetes del mes que contengan facturas con este concepto (incluyendo pagos temporales)
+    const packagesByMonth = await InvoicesPackage.find({
+      fechaPago: {
+        $gte: startDate,
+        $lte: endDate
+      },
+      estatus: { $ne: "Cancelado" } // Excluir paquetes cancelados
+    });
+
+    // Procesar facturas embebidas en paquetes para incluir pagos temporales
+    for (const packageData of packagesByMonth) {
+      if (packageData.facturas && Array.isArray(packageData.facturas)) {
+        for (const facturaEmbebida of packageData.facturas) {
+          // Verificar si la factura tiene el concepto de gasto correcto
+          if (facturaEmbebida.conceptoGasto && 
+              facturaEmbebida.conceptoGasto.id && 
+              facturaEmbebida.conceptoGasto.id.toString() === expenseConceptId) {
+            
+            // Solo considerar facturas no rechazadas y que no estén ya contadas en las autorizadas
+            if (facturaEmbebida.autorizada !== false && facturaEmbebida.autorizada !== true) {
+              totalSpent += facturaEmbebida.importePagado || 0;
+            }
+          }
+        }
+      }
+    }
+
+    const availableBudget = Math.max(0, totalBudget - totalSpent);
+
+    console.log('💰 DEBUG - Resultado final:', {
+      totalBudget,
+      totalSpent,
+      availableBudget,
+      budgetDetailsCount: budgetDetails.length
+    });
+
+    res.json({
+      success: true,
+      data: {
+        expenseConceptId: expenseConceptId,
+        expenseConceptName: expenseConcept.name,
+        categoryId: expenseConcept.categoryId._id,
+        categoryName: expenseConcept.categoryId.name,
+        hasRoutes: budgets.length > 0, // Tiene rutas si encontramos presupuestos con rutas
+        month: month,
+        totalBudget: totalBudget,
+        totalSpent: totalSpent,
+        availableBudget: availableBudget,
+        budgetDetails: budgetDetails,
+      },
+      message: "Presupuesto del concepto de gasto obtenido exitosamente",
+    });
+  } catch (error) {
+    console.error("Error obteniendo presupuesto por concepto de gasto:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error obteniendo presupuesto por concepto de gasto",
       error: error.message,
     });
   }

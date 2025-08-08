@@ -147,57 +147,8 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   }, [budgetData]);
 
   const presupuestoUtilizado = React.useMemo(() => {
-    let totalUtilizado = 0;
-
-    const paquetesDelMes = existingPackages.filter((paquete) => {
-      if (!paquete.fechaPago) return false;
-
-      const fechaPago = new Date(paquete.fechaPago);
-      const yearPaquete = fechaPago.getFullYear();
-      const monthPaquete = fechaPago.getMonth();
-
-      return yearPaquete === selectedYear && monthPaquete === selectedMonth;
-    });
-
-    paquetesDelMes.forEach((paquete) => {
-      if (paquete.facturas && Array.isArray(paquete.facturas)) {
-        paquete.facturas.forEach((factura: any) => {
-          if (factura.importePagado > 0) {
-            totalUtilizado += factura.importePagado;
-          }
-        });
-      }
-    });
-
-    paquetesDelMes.forEach((paquete) => {
-      if (paquete.pagosEfectivo && Array.isArray(paquete.pagosEfectivo)) {
-        paquete.pagosEfectivo.forEach((pagoEfectivo: any) => {
-          if (pagoEfectivo.importeAPagar > 0) {
-            totalUtilizado += pagoEfectivo.importeAPagar;
-          }
-        });
-      }
-    });
-
-    const mesActual = new Date().getMonth();
-    const yearActual = new Date().getFullYear();
-
-    if (selectedYear === yearActual && selectedMonth === mesActual) {
-      Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
-        const invoice = invoices.find((inv) => inv._id === invoiceId);
-        if (!invoice) return;
-
-        if (payment.tipoPago === "completo") {
-          const montoPendiente = invoice.importeAPagar - invoice.importePagado;
-          totalUtilizado += Math.max(0, montoPendiente);
-        } else if (payment.tipoPago === "parcial" && payment.monto) {
-          totalUtilizado += payment.monto;
-        }
-      });
-    }
-
-    return totalUtilizado;
-  }, [existingPackages, tempPayments, invoices, selectedYear, selectedMonth]);
+    return selectedPaymentsSummary.totalPagado;
+  }, [selectedPaymentsSummary]);
 
   const saldoPresupuesto = React.useMemo(() => {
     const saldo = totalBudget - presupuestoUtilizado;

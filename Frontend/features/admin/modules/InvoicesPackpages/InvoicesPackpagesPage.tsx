@@ -434,11 +434,6 @@ const InvoicesPackagePage: React.FC = () => {
           .join(",");
       }
 
-      console.log(
-        "🔍 PACKAGES: Ejecutando handleSearch con companyId:",
-        selectedCompany
-      );
-      console.log("🔍 PACKAGES: Proveedores para filtro:", providerIdsParam);
 
       const startDate = new Date(selectedYear, selectedMonth, 1);
       const endDate = new Date(
@@ -451,7 +446,6 @@ const InvoicesPackagePage: React.FC = () => {
         999
       );
 
-      console.log("🚀 PACKAGES: Llamando a getInvoicesByProviderAndCompany");
       const [invoicesResponse, summaryResponse, packagesResponse] =
         await Promise.all([
           getInvoicesByProviderAndCompany({
@@ -578,9 +572,6 @@ const InvoicesPackagePage: React.FC = () => {
         });
 
         if (cambios) {
-          console.log(
-            "Pagos temporales limpiados para facturas ya guardadas en paquetes"
-          );
         }
 
         return newTempPayments;
@@ -1518,6 +1509,9 @@ const InvoicesPackagePage: React.FC = () => {
         tipoPago={tipoPagoModal}
         saldo={saldoModal}
         invoiceId={selectedInvoiceId}
+        companyId={selectedCompany}
+        brandId={selectedBrand}
+        branchId={selectedBranch}
         onSuccess={handleTempPayment}
       />
 
@@ -1603,6 +1597,9 @@ const InvoicesPackagePage: React.FC = () => {
       <CashPaymentModalSimple
         show={showCashPaymentModal}
         onHide={() => setShowCashPaymentModal(false)}
+        companyId={selectedCompany}
+        brandId={selectedBrand}
+        branchId={selectedBranch}
         onSuccess={(cashPaymentData) => {
           const concept = expenseConcepts.find(
             (c) => c._id === cashPaymentData.expenseConcept

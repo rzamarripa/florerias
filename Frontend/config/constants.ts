@@ -1,5 +1,6 @@
 import { type MenuItemType } from "@/types/layout";
 import {
+  Banknote,
   CircleDollarSign,
   Component,
   Inbox,
@@ -141,6 +142,18 @@ export const menuItems: MenuItemType[] = [
     ],
   },
   {
+    key: "conciliacion",
+    label: "Conciliación",
+    icon: Banknote,
+    children: [
+      {
+        key: "conciliacion",
+        label: "Conciliar",
+        url: "/modulos/conciliacion",
+      },
+    ],
+  },
+  {
     key: "gestion",
     label: "Gestión",
     icon: ShieldUser,
@@ -165,12 +178,7 @@ export const menuItems: MenuItemType[] = [
         key: "importar-movimientos-bancario",
         label: "Importar Movimientos Bancarios",
         url: "/herramientas/importar-movimientos-bancarios",
-      },
-      {
-        key: "conciliacion",
-        label: "Conciliación",
-        url: "/modulos/conciliacion",
-      },
+      }
     ],
   },
 ];

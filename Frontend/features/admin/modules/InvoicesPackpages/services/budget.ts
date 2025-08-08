@@ -98,3 +98,45 @@ export const validatePackageBudgetByExpenseConcept = async (packageId: string): 
         throw new Error(response.message || 'Error al validar presupuesto por concepto de gasto');
     }
 };
+
+export interface BudgetByExpenseConceptResult {
+    expenseConceptId: string;
+    expenseConceptName: string;
+    categoryId: string;
+    categoryName: string;
+    hasRoutes: boolean;
+    month: string;
+    totalBudget: number;
+    totalSpent: number;
+    availableBudget: number;
+    budgetDetails: Array<{
+        routeId?: string;
+        routeName?: string;
+        branchId?: string;
+        assignedAmount: number;
+    }>;
+}
+
+export const getBudgetByExpenseConcept = async (params: {
+    expenseConceptId: string;
+    companyId: string;
+    brandId: string;
+    branchId: string;
+    month: string;
+}): Promise<BudgetByExpenseConceptResult> => {
+    const queryParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            queryParams.append(key, value.toString());
+        }
+    });
+
+    const response = await apiCall<BudgetByExpenseConceptResult>(`/budget/by-expense-concept?${queryParams}`);
+
+    if (response.data) {
+        return response.data;
+    } else {
+        throw new Error(response.message || 'Error al obtener presupuesto por concepto de gasto');
+    }
+};

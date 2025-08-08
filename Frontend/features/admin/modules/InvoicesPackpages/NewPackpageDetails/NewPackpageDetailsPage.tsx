@@ -164,21 +164,7 @@ const NewPackpageDetailsPage: React.FC = () => {
       const month = String(fechaPago.getMonth() + 1).padStart(2, "0");
       const monthFormatted = `${year}-${month}`;
 
-      console.log(
-        "🔍 loadBudgetData - Fecha de pago original:",
-        packpage.fechaPago
-      );
-      console.log("🔍 loadBudgetData - Fecha de pago parseada:", fechaPago);
-      console.log("🔍 loadBudgetData - Año:", year);
-      console.log("🔍 loadBudgetData - Mes:", month);
-      console.log("🔍 loadBudgetData - Mes formateado:", monthFormatted);
 
-      console.log("🔍 loadBudgetData - Parámetros de búsqueda:", {
-        companyId: companyIdStr,
-        brandId: brandIdStr,
-        branchId: branchIdStr,
-        month: monthFormatted,
-      });
 
       const response = await getBudgetByCompanyBrandBranch({
         companyId: companyIdStr,
@@ -187,11 +173,6 @@ const NewPackpageDetailsPage: React.FC = () => {
         month: monthFormatted,
       });
 
-      console.log("🔍 loadBudgetData - Respuesta del servidor:", response);
-      console.log(
-        "🔍 loadBudgetData - Cantidad de presupuestos recibidos:",
-        response?.length || 0
-      );
 
       setBudgetData(response || []);
     } catch (error) {
@@ -941,8 +922,6 @@ const NewPackpageDetailsPage: React.FC = () => {
       return acc + (budget.assignedAmount || 0);
     }, 0);
 
-    console.log("🔍 calcularPresupuestoTotal - budgetData:", budgetData);
-    console.log("🔍 calcularPresupuestoTotal - Total calculado:", total);
 
     return total;
   };
@@ -1110,11 +1089,19 @@ const NewPackpageDetailsPage: React.FC = () => {
               : p
           ) || [];
 
-        // Recalcular totales
-        const pagosAutorizados = pagosActualizados.filter(
+        // Recalcular totales correctamente
+        const facturasAutorizadas = prev.facturas?.filter(
+          (f) => f.autorizada === true
+        ) || [];
+        const pagosEfectivoAutorizados = pagosActualizados.filter(
           (p) => p.autorizada === true
         );
-        const totalPagadoPagosEfectivo = pagosAutorizados.reduce(
+
+        const totalPagadoFacturas = facturasAutorizadas.reduce(
+          (sum, f) => sum + (f.importePagado || 0),
+          0
+        );
+        const totalPagadoPagosEfectivo = pagosEfectivoAutorizados.reduce(
           (sum, p) => sum + (p.importePagado || 0),
           0
         );
@@ -1122,7 +1109,7 @@ const NewPackpageDetailsPage: React.FC = () => {
         return {
           ...prev,
           pagosEfectivo: pagosActualizados,
-          totalPagado: (prev.totalPagado || 0) + totalPagadoPagosEfectivo,
+          totalPagado: totalPagadoFacturas + totalPagadoPagosEfectivo,
         };
       });
 
@@ -1167,11 +1154,19 @@ const NewPackpageDetailsPage: React.FC = () => {
               : p
           ) || [];
 
-        // Recalcular totales
-        const pagosAutorizados = pagosActualizados.filter(
+        // Recalcular totales correctamente
+        const facturasAutorizadas = prev.facturas?.filter(
+          (f) => f.autorizada === true
+        ) || [];
+        const pagosEfectivoAutorizados = pagosActualizados.filter(
           (p) => p.autorizada === true
         );
-        const totalPagadoPagosEfectivo = pagosAutorizados.reduce(
+
+        const totalPagadoFacturas = facturasAutorizadas.reduce(
+          (sum, f) => sum + (f.importePagado || 0),
+          0
+        );
+        const totalPagadoPagosEfectivo = pagosEfectivoAutorizados.reduce(
           (sum, p) => sum + (p.importePagado || 0),
           0
         );
@@ -1179,7 +1174,7 @@ const NewPackpageDetailsPage: React.FC = () => {
         return {
           ...prev,
           pagosEfectivo: pagosActualizados,
-          totalPagado: (prev.totalPagado || 0) + totalPagadoPagosEfectivo,
+          totalPagado: totalPagadoFacturas + totalPagadoPagosEfectivo,
         };
       });
 
