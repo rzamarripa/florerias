@@ -1199,7 +1199,6 @@ export const getBudgetByExpenseConcept = async (req, res) => {
       }
     }
 
-    const ImportedInvoices = mongoose.model("cc_imported_invoices");
     const InvoicesPackage = mongoose.model("cc_invoices_package");
     
     const [year, monthNum] = month.split('-');
