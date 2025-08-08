@@ -1512,6 +1512,8 @@ const InvoicesPackagePage: React.FC = () => {
         companyId={selectedCompany}
         brandId={selectedBrand}
         branchId={selectedBranch}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
         onSuccess={handleTempPayment}
       />
 
