@@ -34,6 +34,7 @@ import authorizationFolioRoutes from "./authorizationFolioRoutes.js";
 import scheduledPaymentRoutes from "./scheduledPaymentRoutes.js";
 import bankMovementRoutes from "./bankMovementRoutes.js";
 import conciliacionRoutes from "./conciliacionRoutes.js";
+import fixIndexesRoutes from "./fixIndexesRoutes.js";
 
 const router = Router();
 
@@ -71,5 +72,6 @@ router.use("/routes", routeRoutes);
 router.use("/structure", structureRoutes);
 router.use("/bank-movements", bankMovementRoutes);
 router.use("/conciliacion", conciliacionRoutes);
+router.use("/fix", fixIndexesRoutes);
 
 export default router;

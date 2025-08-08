@@ -36,11 +36,11 @@ import {
   Company,
   BankAccount,
 } from "../services/scheduledPayment";
-import { 
-  getBudgetByCompanyBrandBranch, 
-  BudgetItem, 
+import {
+  getBudgetByCompanyBrandBranch,
+  BudgetItem,
   validatePackageBudgetByExpenseConcept,
-  BudgetValidationResult 
+  BudgetValidationResult,
 } from "../services/budget";
 import { BsClipboard } from "react-icons/bs";
 import { toast } from "react-toastify";
@@ -90,7 +90,8 @@ const NewPackpageDetailsPage: React.FC = () => {
     "facturas"
   );
   const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
-  const [budgetValidationData, setBudgetValidationData] = useState<BudgetValidationResult | null>(null);
+  const [budgetValidationData, setBudgetValidationData] =
+    useState<BudgetValidationResult | null>(null);
   const [solicitandoFolio, setSolicitandoFolio] = useState(false);
   const [showFolioModal, setShowFolioModal] = useState(false);
   const [folioIngresado, setFolioIngresado] = useState("");
@@ -163,12 +164,34 @@ const NewPackpageDetailsPage: React.FC = () => {
       const month = String(fechaPago.getMonth() + 1).padStart(2, "0");
       const monthFormatted = `${year}-${month}`;
 
+      console.log(
+        "🔍 loadBudgetData - Fecha de pago original:",
+        packpage.fechaPago
+      );
+      console.log("🔍 loadBudgetData - Fecha de pago parseada:", fechaPago);
+      console.log("🔍 loadBudgetData - Año:", year);
+      console.log("🔍 loadBudgetData - Mes:", month);
+      console.log("🔍 loadBudgetData - Mes formateado:", monthFormatted);
+
+      console.log("🔍 loadBudgetData - Parámetros de búsqueda:", {
+        companyId: companyIdStr,
+        brandId: brandIdStr,
+        branchId: branchIdStr,
+        month: monthFormatted,
+      });
+
       const response = await getBudgetByCompanyBrandBranch({
         companyId: companyIdStr,
         brandId: brandIdStr,
         branchId: branchIdStr,
         month: monthFormatted,
       });
+
+      console.log("🔍 loadBudgetData - Respuesta del servidor:", response);
+      console.log(
+        "🔍 loadBudgetData - Cantidad de presupuestos recibidos:",
+        response?.length || 0
+      );
 
       setBudgetData(response || []);
     } catch (error) {
@@ -184,10 +207,15 @@ const NewPackpageDetailsPage: React.FC = () => {
     }
 
     try {
-      const response = await validatePackageBudgetByExpenseConcept(packpage._id);
+      const response = await validatePackageBudgetByExpenseConcept(
+        packpage._id
+      );
       setBudgetValidationData(response);
     } catch (error) {
-      console.error("❌ Error al validar presupuesto por concepto de gasto:", error);
+      console.error(
+        "❌ Error al validar presupuesto por concepto de gasto:",
+        error
+      );
       setBudgetValidationData(null);
     }
   };
@@ -689,18 +717,32 @@ const NewPackpageDetailsPage: React.FC = () => {
 
       // Construir motivo detallado
       let motivo = "";
-      
+
       if (excesoInfo.excedePresupuestoTotal) {
-        motivo += `Exceso de presupuesto total por $${excesoInfo.diferencia.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
+        motivo += `Exceso de presupuesto total por $${excesoInfo.diferencia.toLocaleString(
+          "es-MX",
+          { minimumFractionDigits: 2 }
+        )}`;
       }
 
-      if (excesoInfo.excedePresupuestoConcepto && excesoInfo.validacionConcepto) {
-        const conceptosExcedidos = excesoInfo.validacionConcepto.validaciones.filter(v => v.excede);
+      if (
+        excesoInfo.excedePresupuestoConcepto &&
+        excesoInfo.validacionConcepto
+      ) {
+        const conceptosExcedidos =
+          excesoInfo.validacionConcepto.validaciones.filter((v) => v.excede);
         if (motivo) motivo += ". ";
         motivo += `${conceptosExcedidos.length} concepto(s) de gasto exceden su presupuesto: `;
-        motivo += conceptosExcedidos.map(c => 
-          `${c.concepto.categoryName} - ${c.concepto.name} (exceso: $${c.diferencia.toLocaleString("es-MX", { minimumFractionDigits: 2 })})`
-        ).join(", ");
+        motivo += conceptosExcedidos
+          .map(
+            (c) =>
+              `${c.concepto.categoryName} - ${
+                c.concepto.name
+              } (exceso: $${c.diferencia.toLocaleString("es-MX", {
+                minimumFractionDigits: 2,
+              })})`
+          )
+          .join(", ");
       }
 
       const folioData: CreateAuthorizationFolioRequest = {
@@ -895,9 +937,14 @@ const NewPackpageDetailsPage: React.FC = () => {
   const calcularPresupuestoTotal = () => {
     if (!Array.isArray(budgetData)) return 0;
 
-    return budgetData.reduce((acc, budget) => {
+    const total = budgetData.reduce((acc, budget) => {
       return acc + (budget.assignedAmount || 0);
     }, 0);
+
+    console.log("🔍 calcularPresupuestoTotal - budgetData:", budgetData);
+    console.log("🔍 calcularPresupuestoTotal - Total calculado:", total);
+
+    return total;
   };
 
   // Función para verificar si el presupuesto se excede (validación tradicional + por concepto)
@@ -908,9 +955,10 @@ const NewPackpageDetailsPage: React.FC = () => {
 
     // Validación tradicional (presupuesto total)
     const excedePresupuestoTotal = totalPagadoPaquete > presupuestoTotal;
-    
+
     // Validación por concepto de gasto
-    const excedePresupuestoConcepto = budgetValidationData?.requiereAutorizacion || false;
+    const excedePresupuestoConcepto =
+      budgetValidationData?.requiereAutorizacion || false;
 
     return {
       presupuestoTotal,
@@ -923,8 +971,20 @@ const NewPackpageDetailsPage: React.FC = () => {
     };
   };
 
+  // Interfaz para el mensaje del folio
+  interface MensajeFolio {
+    tipo: "exceso" | "folio";
+    variant: "warning" | "info" | "success" | "danger";
+    titulo: string;
+    mensaje: string;
+    detalles?: string[];
+    diferencia?: number;
+    validacionConcepto?: BudgetValidationResult | null;
+    folio?: string;
+  }
+
   // Función para determinar qué mostrar según el estado de los folios
-  const determinarMensajeFolio = () => {
+  const determinarMensajeFolio = (): MensajeFolio | null => {
     const excesoInfo = verificarExcesoPresupuesto();
 
     // Si no hay exceso, no mostrar nada
@@ -939,15 +999,31 @@ const NewPackpageDetailsPage: React.FC = () => {
       let detalles: string[] = [];
 
       if (excesoInfo.excedePresupuestoTotal) {
-        detalles.push(`Presupuesto total del mes excedido por $${excesoInfo.diferencia.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`);
+        detalles.push(
+          `Presupuesto total del mes excedido por $${excesoInfo.diferencia.toLocaleString(
+            "es-MX",
+            { minimumFractionDigits: 2 }
+          )}`
+        );
       }
 
-      if (excesoInfo.excedePresupuestoConcepto && excesoInfo.validacionConcepto) {
-        const conceptosExcedidos = excesoInfo.validacionConcepto.validaciones.filter(v => v.excede);
-        detalles.push(`${conceptosExcedidos.length} concepto(s) de gasto exceden su presupuesto`);
-        
+      if (
+        excesoInfo.excedePresupuestoConcepto &&
+        excesoInfo.validacionConcepto
+      ) {
+        const conceptosExcedidos =
+          excesoInfo.validacionConcepto.validaciones.filter((v) => v.excede);
+        detalles.push(
+          `${conceptosExcedidos.length} concepto(s) de gasto exceden su presupuesto`
+        );
+
         if (excesoInfo.validacionConcepto.resumen.totalExceso > 0) {
-          detalles.push(`Exceso total por conceptos: $${excesoInfo.validacionConcepto.resumen.totalExceso.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`);
+          detalles.push(
+            `Exceso total por conceptos: $${excesoInfo.validacionConcepto.resumen.totalExceso.toLocaleString(
+              "es-MX",
+              { minimumFractionDigits: 2 }
+            )}`
+          );
         }
       }
 
@@ -1480,10 +1556,9 @@ const NewPackpageDetailsPage: React.FC = () => {
                       </div>
                       <div className="fw-bold text-primary">
                         $
-                        {calcularTotalVisualizacion().toLocaleString(
-                          "es-MX",
-                          { minimumFractionDigits: 2 }
-                        )}
+                        {calcularTotalVisualizacion().toLocaleString("es-MX", {
+                          minimumFractionDigits: 2,
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1581,14 +1656,15 @@ const NewPackpageDetailsPage: React.FC = () => {
                     <div className="fw-bold">{mensajeFolio.titulo}</div>
                     <div className="text-muted">
                       {mensajeFolio.mensaje}
-                      {mensajeFolio.detalles && mensajeFolio.detalles.length > 0 && (
-                        <>
-                          <br />
-                          {mensajeFolio.detalles.map((detalle, index) => (
-                            <div key={index}>• {detalle}</div>
-                          ))}
-                        </>
-                      )}
+                      {mensajeFolio.detalles &&
+                        mensajeFolio.detalles.length > 0 && (
+                          <>
+                            <br />
+                            {mensajeFolio.detalles.map((detalle, index) => (
+                              <div key={index}>• {detalle}</div>
+                            ))}
+                          </>
+                        )}
                       {!mensajeFolio.detalles && mensajeFolio.diferencia && (
                         <>
                           <br />

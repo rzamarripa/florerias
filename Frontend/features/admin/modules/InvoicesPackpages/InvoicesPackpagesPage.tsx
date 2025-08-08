@@ -12,7 +12,7 @@ import {
   Spinner,
 } from "react-bootstrap";
 import { toast } from "react-toastify";
-import { BsClipboard } from "react-icons/bs";
+import { BsCash, BsClipboard, BsSearch } from "react-icons/bs";
 import BudgetSummaryCards from "./components/BudgetSummaryCards";
 import {
   userProvidersService,
@@ -40,7 +40,7 @@ import { useRouter } from "next/navigation";
 import DescuentoFacturaModal from "./components/DescuentoFacturaModal";
 import MultiSelect from "@/components/forms/Multiselect";
 import { CashPaymentModalSimple } from "../cashPayments/components/CashPaymentModalSimple";
-import { Eye } from "lucide-react";
+import { Eye, LucideSearch } from "lucide-react";
 import { formatCurrency } from "@/utils";
 import { formatDate } from "@/utils/dateUtils";
 
@@ -909,29 +909,31 @@ const InvoicesPackagePage: React.FC = () => {
                   )}
               </Form.Group>
             </Col>
-            <Col md={4} className="mb-0">
-              <div className="d-flex gap-2">
+            <Col md={4} className="mb-0 d-flex align-items-end">
+              <div className="d-flex gap-2 w-100">
                 <Button
                   variant="primary"
                   onClick={handleSearch}
                   size="sm"
-                  className="py-1 px-2"
+                  className="py-1 px-2 flex-fill"
                   disabled={
                     !selectedCompany || !selectedBrand || !selectedBranch
                   }
                 >
-                  <i className="bi bi-search me-2"></i>Buscar
+                  <LucideSearch className="me-2" size={16} />
+                  Buscar
                 </Button>
                 <Button
                   variant="success"
                   onClick={() => setShowCashPaymentModal(true)}
                   size="sm"
-                  className="py-1 px-2"
+                  className="py-1 px-2 flex-fill"
                   disabled={
                     !selectedCompany || !selectedBrand || !selectedBranch
                   }
                 >
-                  <i className="bi bi-cash me-2"></i>Pagar en efectivo
+                  <BsCash className="me-2" size={16} />
+                  Pagar en efectivo
                 </Button>
               </div>
             </Col>
@@ -1291,7 +1293,7 @@ const InvoicesPackagePage: React.FC = () => {
                               <>
                                 <div className="d-flex gap-1 w-100">
                                   <Button
-                                    variant="success"
+                                    variant="outline-success"
                                     className="d-flex align-items-center justify-content-center w-100 py-1"
                                     onClick={() => {
                                       setTipoPagoModal("completo");
@@ -1304,7 +1306,7 @@ const InvoicesPackagePage: React.FC = () => {
                                     <span className="fw-bold">Completa</span>
                                   </Button>
                                   <Button
-                                    variant="warning"
+                                    variant="outline-warning"
                                     className="d-flex align-items-center justify-content-center w-100 py-1"
                                     onClick={() => {
                                       setTipoPagoModal("parcial");
@@ -1318,7 +1320,7 @@ const InvoicesPackagePage: React.FC = () => {
                                   </Button>
                                 </div>
                                 <Button
-                                  variant="secondary"
+                                  variant="outline-secondary"
                                   className="d-flex align-items-center justify-content-center w-100 py-1"
                                   onClick={() => {
                                     setDescuentoSaldo(saldo);
@@ -1339,14 +1341,14 @@ const InvoicesPackagePage: React.FC = () => {
                         <Button
                           variant="primary"
                           size="sm"
-                          className="d-flex align-items-center fw-bold text-white"
+                          className="d-flex align-items-center fw-bold text-white btn-sm px-2 py-1"
                           onClick={() => {
                             navigator.clipboard.writeText(invoice.uuid);
                             toast.success("UUID copiado al portapapeles");
                           }}
                         >
                           <BsClipboard className="me-1" />
-                          COPIAR
+                          Copiar
                         </Button>
                       </td>
                       {/* Proveedor */}

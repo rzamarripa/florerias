@@ -69,8 +69,8 @@ export const createBudget = async (req, res) => {
           path: "expenseConceptId",
           populate: {
             path: "categoryId",
-            model: "cc_expense_concept_category"
-          }
+            model: "cc_expense_concept_category",
+          },
         });
 
       return res.json({
@@ -126,8 +126,8 @@ export const createBudget = async (req, res) => {
         path: "expenseConceptId",
         populate: {
           path: "categoryId",
-          model: "cc_expense_concept_category"
-        }
+          model: "cc_expense_concept_category",
+        },
       });
 
     res.status(201).json({
@@ -192,7 +192,8 @@ export const updateBudget = async (req, res) => {
           updateData.branchId !== undefined
             ? updateData.branchId
             : currentBudget.branchId,
-        expenseConceptId: updateData.expenseConceptId || currentBudget.expenseConceptId,
+        expenseConceptId:
+          updateData.expenseConceptId || currentBudget.expenseConceptId,
       };
 
       try {
@@ -218,8 +219,8 @@ export const updateBudget = async (req, res) => {
         path: "expenseConceptId",
         populate: {
           path: "categoryId",
-          model: "cc_expense_concept_category"
-        }
+          model: "cc_expense_concept_category",
+        },
       });
 
     if (!budget) {
@@ -296,9 +297,11 @@ export const getBudgetTree = async (req, res) => {
     }
 
     const categories = await Category.find({ isActive: true });
-    const expenseConcepts = await ExpenseConcept.find({ isActive: true }).populate({
+    const expenseConcepts = await ExpenseConcept.find({
+      isActive: true,
+    }).populate({
       path: "categoryId",
-      model: "cc_expense_concept_category"
+      model: "cc_expense_concept_category",
     });
     const budgets = await Budget.find({ month })
       .populate("categoryId")
@@ -310,8 +313,8 @@ export const getBudgetTree = async (req, res) => {
         path: "expenseConceptId",
         populate: {
           path: "categoryId",
-          model: "cc_expense_concept_category"
-        }
+          model: "cc_expense_concept_category",
+        },
       });
 
     const budgetMap = new Map();
@@ -450,7 +453,9 @@ export const getBudgetTree = async (req, res) => {
 
               // Agregar conceptos de gasto como hijos de cada ruta
               for (const expenseConcept of expenseConcepts) {
-                const budget = budgetMap.get(`route_${route._id}_expense_${expenseConcept._id}`);
+                const budget = budgetMap.get(
+                  `route_${route._id}_expense_${expenseConcept._id}`
+                );
                 const expenseConceptNode = {
                   id: `route_${route._id}_expense_${expenseConcept._id}`,
                   text: `${expenseConcept.categoryId.name} - ${expenseConcept.name}`,
@@ -539,7 +544,9 @@ export const getBudgetTree = async (req, res) => {
 
             // Agregar conceptos de gasto como hijos de cada sucursal (para categorías sin rutas)
             for (const expenseConcept of expenseConcepts) {
-              const budget = budgetMap.get(`branch_${branch._id}_expense_${expenseConcept._id}`);
+              const budget = budgetMap.get(
+                `branch_${branch._id}_expense_${expenseConcept._id}`
+              );
               const expenseConceptNode = {
                 id: `branch_${branch._id}_expense_${expenseConcept._id}`,
                 text: `${expenseConcept.categoryId.name} - ${expenseConcept.name}`,
@@ -608,7 +615,9 @@ export const getBudgetByBranch = async (req, res) => {
   try {
     const { companyId, branchId, month } = req.query;
     if (!companyId || !month) {
-      return res.status(400).json({ success: false, message: 'companyId y month son requeridos' });
+      return res
+        .status(400)
+        .json({ success: false, message: "companyId y month son requeridos" });
     }
     const filter = { companyId, month };
     if (branchId) {
@@ -616,10 +625,13 @@ export const getBudgetByBranch = async (req, res) => {
     }
     // Sumar todos los presupuestos asignados para la(s) sucursal(es) y mes
     const budgets = await Budget.find(filter);
-    const assignedAmount = budgets.reduce((sum, b) => sum + (b.assignedAmount || 0), 0);
+    const assignedAmount = budgets.reduce(
+      (sum, b) => sum + (b.assignedAmount || 0),
+      0
+    );
     res.status(200).json({ success: true, data: { assignedAmount } });
   } catch (error) {
-    console.error('Error en getBudgetByBranch:', error);
+    console.error("Error en getBudgetByBranch:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -632,13 +644,15 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
     if (!packageId) {
       return res.status(400).json({
         success: false,
-        message: "packageId es requerido"
+        message: "packageId es requerido",
       });
     }
 
     // Obtener el paquete con toda su información
     const InvoicesPackage = mongoose.model("cc_invoices_package");
-    const InvoicesPackageCompany = mongoose.model("rs_invoices_packages_companies");
+    const InvoicesPackageCompany = mongoose.model(
+      "rs_invoices_packages_companies"
+    );
     const ImportedInvoices = mongoose.model("cc_imported_invoices");
     const CashPayment = mongoose.model("cc_cash_payment");
     const ExpenseConcept = mongoose.model("cc_expense_concept");
@@ -648,17 +662,19 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
     if (!packageData) {
       return res.status(404).json({
         success: false,
-        message: "Paquete no encontrado"
+        message: "Paquete no encontrado",
       });
     }
 
     // Obtener la información de compañía/marca/sucursal del paquete
-    const packageCompanyInfo = await InvoicesPackageCompany.findByPackageId(packageId);
-    
+    const packageCompanyInfo = await InvoicesPackageCompany.findByPackageId(
+      packageId
+    );
+
     if (!packageCompanyInfo) {
       return res.status(404).json({
         success: false,
-        message: "Información de compañía del paquete no encontrada"
+        message: "Información de compañía del paquete no encontrada",
       });
     }
 
@@ -670,57 +686,57 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
 
     // Obtener todas las facturas del paquete con sus conceptos de gasto
     const facturas = await ImportedInvoices.find({
-      _id: { $in: packageData.facturas }
-    }).populate('conceptoGasto');
+      _id: { $in: packageData.facturas },
+    }).populate("conceptoGasto");
 
     // Obtener todos los pagos en efectivo del paquete con sus conceptos de gasto
     const pagosEfectivo = await CashPayment.find({
-      _id: { $in: packageData.pagosEfectivo || [] }
-    }).populate('expenseConcept');
+      _id: { $in: packageData.pagosEfectivo || [] },
+    }).populate("expenseConcept");
 
     // Agrupar pagos por concepto de gasto
     const pagosPorConcepto = new Map();
 
     // Procesar facturas
-    facturas.forEach(factura => {
+    facturas.forEach((factura) => {
       if (factura.conceptoGasto && factura.autorizada === true) {
         const conceptoId = factura.conceptoGasto._id.toString();
         if (!pagosPorConcepto.has(conceptoId)) {
           pagosPorConcepto.set(conceptoId, {
             concepto: factura.conceptoGasto,
             totalPagado: 0,
-            pagos: []
+            pagos: [],
           });
         }
         const conceptoData = pagosPorConcepto.get(conceptoId);
         conceptoData.totalPagado += factura.importePagado || 0;
         conceptoData.pagos.push({
-          tipo: 'factura',
+          tipo: "factura",
           id: factura._id,
           monto: factura.importePagado || 0,
-          descripcion: factura.nombreEmisor
+          descripcion: factura.nombreEmisor,
         });
       }
     });
 
     // Procesar pagos en efectivo
-    pagosEfectivo.forEach(pago => {
+    pagosEfectivo.forEach((pago) => {
       if (pago.expenseConcept && pago.autorizada === true) {
         const conceptoId = pago.expenseConcept._id.toString();
         if (!pagosPorConcepto.has(conceptoId)) {
           pagosPorConcepto.set(conceptoId, {
             concepto: pago.expenseConcept,
             totalPagado: 0,
-            pagos: []
+            pagos: [],
           });
         }
         const conceptoData = pagosPorConcepto.get(conceptoId);
         conceptoData.totalPagado += pago.importePagado || 0;
         conceptoData.pagos.push({
-          tipo: 'efectivo',
+          tipo: "efectivo",
           id: pago._id,
           monto: pago.importePagado || 0,
-          descripcion: pago.description || 'Pago en efectivo'
+          descripcion: pago.description || "Pago en efectivo",
         });
       }
     });
@@ -734,9 +750,9 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
       // Buscar presupuesto según si la categoría tiene rutas o no
       const Category = mongoose.model("cc_category");
       const categoria = await Category.findById(data.concepto.categoryId);
-      
+
       let presupuesto = null;
-      
+
       if (categoria && categoria.hasRoutes) {
         // Si tiene rutas, buscar en todas las rutas de la sucursal/marca
         const Route = mongoose.model("cc_route");
@@ -753,7 +769,7 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
           const budget = await Budget.findOne({
             routeId: route._id,
             expenseConceptId: conceptoId,
-            month: monthFormatted
+            month: monthFormatted,
           });
           if (budget) {
             totalPresupuesto += budget.assignedAmount || 0;
@@ -769,7 +785,7 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
           categoryId: data.concepto.categoryId,
           expenseConceptId: conceptoId,
           month: monthFormatted,
-          routeId: null
+          routeId: null,
         });
         presupuesto = budget ? budget.assignedAmount || 0 : 0;
       }
@@ -783,13 +799,13 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
         concepto: {
           _id: data.concepto._id,
           name: data.concepto.name,
-          categoryName: data.concepto.categoryId?.name || 'N/A'
+          categoryName: data.concepto.categoryId?.name || "N/A",
         },
         presupuestoAsignado: presupuesto,
         totalPagado: data.totalPagado,
         diferencia: data.totalPagado - presupuesto,
         excede: excede,
-        pagos: data.pagos
+        pagos: data.pagos,
       });
     }
 
@@ -802,23 +818,22 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
         validaciones,
         resumen: {
           conceptosValidados: validaciones.length,
-          conceptosExcedidos: validaciones.filter(v => v.excede).length,
+          conceptosExcedidos: validaciones.filter((v) => v.excede).length,
           totalExceso: validaciones
-            .filter(v => v.excede)
-            .reduce((sum, v) => sum + v.diferencia, 0)
-        }
+            .filter((v) => v.excede)
+            .reduce((sum, v) => sum + v.diferencia, 0),
+        },
       },
-      message: requiereAutorizacion 
-        ? "Algunos conceptos exceden su presupuesto asignado" 
-        : "Todos los conceptos están dentro del presupuesto"
+      message: requiereAutorizacion
+        ? "Algunos conceptos exceden su presupuesto asignado"
+        : "Todos los conceptos están dentro del presupuesto",
     });
-
   } catch (error) {
     console.error("Error en validatePackageBudgetByExpenseConcept:", error);
     res.status(500).json({
       success: false,
       message: "Error al validar presupuesto por concepto de gasto",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -831,14 +846,14 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
     if (!companyId || !brandIds || !month) {
       return res.status(400).json({
         success: false,
-        message: "companyId, brandIds y month son requeridos"
+        message: "companyId, brandIds y month son requeridos",
       });
     }
 
     if (!/^\d{4}-\d{2}$/.test(month)) {
       return res.status(400).json({
         success: false,
-        message: "Formato de mes inválido. Use YYYY-MM"
+        message: "Formato de mes inválido. Use YYYY-MM",
       });
     }
 
@@ -855,7 +870,7 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
     }
 
     // Convertir brandIds de string a array
-    const brandIdsArray = brandIds.split(',');
+    const brandIdsArray = brandIds.split(",");
 
     // Array para almacenar cada combinación sucursal-marca como elemento separado
     const branchBudgetResults = [];
@@ -883,7 +898,6 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
           continue;
         }
       }
-
       // Obtener relaciones branch-brand para esta marca específica
       const branchBrandRelations = await mongoose
         .model("rs_branch_brand")
@@ -894,8 +908,7 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
 
       // Filtrar sucursales que pertenezcan a la compañía
       const relevantBranches = branchBrandRelations.filter(
-        (rel) =>
-          rel.branchId?.companyId?.toString() === companyId
+        (rel) => rel.branchId?.companyId?.toString() === companyId
       );
 
       // Procesar cada sucursal
@@ -928,9 +941,9 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
           for (const route of routes) {
             const budget = await Budget.findOne({
               routeId: route._id,
-              month: month
+              month: month,
             });
-            
+
             if (budget) {
               branchAmount += budget.assignedAmount || 0;
             }
@@ -943,9 +956,9 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
             branchId: branch._id,
             categoryId: category._id,
             month: month,
-            routeId: null
+            routeId: null,
           });
-          
+
           if (budget) {
             branchAmount = budget.assignedAmount || 0;
           }
@@ -956,14 +969,14 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
           branchBudgetResults.push({
             branchId: {
               _id: branch._id.toString(),
-              name: branch.name
+              name: branch.name,
             },
             brandId: {
               _id: brandId,
-              name: brand.name
+              name: brand.name,
             },
             assignedAmount: branchAmount,
-            hasRoutes: category.hasRoutes
+            hasRoutes: category.hasRoutes,
           });
         }
       }
@@ -972,15 +985,14 @@ export const getBudgetByCompanyForBranches = async (req, res) => {
     res.json({
       success: true,
       data: branchBudgetResults,
-      message: "Presupuestos por sucursal obtenidos exitosamente"
+      message: "Presupuestos por sucursal obtenidos exitosamente",
     });
-
   } catch (error) {
     console.error("Error obteniendo presupuestos por sucursal:", error);
     res.status(500).json({
       success: false,
       message: "Error obteniendo presupuestos por sucursal",
-      error: error.message
+      error: error.message,
     });
   }
 };
