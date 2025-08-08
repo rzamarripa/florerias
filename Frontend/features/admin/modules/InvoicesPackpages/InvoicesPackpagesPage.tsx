@@ -434,7 +434,6 @@ const InvoicesPackagePage: React.FC = () => {
           .join(",");
       }
 
-
       const startDate = new Date(selectedYear, selectedMonth, 1);
       const endDate = new Date(
         selectedYear,
@@ -1137,6 +1136,7 @@ const InvoicesPackagePage: React.FC = () => {
 
                         // Para nuevo paquete, solo permitir:
                         // 1. Facturas con pagos temporales (seleccionadas por el usuario)
+                        // 2. Facturas rechazadas (pueden volver a ser pagadas)
                         // 2. Facturas rechazadas (pueden volver a ser pagadas)
                         return hasTempPayment || esRechazada;
                       });
