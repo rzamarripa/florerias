@@ -971,4 +971,38 @@ export const generateExcelReport = async (data: ReportRow[], fileName: string = 
     link.download = fileName;
     link.click();
     window.URL.revokeObjectURL(url);
+};
+
+// Servicio para eliminar una factura específica del arreglo embebido en el paquete
+export const removeInvoiceFromPackage = async (packageId: string, invoiceId: string): Promise<{ success: boolean; message: string; data?: any }> => {
+    try {
+        const response = await apiCall<any>(`/invoices-package/${packageId}/invoices/${invoiceId}`, {
+            method: "DELETE",
+        });
+        return {
+            success: response.success,
+            message: response.message,
+            data: response.data
+        };
+    } catch (error: any) {
+        console.error('Error al eliminar factura del paquete:', error);
+        throw new Error(error?.message || 'Error al eliminar la factura del paquete');
+    }
+};
+
+// Servicio para eliminar un pago en efectivo específico del arreglo embebido en el paquete
+export const removeCashPaymentFromPackage = async (packageId: string, cashPaymentId: string): Promise<{ success: boolean; message: string; data?: any }> => {
+    try {
+        const response = await apiCall<any>(`/invoices-package/${packageId}/cash-payments/${cashPaymentId}`, {
+            method: "DELETE",
+        });
+        return {
+            success: response.success,
+            message: response.message,
+            data: response.data
+        };
+    } catch (error: any) {
+        console.error('Error al eliminar pago en efectivo del paquete:', error);
+        throw new Error(error?.message || 'Error al eliminar el pago en efectivo del paquete');
+    }
 }; 

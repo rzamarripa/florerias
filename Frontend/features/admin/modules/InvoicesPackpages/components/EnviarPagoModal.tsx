@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Table, Alert, Row, Col } from "react-bootstrap";
+import { Modal, Button, Form, Table, Row, Col } from "react-bootstrap";
 import { FiTrash2 } from "react-icons/fi";
 import { BsClipboard } from "react-icons/bs";
 import { useUserSessionStore } from "@/stores/userSessionStore";
@@ -8,10 +8,11 @@ import {
   updateInvoicesPackage,
   markInvoiceAsFullyPaid,
   markInvoiceAsPartiallyPaid,
+  removeInvoiceFromPackage,
+  removeCashPaymentFromPackage,
 } from "../services/invoicesPackpage";
 import { getNextThursdayOfWeek } from "@/utils/dateUtils";
 import { toast } from "react-toastify";
-import CashPaymentsInPackageTable from "../../cashPayments/components/CashPaymentsInPackageTable";
 
 interface FacturaProcesada {
   _id: string;
@@ -87,6 +88,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   tempPayments,
   tempCashPayments,
   onRemoveTempPayment,
+  onRemoveTempCashPayment,
   onCancel,
 }) => {
   const [fechaPago, setFechaPago] = useState<string>(
@@ -104,12 +106,35 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useUserSessionStore();
 
+  // Estados para rastrear eliminaciones diferidas en modo edición
+  const [facturasToRemove, setFacturasToRemove] = useState<string[]>([]);
+  const [cashPaymentsToRemove, setCashPaymentsToRemove] = useState<string[]>(
+    []
+  );
+
+  // Estado para controlar si el modal ya fue inicializado para evitar resets no deseados
+  const [modalInitialized, setModalInitialized] = useState<boolean>(false);
+
   useEffect(() => {
-    // Si es un paquete existente, mostrar todas las facturas del paquete
-    // Si es un nuevo paquete, mostrar las facturas pasadas como prop
-    const facturasAMostrar = paqueteExistente
-      ? paqueteExistente.facturas
-      : facturas;
+    // Combinar facturas del paquete existente con las facturas nuevas seleccionadas
+    let facturasAMostrar = [];
+
+    if (paqueteExistente) {
+      // Empezar con las facturas del paquete existente
+      facturasAMostrar = [...paqueteExistente.facturas];
+
+      // Agregar facturas nuevas que no estén ya en el paquete
+      const facturaIdsExistentes = paqueteExistente.facturas.map(
+        (f: any) => f._id
+      );
+      const facturasNuevas = facturas.filter(
+        (f) => !facturaIdsExistentes.includes(f._id)
+      );
+      facturasAMostrar = [...facturasAMostrar, ...facturasNuevas];
+    } else {
+      // Si es un nuevo paquete, mostrar solo las facturas pasadas como prop
+      facturasAMostrar = facturas;
+    }
 
     // Agrega la propiedad guardada a cada factura
     const facturasConEstado = facturasAMostrar.map((f: any) => {
@@ -133,8 +158,75 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       };
     });
 
-    setFacturasLocal(facturasConEstado);
-  }, [facturas, paqueteExistente, tempPayments]);
+    // Solo actualizar si es la primera carga del modal (evitar resets cuando se eliminan facturas)
+    if (!modalInitialized) {
+      setFacturasLocal(facturasConEstado);
+      setModalInitialized(true);
+    }
+  }, [facturas, paqueteExistente, tempPayments, modalInitialized]);
+
+  // useEffect adicional para asegurar sincronización cuando se abre/cierra el modal
+  useEffect(() => {
+    if (show) {
+      // Limpiar listas de eliminaciones diferidas al abrir el modal
+      setFacturasToRemove([]);
+      setCashPaymentsToRemove([]);
+      // Resetear el flag de inicialización para permitir nueva carga
+      setModalInitialized(false);
+      // Cuando se abre el modal, sincronizar inmediatamente el estado local
+      // Usar la misma lógica que en el primer useEffect para combinar facturas
+      let facturasAMostrar = [];
+      if (paqueteExistente) {
+        // Empezar con las facturas del paquete existente
+        facturasAMostrar = [...paqueteExistente.facturas];
+
+        // Agregar facturas nuevas que no estén ya en el paquete
+        const facturaIdsExistentes = paqueteExistente.facturas.map(
+          (f: any) => f._id
+        );
+        const facturasNuevas = facturas.filter(
+          (f) => !facturaIdsExistentes.includes(f._id)
+        );
+        facturasAMostrar = [...facturasAMostrar, ...facturasNuevas];
+      } else {
+        // Si es un nuevo paquete, mostrar solo las facturas pasadas como prop
+        facturasAMostrar = facturas;
+      }
+
+      const facturasConEstado = facturasAMostrar.map((f: any) => {
+        let importePagadoCalculado = f.importePagado;
+        if (tempPayments && tempPayments[f._id]) {
+          const tempPayment = tempPayments[f._id];
+          if (tempPayment.tipoPago === "completo") {
+            importePagadoCalculado = f.importeAPagar;
+          } else if (tempPayment.tipoPago === "parcial" && tempPayment.monto) {
+            importePagadoCalculado =
+              tempPayment.originalImportePagado + tempPayment.monto;
+          }
+        }
+
+        return {
+          ...f,
+          guardada: paqueteExistente ? true : false,
+          completamentePagada: importePagadoCalculado >= f.importeAPagar,
+          importePagado: importePagadoCalculado,
+        };
+      });
+
+      setFacturasLocal(facturasConEstado);
+
+      // También sincronizar pagos en efectivo
+      const pagosEfectivoExistentes = paqueteExistente?.pagosEfectivo || [];
+      const pagosEfectivoCombinados = [
+        ...pagosEfectivoExistentes,
+        ...(tempCashPayments || []),
+      ];
+      setPagosEfectivoLocal(pagosEfectivoCombinados);
+    } else {
+      // Cuando se cierra el modal, resetear el flag de inicialización
+      setModalInitialized(false);
+    }
+  }, [show, facturas, paqueteExistente, tempPayments, tempCashPayments]);
 
   useEffect(() => {
     const pagosEfectivoExistentes = paqueteExistente?.pagosEfectivo || [];
@@ -144,6 +236,27 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
     ];
     setPagosEfectivoLocal(pagosEfectivoCombinados);
   }, [paqueteExistente, tempCashPayments]);
+
+  // Nuevo useEffect para sincronizar cuando se eliminan pagos temporales
+  useEffect(() => {
+    if (tempPayments) {
+      // Filtrar facturas que ya no están en tempPayments
+      setFacturasLocal((prev) => {
+        // Si no hay facturas en el estado local, no hacer nada
+        if (prev.length === 0) return prev;
+
+        return prev.filter((f) => {
+          // Para paquetes existentes: mantener facturas guardadas o que están en tempPayments
+          if (paqueteExistente) {
+            return f.guardada || tempPayments[f._id];
+          }
+
+          // Para nuevos paquetes: mantener facturas que están en tempPayments o que no son temporales
+          return tempPayments[f._id] || !f.guardada;
+        });
+      });
+    }
+  }, [tempPayments, paqueteExistente]);
 
   useEffect(() => {
     if (paqueteExistente?.fechaPago) {
@@ -166,12 +279,85 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
     }
   }, [paqueteExistente, show, isNewPackage]);
 
-  const handleRemoveFactura = (id: string) => {
-    setFacturasLocal((prev) => prev.filter((f) => f._id !== id));
+  const handleRemoveFactura = async (id: string) => {
+    const factura = facturasLocal.find((f) => f._id === id);
+    if (!factura) return;
 
-    // Si la factura tiene un pago temporal, también eliminarlo del state principal
-    if (tempPayments && tempPayments[id] && onRemoveTempPayment) {
-      onRemoveTempPayment(id);
+    // Verificar si es un pago temporal
+    const isTemporary = tempPayments && tempPayments[id];
+    console.log("isTemporary for", id, ":", Boolean(isTemporary));
+
+    if (isTemporary) {
+      // Eliminar inmediatamente del estado local para eliminación visual instantánea
+      setFacturasLocal((prev) => prev.filter((f) => f._id !== id));
+
+      // Llamar al callback para eliminar el pago temporal del state principal
+      if (onRemoveTempPayment) {
+        onRemoveTempPayment(id);
+        console.log("onRemoveTempPayment", id);
+      }
+    } else {
+      // Para facturas guardadas, verificar si se puede eliminar
+      if (canRemovePayment(false)) {
+        if (paqueteExistente && paqueteExistente._id) {
+          // HAY PAQUETE EXISTENTE: Usar eliminación diferida (eliminar solo del estado local hasta guardar)
+          setFacturasLocal((prev) => prev.filter((f) => f._id !== id));
+          setFacturasToRemove((prev) => [...prev, id]);
+          console.log("Factura marcada para eliminación diferida:", id);
+        } else {
+          // NO HAY PAQUETE EXISTENTE: Solo eliminar del estado local
+          setFacturasLocal((prev) => prev.filter((f) => f._id !== id));
+          console.log("Factura eliminada del estado local:", id);
+        }
+      }
+    }
+  };
+
+  // Función para verificar si un pago se puede eliminar
+  const canRemovePayment = (isTemporary = false) => {
+    // Los pagos temporales siempre se pueden eliminar
+    if (isTemporary) {
+      return true;
+    }
+
+    // Para facturas procesadas en paquetes existentes:
+    // Solo se pueden eliminar si el paquete está en estatus "Borrador"
+    const packageIsDraft = paqueteExistente?.estatus === "Borrador";
+
+    return packageIsDraft;
+  };
+
+  const handleRemoveCashPayment = async (pagoId: string) => {
+    // Verificar si es un pago temporal
+    const isTemporary =
+      tempCashPayments && tempCashPayments.some((p) => p._id === pagoId);
+
+    if (isTemporary) {
+      // Eliminar inmediatamente del estado local para evitar parpadeos visuales
+      setPagosEfectivoLocal((prev) => prev.filter((p) => p._id !== pagoId));
+
+      // Llamar al callback para eliminar el pago temporal del state principal
+      if (onRemoveTempCashPayment) {
+        onRemoveTempCashPayment(pagoId);
+      }
+    } else {
+      // Para pagos guardados, verificar si se puede eliminar
+      const pago = pagosEfectivoLocal.find((p) => p._id === pagoId);
+      if (pago && canRemovePayment(false)) {
+        if (paqueteExistente && paqueteExistente._id) {
+          // HAY PAQUETE EXISTENTE: Usar eliminación diferida (eliminar solo del estado local hasta guardar)
+          setPagosEfectivoLocal((prev) => prev.filter((p) => p._id !== pagoId));
+          setCashPaymentsToRemove((prev) => [...prev, pagoId]);
+          console.log(
+            "Pago en efectivo marcado para eliminación diferida:",
+            pagoId
+          );
+        } else {
+          // NO HAY PAQUETE EXISTENTE: Solo eliminar del estado local
+          setPagosEfectivoLocal((prev) => prev.filter((p) => p._id !== pagoId));
+          console.log("Pago en efectivo eliminado del estado local:", pagoId);
+        }
+      }
     }
   };
 
@@ -320,6 +506,50 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         }
       }
 
+      // PASO 1.5: Procesar eliminaciones diferidas si hay paquete existente
+      if (paqueteExistente && paqueteExistente._id) {
+        // Eliminar facturas marcadas para eliminación
+        for (const facturaId of facturasToRemove) {
+          try {
+            await removeInvoiceFromPackage(paqueteExistente._id, facturaId);
+            console.log("Factura eliminada del backend (diferida):", facturaId);
+          } catch (error: any) {
+            console.error("Error al eliminar factura diferida:", error);
+            // Si el error es 404 (no encontrada), puede ser que ya fue eliminada - continuar
+            if (!error.message?.includes("no encontrada")) {
+              console.error("Error inesperado:", error);
+            }
+          }
+        }
+
+        // Eliminar pagos en efectivo marcados para eliminación
+        for (const cashPaymentId of cashPaymentsToRemove) {
+          try {
+            await removeCashPaymentFromPackage(
+              paqueteExistente._id,
+              cashPaymentId
+            );
+            console.log(
+              "Pago en efectivo eliminado del backend (diferido):",
+              cashPaymentId
+            );
+          } catch (error: any) {
+            console.error(
+              "Error al eliminar pago en efectivo diferido:",
+              error
+            );
+            // Si el error es 404 (no encontrado), puede ser que ya fue eliminado - continuar
+            if (!error.message?.includes("no encontrado")) {
+              console.error("Error inesperado:", error);
+            }
+          }
+        }
+
+        // Limpiar las listas de eliminaciones después de procesarlas
+        setFacturasToRemove([]);
+        setCashPaymentsToRemove([]);
+      }
+
       // PASO 2: Crear o actualizar paquete de facturas (POST)
       // Usar la fecha seleccionada por el usuario
       const fechaPagoParaGuardar = fechaPago;
@@ -371,17 +601,72 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         const response = await createInvoicesPackage(dataToSend);
         packpageId = response?.data?._id;
       } else if (paqueteExistente) {
-        const response = await updateInvoicesPackage(paqueteExistente._id, {
-          facturas: facturasLocal.map((f) => f._id),
-          pagosEfectivo: pagosEfectivoParaEnviar,
-          comentario,
-          fechaPago: fechaPagoParaGuardar,
-          companyId: selectedCompanyId,
-          brandId: selectedBrandId,
-          branchId: selectedBranchId,
-          conceptosGasto,
-        });
-        packpageId = response?.data?._id;
+        // Verificar si hay nuevas facturas o pagos en efectivo para agregar
+        const facturasOriginales = paqueteExistente.facturas.map(
+          (f: any) => f._id
+        );
+        const facturasActuales = facturasLocal.map((f) => f._id);
+        const nuevasFacturas = facturasActuales.filter(
+          (id) => !facturasOriginales.includes(id)
+        );
+
+        const pagosOriginales =
+          paqueteExistente.pagosEfectivo?.map((p: any) => p._id) || [];
+        const nuevosPagos = pagosEfectivoParaEnviar.filter(
+          (p) =>
+            !p._id ||
+            p._id.startsWith("temp_") ||
+            !pagosOriginales.includes(p._id)
+        );
+
+        // Solo llamar updateInvoicesPackage si hay nuevos elementos o cambios en metadatos
+        const hayNuevasFacturas = nuevasFacturas.length > 0;
+        const hayNuevosPagos = nuevosPagos.length > 0;
+        const hayNuevosPagosTemporales = pagosEfectivoParaEnviar.some(
+          (p) => !p._id || p._id.startsWith("temp_")
+        );
+        const hayCambiosMetadatos =
+          comentario !== paqueteExistente.comentario ||
+          fechaPagoParaGuardar !== paqueteExistente.fechaPago ||
+          (tempPayments && Object.keys(tempPayments).length > 0);
+
+        if (
+          hayNuevasFacturas ||
+          hayNuevosPagos ||
+          hayNuevosPagosTemporales ||
+          hayCambiosMetadatos
+        ) {
+          const updateData: any = {
+            comentario,
+            fechaPago: fechaPagoParaGuardar,
+            companyId: selectedCompanyId,
+            brandId: selectedBrandId,
+            branchId: selectedBranchId,
+          };
+
+          // Solo enviar facturas si hay nuevas facturas
+          if (hayNuevasFacturas) {
+            updateData.facturas = nuevasFacturas;
+            updateData.conceptosGasto = conceptosGasto;
+          }
+
+          // Solo enviar pagos en efectivo si hay nuevos pagos
+          if (hayNuevosPagos || hayNuevosPagosTemporales) {
+            updateData.pagosEfectivo = nuevosPagos;
+          }
+
+          const response = await updateInvoicesPackage(
+            paqueteExistente._id,
+            updateData
+          );
+          packpageId = response?.data?._id;
+        } else {
+          // Solo hubo eliminaciones, no es necesario llamar updateInvoicesPackage
+          packpageId = paqueteExistente._id;
+          console.log(
+            "Solo se procesaron eliminaciones, no se requiere actualización del paquete"
+          );
+        }
       }
 
       // PASO 3: La relación InvoicesPackageCompany se crea automáticamente en el backend
@@ -456,17 +741,6 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
             </Col>
           </Row>
 
-          {paqueteExistente && facturasLocal.length === 0 && (
-            <Alert variant="warning" className="mb-3">
-              <b>No hay facturas nuevas para agregar:</b>
-              <p className="mb-0 mt-2">
-                Todas las facturas seleccionadas ya están incluidas en este
-                paquete existente. No se pueden agregar facturas duplicadas al
-                mismo paquete.
-              </p>
-            </Alert>
-          )}
-
           {/* Tabs de facturas y pagos en efectivo */}
           <ul className="nav nav-tabs mb-3">
             <li className="nav-item">
@@ -514,7 +788,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                       <th>Estatus</th>
                       <th>Fecha Cancelación</th>
                       <th>Saldo</th>
-                      <th>Importe Pagado</th>
+                      <th>Importe A Pagar </th>
                       <th className="text-center">Acciones</th>
                     </tr>
                   </thead>
@@ -689,15 +963,39 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                           </td>
                           {/* Acciones */}
                           <td className="text-center align-middle">
-                            <button
-                              className="btn btn-light btn-icon btn-sm rounded-circle"
-                              onClick={() => handleRemoveFactura(f._id)}
-                              title="Eliminar"
-                              type="button"
-                              tabIndex={0}
-                            >
-                              <FiTrash2 size={16} />
-                            </button>
+                            {(() => {
+                              const isTemporary =
+                                tempPayments && tempPayments[f._id];
+                              const canRemove =
+                                isTemporary || canRemovePayment(false);
+
+                              return canRemove ? (
+                                <button
+                                  className="btn btn-light btn-icon btn-sm rounded-circle"
+                                  onClick={() => handleRemoveFactura(f._id)}
+                                  title={
+                                    isTemporary
+                                      ? "Eliminar pago temporal"
+                                      : "Eliminar pago"
+                                  }
+                                  type="button"
+                                  tabIndex={0}
+                                >
+                                  <FiTrash2 size={16} />
+                                </button>
+                              ) : (
+                                <button
+                                  className="btn btn-light btn-icon btn-sm rounded-circle"
+                                  disabled
+                                  title="No se puede eliminar este pago"
+                                  type="button"
+                                  tabIndex={-1}
+                                  style={{ opacity: 0.3 }}
+                                >
+                                  <FiTrash2 size={16} />
+                                </button>
+                              );
+                            })()}
                           </td>
                         </tr>
                       );
@@ -730,14 +1028,109 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
               }`}
               id="pagosEfectivo"
             >
-              <CashPaymentsInPackageTable
-                pagos={pagosEfectivoLocal}
-                onAuthorize={() => {}} // No hay autorización en el modal
-                onReject={() => {}} // No hay rechazo en el modal
-                loading={false}
-                packageStatus="Borrador"
-                showActions={false}
-              />
+              <div className="table-responsive">
+                <Table responsive className="mb-0">
+                  <thead className="bg-light">
+                    <tr>
+                      <th>#</th>
+                      <th>Concepto de Gasto</th>
+                      <th>Descripción</th>
+                      <th>Estatus</th>
+                      <th>Importe a Pagar</th>
+                      <th className="text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagosEfectivoLocal.map((pago, idx) => (
+                      <tr
+                        key={pago._id}
+                        className={idx % 2 === 1 ? "bg-pink bg-opacity-25" : ""}
+                      >
+                        <td>{idx + 1}</td>
+                        <td>
+                          <div className="d-flex flex-column gap-1">
+                            <strong>{pago.expenseConcept.name}</strong>
+                            {pago.expenseConcept.categoryId && (
+                              <small className="text-muted">
+                                {pago.expenseConcept.categoryId.name}
+                              </small>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          {pago.description || (
+                            <span className="text-muted">Sin descripción</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className="badge bg-success bg-opacity-10 text-success fw-bold">
+                            <i className="bi bi-check-circle me-1"></i>
+                            Vigente
+                          </span>
+                        </td>
+                        <td>
+                          <span className="fw-bold text-success">
+                            {pago.importeAPagar.toLocaleString("es-MX", {
+                              style: "currency",
+                              currency: "MXN",
+                            })}
+                          </span>
+                        </td>
+                        <td className="text-center align-middle">
+                          {(() => {
+                            const isTemporary =
+                              tempCashPayments &&
+                              tempCashPayments.some((p) => p._id === pago._id);
+                            const canRemove =
+                              isTemporary || canRemovePayment(false);
+
+                            return canRemove ? (
+                              <button
+                                className="btn btn-light btn-icon btn-sm rounded-circle"
+                                onClick={() =>
+                                  handleRemoveCashPayment(pago._id)
+                                }
+                                title={
+                                  isTemporary
+                                    ? "Eliminar pago temporal"
+                                    : "Eliminar pago"
+                                }
+                                type="button"
+                                tabIndex={0}
+                              >
+                                <FiTrash2 size={16} />
+                              </button>
+                            ) : (
+                              <button
+                                className="btn btn-light btn-icon btn-sm rounded-circle"
+                                disabled
+                                title="No se puede eliminar este pago"
+                                type="button"
+                                tabIndex={-1}
+                                style={{ opacity: 0.3 }}
+                              >
+                                <FiTrash2 size={16} />
+                              </button>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="fw-bold text-left">
+                      <td className="text-end" colSpan={4}>
+                        Total a pagar
+                      </td>
+                      <td className="text-end">
+                        {calcularTotalesPagosEfectivo().total.toLocaleString(
+                          "es-MX",
+                          { style: "currency", currency: "MXN" }
+                        )}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </Table>
+              </div>
             </div>
           </div>
         </>
@@ -755,13 +1148,19 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
           onClick={handleGuardar}
           disabled={
             (facturasLocal.length === 0 &&
-              (!tempCashPayments || tempCashPayments.length === 0)) ||
+              (!tempCashPayments || tempCashPayments.length === 0) &&
+              pagosEfectivoLocal.length === 0 &&
+              facturasToRemove.length === 0 &&
+              cashPaymentsToRemove.length === 0) ||
             isSubmitting
           }
           title={
             facturasLocal.length === 0 &&
-            (!tempCashPayments || tempCashPayments.length === 0)
-              ? "No hay facturas o pagos en efectivo para agregar al paquete"
+            (!tempCashPayments || tempCashPayments.length === 0) &&
+            pagosEfectivoLocal.length === 0 &&
+            facturasToRemove.length === 0 &&
+            cashPaymentsToRemove.length === 0
+              ? "No hay cambios para guardar"
               : isSubmitting
               ? "Procesando..."
               : ""

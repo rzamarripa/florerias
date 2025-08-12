@@ -333,7 +333,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                   <th>Estado</th>
                   <th>Autorización</th>
                   <th>Pagos Totales</th>
-                  <th>Total A Pagar</th>
+                  <th>Imorte A Pagar</th>
                   <th>Fecha Pago</th>
                   <th>Fecha Creación</th>
                   <th className="text-center">Acciones</th>

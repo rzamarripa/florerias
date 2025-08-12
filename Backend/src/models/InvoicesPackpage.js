@@ -370,7 +370,7 @@ const InvoicesPackageSchema = new mongoose.Schema(
     totalFacturas: {
       type: Number,
       required: true,
-      min: 1,
+      min: 0,
       default: 0,
     },
     active: {
@@ -683,19 +683,8 @@ InvoicesPackageSchema.pre("save", function (next) {
     this.totalPagado = this.totalImporteAPagar;
   }
 
-  const tieneFacturas = this.facturas && this.facturas.length > 0;
-  const tienePagosEfectivo =
-    this.pagosEfectivo &&
-    Array.isArray(this.pagosEfectivo) &&
-    this.pagosEfectivo.length > 0;
-
-  if (!tieneFacturas && !tienePagosEfectivo) {
-    return next(
-      new Error(
-        "El paquete debe contener al menos una factura o un pago en efectivo"
-      )
-    );
-  }
+  // Se permite que los paquetes estén vacíos (sin facturas ni pagos en efectivo)
+  // Esta validación se eliminó para permitir eliminaciones completas
 
   const uuids = this.facturas.map((factura) => factura.uuid);
   const ids = this.facturas.map((factura) => factura._id.toString());

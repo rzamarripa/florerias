@@ -4,7 +4,7 @@ import CountUp from "react-countup";
 
 interface BudgetStatisticCardProps {
   title: string;
-  subtitle: string;
+  subtitle: string | React.ReactNode;
   stats: string | number;
   icon: React.ReactNode;
   variant?: string;

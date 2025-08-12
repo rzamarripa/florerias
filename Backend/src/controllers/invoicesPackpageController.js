@@ -276,10 +276,19 @@ export const createInvoicesPackage = async (req, res) => {
     // Obtener el paquete con las facturas embebidas
     const paqueteCompleto = await InvoicesPackage.findById(
       paqueteGuardado._id
-    ).populate({
-      path: "packageCompanyId",
-      populate: ["companyId", "brandId", "branchId"],
-    });
+    )
+      .populate({
+        path: "packageCompanyId",
+        populate: ["companyId", "brandId", "branchId"],
+      })
+      .populate({
+        path: "pagosEfectivo.expenseConcept",
+        select: "name description",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
+      });
 
     res.status(201).json({
       success: true,
@@ -324,6 +333,14 @@ export const getInvoicesPackages = async (req, res) => {
         path: "packageCompanyId",
         populate: ["companyId", "brandId", "branchId"],
       })
+      .populate({
+        path: "pagosEfectivo.expenseConcept",
+        select: "name description",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
+      })
       .sort(sortOptions)
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -361,10 +378,19 @@ export const getInvoicesPackageById = async (req, res) => {
     const { id } = req.params;
     console.log("Buscando paquete con ID:", id);
 
-    const paquete = await InvoicesPackage.findById(id).populate({
-      path: "packageCompanyId",
-      populate: ["companyId", "brandId", "branchId"],
-    });
+    const paquete = await InvoicesPackage.findById(id)
+      .populate({
+        path: "packageCompanyId",
+        populate: ["companyId", "brandId", "branchId"],
+      })
+      .populate({
+        path: "pagosEfectivo.expenseConcept",
+        select: "name description",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
+      });
 
     if (!paquete) {
       return res.status(404).json({
@@ -572,7 +598,7 @@ export const updateInvoicesPackage = async (req, res) => {
         (facturaId) => !facturasActualesIds.includes(facturaId.toString())
       );
 
-      // Permitir actualizar facturas existentes (pagos parciales acumulativos)
+      // NUEVA LÓGICA: Permitir pagos parciales acumulativos para la misma factura en el mismo paquete
       // Solo rechazar si se intenta agregar exactamente las mismas facturas sin cambios en importePagado
       const facturasYaEnPaqueteConMismoImporte = facturas.filter((facturaId) => {
         const facturaIdStr = facturaId.toString();
@@ -580,7 +606,7 @@ export const updateInvoicesPackage = async (req, res) => {
         
         if (!yaEstaEnPaquete) return false;
 
-        // Verificar si el importePagado es diferente (permitir actualizaciones)
+        // Verificar si el importePagado es diferente (permitir actualizaciones/acumulaciones)
         const facturaEnPaquete = paqueteExistente.facturas.find(
           (f) => f._id.toString() === facturaIdStr
         );
@@ -590,15 +616,31 @@ export const updateInvoicesPackage = async (req, res) => {
 
         if (!facturaEnPaquete || !facturaNueva) return false;
 
-        // Si el importePagado es diferente, permitir la actualización
-        return facturaEnPaquete.importePagado === facturaNueva.importePagado;
+        // CAMBIO IMPORTANTE: Permitir si el importePagado es MAYOR (acumulación de pagos parciales)
+        // Solo rechazar si es exactamente igual (sin cambios)
+        const importePagadoAnterior = parseFloat(facturaEnPaquete.importePagado) || 0;
+        const importePagadoNuevo = parseFloat(facturaNueva.importePagado) || 0;
+        
+        console.log(`🔍 Validando factura ${facturaIdStr} para acumulación:`, {
+          importePagadoAnterior,
+          importePagadoNuevo,
+          diferencia: importePagadoNuevo - importePagadoAnterior,
+          permitirActualizacion: importePagadoNuevo > importePagadoAnterior
+        });
+
+        // Solo rechazar si no hay cambio en el importePagado (esto evita duplicados sin cambios)
+        return importePagadoNuevo === importePagadoAnterior;
       });
 
       if (facturasYaEnPaqueteConMismoImporte.length > 0) {
+        const facturasAfectadas = facturasYaEnPaqueteConMismoImporte.map(facturaId => {
+          const facturaEnPaquete = paqueteExistente.facturas.find(f => f._id.toString() === facturaId.toString());
+          return facturaEnPaquete?.uuid || facturaId;
+        }).join(', ');
+        
         return res.status(400).json({
           success: false,
-          message:
-            "No se pueden agregar facturas que ya están en el paquete sin cambios en el monto pagado.",
+          message: `No se pueden agregar facturas que ya están en el paquete sin cambios en el monto pagado. Facturas afectadas: ${facturasAfectadas}`,
         });
       }
 
@@ -731,13 +773,36 @@ export const updateInvoicesPackage = async (req, res) => {
           );
 
           if (indiceFacturaEnPaquete >= 0) {
-            // La factura ya existe en el paquete - actualizar su importePagado
+            // La factura ya existe en el paquete - LÓGICA DE ACUMULACIÓN DE PAGOS PARCIALES
+            const facturaEnPaquete = facturasActualizadas[indiceFacturaEnPaquete];
+            const importePagadoAnteriorEnPaquete = parseFloat(facturaEnPaquete.importePagado) || 0;
+            const importePagadoNuevoFromOriginal = parseFloat(facturaExistente.importePagado) || 0;
+            const importeTotalFactura = parseFloat(facturaEnPaquete.importeAPagar || facturaExistente.importeAPagar) || 0;
+
+            // VALIDACIÓN: No permitir que la suma exceda el importe total de la factura
+            if (importePagadoNuevoFromOriginal > importeTotalFactura) {
+              return res.status(400).json({
+                success: false,
+                message: `El pago acumulado de la factura ${facturaExistente.uuid || facturaIdStr} ($${importePagadoNuevoFromOriginal.toLocaleString('es-MX', {minimumFractionDigits: 2})}) no puede exceder el importe total de la factura ($${importeTotalFactura.toLocaleString('es-MX', {minimumFractionDigits: 2})}).`,
+              });
+            }
+
+            console.log(`🔄 Acumulando pago parcial para factura ${facturaIdStr}:`, {
+              importePagadoAnteriorEnPaquete,
+              importePagadoNuevoFromOriginal, 
+              importeTotalFactura,
+              diferenciaAcumulada: importePagadoNuevoFromOriginal - importePagadoAnteriorEnPaquete,
+              estaCompletaAhora: importePagadoNuevoFromOriginal >= importeTotalFactura
+            });
+
+            // ACUMULACIÓN: Actualizar TANTO la factura embebida en el paquete como la original
+            // 1. Actualizar factura embebida en el paquete
             facturasActualizadas[indiceFacturaEnPaquete] = {
               ...facturasActualizadas[indiceFacturaEnPaquete],
-              importePagado: facturaExistente.importePagado,
+              importePagado: importePagadoNuevoFromOriginal, // Sincronizar con la factura original actualizada
               autorizada: null, // Resetear a pendiente para nueva autorización
               estadoPago: 0,
-              esCompleta: false,
+              esCompleta: importePagadoNuevoFromOriginal >= importeTotalFactura, // Verificar si ya está completa
               pagoRechazado: false,
               fechaRevision: new Date(),
             };
@@ -749,6 +814,15 @@ export const updateInvoicesPackage = async (req, res) => {
                 facturasActualizadas[indiceFacturaEnPaquete].conceptoGasto = conceptosGastoMap[conceptoId];
               }
             }
+
+            console.log(`✅ Factura embebida en paquete actualizada exitosamente ${facturaIdStr}:`, {
+              importePagadoAnterior: importePagadoAnteriorEnPaquete,
+              importePagadoNuevo: importePagadoNuevoFromOriginal,
+              saldoRestante: importeTotalFactura - importePagadoNuevoFromOriginal,
+              estaCompleta: importePagadoNuevoFromOriginal >= importeTotalFactura,
+              facturaEmbebidaActualizada: true,
+              facturaOriginalYaActualizada: true // Se actualizó en el paso anterior con markInvoiceAsPartiallyPaid
+            });
           } else {
             // La factura es nueva - agregarla al paquete
             const facturaData = facturaExistente.toObject();
@@ -789,6 +863,17 @@ export const updateInvoicesPackage = async (req, res) => {
         }
 
         datosActualizacion.facturas = facturasActualizadas;
+        
+        // Log de resumen de la actualización de facturas
+        const facturasExistentesActualizadas = facturas.filter(f => facturasActualesIds.includes(f.toString()));
+        const facturasNuevasReales = facturas.filter(f => !facturasActualesIds.includes(f.toString()));
+        
+        console.log(`📊 Resumen actualización de paquete ${id}:`, {
+          facturasExistentesActualizadas: facturasExistentesActualizadas.length,
+          facturasNuevasAgregadas: facturasNuevasReales.length,
+          totalFacturasEnPaquete: facturasActualizadas.length,
+          permitirAcumulacionPagosParciales: true
+        });
       }
     }
     if (estatus) datosActualizacion.estatus = estatus;
@@ -868,10 +953,19 @@ export const updateInvoicesPackage = async (req, res) => {
     }
 
     // Obtener el paquete actualizado con las facturas embebidas
-    const paqueteCompleto = await InvoicesPackage.findById(id).populate({
-      path: "packageCompanyId",
-      populate: ["companyId", "brandId", "branchId"],
-    });
+    const paqueteCompleto = await InvoicesPackage.findById(id)
+      .populate({
+        path: "packageCompanyId",
+        populate: ["companyId", "brandId", "branchId"],
+      })
+      .populate({
+        path: "pagosEfectivo.expenseConcept",
+        select: "name description",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
+      });
 
     res.status(200).json({
       success: true,
@@ -1152,6 +1246,14 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
         path: "packageCompanyId",
         populate: ["companyId", "brandId", "branchId"],
       })
+      .populate({
+        path: "pagosEfectivo.expenseConcept",
+        select: "name description",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
+      })
       .sort({ createdAt: -1 }); // Ordenar por fecha de creación descendente
 
     // Agregar headers para evitar caché
@@ -1186,6 +1288,14 @@ export const getInvoicesPackagesCreatedByUsuario = async (req, res) => {
       .populate({
         path: "packageCompanyId",
         populate: ["companyId", "brandId", "branchId"],
+      })
+      .populate({
+        path: "pagosEfectivo.expenseConcept",
+        select: "name description",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
       })
       .sort({ createdAt: -1 }); // Ordenar por fecha de creación descendente
 
@@ -1244,6 +1354,23 @@ export const actualizarFacturaEnPaquetes = async (
     if (datosActualizados.importePagado !== undefined) {
       camposActualizacion["facturas.$.importePagado"] =
         datosActualizados.importePagado;
+    }
+
+    // También actualizar importeAPagar si está presente
+    if (datosActualizados.importeAPagar !== undefined) {
+      camposActualizacion["facturas.$.importeAPagar"] =
+        datosActualizados.importeAPagar;
+    }
+
+    // Otros campos necesarios para la acumulación de pagos parciales
+    if (datosActualizados.fechaRevision !== undefined) {
+      camposActualizacion["facturas.$.fechaRevision"] =
+        datosActualizados.fechaRevision;
+    }
+
+    if (datosActualizados.estaRegistrada !== undefined) {
+      camposActualizacion["facturas.$.estaRegistrada"] =
+        datosActualizados.estaRegistrada;
     }
 
     // Actualizar directamente en la base de datos usando $set
@@ -1978,6 +2105,176 @@ export const updatePackagesToGenerated = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating packages to generated status:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error interno del servidor.",
+    });
+  }
+};
+
+// DELETE - Eliminar factura específica del arreglo embebido en el paquete
+export const removeInvoiceFromPackage = async (req, res) => {
+  try {
+    const { packageId, invoiceId } = req.params;
+
+    // Validar que los IDs sean ObjectIds válidos
+    if (!mongoose.Types.ObjectId.isValid(packageId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de paquete inválido.",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(invoiceId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de factura inválido.",
+      });
+    }
+
+    // Buscar el paquete
+    const paquete = await InvoicesPackage.findById(packageId);
+    if (!paquete) {
+      return res.status(404).json({
+        success: false,
+        message: "Paquete no encontrado.",
+      });
+    }
+
+    // Solo permitir eliminación en paquetes con estatus "Borrador"
+    if (paquete.estatus !== "Borrador") {
+      return res.status(400).json({
+        success: false,
+        message: 'Solo se pueden eliminar facturas de paquetes en estatus "Borrador".',
+      });
+    }
+
+    // Verificar que la factura existe en el paquete
+    const facturaIndex = paquete.facturas.findIndex(
+      (f) => f._id.toString() === invoiceId
+    );
+
+    if (facturaIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Factura no encontrada en el paquete.",
+      });
+    }
+
+    // Eliminar la factura del arreglo
+    paquete.facturas.splice(facturaIndex, 1);
+
+    // Actualizar totales y guardar
+    await paquete.actualizarTotales();
+    await paquete.save();
+
+    // Resetear la factura original a su estado inicial
+    const datosReseteo = {
+      importePagado: 0,
+      estadoPago: 0, // Pendiente
+      esCompleta: false,
+      descripcionPago: null,
+      autorizada: null,
+      pagoRechazado: false,
+      fechaRevision: null,
+      registrado: 0,
+      pagado: 0,
+      estaRegistrada: false,
+    };
+
+    await ImportedInvoices.findByIdAndUpdate(invoiceId, {
+      $set: datosReseteo,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Factura eliminada del paquete exitosamente.",
+      data: {
+        packageId: paquete._id,
+        removedInvoiceId: invoiceId,
+        remainingInvoicesCount: paquete.facturas.length,
+        newTotalImporte: paquete.totalImporteAPagar,
+        newTotalPagado: paquete.totalPagado,
+      },
+    });
+  } catch (error) {
+    console.error("Error removing invoice from package:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error interno del servidor.",
+    });
+  }
+};
+
+// DELETE - Eliminar pago en efectivo específico del arreglo embebido en el paquete
+export const removeCashPaymentFromPackage = async (req, res) => {
+  try {
+    const { packageId, cashPaymentId } = req.params;
+
+    // Validar que los IDs sean ObjectIds válidos
+    if (!mongoose.Types.ObjectId.isValid(packageId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de paquete inválido.",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(cashPaymentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de pago en efectivo inválido.",
+      });
+    }
+
+    // Buscar el paquete
+    const paquete = await InvoicesPackage.findById(packageId);
+    if (!paquete) {
+      return res.status(404).json({
+        success: false,
+        message: "Paquete no encontrado.",
+      });
+    }
+
+    // Solo permitir eliminación en paquetes con estatus "Borrador"
+    if (paquete.estatus !== "Borrador") {
+      return res.status(400).json({
+        success: false,
+        message: 'Solo se pueden eliminar pagos en efectivo de paquetes en estatus "Borrador".',
+      });
+    }
+
+    // Verificar que el pago en efectivo existe en el paquete
+    const pagoIndex = paquete.pagosEfectivo.findIndex(
+      (p) => p._id.toString() === cashPaymentId
+    );
+
+    if (pagoIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Pago en efectivo no encontrado en el paquete.",
+      });
+    }
+
+    // Eliminar el pago del arreglo
+    paquete.pagosEfectivo.splice(pagoIndex, 1);
+
+    // Actualizar totales y guardar
+    await paquete.actualizarTotales();
+    await paquete.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Pago en efectivo eliminado del paquete exitosamente.",
+      data: {
+        packageId: paquete._id,
+        removedCashPaymentId: cashPaymentId,
+        remainingCashPaymentsCount: paquete.pagosEfectivo.length,
+        newTotalImporte: paquete.totalImporteAPagar,
+        newTotalPagado: paquete.totalPagado,
+      },
+    });
+  } catch (error) {
+    console.error("Error removing cash payment from package:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Error interno del servidor.",

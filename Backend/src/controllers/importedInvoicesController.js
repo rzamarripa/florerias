@@ -366,6 +366,14 @@ export const getInvoicesByProviderAndCompany = async (req, res) => {
     // Consulta con paginación
     const invoicesPromise = ImportedInvoices.find(query)
       .populate("razonSocial", "name rfc")
+      .populate({
+        path: "conceptoGasto",
+        select: "name categoryId",
+        populate: {
+          path: "categoryId",
+          select: "name"
+        }
+      })
       .sort(sortOptions)
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -903,6 +911,18 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
     }
 
     await invoice.save();
+
+    // ACUMULACIÓN: También actualizar la factura embebida en todos los paquetes que la contengan
+    await actualizarFacturaEnPaquetes(invoice._id, {
+      importePagado: invoice.importePagado,
+      importeAPagar: invoice.importeAPagar,
+      descripcionPago: invoice.descripcionPago,
+      estadoPago: invoice.estadoPago,
+      esCompleta: invoice.esCompleta,
+      autorizada: invoice.autorizada,
+      fechaRevision: invoice.fechaRevision,
+      estaRegistrada: invoice.estaRegistrada
+    });
 
     res.status(200).json({
       success: true,

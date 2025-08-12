@@ -19,7 +19,9 @@ import {
     getPackagesToFund,
     getPackageCompanyRelations,
     updatePackagesToGenerated,
-    toggleInvoicesPackageActive
+    toggleInvoicesPackageActive,
+    removeInvoiceFromPackage,
+    removeCashPaymentFromPackage
 } from '../controllers/invoicesPackpageController.js';
 import packageTimelineController from '../controllers/packageTimelineController.js';
 import { protect } from '../middleware/auth.js';
@@ -76,6 +78,12 @@ router.patch('/:id/status', changeInvoicesPackageStatus);
 
 // Cambiar estado activo de un paquete
 router.patch('/:id/toggle-active', protect, toggleInvoicesPackageActive);
+
+// Eliminar factura específica del arreglo embebido en el paquete
+router.delete('/:packageId/invoices/:invoiceId', protect, removeInvoiceFromPackage);
+
+// Eliminar pago en efectivo específico del arreglo embebido en el paquete
+router.delete('/:packageId/cash-payments/:cashPaymentId', protect, removeCashPaymentFromPackage);
 
 // Enviar paquete a dirección
 router.post('/:id/enviar-direccion', protect, enviarPaqueteADireccion);

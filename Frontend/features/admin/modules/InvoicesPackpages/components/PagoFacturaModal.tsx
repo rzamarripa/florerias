@@ -94,7 +94,29 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
   const [budgetData, setBudgetData] =
     useState<BudgetByExpenseConceptResult | null>(null);
   const [loadingBudget, setLoadingBudget] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const { user } = useUserSessionStore();
+
+  useEffect(() => {
+    if (show && invoiceId) {
+      const invoice = invoices.find((inv: any) => inv._id === invoiceId);
+      if (invoice) {
+        setIsEditing(invoice.importePagado > 0);
+
+        if (invoice.conceptoGasto) {
+          if (typeof invoice.conceptoGasto === "string") {
+            setConceptoGasto(invoice.conceptoGasto);
+          } else if (invoice.conceptoGasto._id) {
+            setConceptoGasto(invoice.conceptoGasto._id);
+          }
+        }
+
+        if (invoice.descripcionPago) {
+          setDescripcion(invoice.descripcionPago);
+        }
+      }
+    }
+  }, [show, invoiceId, invoices]);
 
   useEffect(() => {
     if (show && user?.departmentId) {
@@ -108,7 +130,14 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
     } else {
       setBudgetData(null);
     }
-  }, [conceptoGasto, companyId, brandId, branchId, selectedYear, selectedMonth]);
+  }, [
+    conceptoGasto,
+    companyId,
+    brandId,
+    branchId,
+    selectedYear,
+    selectedMonth,
+  ]);
 
   const loadConceptosGasto = async () => {
     if (!user?.departmentId) return;
@@ -137,7 +166,10 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
 
     try {
       setLoadingBudget(true);
-      const month = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
+      const month = `${selectedYear}-${String(selectedMonth + 1).padStart(
+        2,
+        "0"
+      )}`;
 
       const budgetInfo = await getBudgetByExpenseConcept({
         expenseConceptId: conceptoGasto,
@@ -147,14 +179,14 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
         month,
       });
 
-      // Calcular el gasto adicional del estado local que aún no se ha enviado
       let localSpent = 0;
-      
-      // Sumar pagos temporales de facturas para el mismo concepto
+
       Object.entries(tempPayments).forEach(([invoiceIdKey, payment]) => {
         if (payment.conceptoGasto === conceptoGasto) {
           if (payment.tipoPago === "completo") {
-            const invoice = invoices.find((inv: any) => inv._id === invoiceIdKey);
+            const invoice = invoices.find(
+              (inv: any) => inv._id === invoiceIdKey
+            );
             if (invoice) {
               localSpent += invoice.importeAPagar - invoice.importePagado;
             }
@@ -163,34 +195,27 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
           }
         }
       });
-      
-      // Sumar pagos en efectivo temporales para el mismo concepto
+
       tempCashPayments.forEach((cashPayment) => {
         if (cashPayment.expenseConcept._id === conceptoGasto) {
           localSpent += cashPayment.importeAPagar;
         }
       });
 
-      // Ajustar el presupuesto disponible considerando el estado local
       const adjustedBudgetInfo = {
         ...budgetInfo,
         totalSpent: budgetInfo.totalSpent + localSpent,
-        availableBudget: budgetInfo.availableBudget - localSpent
+        availableBudget: budgetInfo.availableBudget - localSpent,
       };
 
       setBudgetData(adjustedBudgetInfo);
-
     } catch (error) {
-      console.error(
-        "Error al cargar información de presupuesto:",
-        error
-      );
+      console.error("Error al cargar información de presupuesto:", error);
       setBudgetData(null);
     } finally {
       setLoadingBudget(false);
     }
   };
-
 
   const handleOk = async () => {
     if (!invoiceId) {
@@ -218,13 +243,14 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
       return;
     }
 
-    // Validación de presupuesto al momento de guardar
     if (budgetData) {
       const montoAPagar = tipoPago === "completo" ? saldo : Number(monto) || 0;
       const excede = montoAPagar >= budgetData.availableBudget;
-      
+
       if (excede && montoAPagar > 0) {
-        toast.warning("Presupuesto excedido. Se requerirá un folio de autorización");
+        toast.warning(
+          "Presupuesto excedido. Se requerirá un folio de autorización"
+        );
       }
     }
 
@@ -261,7 +287,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
 
   return (
     <Modal show={show} onHide={handleClose} centered>
-      <Modal.Body className="text-center p-4">
+      <Modal.Body className="p-4">
         <div className="mb-3 d-flex justify-content-center">
           <div
             className="border border-info rounded-circle d-flex align-items-center justify-content-center"
@@ -270,17 +296,21 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
             <InfoIcon className="text-info" size={24} />
           </div>
         </div>
-        <h4 className="fw-bold mb-2">
-          {tipoPago === "completo"
-            ? "Introduce la descripción:"
-            : "Introduce la cantidad a pagar y la descripción:"}
+
+        <h4 className="fw-bold mb-3 text-center">
+          {isEditing ? "Editar Pago de Factura" : "Nuevo Pago de Factura"}
         </h4>
-        <div className="mb-2">
-          Su Saldo es:{" "}
-          <span className="fw-medium">${saldo.toLocaleString()}</span>
+
+        <div className="mb-3">
+          <div className="text-center">
+            <small className="text-muted">Saldo disponible:</small>
+            <div className="h4 text-warning mb-0">
+              ${saldo.toLocaleString()}
+            </div>
+          </div>
         </div>
 
-        <Form.Group className="mb-2">
+        <Form.Group className="mb-3">
           <Form.Label>
             Concepto de Gasto <span className="text-danger">*</span>
           </Form.Label>
@@ -380,7 +410,10 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
         )}
 
         {tipoPago === "parcial" && (
-          <Form.Group className="mb-2">
+          <Form.Group className="mb-3">
+            <Form.Label>
+              Cantidad a Pagar <span className="text-danger">*</span>
+            </Form.Label>
             <Form.Control
               type="number"
               min="1"
@@ -390,24 +423,36 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
               placeholder="Cantidad"
               className=""
             />
+            <small className="text-muted">
+              Saldo disponible: {formatCurrency(saldo)}
+            </small>
           </Form.Group>
         )}
+
         <Form.Group className="mb-3">
+          <Form.Label>
+            Descripción del Pago <span className="text-danger">*</span>
+          </Form.Label>
           <Form.Control
             as="textarea"
             rows={3}
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Descripción"
+            placeholder="Descripción del pago..."
             className="shadow-none"
           />
         </Form.Group>
-        <div className="d-flex justify-content-center gap-2 mt-3">
+
+        <div className="d-flex justify-content-center gap-2 mt-4">
           <Button variant="light" onClick={handleClose} disabled={loading}>
-            Cancel
+            Cancelar
           </Button>
           <Button variant="primary" onClick={handleOk} disabled={loading}>
-            {loading ? "Procesando..." : "Guardar"}
+            {loading
+              ? "Procesando..."
+              : isEditing
+              ? "Actualizar Pago"
+              : "Guardar Pago"}
           </Button>
         </div>
       </Modal.Body>

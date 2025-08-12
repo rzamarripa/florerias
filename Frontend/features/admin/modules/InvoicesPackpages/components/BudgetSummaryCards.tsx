@@ -2,6 +2,7 @@ import React from "react";
 import { FileText, Calendar, PieChart, Info } from "lucide-react";
 import BudgetStatisticCard from "./BudgetStatisticCard";
 import { BudgetItem } from "../services/budget";
+import { Span } from "next/dist/trace";
 
 interface BudgetSummaryCardsProps {
   tempPayments?: {
@@ -212,19 +213,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       <div className="flex-fill" style={{ minWidth: 0 }}>
         <BudgetStatisticCard
           title="Presupuesto utilizado"
-          subtitle={`${
-            realBudgetUsed > 0
-              ? `$${realBudgetUsed.toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                })} ya procesados`
-              : "Sin pagos procesados"
-          } + ${
-            presupuestoTemporal > 0
-              ? `$${presupuestoTemporal.toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                })} por realizar`
-              : "Sin pagos por realizar"
-          }`}
+          subtitle={<span>Pagos procesados y seleccionados</span>}
           stats={`$${presupuestoUtilizado.toLocaleString("es-MX", {
             minimumFractionDigits: 2,
           })}`}
