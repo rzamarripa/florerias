@@ -29,6 +29,8 @@ export const createInvoicesPackage = async (req, res) => {
       // Nuevo campo para conceptos de gasto por factura
       conceptosGasto,
       pagosEfectivo,
+      // Nuevo campo para montos específicos por factura (pagos parciales separados)
+      montosEspecificos,
     } = req.body;
 
     // Validar datos requeridos - debe haber al menos facturas o pagos en efectivo
@@ -146,19 +148,27 @@ export const createInvoicesPackage = async (req, res) => {
         const facturaData = factura.toObject();
         // Asegurar que el _id esté presente
         facturaData._id = factura._id;
+        
+        // NUEVA LÓGICA: Usar monto específico si se proporciona
+        const facturaIdStr = factura._id.toString();
+        const montoEspecificoEstesPago = montosEspecificos && montosEspecificos[facturaIdStr] 
+          ? parseFloat(montosEspecificos[facturaIdStr]) 
+          : facturaData.importePagado || 0;
+          
+        facturaData.importePagado = montoEspecificoEstesPago;
 
         // FORZAR que autorizada sea null (pendiente) al crear el paquete
         facturaData.autorizada = null;
         facturaData.estadoPago = 0;
-        facturaData.esCompleta = false;
+        facturaData.esCompleta = montoEspecificoEstesPago >= facturaData.importeAPagar;
         facturaData.pagoRechazado = false;
         facturaData.estaRegistrada = true;
         facturaData.registrado = 1;
         facturaData.fechaRevision = new Date();
 
         // Asignar concepto de gasto si se proporciona para esta factura
-        if (conceptosGasto && conceptosGasto[factura._id.toString()]) {
-          const conceptoId = conceptosGasto[factura._id.toString()];
+        if (conceptosGasto && conceptosGasto[facturaIdStr]) {
+          const conceptoId = conceptosGasto[facturaIdStr];
           if (conceptosGastoMap[conceptoId]) {
             facturaData.conceptoGasto = conceptosGastoMap[conceptoId];
           }
@@ -545,6 +555,8 @@ export const updateInvoicesPackage = async (req, res) => {
       conceptosGasto,
       // Nuevo campo para pagos en efectivo
       pagosEfectivo,
+      // Nuevo campo para montos específicos por factura (pagos parciales separados)
+      montosEspecificos,
     } = req.body;
 
     // Buscar el paquete existente
@@ -598,15 +610,16 @@ export const updateInvoicesPackage = async (req, res) => {
         (facturaId) => !facturasActualesIds.includes(facturaId.toString())
       );
 
-      // NUEVA LÓGICA: Permitir pagos parciales acumulativos para la misma factura en el mismo paquete
-      // Solo rechazar si se intenta agregar exactamente las mismas facturas sin cambios en importePagado
+      // NUEVA LÓGICA: Permitir pagos parciales separados para la misma factura en diferentes paquetes
+      // Solo validar duplicados exactos dentro del MISMO paquete
       const facturasYaEnPaqueteConMismoImporte = facturas.filter((facturaId) => {
         const facturaIdStr = facturaId.toString();
         const yaEstaEnPaquete = facturasActualesIds.includes(facturaIdStr);
         
         if (!yaEstaEnPaquete) return false;
 
-        // Verificar si el importePagado es diferente (permitir actualizaciones/acumulaciones)
+        // Para pagos parciales en DIFERENTES paquetes: SIEMPRE permitir
+        // Solo verificar duplicados exactos en el MISMO paquete
         const facturaEnPaquete = paqueteExistente.facturas.find(
           (f) => f._id.toString() === facturaIdStr
         );
@@ -616,19 +629,19 @@ export const updateInvoicesPackage = async (req, res) => {
 
         if (!facturaEnPaquete || !facturaNueva) return false;
 
-        // CAMBIO IMPORTANTE: Permitir si el importePagado es MAYOR (acumulación de pagos parciales)
-        // Solo rechazar si es exactamente igual (sin cambios)
+        // CAMBIO CLAVE: Permitir siempre si es un nuevo pago parcial (diferente importe)
+        // Solo rechazar si es exactamente el mismo monto (duplicado exacto)
         const importePagadoAnterior = parseFloat(facturaEnPaquete.importePagado) || 0;
         const importePagadoNuevo = parseFloat(facturaNueva.importePagado) || 0;
         
-        console.log(`🔍 Validando factura ${facturaIdStr} para acumulación:`, {
+        console.log(`🔍 Validando factura ${facturaIdStr} para pago parcial separado:`, {
           importePagadoAnterior,
           importePagadoNuevo,
-          diferencia: importePagadoNuevo - importePagadoAnterior,
-          permitirActualizacion: importePagadoNuevo > importePagadoAnterior
+          esDuplicadoExacto: importePagadoNuevo === importePagadoAnterior,
+          esNuevoPagoParcial: importePagadoNuevo !== importePagadoAnterior
         });
 
-        // Solo rechazar si no hay cambio en el importePagado (esto evita duplicados sin cambios)
+        // Solo rechazar duplicados exactos en el mismo paquete
         return importePagadoNuevo === importePagadoAnterior;
       });
 
@@ -640,13 +653,39 @@ export const updateInvoicesPackage = async (req, res) => {
         
         return res.status(400).json({
           success: false,
-          message: `No se pueden agregar facturas que ya están en el paquete sin cambios en el monto pagado. Facturas afectadas: ${facturasAfectadas}`,
+          message: `No se pueden agregar facturas duplicadas con el mismo monto en el mismo paquete. Facturas afectadas: ${facturasAfectadas}`,
         });
       }
 
-      // Procesar solo las facturas nuevas que se están agregando al paquete
-      if (facturasNuevas.length > 0) {
-        for (const facturaId of facturasNuevas) {
+      // Procesar todas las facturas (nuevas y existentes con diferentes montos)
+      const facturasAProcesar = facturas.filter(facturaId => {
+        const facturaIdStr = facturaId.toString();
+        const yaEstaEnPaquete = facturasActualesIds.includes(facturaIdStr);
+        
+        if (!yaEstaEnPaquete) {
+          // Es una factura nueva, procesarla
+          return true;
+        }
+        
+        // Es una factura existente, verificar si tiene un monto diferente
+        const facturaEnPaquete = paqueteExistente.facturas.find(
+          (f) => f._id.toString() === facturaIdStr
+        );
+        const facturaNueva = facturasExistentes.find(
+          (f) => f._id.toString() === facturaIdStr
+        );
+        
+        if (!facturaEnPaquete || !facturaNueva) return false;
+        
+        const importePagadoAnterior = parseFloat(facturaEnPaquete.importePagado) || 0;
+        const importePagadoNuevo = parseFloat(facturaNueva.importePagado) || 0;
+        
+        // Procesar si tiene un monto diferente (nuevo pago parcial)
+        return importePagadoNuevo !== importePagadoAnterior;
+      });
+
+      if (facturasAProcesar.length > 0) {
+        for (const facturaId of facturasAProcesar) {
           const factura = facturasExistentes.find(
             (f) => f._id.toString() === facturaId.toString()
           );
@@ -745,6 +784,16 @@ export const updateInvoicesPackage = async (req, res) => {
 
     // Actualizar el paquete
     const datosActualizacion = {};
+    
+    // DEBUG: Ver qué datos están llegando
+    console.log(`🔍 DATOS DE ENTRADA - updateInvoicesPackage:`, {
+      facturas: facturas,
+      facturasLength: facturas?.length || 0,
+      montosEspecificos: montosEspecificos,
+      paqueteExistenteId: paqueteExistente?._id,
+      paqueteExistenteFacturasCount: paqueteExistente?.facturas?.length || 0
+    });
+    
     if (facturas) {
       // En lugar de reemplazar todas las facturas, agregar solo las nuevas
       const facturasActualesIds = paqueteExistente.facturas.map((f) =>
@@ -773,65 +822,79 @@ export const updateInvoicesPackage = async (req, res) => {
           );
 
           if (indiceFacturaEnPaquete >= 0) {
-            // La factura ya existe en el paquete - LÓGICA DE ACUMULACIÓN DE PAGOS PARCIALES
+            // La factura ya existe en el paquete - LÓGICA DE PAGOS PARCIALES SEPARADOS
             const facturaEnPaquete = facturasActualizadas[indiceFacturaEnPaquete];
-            const importePagadoAnteriorEnPaquete = parseFloat(facturaEnPaquete.importePagado) || 0;
-            const importePagadoNuevoFromOriginal = parseFloat(facturaExistente.importePagado) || 0;
             const importeTotalFactura = parseFloat(facturaEnPaquete.importeAPagar || facturaExistente.importeAPagar) || 0;
+            
+            // NUEVA LÓGICA: Usar monto específico de este pago parcial en lugar del acumulativo
+            const montoEspecificoEstesPago = montosEspecificos && montosEspecificos[facturaIdStr] 
+              ? parseFloat(montosEspecificos[facturaIdStr]) 
+              : parseFloat(facturaExistente.importePagado) || 0;
 
-            // VALIDACIÓN: No permitir que la suma exceda el importe total de la factura
-            if (importePagadoNuevoFromOriginal > importeTotalFactura) {
+            // VALIDACIÓN: El monto específico no puede exceder el importe total
+            if (montoEspecificoEstesPago > importeTotalFactura) {
               return res.status(400).json({
                 success: false,
-                message: `El pago acumulado de la factura ${facturaExistente.uuid || facturaIdStr} ($${importePagadoNuevoFromOriginal.toLocaleString('es-MX', {minimumFractionDigits: 2})}) no puede exceder el importe total de la factura ($${importeTotalFactura.toLocaleString('es-MX', {minimumFractionDigits: 2})}).`,
+                message: `El monto del pago parcial ($${montoEspecificoEstesPago.toLocaleString('es-MX', {minimumFractionDigits: 2})}) no puede exceder el importe total de la factura ($${importeTotalFactura.toLocaleString('es-MX', {minimumFractionDigits: 2})}).`,
               });
             }
 
-            console.log(`🔄 Acumulando pago parcial para factura ${facturaIdStr}:`, {
-              importePagadoAnteriorEnPaquete,
-              importePagadoNuevoFromOriginal, 
+            console.log(`🔄 Agregando pago parcial separado para factura ${facturaIdStr}:`, {
               importeTotalFactura,
-              diferenciaAcumulada: importePagadoNuevoFromOriginal - importePagadoAnteriorEnPaquete,
-              estaCompletaAhora: importePagadoNuevoFromOriginal >= importeTotalFactura
+              montoEspecificoEstesPago,
+              esPagoCompleto: montoEspecificoEstesPago >= importeTotalFactura,
+              usandoMontoEspecifico: !!montosEspecificos && !!montosEspecificos[facturaIdStr],
+              facturaExistenteImportePagado: facturaExistente.importePagado
             });
 
-            // ACUMULACIÓN: Actualizar TANTO la factura embebida en el paquete como la original
-            // 1. Actualizar factura embebida en el paquete
-            facturasActualizadas[indiceFacturaEnPaquete] = {
-              ...facturasActualizadas[indiceFacturaEnPaquete],
-              importePagado: importePagadoNuevoFromOriginal, // Sincronizar con la factura original actualizada
-              autorizada: null, // Resetear a pendiente para nueva autorización
+            // NUEVA LÓGICA: Crear nueva entrada con el monto específico de este pago parcial
+            // En lugar de actualizar la existente, agregar como nueva entrada
+            const nuevaEntradaPagoParcial = {
+              ...facturaExistente.toObject(),
+              importePagado: montoEspecificoEstesPago, // Monto específico de este pago parcial
+              autorizada: null, // Pendiente de autorización
               estadoPago: 0,
-              esCompleta: importePagadoNuevoFromOriginal >= importeTotalFactura, // Verificar si ya está completa
+              esCompleta: montoEspecificoEstesPago >= importeTotalFactura,
               pagoRechazado: false,
               fechaRevision: new Date(),
             };
+
+            console.log(`📝 Nueva entrada creada con importePagado: ${nuevaEntradaPagoParcial.importePagado}`);
 
             // Asignar concepto de gasto si se proporciona para esta factura
             if (conceptosGasto && conceptosGasto[facturaIdStr]) {
               const conceptoId = conceptosGasto[facturaIdStr];
               if (conceptosGastoMap[conceptoId]) {
-                facturasActualizadas[indiceFacturaEnPaquete].conceptoGasto = conceptosGastoMap[conceptoId];
+                nuevaEntradaPagoParcial.conceptoGasto = conceptosGastoMap[conceptoId];
               }
             }
 
-            console.log(`✅ Factura embebida en paquete actualizada exitosamente ${facturaIdStr}:`, {
-              importePagadoAnterior: importePagadoAnteriorEnPaquete,
-              importePagadoNuevo: importePagadoNuevoFromOriginal,
-              saldoRestante: importeTotalFactura - importePagadoNuevoFromOriginal,
-              estaCompleta: importePagadoNuevoFromOriginal >= importeTotalFactura,
-              facturaEmbebidaActualizada: true,
-              facturaOriginalYaActualizada: true // Se actualizó en el paso anterior con markInvoiceAsPartiallyPaid
+            // Agregar como nueva entrada en lugar de actualizar la existente
+            facturasActualizadas.push(nuevaEntradaPagoParcial);
+
+            console.log(`✅ Nueva entrada de pago parcial agregada para factura ${facturaIdStr}:`, {
+              importeTotalFactura,
+              montoEspecificoEstesPago,
+              saldoRestante: importeTotalFactura - montoEspecificoEstesPago,
+              estaCompleta: montoEspecificoEstesPago >= importeTotalFactura,
+              nuevaEntradaCreada: true
             });
           } else {
             // La factura es nueva - agregarla al paquete
             const facturaData = facturaExistente.toObject();
             facturaData._id = facturaExistente._id;
+            
+            // NUEVA LÓGICA: Usar monto específico si se proporciona
+            const montoEspecificoEstesPago = montosEspecificos && montosEspecificos[facturaIdStr] 
+              ? parseFloat(montosEspecificos[facturaIdStr]) 
+              : facturaData.importePagado || 0;
+              
+            facturaData.importePagado = montoEspecificoEstesPago;
 
             // FORZAR que autorizada sea null (pendiente) al agregar al paquete
             facturaData.autorizada = null;
             facturaData.estadoPago = 0;
-            facturaData.esCompleta = false;
+            facturaData.esCompleta = montoEspecificoEstesPago >= facturaData.importeAPagar;
             facturaData.pagoRechazado = false;
             facturaData.estaRegistrada = true;
             facturaData.registrado = 1;
@@ -862,18 +925,187 @@ export const updateInvoicesPackage = async (req, res) => {
           }
         }
 
+        // PASO 2.5: Actualizar importePagado de facturas embebidas para reflejar el acumulativo de la factura original
+        // Esto es crítico para pagos parciales múltiples de la misma factura en el mismo paquete
+        if (facturasActualizadas.length > 0) {
+          console.log(`🔄 PASO 2.5: Actualizando importePagado acumulativo de facturas embebidas...`);
+          console.log(`📊 Facturas a procesar: ${facturasActualizadas.length}`);
+          
+          // DEBUG: Mostrar estado inicial de facturas embebidas
+          facturasActualizadas.forEach((f, index) => {
+            console.log(`📋 Factura embebida ${index + 1}:`, {
+              _id: f._id.toString(),
+              importePagado: f.importePagado,
+              importeAPagar: f.importeAPagar
+            });
+          });
+          
+          // Obtener importePagado actual de las facturas originales
+          const facturaIds = [...new Set(facturasActualizadas.map(f => f._id.toString()))];
+          console.log(`🔍 IDs únicos a buscar en ImportedInvoices:`, facturaIds);
+          
+          const facturasOriginales = await ImportedInvoices.find({
+            _id: { $in: facturaIds }
+          });
+          
+          console.log(`📦 Facturas originales encontradas: ${facturasOriginales.length}`);
+          
+          // Crear mapa de importePagado original por ID
+          const importesPagadosOriginales = {};
+          facturasOriginales.forEach(facturaOriginal => {
+            const importePagado = parseFloat(facturaOriginal.importePagado) || 0;
+            importesPagadosOriginales[facturaOriginal._id.toString()] = importePagado;
+            console.log(`💰 Factura original ${facturaOriginal._id}: importePagado = ${importePagado}`);
+          });
+          
+          // Actualizar todas las entradas embebidas de cada factura con el importePagado acumulativo
+          // Esto asegura que todas las entradas de la misma factura en el paquete muestren el monto total acumulado
+          let facturasActualizadasCount = 0;
+          facturasActualizadas.forEach(facturaEmbebida => {
+            const facturaIdStr = facturaEmbebida._id.toString();
+            const importePagadoAcumulativo = importesPagadosOriginales[facturaIdStr];
+            
+            console.log(`🔧 Procesando factura embebida ${facturaIdStr}:`, {
+              importePagadoAntes: facturaEmbebida.importePagado,
+              importePagadoAcumulativo: importePagadoAcumulativo,
+              tieneValorAcumulativo: importePagadoAcumulativo !== undefined
+            });
+            
+            if (importePagadoAcumulativo !== undefined) {
+              const importePagadoAnterior = facturaEmbebida.importePagado;
+              facturaEmbebida.importePagado = importePagadoAcumulativo;
+              facturasActualizadasCount++;
+              
+              console.log(`✅ Factura embebida ${facturaIdStr} ACTUALIZADA: ${importePagadoAnterior} → ${importePagadoAcumulativo}`);
+            } else {
+              console.log(`❌ No se encontró valor acumulativo para factura ${facturaIdStr}`);
+            }
+          });
+          
+          console.log(`✅ Actualización de importePagado embebido completada: ${facturasActualizadasCount}/${facturaIds.length} facturas actualizadas`);
+          
+          // DEBUG: Mostrar estado final de facturas embebidas
+          console.log(`📊 Estado FINAL de facturas embebidas después de actualización:`);
+          facturasActualizadas.forEach((f, index) => {
+            console.log(`📋 Factura embebida ${index + 1} (FINAL):`, {
+              _id: f._id.toString(),
+              importePagado: f.importePagado,
+              importeAPagar: f.importeAPagar
+            });
+          });
+        }
+
         datosActualizacion.facturas = facturasActualizadas;
+      } else {
+        // CASO ESPECIAL: No hay facturas nuevas, pero puede haber pagos temporales que requieren 
+        // actualización del importePagado embebido (pagos parciales adicionales de facturas existentes)
+        console.log(`⚠️ No hay facturas nuevas para agregar, pero verificando si hay pagos temporales procesados...`);
+      }
+      
+      // PASO 2.5 MEJORADO: Ejecutar SIEMPRE que haya montos específicos para actualizar facturas embebidas
+      const hayMontosEspecificos = montosEspecificos && Object.keys(montosEspecificos).length > 0;
+      console.log(`🔄 Verificando necesidad de actualizar importePagado embebido:`, {
+        hayFacturasActualizadas: !!(datosActualizacion.facturas && datosActualizacion.facturas.length > 0),
+        hayMontosEspecificos: hayMontosEspecificos,
+        debeEjecutarPaso25: hayMontosEspecificos
+      });
+      
+      if (hayMontosEspecificos) {
+        // Usar las facturas del paquete existente para la actualización
+        const facturasParaActualizar = paqueteExistente.facturas || [];
         
-        // Log de resumen de la actualización de facturas
-        const facturasExistentesActualizadas = facturas.filter(f => facturasActualesIds.includes(f.toString()));
-        const facturasNuevasReales = facturas.filter(f => !facturasActualesIds.includes(f.toString()));
+        console.log(`🔄 PASO 2.5 (MEJORADO): Actualizando importePagado acumulativo de facturas embebidas...`);
+        console.log(`📊 Facturas a procesar: ${facturasParaActualizar.length}`);
         
-        console.log(`📊 Resumen actualización de paquete ${id}:`, {
-          facturasExistentesActualizadas: facturasExistentesActualizadas.length,
-          facturasNuevasAgregadas: facturasNuevasReales.length,
-          totalFacturasEnPaquete: facturasActualizadas.length,
-          permitirAcumulacionPagosParciales: true
+        // DEBUG: Mostrar estado inicial de facturas embebidas
+        facturasParaActualizar.forEach((f, index) => {
+          // Validar que la factura tenga todos los campos necesarios antes de hacer console.log
+          if (f && f._id) {
+            console.log(`📋 Factura embebida ${index + 1}:`, {
+              _id: f._id.toString(),
+              importePagado: f.importePagado || 0,
+              importeAPagar: f.importeAPagar || 0
+            });
+          } else {
+            console.log(`⚠️ Factura embebida ${index + 1}: Factura inválida o sin _id`);
+          }
         });
+        
+        // Obtener IDs únicos de facturas que tienen montos específicos
+        const facturaIdsConMontosEspecificos = Object.keys(montosEspecificos || {});
+        console.log(`🔍 Facturas con montos específicos:`, facturaIdsConMontosEspecificos);
+        
+        if (facturaIdsConMontosEspecificos.length > 0) {
+          const facturasOriginales = await ImportedInvoices.find({
+            _id: { $in: facturaIdsConMontosEspecificos }
+          });
+          
+          console.log(`📦 Facturas originales encontradas: ${facturasOriginales.length}`);
+          
+          // Crear mapa de importePagado original por ID
+          const importesPagadosOriginales = {};
+          facturasOriginales.forEach(facturaOriginal => {
+            if (facturaOriginal && facturaOriginal._id) {
+              const importePagado = parseFloat(facturaOriginal.importePagado) || 0;
+              importesPagadosOriginales[facturaOriginal._id.toString()] = importePagado;
+              console.log(`💰 Factura original ${facturaOriginal._id}: importePagado = ${importePagado}`);
+            }
+          });
+          
+          // Actualizar las facturas embebidas del paquete existente
+          const facturasActualizadasPaso25 = facturasParaActualizar.map(facturaEmbebida => {
+            // Validar que la factura embebida tenga todos los campos necesarios
+            if (!facturaEmbebida || !facturaEmbebida._id) {
+              console.log(`⚠️ Factura embebida inválida, saltando...`);
+              return facturaEmbebida; // Devolver sin cambios si es inválida
+            }
+            
+            const facturaIdStr = facturaEmbebida._id.toString();
+            const importePagadoAcumulativo = importesPagadosOriginales[facturaIdStr];
+            
+            console.log(`🔧 Procesando factura embebida ${facturaIdStr}:`, {
+              importePagadoAntes: facturaEmbebida.importePagado || 0,
+              importePagadoAcumulativo: importePagadoAcumulativo || 0,
+              tieneValorAcumulativo: importePagadoAcumulativo !== undefined,
+              tieneMontoEspecifico: facturaIdsConMontosEspecificos.includes(facturaIdStr)
+            });
+            
+            if (importePagadoAcumulativo !== undefined) {
+              const importePagadoAnterior = facturaEmbebida.importePagado || 0;
+              
+              console.log(`✅ Factura embebida ${facturaIdStr} ACTUALIZADA: ${importePagadoAnterior} → ${importePagadoAcumulativo}`);
+              
+              // Crear una nueva versión de la factura embebida con el importePagado actualizado
+              return {
+                ...facturaEmbebida,
+                importePagado: importePagadoAcumulativo
+              };
+            }
+            
+            // Si no tiene valor acumulativo, devolver la factura sin cambios
+            return facturaEmbebida;
+          });
+          
+          // Actualizar las facturas en datosActualizacion
+          datosActualizacion.facturas = facturasActualizadasPaso25;
+          
+          console.log(`✅ PASO 2.5 (MEJORADO) completado: facturas embebidas actualizadas`);
+          
+          // DEBUG: Mostrar estado final de facturas embebidas
+          console.log(`📊 Estado FINAL de facturas embebidas después de actualización:`);
+          facturasActualizadasPaso25.forEach((f, index) => {
+            // Validar que la factura tenga todos los campos necesarios antes de hacer console.log
+            if (f && f._id) {
+              console.log(`📋 Factura embebida ${index + 1} (FINAL):`, {
+                _id: f._id.toString(),
+                importePagado: f.importePagado || 0,
+                importeAPagar: f.importeAPagar || 0
+              });
+            } else {
+              console.log(`⚠️ Factura embebida ${index + 1} (FINAL): Factura inválida o sin _id`);
+            }
+          });
+        }
       }
     }
     if (estatus) datosActualizacion.estatus = estatus;
@@ -897,11 +1129,24 @@ export const updateInvoicesPackage = async (req, res) => {
       ];
     }
 
+    console.log(`💾 Guardando paquete con ${datosActualizacion.facturas?.length || 0} facturas embebidas`);
+    
     const paqueteActualizado = await InvoicesPackage.findByIdAndUpdate(
       id,
       { $set: datosActualizacion },
       { new: true, runValidators: true }
     );
+
+    console.log(`✅ Paquete guardado. Verificando facturas embebidas después del guardado:`);
+    if (paqueteActualizado.facturas) {
+      paqueteActualizado.facturas.forEach((f, index) => {
+        console.log(`📋 Factura guardada ${index + 1}:`, {
+          _id: f._id.toString(),
+          importePagado: f.importePagado,
+          importeAPagar: f.importeAPagar
+        });
+      });
+    }
 
     await paqueteActualizado.actualizarTotales();
 
@@ -2161,6 +2406,10 @@ export const removeInvoiceFromPackage = async (req, res) => {
       });
     }
 
+    // Obtener la factura embebida antes de eliminarla para calcular el monto a restar
+    const facturaEmbebida = paquete.facturas[facturaIndex];
+    const importePagadoEmbebido = parseFloat(facturaEmbebida.importePagado) || 0;
+
     // Eliminar la factura del arreglo
     paquete.facturas.splice(facturaIndex, 1);
 
@@ -2168,23 +2417,36 @@ export const removeInvoiceFromPackage = async (req, res) => {
     await paquete.actualizarTotales();
     await paquete.save();
 
-    // Resetear la factura original a su estado inicial
-    const datosReseteo = {
-      importePagado: 0,
-      estadoPago: 0, // Pendiente
-      esCompleta: false,
-      descripcionPago: null,
-      autorizada: null,
-      pagoRechazado: false,
-      fechaRevision: null,
-      registrado: 0,
-      pagado: 0,
-      estaRegistrada: false,
-    };
+    // Actualizar la factura original: solo restar el importePagado del pago parcial eliminado
+    // NO resetear completamente para no afectar otros paquetes
+    const facturaOriginal = await ImportedInvoices.findById(invoiceId);
+    if (facturaOriginal) {
+      const importePagadoActual = parseFloat(facturaOriginal.importePagado) || 0;
+      const nuevoImportePagado = Math.max(0, importePagadoActual - importePagadoEmbebido);
+      
+      // Solo actualizar campos relacionados con el pago, NO resetear completamente
+      const datosActualizacion = {
+        importePagado: nuevoImportePagado,
+        esCompleta: nuevoImportePagado >= facturaOriginal.importeAPagar,
+        estadoPago: nuevoImportePagado > 0 ? 1 : 0, // 1 si tiene pagos, 0 si no
+        fechaRevision: new Date(),
+      };
 
-    await ImportedInvoices.findByIdAndUpdate(invoiceId, {
-      $set: datosReseteo,
-    });
+      // Solo resetear autorización si ya no hay pagos
+      if (nuevoImportePagado === 0) {
+        datosActualizacion.autorizada = null;
+        datosActualizacion.pagoRechazado = false;
+        datosActualizacion.registrado = 0;
+        datosActualizacion.pagado = 0;
+        datosActualizacion.estaRegistrada = false;
+      }
+
+      await ImportedInvoices.findByIdAndUpdate(invoiceId, {
+        $set: datosActualizacion,
+      });
+
+      console.log(`✅ Factura original actualizada: importePagado ${importePagadoActual} → ${nuevoImportePagado} (restado ${importePagadoEmbebido})`);
+    }
 
     res.status(200).json({
       success: true,

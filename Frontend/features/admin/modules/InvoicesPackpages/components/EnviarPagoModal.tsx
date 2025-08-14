@@ -367,23 +367,24 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
     setTimeout(() => setCopied(null), 1500);
   };
 
-  // Calcular el total considerando pagos temporales, reales y pagos en efectivo
+  // Calcular el total considerando solo los montos que se pagarán en este paquete
   const totalPagar =
     facturasLocal.reduce((sum, f) => {
-      let importePagadoCalculado = f.importePagado;
-
-      // Si hay pagos temporales para esta factura, calcular el importe total
+      // Solo sumar los montos de los pagos actuales que se van a procesar
       if (tempPayments && tempPayments[f._id]) {
         const tempPayment = tempPayments[f._id];
         if (tempPayment.tipoPago === "completo") {
-          importePagadoCalculado = f.importeAPagar;
+          // Para pagos completos, sumar el saldo restante que se está pagando
+          const saldoRestante =
+            f.importeAPagar - tempPayment.originalImportePagado;
+          return sum + saldoRestante;
         } else if (tempPayment.tipoPago === "parcial" && tempPayment.monto) {
-          importePagadoCalculado =
-            tempPayment.originalImportePagado + tempPayment.monto;
+          // Para pagos parciales, sumar solo el monto del pago actual
+          return sum + tempPayment.monto;
         }
       }
-
-      return sum + importePagadoCalculado;
+      // Si no es un pago temporal, no sumar nada
+      return sum;
     }, 0) +
     (pagosEfectivoLocal.reduce(
       (sum, payment) => sum + payment.importeAPagar,
@@ -406,34 +407,33 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
     return 0;
   };
 
-  // Función para calcular totales de facturas (igual que en el detalle del paquete)
+  // Función para calcular totales de facturas - solo los montos que se pagarán en este paquete
   const calcularTotalesFacturas = () => {
     if (!facturasLocal || facturasLocal.length === 0)
       return { total: 0, pagado: 0, pendiente: 0, cantidad: 0 };
 
-    const total = facturasLocal.reduce(
-      (sum, f) => sum + toNumber(f.importeAPagar),
-      0
-    );
-    const pagado = facturasLocal.reduce((sum, f) => {
-      let importePagadoCalculado = f.importePagado;
+    // Para el total y pagado, sumar solo los montos de los pagos actuales de este paquete
+    const totalMontosPago = facturasLocal.reduce((sum, f) => {
       if (tempPayments && tempPayments[f._id]) {
         const tempPayment = tempPayments[f._id];
         if (tempPayment.tipoPago === "completo") {
-          importePagadoCalculado = f.importeAPagar;
+          // Para pagos completos, sumar el saldo restante que se está pagando
+          const saldoRestante =
+            f.importeAPagar - tempPayment.originalImportePagado;
+          return sum + saldoRestante;
         } else if (tempPayment.tipoPago === "parcial" && tempPayment.monto) {
-          importePagadoCalculado =
-            tempPayment.originalImportePagado + tempPayment.monto;
+          // Para pagos parciales, sumar solo el monto del pago actual
+          return sum + tempPayment.monto;
         }
       }
-      return sum + importePagadoCalculado;
+      // Si no es un pago temporal, no sumar nada (no debería ocurrir en este modal)
+      return sum;
     }, 0);
-    const pendiente = total - pagado;
 
     return {
-      total,
-      pagado,
-      pendiente,
+      total: totalMontosPago, // Total de lo que se va a pagar en este paquete
+      pagado: totalMontosPago, // Lo que se pagará (será igual al total)
+      pendiente: 0, // No hay pendiente porque todo lo mostrado se va a pagar
       cantidad: facturasLocal.length,
     };
   };
@@ -554,8 +554,10 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       // Usar la fecha seleccionada por el usuario
       const fechaPagoParaGuardar = fechaPago;
 
-      // Preparar conceptos de gasto para cada factura
+      // Preparar conceptos de gasto y montos específicos para cada factura
       const conceptosGasto: { [invoiceId: string]: string } = {};
+      const montosEspecificos: { [invoiceId: string]: number } = {};
+
       facturasLocal.forEach((factura) => {
         if (
           tempPayments &&
@@ -564,6 +566,19 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         ) {
           conceptosGasto[factura._id] =
             tempPayments[factura._id].conceptoGasto!;
+        }
+
+        // Para pagos parciales, enviar el monto específico de este pago
+        if (tempPayments && tempPayments[factura._id]) {
+          const tempPayment = tempPayments[factura._id];
+          if (tempPayment.tipoPago === "parcial" && tempPayment.monto) {
+            montosEspecificos[factura._id] = tempPayment.monto;
+          } else if (tempPayment.tipoPago === "completo") {
+            // Para pagos completos, calcular el saldo restante
+            const saldoRestante =
+              factura.importeAPagar - tempPayment.originalImportePagado;
+            montosEspecificos[factura._id] = saldoRestante;
+          }
         }
       });
 
@@ -594,6 +609,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         brandId: selectedBrandId,
         branchId: selectedBranchId,
         conceptosGasto,
+        montosEspecificos, // Nuevos montos específicos por factura
       };
 
       let packpageId: string | undefined = undefined;
@@ -625,15 +641,17 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         const hayNuevosPagosTemporales = pagosEfectivoParaEnviar.some(
           (p) => !p._id || p._id.startsWith("temp_")
         );
+        const hayPagosTemporalesEnFacturas =
+          tempPayments && Object.keys(tempPayments).length > 0;
         const hayCambiosMetadatos =
           comentario !== paqueteExistente.comentario ||
-          fechaPagoParaGuardar !== paqueteExistente.fechaPago ||
-          (tempPayments && Object.keys(tempPayments).length > 0);
+          fechaPagoParaGuardar !== paqueteExistente.fechaPago;
 
         if (
           hayNuevasFacturas ||
           hayNuevosPagos ||
           hayNuevosPagosTemporales ||
+          hayPagosTemporalesEnFacturas ||
           hayCambiosMetadatos
         ) {
           const updateData: any = {
@@ -644,10 +662,16 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
             branchId: selectedBranchId,
           };
 
-          // Solo enviar facturas si hay nuevas facturas
-          if (hayNuevasFacturas) {
-            updateData.facturas = nuevasFacturas;
+          // Enviar facturas si hay nuevas facturas O si hay pagos temporales en facturas existentes
+          if (hayNuevasFacturas || hayPagosTemporalesEnFacturas) {
+            // Si hay pagos temporales, enviar TODAS las facturas del paquete para actualizar las embebidas
+            if (hayPagosTemporalesEnFacturas) {
+              updateData.facturas = facturasLocal.map((f) => f._id);
+            } else {
+              updateData.facturas = nuevasFacturas;
+            }
             updateData.conceptosGasto = conceptosGasto;
+            updateData.montosEspecificos = montosEspecificos;
           }
 
           // Solo enviar pagos en efectivo si hay nuevos pagos
@@ -668,6 +692,8 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
           );
         }
       }
+
+      // La actualización del importePagado de facturas embebidas ahora se maneja automáticamente en el backend
 
       // PASO 3: La relación InvoicesPackageCompany se crea automáticamente en el backend
       // cuando se proporcionan companyId, brandId, branchId en el paso 2
@@ -788,7 +814,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                       <th>Estatus</th>
                       <th>Fecha Cancelación</th>
                       <th>Saldo</th>
-                      <th>Importe A Pagar </th>
+                      <th className="text-center">Importe A Pagar </th>
                       <th className="text-center">Acciones</th>
                     </tr>
                   </thead>
@@ -796,14 +822,16 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                     {facturasLocal.map((f, idx) => {
                       // Calcular importe pagado considerando pagos temporales
                       let importePagadoCalculado = f.importePagado;
-                      let saldoCalculado = f.importeAPagar - f.importePagado;
+                      // El saldo siempre será el importe total original de la factura
+                      let saldoCalculado = f.importeAPagar;
 
                       // Si hay pagos temporales para esta factura, calcular el importe total
                       if (tempPayments && tempPayments[f._id]) {
                         const tempPayment = tempPayments[f._id];
                         if (tempPayment.tipoPago === "completo") {
                           importePagadoCalculado = f.importeAPagar;
-                          saldoCalculado = 0;
+                          // El saldo sigue siendo el total original
+                          saldoCalculado = f.importeAPagar;
                         } else if (
                           tempPayment.tipoPago === "parcial" &&
                           tempPayment.monto
@@ -811,8 +839,8 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                           importePagadoCalculado =
                             tempPayment.originalImportePagado +
                             tempPayment.monto;
-                          saldoCalculado =
-                            f.importeAPagar - importePagadoCalculado;
+                          // El saldo sigue siendo el total original
+                          saldoCalculado = f.importeAPagar;
                         }
                       }
 
@@ -830,42 +858,87 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                           <td>{idx + 1}</td>
                           {/* Estado de guardado */}
                           <td>
-                            {f.completamentePagada ? (
-                              <div className="d-flex flex-column gap-1">
-                                {f.estaRegistrada ? (
-                                  f.autorizada ? (
-                                    <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
-                                      <i className="bi bi-shield-check me-1"></i>
-                                      Autorizada
-                                    </span>
-                                  ) : (
-                                    <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
+                            {(() => {
+                              // Si tiene pago temporal, mostrar el estado basado en el tipo de pago temporal
+                              const tempPayment =
+                                tempPayments && tempPayments[f._id];
+                              if (tempPayment) {
+                                if (tempPayment.tipoPago === "parcial") {
+                                  // Mostrar porcentaje del pago parcial temporal sobre el total de la factura
+                                  const porcentajePago = Math.round(
+                                    ((tempPayment.monto || 0) /
+                                      f.importeAPagar) *
+                                      100
+                                  );
+                                  return (
+                                    <span className="badge bg-warning bg-opacity-10 text-warning fw-bold">
                                       <i className="bi bi-clock me-1"></i>
-                                      Procesada
+                                      Pago Parcial: {porcentajePago}%
                                     </span>
-                                  )
-                                ) : (
-                                  <span className="badge bg-success bg-opacity-10 text-success fw-bold">
-                                    <i className="bi bi-check-circle me-1"></i>
-                                    Completamente Pagada
+                                  );
+                                } else if (
+                                  tempPayment.tipoPago === "completo"
+                                ) {
+                                  // Para pagos completos temporales, mostrar porcentaje del saldo restante
+                                  const saldoRestante =
+                                    f.importeAPagar -
+                                    tempPayment.originalImportePagado;
+                                  const porcentajePago = Math.round(
+                                    (saldoRestante / f.importeAPagar) * 100
+                                  );
+                                  return (
+                                    <span className="badge bg-success bg-opacity-10 text-success fw-bold">
+                                      <i className="bi bi-check-circle me-1"></i>
+                                      Pago Final: {porcentajePago}%
+                                    </span>
+                                  );
+                                }
+                              }
+
+                              // Lógica original para facturas sin pagos temporales
+                              if (f.completamentePagada) {
+                                return (
+                                  <div className="d-flex flex-column gap-1">
+                                    {f.estaRegistrada ? (
+                                      f.autorizada ? (
+                                        <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
+                                          <i className="bi bi-shield-check me-1"></i>
+                                          Autorizada
+                                        </span>
+                                      ) : (
+                                        <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
+                                          <i className="bi bi-clock me-1"></i>
+                                          Procesada
+                                        </span>
+                                      )
+                                    ) : (
+                                      <span className="badge bg-success bg-opacity-10 text-success fw-bold">
+                                        <i className="bi bi-check-circle me-1"></i>
+                                        Completamente Pagada
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              } else if (f.importePagado > 0) {
+                                return (
+                                  <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
+                                    <i className="bi bi-clock me-1"></i>
+                                    Pago Parcial:{" "}
+                                    {Math.round(
+                                      (f.importePagado / f.importeAPagar) * 100
+                                    )}
+                                    %
                                   </span>
-                                )}
-                              </div>
-                            ) : f.importePagado > 0 ? (
-                              <span className="badge bg-primary bg-opacity-10 text-primary fw-bold">
-                                <i className="bi bi-clock me-1"></i>
-                                Pago Parcial:{" "}
-                                {Math.round(
-                                  (f.importePagado / f.importeAPagar) * 100
-                                )}
-                                %
-                              </span>
-                            ) : (
-                              <span className="badge bg-warning bg-opacity-10 text-warning fw-bold">
-                                <i className="bi bi-plus-circle me-1"></i>
-                                Nueva
-                              </span>
-                            )}
+                                );
+                              } else {
+                                return (
+                                  <span className="badge bg-warning bg-opacity-10 text-warning fw-bold">
+                                    <i className="bi bi-plus-circle me-1"></i>
+                                    Nueva
+                                  </span>
+                                );
+                              }
+                            })()}
                           </td>
                           {/* Proveedor */}
                           <td>
@@ -927,13 +1000,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                           </td>
                           {/* Saldo */}
                           <td>
-                            <span
-                              className={
-                                saldoCalculado > 0
-                                  ? "text-warning"
-                                  : "text-success"
-                              }
-                            >
+                            <span className="text-primary fw-bold">
                               {saldoCalculado.toLocaleString("es-MX", {
                                 style: "currency",
                                 currency: "MXN",
@@ -941,18 +1008,72 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                             </span>
                           </td>
                           {/* Importe Pagado */}
-                          <td>
+                          <td className="text-end">
                             <span
-                              className={
-                                importePagadoCalculado > 0
+                              className={(() => {
+                                // Para pagos temporales, mostrar solo el monto del pago actual
+                                if (tempPayments && tempPayments[f._id]) {
+                                  const tempPayment = tempPayments[f._id];
+                                  if (tempPayment.tipoPago === "completo") {
+                                    // Para pagos completos, mostrar el saldo restante que se está pagando
+                                    const montoAPagar =
+                                      f.importeAPagar -
+                                      tempPayment.originalImportePagado;
+                                    return montoAPagar > 0
+                                      ? "text-success"
+                                      : "text-muted";
+                                  } else if (
+                                    tempPayment.tipoPago === "parcial" &&
+                                    tempPayment.monto
+                                  ) {
+                                    // Para pagos parciales, mostrar solo el monto del pago actual
+                                    return tempPayment.monto > 0
+                                      ? "text-success"
+                                      : "text-muted";
+                                  }
+                                }
+                                // Para facturas sin pagos temporales, mostrar el importe pagado normal
+                                return importePagadoCalculado > 0
                                   ? "text-success"
-                                  : "text-muted"
-                              }
+                                  : "text-muted";
+                              })()}
                             >
-                              {importePagadoCalculado.toLocaleString("es-MX", {
-                                style: "currency",
-                                currency: "MXN",
-                              })}
+                              {(() => {
+                                // Para pagos temporales, mostrar solo el monto del pago actual
+                                if (tempPayments && tempPayments[f._id]) {
+                                  const tempPayment = tempPayments[f._id];
+                                  if (tempPayment.tipoPago === "completo") {
+                                    // Para pagos completos, mostrar el saldo restante que se está pagando
+                                    const montoAPagar =
+                                      f.importeAPagar -
+                                      tempPayment.originalImportePagado;
+                                    return montoAPagar.toLocaleString("es-MX", {
+                                      style: "currency",
+                                      currency: "MXN",
+                                    });
+                                  } else if (
+                                    tempPayment.tipoPago === "parcial" &&
+                                    tempPayment.monto
+                                  ) {
+                                    // Para pagos parciales, mostrar solo el monto del pago actual
+                                    return tempPayment.monto.toLocaleString(
+                                      "es-MX",
+                                      {
+                                        style: "currency",
+                                        currency: "MXN",
+                                      }
+                                    );
+                                  }
+                                }
+                                // Para facturas sin pagos temporales, mostrar el importe pagado normal
+                                return importePagadoCalculado.toLocaleString(
+                                  "es-MX",
+                                  {
+                                    style: "currency",
+                                    currency: "MXN",
+                                  }
+                                );
+                              })()}
                             </span>
                             {tempPayments && tempPayments[f._id] && (
                               <small className="text-warning d-block">
@@ -1036,7 +1157,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                       <th>Concepto de Gasto</th>
                       <th>Descripción</th>
                       <th>Estatus</th>
-                      <th>Importe a Pagar</th>
+                      <th className="text-center">Importe a Pagar</th>
                       <th className="text-center">Acciones</th>
                     </tr>
                   </thead>
@@ -1068,7 +1189,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                             Vigente
                           </span>
                         </td>
-                        <td>
+                        <td className="text-end">
                           <span className="fw-bold text-success">
                             {pago.importeAPagar.toLocaleString("es-MX", {
                               style: "currency",

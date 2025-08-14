@@ -759,6 +759,13 @@ const InvoicesPackagePage: React.FC = () => {
 
       const esRechazada = f.autorizada === false || f.pagoRechazado === true;
 
+      // Si tiene pago temporal, siempre incluirla (incluso si se paga completamente con el temporal)
+      if (hasTempPayment) {
+        const noEstaGuardada = !facturasGuardadas.includes(f._id);
+        return noEstaGuardada;
+      }
+
+      // Para facturas sin pagos temporales, aplicar la lógica original
       if (
         f.estaRegistrada &&
         invoiceWithTempPayments.importePagado >=
@@ -773,10 +780,6 @@ const InvoicesPackagePage: React.FC = () => {
         return true;
       }
 
-      if (hasTempPayment && noEstaGuardada) {
-        return true;
-      }
-
       return false;
     });
   }, [invoices, facturasGuardadas, tempPayments]);
@@ -788,6 +791,13 @@ const InvoicesPackagePage: React.FC = () => {
 
       const esRechazada = f.autorizada === false || f.pagoRechazado === true;
 
+      // Si tiene pago temporal, siempre incluirla (incluso si se paga completamente con el temporal)
+      if (hasTempPayment) {
+        const noEstaGuardada = !facturasGuardadas.includes(f._id);
+        return noEstaGuardada;
+      }
+
+      // Para facturas sin pagos temporales, aplicar la lógica original
       if (
         f.estaRegistrada &&
         invoiceWithTempPayments.importePagado >=
@@ -800,9 +810,9 @@ const InvoicesPackagePage: React.FC = () => {
       const noEstaGuardada = !facturasGuardadas.includes(f._id);
 
       if (isNewPackage) {
-        return (esRechazada || hasTempPayment) && noEstaGuardada;
+        return esRechazada && noEstaGuardada;
       } else {
-        return (esRechazada || hasTempPayment) && noEstaGuardada;
+        return esRechazada && noEstaGuardada;
       }
     });
   }, [invoices, facturasGuardadas, tempPayments, isNewPackage]);

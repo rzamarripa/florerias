@@ -870,6 +870,31 @@ export const markInvoiceAsFullyPaid = async (req, res) => {
   }
 };
 
+// Función para calcular el total de pagos de una factura en todos los paquetes
+const calcularTotalPagosEnPaquetes = async (invoiceId) => {
+  try {
+    const paquetes = await InvoicesPackage.find({ 'facturas._id': invoiceId });
+    let totalPagos = 0;
+    
+    for (const paquete of paquetes) {
+      const facturasEnPaquete = paquete.facturas.filter(f => f._id.toString() === invoiceId.toString());
+      for (const factura of facturasEnPaquete) {
+        const importePagado = typeof factura.importePagado === 'object' && 
+          factura.importePagado !== null &&
+          factura.importePagado._bsontype === 'Decimal128'
+          ? parseFloat(factura.importePagado.toString())
+          : factura.importePagado || 0;
+        totalPagos += importePagado;
+      }
+    }
+    
+    return totalPagos;
+  } catch (error) {
+    console.error('Error al calcular total de pagos en paquetes:', error);
+    return 0;
+  }
+};
+
 export const markInvoiceAsPartiallyPaid = async (req, res) => {
   try {
     const { id } = req.params;
@@ -888,9 +913,21 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
         .json({ success: false, message: "Factura no encontrada" });
     }
 
-    // Calcular el nuevo importe pagado sumando al existente
-    const nuevoImportePagado = (invoice.importePagado || 0) + monto;
+    // Calcular el total de pagos existentes en todos los paquetes
+    const totalPagosEnPaquetes = await calcularTotalPagosEnPaquetes(id);
+    const nuevoImportePagado = totalPagosEnPaquetes + monto;
 
+    // Validar que no se exceda el importe a pagar
+    if (nuevoImportePagado > invoice.importeAPagar) {
+      return res
+        .status(400)
+        .json({ 
+          success: false, 
+          message: `El monto total de pagos ($${nuevoImportePagado}) excede el importe a pagar ($${invoice.importeAPagar})` 
+        });
+    }
+
+    // Actualizar la factura original con el total acumulado
     invoice.descripcionPago = descripcion;
     invoice.importePagado = nuevoImportePagado;
     invoice.fechaRevision = new Date();
@@ -912,17 +949,8 @@ export const markInvoiceAsPartiallyPaid = async (req, res) => {
 
     await invoice.save();
 
-    // ACUMULACIÓN: También actualizar la factura embebida en todos los paquetes que la contengan
-    await actualizarFacturaEnPaquetes(invoice._id, {
-      importePagado: invoice.importePagado,
-      importeAPagar: invoice.importeAPagar,
-      descripcionPago: invoice.descripcionPago,
-      estadoPago: invoice.estadoPago,
-      esCompleta: invoice.esCompleta,
-      autorizada: invoice.autorizada,
-      fechaRevision: invoice.fechaRevision,
-      estaRegistrada: invoice.estaRegistrada
-    });
+    // NO actualizar facturas embebidas - cada paquete mantiene su propio registro de pago parcial
+    // La función actualizarFacturaEnPaquetes se usará solo para cambios de estado, no de montos
 
     res.status(200).json({
       success: true,

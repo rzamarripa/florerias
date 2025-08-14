@@ -102,18 +102,6 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
       const invoice = invoices.find((inv: any) => inv._id === invoiceId);
       if (invoice) {
         setIsEditing(invoice.importePagado > 0);
-
-        if (invoice.conceptoGasto) {
-          if (typeof invoice.conceptoGasto === "string") {
-            setConceptoGasto(invoice.conceptoGasto);
-          } else if (invoice.conceptoGasto._id) {
-            setConceptoGasto(invoice.conceptoGasto._id);
-          }
-        }
-
-        if (invoice.descripcionPago) {
-          setDescripcion(invoice.descripcionPago);
-        }
       }
     }
   }, [show, invoiceId, invoices]);
