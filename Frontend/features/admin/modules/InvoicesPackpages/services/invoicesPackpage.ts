@@ -214,6 +214,8 @@ export const createInvoicesPackage = async (data: {
     branchId?: string;
     // Nuevo campo para conceptos de gasto por factura
     conceptosGasto?: { [invoiceId: string]: string };
+    // Nuevo campo para montos específicos por factura (pagos parciales)
+    montosEspecificos?: { [invoiceId: string]: number };
 }): Promise<InvoicesPackageResponse> => {
     const response = await apiCall<InvoicesPackageResponse>("/invoices-package", {
         method: "POST",
@@ -270,6 +272,8 @@ export const updateInvoicesPackage = async (id: string, data: {
     branchId?: string;
     // Nuevo campo para conceptos de gasto por factura
     conceptosGasto?: { [invoiceId: string]: string };
+    // Nuevo campo para montos específicos por factura (pagos parciales)
+    montosEspecificos?: { [invoiceId: string]: number };
     // Nuevo campo para pagos en efectivo
     pagosEfectivo?: {
         _id?: string;
@@ -285,6 +289,8 @@ export const updateInvoicesPackage = async (id: string, data: {
         description?: string;
         createdAt?: string;
     }[];
+    // Nuevo flag para indicar si las facturas enviadas son nuevas
+    esNuevasFacturas?: boolean;
 }): Promise<InvoicesPackageResponse> => {
     const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${id}`, {
         method: "PUT",

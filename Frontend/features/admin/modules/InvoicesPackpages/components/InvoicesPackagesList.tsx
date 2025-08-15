@@ -118,6 +118,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
     }, 1000);
   };
 
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Borrador":

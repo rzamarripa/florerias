@@ -329,12 +329,8 @@ const InvoicesPackagePage: React.FC = () => {
   };
 
   const handleRemoveTempPayment = (invoiceId: string) => {
-    setTempPayments((prev) => {
-      const newTempPayments = { ...prev };
-      delete newTempPayments[invoiceId];
-      return newTempPayments;
-    });
-    toast.info("Pago temporal eliminado");
+    // NO hacer nada aquí - dejar que el modal maneje la eliminación diferida
+    // El modal eliminará visualmente y procesará al guardar
   };
 
   const handleAddTempCashPayment = (cashPayment: {
@@ -356,10 +352,8 @@ const InvoicesPackagePage: React.FC = () => {
   };
 
   const handleRemoveTempCashPayment = (cashPaymentId: string) => {
-    setTempCashPayments((prev) =>
-      prev.filter((payment) => payment._id !== cashPaymentId)
-    );
-    toast.info("Pago en efectivo temporal eliminado");
+    // NO hacer nada aquí - dejar que el modal maneje la eliminación diferida
+    // El modal eliminará visualmente y procesará al guardar
   };
 
   const combinedSummary = React.useMemo(() => {
@@ -535,21 +529,6 @@ const InvoicesPackagePage: React.FC = () => {
       }
 
       setRealBudgetUsed(totalRealBudgetUsed);
-
-      console.log("🔍 Presupuesto realmente utilizado calculado:", {
-        totalRealBudgetUsed,
-        selectedYear,
-        selectedMonth,
-        invoicesCount: invoicesResponse?.data?.length || 0,
-        packagesCount: Array.isArray(packagesResponse?.data)
-          ? packagesResponse.data.length
-          : 0,
-        message: `Presupuesto utilizado para ${
-          selectedMonth + 1
-        }/${selectedYear}: $${totalRealBudgetUsed.toLocaleString("es-MX", {
-          minimumFractionDigits: 2,
-        })}`,
-      });
     } catch (error) {
       console.error("Error en la búsqueda:", error);
       toast.error("Error al realizar la búsqueda");
