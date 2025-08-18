@@ -249,6 +249,43 @@ export const createInvoicesPackage = async (req, res) => {
     // Guardar el paquete
     const paqueteGuardado = await nuevoPaquete.save();
 
+    // NUEVO: Actualizar las facturas originales con los montos específicos
+    if (montosEspecificos && Object.keys(montosEspecificos).length > 0) {
+      const facturaIdsConMontosEspecificos = Object.keys(montosEspecificos);
+      
+      // Obtener las facturas originales actuales
+      const facturasOriginales = await ImportedInvoices.find({
+        _id: { $in: facturaIdsConMontosEspecificos }
+      });
+      
+      // Actualizar cada factura original
+      for (const facturaOriginal of facturasOriginales) {
+        const facturaIdStr = facturaOriginal._id.toString();
+        const montoEspecificoNuevo = parseFloat(montosEspecificos[facturaIdStr]) || 0;
+        
+        if (montoEspecificoNuevo > 0) {
+          // Para nuevos paquetes, sumar el monto específico al importePagado actual
+          const importePagadoActual = parseFloat(facturaOriginal.importePagado) || 0;
+          const nuevoImportePagado = importePagadoActual + montoEspecificoNuevo;
+          
+          // Actualizar la factura original
+          await ImportedInvoices.findByIdAndUpdate(facturaOriginal._id, {
+            $set: {
+              importePagado: nuevoImportePagado,
+              fechaRevision: new Date(),
+              // Actualizar estado según el pago
+              esCompleta: nuevoImportePagado >= facturaOriginal.importeAPagar,
+              autorizada: null, // Pendiente de autorización
+              estadoPago: null, // Pendiente de autorización
+              estaRegistrada: true,
+            },
+          });
+          
+          console.log(`✅ Factura original actualizada en CREATE: ${facturaIdStr} - importePagado: ${importePagadoActual} → ${nuevoImportePagado} (+ ${montoEspecificoNuevo})`);
+        }
+      }
+    }
+
     // Crear la relación con Company, Brand, Branch si se proporcionan
     let packageCompanyId = null;
     if (companyId) {
@@ -630,52 +667,12 @@ export const updateInvoicesPackage = async (req, res) => {
       }
     }
 
-    // NUEVA LÓGICA: Permitir pagos parciales separados para la misma factura en diferentes paquetes
-    // Solo validar duplicados exactos dentro del MISMO paquete
+    // NUEVA LÓGICA: Permitir múltiples pagos parciales para la misma factura en el mismo paquete
+    // incluso con el mismo monto - la validación de duplicados se ha eliminado para permitir
+    // múltiples pagos parciales independientemente del monto
+
+    // Procesar todas las facturas que se envían
     if (facturas && Array.isArray(facturas) && facturas.length > 0) {
-      const facturasYaEnPaqueteConMismoImporte = facturas.filter((facturaId) => {
-        const facturaIdStr = facturaId.toString();
-        const yaEstaEnPaquete = facturasActualesIds.includes(facturaIdStr);
-        
-        if (!yaEstaEnPaquete) return false;
-
-        // Para pagos parciales en DIFERENTES paquetes: SIEMPRE permitir
-        // Solo verificar duplicados exactos en el MISMO paquete
-        const facturaEnPaquete = paqueteExistente.facturas.find(
-          (f) => f._id.toString() === facturaIdStr
-        );
-        const facturaNueva = facturasExistentes.find(
-          (f) => f._id.toString() === facturaIdStr
-        );
-
-        if (!facturaEnPaquete || !facturaNueva) return false;
-
-        // CORRECCIÓN: Usar montosEspecificos para comparar el monto de ESTE pago específico
-        // en lugar del importePagado acumulativo de la factura original
-        const montoEspecificoAnterior = parseFloat(facturaEnPaquete.importePagado) || 0;
-        const montoEspecificoNuevo = montosEspecificos && montosEspecificos[facturaIdStr] 
-          ? parseFloat(montosEspecificos[facturaIdStr]) 
-          : 0;
-        
-
-
-        // Solo rechazar si el monto específico de este pago es exactamente igual
-        // al monto específico de una entrada existente en el paquete
-        return montoEspecificoNuevo === montoEspecificoAnterior && montoEspecificoNuevo > 0;
-      });
-
-      if (facturasYaEnPaqueteConMismoImporte.length > 0) {
-        const facturasAfectadas = facturasYaEnPaqueteConMismoImporte.map(facturaId => {
-          const facturaEnPaquete = paqueteExistente.facturas.find(f => f._id.toString() === facturaId.toString());
-          return facturaEnPaquete?.uuid || facturaId;
-        }).join(', ');
-        
-        return res.status(400).json({
-          success: false,
-          message: `No se pueden agregar facturas duplicadas con el mismo monto en el mismo paquete. Facturas afectadas: ${facturasAfectadas}`,
-        });
-      }
-
       // Procesar todas las facturas (nuevas y existentes con diferentes montos)
       const facturasAProcesar = facturas.filter(facturaId => {
         const facturaIdStr = facturaId.toString();
@@ -699,8 +696,8 @@ export const updateInvoicesPackage = async (req, res) => {
           ? parseFloat(montosEspecificos[facturaIdStr]) 
           : 0;
         
-        // Procesar si el monto específico es diferente (nuevo pago parcial)
-        return montoEspecificoNuevo !== montoEspecificoAnterior && montoEspecificoNuevo > 0;
+        // Procesar siempre que el monto específico sea mayor a 0 (permitir mismo monto)
+        return montoEspecificoNuevo > 0;
       });
 
       if (facturasAProcesar.length > 0) {
@@ -985,8 +982,11 @@ export const updateInvoicesPackage = async (req, res) => {
                   const importePagadoEnPaquete = facturaEmbebida.importePagado || 0;
                   nuevoImportePagado = importePagadoEnPaquete + montoEspecificoNuevo;
                 } else {
-                  // Es una factura NUEVA: usar el valor acumulativo completo de la factura original
-                  nuevoImportePagado = importePagadoAcumulativo;
+                  // Es una factura NUEVA: usar solo el monto específico de este pago
+                  const montoEspecificoNuevo = montosEspecificos && montosEspecificos[facturaIdStr] 
+                    ? parseFloat(montosEspecificos[facturaIdStr]) 
+                    : 0;
+                  nuevoImportePagado = montoEspecificoNuevo;
                 }
               
               // CORRECCIÓN CRÍTICA: Crear un objeto limpio sin propiedades internas de Mongoose
@@ -1212,6 +1212,43 @@ export const updateInvoicesPackage = async (req, res) => {
           select: "name",
         },
       });
+
+    // NUEVO: Actualizar las facturas originales con los montos específicos (igual que en CREATE)
+    if (montosEspecificos && Object.keys(montosEspecificos).length > 0) {
+      const facturaIdsConMontosEspecificos = Object.keys(montosEspecificos);
+      
+      // Obtener las facturas originales actuales
+      const facturasOriginales = await ImportedInvoices.find({
+        _id: { $in: facturaIdsConMontosEspecificos }
+      });
+      
+      // Actualizar cada factura original
+      for (const facturaOriginal of facturasOriginales) {
+        const facturaIdStr = facturaOriginal._id.toString();
+        const montoEspecificoNuevo = parseFloat(montosEspecificos[facturaIdStr]) || 0;
+        
+        if (montoEspecificoNuevo > 0) {
+          // Para paquetes existentes, sumar el monto específico al importePagado actual
+          const importePagadoActual = parseFloat(facturaOriginal.importePagado) || 0;
+          const nuevoImportePagado = importePagadoActual + montoEspecificoNuevo;
+          
+          // Actualizar la factura original
+          await ImportedInvoices.findByIdAndUpdate(facturaOriginal._id, {
+            $set: {
+              importePagado: nuevoImportePagado,
+              fechaRevision: new Date(),
+              // Actualizar estado según el pago
+              esCompleta: nuevoImportePagado >= facturaOriginal.importeAPagar,
+              autorizada: null, // Pendiente de autorización
+              estadoPago: null, // Pendiente de autorización
+              estaRegistrada: true,
+            },
+          });
+          
+          console.log(`✅ Factura original actualizada en UPDATE: ${facturaIdStr} - importePagado: ${importePagadoActual} → ${nuevoImportePagado} (+ ${montoEspecificoNuevo})`);
+        }
+      }
+    }
 
     res.status(200).json({
       success: true,

@@ -684,6 +684,20 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
     const month = String(fechaPago.getMonth() + 1).padStart(2, "0");
     const monthFormatted = `${year}-${month}`;
 
+    // Obtener los presupuestos del mes para esta compañía/marca/sucursal
+    const Budget = mongoose.model("cc_budget");
+    const budgetData = await Budget.find({
+      companyId: packageCompanyInfo.companyId._id,
+      brandId: packageCompanyInfo.brandId._id,
+      branchId: packageCompanyInfo.branchId._id,
+      month: monthFormatted,
+    }).populate("expenseConceptId");
+
+    console.log(`📊 Presupuestos obtenidos para validación: ${budgetData.length} conceptos`);
+    budgetData.forEach(budget => {
+      console.log(`  - Concepto: ${budget.expenseConceptId?.name || 'N/A'}, Monto: $${budget.assignedAmount}`);
+    });
+
     // Obtener todas las facturas del paquete con sus conceptos de gasto
     // También obtener las facturas originales de la BD para comparar pagos previos
     const facturasIds = packageData.facturas.map((f) => f._id);
@@ -720,6 +734,8 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
         const conceptoId = facturaOriginal.conceptoGasto._id.toString();
         const facturaEmbebida = facturasEmbebidas.get(facturaOriginal._id.toString());
         
+        console.log(`🔍 Procesando factura ${facturaOriginal._id} con concepto ${facturaOriginal.conceptoGasto.name} (ID: ${conceptoId})`);
+        
         // Solo procesar si la factura está autorizada EN EL PAQUETE o si no está rechazada
         if (facturaEmbebida && facturaEmbebida.autorizada !== false) {
           if (!pagosPorConcepto.has(conceptoId)) {
@@ -728,6 +744,7 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
               totalPagado: 0,
               pagos: [],
             });
+            console.log(`  ✅ Nuevo concepto agregado: ${facturaOriginal.conceptoGasto.name}`);
           }
           
           const conceptoData = pagosPorConcepto.get(conceptoId);
@@ -742,7 +759,13 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
             monto: montoPagado,
             descripcion: facturaOriginal.nombreEmisor,
           });
+          
+          console.log(`  💰 Monto agregado: $${montoPagado}, Total acumulado: $${conceptoData.totalPagado}`);
+        } else {
+          console.log(`  ❌ Factura no autorizada o rechazada, saltando`);
         }
+      } else {
+        console.log(`⚠️ Factura ${facturaOriginal._id} sin concepto de gasto`);
       }
     });
 
@@ -783,48 +806,26 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
     let requiereAutorizacion = false;
 
     for (const [conceptoId, data] of pagosPorConcepto) {
-      // Buscar el presupuesto específico para este concepto
-      // Buscar presupuesto según si la categoría tiene rutas o no
-      const Category = mongoose.model("cc_category");
-      const categoria = await Category.findById(data.concepto.categoryId);
+      console.log(`🔍 Procesando concepto ${conceptoId}:`, {
+        totalPagado: data.totalPagado,
+        pagosCount: data.pagos.length
+      });
 
-      let presupuesto = null;
-
-      if (categoria && categoria.hasRoutes) {
-        // Si tiene rutas, buscar en todas las rutas de la sucursal/marca
-        const Route = mongoose.model("cc_route");
-        const routes = await Route.find({
-          categoryId: categoria._id,
-          companyId: packageCompanyInfo.companyId._id,
-          brandId: packageCompanyInfo.brandId._id,
-          branchId: packageCompanyInfo.branchId._id,
-          status: true,
-        });
-
-        let totalPresupuesto = 0;
-        for (const route of routes) {
-          const budget = await Budget.findOne({
-            routeId: route._id,
-            expenseConceptId: conceptoId,
-            month: monthFormatted,
-          });
-          if (budget) {
-            totalPresupuesto += budget.assignedAmount || 0;
-          }
-        }
-        presupuesto = totalPresupuesto;
+      // SIMPLIFICAR: Buscar directamente el presupuesto por expenseConceptId
+      // Ya tenemos los presupuestos cargados desde getBudgetByCompanyBrandBranch
+      let presupuesto = 0;
+      
+      // Buscar en los presupuestos ya cargados por el concepto específico
+      const presupuestoConcepto = budgetData.find(budget => 
+        budget.expenseConceptId && 
+        budget.expenseConceptId.toString() === conceptoId
+      );
+      
+      if (presupuestoConcepto) {
+        presupuesto = presupuestoConcepto.assignedAmount || 0;
+        console.log(`💰 Presupuesto encontrado para concepto ${conceptoId}: $${presupuesto}`);
       } else {
-        // Si no tiene rutas, buscar directo en la sucursal
-        const budget = await Budget.findOne({
-          companyId: packageCompanyInfo.companyId._id,
-          brandId: packageCompanyInfo.brandId._id,
-          branchId: packageCompanyInfo.branchId._id,
-          categoryId: data.concepto.categoryId,
-          expenseConceptId: conceptoId,
-          month: monthFormatted,
-          routeId: null,
-        });
-        presupuesto = budget ? budget.assignedAmount || 0 : 0;
+        console.log(`⚠️ NO se encontró presupuesto para concepto ${conceptoId}`);
       }
 
       // AGREGAR: Buscar todos los pagos ya autorizados del mes para este concepto de gasto
@@ -916,9 +917,17 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
         }
       }
 
+      console.log(`📊 Validación concepto ${conceptoId}:`, {
+        presupuesto,
+        totalPagadoEnElMes,
+        excede: totalPagadoEnElMes > presupuesto,
+        diferencia: totalPagadoEnElMes - presupuesto
+      });
+
       const excede = totalPagadoEnElMes > presupuesto;
       if (excede) {
         requiereAutorizacion = true;
+        console.log(`🚨 CONCEPTO EXCEDIDO: ${conceptoId} - Presupuesto: $${presupuesto}, Pagado: $${totalPagadoEnElMes}`);
       }
 
       validaciones.push({

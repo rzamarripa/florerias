@@ -79,13 +79,13 @@ $theme-modern-colors: (
             --#{$prefix}sidenav-item-active-bg:         #e8e8ed;
         }
 
-        // Dark Left Sidebar
+        // Dark Left Sidebar - MODERN DESIGN (like reference image)
         &[data-menu-color="dark"] {
-            --#{$prefix}sidenav-bg:                     #23303c;
-            --#{$prefix}sidenav-border-color:           #23303c;
-            --#{$prefix}sidenav-item-color:             #8495ab;
-            --#{$prefix}sidenav-item-hover-color:       #bccee4;
-            --#{$prefix}sidenav-item-hover-bg:          #2f3742;
+            --#{$prefix}sidenav-bg:                     #252630;
+            --#{$prefix}sidenav-border-color:           #2c2d38;
+            --#{$prefix}sidenav-item-color:             #adb5bf;
+            --#{$prefix}sidenav-item-hover-color:       #e0eeff;
+            --#{$prefix}sidenav-item-hover-bg:          #2d2e3c;
             --#{$prefix}sidenav-item-active-color:      #ced6df;
             --#{$prefix}sidenav-item-active-bg:         #1c262f;
         }
@@ -116,13 +116,13 @@ $theme-modern-colors: (
         &[data-bs-theme="dark"][data-menu-color="dark"],
         &[data-bs-theme="dark"][data-menu-color="gray"],
         &[data-bs-theme="dark"][data-menu-color="light"] {
-            --#{$prefix}sidenav-bg:                     #1e1f27;
+            --#{$prefix}sidenav-bg:                     #252630;
             --#{$prefix}sidenav-border-color:           #2c2d38;
-            --#{$prefix}sidenav-item-color:             #8495ab;
-            --#{$prefix}sidenav-item-hover-color:       #bccee4;
-            --#{$prefix}sidenav-item-hover-bg:          #2f3742;
+            --#{$prefix}sidenav-item-color:             #adb5bf;
+            --#{$prefix}sidenav-item-hover-color:       #e0eeff;
+            --#{$prefix}sidenav-item-hover-bg:          #2d2e3c;
             --#{$prefix}sidenav-item-active-color:      #ced6df;
-            --#{$prefix}sidenav-item-active-bg:         #22232c;
+            --#{$prefix}sidenav-item-active-bg:         #1c262f;
         }
 
         // Light Topbar

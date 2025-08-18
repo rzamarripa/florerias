@@ -676,40 +676,9 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         }
       }
 
-      // La actualización del importePagado de facturas embebidas ahora se maneja automáticamente en el backend
-
-      // PASO 3: AHORA SÍ procesar pagos temporales (después de que el paquete fue actualizado exitosamente)
-      // IMPORTANTE: Solo procesar pagos de facturas que realmente quedaron en el paquete final
-      if (tempPayments && Object.keys(tempPayments).length > 0) {
-        // Filtrar solo las facturas que están realmente en facturasLocal (no las eliminadas)
-        const facturasEnPaqueteFinal = facturasLocal.map(f => f._id);
-        
-        const paymentsToProcess = Object.entries(tempPayments)
-          .filter(([invoiceId]) => facturasEnPaqueteFinal.includes(invoiceId)) // Solo procesar si la factura está en el paquete final
-          .map(([invoiceId, payment]) => ({
-            invoiceId,
-            ...payment,
-          }));
-
-        console.log('Pagos temporales a procesar:', paymentsToProcess.length);
-        console.log('Facturas en paquete final:', facturasEnPaqueteFinal.length);
-
-        // Procesar cada pago temporal (solo de facturas que quedaron en el paquete)
-        for (const payment of paymentsToProcess) {
-          if (payment.tipoPago === "completo") {
-            await markInvoiceAsFullyPaid(
-              payment.invoiceId,
-              payment.descripcion
-            );
-          } else if (payment.tipoPago === "parcial" && payment.monto) {
-            await markInvoiceAsPartiallyPaid(
-              payment.invoiceId,
-              payment.descripcion,
-              payment.monto
-            );
-          }
-        }
-      }
+      // La actualización del importePagado de facturas embebidas y originales ahora se maneja automáticamente en el backend
+      // cuando se procesan los montosEspecificos, por lo que ya no es necesario llamar markInvoiceAsPartiallyPaid 
+      // o markInvoiceAsFullyPaid ya que esto causaba duplicación de montos
 
       // PASO 4: La relación InvoicesPackageCompany se crea automáticamente en el backend
       // cuando se proporcionan companyId, brandId, branchId en el paso 2

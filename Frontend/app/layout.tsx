@@ -39,7 +39,7 @@ export default function RootLayout({
       lang="en"
       data-skin="modern"
       data-bs-theme="light"
-      data-menu-color="gradient"
+      data-menu-color="dark"
       data-topbar-color="light"
       data-layout-position="fixed"
       data-sidenav-size="default"
