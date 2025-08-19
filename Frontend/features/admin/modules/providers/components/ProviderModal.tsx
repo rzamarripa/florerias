@@ -11,7 +11,6 @@ import {
   getStatesByCountry,
   getMunicipalitiesByState,
   getAllBanks,
-  getAllBranches,
   createProvider,
   updateProvider,
 } from "../services/providers";
@@ -41,12 +40,10 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
   const [states, setStates] = useState<Location[]>([]);
   const [municipalities, setMunicipalities] = useState<Location[]>([]);
   const [banks, setBanks] = useState<Location[]>([]);
-  const [branches, setBranches] = useState<Location[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(false);
   const [loadingBanks, setLoadingBanks] = useState(false);
-  const [loadingBranches, setLoadingBranches] = useState(false);
 
   const {
     control,
@@ -86,7 +83,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
     if (showModal) {
       setLoadingCountries(true);
       setLoadingBanks(true);
-      setLoadingBranches(true);
 
       getAllCountries()
         .then((res) => {
@@ -104,14 +100,6 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
         })
         .finally(() => setLoadingBanks(false));
 
-      getAllBranches()
-        .then((res) => {
-          if (res.success && Array.isArray(res.data)) {
-            setBranches(res.data);
-          }
-        })
-        .finally(() => setLoadingBranches(false));
-
       if (isEditing && editingProvider) {
         setValue("commercialName", editingProvider.commercialName);
         setValue("businessName", editingProvider.businessName);
@@ -128,7 +116,7 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
         setValue("accountNumber", editingProvider.accountNumber);
         setValue("clabe", editingProvider.clabe);
         setValue("referencia", editingProvider.referencia);
-        setValue("sucursal", editingProvider.sucursal._id);
+        setValue("sucursal", editingProvider.sucursal?.name || "");
         setValue("isActive", editingProvider.isActive);
 
         setLoadingStates(true);
@@ -548,18 +536,12 @@ const ProviderModal: React.FC<ProviderModalProps> = ({
                   render={({ field }) => (
                     <Form.Group>
                       <Form.Label>Sucursal *</Form.Label>
-                      <Form.Select
+                      <Form.Control
                         {...field}
+                        type="text"
+                        placeholder="Ingrese el nombre de la sucursal"
                         isInvalid={!!errors.sucursal}
-                        disabled={loadingBranches}
-                      >
-                        <option value="">Seleccionar sucursal</option>
-                        {branches.map((branch) => (
-                          <option key={branch._id} value={branch._id}>
-                            {branch.name}
-                          </option>
-                        ))}
-                      </Form.Select>
+                      />
                       <Form.Control.Feedback type="invalid">
                         {errors.sucursal?.message}
                       </Form.Control.Feedback>

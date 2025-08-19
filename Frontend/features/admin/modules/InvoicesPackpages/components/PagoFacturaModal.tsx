@@ -33,8 +33,7 @@ interface PagoFacturaModalProps {
   companyId?: string;
   brandId?: string;
   branchId?: string;
-  selectedYear?: number;
-  selectedMonth?: number;
+  selectedPaymentDate?: string;
   tempPayments?: {
     [invoiceId: string]: {
       tipoPago: "completo" | "parcial";
@@ -78,8 +77,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
   companyId,
   brandId,
   branchId,
-  selectedYear = new Date().getFullYear(),
-  selectedMonth = new Date().getMonth(),
+  selectedPaymentDate,
   tempPayments = {},
   tempCashPayments = [],
   invoices = [],
@@ -118,14 +116,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
     } else {
       setBudgetData(null);
     }
-  }, [
-    conceptoGasto,
-    companyId,
-    brandId,
-    branchId,
-    selectedYear,
-    selectedMonth,
-  ]);
+  }, [conceptoGasto, companyId, brandId, branchId, selectedPaymentDate]);
 
   const loadConceptosGasto = async () => {
     if (!user?.departmentId) return;
@@ -154,10 +145,21 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
 
     try {
       setLoadingBudget(true);
-      const month = `${selectedYear}-${String(selectedMonth + 1).padStart(
-        2,
-        "0"
-      )}`;
+
+      // Extraer año y mes de selectedPaymentDate o usar fecha actual como fallback
+      let month: string;
+      if (selectedPaymentDate) {
+        const paymentDate = new Date(selectedPaymentDate);
+        month = `${paymentDate.getFullYear()}-${String(
+          paymentDate.getMonth() + 1
+        ).padStart(2, "0")}`;
+      } else {
+        const today = new Date();
+        month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}`;
+      }
 
       const budgetInfo = await getBudgetByExpenseConcept({
         expenseConceptId: conceptoGasto,

@@ -19,7 +19,7 @@ import { uploadSingle } from "../middleware/multerUpload.js";
 const router = express.Router();
 
 router.get("/", getAllUsers);
-router.get("/:id", getUserById);
+router.get("/:id", getUserById);https://www.thunderclient.com/welcome
 router.get("/:userId/providers", getUserProviders);
 
 router.post("/register", uploadSingle("image"), registerUser);

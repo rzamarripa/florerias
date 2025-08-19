@@ -9,7 +9,6 @@ import {
   getStatesByCountryId,
   getMunicipalitiesByStateId,
   getAllBanks,
-  getAllBranches,
   getBankAccountsByBank,
   getProvidersByRfcs,
 } from "../controllers/providerController.js";
@@ -34,7 +33,7 @@ router.get("/municipalities/by-state/:stateId", getMunicipalitiesByStateId);
 
 router.get("/banks", getAllBanks);
 
-router.get("/branches", getAllBranches);
+
 
 router.get("/bank-accounts/by-bank/:bankId", getBankAccountsByBank);
 

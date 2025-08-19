@@ -3,7 +3,6 @@ import { Country } from "../models/Country.js";
 import { State } from "../models/State.js";
 import { Municipality } from "../models/Municipality.js";
 import { Bank } from "../models/Bank.js";
-import { Branch } from "../models/Branch.js";
 
 export const getAll = async (req, res) => {
   try {
@@ -18,7 +17,6 @@ export const getAll = async (req, res) => {
       .populate("stateId", "_id name")
       .populate("municipalityId", "_id name")
       .populate("bank", "_id name")
-      .populate("sucursal", "_id name")
       .sort({ commercialName: 1 })
       .skip(skip)
       .limit(limit);
@@ -66,7 +64,6 @@ export const getAllProviders = async (req, res) => {
       .populate("stateId", "_id name")
       .populate("municipalityId", "_id name")
       .populate("bank", "_id name")
-      .populate("sucursal", "_id name")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -126,11 +123,6 @@ export const createProvider = async (req, res) => {
     const bankExists = await Bank.findOne({ _id: bank, isActive: true });
     if (!bankExists) {
       return res.status(400).json({ success: false, message: "Selected bank does not exist or is not active" });
-    }
-
-    const branchExists = await Branch.findOne({ _id: sucursal, isActive: true });
-    if (!branchExists) {
-      return res.status(400).json({ success: false, message: "Selected branch does not exist or is not active" });
     }
 
     // Verificar que la referencia sea única
@@ -210,11 +202,6 @@ export const updateProvider = async (req, res) => {
     const bankExists = await Bank.findOne({ _id: bank, isActive: true });
     if (!bankExists) {
       return res.status(400).json({ success: false, message: "Selected bank does not exist or is not active" });
-    }
-
-    const branchExists = await Branch.findOne({ _id: sucursal, isActive: true });
-    if (!branchExists) {
-      return res.status(400).json({ success: false, message: "Selected branch does not exist or is not active" });
     }
 
     // Verificar que la referencia sea única (excluyendo el proveedor actual)
@@ -341,16 +328,7 @@ export const getAllBanks = async (req, res) => {
   }
 };
 
-export const getAllBranches = async (req, res) => {
-  try {
-    const branches = await Branch.find({ isActive: true })
-      .select("_id name")
-      .sort({ name: 1 });
-    res.status(200).json({ success: true, data: branches });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+
 
 // GET - Obtener proveedores por RFCs
 export const getProvidersByRfcs = async (req, res) => {
@@ -377,7 +355,6 @@ export const getProvidersByRfcs = async (req, res) => {
     })
       .select('_id commercialName businessName rfc contactName bank accountNumber clabe referencia sucursal')
       .populate('bank', '_id name')
-      .populate('sucursal', '_id name')
       .sort({ commercialName: 1 });
 
     console.log('Proveedores encontrados:', providers.length);

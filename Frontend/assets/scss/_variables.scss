@@ -7,13 +7,13 @@
 $prefix:                      ins-;
 
 // Theme mode (If you want to use only one theme, set that theme to true and set all other themes to false.)
-$theme-classic:          true; // Default Theme
-$theme-saas:             true;
-$theme-modern:           true;
-$theme-minimal:          true;
-$theme-flat:             true;
-$theme-material:         true;
-$theme-galaxy:           true;
+$theme-classic:          false;
+$theme-saas:             false;
+$theme-modern:           true; // Modern Theme
+$theme-minimal:          false;
+$theme-flat:             false;
+$theme-material:         false;
+$theme-galaxy:           false;
 
 // Color system
 

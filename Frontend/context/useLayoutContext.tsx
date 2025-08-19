@@ -31,7 +31,7 @@ const INIT_STATE: LayoutState = {
   orientation: "vertical",
   sidenav: {
     size: "default",
-    color: "dark",
+    color: "gradient",
     user: true,
     isMobileMenuOpen: false,
   },

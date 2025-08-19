@@ -52,6 +52,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
     string[]
   >([]);
   const [loadingGrouping, setLoadingGrouping] = useState(false);
+  const [layoutType, setLayoutType] = useState<'grouped' | 'individual'>('grouped');
 
   useEffect(() => {
     if (show) {
@@ -96,7 +97,12 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
       selectedCompanyId &&
       selectedBankAccountId
     ) {
-      groupInvoicesByProviderLocally();
+      if (layoutType === 'grouped') {
+        groupInvoicesByProviderLocally();
+      } else {
+        // Para layout individual, usar los paquetes tal como están
+        setGroupedPayments([]);
+      }
     } else {
       setGroupedPayments([]);
     }
@@ -105,6 +111,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
     packagesPreview,
     selectedCompanyId,
     selectedBankAccountId,
+    layoutType,
   ]);
 
   const loadCompanies = async () => {
@@ -287,7 +294,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
             _id: `local_${rfc}`,
             groupingFolio: `LOCAL_${Math.random()
               .toString(36)
-              .substr(2, 5)
+              .substring(2, 7)
               .toUpperCase()}`,
             totalAmount: Number(group.totalAmount) || 0,
             providerRfc: rfc,
@@ -296,6 +303,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
             companyProvider: "Pago en Efectivo",
             bankNumber: "00000",
             debitedBankAccount: selectedBankAccountId,
+            companyId: selectedCompanyId,
             isActive: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -307,7 +315,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
             _id: `local_${rfc}`,
             groupingFolio: `LOCAL_${Math.random()
               .toString(36)
-              .substr(2, 5)
+              .substring(2, 7)
               .toUpperCase()}`,
             totalAmount: Number(group.totalAmount) || 0,
             providerRfc: group.provider.rfc,
@@ -316,6 +324,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
             companyProvider: group.provider.businessName,
             bankNumber: "00000", // Se obtendrá del backend al generar el reporte
             debitedBankAccount: selectedBankAccountId,
+            companyId: selectedCompanyId,
             isActive: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -336,6 +345,18 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
     }
   };
 
+  const handleClose = () => {
+    setSelectedCompanyId("");
+    setSelectedBankAccountId("");
+    setBankAccounts([]);
+    setPackagesPreview([]);
+    setSelectedPackageIds([]);
+    setTotalToFund(0);
+    setPackagesWithProviders([]);
+    setSelectedGroupedPayments([]);
+    onClose();
+  };
+
   const generatePaymentReport = async () => {
     if (!selectedCompanyId || !selectedBankAccountId) {
       toast.error("Por favor seleccione una razón social y cuenta bancaria");
@@ -349,7 +370,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
       return;
     }
 
-    if (selectedGroupedPayments.length === 0) {
+    if (layoutType === 'grouped' && selectedGroupedPayments.length === 0) {
       toast.error(
         "Por favor seleccione al menos una agrupación de facturas para generar el reporte"
       );
@@ -359,26 +380,33 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
     try {
       setRequestingFunding(true);
 
-      // Aquí es donde se hace la petición al backend para guardar en cc_payments_by_provider
-      const { groupInvoicesByProvider } = await import(
-        "../../paymentsByProvider/services/paymentsByProvider"
-      );
+      if (layoutType === 'grouped') {
+        // Aquí es donde se hace la petición al backend para guardar en cc_payments_by_provider
+        const { groupInvoicesByProvider } = await import(
+          "../../paymentsByProvider/services/paymentsByProvider"
+        );
 
-      const result = await groupInvoicesByProvider({
-        packageIds: selectedPackageIds,
-        bankAccountId: selectedBankAccountId,
-        companyId: selectedCompanyId,
-      });
-      console.log("result", result);
-      if (!result.success) {
-        throw new Error(
-          result.message || "Error al procesar pagos por proveedor"
+        const result = await groupInvoicesByProvider({
+          packageIds: selectedPackageIds,
+          bankAccountId: selectedBankAccountId,
+          companyId: selectedCompanyId,
+        });
+        console.log("result", result);
+        if (!result.success) {
+          throw new Error(
+            result.message || "Error al procesar pagos por proveedor"
+          );
+        }
+
+        toast.success(
+          `Generando reporte con ${selectedGroupedPayments.length} proveedores seleccionados`
+        );
+      } else {
+        // Para layout individual, solo mostrar mensaje
+        toast.success(
+          `Generando reporte individual con ${selectedPackageIds.length} paquetes seleccionados`
         );
       }
-
-      toast.success(
-        `Generando reporte con ${selectedGroupedPayments.length} proveedores seleccionados`
-      );
 
       const selectedBankAccount = bankAccounts.find(
         (acc) => acc._id === selectedBankAccountId
@@ -390,11 +418,12 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
       if (bankName.toLowerCase() === "banorte") {
         const banorteData: SantanderReportRow[] = [];
 
-        const selectedPayments = groupedPayments.filter((payment) =>
-          selectedGroupedPayments.includes(payment._id)
-        );
+        if (layoutType === 'grouped') {
+          const selectedPayments = groupedPayments.filter((payment) =>
+            selectedGroupedPayments.includes(payment._id)
+          );
 
-        selectedPayments.forEach((paymentGroup: PaymentByProvider) => {
+          selectedPayments.forEach((paymentGroup: PaymentByProvider) => {
           if (paymentGroup.providerRfc.startsWith("EFECTIVO_")) {
             // Para pagos en efectivo, crear registro especial
             const reportRow: SantanderReportRow = {
@@ -439,29 +468,113 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
 
             banorteData.push(reportRow);
           }
-        });
+          });
+        } else {
+          // Layout individual - crear filas para cada factura individual
+          const selectedPackages = packagesWithProviders.filter((pkg) =>
+            selectedPackageIds.includes(pkg._id)
+          );
+
+          selectedPackages.forEach((pkg) => {
+            // Procesar facturas individuales
+            if (pkg.facturas && Array.isArray(pkg.facturas)) {
+              pkg.facturas.forEach((factura: any) => {
+                if (factura.rfcEmisor && (factura.importeAPagar > 0 || factura.importePagado > 0)) {
+                  const reportRow: SantanderReportRow = {
+                    cuentaCargo: selectedBankAccount?.accountNumber || "",
+                    cuentaAbono: "000000000000000000",
+                    bancoReceptor: factura.nombreEmisor,
+                    beneficiario: factura.nombreEmisor,
+                    sucursal: "N/A",
+                    importe: factura.importeAPagar || 0,
+                    plazaBanxico: selectedBankAccount?.claveBanxico || "",
+                    concepto: `Pago individual - ${factura.nombreEmisor} - ${factura.folio || factura.uuid.substring(0, 8)}`,
+                    estadoCuentaFiscal: "SI",
+                    rfc: factura.rfcEmisor,
+                    iva: (factura.importeAPagar || 0) * 0.16,
+                    referenciaOrdenante: `PKG_${pkg.folio}_${factura.folio || factura._id}`,
+                    formaAplicacion: "1",
+                    fechaAplicacion: "",
+                    emailBeneficiario: "",
+                  };
+                  banorteData.push(reportRow);
+                }
+              });
+            }
+
+            // Procesar pagos en efectivo individuales
+            if (pkg.pagosEfectivo && Array.isArray(pkg.pagosEfectivo)) {
+              pkg.pagosEfectivo.forEach((pago: any) => {
+                if (pago.importeAPagar > 0) {
+                  const reportRow: SantanderReportRow = {
+                    cuentaCargo: selectedBankAccount?.accountNumber || "",
+                    cuentaAbono: "000000000000000000",
+                    bancoReceptor: "PAGO EN EFECTIVO",
+                    beneficiario: pago.expenseConcept?.name || "Pago en Efectivo",
+                    sucursal: "N/A",
+                    importe: pago.importeAPagar || 0,
+                    plazaBanxico: selectedBankAccount?.claveBanxico || "",
+                    concepto: `Pago en efectivo - ${pago.description || pago.expenseConcept?.name}`,
+                    estadoCuentaFiscal: "SI",
+                    rfc: "XAXX010101000",
+                    iva: (pago.importeAPagar || 0) * 0.16,
+                    referenciaOrdenante: `PKG_${pkg.folio}_CASH_${pago._id}`,
+                    formaAplicacion: "1",
+                    fechaAplicacion: "",
+                    emailBeneficiario: "",
+                  };
+                  banorteData.push(reportRow);
+                }
+              });
+            }
+          });
+        }
 
         reportData = banorteData;
       } else if (bankName.toLowerCase() === "afirme") {
         const afirmeData: AfirmeReportRow[] = [];
 
-        const selectedPayments = groupedPayments.filter((payment) =>
-          selectedGroupedPayments.includes(payment._id)
-        );
+        if (layoutType === 'grouped') {
+          const selectedPayments = groupedPayments.filter((payment) =>
+            selectedGroupedPayments.includes(payment._id)
+          );
 
-        selectedPayments.forEach((paymentGroup: PaymentByProvider) => {
-          if (!paymentGroup.providerRfc.startsWith("EFECTIVO_")) {
-            const reportRow: AfirmeReportRow = {
-              nombreBeneficiario: paymentGroup.providerName,
-              tipoCuenta: "40",
-              cuentaDestino: "000000000000000000", // Se obtendría del proveedor
-              numeroBanco: paymentGroup.bankNumber,
-              correoElectronico: "",
-            };
+          selectedPayments.forEach((paymentGroup: PaymentByProvider) => {
+            if (!paymentGroup.providerRfc.startsWith("EFECTIVO_")) {
+              const reportRow: AfirmeReportRow = {
+                nombreBeneficiario: paymentGroup.providerName,
+                tipoCuenta: "40",
+                cuentaDestino: "000000000000000000", // Se obtendría del proveedor
+                numeroBanco: paymentGroup.bankNumber,
+                correoElectronico: "",
+              };
 
-            afirmeData.push(reportRow);
-          }
-        });
+              afirmeData.push(reportRow);
+            }
+          });
+        } else {
+          // Layout individual para Afirme
+          const selectedPackages = packagesWithProviders.filter((pkg) =>
+            selectedPackageIds.includes(pkg._id)
+          );
+
+          selectedPackages.forEach((pkg) => {
+            if (pkg.facturas && Array.isArray(pkg.facturas)) {
+              pkg.facturas.forEach((factura: any) => {
+                if (factura.rfcEmisor && (factura.importeAPagar > 0 || factura.importePagado > 0)) {
+                  const reportRow: AfirmeReportRow = {
+                    nombreBeneficiario: factura.nombreEmisor,
+                    tipoCuenta: "40",
+                    cuentaDestino: "000000000000000000",
+                    numeroBanco: "00000",
+                    correoElectronico: "",
+                  };
+                  afirmeData.push(reportRow);
+                }
+              });
+            }
+          });
+        }
 
         reportData = afirmeData;
       } else {
@@ -515,18 +628,6 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
     } finally {
       setRequestingFunding(false);
     }
-  };
-
-  const handleClose = () => {
-    setSelectedCompanyId("");
-    setSelectedBankAccountId("");
-    setBankAccounts([]);
-    setPackagesPreview([]);
-    setSelectedPackageIds([]);
-    setTotalToFund(0);
-    setPackagesWithProviders([]);
-    setSelectedGroupedPayments([]);
-    onClose();
   };
 
   return (
@@ -616,6 +717,25 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
               </div>
             )}
           </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>
+              Tipo de Layout <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Select
+              value={layoutType}
+              onChange={(e) => setLayoutType(e.target.value as 'grouped' | 'individual')}
+            >
+              <option value="grouped">Agrupado por Proveedor</option>
+              <option value="individual">Individual (Sin Agrupar)</option>
+            </Form.Select>
+            <Form.Text className="text-muted">
+              {layoutType === 'grouped' 
+                ? 'Las facturas se agruparán por proveedor en el reporte Excel'
+                : 'Las facturas se mostrarán individualmente en el reporte Excel'
+              }
+            </Form.Text>
+          </Form.Group>
         </Form>
 
         {selectedCompanyId && selectedBankAccountId && (
@@ -675,7 +795,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
                       <br />
                       <small>
                         {selectedPackageIds.length} paquetes seleccionados
-                        {selectedGroupedPayments.length > 0 && (
+                        {layoutType === 'grouped' && selectedGroupedPayments.length > 0 && (
                           <span>
                             {" "}
                             • {selectedGroupedPayments.length} proveedores
@@ -691,12 +811,13 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
                   </Alert>
                 )}
 
-                {loadingGrouping ? (
-                  <div className="text-center py-3">
-                    <Spinner animation="border" size="sm" className="me-2" />
-                    Agrupando facturas por proveedor...
-                  </div>
-                ) : groupedPayments.length > 0 ? (
+                {layoutType === 'grouped' ? (
+                  loadingGrouping ? (
+                    <div className="text-center py-3">
+                      <Spinner animation="border" size="sm" className="me-2" />
+                      Agrupando facturas por proveedor...
+                    </div>
+                  ) : groupedPayments.length > 0 ? (
                   <Table size="sm" className="mt-3">
                     <thead>
                       <tr>
@@ -773,39 +894,102 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
                       ))}
                     </tbody>
                   </Table>
+                  ) : (
+                    <Table size="sm" className="mt-3">
+                      <thead>
+                        <tr>
+                          <th>Folio</th>
+                          <th>Departamento</th>
+                          <th>Total Pagado</th>
+                          <th>Fecha Pago</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {packagesWithProviders.map((pkg) => {
+                          const isSelected = selectedPackageIds.includes(pkg._id);
+                          return (
+                            <tr
+                              key={pkg._id}
+                              className={isSelected ? "table-success" : ""}
+                            >
+                              <td>#{pkg.folio}</td>
+                              <td>{pkg.departamento}</td>
+                              <td className={isSelected ? "fw-bold" : ""}>
+                                {formatCurrency(pkg.totalPagado)}
+                              </td>
+                              <td>
+                                {new Date(pkg.fechaPago).toLocaleDateString(
+                                  "es-MX"
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </Table>
+                  )
                 ) : (
-                  <Table size="sm" className="mt-3">
-                    <thead>
-                      <tr>
-                        <th>Folio</th>
-                        <th>Departamento</th>
-                        <th>Total Pagado</th>
-                        <th>Fecha Pago</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {packagesWithProviders.map((pkg) => {
-                        const isSelected = selectedPackageIds.includes(pkg._id);
-                        return (
-                          <tr
-                            key={pkg._id}
-                            className={isSelected ? "table-success" : ""}
-                          >
-                            <td>#{pkg.folio}</td>
-                            <td>{pkg.departamento}</td>
-                            <td className={isSelected ? "fw-bold" : ""}>
-                              {formatCurrency(pkg.totalPagado)}
-                            </td>
-                            <td>
-                              {new Date(pkg.fechaPago).toLocaleDateString(
-                                "es-MX"
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </Table>
+                  // Layout individual - mostrar facturas individuales
+                  <div className="mt-3">
+                    <h6 className="fw-bold mb-3 text-info">
+                      <i className="bi bi-list-ul me-2"></i>
+                      Vista Individual - Facturas sin Agrupar
+                    </h6>
+                    {packagesWithProviders
+                      .filter((pkg) => selectedPackageIds.includes(pkg._id))
+                      .map((pkg) => (
+                        <div key={pkg._id} className="mb-3">
+                          <h6 className="text-primary">Paquete #{pkg.folio}</h6>
+                          {pkg.facturas && pkg.facturas.length > 0 && (
+                            <Table size="sm" className="mb-2">
+                              <thead>
+                                <tr>
+                                  <th>UUID</th>
+                                  <th>Emisor</th>
+                                  <th>RFC Emisor</th>
+                                  <th>Importe</th>
+                                  <th>Folio</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {pkg.facturas.map((factura: any) => (
+                                  <tr key={factura._id}>
+                                    <td className="small">{factura.uuid?.substring(0, 8)}...</td>
+                                    <td>{factura.nombreEmisor}</td>
+                                    <td>{factura.rfcEmisor}</td>
+                                    <td>{formatCurrency(factura.importePagado && factura.importePagado.$numberDecimal ? parseFloat(factura.importePagado.$numberDecimal) : 0)}</td>
+                                    <td>{factura.folio || '-'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </Table>
+                          )}
+                          {pkg.pagosEfectivo && pkg.pagosEfectivo.length > 0 && (
+                            <>
+                              <h6 className="text-secondary mt-2">Pagos en Efectivo</h6>
+                              <Table size="sm" className="mb-2">
+                                <thead>
+                                  <tr>
+                                    <th>Concepto</th>
+                                    <th>Descripción</th>
+                                    <th>Importe</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {pkg.pagosEfectivo.map((pago: any) => (
+                                    <tr key={pago._id}>
+                                      <td>{pago.expenseConcept?.name || 'Sin concepto'}</td>
+                                      <td>{pago.description || '-'}</td>
+                                      <td>{formatCurrency(pago.importePagado && pago.importePagado.$numberDecimal ? parseFloat(pago.importePagado.$numberDecimal) : 0)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </Table>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </>
             ) : (
@@ -830,7 +1014,7 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
             !selectedCompanyId ||
             !selectedBankAccountId ||
             selectedPackageIds.length === 0 ||
-            selectedGroupedPayments.length === 0
+            (layoutType === 'grouped' && selectedGroupedPayments.length === 0)
           }
         >
           {requestingFunding ? (

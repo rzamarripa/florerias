@@ -105,8 +105,9 @@ export const providerSchema = z.object({
 
   sucursal: z
     .string()
-    .min(24, "ID de sucursal inválido")
-    .max(24, "ID de sucursal inválido"),
+    .min(1, "El nombre de la sucursal es requerido")
+    .max(100, "El nombre de la sucursal no puede exceder 100 caracteres")
+    .trim(),
 
   isActive: z.boolean().default(true),
 });

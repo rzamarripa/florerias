@@ -1451,7 +1451,7 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
 
     // Obtener el nombre del departamento
     const departmentName = user.departmentId?.name || "";
-    const isTesoreria = departmentName.toLowerCase() === "tesorería";
+    const isTesoreria = departmentName.toLowerCase() === "tesorería" || departmentName.toLowerCase() === "tesoreria";
 
     let paquetesQuery = InvoicesPackage.find();
 

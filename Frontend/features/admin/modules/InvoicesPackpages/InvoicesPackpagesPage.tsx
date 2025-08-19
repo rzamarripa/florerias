@@ -42,7 +42,7 @@ import MultiSelect from "@/components/forms/Multiselect";
 import { CashPaymentModalSimple } from "../cashPayments/components/CashPaymentModalSimple";
 import { Eye, LucideSearch } from "lucide-react";
 import { formatCurrency } from "@/utils";
-import { formatDate } from "@/utils/dateUtils";
+import { formatDate, getNextThursdayOfWeek } from "@/utils/dateUtils";
 
 const InvoicesPackagePage: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -58,6 +58,12 @@ const InvoicesPackagePage: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<string>("");
   const [selectedBrand, setSelectedBrand] = useState<string>("");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
+
+  // Estado para la fecha de pago del paquete
+  const [selectedPaymentDate, setSelectedPaymentDate] = useState<string>(() => {
+    const nextThursday = getNextThursdayOfWeek(new Date());
+    return nextThursday.toISOString().split("T")[0];
+  });
 
   const [loadingInvoices, setLoadingInvoices] = useState(false);
 
@@ -239,8 +245,27 @@ const InvoicesPackagePage: React.FC = () => {
         (brand) => brand.companyId === companyId
       );
       setBrands(companyBrands);
+
+      // Si solo hay una marca, seleccionarla automáticamente
+      if (companyBrands.length === 1) {
+        const brandId = companyBrands[0]._id;
+        setSelectedBrand(brandId);
+
+        // IMPORTANTE: También cargar las sucursales correspondientes
+        const brandBranches = visibilityStructure.branches.filter(
+          (branch) =>
+            branch.brandId === brandId && branch.companyId === companyId
+        );
+        setBranches(brandBranches);
+
+        // Si solo hay una sucursal, seleccionarla automáticamente
+        if (brandBranches.length === 1) {
+          setSelectedBranch(brandBranches[0]._id);
+        }
+      }
     } else {
       setBrands([]);
+      setBranches([]);
     }
   };
 
@@ -250,11 +275,19 @@ const InvoicesPackagePage: React.FC = () => {
     setSelectedBrand(brandId);
     setSelectedBranch("");
 
-    if (brandId && visibilityStructure) {
+    if (brandId && selectedCompany && visibilityStructure) {
+      // Filtrar sucursales por brandId Y companyId para obtener solo las sucursales
+      // de la marca específica para la razón social seleccionada
       const brandBranches = visibilityStructure.branches.filter(
-        (branch) => branch.brandId === brandId
+        (branch) =>
+          branch.brandId === brandId && branch.companyId === selectedCompany
       );
       setBranches(brandBranches);
+
+      // Si solo hay una sucursal, seleccionarla automáticamente
+      if (brandBranches.length === 1) {
+        setSelectedBranch(brandBranches[0]._id);
+      }
     } else {
       setBranches([]);
     }
@@ -328,7 +361,7 @@ const InvoicesPackagePage: React.FC = () => {
     );
   };
 
-  const handleRemoveTempPayment = (invoiceId: string) => {
+  const handleRemoveTempPayment = () => {
     // NO hacer nada aquí - dejar que el modal maneje la eliminación diferida
     // El modal eliminará visualmente y procesará al guardar
   };
@@ -351,7 +384,7 @@ const InvoicesPackagePage: React.FC = () => {
     toast.success("Pago en efectivo agregado temporalmente");
   };
 
-  const handleRemoveTempCashPayment = (cashPaymentId: string) => {
+  const handleRemoveTempCashPayment = () => {
     // NO hacer nada aquí - dejar que el modal maneje la eliminación diferida
     // El modal eliminará visualmente y procesará al guardar
   };
@@ -576,9 +609,33 @@ const InvoicesPackagePage: React.FC = () => {
         order: "desc",
       });
 
-      if (response) {
-        setInvoices(response);
-        setPagination(pagination);
+      if (response && response.data) {
+        // Aplicar los pagos temporales a las nuevas facturas cargadas
+        const invoicesWithTempPayments = response.data.map(
+          (invoice: ImportedInvoice) => {
+            const tempPayment = tempPayments[invoice._id];
+            if (!tempPayment) return invoice;
+
+            let newImportePagado = invoice.importePagado;
+            if (tempPayment.tipoPago === "completo") {
+              newImportePagado = invoice.importeAPagar;
+            } else if (
+              tempPayment.tipoPago === "parcial" &&
+              tempPayment.monto
+            ) {
+              newImportePagado =
+                tempPayment.originalImportePagado + tempPayment.monto;
+            }
+
+            return {
+              ...invoice,
+              importePagado: newImportePagado,
+            };
+          }
+        );
+
+        setInvoices(invoicesWithTempPayments);
+        setPagination(response.pagination || pagination);
       }
     } catch (error) {
       console.error("Error al cambiar página:", error);
@@ -926,6 +983,26 @@ const InvoicesPackagePage: React.FC = () => {
             </Col>
           </Row>
 
+          <Row className="mb-1">
+            <Col md={3} className="mb-0">
+              <Form.Group className="mb-0">
+                <Form.Label className="mb-1">
+                  Fecha de Pago del Paquete:
+                </Form.Label>
+                <Form.Control
+                  type="date"
+                  value={selectedPaymentDate}
+                  onChange={(e) => setSelectedPaymentDate(e.target.value)}
+                  className="form-control-sm"
+                />
+                <small className="text-muted">
+                  Esta fecha se usará para validar presupuestos y para el
+                  paquete
+                </small>
+              </Form.Group>
+            </Col>
+          </Row>
+
           <Row className="align-items-end mb-0">
             <Col md={8} className="mb-0">
               <Form.Group className="mb-0">
@@ -940,15 +1017,6 @@ const InvoicesPackagePage: React.FC = () => {
                   placeholder="Selecciona uno o más proveedores (o deja vacío para usar todos)..."
                   isSearchable
                 />
-                {selectedProviders.length === 0 &&
-                  selectedCompany &&
-                  selectedBrand &&
-                  selectedBranch && (
-                    <small className="text-info">
-                      <i className="bi bi-info-circle me-1"></i>
-                      Se usarán todos los proveedores de tu visibilidad
-                    </small>
-                  )}
               </Form.Group>
             </Col>
             <Col md={4} className="mb-0 d-flex align-items-end">
@@ -1564,8 +1632,7 @@ const InvoicesPackagePage: React.FC = () => {
         companyId={selectedCompany}
         brandId={selectedBrand}
         branchId={selectedBranch}
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
+        selectedPaymentDate={selectedPaymentDate}
         tempPayments={tempPayments}
         tempCashPayments={tempCashPayments}
         invoices={invoices}
@@ -1598,6 +1665,7 @@ const InvoicesPackagePage: React.FC = () => {
         selectedCompanyId={selectedCompany}
         selectedBrandId={selectedBrand}
         selectedBranchId={selectedBranch}
+        selectedPaymentDate={selectedPaymentDate}
         tempPayments={tempPayments}
         tempCashPayments={tempCashPayments}
         onRemoveTempPayment={handleRemoveTempPayment}
@@ -1657,8 +1725,7 @@ const InvoicesPackagePage: React.FC = () => {
         companyId={selectedCompany}
         brandId={selectedBrand}
         branchId={selectedBranch}
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
+        selectedPaymentDate={selectedPaymentDate}
         tempPayments={tempPayments}
         tempCashPayments={tempCashPayments}
         invoices={invoices}

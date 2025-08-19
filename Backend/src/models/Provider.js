@@ -83,9 +83,9 @@ const providerSchema = new Schema({
     uppercase: true,
   },
   sucursal: {
-    type: Schema.Types.ObjectId,
-    ref: "cc_branch",
+    type: String,
     required: true,
+    trim: true,
   },
   isActive: {
     type: Boolean,

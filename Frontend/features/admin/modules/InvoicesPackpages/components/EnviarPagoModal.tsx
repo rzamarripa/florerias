@@ -6,8 +6,6 @@ import { useUserSessionStore } from "@/stores/userSessionStore";
 import {
   createInvoicesPackage,
   updateInvoicesPackage,
-  markInvoiceAsFullyPaid,
-  markInvoiceAsPartiallyPaid,
   removeInvoiceFromPackage,
   removeCashPaymentFromPackage,
 } from "../services/invoicesPackpage";
@@ -45,6 +43,7 @@ interface EnviarPagoModalProps {
   selectedCompanyId?: string;
   selectedBrandId?: string;
   selectedBranchId?: string;
+  selectedPaymentDate?: string;
   tempPayments?: {
     [invoiceId: string]: {
       tipoPago: "completo" | "parcial";
@@ -85,6 +84,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   selectedCompanyId,
   selectedBrandId,
   selectedBranchId,
+  selectedPaymentDate,
   tempPayments,
   tempCashPayments,
   onRemoveTempPayment,
@@ -92,7 +92,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   onCancel,
 }) => {
   const [fechaPago, setFechaPago] = useState<string>(
-    paqueteExistente?.fechaPago || ""
+    paqueteExistente?.fechaPago || selectedPaymentDate || ""
   );
   const [comentario, setComentario] = useState<string>(
     paqueteExistente?.comentario || ""
@@ -265,8 +265,12 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       const fechaFormateada = fechaOriginal.toISOString().split("T")[0];
       setFechaPago(fechaFormateada);
       setComentario(paqueteExistente.comentario || "");
-    } else if (show && isNewPackage) {
-      // Si es un nuevo paquete, precargar con la fecha calculada (jueves de la semana siguiente)
+    } else if (show && selectedPaymentDate) {
+      // Si hay una fecha seleccionada en la página principal, usarla
+      setFechaPago(selectedPaymentDate);
+      setComentario("");
+    } else if (show && isNewPackage && !selectedPaymentDate) {
+      // Si es un nuevo paquete y no hay fecha seleccionada, precargar con la fecha calculada (jueves de la semana siguiente)
       const today = new Date();
       const fechaCalculada = getNextThursdayOfWeek(today);
       const fechaCalculadaStr = fechaCalculada.toISOString().split("T")[0];
@@ -277,7 +281,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       setFechaPago("");
       setComentario("");
     }
-  }, [paqueteExistente, show, isNewPackage]);
+  }, [paqueteExistente, show, isNewPackage, selectedPaymentDate]);
 
   const handleRemoveFactura = async (id: string) => {
     const factura = facturasLocal.find((f) => f._id === id);
@@ -358,53 +362,18 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
     setTimeout(() => setCopied(null), 1500);
   };
 
-  // Calcular el total considerando solo los montos que se pagarán en este paquete
-  const totalPagar =
-    facturasLocal.reduce((sum, f) => {
-      // Solo sumar los montos de los pagos actuales que se van a procesar
-      if (tempPayments && tempPayments[f._id]) {
-        const tempPayment = tempPayments[f._id];
-        if (tempPayment.tipoPago === "completo") {
-          // Para pagos completos, sumar el saldo restante que se está pagando
-          const saldoRestante =
-            f.importeAPagar - tempPayment.originalImportePagado;
-          return sum + saldoRestante;
-        } else if (tempPayment.tipoPago === "parcial" && tempPayment.monto) {
-          // Para pagos parciales, sumar solo el monto del pago actual
-          return sum + tempPayment.monto;
-        }
-      }
-      // Si no es un pago temporal, no sumar nada
-      return sum;
-    }, 0) +
-    (pagosEfectivoLocal.reduce(
-      (sum, payment) => sum + payment.importeAPagar,
-      0
-    ) || 0);
-
-  const toNumber = (value: any): number => {
-    if (typeof value === "number") return value;
-    if (typeof value === "string") return parseFloat(value) || 0;
-
-    if (typeof value === "object" && value !== null) {
-      if (value.$numberDecimal) {
-        return parseFloat(value.$numberDecimal) || 0;
-      }
-      if (value._bsontype === "Decimal128") {
-        return parseFloat(value.toString()) || 0;
-      }
-    }
-
-    return 0;
-  };
-
-  // Función para calcular totales de facturas - solo los montos que se pagarán en este paquete
+  // Función para calcular totales de facturas - mostrar saldos totales y montos que se pagarán
   const calcularTotalesFacturas = () => {
     if (!facturasLocal || facturasLocal.length === 0)
-      return { total: 0, pagado: 0, pendiente: 0, cantidad: 0 };
+      return { totalSaldos: 0, totalAPagar: 0, cantidad: 0 };
 
-    // Para el total y pagado, sumar solo los montos de los pagos actuales de este paquete
-    const totalMontosPago = facturasLocal.reduce((sum, f) => {
+    // Calcular el total de saldos (importeAPagar de todas las facturas)
+    const totalSaldos = facturasLocal.reduce((sum, f) => {
+      return sum + f.importeAPagar;
+    }, 0);
+
+    // Calcular solo los montos que se pagarán en este paquete
+    const totalAPagar = facturasLocal.reduce((sum, f) => {
       if (tempPayments && tempPayments[f._id]) {
         const tempPayment = tempPayments[f._id];
         if (tempPayment.tipoPago === "completo") {
@@ -422,11 +391,37 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
     }, 0);
 
     return {
-      total: totalMontosPago, // Total de lo que se va a pagar en este paquete
-      pagado: totalMontosPago, // Lo que se pagará (será igual al total)
-      pendiente: 0, // No hay pendiente porque todo lo mostrado se va a pagar
+      totalSaldos, // Total de importeAPagar de todas las facturas
+      totalAPagar, // Total de lo que se va a pagar en este paquete
       cantidad: facturasLocal.length,
     };
+  };
+
+  // Calcular el total considerando solo los montos que se pagarán en este paquete
+  const totalPagar = React.useMemo(() => {
+    const totalesFacturas = calcularTotalesFacturas();
+    const totalesPagosEfectivo =
+      pagosEfectivoLocal.reduce(
+        (sum, payment) => sum + payment.importeAPagar,
+        0
+      ) || 0;
+    return totalesFacturas.totalAPagar + totalesPagosEfectivo;
+  }, [facturasLocal, tempPayments, pagosEfectivoLocal]);
+
+  const toNumber = (value: any): number => {
+    if (typeof value === "number") return value;
+    if (typeof value === "string") return parseFloat(value) || 0;
+
+    if (typeof value === "object" && value !== null) {
+      if (value.$numberDecimal) {
+        return parseFloat(value.$numberDecimal) || 0;
+      }
+      if (value._bsontype === "Decimal128") {
+        return parseFloat(value.toString()) || 0;
+      }
+    }
+
+    return 0;
   };
 
   // Función para calcular totales de pagos en efectivo (igual que en el detalle del paquete)
@@ -677,7 +672,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       }
 
       // La actualización del importePagado de facturas embebidas y originales ahora se maneja automáticamente en el backend
-      // cuando se procesan los montosEspecificos, por lo que ya no es necesario llamar markInvoiceAsPartiallyPaid 
+      // cuando se procesan los montosEspecificos, por lo que ya no es necesario llamar markInvoiceAsPartiallyPaid
       // o markInvoiceAsFullyPaid ya que esto causaba duplicación de montos
 
       // PASO 4: La relación InvoicesPackageCompany se crea automáticamente en el backend
@@ -724,6 +719,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                     const selectedDate = e.target.value;
                     setFechaPago(selectedDate);
                   }}
+                  readOnly={!!selectedPaymentDate && !paqueteExistente}
                 />
               </Form.Group>
             </Col>
@@ -798,7 +794,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                       <th>Emisor RFC</th>
                       <th>Estatus</th>
                       <th>Fecha Cancelación</th>
-                      <th>Saldo</th>
+                      <th>Importe Total</th>
                       <th className="text-center">Importe A Pagar </th>
                       <th className="text-center">Acciones</th>
                     </tr>
@@ -1108,16 +1104,16 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                     })}
                     <tr className="fw-bold text-left">
                       <td className="text-end" colSpan={9}>
-                        Total a pagar
+                        Totales:
                       </td>
                       <td className="text-end">
-                        {calcularTotalesFacturas().pendiente.toLocaleString(
+                        {calcularTotalesFacturas().totalSaldos.toLocaleString(
                           "es-MX",
                           { style: "currency", currency: "MXN" }
                         )}
                       </td>
                       <td className="text-end">
-                        {calcularTotalesFacturas().pagado.toLocaleString(
+                        {calcularTotalesFacturas().totalAPagar.toLocaleString(
                           "es-MX",
                           { style: "currency", currency: "MXN" }
                         )}
@@ -1258,7 +1254,9 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
               pagosEfectivoLocal.length === 0 &&
               facturasToRemove.length === 0 &&
               cashPaymentsToRemove.length === 0) ||
-            (isNewPackage && facturasLocal.length === 0 && pagosEfectivoLocal.length === 0) ||
+            (isNewPackage &&
+              facturasLocal.length === 0 &&
+              pagosEfectivoLocal.length === 0) ||
             isSubmitting
           }
           title={
@@ -1268,7 +1266,9 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
             facturasToRemove.length === 0 &&
             cashPaymentsToRemove.length === 0
               ? "No hay cambios para guardar"
-              : isNewPackage && facturasLocal.length === 0 && pagosEfectivoLocal.length === 0
+              : isNewPackage &&
+                facturasLocal.length === 0 &&
+                pagosEfectivoLocal.length === 0
               ? "No hay pagos para crear un nuevo paquete"
               : isSubmitting
               ? "Procesando..."
