@@ -119,8 +119,9 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
   }, [show, departmentId]);
 
   // Cargar información de presupuesto cuando se selecciona un concepto
+  // routeId es opcional - si no hay rutas, se consulta a nivel de sucursal
   useEffect(() => {
-    if (watchedValues.expenseConcept && companyId && brandId && branchId && routeId) {
+    if (watchedValues.expenseConcept && companyId && brandId && branchId) {
       loadBudgetData();
     } else {
       setBudgetData(null);
@@ -169,7 +170,7 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
   };
 
   const loadBudgetData = async () => {
-    if (!watchedValues.expenseConcept || !companyId || !brandId || !branchId || !routeId)
+    if (!watchedValues.expenseConcept || !companyId || !brandId || !branchId)
       return;
 
     try {

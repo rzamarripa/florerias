@@ -113,13 +113,21 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
   }, [show, user?.departmentId]);
 
   useEffect(() => {
-    // SOLO cargar presupuesto si HAY una ruta seleccionada
-    if (conceptoGasto && companyId && brandId && branchId && routeId) {
+    // Cargar presupuesto cuando se tenga concepto y estructura mínima (company/brand/branch)
+    // routeId es opcional - si no hay rutas, se consulta a nivel de sucursal
+    if (conceptoGasto && companyId && brandId && branchId) {
       loadBudgetData();
     } else {
       setBudgetData(null);
     }
-  }, [conceptoGasto, companyId, brandId, branchId, routeId, selectedPaymentDate]);
+  }, [
+    conceptoGasto,
+    companyId,
+    brandId,
+    branchId,
+    routeId,
+    selectedPaymentDate,
+  ]);
 
   const loadConceptosGasto = async () => {
     if (!user?.departmentId) return;
@@ -144,14 +152,17 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
   };
 
   const loadBudgetData = async () => {
-    if (!conceptoGasto || !companyId || !brandId || !branchId || !routeId) {
-      console.warn("❌ PagoFacturaModal: Faltan parámetros requeridos para cargar presupuesto", {
-        conceptoGasto,
-        companyId,
-        brandId,
-        branchId,
-        routeId
-      });
+    if (!conceptoGasto || !companyId || !brandId || !branchId) {
+      console.warn(
+        "❌ PagoFacturaModal: Faltan parámetros requeridos para cargar presupuesto",
+        {
+          conceptoGasto,
+          companyId,
+          brandId,
+          branchId,
+          routeId,
+        }
+      );
       return;
     }
 
@@ -178,7 +189,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
         companyId,
         brandId,
         branchId,
-        routeId,
+        routeId: routeId || "No especificado (nivel sucursal)",
         month,
       });
 
@@ -191,7 +202,10 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
         routeId,
       });
 
-      console.log("📊 PagoFacturaModal: Respuesta del presupuesto:", budgetInfo);
+      console.log(
+        "📊 PagoFacturaModal: Respuesta del presupuesto:",
+        budgetInfo
+      );
 
       let localSpent = 0;
 
