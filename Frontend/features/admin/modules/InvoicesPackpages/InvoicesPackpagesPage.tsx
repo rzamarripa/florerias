@@ -195,6 +195,78 @@ const InvoicesPackagePage: React.FC = () => {
     }
   }, [selectedYear, selectedMonth]);
 
+  // useEffect separado para recalcular realBudgetUsed cuando cambie la razón social
+  useEffect(() => {
+    if (selectedCompany && existingPackages.length > 0) {
+      calculateRealBudgetUsed();
+    } else {
+      setRealBudgetUsed(0);
+    }
+  }, [selectedCompany, selectedYear, selectedMonth, existingPackages]);
+
+  // Función para calcular el presupuesto realmente utilizado
+  const calculateRealBudgetUsed = () => {
+    if (!selectedCompany || existingPackages.length === 0) {
+      setRealBudgetUsed(0);
+      return;
+    }
+
+    let totalRealBudgetUsed = 0;
+
+    // Procesar todos los paquetes existentes
+    existingPackages.forEach((pkg: any) => {
+      // Verificar si el paquete tiene fecha de pago en el mes seleccionado
+      if (pkg.fechaPago) {
+        const fechaPagoPaquete = new Date(pkg.fechaPago);
+        const yearPago = fechaPagoPaquete.getFullYear();
+        const monthPago = fechaPagoPaquete.getMonth();
+
+        // Solo considerar paquetes cuya fechaPago corresponde al mes seleccionado
+        // Y que pertenezcan a la razón social seleccionada
+        if (yearPago === selectedYear && monthPago === selectedMonth) {
+          // Verificar si el paquete pertenece a la razón social seleccionada
+          let perteneceACompania = false;
+
+          if (
+            pkg.companyInfo &&
+            pkg.companyInfo.companyId === selectedCompany
+          ) {
+            perteneceACompania = true;
+          } else if (pkg.packageCompanyId && pkg.packageCompanyId.companyId) {
+            const companyIdFromPackage =
+              typeof pkg.packageCompanyId.companyId === "string"
+                ? pkg.packageCompanyId.companyId
+                : pkg.packageCompanyId.companyId._id;
+            perteneceACompania = companyIdFromPackage === selectedCompany;
+          }
+
+          // Solo procesar si pertenece a la compañía seleccionada
+          if (perteneceACompania) {
+            // Sumar facturas del paquete
+            if (pkg.facturas && Array.isArray(pkg.facturas)) {
+              pkg.facturas.forEach((factura: any) => {
+                if (factura.importePagado > 0) {
+                  totalRealBudgetUsed += factura.importePagado;
+                }
+              });
+            }
+
+            // Sumar pagos en efectivo del paquete
+            if (pkg.pagosEfectivo && Array.isArray(pkg.pagosEfectivo)) {
+              pkg.pagosEfectivo.forEach((pagoEfectivo: any) => {
+                if (pagoEfectivo.importeAPagar > 0) {
+                  totalRealBudgetUsed += pagoEfectivo.importeAPagar;
+                }
+              });
+            }
+          }
+        }
+      }
+    });
+
+    setRealBudgetUsed(totalRealBudgetUsed);
+  };
+
   const loadUserProviders = async () => {
     try {
       const response = await userProvidersService.getCurrentUserProviders({
@@ -559,52 +631,16 @@ const InvoicesPackagePage: React.FC = () => {
         toast.error("Error al cargar el resumen");
       }
 
-      setExistingPackages(
-        Array.isArray(packagesResponse?.data)
-          ? packagesResponse.data
-          : Array.isArray(packagesResponse)
-          ? packagesResponse
-          : []
-      );
+      const packagesData = Array.isArray(packagesResponse?.data)
+        ? packagesResponse.data
+        : Array.isArray(packagesResponse)
+        ? packagesResponse
+        : [];
 
-      // Calcular el presupuesto realmente utilizado usando fechaPago de paquetes
-      let totalRealBudgetUsed = 0;
+      setExistingPackages(packagesData);
 
-      // Sumar pagos ya procesados de paquetes existentes del mes seleccionado
-      // AHORA usar fechaPago del paquete en lugar de fechaEmision de facturas
-      if (Array.isArray(packagesResponse?.data)) {
-        packagesResponse.data.forEach((pkg: any) => {
-          // Verificar si el paquete tiene fecha de pago en el mes seleccionado
-          if (pkg.fechaPago) {
-            const fechaPagoPaquete = new Date(pkg.fechaPago);
-            const yearPago = fechaPagoPaquete.getFullYear();
-            const monthPago = fechaPagoPaquete.getMonth();
-
-            // Solo considerar paquetes cuya fechaPago corresponde al mes seleccionado
-            if (yearPago === selectedYear && monthPago === selectedMonth) {
-              // Sumar facturas del paquete
-              if (pkg.facturas && Array.isArray(pkg.facturas)) {
-                pkg.facturas.forEach((factura: any) => {
-                  if (factura.importePagado > 0) {
-                    totalRealBudgetUsed += factura.importePagado;
-                  }
-                });
-              }
-
-              // Sumar pagos en efectivo del paquete
-              if (pkg.pagosEfectivo && Array.isArray(pkg.pagosEfectivo)) {
-                pkg.pagosEfectivo.forEach((pagoEfectivo: any) => {
-                  if (pagoEfectivo.importeAPagar > 0) {
-                    totalRealBudgetUsed += pagoEfectivo.importeAPagar;
-                  }
-                });
-              }
-            }
-          }
-        });
-      }
-
-      setRealBudgetUsed(totalRealBudgetUsed);
+      // El cálculo de realBudgetUsed se hará automáticamente
+      // en el useEffect que escucha cambios en existingPackages
     } catch (error) {
       console.error("Error en la búsqueda:", error);
       toast.error("Error al realizar la búsqueda");
@@ -929,6 +965,7 @@ const InvoicesPackagePage: React.FC = () => {
           selectedMonth={selectedMonth}
           realBudgetUsed={realBudgetUsed}
           selectedPaymentDate={selectedPaymentDate}
+          selectedCompany={selectedCompany}
         />
       </div>
 

@@ -37,6 +37,8 @@ interface BudgetSummaryCardsProps {
   realBudgetUsed?: number;
   // Fecha de pago seleccionada para facturas temporales
   selectedPaymentDate?: string;
+  // Razón social seleccionada para filtrar cálculos
+  selectedCompany?: string;
 }
 
 const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
@@ -49,6 +51,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   selectedMonth = new Date().getMonth(),
   realBudgetUsed = 0,
   selectedPaymentDate,
+  selectedCompany,
 }) => {
   const selectedPaymentsSummary = React.useMemo(() => {
     let totalPagado = 0;
@@ -168,6 +171,8 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
     existingPackages,
     selectedYear,
     selectedMonth,
+    selectedPaymentDate,
+    selectedCompany,
   ]);
 
   const totalBudget = React.useMemo(() => {
