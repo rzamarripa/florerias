@@ -121,12 +121,7 @@ export const menuItems: MenuItemType[] = [
         key: "foliosAutorizacion",
         label: "Folios de Autorización",
         url: "/modulos/paquetes-facturas/folios-autorizacion",
-      },
-      {
-        key: "pagosEfectivo",
-        label: "Pagos en Efectivo",
-        url: "/modulos/pagos-efectivo",
-      },
+      }
     ],
   },
   {

@@ -780,9 +780,7 @@ const NewPackpageDetailsPage: React.FC = () => {
       const response = await createAuthorizationFolio(folioData);
 
       if (response && response.success) {
-        toast.success(
-          `Folio de autorización ${folioNumber} creado exitosamente`
-        );
+        toast.success(`Folio de autorización creado exitosamente`);
         // Recargar folios autorizados
         await loadFoliosAutorizados();
       } else {
@@ -1745,7 +1743,7 @@ const NewPackpageDetailsPage: React.FC = () => {
                       <i className="bi bi-wallet2"></i>
                     </div>
                     <div>
-                      <div className="fw-bold text-danger">Presupuestos123</div>
+                      <div className="fw-bold text-danger">Presupuestos</div>
                       <div className="text-muted small">
                         {getMonthFromPaymentDate()}
                       </div>
