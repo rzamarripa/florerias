@@ -684,14 +684,26 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
     const month = String(fechaPago.getMonth() + 1).padStart(2, "0");
     const monthFormatted = `${year}-${month}`;
 
-    // Obtener los presupuestos del mes para esta compañía/marca/sucursal
+    // Obtener los presupuestos del mes para esta compañía/marca/sucursal/ruta
     const Budget = mongoose.model("cc_budget");
-    const budgetData = await Budget.find({
+    let budgetFilter = {
       companyId: packageCompanyInfo.companyId._id,
       brandId: packageCompanyInfo.brandId._id,
       branchId: packageCompanyInfo.branchId._id,
       month: monthFormatted,
-    }).populate("expenseConceptId");
+    };
+
+    // Si el paquete tiene routeId asignado, filtrar por ruta específica
+    if (packageCompanyInfo.routeId) {
+      budgetFilter.routeId = packageCompanyInfo.routeId._id;
+      console.log(`🔍 Utilizando filtro por ruta específica: ${packageCompanyInfo.routeId.name} (${packageCompanyInfo.routeId._id})`);
+    } else {
+      // Si no hay ruta específica, usar lógica original (por sucursal)
+      budgetFilter.routeId = null;
+      console.log(`🔍 Utilizando filtro por sucursal (sin ruta específica)`);
+    }
+
+    const budgetData = await Budget.find(budgetFilter).populate("expenseConceptId");
 
     console.log(`📊 Presupuestos obtenidos para validación: ${budgetData.length} conceptos`);
     budgetData.forEach(budget => {
@@ -886,10 +898,22 @@ export const validatePackageBudgetByExpenseConcept = async (req, res) => {
         // Verificar que el paquete sea de la misma compañía/marca/sucursal
         const otroPaqueteCompanyInfo = await InvoicesPackageCompany.findByPackageId(otroPaquete._id);
         
+        // Comparar también routeId si está presente en el paquete actual
+        let routeMatches = true;
+        if (packageCompanyInfo.routeId) {
+          // Si el paquete actual tiene routeId, verificar que coincida
+          routeMatches = otroPaqueteCompanyInfo.routeId && 
+                        otroPaqueteCompanyInfo.routeId._id.toString() === packageCompanyInfo.routeId._id.toString();
+        } else {
+          // Si el paquete actual no tiene routeId, el otro tampoco debería tenerlo
+          routeMatches = !otroPaqueteCompanyInfo.routeId;
+        }
+
         if (otroPaqueteCompanyInfo && 
             otroPaqueteCompanyInfo.companyId._id.toString() === packageCompanyInfo.companyId._id.toString() &&
             otroPaqueteCompanyInfo.brandId._id.toString() === packageCompanyInfo.brandId._id.toString() &&
-            otroPaqueteCompanyInfo.branchId._id.toString() === packageCompanyInfo.branchId._id.toString()) {
+            otroPaqueteCompanyInfo.branchId._id.toString() === packageCompanyInfo.branchId._id.toString() &&
+            routeMatches) {
           
           // Sumar facturas del paquete con este concepto
           if (otroPaquete.facturas && Array.isArray(otroPaquete.facturas)) {
@@ -1140,7 +1164,8 @@ export const getBudgetByExpenseConcept = async (req, res) => {
       companyId, 
       brandId, 
       branchId, 
-      month 
+      month,
+      routeId
     } = req.query;
 
     if (!expenseConceptId || !companyId || !brandId || !branchId || !month) {
@@ -1168,21 +1193,22 @@ export const getBudgetByExpenseConcept = async (req, res) => {
       });
     }
 
-    let budgets = await Budget.find({
-      companyId: companyId,
-      brandId: brandId,
-      branchId: branchId,
-      expenseConceptId: expenseConceptId,
-      month: month,
-      routeId: { $ne: null }
-    }).populate('routeId');
-
     let totalBudget = 0;
     let budgetDetails = [];
 
-    if (budgets.length > 0) {
-      for (const budget of budgets) {
-        totalBudget += budget.assignedAmount || 0;
+    // Si se proporciona routeId, buscar solo el presupuesto de esa ruta específica
+    if (routeId) {
+      const budget = await Budget.findOne({
+        companyId: companyId,
+        brandId: brandId,
+        branchId: branchId,
+        expenseConceptId: expenseConceptId,
+        month: month,
+        routeId: routeId
+      }).populate('routeId');
+
+      if (budget) {
+        totalBudget = budget.assignedAmount || 0;
         budgetDetails.push({
           routeId: budget.routeId._id,
           routeName: budget.routeId.name,
@@ -1190,21 +1216,42 @@ export const getBudgetByExpenseConcept = async (req, res) => {
         });
       }
     } else {
-      const budget = await Budget.findOne({
+      // Si no se proporciona routeId, mantener lógica original (sumar todas las rutas o buscar por sucursal)
+      let budgets = await Budget.find({
         companyId: companyId,
         brandId: brandId,
         branchId: branchId,
         expenseConceptId: expenseConceptId,
         month: month,
-        routeId: null,
-      });
+        routeId: { $ne: null }
+      }).populate('routeId');
 
-      if (budget) {
-        totalBudget = budget.assignedAmount || 0;
-        budgetDetails.push({
+      if (budgets.length > 0) {
+        for (const budget of budgets) {
+          totalBudget += budget.assignedAmount || 0;
+          budgetDetails.push({
+            routeId: budget.routeId._id,
+            routeName: budget.routeId.name,
+            assignedAmount: budget.assignedAmount || 0,
+          });
+        }
+      } else {
+        const budget = await Budget.findOne({
+          companyId: companyId,
+          brandId: brandId,
           branchId: branchId,
-          assignedAmount: budget.assignedAmount || 0,
+          expenseConceptId: expenseConceptId,
+          month: month,
+          routeId: null,
         });
+
+        if (budget) {
+          totalBudget = budget.assignedAmount || 0;
+          budgetDetails.push({
+            branchId: branchId,
+            assignedAmount: budget.assignedAmount || 0,
+          });
+        }
       }
     }
 
@@ -1232,6 +1279,12 @@ export const getBudgetByExpenseConcept = async (req, res) => {
           packageCompanyInfo.companyId._id.toString() === companyId.toString() &&
           packageCompanyInfo.brandId._id.toString() === brandId.toString() &&
           packageCompanyInfo.branchId._id.toString() === branchId.toString()) {
+        
+        // Si se proporciona routeId, también verificar que el paquete sea de la misma ruta
+        if (routeId && packageCompanyInfo.routeId && 
+            packageCompanyInfo.routeId._id.toString() !== routeId.toString()) {
+          continue; // Saltar este paquete si no es de la ruta especificada
+        }
         
         if (packageData.facturas && Array.isArray(packageData.facturas)) {
           for (const facturaEmbebida of packageData.facturas) {
@@ -1272,7 +1325,7 @@ export const getBudgetByExpenseConcept = async (req, res) => {
         expenseConceptName: expenseConcept.name,
         categoryId: expenseConcept.categoryId._id,
         categoryName: expenseConcept.categoryId.name,
-        hasRoutes: budgets.length > 0,
+        hasRoutes: routeId ? true : budgetDetails.some(detail => detail.routeId),
         month: month,
         totalBudget: totalBudget,
         totalSpent: totalSpent,

@@ -43,6 +43,7 @@ interface EnviarPagoModalProps {
   selectedCompanyId?: string;
   selectedBrandId?: string;
   selectedBranchId?: string;
+  selectedRouteId?: string;
   selectedPaymentDate?: string;
   tempPayments?: {
     [invoiceId: string]: {
@@ -84,6 +85,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
   selectedCompanyId,
   selectedBrandId,
   selectedBranchId,
+  selectedRouteId,
   selectedPaymentDate,
   tempPayments,
   tempCashPayments,
@@ -568,6 +570,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
         companyId: selectedCompanyId,
         brandId: selectedBrandId,
         branchId: selectedBranchId,
+        routeId: selectedRouteId,
         conceptosGasto,
         montosEspecificos, // Nuevos montos específicos por factura
       };
@@ -620,6 +623,7 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
             companyId: selectedCompanyId,
             brandId: selectedBrandId,
             branchId: selectedBranchId,
+            routeId: selectedRouteId,
           };
 
           // Enviar facturas si hay nuevas facturas O si hay pagos temporales en facturas existentes

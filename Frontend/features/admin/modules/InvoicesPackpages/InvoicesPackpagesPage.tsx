@@ -31,6 +31,7 @@ import {
   VisibilityCompany,
   VisibilityBrand,
   VisibilityBranch,
+  VisibilityRoute,
 } from "./types";
 import PagoFacturaModal from "./components/PagoFacturaModal";
 import EnviarPagoModal from "./components/EnviarPagoModal";
@@ -43,6 +44,7 @@ import { CashPaymentModalSimple } from "../cashPayments/components/CashPaymentMo
 import { Eye, LucideSearch } from "lucide-react";
 import { formatCurrency } from "@/utils";
 import { formatDate, getNextThursdayOfWeek } from "@/utils/dateUtils";
+import { routeService } from "../routes/services/routeService";
 
 const InvoicesPackagePage: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -55,9 +57,11 @@ const InvoicesPackagePage: React.FC = () => {
   const [companies, setCompanies] = useState<VisibilityCompany[]>([]);
   const [brands, setBrands] = useState<VisibilityBrand[]>([]);
   const [branches, setBranches] = useState<VisibilityBranch[]>([]);
+  const [routes, setRoutes] = useState<VisibilityRoute[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>("");
   const [selectedBrand, setSelectedBrand] = useState<string>("");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
+  const [selectedRoute, setSelectedRoute] = useState<string>("");
 
   // Estado para la fecha de pago del paquete
   const [selectedPaymentDate, setSelectedPaymentDate] = useState<string>(() => {
@@ -239,6 +243,7 @@ const InvoicesPackagePage: React.FC = () => {
     setSelectedCompany(companyId);
     setSelectedBrand("");
     setSelectedBranch("");
+    setSelectedRoute("");
 
     if (companyId && visibilityStructure) {
       const companyBrands = visibilityStructure.brands.filter(
@@ -261,11 +266,14 @@ const InvoicesPackagePage: React.FC = () => {
         // Si solo hay una sucursal, seleccionarla automáticamente
         if (brandBranches.length === 1) {
           setSelectedBranch(brandBranches[0]._id);
+          // Cargar rutas automáticamente si hay una sola sucursal
+          loadRoutesByBranch(brandBranches[0]._id);
         }
       }
     } else {
       setBrands([]);
       setBranches([]);
+      setRoutes([]);
     }
   };
 
@@ -274,6 +282,7 @@ const InvoicesPackagePage: React.FC = () => {
 
     setSelectedBrand(brandId);
     setSelectedBranch("");
+    setSelectedRoute("");
 
     if (brandId && selectedCompany && visibilityStructure) {
       // Filtrar sucursales por brandId Y companyId para obtener solo las sucursales
@@ -287,14 +296,51 @@ const InvoicesPackagePage: React.FC = () => {
       // Si solo hay una sucursal, seleccionarla automáticamente
       if (brandBranches.length === 1) {
         setSelectedBranch(brandBranches[0]._id);
+        // Cargar rutas automáticamente si hay una sola sucursal
+        loadRoutesByBranch(brandBranches[0]._id);
       }
     } else {
       setBranches([]);
+      setRoutes([]);
     }
   };
 
   const handleBranchChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedBranch(event.target.value);
+    const branchId = event.target.value;
+    setSelectedBranch(branchId);
+    setSelectedRoute("");
+
+    if (branchId) {
+      loadRoutesByBranch(branchId);
+    } else {
+      setRoutes([]);
+    }
+  };
+
+  const handleRouteChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedRoute(event.target.value);
+  };
+
+  const loadRoutesByBranch = async (branchId: string) => {
+    try {
+      const response = await routeService.getRoutesByBranch(branchId);
+      if (response.success && response.data) {
+        const routesData: VisibilityRoute[] = response.data.map((route) => ({
+          _id: route._id,
+          name: route.name,
+          description: route.description,
+          branchId: route.branchId._id,
+          brandId: route.brandId._id,
+          companyId: route.companyId._id,
+        }));
+        setRoutes(routesData);
+      } else {
+        setRoutes([]);
+      }
+    } catch (error) {
+      console.error("Error cargando rutas:", error);
+      setRoutes([]);
+    }
   };
 
   const consultarPresupuesto = async () => {
@@ -928,7 +974,7 @@ const InvoicesPackagePage: React.FC = () => {
           </Row>
 
           <Row className="mb-1">
-            <Col md={4} className="mb-0">
+            <Col md={3} className="mb-0">
               <Form.Group className="mb-0">
                 <Form.Label className="mb-1">Razón Social:</Form.Label>
                 <Form.Select
@@ -945,7 +991,7 @@ const InvoicesPackagePage: React.FC = () => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={4} className="mb-0">
+            <Col md={3} className="mb-0">
               <Form.Group className="mb-0">
                 <Form.Label className="mb-1">Marca:</Form.Label>
                 <Form.Select
@@ -963,7 +1009,7 @@ const InvoicesPackagePage: React.FC = () => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={4} className="mb-0">
+            <Col md={3} className="mb-0">
               <Form.Group className="mb-0">
                 <Form.Label className="mb-1">Sucursal:</Form.Label>
                 <Form.Select
@@ -976,6 +1022,24 @@ const InvoicesPackagePage: React.FC = () => {
                   {branches.map((branch) => (
                     <option key={branch._id} value={branch._id}>
                       {branch.name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={3} className="mb-0">
+              <Form.Group className="mb-0">
+                <Form.Label className="mb-1">Ruta:</Form.Label>
+                <Form.Select
+                  value={selectedRoute}
+                  onChange={handleRouteChange}
+                  disabled={!selectedBranch}
+                  className="form-select-sm"
+                >
+                  <option value="">Selecciona una ruta...</option>
+                  {routes.map((route) => (
+                    <option key={route._id} value={route._id}>
+                      {route.name}
                     </option>
                   ))}
                 </Form.Select>
@@ -1632,6 +1696,7 @@ const InvoicesPackagePage: React.FC = () => {
         companyId={selectedCompany}
         brandId={selectedBrand}
         branchId={selectedBranch}
+        routeId={selectedRoute}
         selectedPaymentDate={selectedPaymentDate}
         tempPayments={tempPayments}
         tempCashPayments={tempCashPayments}
@@ -1665,6 +1730,7 @@ const InvoicesPackagePage: React.FC = () => {
         selectedCompanyId={selectedCompany}
         selectedBrandId={selectedBrand}
         selectedBranchId={selectedBranch}
+        selectedRouteId={selectedRoute}
         selectedPaymentDate={selectedPaymentDate}
         tempPayments={tempPayments}
         tempCashPayments={tempCashPayments}
@@ -1725,6 +1791,7 @@ const InvoicesPackagePage: React.FC = () => {
         companyId={selectedCompany}
         brandId={selectedBrand}
         branchId={selectedBranch}
+        routeId={selectedRoute}
         selectedPaymentDate={selectedPaymentDate}
         tempPayments={tempPayments}
         tempCashPayments={tempCashPayments}

@@ -74,6 +74,7 @@ export const getBudgetByCompanyBrandBranch = async (params: {
     brandId: string;
     branchId: string;
     month: string;
+    routeId?: string;
 }): Promise<BudgetItem[]> => {
     const queryParams = new URLSearchParams();
 
@@ -123,6 +124,7 @@ export const getBudgetByExpenseConcept = async (params: {
     brandId: string;
     branchId: string;
     month: string;
+    routeId?: string;
 }): Promise<BudgetByExpenseConceptResult> => {
     const queryParams = new URLSearchParams();
 

@@ -23,6 +23,7 @@ interface CashPaymentModalSimpleProps {
   companyId?: string;
   brandId?: string;
   branchId?: string;
+  routeId?: string;
   selectedPaymentDate?: string;
   tempPayments?: {
     [invoiceId: string]: {
@@ -60,6 +61,7 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
   companyId,
   brandId,
   branchId,
+  routeId,
   selectedPaymentDate,
   tempPayments = {},
   tempCashPayments = [],
@@ -118,7 +120,7 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
 
   // Cargar información de presupuesto cuando se selecciona un concepto
   useEffect(() => {
-    if (watchedValues.expenseConcept && companyId && brandId && branchId) {
+    if (watchedValues.expenseConcept && companyId && brandId && branchId && routeId) {
       loadBudgetData();
     } else {
       setBudgetData(null);
@@ -129,6 +131,7 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
     companyId,
     brandId,
     branchId,
+    routeId,
     selectedPaymentDate,
   ]);
 
@@ -166,7 +169,7 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
   };
 
   const loadBudgetData = async () => {
-    if (!watchedValues.expenseConcept || !companyId || !brandId || !branchId)
+    if (!watchedValues.expenseConcept || !companyId || !brandId || !branchId || !routeId)
       return;
 
     try {
@@ -193,6 +196,7 @@ export const CashPaymentModalSimple: React.FC<CashPaymentModalSimpleProps> = ({
         brandId,
         branchId,
         month,
+        routeId,
       });
 
       // Calcular el gasto adicional del estado local que aún no se ha enviado

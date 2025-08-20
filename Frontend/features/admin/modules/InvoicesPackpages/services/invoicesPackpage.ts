@@ -368,9 +368,9 @@ export async function markInvoiceAsPartiallyPaid(invoiceId: string, descripcion:
     return response;
 }
 
-// Servicio para obtener paqu/by-usuarioetes por usuario (con filtrado por departamento y visibilidad)
+// Servicio para obtener paquetes por usuario (con filtrado por departamento y visibilidad)
 export const getInvoicesPackagesByUsuario = async (usuario_id: string): Promise<any> => {
-    const response = await apiCall<any>(`/invoices-package?usuario_id=${usuario_id}`, {
+    const response = await apiCall<any>(`/invoices-package/by-usuario?usuario_id=${usuario_id}`, {
         headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
@@ -540,6 +540,16 @@ export interface PackageCompanyInfo {
         brandId: string;
         address: string;
         isActive: boolean;
+        createdAt: string;
+    };
+    routeId?: {
+        _id: string;
+        name: string;
+        companyId: string;
+        brandId: string;
+        branchId: string;
+        categoryId: string;
+        status: boolean;
         createdAt: string;
     };
     createdAt: string;

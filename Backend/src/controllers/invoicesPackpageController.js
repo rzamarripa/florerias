@@ -22,10 +22,11 @@ export const createInvoicesPackage = async (req, res) => {
       comentario,
       fechaPago,
       totalImporteAPagar,
-      // Nuevos campos para la relación con Company, Brand, Branch
+      // Nuevos campos para la relación con Company, Brand, Branch, Route
       companyId,
       brandId,
       branchId,
+      routeId,
       // Nuevo campo para conceptos de gasto por factura
       conceptosGasto,
       pagosEfectivo,
@@ -302,6 +303,11 @@ export const createInvoicesPackage = async (req, res) => {
       // Agregar branchId si se proporciona
       if (branchId) {
         packageCompanyData.branchId = new mongoose.Types.ObjectId(branchId);
+      }
+
+      // Agregar routeId si se proporciona
+      if (routeId) {
+        packageCompanyData.routeId = new mongoose.Types.ObjectId(routeId);
       }
 
       const packageCompany = new InvoicesPackageCompany(packageCompanyData);
@@ -1457,6 +1463,7 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
 
     if (isTesoreria) {
       // Si el departamento es "Tesorería", mostrar paquetes según la visibilidad del usuario
+      // EXCLUIR paquetes con estatus "Borrador" para Tesorería
       const userVisibility = await RoleVisibility.findOne({
         userId: usuarioObjectId,
       });
@@ -1510,8 +1517,10 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
         }
 
         // Filtrar por los paquetes que el usuario puede ver
+        // IMPORTANTE: Para Tesorería, excluir paquetes con estatus "Borrador"
         paquetesQuery = paquetesQuery.find({
           _id: { $in: packageIds },
+          estatus: { $ne: "Borrador" }, // Excluir paquetes en estado Borrador
         });
       } else {
         // Si no hay visibilidad configurada para Tesorería, no mostrar nada
@@ -1519,8 +1528,10 @@ export const getInvoicesPackagesByUsuario = async (req, res) => {
       }
     } else {
       // Si el departamento es diferente a "Tesorería", mostrar solo paquetes del departamento del usuario
+      // IMPORTANTE: Para otros departamentos (como Compras), solo mostrar paquetes con estatus "Borrador"
       paquetesQuery = paquetesQuery.find({
         departamento_id: user.departmentId._id,
+        estatus: "Borrador", // Solo mostrar paquetes en estado Borrador
       });
     }
 
@@ -1776,7 +1787,7 @@ export const enviarPaqueteADireccion = async (req, res) => {
 // GET - Obtener presupuesto por compañía, marca, sucursal y mes (original)
 export const getBudgetByCompanyBrandBranch = async (req, res) => {
   try {
-    const { companyId, brandId, branchId, month } = req.query;
+    const { companyId, brandId, branchId, month, routeId } = req.query;
 
     // Validar parámetros requeridos
     if (!companyId || !brandId || !branchId || !month) {
@@ -1840,7 +1851,7 @@ export const getBudgetByCompanyBrandBranch = async (req, res) => {
       });
     }
 
-    // Construir el filtro base - Primero sin categoryId para ver todos los presupuestos
+    // Construir el filtro base
     let filtro = {
       companyId: companyObjectId,
       brandId: brandObjectId,
@@ -1848,25 +1859,34 @@ export const getBudgetByCompanyBrandBranch = async (req, res) => {
       month: month,
     };
 
+    // Si se proporciona routeId, filtrar por ruta específica
+    if (routeId) {
+      filtro.routeId = new mongoose.Types.ObjectId(routeId);
+      console.log("getBudgetByCompanyBrandBranch - Filtrando por ruta específica:", routeId);
+    }
+
     console.log("getBudgetByCompanyBrandBranch - Filtro aplicado:", {
       companyId: companyObjectId.toString(),
       brandId: brandObjectId.toString(),
       branchId: branchObjectId.toString(),
       month: month,
+      routeId: routeId || "No especificado",
       categoryId: brand.categoryId?.toString() || "No definido",
     });
 
-    // Primero, buscar TODOS los presupuestos para esta combinación (sin filtrar por routeId)
-    // para entender qué presupuestos existen
+    // Buscar presupuestos según el filtro aplicado
     console.log(
-      "getBudgetByCompanyBrandBranch - Buscando TODOS los presupuestos para la combinación..."
+      routeId 
+        ? "getBudgetByCompanyBrandBranch - Buscando presupuestos para ruta específica..."
+        : "getBudgetByCompanyBrandBranch - Buscando TODOS los presupuestos para la combinación..."
     );
     const todosLosPresupuestos = await Budget.find(filtro)
       .populate("routeId")
       .populate("brandId")
       .populate("companyId")
       .populate("branchId")
-      .populate("categoryId");
+      .populate("categoryId")
+      .populate("expenseConceptId");
 
     console.log(
       "getBudgetByCompanyBrandBranch - TODOS los presupuestos encontrados:",

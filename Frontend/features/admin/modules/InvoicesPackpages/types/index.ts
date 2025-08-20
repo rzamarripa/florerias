@@ -229,9 +229,19 @@ export interface VisibilityBranch {
   companyId: string;
 }
 
+export interface VisibilityRoute {
+  _id: string;
+  name: string;
+  description?: string;
+  branchId: string;
+  brandId: string;
+  companyId: string;
+}
+
 export interface UserVisibilityStructure {
   companies: VisibilityCompany[];
   brands: VisibilityBrand[];
   branches: VisibilityBranch[];
+  routes?: VisibilityRoute[];
   hasFullAccess: boolean;
 } 

@@ -67,12 +67,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
             paquetesFiltrados = [];
           }
 
-          if (user?.department === "Tesorería") {
-            paquetesFiltrados = paquetesFiltrados.filter(
-              (pkg: InvoicesPackage) => pkg.estatus !== "Borrador"
-            );
-          }
-
           setPackages(paquetesFiltrados);
         })
         .catch((error) => {
@@ -117,7 +111,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
       loadPackages();
     }, 1000);
   };
-
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -182,48 +175,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
           </span>
         );
     }
-  };
-
-  const getAutorizacionStatus = (packpage: InvoicesPackage) => {
-    const facturasCompletamentePagadas = packpage.facturas.filter(
-      (f: any) => f.importePagado >= f.importeAPagar
-    );
-    const facturasAutorizadas = facturasCompletamentePagadas.filter(
-      (f: any) => f.autorizada
-    );
-    const facturasPendientes = facturasCompletamentePagadas.filter(
-      (f: any) => !f.autorizada && f.estaRegistrada
-    );
-
-    if (facturasCompletamentePagadas.length === 0) {
-      return {
-        tipo: "sin_pagos_completos",
-        texto: "Sin pagos completos",
-        variant: "secondary",
-      };
-    }
-
-    if (facturasAutorizadas.length === facturasCompletamentePagadas.length) {
-      return {
-        tipo: "todas_autorizadas",
-        texto: "Todas autorizadas",
-        variant: "success",
-      };
-    }
-
-    if (facturasPendientes.length > 0) {
-      return {
-        tipo: "pendientes",
-        texto: "Hay pagos pendientes",
-        variant: "warning",
-      };
-    }
-
-    return {
-      tipo: "parcial",
-      texto: `${facturasAutorizadas.length}/${facturasCompletamentePagadas.length} autorizadas`,
-      variant: "info",
-    };
   };
 
   const filteredPackages = packages.filter((pkg) => {
@@ -332,7 +283,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                   <th>Comentario</th>
                   <th>Estatus</th>
                   <th>Estado</th>
-                  <th>Autorización</th>
                   <th>Pagos Totales</th>
                   <th>Imorte A Pagar</th>
                   <th>Fecha Pago</th>
@@ -393,18 +343,6 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                         >
                           {pkg.active ? "Activo" : "Inactivo"}
                         </span>
-                      </td>
-                      <td>
-                        {(() => {
-                          const authStatus = getAutorizacionStatus(pkg);
-                          return (
-                            <span
-                              className={`badge bg-${authStatus.variant} bg-opacity-10 text-${authStatus.variant} fw-bold py-2 px-3`}
-                            >
-                              {authStatus.texto}
-                            </span>
-                          );
-                        })()}
                       </td>
                       <td>
                         <div className="">

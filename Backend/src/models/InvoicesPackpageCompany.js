@@ -27,6 +27,12 @@ const invoicesPackageCompanySchema = new Schema(
       required: false,
       index: true,
     },
+    routeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "cc_route",
+      required: false,
+      index: true,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -42,12 +48,14 @@ const invoicesPackageCompanySchema = new Schema(
 invoicesPackageCompanySchema.index({ packageId: 1, companyId: 1 });
 invoicesPackageCompanySchema.index({ companyId: 1, brandId: 1 });
 invoicesPackageCompanySchema.index({ brandId: 1, branchId: 1 });
+invoicesPackageCompanySchema.index({ branchId: 1, routeId: 1 });
 
 invoicesPackageCompanySchema.statics.findByPackageId = function (packageId) {
   return this.findOne({ packageId }).populate([
     "companyId",
     "brandId",
     "branchId",
+    "routeId",
   ]);
 };
 
@@ -72,6 +80,16 @@ invoicesPackageCompanySchema.statics.findByBranchId = function (branchId) {
     "packageId",
     "companyId",
     "brandId",
+    "routeId",
+  ]);
+};
+
+invoicesPackageCompanySchema.statics.findByRouteId = function (routeId) {
+  return this.find({ routeId }).populate([
+    "packageId",
+    "companyId",
+    "brandId",
+    "branchId",
   ]);
 };
 
