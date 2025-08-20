@@ -2,7 +2,6 @@ import React from "react";
 import { FileText, Calendar, PieChart, Info } from "lucide-react";
 import BudgetStatisticCard from "./BudgetStatisticCard";
 import { BudgetItem } from "../services/budget";
-import { Span } from "next/dist/trace";
 
 interface BudgetSummaryCardsProps {
   tempPayments?: {
@@ -36,6 +35,8 @@ interface BudgetSummaryCardsProps {
   selectedMonth?: number;
   // Nueva prop para el presupuesto realmente utilizado
   realBudgetUsed?: number;
+  // Fecha de pago seleccionada para facturas temporales
+  selectedPaymentDate?: string;
 }
 
 const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
@@ -47,6 +48,7 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   selectedYear = new Date().getFullYear(),
   selectedMonth = new Date().getMonth(),
   realBudgetUsed = 0,
+  selectedPaymentDate,
 }) => {
   const selectedPaymentsSummary = React.useMemo(() => {
     let totalPagado = 0;
@@ -74,24 +76,28 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       tempCashPayments
     );
 
-    // Procesar pagos temporales de facturas (IGNORAR paquetes existentes)
+    // Procesar pagos temporales de facturas usando selectedPaymentDate
     Object.entries(tempPayments).forEach(([invoiceId, payment]) => {
       const invoice = invoices.find((inv) => inv._id === invoiceId);
-      if (invoice) {
-        const fechaEmision = new Date(invoice.fechaEmision);
-        const yearFactura = fechaEmision.getFullYear();
-        const monthFactura = fechaEmision.getMonth();
+      if (invoice && selectedPaymentDate) {
+        // Usar selectedPaymentDate para determinar si corresponde al mes seleccionado
+        const fechaPago = new Date(selectedPaymentDate);
+        const yearPago = fechaPago.getFullYear();
+        const monthPago = fechaPago.getMonth();
 
-        if (yearFactura === selectedYear && monthFactura === selectedMonth) {
+        if (yearPago === selectedYear && monthPago === selectedMonth) {
           // NO verificar si está en paquete existente - solo contar temporales
           if (payment.tipoPago === "completo") {
             totalPagado += invoice.importeAPagar;
             facturasSeleccionadas += 1;
             console.log(
-              "🔍 BudgetSummaryCards - Pago completo temporal agregado:",
+              "🔍 BudgetSummaryCards - Pago completo temporal agregado (usando fechaPago):",
               {
                 invoiceId,
                 amount: invoice.importeAPagar,
+                selectedPaymentDate,
+                yearPago,
+                monthPago,
                 totalPagado,
               }
             );
@@ -99,10 +105,13 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
             totalPagado += payment.monto;
             facturasSeleccionadas += 1;
             console.log(
-              "🔍 BudgetSummaryCards - Pago parcial temporal agregado:",
+              "🔍 BudgetSummaryCards - Pago parcial temporal agregado (usando fechaPago):",
               {
                 invoiceId,
                 amount: payment.monto,
+                selectedPaymentDate,
+                yearPago,
+                monthPago,
                 totalPagado,
               }
             );
@@ -113,24 +122,31 @@ const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
 
     // NO contar pagos de paquetes existentes - solo temporales
 
-    // Procesar pagos en efectivo temporales
-    tempCashPayments.forEach((pagoEfectivo) => {
-      // Los pagos en efectivo temporales se cuentan para el mes seleccionado
-      // ya que son pagos que se están agregando para ese período
-      totalPagado += pagoEfectivo.importeAPagar;
-      pagosEfectivoSeleccionados += 1;
-      console.log(
-        "🔍 BudgetSummaryCards - Pago en efectivo temporal agregado:",
-        {
-          pagoId: pagoEfectivo._id,
-          amount: pagoEfectivo.importeAPagar,
-          concept: pagoEfectivo.expenseConcept?.name,
-          totalPagado,
-          selectedYear,
-          selectedMonth,
-        }
-      );
-    });
+    // Procesar pagos en efectivo temporales usando selectedPaymentDate
+    if (selectedPaymentDate) {
+      const fechaPago = new Date(selectedPaymentDate);
+      const yearPago = fechaPago.getFullYear();
+      const monthPago = fechaPago.getMonth();
+
+      if (yearPago === selectedYear && monthPago === selectedMonth) {
+        tempCashPayments.forEach((pagoEfectivo) => {
+          totalPagado += pagoEfectivo.importeAPagar;
+          pagosEfectivoSeleccionados += 1;
+          console.log(
+            "🔍 BudgetSummaryCards - Pago en efectivo temporal agregado (usando fechaPago):",
+            {
+              pagoId: pagoEfectivo._id,
+              amount: pagoEfectivo.importeAPagar,
+              concept: pagoEfectivo.expenseConcept?.name,
+              selectedPaymentDate,
+              yearPago,
+              monthPago,
+              totalPagado,
+            }
+          );
+        });
+      }
+    }
 
     const resultado = {
       totalPagado,
