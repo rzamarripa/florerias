@@ -244,6 +244,7 @@ const InvoicesPackagePage: React.FC = () => {
     setSelectedBrand("");
     setSelectedBranch("");
     setSelectedRoute("");
+    setRoutes([]);
 
     if (companyId && visibilityStructure) {
       const companyBrands = visibilityStructure.brands.filter(
@@ -283,6 +284,7 @@ const InvoicesPackagePage: React.FC = () => {
     setSelectedBrand(brandId);
     setSelectedBranch("");
     setSelectedRoute("");
+    setRoutes([]);
 
     if (brandId && selectedCompany && visibilityStructure) {
       // Filtrar sucursales por brandId Y companyId para obtener solo las sucursales
@@ -1027,24 +1029,26 @@ const InvoicesPackagePage: React.FC = () => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={3} className="mb-0">
-              <Form.Group className="mb-0">
-                <Form.Label className="mb-1">Ruta:</Form.Label>
-                <Form.Select
-                  value={selectedRoute}
-                  onChange={handleRouteChange}
-                  disabled={!selectedBranch}
-                  className="form-select-sm"
-                >
-                  <option value="">Selecciona una ruta...</option>
-                  {routes.map((route) => (
-                    <option key={route._id} value={route._id}>
-                      {route.name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
+            {routes.length > 0 && (
+              <Col md={3} className="mb-0">
+                <Form.Group className="mb-0">
+                  <Form.Label className="mb-1">Ruta:</Form.Label>
+                  <Form.Select
+                    value={selectedRoute}
+                    onChange={handleRouteChange}
+                    disabled={!selectedBranch}
+                    className="form-select-sm"
+                  >
+                    <option value="">Selecciona una ruta...</option>
+                    {routes.map((route) => (
+                      <option key={route._id} value={route._id}>
+                        {route.name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            )}
           </Row>
 
           <Row className="mb-1">
