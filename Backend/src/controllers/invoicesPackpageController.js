@@ -2665,3 +2665,118 @@ export const toggleInvoicesPackageActive = async (req, res) => {
     });
   }
 };
+
+// POST - Marcar paquete como pagado (cambiar estatus de "Generado" a "Pagado")
+export const markPackageAsPaid = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Buscar el paquete
+    const paquete = await InvoicesPackage.findById(id);
+    if (!paquete) {
+      return res.status(404).json({
+        success: false,
+        message: "Paquete de facturas no encontrado.",
+      });
+    }
+
+    // Verificar que el paquete esté en estatus "Generado"
+    if (paquete.estatus !== "Generado") {
+      return res.status(400).json({
+        success: false,
+        message: 'Solo se pueden marcar como pagados los paquetes con estatus "Generado".',
+      });
+    }
+
+    // 1. Actualizar el estatus del paquete a "Pagado"
+    paquete.estatus = "Pagado";
+    await paquete.save();
+
+    // 2. Actualizar facturas embebidas en el paquete: cambiar pagado de 0 a 1
+    if (paquete.facturas && paquete.facturas.length > 0) {
+      paquete.facturas.forEach(factura => {
+        factura.pagado = 1;
+        factura.estadoPago = 2; // Estado "Pagado"
+        factura.fechaRevision = new Date();
+      });
+      await paquete.save();
+    }
+
+    // 3. Actualizar pagos en efectivo embebidos en el paquete: cambiar pagado de 0 a 1
+    if (paquete.pagosEfectivo && paquete.pagosEfectivo.length > 0) {
+      paquete.pagosEfectivo.forEach(pago => {
+        pago.pagado = 1;
+        pago.estadoPago = 2; // Estado "Pagado"
+        pago.fechaRevision = new Date();
+      });
+      await paquete.save();
+    }
+
+    // 4. Actualizar facturas originales en ImportedInvoices
+    const facturaIds = paquete.facturas.map(f => f._id);
+    if (facturaIds.length > 0) {
+      await ImportedInvoices.updateMany(
+        { _id: { $in: facturaIds } },
+        { 
+          $set: { 
+            pagado: 1,
+            estadoPago: 2, // Estado "Pagado"
+            fechaRevision: new Date()
+          } 
+        }
+      );
+    }
+
+    // 5. Actualizar pagos en efectivo originales en CashPayment si es necesario
+    // (Los pagos en efectivo ya están embebidos, pero si necesitas actualizar originales)
+    const pagoEfectivoIds = paquete.pagosEfectivo ? paquete.pagosEfectivo.map(p => p._id) : [];
+    if (pagoEfectivoIds.length > 0) {
+      await CashPayment.updateMany(
+        { _id: { $in: pagoEfectivoIds } },
+        { 
+          $set: { 
+            pagado: 1,
+            estadoPago: 2, // Estado "Pagado"
+            fechaRevision: new Date()
+          } 
+        }
+      );
+    }
+
+    // 6. Registrar el cambio de estatus en el timeline
+    if (req.user && req.user._id) {
+      await timelineService.registerStatusChange(
+        req.user._id, // userId del usuario autenticado
+        paquete._id, // packageId
+        "pagado" // estatus
+      );
+    }
+
+    // 7. Obtener el paquete actualizado
+    const paqueteActualizado = await InvoicesPackage.findById(id)
+      .populate({
+        path: "packageCompanyId",
+        populate: ["companyId", "brandId", "branchId"],
+      })
+      .populate({
+        path: "pagosEfectivo.expenseConcept",
+        select: "name description",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
+      });
+
+    res.status(200).json({
+      success: true,
+      message: "Paquete marcado como pagado exitosamente.",
+      data: paqueteActualizado,
+    });
+  } catch (error) {
+    console.error("Error marking package as paid:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error interno del servidor.",
+    });
+  }
+};

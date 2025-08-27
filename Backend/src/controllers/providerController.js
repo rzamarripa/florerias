@@ -354,7 +354,7 @@ export const getProvidersByRfcs = async (req, res) => {
       isActive: true
     })
       .select('_id commercialName businessName rfc contactName bank accountNumber clabe referencia sucursal')
-      .populate('bank', '_id name')
+      .populate('bank', '_id name bankNumber') // Agregado bankNumber
       .sort({ commercialName: 1 });
 
     console.log('Proveedores encontrados:', providers.length);

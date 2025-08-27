@@ -374,9 +374,10 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
       return sum + f.importeAPagar;
     }, 0);
 
-    // Calcular solo los montos que se pagarán en este paquete
+    // Calcular los montos que se pagarán en este paquete
     const totalAPagar = facturasLocal.reduce((sum, f) => {
       if (tempPayments && tempPayments[f._id]) {
+        // Facturas con pagos temporales (nuevas o adicionales)
         const tempPayment = tempPayments[f._id];
         if (tempPayment.tipoPago === "completo") {
           // Para pagos completos, sumar el saldo restante que se está pagando
@@ -387,8 +388,22 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
           // Para pagos parciales, sumar solo el monto del pago actual
           return sum + tempPayment.monto;
         }
+      } else if (paqueteExistente && f.guardada) {
+        // En modo edición: facturas ya guardadas en el paquete
+        // Buscar el pago embebido en el paquete para obtener el monto original
+        const facturaEmbebida = paqueteExistente.facturas.find(
+          (fe: any) => fe._id === f._id
+        );
+        if (facturaEmbebida && facturaEmbebida.montoPagado) {
+          return sum + facturaEmbebida.montoPagado;
+        }
+        // Fallback: si no hay monto embebido, usar el importe pagado de la factura
+        return sum + (f.importePagado || 0);
+      } else if (!paqueteExistente) {
+        // En modo creación nuevo paquete: facturas sin pagos temporales no deberían estar aquí
+        // pero si están, incluir su importe total
+        return sum + f.importeAPagar;
       }
-      // Si no es un pago temporal, no sumar nada (no debería ocurrir en este modal)
       return sum;
     }, 0);
 
@@ -1016,8 +1031,21 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                                       ? "text-success"
                                       : "text-muted";
                                   }
+                                } else if (paqueteExistente && f.guardada) {
+                                  // Para facturas ya guardadas en modo edición, mostrar el monto del pago original
+                                  const facturaEmbebida =
+                                    paqueteExistente.facturas.find(
+                                      (fe: any) => fe._id === f._id
+                                    );
+                                  const montoPagado =
+                                    facturaEmbebida?.montoPagado ||
+                                    f.importePagado ||
+                                    0;
+                                  return montoPagado > 0
+                                    ? "text-success"
+                                    : "text-muted";
                                 }
-                                // Para facturas sin pagos temporales, mostrar el importe pagado normal
+                                // Para facturas sin pagos temporales en modo creación, mostrar el importe pagado normal
                                 return importePagadoCalculado > 0
                                   ? "text-success"
                                   : "text-muted";
@@ -1049,8 +1077,22 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                                       }
                                     );
                                   }
+                                } else if (paqueteExistente && f.guardada) {
+                                  // Para facturas ya guardadas en modo edición, mostrar el monto del pago original
+                                  const facturaEmbebida =
+                                    paqueteExistente.facturas.find(
+                                      (fe: any) => fe._id === f._id
+                                    );
+                                  const montoPagado =
+                                    facturaEmbebida?.montoPagado ||
+                                    f.importePagado ||
+                                    0;
+                                  return montoPagado.toLocaleString("es-MX", {
+                                    style: "currency",
+                                    currency: "MXN",
+                                  });
                                 }
-                                // Para facturas sin pagos temporales, mostrar el importe pagado normal
+                                // Para facturas sin pagos temporales en modo creación, mostrar el importe pagado normal
                                 return importePagadoCalculado.toLocaleString(
                                   "es-MX",
                                   {
@@ -1066,6 +1108,14 @@ const EnviarPagoModal: React.FC<EnviarPagoModalProps> = ({
                                 Temporal
                               </small>
                             )}
+                            {paqueteExistente &&
+                              f.guardada &&
+                              !(tempPayments && tempPayments[f._id]) && (
+                                <small className="text-info d-block">
+                                  <i className="bi bi-check-circle me-1"></i>
+                                  Guardado
+                                </small>
+                              )}
                           </td>
                           {/* Acciones */}
                           <td className="text-center align-middle">

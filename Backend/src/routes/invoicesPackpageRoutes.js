@@ -21,7 +21,8 @@ import {
     updatePackagesToGenerated,
     toggleInvoicesPackageActive,
     removeInvoiceFromPackage,
-    removeCashPaymentFromPackage
+    removeCashPaymentFromPackage,
+    markPackageAsPaid
 } from '../controllers/invoicesPackpageController.js';
 import packageTimelineController from '../controllers/packageTimelineController.js';
 import { protect } from '../middleware/auth.js';
@@ -93,6 +94,9 @@ router.post('/:id/generate-report', protect, generatePackageReport);
 
 // Actualizar múltiples paquetes a estatus "Generado"
 router.post('/update-to-generated', protect, updatePackagesToGenerated);
+
+// Marcar paquete como pagado (de "Generado" a "Pagado")
+router.post('/:id/mark-as-paid', protect, markPackageAsPaid);
 
 // Rutas del timeline
 router.post('/timeline', protect, packageTimelineController.createTimelineEntry);

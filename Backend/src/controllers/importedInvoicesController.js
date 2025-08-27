@@ -663,6 +663,12 @@ export const getByProviderAndCompany = async (req, res) => {
     res.json({
       success: true,
       data: facturas,
+      pagination: {
+        total: total,
+        page: parseInt(page, 10),
+        pages: Math.ceil(total / parseInt(limit)),
+        limit: parseInt(limit, 10),
+      },
     });
   } catch (error) {
     console.error(

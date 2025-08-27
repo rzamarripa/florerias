@@ -47,13 +47,15 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
     useState<InvoicesPackage | null>(null);
   const [facturasProcesadas, setFacturasProcesadas] = useState<any[]>([]);
   const [showFundingModal, setShowFundingModal] = useState(false);
-  const [loadingToggle, setLoadingToggle] = useState<string | null>(null);
+
   const { user } = useUserSessionStore();
   const router = useRouter();
 
-  const loadPackages = () => {
+  const loadPackages = (showLoading = true) => {
     if (show && user?._id) {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
 
       getInvoicesPackagesByUsuario(user._id)
         .then((paquetes) => {
@@ -73,12 +75,16 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
           toast.error("Error al cargar los paquetes de facturas");
           console.error(error);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (showLoading) {
+            setLoading(false);
+          }
+        });
     }
   };
 
   useEffect(() => {
-    loadPackages();
+    loadPackages(true); // Mostrar loading en carga inicial
   }, [show, user]);
 
   const handleDelete = async () => {
@@ -89,7 +95,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
       toast.success("Paquete eliminado correctamente");
       setShowDeleteModal(false);
       setSelectedPackpageId(null);
-      loadPackages();
+      loadPackages(false); // No mostrar loading después de eliminar
     } catch (error: any) {
       toast.error(error?.message || "Error al eliminar el paquete");
     } finally {
@@ -104,12 +110,10 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
     setShowEnviarPagoModal(true);
   };
 
-  const handleToggleActive = (packpageId: string) => {
-    setLoadingToggle(packpageId);
-    setTimeout(() => {
-      setLoadingToggle(null);
-      loadPackages();
-    }, 1000);
+  const handleToggleActive = () => {
+    // La lógica del toggle ya está implementada en PackpageActions.tsx
+    // Solo necesitamos recargar los paquetes después del toggle (sin loading)
+    loadPackages(false);
   };
 
   const getStatusBadge = (status: string) => {
@@ -292,25 +296,28 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
               </thead>
               <tbody>
                 {filteredPackages.map((pkg) => {
-                  const totalFacturasAPagar = Array.isArray(pkg.facturas)
+                  // Calcular total de importes pagados individuales (facturas + pagos efectivo)
+                  const totalFacturasPagadas = Array.isArray(pkg.facturas)
                     ? pkg.facturas.reduce(
-                        (sum, f) => sum + (f.importeAPagar || 0),
+                        (sum, f) => sum + (f.importePagado || 0),
                         0
                       )
                     : 0;
-                  const totalPagosEfectivoAPagar = Array.isArray(
+                  const totalPagosEfectivoPagados = Array.isArray(
                     pkg.pagosEfectivo
                   )
                     ? pkg.pagosEfectivo.reduce(
-                        (sum, p) => sum + (p.importeAPagar || 0),
+                        (sum, p) => sum + (p.importePagado || 0),
                         0
                       )
                     : 0;
-                  const totalAPagar =
-                    totalFacturasAPagar + totalPagosEfectivoAPagar;
+                  const totalPagadoIndividual =
+                    totalFacturasPagadas + totalPagosEfectivoPagados;
+                  
+                  // Calcular porcentaje que representa este total respecto al totalPagado del paquete
                   const porcentajePagado =
-                    totalAPagar > 0
-                      ? Math.round((pkg.totalPagado / totalAPagar) * 100)
+                    pkg.totalPagado > 0
+                      ? Math.round((totalPagadoIndividual / pkg.totalPagado) * 100)
                       : 0;
                   return (
                     <tr key={pkg._id}>
@@ -394,9 +401,10 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
                           packpageId={pkg._id}
                           packageStatus={pkg.estatus}
                           onEdit={() => handleEdit(pkg)}
-                          onToggleActive={() => handleToggleActive(pkg._id)}
+                          onToggleActive={() => handleToggleActive()}
+                          onMarkAsPaid={() => loadPackages(false)} // Recargar sin loading después de marcar como pagado
                           active={pkg.active}
-                          loadingToggle={loadingToggle === pkg._id}
+                          loadingToggle={false}
                         />
                       </td>
                     </tr>
@@ -469,7 +477,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
           setShowEnviarPagoModal(false);
           setPaqueteExistenteSeleccionado(null);
           setFacturasProcesadas([]);
-          loadPackages();
+          loadPackages(false); // No mostrar loading después de enviar pago
         }}
       />
 
@@ -478,7 +486,7 @@ const InvoicesPackagesList: React.FC<InvoicesPackagesListProps> = ({
         onClose={() => setShowFundingModal(false)}
         onSuccess={() => {
           setShowFundingModal(false);
-          loadPackages();
+          loadPackages(false); // No mostrar loading después de funding request
         }}
       />
     </Container>

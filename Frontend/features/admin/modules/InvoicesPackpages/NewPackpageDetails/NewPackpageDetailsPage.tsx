@@ -542,30 +542,33 @@ const NewPackpageDetailsPage: React.FC = () => {
     // Verificar si hay exceso de presupuesto
     const excesoInfo = verificarExcesoPresupuesto();
     if (excesoInfo.excede) {
-      // Si hay exceso, verificar si hay folios pendientes o autorizados
-      const folioMasReciente = todosLosFolios.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )[0];
-
-      if (
-        folioMasReciente &&
-        (folioMasReciente.estatus === "pendiente" ||
-          folioMasReciente.estatus === "autorizado")
-      ) {
-        // Si hay folio pendiente o autorizado, mostrar modal de folio directamente
+      // Si hay exceso, verificar si hay folios autorizados
+      if (foliosAutorizados.length > 0) {
+        // Si hay folios autorizados, mostrar modal de folio para canjear
         setShowFolioModal(true);
         return;
-      } else if (foliosAutorizados.length === 0) {
-        // Si no hay folios autorizados, mostrar error
-        toast.error(
-          "No se puede enviar el paquete. Presupuesto excedido y no hay folios autorizados."
-        );
-        return;
+      } else {
+        // Verificar si hay folios pendientes
+        const folioMasReciente = todosLosFolios.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )[0];
+
+        if (folioMasReciente && folioMasReciente.estatus === "pendiente") {
+          // Si hay folio pendiente, mostrar modal de folio
+          setShowFolioModal(true);
+          return;
+        } else {
+          // Si no hay folios autorizados ni pendientes, mostrar error
+          toast.error(
+            "No se puede enviar el paquete. Presupuesto excedido y no hay folios autorizados."
+          );
+          return;
+        }
       }
     }
 
-    // Si no hay exceso o hay folios autorizados, mostrar modal de confirmación
+    // Si no hay exceso, mostrar modal de confirmación directamente
     setShowConfirmationModal(true);
   };
 
@@ -2195,29 +2198,51 @@ const NewPackpageDetailsPage: React.FC = () => {
         centered
       >
         <Modal.Header closeButton>
-          <Modal.Title>Ingrese folio de autorización</Modal.Title>
+          <Modal.Title>
+            {foliosAutorizados.length > 0 ? "Canjear folio de autorización" : "Ingrese folio de autorización"}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div className="mb-3">
-            <Alert variant="warning">
-              <i className="bi bi-exclamation-triangle me-2"></i>
-              El presupuesto mensual ha sido excedido. Para enviar este paquete
-              a tesorería, debe ingresar un folio de autorización válido.
-            </Alert>
+            {foliosAutorizados.length > 0 ? (
+              <Alert variant="info">
+                <i className="bi bi-info-circle me-2"></i>
+                El presupuesto mensual ha sido excedido. Tiene {foliosAutorizados.length} folio(s) autorizado(s) disponible(s). 
+                Para enviar este paquete a tesorería, debe canjear un folio de autorización.
+              </Alert>
+            ) : (
+              <Alert variant="warning">
+                <i className="bi bi-exclamation-triangle me-2"></i>
+                El presupuesto mensual ha sido excedido. Para enviar este paquete
+                a tesorería, debe ingresar un folio de autorización válido.
+              </Alert>
+            )}
           </div>
           <Form>
             <Form.Group className="mb-3">
-              <Form.Label>Folio de autorización</Form.Label>
+              <Form.Label>
+                {foliosAutorizados.length > 0 ? "Folio de autorización a canjear" : "Folio de autorización"}
+              </Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Ingrese el folio de autorización"
+                placeholder={foliosAutorizados.length > 0 ? "Ingrese el folio autorizado a canjear" : "Ingrese el folio de autorización"}
                 value={folioIngresado}
                 onChange={(e) => setFolioIngresado(e.target.value)}
                 disabled={validandoFolio}
               />
               <Form.Text className="text-muted">
-                El folio debe estar autorizado y corresponder a este paquete.
+                {foliosAutorizados.length > 0 
+                  ? "Ingrese uno de los folios autorizados para poder enviar el paquete a tesorería."
+                  : "El folio debe estar autorizado y corresponder a este paquete."
+                }
               </Form.Text>
+              {foliosAutorizados.length > 0 && (
+                <div className="mt-2">
+                  <small className="text-info">
+                    <strong>Folios autorizados disponibles:</strong> {foliosAutorizados.map(f => f.folio).join(", ")}
+                  </small>
+                </div>
+              )}
             </Form.Group>
           </Form>
         </Modal.Body>

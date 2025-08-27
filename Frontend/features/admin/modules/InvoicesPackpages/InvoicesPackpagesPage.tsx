@@ -8,7 +8,6 @@ import {
   Button,
   Card,
   Table,
-  ButtonGroup,
   Spinner,
 } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -41,7 +40,7 @@ import { useRouter } from "next/navigation";
 import DescuentoFacturaModal from "./components/DescuentoFacturaModal";
 import MultiSelect from "@/components/forms/Multiselect";
 import { CashPaymentModalSimple } from "../cashPayments/components/CashPaymentModalSimple";
-import { Eye, LucideSearch } from "lucide-react";
+import { Eye, LucideSearch, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/utils";
 import { formatDate, getNextThursdayOfWeek } from "@/utils/dateUtils";
 import { routeService } from "../routes/services/routeService";
@@ -574,6 +573,8 @@ const InvoicesPackagePage: React.FC = () => {
     }
     try {
       setLoadingInvoices(true);
+      setCurrentPage(1);
+      setPagination((prev) => ({ ...prev, page: 1 }));
 
       let providerIdsParam = "";
       if (selectedProviders.length > 0) {
@@ -602,7 +603,7 @@ const InvoicesPackagePage: React.FC = () => {
             companyId: selectedCompany,
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
-            page: currentPage,
+            page: 1,
             limit: 15,
             sortBy: "fechaEmision",
             order: "desc",
@@ -620,9 +621,18 @@ const InvoicesPackagePage: React.FC = () => {
 
       if (invoicesResponse && invoicesResponse.data) {
         setInvoices(invoicesResponse.data);
-        setPagination(invoicesResponse.pagination || pagination);
+        setPagination(
+          invoicesResponse.pagination || {
+            total: 0,
+            page: 1,
+            pages: 0,
+            limit: 15,
+          }
+        );
       } else {
         toast.error("Error al cargar las facturas");
+        setInvoices([]);
+        setPagination({ total: 0, page: 1, pages: 0, limit: 15 });
       }
 
       if (summaryResponse && summaryResponse.data) {
@@ -650,9 +660,10 @@ const InvoicesPackagePage: React.FC = () => {
   };
 
   const handlePageChange = async (page: number) => {
-    setCurrentPage(page);
-
     if (!selectedCompany || !selectedBrand || !selectedBranch) return;
+
+    setCurrentPage(page);
+    setPagination((prev) => ({ ...prev, page }));
 
     try {
       setLoadingInvoices(true);
@@ -714,7 +725,9 @@ const InvoicesPackagePage: React.FC = () => {
         );
 
         setInvoices(invoicesWithTempPayments);
-        setPagination(response.pagination || pagination);
+        setPagination(
+          response.pagination || { total: 0, page: 1, pages: 0, limit: 15 }
+        );
       }
     } catch (error) {
       console.error("Error al cambiar página:", error);
@@ -821,6 +834,44 @@ const InvoicesPackagePage: React.FC = () => {
       mostrarBotones: true,
       descripcion: "Sin pagos - Puede realizar pagos",
     };
+  };
+
+  // Función para generar los números de página a mostrar
+  const getPageNumbers = () => {
+    const { page, pages } = pagination;
+
+    // Si no hay páginas o solo hay una página, mostrar solo la página 1
+    if (pages <= 1) {
+      return [1];
+    }
+
+    const delta = 2; // Número de páginas a mostrar antes y después de la página actual
+    const range = [];
+    const rangeWithDots = [];
+
+    for (
+      let i = Math.max(2, page - delta);
+      i <= Math.min(pages - 1, page + delta);
+      i++
+    ) {
+      range.push(i);
+    }
+
+    if (page - delta > 2) {
+      rangeWithDots.push(1, "...");
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (page + delta < pages - 1) {
+      rangeWithDots.push("...", pages);
+    } else if (pages > 1) {
+      rangeWithDots.push(pages);
+    }
+
+    return rangeWithDots;
   };
 
   const loadExistingPackages = async () => {
@@ -1667,61 +1718,56 @@ const InvoicesPackagePage: React.FC = () => {
           )}
         </Card.Body>
 
-        {pagination.total > 0 && (
-          <Card.Footer className="bg-white border-top">
-            <div className="d-flex justify-content-between align-items-center">
-              <span className="text-muted">
-                Mostrando {(currentPage - 1) * pagination.limit + 1} a{" "}
-                {Math.min(currentPage * pagination.limit, pagination.total)} de{" "}
-                {pagination.total} registros
-              </span>
-              <ButtonGroup size="sm">
-                <Button
-                  variant="outline-secondary"
-                  disabled={currentPage === 1}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                >
-                  <i className="bi bi-chevron-left"></i> Anterior
-                </Button>
+        <div className="d-flex justify-content-between align-items-center p-3 border-top">
+          <span className="text-muted">
+            Mostrando {invoices.length} de {pagination.total} registros
+          </span>
+          <div className="d-flex gap-1 align-items-center">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              disabled={pagination.page === 1 || pagination.pages <= 1}
+              onClick={() => handlePageChange(pagination.page - 1)}
+              className="d-flex align-items-center"
+            >
+              <ChevronLeft size={16} />
+              Anterior
+            </Button>
 
-                {/* Mostrar páginas */}
-                {Array.from(
-                  { length: Math.min(5, pagination.pages) },
-                  (_, i) => {
-                    const pageNum =
-                      Math.max(
-                        1,
-                        Math.min(pagination.pages - 4, currentPage - 2)
-                      ) + i;
-                    if (pageNum > pagination.pages) return null;
-
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={
-                          pageNum === currentPage
-                            ? "primary"
-                            : "outline-secondary"
-                        }
-                        onClick={() => handlePageChange(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  }
+            {getPageNumbers().map((pageNum, index) => (
+              <React.Fragment key={index}>
+                {pageNum === "..." ? (
+                  <span className="px-2 text-muted">...</span>
+                ) : (
+                  <Button
+                    variant={
+                      pageNum === pagination.page
+                        ? "primary"
+                        : "outline-secondary"
+                    }
+                    size="sm"
+                    onClick={() => handlePageChange(pageNum as number)}
+                  >
+                    {pageNum}
+                  </Button>
                 )}
+              </React.Fragment>
+            ))}
 
-                <Button
-                  variant="outline-secondary"
-                  disabled={currentPage === pagination.pages}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                >
-                  Siguiente <i className="bi bi-chevron-right"></i>
-                </Button>
-              </ButtonGroup>
-            </div>
-          </Card.Footer>
-        )}
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              disabled={
+                pagination.page >= pagination.pages || pagination.pages <= 1
+              }
+              onClick={() => handlePageChange(pagination.page + 1)}
+              className="d-flex align-items-center"
+            >
+              Siguiente
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <PagoFacturaModal

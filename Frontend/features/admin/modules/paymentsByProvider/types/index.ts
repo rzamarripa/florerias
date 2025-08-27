@@ -7,6 +7,7 @@ export interface PaymentByProvider {
   branchName: string;
   companyProvider: string;
   bankNumber: string;
+  providerAccountNumber?: string; // CLABE del proveedor para transferencias
   debitedBankAccount: string;
   companyId: string;
   isActive: boolean;

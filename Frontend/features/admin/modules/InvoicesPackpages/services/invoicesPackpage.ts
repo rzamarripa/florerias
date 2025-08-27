@@ -679,14 +679,12 @@ export interface Provider {
     bank: {
         _id: string;
         name: string;
+        bankNumber: number; // Agregado bankNumber
     };
     accountNumber: string;
     clabe: string;
     referencia: string;
-    sucursal: {
-        _id: string;
-        name: string;
-    };
+    sucursal: string; // Cambiado de objeto a string
 }
 
 export const getProvidersByRfcs = async (rfcs: string[]): Promise<Provider[]> => {
@@ -1021,4 +1019,12 @@ export const removeCashPaymentFromPackage = async (packageId: string, cashPaymen
         console.error('Error al eliminar pago en efectivo del paquete:', error);
         throw new Error(error?.message || 'Error al eliminar el pago en efectivo del paquete');
     }
+};
+
+// Servicio para marcar paquete como pagado (cambiar de "Generado" a "Pagado")
+export const markPackageAsPaid = async (packageId: string): Promise<InvoicesPackageResponse> => {
+    const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${packageId}/mark-as-paid`, {
+        method: "POST",
+    });
+    return response.data;
 }; 
