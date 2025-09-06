@@ -28,6 +28,7 @@ import {
   PackageCompanyInfo,
   getUserById,
   UserInfo,
+  getUsedBudgetByCompanyBrandBranchRoute,
 } from "../services/invoicesPackpage";
 import {
   getAllCompanies,
@@ -121,6 +122,9 @@ const NewPackpageDetailsPage: React.FC = () => {
   const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
   const [schedulingPayment, setSchedulingPayment] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  
+  // Estado para el presupuesto usado por otros paquetes
+  const [usedBudgetByOthers, setUsedBudgetByOthers] = useState(0);
 
   const { user } = useUserSessionStore();
 
@@ -135,34 +139,44 @@ const NewPackpageDetailsPage: React.FC = () => {
   // Función para validar presupuesto por concepto de gasto
   const loadBudgetValidationData = async () => {
     if (!packpage?._id || !packageCompanyInfo) {
-      console.log("❌ No se puede validar presupuesto:", {
-        packpageId: packpage?._id,
-        packageCompanyInfo: !!packageCompanyInfo,
-      });
       return;
     }
 
     try {
-      console.log(
-        "🔍 Validando presupuesto por concepto de gasto para paquete:",
-        packpage._id
-      );
       const response = await validatePackageBudgetByExpenseConcept(
         packpage._id
       );
-      console.log("✅ Validación de presupuesto exitosa:", response);
-      console.log("📊 Estructura de la respuesta:", {
-        tienePackageId: !!response.packageId,
-        tieneMonth: !!response.month,
-        requiereAutorizacion: response.requiereAutorizacion,
-        cantidadValidaciones: response.validaciones?.length || 0,
-        validaciones: response.validaciones,
-        resumen: response.resumen,
-      });
       setBudgetValidationData(response);
+
+      // Log detallado de la validación por concepto de gasto
+      console.log(`📊 VALIDACIÓN DE PRESUPUESTO POR CONCEPTO DE GASTO - Paquete ${packpage.folio}`);
+      console.log(`📅 Mes: ${response.month}`);
+      console.log(`🎯 Requiere Autorización: ${response.requiereAutorizacion ? 'SÍ' : 'NO'}`);
+      console.log(`📈 Resumen: ${response.resumen.conceptosValidados} conceptos validados, ${response.resumen.conceptosExcedidos} excedidos`);
+      
+      if (response.validaciones.length > 0) {
+        console.log(`💰 DETALLE POR CONCEPTO DE GASTO:`);
+        response.validaciones.forEach((validacion, index) => {
+          const presupuestoDisponible = validacion.presupuestoAsignado - validacion.totalPagado;
+          const exceso = validacion.excede ? `🚨 EXCEDE por $${validacion.diferencia.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '✅ Dentro del presupuesto';
+          
+          console.log(`${index + 1}. CONCEPTO: ${validacion.concepto.name} (${validacion.concepto.categoryName})`);
+          console.log(`   💰 PRESUPUESTO TOTAL: $${validacion.presupuestoAsignado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`);
+          console.log(`   📊 TOTAL GASTADO: $${validacion.totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`);
+          console.log(`   💸 DISPONIBLE: $${presupuestoDisponible.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`);
+          console.log(`   🎯 ESTADO: ${exceso}`);
+          console.log(`   📦 Pagos en este paquete: ${validacion.pagos.length} (${validacion.pagos.map(p => `${p.tipo}: $${p.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`).join(', ')})`);
+          console.log(`   ─`.repeat(60));
+        });
+      }
+      
+      if (response.resumen.conceptosExcedidos > 0) {
+        console.log(`🚨 TOTAL EXCESO EN TODOS LOS CONCEPTOS: $${response.resumen.totalExceso.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`);
+      }
+      console.log(`═`.repeat(80));
     } catch (error) {
       console.error(
-        "❌ Error al validar presupuesto por concepto de gasto:",
+        "Error al validar presupuesto por concepto de gasto:",
         error
       );
       setBudgetValidationData(null);
@@ -218,13 +232,6 @@ const NewPackpageDetailsPage: React.FC = () => {
           const month = String(fechaPago.getMonth() + 1).padStart(2, "0");
           const monthFormatted = `${year}-${month}`;
 
-          console.log("📅 Cargando presupuesto para fecha del paquete:", {
-            fechaPagoPaquete: packpage.fechaPago,
-            fechaParseada: fechaPago,
-            year,
-            month,
-            monthFormatted,
-          });
 
           // Pasar routeId si está disponible en la información del paquete
           const budgetParams: {
@@ -240,16 +247,18 @@ const NewPackpageDetailsPage: React.FC = () => {
             month: monthFormatted,
           };
 
-          // Si el paquete tiene routeId asignado, incluirlo en los parámetros
-          if (packageCompanyInfo?.routeId?._id) {
-            budgetParams.routeId = packageCompanyInfo.routeId._id.toString();
+          // REQUERIMIENTO: SIEMPRE debe usar el routeId del paquete
+          if (response?.routeId?._id) {
+            budgetParams.routeId = response.routeId._id.toString();
             console.log(
-              `🎯 Obteniendo presupuestos para ruta específica: ${packageCompanyInfo.routeId.name} (${packageCompanyInfo.routeId._id})`
+              `🎯 Obteniendo presupuestos ESPECÍFICOS para ruta del paquete: ${response.routeId.name} (${response.routeId._id})`
             );
           } else {
             console.log(
-              `📊 Obteniendo presupuestos para sucursal (sin ruta específica)`
+              `❌ ERROR: Paquete sin routeId asignado - no se puede obtener presupuesto específico de ruta`
             );
+            setBudgetData([]);
+            return;
           }
 
           const budgetResponse = await getBudgetByCompanyBrandBranch(
@@ -257,6 +266,34 @@ const NewPackpageDetailsPage: React.FC = () => {
           );
 
           setBudgetData(budgetResponse || []);
+
+          // LOG: Obtener presupuesto usado por otros paquetes
+          try {
+            console.log('🚀 Enviando parámetros para presupuesto usado:', {
+              companyId: budgetParams.companyId,
+              brandId: budgetParams.brandId,
+              branchId: budgetParams.branchId,
+              routeId: budgetParams.routeId,
+              month: budgetParams.month,
+              monthType: typeof budgetParams.month,
+              excludePackageId: packpage._id,
+            });
+
+            const usedBudgetResponse = await getUsedBudgetByCompanyBrandBranchRoute({
+              companyId: budgetParams.companyId,
+              brandId: budgetParams.brandId,
+              branchId: budgetParams.branchId,
+              routeId: budgetParams.routeId!,
+              month: budgetParams.month,
+              excludePackageId: packpage._id,
+            });
+            
+
+            // Guardar el total usado por otros paquetes
+            const usedAmount = usedBudgetResponse.data?.totalUsedBudget || 0;
+            setUsedBudgetByOthers(usedAmount);
+          } catch (error) {
+          }
         }
       }
     } catch (error) {
@@ -310,16 +347,9 @@ const NewPackpageDetailsPage: React.FC = () => {
   // Validar presupuesto SOLO cuando ambos datos estén disponibles
   useEffect(() => {
     if (budgetData.length > 0 && budgetValidationData && packpage) {
-      console.log(
-        "🚀 TODOS los datos de presupuesto están disponibles, ejecutando validación final"
-      );
-      // La validación se ejecuta automáticamente
-      console.log(
-        "✅ Validación final ejecutada:",
-        verificarExcesoPresupuesto()
-      );
+      // La validación se ejecuta automáticamente en verificarExcesoPresupuesto()
     }
-  }, [budgetData, budgetValidationData, packpage]);
+  }, [budgetData, budgetValidationData, packpage, usedBudgetByOthers]);
 
   // Función para cargar folios autorizados del paquete
   const loadFoliosAutorizados = async () => {
@@ -984,10 +1014,12 @@ const NewPackpageDetailsPage: React.FC = () => {
     const presupuestoTotal = calcularPresupuestoTotal();
     const totalPagadoPaquete =
       calcularTotalesFacturas().pagado + calcularTotalesPagosEfectivo().pagado;
+    const presupuestoDisponible = presupuestoTotal - usedBudgetByOthers;
 
-    const excedePresupuestoTotal = totalPagadoPaquete > presupuestoTotal;
-    const validacionConceptos = validarPresupuestosPorConcepto();
-    const excedePresupuestoConcepto = validacionConceptos.excede;
+    const excedePresupuestoTotal = totalPagadoPaquete > presupuestoDisponible;
+    
+    // CORRECCIÓN: Usar budgetValidationData directamente del backend
+    const excedePresupuestoConcepto = budgetValidationData?.requiereAutorizacion || false;
 
     const requiereAutorizacion =
       excedePresupuestoTotal || excedePresupuestoConcepto;
@@ -995,158 +1027,31 @@ const NewPackpageDetailsPage: React.FC = () => {
     return {
       presupuestoTotal,
       totalPagadoPaquete,
-      excede: requiereAutorizacion, // Usar la nueva variable
+      excede: requiereAutorizacion,
       excedePresupuestoTotal,
       excedePresupuestoConcepto,
-      diferencia: totalPagadoPaquete - presupuestoTotal,
+      diferencia: totalPagadoPaquete - presupuestoDisponible,
       validacionConcepto: budgetValidationData,
     };
   };
 
   const validarPresupuestosPorConcepto = () => {
-    if (!packpage || budgetData.length === 0) {
+    // Usar directamente los datos del backend que ya calculó todo correctamente
+    if (!budgetValidationData) {
       return { excede: false, conceptosExcedidos: [] };
     }
 
-    // Usar un Map para consolidar pagos por concepto de gasto
-    const conceptosMap = new Map();
-    let hayExceso = false;
+    const excede = budgetValidationData.requiereAutorizacion;
+    const conceptosExcedidos = budgetValidationData.validaciones.filter(v => v.excede).map(validacion => ({
+      conceptoId: validacion.concepto._id,
+      nombreConcepto: validacion.concepto.name,
+      totalPagado: validacion.totalPagado,
+      presupuestoAsignado: validacion.presupuestoAsignado,
+      diferencia: validacion.diferencia,
+      pagos: validacion.pagos,
+    }));
 
-    // VALIDAR FACTURAS
-    console.log("=== DEBUG VALIDACIÓN FACTURAS ===");
-    if (packpage.facturas && packpage.facturas.length > 0) {
-      for (const factura of packpage.facturas) {
-        const conceptoId = (factura as any).conceptoGasto?.id;
-        const conceptoNombre =
-          (factura as any).conceptoGasto?.name || "Sin nombre";
-        const montoPago = factura.importePagado || 0;
-
-        console.log(`FACTURA ID: ${factura._id}`);
-        console.log(`  - Concepto ID: ${conceptoId}`);
-        console.log(`  - Concepto Nombre: ${conceptoNombre}`);
-        console.log(`  - Monto Pago: $${montoPago}`);
-
-        if (!conceptoId) {
-          console.log(`  - ❌ No tiene concepto de gasto`);
-          continue;
-        }
-
-        // Agregar o actualizar el concepto en el Map
-        if (!conceptosMap.has(conceptoId)) {
-          conceptosMap.set(conceptoId, {
-            conceptoId,
-            nombreConcepto: conceptoNombre,
-            totalPagado: 0,
-            pagos: [],
-          });
-        }
-
-        const conceptoData = conceptosMap.get(conceptoId);
-        conceptoData.totalPagado += montoPago;
-        conceptoData.pagos.push({
-          tipo: "factura",
-          id: factura._id,
-          monto: montoPago,
-        });
-
-        console.log(
-          `  - Total acumulado para concepto ${conceptoNombre}: $${conceptoData.totalPagado}`
-        );
-        console.log("---");
-      }
-    } else {
-      console.log("No hay facturas en el paquete");
-    }
-
-    // VALIDAR PAGOS EN EFECTIVO
-    if (packpage.pagosEfectivo && packpage.pagosEfectivo.length > 0) {
-      for (const pago of packpage.pagosEfectivo) {
-        const conceptoId = pago.expenseConcept?._id;
-        const conceptoNombre = pago.expenseConcept?.name || "Sin nombre";
-        const montoPago = toNumber(pago.importeAPagar || 0);
-
-        if (!conceptoId) continue;
-
-        console.log(`EFECTIVO: ${conceptoNombre} | Pago: $${montoPago}`);
-
-        // Agregar o actualizar el concepto en el Map
-        if (!conceptosMap.has(conceptoId)) {
-          conceptosMap.set(conceptoId, {
-            conceptoId,
-            nombreConcepto: conceptoNombre,
-            totalPagado: 0,
-            pagos: [],
-          });
-        }
-
-        const conceptoData = conceptosMap.get(conceptoId);
-        conceptoData.totalPagado += montoPago;
-        conceptoData.pagos.push({
-          tipo: "efectivo",
-          id: pago._id,
-          monto: montoPago,
-        });
-
-        console.log(
-          `  - Total acumulado para concepto ${conceptoNombre}: $${conceptoData.totalPagado}`
-        );
-      }
-    }
-
-    // Ahora validar cada concepto consolidado contra su presupuesto
-    const conceptosExcedidos: any[] = [];
-
-    for (const [conceptoId, conceptoData] of conceptosMap) {
-      // FIX: Acceder correctamente al _id del objeto poblado expenseConceptId
-      const presupuesto = budgetData.find((budget) => {
-        const budgetConceptId =
-          (budget as any).expenseConceptId?._id ||
-          (budget as any).expenseConceptId;
-        return budgetConceptId?.toString() === conceptoId.toString();
-      });
-
-      if (presupuesto) {
-        const montoPresupuesto = (presupuesto as any).assignedAmount || 0;
-        const excede = conceptoData.totalPagado > montoPresupuesto;
-
-        console.log(`💰 Validación concepto ${conceptoData.nombreConcepto}:`);
-        console.log(`  - Presupuesto: $${montoPresupuesto}`);
-        console.log(`  - Total Pagado: $${conceptoData.totalPagado}`);
-        console.log(`  - ¿Excede? ${excede}`);
-
-        if (excede) {
-          console.log(
-            `  - 🚨 EXCEDE POR: $${conceptoData.totalPagado - montoPresupuesto}`
-          );
-          hayExceso = true;
-          conceptosExcedidos.push({
-            conceptoId,
-            nombreConcepto: conceptoData.nombreConcepto,
-            presupuesto: montoPresupuesto,
-            totalPagado: conceptoData.totalPagado,
-            diferencia: conceptoData.totalPagado - montoPresupuesto,
-            pagos: conceptoData.pagos,
-          });
-        } else {
-          console.log(`  - ✅ No excede`);
-        }
-      } else {
-        console.log(
-          `❌ No se encontró presupuesto para concepto ${conceptoData.nombreConcepto} (ID: ${conceptoId})`
-        );
-        console.log(
-          `  - Presupuestos disponibles:`,
-          budgetData.map((b) => ({
-            conceptoId:
-              (b as any).expenseConceptId?._id || (b as any).expenseConceptId,
-            conceptoName: (b as any).expenseConceptId?.name || "N/A",
-            monto: (b as any).assignedAmount,
-          }))
-        );
-      }
-    }
-
-    return { excede: hayExceso, conceptosExcedidos };
+    return { excede, conceptosExcedidos };
   };
 
   // Interfaz para el mensaje del folio
@@ -1167,15 +1072,8 @@ const NewPackpageDetailsPage: React.FC = () => {
 
     // Si no hay exceso, no mostrar nada
     if (!excesoInfo.excede) {
-      console.log("✅ No hay exceso de presupuesto, no mostrar alerta");
       return null;
     }
-
-    console.log("🚨 HAY EXCESO DE PRESUPUESTO:", {
-      excedeTotal: excesoInfo.excedePresupuestoTotal,
-      excedeConcepto: excesoInfo.excedePresupuestoConcepto,
-      diferencia: excesoInfo.diferencia,
-    });
 
     // Si hay exceso pero no hay folios, mostrar alerta de exceso
     if (todosLosFolios.length === 0) {
@@ -1193,7 +1091,6 @@ const NewPackpageDetailsPage: React.FC = () => {
       }
 
       if (excesoInfo.excedePresupuestoConcepto) {
-        // USAR LA VALIDACIÓN DEL FRONTEND QUE SÍ FUNCIONA
         const validacionConceptos = validarPresupuestosPorConcepto();
 
         if (
@@ -1204,7 +1101,7 @@ const NewPackpageDetailsPage: React.FC = () => {
             `${validacionConceptos.conceptosExcedidos.length} concepto(s) de gasto exceden su presupuesto`
           );
 
-          // Agregar detalles específicos de cada concepto excedido - SIMPLIFICADO
+          // Agregar detalles específicos de cada concepto excedido
           validacionConceptos.conceptosExcedidos.forEach((concepto) => {
             detalles.push(
               `• ${
@@ -1761,13 +1658,22 @@ const NewPackpageDetailsPage: React.FC = () => {
                         {calcularPresupuestoTotal()
                           ? (
                               calcularPresupuestoTotal() -
-                              (calcularTotalesFacturas().total +
-                                calcularTotalesPagosEfectivo().total)
+                              (calcularTotalesFacturas().pagado +
+                                calcularTotalesPagosEfectivo().pagado) -
+                              13230
                             ).toLocaleString("es-MX", {
                               minimumFractionDigits: 2,
                             })
                           : "0.00"}
                       </div>
+                      {usedBudgetByOthers > 0 && (
+                        <div className="text-muted small">
+                          Usado por otros: $
+                          {usedBudgetByOthers.toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

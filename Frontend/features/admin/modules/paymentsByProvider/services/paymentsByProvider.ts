@@ -9,6 +9,14 @@ export const groupInvoicesByProvider = async (data: GroupInvoicesRequest): Promi
   return response;
 };
 
+export const generateIndividualInvoiceReferences = async (data: { packageIds: string[] }): Promise<ApiResponse<any>> => {
+  const response = await apiCall("/payments-by-provider/generate-individual-references", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return response;
+};
+
 export const getPaymentsByProvider = async (params?: GetPaymentsByProviderParams): Promise<ApiResponse<PaymentByProvider[]>> => {
   let url = "/payments-by-provider";
   if (params) {

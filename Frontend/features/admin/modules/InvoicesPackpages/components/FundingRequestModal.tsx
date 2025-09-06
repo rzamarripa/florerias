@@ -418,9 +418,23 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
           `Generando reporte con ${selectedGroupedPayments.length} proveedores seleccionados`
         );
       } else {
-        // Para layout individual, procesar directamente sin agrupar
+        // Para layout individual, generar referencias individuales para cada factura
+        const { generateIndividualInvoiceReferences } = await import(
+          "../../paymentsByProvider/services/paymentsByProvider"
+        );
+
+        const result = await generateIndividualInvoiceReferences({
+          packageIds: selectedPackageIds,
+        });
+        
+        if (!result.success) {
+          throw new Error(
+            result.message || "Error al generar referencias individuales"
+          );
+        }
+
         toast.success(
-          `Generando reporte individual con ${selectedPackageIds.length} paquetes seleccionados`
+          `Referencias generadas para facturas en ${selectedPackageIds.length} paquetes seleccionados`
         );
       }
 

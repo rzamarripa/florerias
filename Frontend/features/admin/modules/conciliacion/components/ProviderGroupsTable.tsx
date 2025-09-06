@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Card, Table, Form } from "react-bootstrap";
+import { Card, Table, Form, Row, Col } from "react-bootstrap";
+import { format } from "date-fns";
 import { ProviderGroup } from "../types";
 import { formatCurrency } from "@/utils";
 
@@ -9,18 +10,37 @@ interface ProviderGroupsTableProps {
   providerGroups: ProviderGroup[];
   selectedProviderGroups: string[];
   onProviderGroupSelect: (providerGroupId: string) => void;
+  fechaFacturas: string;
+  onFechaFacturasChange: (fecha: string) => void;
 }
 
 export default function ProviderGroupsTable({
   providerGroups,
   selectedProviderGroups,
   onProviderGroupSelect,
+  fechaFacturas,
+  onFechaFacturasChange,
 }: ProviderGroupsTableProps) {
   return (
     <Card>
       <Card.Header>
-        <h5>Proveedores Agrupados</h5>
-        <small className="text-muted">Total: {providerGroups.length}</small>
+        <Row className="align-items-center">
+          <Col md={6}>
+            <h5 className="mb-0">Proveedores Agrupados</h5>
+            <small className="text-muted">Total: {providerGroups.length}</small>
+          </Col>
+          <Col md={6}>
+            <Form.Group className="mb-0">
+              <Form.Label className="small mb-1">Fecha Facturas</Form.Label>
+              <Form.Control
+                type="date"
+                size="sm"
+                value={fechaFacturas}
+                onChange={(e) => onFechaFacturasChange(e.target.value)}
+              />
+            </Form.Group>
+          </Col>
+        </Row>
       </Card.Header>
       <Card.Body style={{ maxHeight: "500px", overflowY: "auto" }}>
         <Table striped bordered hover size="sm">

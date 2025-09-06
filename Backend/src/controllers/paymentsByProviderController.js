@@ -186,6 +186,20 @@ export const paymentsByProviderController = {
 
       console.log("Datos válidos recibidos. packageIds:", packageIds, "bankAccountId:", bankAccountId);
 
+      // Función para generar referencia con formato específico: fecha + año + mes + día + horas + minutos + segundos + 2 dígitos random
+      const generateReferenciaCode = () => {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');  
+        const year = String(now.getFullYear()).slice(-2); // últimos 2 dígitos del año
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const randomDigits = String(Math.floor(Math.random() * 100)).padStart(2, '0'); // 2 dígitos random
+        
+        return `${day}${month}${year}${hours}${minutes}${seconds}${randomDigits}`;
+      };
+
       // Obtener todos los paquetes con sus facturas
       let InvoicesPackage, BankAccount;
       
@@ -340,82 +354,293 @@ export const paymentsByProviderController = {
 
       console.log("Proveedores encontrados:", providers.length);
 
-      // Crear registros en PaymentsByProvider
+      // Crear o actualizar registros en PaymentsByProvider
       const createdPayments = [];
+      const updatedPayments = [];
+
+      // Obtener fecha de inicio y fin del día actual para búsqueda
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
       for (const [rfc, group] of providerGroups) {
-        console.log(`Guardando grupo ${rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
+        console.log(`Procesando grupo ${rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
         
-        if (group.isCashPayment) {
-          // Para pagos en efectivo, crear registro especial
-          const cashPayment = new PaymentsByProvider({
-            totalAmount: group.totalAmount,
-            providerRfc: rfc,
-            providerName: group.expenseConcept?.name || 'Pago en Efectivo',
-            branchName: 'N/A',
-            companyProvider: 'Pago en Efectivo',
-            bankNumber: '00000', // Número especial para pagos en efectivo
-            debitedBankAccount: bankAccount._id,
-            companyId: companyId,
-            facturas: group.invoices.map(invoice => invoice._id),
-          });
+        // Verificar si ya existe una agrupación del mismo proveedor, cuenta bancaria, empresa y fecha QUE NO ESTÉ CONCILIADA
+        const existingPayment = await PaymentsByProvider.findOne({
+          providerRfc: rfc,
+          debitedBankAccount: bankAccount._id,
+          companyId: companyId,
+          createdAt: { $gte: startOfDay, $lte: endOfDay },
+          conciliado: { $ne: true } // Solo buscar agrupaciones NO conciliadas
+        });
+
+        if (existingPayment) {
+          console.log(`Actualizando agrupación existente para RFC ${rfc} - ID: ${existingPayment._id}`);
           
-          await cashPayment.save();
-          createdPayments.push(cashPayment);
+          // Actualizar el registro existente
+          const newFacturasIds = group.invoices.map(invoice => invoice._id);
+          const newPackageIds = packageIds;
+          
+          // Evitar duplicados en facturas
+          const existingFacturasIds = existingPayment.facturas.map(id => id.toString());
+          const uniqueNewFacturasIds = newFacturasIds.filter(id => 
+            !existingFacturasIds.includes(id.toString())
+          );
+          
+          // Evitar duplicados en packageIds
+          const existingPackageIds = existingPayment.packageIds.map(id => id.toString());
+          const uniqueNewPackageIds = newPackageIds.filter(id => 
+            !existingPackageIds.includes(id.toString())
+          );
+
+          const updatedPayment = await PaymentsByProvider.findByIdAndUpdate(
+            existingPayment._id,
+            {
+              $inc: { totalAmount: group.totalAmount },
+              $addToSet: { 
+                facturas: { $each: uniqueNewFacturasIds },
+                packageIds: { $each: uniqueNewPackageIds }
+              }
+            },
+            { new: true }
+          );
+
+          updatedPayments.push(updatedPayment);
+          console.log(`Agrupación actualizada para ${rfc} - Nuevo total: ${updatedPayment.totalAmount}`);
+          
         } else {
-          // Para proveedores regulares
-          const provider = providers.find(p => p.rfc === rfc);
+          console.log(`Creando nueva agrupación para RFC ${rfc}`);
           
-          if (provider) {
-            console.log("Procesando proveedor:", provider.rfc, provider.commercialName);
-            console.log("Banco del proveedor:", provider.bank?.name);
-            console.log("Sucursal del proveedor:", provider.sucursal?.name);
-            
-            // Buscar número de banco en BankNumber
-            const bankNumberRecord = await BankNumber.findOne({
-              bankDebited: bankAccount.bank._id,
-              bankCredited: provider.bank.name
-            });
-
-            console.log("Registro de número de banco encontrado:", bankNumberRecord ? "Sí" : "No");
-
-            const bankNumber = bankNumberRecord ? bankNumberRecord.bankNumber : '00000';
-
-            console.log(`Guardando proveedor ${provider.rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
-            
-            const payment = new PaymentsByProvider({
+          if (group.isCashPayment) {
+            // Para pagos en efectivo, crear registro especial
+            const cashPayment = new PaymentsByProvider({
               totalAmount: group.totalAmount,
-              providerRfc: provider.rfc,
-              providerName: provider.commercialName,
-              branchName: provider.sucursal?.name || 'N/A',
-              companyProvider: provider.businessName,
-              bankNumber: bankNumber,
+              providerRfc: rfc,
+              providerName: group.expenseConcept?.name || 'Pago en Efectivo',
+              branchName: 'N/A',
+              companyProvider: 'Pago en Efectivo',
+              bankNumber: '00000', // Número especial para pagos en efectivo
               debitedBankAccount: bankAccount._id,
               companyId: companyId,
               facturas: group.invoices.map(invoice => invoice._id),
+              packageIds: packageIds,
+              referencia: generateReferenciaCode(),
             });
-
-            await payment.save();
-            createdPayments.push(payment);
-            console.log("Pago creado para proveedor:", provider.rfc);
+            
+            await cashPayment.save();
+            createdPayments.push(cashPayment);
           } else {
-            console.log("Proveedor no encontrado para RFC:", rfc);
+            // Para proveedores regulares
+            const provider = providers.find(p => p.rfc === rfc);
+            
+            if (provider) {
+              console.log("Procesando proveedor:", provider.rfc, provider.commercialName);
+              console.log("Banco del proveedor:", provider.bank?.name);
+              console.log("Sucursal del proveedor:", provider.sucursal?.name);
+              
+              // Buscar número de banco en BankNumber
+              const bankNumberRecord = await BankNumber.findOne({
+                bankDebited: bankAccount.bank._id,
+                bankCredited: provider.bank.name
+              });
+
+              console.log("Registro de número de banco encontrado:", bankNumberRecord ? "Sí" : "No");
+
+              const bankNumber = bankNumberRecord ? bankNumberRecord.bankNumber : '00000';
+
+              console.log(`Creando nueva agrupación para proveedor ${provider.rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
+              
+              const payment = new PaymentsByProvider({
+                totalAmount: group.totalAmount,
+                providerRfc: provider.rfc,
+                providerName: provider.commercialName,
+                branchName: provider.sucursal?.name || 'N/A',
+                companyProvider: provider.businessName,
+                bankNumber: bankNumber,
+                debitedBankAccount: bankAccount._id,
+                companyId: companyId,
+                facturas: group.invoices.map(invoice => invoice._id),
+                packageIds: packageIds,
+                referencia: generateReferenciaCode(),
+              });
+
+              await payment.save();
+              createdPayments.push(payment);
+              console.log("Nueva agrupación creada para proveedor:", provider.rfc);
+            } else {
+              console.log("Proveedor no encontrado para RFC:", rfc);
+            }
           }
         }
       }
 
-      console.log("Pagos creados:", createdPayments);
+      console.log("Pagos creados:", createdPayments.length);
+      console.log("Pagos actualizados:", updatedPayments.length);
+
+      const totalProcessed = createdPayments.length + updatedPayments.length;
+      const allPayments = [...createdPayments, ...updatedPayments];
+
+      let message = '';
+      if (createdPayments.length > 0 && updatedPayments.length > 0) {
+        message = `${createdPayments.length} nuevas agrupaciones creadas y ${updatedPayments.length} agrupaciones actualizadas exitosamente`;
+      } else if (createdPayments.length > 0) {
+        message = `${createdPayments.length} nuevas agrupaciones de pagos por proveedor creadas exitosamente`;
+      } else if (updatedPayments.length > 0) {
+        message = `${updatedPayments.length} agrupaciones de pagos por proveedor actualizadas exitosamente`;
+      } else {
+        message = 'No se procesaron agrupaciones de pagos por proveedor';
+      }
 
       res.json({
         success: true,
-        message: `${createdPayments.length} grupos de pagos por proveedor creados exitosamente`,
-        data: createdPayments,
+        message: message,
+        data: allPayments,
+        summary: {
+          created: createdPayments.length,
+          updated: updatedPayments.length,
+          total: totalProcessed
+        }
       });
     } catch (error) {
       console.error("Error en groupInvoicesByProvider:", error);
       res.status(500).json({
         success: false,
         message: "Error al agrupar facturas por proveedor",
+        error: error.message,
+      });
+    }
+  },
+
+  generateIndividualInvoiceReferences: async (req, res) => {
+    try {
+      console.log("Iniciando generateIndividualInvoiceReferences con datos:", req.body);
+      const { packageIds } = req.body;
+
+      if (!packageIds || !Array.isArray(packageIds) || packageIds.length === 0) {
+        console.log("Error: packageIds inválidos:", packageIds);
+        return res.status(400).json({
+          success: false,
+          message: "Se requieren IDs de paquetes válidos",
+        });
+      }
+
+      // Función para generar referencia con formato específico
+      const generateReferenciaCode = () => {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');  
+        const year = String(now.getFullYear()).slice(-2);
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const randomDigits = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+        
+        return `${day}${month}${year}${hours}${minutes}${seconds}${randomDigits}`;
+      };
+
+      // Obtener todos los paquetes con sus facturas
+      let InvoicesPackage, ImportedInvoices;
+      
+      try {
+        const invoicesPackageModule = await import("../models/InvoicesPackpage.js");
+        const importedInvoicesModule = await import("../models/ImportedInvoices.js");
+        InvoicesPackage = invoicesPackageModule.InvoicesPackage;
+        ImportedInvoices = importedInvoicesModule.ImportedInvoices;
+      } catch (importError) {
+        console.error("Error importando modelos:", importError);
+        return res.status(500).json({
+          success: false,
+          message: "Error interno del servidor al cargar modelos",
+          error: importError.message,
+        });
+      }
+
+      console.log("Buscando paquetes con IDs:", packageIds);
+      const packages = await InvoicesPackage.find({ _id: { $in: packageIds } });
+
+      console.log("Paquetes encontrados:", packages.length);
+
+      if (packages.length === 0) {
+        console.log("No se encontraron paquetes");
+        return res.status(404).json({
+          success: false,
+          message: "No se encontraron paquetes",
+        });
+      }
+
+      const updatedInvoicesCount = { total: 0, embedded: 0, original: 0 };
+
+      for (const pkg of packages) {
+        console.log(`Procesando paquete ${pkg.folio} con ${pkg.facturas.length} facturas`);
+        
+        // Actualizar facturas embebidas en el paquete
+        let packageModified = false;
+        for (let i = 0; i < pkg.facturas.length; i++) {
+          const factura = pkg.facturas[i];
+          
+          // Solo procesar facturas que tienen importes válidos
+          const importeAPagar = factura.importeAPagar && factura.importeAPagar.$numberDecimal
+            ? parseFloat(factura.importeAPagar.$numberDecimal)
+            : factura.importeAPagar || 0;
+          const importePagado = factura.importePagado && factura.importePagado.$numberDecimal
+            ? parseFloat(factura.importePagado.$numberDecimal)
+            : factura.importePagado || 0;
+
+          if ((importeAPagar > 0 || importePagado > 0) && factura.rfcEmisor) {
+            // Generar nueva referencia para esta factura
+            const nuevaReferencia = generateReferenciaCode();
+            
+            // Actualizar factura embebida en el paquete
+            pkg.facturas[i].referencia = nuevaReferencia;
+            packageModified = true;
+            updatedInvoicesCount.embedded++;
+            
+            console.log(`Factura embebida ${factura.uuid} - Nueva referencia: ${nuevaReferencia}`);
+            
+            // Actualizar factura original en ImportedInvoices
+            try {
+              const result = await ImportedInvoices.updateOne(
+                { _id: factura._id },
+                { $set: { referencia: nuevaReferencia } }
+              );
+              
+              if (result.modifiedCount > 0) {
+                updatedInvoicesCount.original++;
+                console.log(`Factura original ${factura._id} actualizada con referencia: ${nuevaReferencia}`);
+              } else {
+                console.log(`No se pudo actualizar factura original ${factura._id}`);
+              }
+            } catch (error) {
+              console.error(`Error actualizando factura original ${factura._id}:`, error);
+            }
+          }
+        }
+        
+        // Guardar paquete si se modificó
+        if (packageModified) {
+          await pkg.save();
+          updatedInvoicesCount.total++;
+          console.log(`Paquete ${pkg.folio} actualizado`);
+        }
+      }
+
+      console.log("Referencias generadas:", updatedInvoicesCount);
+
+      res.json({
+        success: true,
+        message: `Referencias individuales generadas exitosamente para ${updatedInvoicesCount.embedded} facturas en ${updatedInvoicesCount.total} paquetes`,
+        data: {
+          packagesProcessed: updatedInvoicesCount.total,
+          embeddedInvoicesUpdated: updatedInvoicesCount.embedded,
+          originalInvoicesUpdated: updatedInvoicesCount.original,
+        },
+      });
+    } catch (error) {
+      console.error("Error en generateIndividualInvoiceReferences:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al generar referencias individuales",
         error: error.message,
       });
     }

@@ -25,11 +25,38 @@ export const importBankMovements = async (req, res) => {
       const abonoNum = Number(mov.abono);
       const saldoNum = Number(mov.saldo);
 
+      // Extraer número de referencia del concepto
+      const extractReferenceFromConcept = (concepto) => {
+        if (!concepto || typeof concepto !== 'string') return null;
+        
+        // Buscar patrones comunes de referencia numérica
+        const patterns = [
+          /REF[:\s]*(\d+)/i,           // REF: 123456 o REF 123456
+          /REFERENCIA[:\s]*(\d+)/i,    // REFERENCIA: 123456
+          /REF\.?\s*(\d+)/i,           // REF. 123456
+          /\b(\d{6,})\b/,              // Cualquier número de 6+ dígitos
+          /FOLIO[:\s]*(\d+)/i,         // FOLIO: 123456
+          /NO\.?\s*(\d+)/i,            // NO. 123456 o NO 123456
+        ];
+
+        for (const pattern of patterns) {
+          const match = concepto.match(pattern);
+          if (match && match[1]) {
+            return match[1];
+          }
+        }
+        
+        return null;
+      };
+
+      const referencia = extractReferenceFromConcept(mov.concepto);
+
       const movimientoEnriquecido = {
         ...mov,
         cargo: cargoNum,
         abono: abonoNum,
         saldo: saldoNum,
+        referencia: referencia,
         company,
         bankAccount,
         bank: account.bank,

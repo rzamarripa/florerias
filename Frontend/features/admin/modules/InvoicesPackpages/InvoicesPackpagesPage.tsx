@@ -427,12 +427,19 @@ const InvoicesPackagePage: React.FC = () => {
         .toString()
         .padStart(2, "0")}`;
 
-      const response = await getBudgetByCompanyBrandBranch({
+      const params = {
         companyId: selectedCompany,
         brandId: selectedBrand,
         branchId: selectedBranch,
         month: monthFormatted,
-      });
+      };
+
+      // Si hay una ruta seleccionada, incluirla en los parámetros
+      if (selectedRoute) {
+        params.routeId = selectedRoute;
+      }
+
+      const response = await getBudgetByCompanyBrandBranch(params);
 
       setBudgetData(response || []);
     } catch (error) {
@@ -447,7 +454,7 @@ const InvoicesPackagePage: React.FC = () => {
     } else {
       setBudgetData([]);
     }
-  }, [selectedBranch, selectedYear, selectedMonth]);
+  }, [selectedBranch, selectedRoute, selectedYear, selectedMonth]);
 
   const handleTempPayment = (
     invoiceId: string,

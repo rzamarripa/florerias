@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+import { format } from 'date-fns';
+import { toast } from 'react-toastify';
 import { 
   ProviderGroup, 
   MovimientoBancario, 
@@ -8,6 +10,7 @@ import { conciliacionService } from '../services';
 
 export const useConciliacion = () => {
   const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([]);
+  const [facturasIndividuales, setFacturasIndividuales] = useState<any[]>([]);
   const [movimientos, setMovimientos] = useState<MovimientoBancario[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -15,53 +18,111 @@ export const useConciliacion = () => {
   const [providerGroupsRestantes, setProviderGroupsRestantes] = useState<ProviderGroup[]>([]);
   const [movimientosRestantes, setMovimientosRestantes] = useState<MovimientoBancario[]>([]);
   const [selectedProviderGroups, setSelectedProviderGroups] = useState<string[]>([]);
+  const [selectedFacturasIndividuales, setSelectedFacturasIndividuales] = useState<string[]>([]);
   const [selectedMovimiento, setSelectedMovimiento] = useState<string>('');
   const [selectedMovimientos, setSelectedMovimientos] = useState<string[]>([]);
+  const [layoutType, setLayoutType] = useState<'grouped' | 'individual'>('grouped');
   const [currentFilters, setCurrentFilters] = useState<{
     companyId: string;
     bankAccountId: string;
-    fecha: string;
   } | null>(null);
+  const [fechaFacturas, setFechaFacturas] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [fechaMovimientos, setFechaMovimientos] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
-  const loadData = useCallback(async (filters: {
+  const loadFacturas = useCallback(async (filters: {
     companyId: string;
     bankAccountId: string;
-    fecha: string;
-  }) => {
+  }, fecha: string) => {
+    if (!filters.companyId || !filters.bankAccountId || !fecha) return;
+    
     setLoading(true);
     setSelectedProviderGroups([]);
-    setSelectedMovimiento('');
-    setSelectedMovimientos([]);
-    setCurrentFilters(filters);
+    setSelectedFacturasIndividuales([]);
     
     try {
-      const [providerGroupsResponse, movimientosResponse] = await Promise.all([
-        conciliacionService.getProviderGroupsParaConciliacion(
+      if (layoutType === 'grouped') {
+        const providerGroupsResponse = await conciliacionService.getProviderGroupsParaConciliacion(
           filters.companyId,
           filters.bankAccountId,
-          filters.fecha
-        ),
-        conciliacionService.getMovimientosParaConciliacion(
-          filters.companyId,
-          filters.bankAccountId,
-          filters.fecha
-        )
-      ]);
+          fecha
+        );
 
-      if (providerGroupsResponse.success) {
-        setProviderGroups(providerGroupsResponse.data);
+        if (providerGroupsResponse.success) {
+          setProviderGroups(providerGroupsResponse.data);
+        }
+        setFacturasIndividuales([]);
+      } else {
+        // Layout individual
+        const facturasIndividualesResponse = await conciliacionService.getFacturasIndividualesParaConciliacion(
+          filters.companyId,
+          filters.bankAccountId,
+          fecha
+        );
+
+        if (facturasIndividualesResponse.success) {
+          setFacturasIndividuales(facturasIndividualesResponse.data);
+        }
+        setProviderGroups([]);
       }
+    } catch {
+      setProviderGroups([]);
+      setFacturasIndividuales([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [layoutType]);
+
+  const loadMovimientos = useCallback(async (filters: {
+    companyId: string;
+    bankAccountId: string;
+  }, fecha: string) => {
+    if (!filters.companyId || !filters.bankAccountId || !fecha) return;
+    
+    setLoading(true);
+    setSelectedMovimiento('');
+    setSelectedMovimientos([]);
+    
+    try {
+      const movimientosResponse = await conciliacionService.getMovimientosParaConciliacion(
+        filters.companyId,
+        filters.bankAccountId,
+        fecha
+      );
 
       if (movimientosResponse.success) {
         setMovimientos(movimientosResponse.data);
       }
     } catch {
-      setProviderGroups([]);
       setMovimientos([]);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const loadAllData = useCallback(async (filters: {
+    companyId: string;
+    bankAccountId: string;
+  }) => {
+    if (!filters.companyId || !filters.bankAccountId || !fechaFacturas || !fechaMovimientos) return;
+    
+    setLoading(true);
+    setSelectedProviderGroups([]);
+    setSelectedFacturasIndividuales([]);
+    setSelectedMovimiento('');
+    setSelectedMovimientos([]);
+    setCurrentFilters(filters);
+    
+    try {
+      const promises = [
+        loadFacturas(filters, fechaFacturas),
+        loadMovimientos(filters, fechaMovimientos)
+      ];
+      
+      await Promise.all(promises);
+    } finally {
+      setLoading(false);
+    }
+  }, [fechaFacturas, fechaMovimientos, loadFacturas, loadMovimientos]);
 
   const handleProviderGroupSelect = useCallback((providerGroupId: string) => {
     setSelectedProviderGroups(prev => {
@@ -71,6 +132,34 @@ export const useConciliacion = () => {
         return [...prev, providerGroupId];
       }
     });
+  }, []);
+
+  const handleFacturaIndividualSelect = useCallback((facturaId: string) => {
+    setSelectedFacturasIndividuales(prev => {
+      if (prev.includes(facturaId)) {
+        return prev.filter(id => id !== facturaId);
+      } else {
+        return [...prev, facturaId];
+      }
+    });
+  }, []);
+
+  const handleLayoutTypeChange = useCallback((newLayoutType: 'grouped' | 'individual') => {
+    setLayoutType(newLayoutType);
+    setSelectedProviderGroups([]);
+    setSelectedFacturasIndividuales([]);
+    setSelectedMovimiento('');
+    setSelectedMovimientos([]);
+    setProviderGroups([]);
+    setFacturasIndividuales([]);
+  }, []);
+
+  const handleFechaFacturasChange = useCallback((nuevaFecha: string) => {
+    setFechaFacturas(nuevaFecha);
+  }, []);
+
+  const handleFechaMovimientosChange = useCallback((nuevaFecha: string) => {
+    setFechaMovimientos(nuevaFecha);
   }, []);
 
   const handleMovimientoSelect = useCallback((movimientoId: string) => {
@@ -90,11 +179,18 @@ export const useConciliacion = () => {
   const handleConciliarAutomatico = async (filters: {
     companyId: string;
     bankAccountId: string;
-    fecha: string;
+    fechaFacturas: string;
+    fechaMovimientos: string;
   }) => {
     setLoading(true);
     try {
-      const response = await conciliacionService.conciliacionAutomatica(filters);
+      // Usar fechaFacturas como la fecha principal para la conciliación automática
+      const conciliacionFilters = {
+        companyId: filters.companyId,
+        bankAccountId: filters.bankAccountId,
+        fecha: filters.fechaFacturas
+      };
+      const response = await conciliacionService.conciliacionAutomatica(conciliacionFilters);
 
       if (response.success) {
         const { coincidencias, movimientosNoCoinciden } = response.data;
@@ -119,7 +215,10 @@ export const useConciliacion = () => {
         }
       }
     } catch {
-      alert('Error en la conciliación automática');
+      toast.error('Error en la conciliación automática', {
+        position: "top-right",
+        autoClose: 5000,
+      });
     } finally {
       setLoading(false);
     }
@@ -142,44 +241,167 @@ export const useConciliacion = () => {
   };
 
   const handleConciliacionDirecta = useCallback(async (providerGroupIds: string[], movimientoIds: string[], comentario?: string) => {
-    if (providerGroupIds.length === 0 || movimientoIds.length === 0) {
-      alert('Debe seleccionar al menos un proveedor agrupado y un movimiento bancario');
-      return;
-    }
-
     setLoading(true);
+    
     try {
-      const promises = providerGroupIds.map(providerGroupId =>
-        conciliacionService.conciliacionDirectaProvider({
-          providerGroupId,
-          movimientoIds,
-          comentario: comentario || 'Conciliación directa'
-        })
-      );
+      let items: string[];
+      let tipo: 'individual' | 'grouped';
 
-      const responses = await Promise.all(promises);
-      const allSuccess = responses.every(response => response.success);
+      if (layoutType === 'grouped') {
+        if (providerGroupIds.length === 0 || movimientoIds.length === 0) {
+          toast.warn('Debe seleccionar al menos un proveedor agrupado y un movimiento bancario', {
+            position: "top-right",
+            autoClose: 4000,
+          });
+          return;
+        }
+        items = providerGroupIds;
+        tipo = 'grouped';
+      } else {
+        if (selectedFacturasIndividuales.length === 0 || movimientoIds.length === 0) {
+          toast.warn('Debe seleccionar al menos una factura y un movimiento bancario', {
+            position: "top-right",
+            autoClose: 4000,
+          });
+          return;
+        }
+        items = selectedFacturasIndividuales;
+        tipo = 'individual';
+      }
 
-      if (allSuccess) {
-        alert('Conciliación realizada exitosamente');
+      const response = await conciliacionService.conciliacionConValidaciones({
+        tipo,
+        items,
+        movimientoIds,
+        comentario: comentario || 'Conciliación directa con validaciones'
+      });
+
+      if (response.success) {
+        toast.success(response.message, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         setSelectedProviderGroups([]);
+        setSelectedFacturasIndividuales([]);
         setSelectedMovimientos([]);
+        // Recargar datos automáticamente
         if (currentFilters) {
-          await loadData(currentFilters);
+          await loadAllData(currentFilters);
         }
       } else {
-        alert('Algunas conciliaciones fallaron');
+        // Mostrar cada error en un toast separado con mejor formato
+        if (response.errores && response.errores.length > 0) {
+          response.errores.forEach((error: string) => {
+            // Dividir el error en título y detalles si contiene saltos de línea
+            const lines = error.split('\n');
+            const titulo = lines[0];
+            const detalles = lines.slice(1);
+            
+            // Crear el mensaje del toast
+            let mensajeToast = titulo;
+            if (detalles.length > 0) {
+              mensajeToast += '\n\n' + detalles.join('\n');
+            }
+            
+            toast.error(mensajeToast, {
+              position: "top-right",
+              autoClose: 12000, // 12 segundos para dar tiempo a leer
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              style: {
+                whiteSpace: 'pre-line', // Preservar saltos de línea
+                fontSize: '14px',
+                lineHeight: '1.4'
+              }
+            });
+          });
+        }
+        
+        // Mostrar mensaje principal como toast informativo
+        toast.warn(`❌ ${response.message} (${response.errores?.length || 0} ${response.errores?.length === 1 ? 'error' : 'errores'})`, {
+          position: "top-right",
+          autoClose: 6000,
+          style: {
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }
+        });
       }
-    } catch {
-      alert('Error al realizar la conciliación');
+    } catch (error: any) {
+      // Verificar si es un error de validación (status 400) con datos estructurados
+      if (error?.status === 400 && error?.data) {
+        const { success, message, errores } = error.data;
+        
+        if (!success && errores && errores.length > 0) {
+          // Mostrar cada error en un toast separado con mejor formato
+          console.log('Mostrando errores en toast:', errores);
+          errores.forEach((errorMsg: string) => {
+            // Dividir el error en título y detalles si contiene saltos de línea
+            const lines = errorMsg.split('\n');
+            const titulo = lines[0];
+            const detalles = lines.slice(1);
+            
+            // Crear el mensaje del toast
+            let mensajeToast = titulo;
+            if (detalles.length > 0) {
+              mensajeToast += '\n\n' + detalles.join('\n');
+            }
+            
+            toast.error(mensajeToast, {
+              position: "top-right",
+              autoClose: 12000, // 12 segundos para dar tiempo a leer
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              style: {
+                whiteSpace: 'pre-line', // Preservar saltos de línea
+                fontSize: '14px',
+                lineHeight: '1.4'
+              }
+            });
+          });
+          
+          // Mostrar mensaje principal como toast informativo
+          toast.warn(`❌ ${message} (${errores.length} ${errores.length === 1 ? 'error' : 'errores'})`, {
+            position: "top-right",
+            autoClose: 6000,
+            style: {
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }
+          });
+        } else {
+          // Error 400 sin estructura de errores esperada
+          toast.error(`Error de validación: ${message || 'Error desconocido'}`, {
+            position: "top-right",
+            autoClose: 8000,
+          });
+        }
+      } else {
+        // Otros tipos de error (red, 500, etc.)
+        toast.error('Error al realizar la conciliación: ' + (error.message || 'Error desconocido'), {
+          position: "top-right",
+          autoClose: 8000,
+        });
+      }
     } finally {
       setLoading(false);
     }
-  }, [currentFilters, loadData]);
+  }, [layoutType, selectedFacturasIndividuales, currentFilters, loadAllData]);
 
   const handleCerrarConciliacion = async () => {
     if (conciliacionesPendientes.length === 0) {
-      alert('No hay conciliaciones pendientes para procesar.');
+      toast.warn('No hay conciliaciones pendientes para procesar.', {
+        position: "top-right",
+        autoClose: 4000,
+      });
       return;
     }
 
@@ -190,14 +412,24 @@ export const useConciliacion = () => {
       });
 
       if (response.success) {
-        alert(response.message);
+        toast.success(response.message, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         resetModal();
         setSelectedProviderGroups([]);
         setSelectedMovimiento('');
         setSelectedMovimientos([]);
       }
     } catch {
-      alert('Error al cerrar la conciliación');
+      toast.error('Error al cerrar la conciliación', {
+        position: "top-right",
+        autoClose: 5000,
+      });
     } finally {
       setLoading(false);
     }
@@ -212,6 +444,7 @@ export const useConciliacion = () => {
 
   return {
     providerGroups,
+    facturasIndividuales,
     movimientos,
     loading,
     showModal,
@@ -219,12 +452,20 @@ export const useConciliacion = () => {
     providerGroupsRestantes,
     movimientosRestantes,
     selectedProviderGroups,
+    selectedFacturasIndividuales,
     selectedMovimiento,
     selectedMovimientos,
-    loadData,
+    layoutType,
+    fechaFacturas,
+    fechaMovimientos,
+    loadAllData,
     handleProviderGroupSelect,
+    handleFacturaIndividualSelect,
     handleMovimientoSelect,
     handleMovimientosSelect,
+    handleLayoutTypeChange,
+    handleFechaFacturasChange,
+    handleFechaMovimientosChange,
     handleConciliarAutomatico,
     handleConciliacionManual,
     handleConciliacionDirecta,

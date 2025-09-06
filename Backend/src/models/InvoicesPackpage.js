@@ -239,6 +239,12 @@ const InvoicesPackageSchema = new mongoose.Schema(
           trim: true,
           index: true,
         },
+        referencia: {
+          type: String,
+          trim: true,
+          maxLength: 50,
+          default: null,
+        },
         createdAt: {
           type: Date,
           default: Date.now,

@@ -178,9 +178,9 @@ export const getPaidByExpenseConceptId = async (req, res) => {
           if (pago.autorizada === true && 
               pago.expenseConcept?.toString() === expenseConceptId.toString()) {
             
-            const importePagado = typeof pago.importeAPagar === 'object' && pago.importeAPagar !== null
-              ? parseFloat(pago.importeAPagar.toString())
-              : pago.importeAPagar || 0;
+            const importePagado = typeof pago.importePagado === 'object' && pago.importePagado !== null
+              ? parseFloat(pago.importePagado.toString())
+              : pago.importePagado || 0;
             
             totalPaid += importePagado;
             
@@ -282,11 +282,11 @@ export const getPendingByExpenseConceptId = async (req, res) => {
           if ((factura.autorizada === true || factura.autorizada === null) && 
               factura.conceptoGasto?.id?.toString() === expenseConceptId.toString()) {
             
-            const importeAPagar = typeof factura.importeAPagar === 'object' && factura.importeAPagar !== null
-              ? parseFloat(factura.importeAPagar.toString())
-              : factura.importeAPagar || 0;
+            const importePagado = typeof factura.importePagado === 'object' && factura.importePagado !== null
+              ? parseFloat(factura.importePagado.toString())
+              : factura.importePagado || 0;
             
-            totalPending += importeAPagar;
+            totalPending += importePagado;
             
             pendingDetails.push({
               packageId: pkg._id,
@@ -294,7 +294,7 @@ export const getPendingByExpenseConceptId = async (req, res) => {
               packageStatus: pkg.estatus,
               type: "factura",
               invoiceId: factura._id,
-              amount: importeAPagar,
+              amount: importePagado,
               description: factura.nombreEmisor || 'N/A',
               uuid: factura.uuid || 'N/A',
               authorized: factura.autorizada
@@ -310,11 +310,11 @@ export const getPendingByExpenseConceptId = async (req, res) => {
           if ((pago.autorizada === true || pago.autorizada === null) && 
               pago.expenseConcept?.toString() === expenseConceptId.toString()) {
             
-            const importeAPagar = typeof pago.importeAPagar === 'object' && pago.importeAPagar !== null
-              ? parseFloat(pago.importeAPagar.toString())
-              : pago.importeAPagar || 0;
+            const importePagado = typeof pago.importePagado === 'object' && pago.importePagado !== null
+              ? parseFloat(pago.importePagado.toString())
+              : pago.importePagado || 0;
             
-            totalPending += importeAPagar;
+            totalPending += importePagado;
             
             pendingDetails.push({
               packageId: pkg._id,
@@ -322,7 +322,7 @@ export const getPendingByExpenseConceptId = async (req, res) => {
               packageStatus: pkg.estatus,
               type: "efectivo",
               cashPaymentId: pago._id,
-              amount: importeAPagar,
+              amount: importePagado,
               description: pago.description || 'Pago en efectivo',
               authorized: pago.autorizada
             });

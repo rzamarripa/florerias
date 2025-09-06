@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, Table, Form } from "react-bootstrap";
+import { Card, Table, Form, Row, Col } from "react-bootstrap";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { MovimientoBancario } from "../types";
@@ -13,6 +13,8 @@ interface MovimientosTableProps {
   selectedMovimientos: string[];
   onMovimientoSelect: (movimientoId: string) => void;
   onMovimientosSelect: (movimientoId: string) => void;
+  fechaMovimientos: string;
+  onFechaMovimientosChange: (fecha: string) => void;
 }
 
 export default function MovimientosTable({
@@ -21,15 +23,32 @@ export default function MovimientosTable({
   selectedMovimientos,
   onMovimientoSelect, // eslint-disable-line @typescript-eslint/no-unused-vars
   onMovimientosSelect,
+  fechaMovimientos,
+  onFechaMovimientosChange,
 }: MovimientosTableProps) {
   return (
     <Card>
       <Card.Header>
-        <h5>Movimientos Bancarios</h5>
-        <small className="text-muted">
-          Total: {movimientos.length} | Seleccionados:{" "}
-          {selectedMovimientos.length}
-        </small>
+        <Row className="align-items-center">
+          <Col md={6}>
+            <h5 className="mb-0">Movimientos Bancarios</h5>
+            <small className="text-muted">
+              Total: {movimientos.length} | Seleccionados:{" "}
+              {selectedMovimientos.length}
+            </small>
+          </Col>
+          <Col md={6}>
+            <Form.Group className="mb-0">
+              <Form.Label className="small mb-1">Fecha Movimientos</Form.Label>
+              <Form.Control
+                type="date"
+                size="sm"
+                value={fechaMovimientos}
+                onChange={(e) => onFechaMovimientosChange(e.target.value)}
+              />
+            </Form.Group>
+          </Col>
+        </Row>
       </Card.Header>
       <Card.Body style={{ maxHeight: "500px", overflowY: "auto" }}>
         <Table striped bordered hover size="sm">

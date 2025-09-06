@@ -7,31 +7,29 @@ import { Company, BankAccount } from "../types";
 import { companiesService, bankAccountsService } from "../services";
 
 interface FiltrosConciliacionProps {
-  onFiltersChange: (filters: {
+  onLoadData: (filters: {
     companyId: string;
     bankAccountId: string;
-    fecha: string;
   }) => void;
-  onConciliar: (filters: {
-    companyId: string;
-    bankAccountId: string;
-    fecha: string;
-  }) => void;
+  onLayoutTypeChange: (layoutType: 'grouped' | 'individual') => void;
+  layoutType: 'grouped' | 'individual';
   loading: boolean;
+  fechaFacturas: string;
+  fechaMovimientos: string;
 }
 
 export default function FiltrosConciliacion({
-  onFiltersChange,
-  onConciliar,
+  onLoadData,
+  onLayoutTypeChange,
+  layoutType,
   loading,
+  fechaFacturas,
+  fechaMovimientos,
 }: FiltrosConciliacionProps) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>("");
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState<string>(
-    format(new Date(), "yyyy-MM-dd")
-  );
 
   useEffect(() => {
     loadCompanies();
@@ -47,28 +45,18 @@ export default function FiltrosConciliacion({
     }
   }, [selectedCompany]);
 
-  const handleFiltersUpdate = () => {
-    console.log("handleFiltersUpdate - Valores:", {
-      selectedCompany,
-      selectedBankAccount,
-      selectedDate,
-    });
-    if (selectedCompany && selectedBankAccount && selectedDate) {
-      console.log("handleFiltersUpdate - Llamando a onFiltersChange");
-      onFiltersChange({
+  const handleLoadData = () => {
+    if (selectedCompany && selectedBankAccount) {
+      onLoadData({
         companyId: selectedCompany,
         bankAccountId: selectedBankAccount,
-        fecha: selectedDate,
       });
-    } else {
-      console.log("handleFiltersUpdate - No se cumplen las condiciones");
     }
   };
 
-  const handleManualLoad = () => {
-    console.log("handleManualLoad - Botón presionado");
-    handleFiltersUpdate();
-  };
+
+  const isDataLoadEnabled = selectedCompany && selectedBankAccount && fechaFacturas && fechaMovimientos;
+
 
   const loadCompanies = async () => {
     try {
@@ -94,77 +82,74 @@ export default function FiltrosConciliacion({
     }
   };
 
-  const handleConciliar = () => {
-    if (selectedCompany && selectedBankAccount && selectedDate) {
-      onConciliar({
-        companyId: selectedCompany,
-        bankAccountId: selectedBankAccount,
-        fecha: selectedDate,
-      });
-    }
-  };
 
   return (
-    <Row className="mb-4">
-      <Col md={3}>
-        <Form.Group>
-          <Form.Label>Razón Social</Form.Label>
-          <Form.Select
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
+    <>
+      <Row className="mb-3">
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label>Razón Social</Form.Label>
+            <Form.Select
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+            >
+              <option value="">Seleccionar razón social</option>
+              {companies.map((company) => (
+                <option key={company._id} value={company._id}>
+                  {company.name}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label>Cuenta Bancaria</Form.Label>
+            <Form.Select
+              value={selectedBankAccount}
+              onChange={(e) => setSelectedBankAccount(e.target.value)}
+              disabled={!selectedCompany}
+            >
+              <option value="">Seleccionar cuenta</option>
+              {bankAccounts.map((account) => (
+                <option key={account._id} value={account._id}>
+                  {account.accountNumber} - {account.bank.name}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label>Tipo de Layout</Form.Label>
+            <Form.Select
+              value={layoutType}
+              onChange={(e) => onLayoutTypeChange(e.target.value as 'grouped' | 'individual')}
+            >
+              <option value="grouped">Agrupado por Proveedor</option>
+              <option value="individual">Facturas Individuales</option>
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={3} className="d-flex align-items-end">
+          <Button
+            variant="outline-primary"
+            onClick={handleLoadData}
+            disabled={!isDataLoadEnabled || loading}
+            size="sm"
+            className="w-100"
           >
-            <option value="">Seleccionar razón social</option>
-            {companies.map((company) => (
-              <option key={company._id} value={company._id}>
-                {company.name}
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-      </Col>
-      <Col md={3}>
-        <Form.Group>
-          <Form.Label>Cuenta Bancaria</Form.Label>
-          <Form.Select
-            value={selectedBankAccount}
-            onChange={(e) => setSelectedBankAccount(e.target.value)}
-            disabled={!selectedCompany}
-          >
-            <option value="">Seleccionar cuenta</option>
-            {bankAccounts.map((account) => (
-              <option key={account._id} value={account._id}>
-                {account.accountNumber} - {account.bank.name}
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-      </Col>
-      <Col md={3}>
-        <Form.Group>
-          <Form.Label>Fecha</Form.Label>
-          <Form.Control
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-        </Form.Group>
-      </Col>
-      <Col md={3} className="d-flex align-items-end gap-2">
-        <Button
-          variant="outline-primary"
-          onClick={handleManualLoad}
-          disabled={!selectedCompany || !selectedBankAccount || loading}
-        >
-          Cargar Datos
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleConciliar}
-          disabled={!selectedCompany || !selectedBankAccount || loading}
-        >
-          {loading ? <Spinner animation="border" size="sm" /> : "Conciliar"}
-        </Button>
-      </Col>
-    </Row>
+            {loading ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-1" />
+                Cargando...
+              </>
+            ) : (
+              "Cargar Datos"
+            )}
+          </Button>
+        </Col>
+      </Row>
+    </>
   );
 }

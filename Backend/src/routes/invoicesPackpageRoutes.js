@@ -22,7 +22,8 @@ import {
     toggleInvoicesPackageActive,
     removeInvoiceFromPackage,
     removeCashPaymentFromPackage,
-    markPackageAsPaid
+    markPackageAsPaid,
+    getUsedBudgetByCompanyBrandBranchRoute
 } from '../controllers/invoicesPackpageController.js';
 import packageTimelineController from '../controllers/packageTimelineController.js';
 import { protect } from '../middleware/auth.js';
@@ -49,6 +50,9 @@ router.get('/budget', getBudgetByCompanyBrandBranch);
 
 // Obtener presupuesto por compañía y mes (específico para dashboard de pagos)
 router.get('/budget-dashboard', getBudgetByCompanyForDashboard);
+
+// Obtener presupuesto usado por otros paquetes con la misma combinación
+router.get('/used-budget', getUsedBudgetByCompanyBrandBranchRoute);
 
 // Obtener relaciones paquete-sucursal/marca
 router.get('/package-company-relations', getPackageCompanyRelations);

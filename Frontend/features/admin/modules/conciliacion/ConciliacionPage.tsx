@@ -5,6 +5,7 @@ import { Row, Col, Button, Spinner, Alert } from "react-bootstrap";
 import {
   FiltrosConciliacion,
   ProviderGroupsTable,
+  FacturasIndividualesTable,
   MovimientosTable,
   ConciliacionManualModal,
 } from "./components";
@@ -13,6 +14,7 @@ import { useConciliacion } from "./hooks/useConciliacion";
 export default function ConciliacionPage() {
   const {
     providerGroups,
+    facturasIndividuales,
     movimientos,
     loading,
     showModal,
@@ -20,13 +22,20 @@ export default function ConciliacionPage() {
     providerGroupsRestantes,
     movimientosRestantes,
     selectedProviderGroups,
+    selectedFacturasIndividuales,
     selectedMovimiento,
     selectedMovimientos,
-    loadData,
+    layoutType,
+    fechaFacturas,
+    fechaMovimientos,
+    loadAllData,
     handleProviderGroupSelect,
+    handleFacturaIndividualSelect,
     handleMovimientoSelect,
     handleMovimientosSelect,
-    handleConciliarAutomatico,
+    handleLayoutTypeChange,
+    handleFechaFacturasChange,
+    handleFechaMovimientosChange,
     handleConciliacionManual,
     handleConciliacionDirecta,
     handleCerrarConciliacion,
@@ -35,33 +44,17 @@ export default function ConciliacionPage() {
 
   const [hasData, setHasData] = useState<boolean>(false);
 
-  const handleFiltersChange = (filters: {
+  const handleLoadData = (filters: {
     companyId: string;
     bankAccountId: string;
-    fecha: string;
   }) => {
-    loadData(filters);
+    loadAllData(filters);
     setHasData(true);
   };
 
-  const handleConciliar = (filters: {
-    companyId: string;
-    bankAccountId: string;
-    fecha: string;
-  }) => {
-    handleConciliarAutomatico(filters);
-  };
 
   const handleConciliarDirectamente = () => {
-    if (selectedProviderGroups.length === 0) {
-      alert("Debe seleccionar al menos un proveedor agrupado");
-      return;
-    }
-    if (selectedMovimientos.length === 0) {
-      alert("Debe seleccionar al menos un movimiento bancario");
-      return;
-    }
-
+    // Las validaciones ya se manejan en el hook useConciliacion con toasts
     handleConciliacionDirecta(selectedProviderGroups, selectedMovimientos);
   };
 
@@ -74,20 +67,73 @@ export default function ConciliacionPage() {
       </Row>
 
       <FiltrosConciliacion
-        onFiltersChange={handleFiltersChange}
-        onConciliar={handleConciliar}
+        onLoadData={handleLoadData}
+        onLayoutTypeChange={handleLayoutTypeChange}
+        layoutType={layoutType}
         loading={loading}
+        fechaFacturas={fechaFacturas}
+        fechaMovimientos={fechaMovimientos}
       />
 
       {hasData && (
         <>
+          {/* Botón de Conciliar Selección */}
+          {((layoutType === 'grouped' && selectedProviderGroups.length > 0) ||
+            (layoutType === 'individual' && selectedFacturasIndividuales.length > 0)) &&
+            selectedMovimientos.length > 0 && (
+              <Row className="mb-3">
+                <Col>
+                  <div className="d-flex gap-3 align-items-center">
+                    <Button
+                      variant="success"
+                      onClick={handleConciliarDirectamente}
+                      disabled={loading}
+                      size="lg"
+                    >
+                      {loading ? (
+                        <>
+                          <Spinner
+                            animation="border"
+                            size="sm"
+                            className="me-2"
+                          />
+                          Conciliando...
+                        </>
+                      ) : (
+                        "Conciliar Selección"
+                      )}
+                    </Button>
+                    <Alert variant="info" className="mb-0">
+                      Seleccionados:{" "}
+                      {layoutType === 'grouped' 
+                        ? `${selectedProviderGroups.length} proveedores agrupados`
+                        : `${selectedFacturasIndividuales.length} facturas individuales`
+                      } y {selectedMovimientos.length} movimientos
+                    </Alert>
+                  </div>
+                </Col>
+              </Row>
+            )}
+
           <Row>
             <Col md={6}>
-              <ProviderGroupsTable
-                providerGroups={providerGroups}
-                selectedProviderGroups={selectedProviderGroups}
-                onProviderGroupSelect={handleProviderGroupSelect}
-              />
+              {layoutType === 'grouped' ? (
+                <ProviderGroupsTable
+                  providerGroups={providerGroups}
+                  selectedProviderGroups={selectedProviderGroups}
+                  onProviderGroupSelect={handleProviderGroupSelect}
+                  fechaFacturas={fechaFacturas}
+                  onFechaFacturasChange={handleFechaFacturasChange}
+                />
+              ) : (
+                <FacturasIndividualesTable
+                  facturas={facturasIndividuales}
+                  selectedFacturas={selectedFacturasIndividuales}
+                  onFacturaSelect={handleFacturaIndividualSelect}
+                  fechaFacturas={fechaFacturas}
+                  onFechaFacturasChange={handleFechaFacturasChange}
+                />
+              )}
             </Col>
 
             <Col md={6}>
@@ -97,48 +143,12 @@ export default function ConciliacionPage() {
                 selectedMovimientos={selectedMovimientos}
                 onMovimientoSelect={handleMovimientoSelect}
                 onMovimientosSelect={handleMovimientosSelect}
+                fechaMovimientos={fechaMovimientos}
+                onFechaMovimientosChange={handleFechaMovimientosChange}
               />
             </Col>
           </Row>
 
-          {(selectedProviderGroups.length > 0 ||
-            selectedMovimientos.length > 0) && (
-            <Row className="mt-3">
-              <Col>
-                <Alert variant="info">
-                  Seleccionados: {selectedProviderGroups.length} proveedores
-                  agrupados y {selectedMovimientos.length} movimientos
-                </Alert>
-              </Col>
-            </Row>
-          )}
-
-          {selectedProviderGroups.length > 0 &&
-            selectedMovimientos.length > 0 && (
-              <Row className="mt-2">
-                <Col>
-                  <Button
-                    variant="success"
-                    onClick={handleConciliarDirectamente}
-                    disabled={loading}
-                    size="lg"
-                  >
-                    {loading ? (
-                      <>
-                        <Spinner
-                          animation="border"
-                          size="sm"
-                          className="me-2"
-                        />
-                        Conciliando...
-                      </>
-                    ) : (
-                      "Conciliar Selección"
-                    )}
-                  </Button>
-                </Col>
-              </Row>
-            )}
         </>
       )}
 

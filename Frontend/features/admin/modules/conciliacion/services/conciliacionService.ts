@@ -46,6 +46,17 @@ export const conciliacionService = {
     return response;
   },
 
+  getFacturasIndividualesParaConciliacion: async (
+    companyId: string,
+    bankAccountId: string,
+    fecha: string
+  ): Promise<GetFacturasResponse> => {
+    const response = await apiCall<GetFacturasResponse["data"]>(
+      `/conciliacion/facturas-individuales?companyId=${companyId}&bankAccountId=${bankAccountId}&fecha=${fecha}`
+    );
+    return response;
+  },
+
   conciliacionAutomatica: async (
     data: ConciliacionAutomaticaRequest
   ): Promise<{ success: boolean; data: ConciliacionAutomaticaResponse; message: string }> => {
@@ -99,6 +110,19 @@ export const conciliacionService = {
         body: JSON.stringify(data),
       }
     );
+    return response;
+  },
+
+  conciliacionConValidaciones: async (data: {
+    tipo: 'individual' | 'grouped';
+    items: string[];
+    movimientoIds: string[];
+    comentario?: string;
+  }): Promise<{ success: boolean; data: any; message: string; errores?: string[] }> => {
+    const response = await apiCall<any>("/conciliacion/con-validaciones", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
     return response;
   },
 }; 

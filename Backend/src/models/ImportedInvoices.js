@@ -195,6 +195,12 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     default: null,
     index: true
   },
+  referencia: {
+    type: String,
+    trim: true,
+    maxLength: 50,
+    default: null
+  },
 }, {
   timestamps: true,
   collection: 'cc_imported_invoices',

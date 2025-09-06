@@ -2780,3 +2780,168 @@ export const markPackageAsPaid = async (req, res) => {
     });
   }
 };
+
+// GET - Calcular presupuesto usado por otros paquetes con misma combinación empresa-marca-sucursal-ruta
+export const getUsedBudgetByCompanyBrandBranchRoute = async (req, res) => {
+  try {
+    const { companyId, brandId, branchId, routeId, month, excludePackageId } = req.query;
+
+    // Validar parámetros requeridos
+    if (!companyId || !brandId || !branchId || !month) {
+      return res.status(400).json({
+        success: false,
+        message: "Los parámetros companyId, brandId, branchId y month son requeridos.",
+      });
+    }
+
+    // Validar formato del mes (YYYY-MM)
+    const monthRegex = /^\d{4}-\d{2}$/;
+    if (!monthRegex.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "El formato del mes debe ser YYYY-MM.",
+      });
+    }
+
+    // Construir filtro para buscar paquetes con misma combinación
+    const relationFilter = {
+      companyId: new mongoose.Types.ObjectId(companyId),
+      brandId: new mongoose.Types.ObjectId(brandId),
+      branchId: new mongoose.Types.ObjectId(branchId),
+    };
+
+    // Si se proporciona routeId, incluirlo en el filtro
+    if (routeId) {
+      relationFilter.routeId = new mongoose.Types.ObjectId(routeId);
+    }
+
+    console.log("🔍 Buscando paquetes con filtro:", relationFilter);
+
+    // Buscar todas las relaciones que coincidan con los criterios
+    const matchingRelations = await InvoicesPackageCompany.find(relationFilter);
+    
+    if (matchingRelations.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalUsedBudget: 0,
+          packagesCount: 0,
+          details: []
+        },
+        message: "No se encontraron paquetes con la combinación especificada."
+      });
+    }
+
+    // Obtener los IDs de los paquetes
+    const packageIds = matchingRelations.map(rel => rel.packageId);
+    
+    // Excluir el paquete actual si se proporciona excludePackageId
+    const filteredPackageIds = excludePackageId 
+      ? packageIds.filter(id => id.toString() !== excludePackageId)
+      : packageIds;
+
+    console.log(`📦 Encontrados ${filteredPackageIds.length} paquetes para calcular presupuesto usado`);
+
+    if (filteredPackageIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalUsedBudget: 0,
+          packagesCount: 0,
+          details: []
+        },
+        message: "No hay otros paquetes con la misma combinación."
+      });
+    }
+
+    // Buscar paquetes y filtrar por mes de fechaPago
+    const packages = await InvoicesPackage.find({
+      _id: { $in: filteredPackageIds }
+    });
+
+    console.log(`📅 Filtrando paquetes por mes: ${month}`);
+
+    let totalUsedBudget = 0;
+    const packageDetails = [];
+
+    for (const pkg of packages) {
+      if (!pkg.fechaPago) continue;
+
+      // Verificar si la fechaPago corresponde al mes especificado
+      const fechaPago = new Date(pkg.fechaPago);
+      const year = fechaPago.getFullYear();
+      const monthNum = String(fechaPago.getMonth() + 1).padStart(2, "0");
+      const packageMonth = `${year}-${monthNum}`;
+
+      if (packageMonth === month) {
+        // Calcular presupuesto usado por este paquete (solo facturas y pagos en efectivo pagados)
+        let packageUsedBudget = 0;
+
+        // Sumar facturas que NO estén rechazadas (importePagado)
+        if (pkg.facturas && Array.isArray(pkg.facturas)) {
+          for (const factura of pkg.facturas) {
+            if (factura.pagoRechazado !== true && factura.importePagado > 0) {
+              packageUsedBudget += parseFloat(factura.importePagado) || 0;
+              console.log(`  💳 Factura: $${factura.importePagado} (autorizada: ${factura.autorizada}, rechazada: ${factura.pagoRechazado})`);
+            }
+          }
+        }
+
+        // Sumar pagos en efectivo que NO estén rechazados (importePagado)
+        if (pkg.pagosEfectivo && Array.isArray(pkg.pagosEfectivo)) {
+          for (const pagoEfectivo of pkg.pagosEfectivo) {
+            if (pagoEfectivo.pagoRechazado !== true && pagoEfectivo.importePagado > 0) {
+              packageUsedBudget += parseFloat(pagoEfectivo.importePagado) || 0;
+              console.log(`  💵 Pago efectivo: $${pagoEfectivo.importePagado} (autorizada: ${pagoEfectivo.autorizada}, rechazada: ${pagoEfectivo.pagoRechazado})`);
+            }
+          }
+        }
+
+        totalUsedBudget += packageUsedBudget;
+
+        packageDetails.push({
+          packageId: pkg._id,
+          folio: pkg.folio,
+          estatus: pkg.estatus,
+          fechaPago: pkg.fechaPago,
+          usedBudget: packageUsedBudget,
+          facturas: pkg.facturas?.length || 0,
+          pagosEfectivo: pkg.pagosEfectivo?.length || 0
+        });
+
+        console.log(`💰 Paquete ${pkg.folio}: $${packageUsedBudget.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`);
+      }
+    }
+
+    console.log(`🎯 Presupuesto total usado por otros paquetes: $${totalUsedBudget.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`);
+
+    const responseData = {
+      success: true,
+      data: {
+        totalUsedBudget,
+        packagesCount: packageDetails.length,
+        details: packageDetails,
+        filters: {
+          companyId,
+          brandId,
+          branchId,
+          routeId,
+          month,
+          excludePackageId
+        }
+      },
+      message: `Presupuesto usado calculado para ${packageDetails.length} paquetes.`
+    };
+
+    console.log('📊 RESPONSE getUsedBudgetByCompanyBrandBranchRoute:', JSON.stringify(responseData, null, 2));
+
+    res.status(200).json(responseData);
+
+  } catch (error) {
+    console.error("Error calculating used budget by company-brand-branch-route:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error interno del servidor.",
+    });
+  }
+};

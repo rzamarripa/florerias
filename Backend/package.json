@@ -8,6 +8,7 @@
     "dev": "nodemon src/app.js --watch src",
     "demo": "MONGODB_URI=mongodb://localhost:27017/caprepa nodemon src/app.js --watch src",
     "seed": "node seed.js",
+    "clear": "node clearCollections.js --force",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

@@ -212,6 +212,7 @@ export const createInvoicesPackage = async (data: {
     companyId?: string;
     brandId?: string;
     branchId?: string;
+    routeId?: string;
     // Nuevo campo para conceptos de gasto por factura
     conceptosGasto?: { [invoiceId: string]: string };
     // Nuevo campo para montos específicos por factura (pagos parciales)
@@ -270,6 +271,7 @@ export const updateInvoicesPackage = async (id: string, data: {
     companyId?: string;
     brandId?: string;
     branchId?: string;
+    routeId?: string;
     // Nuevo campo para conceptos de gasto por factura
     conceptosGasto?: { [invoiceId: string]: string };
     // Nuevo campo para montos específicos por factura (pagos parciales)
@@ -1026,5 +1028,44 @@ export const markPackageAsPaid = async (packageId: string): Promise<InvoicesPack
     const response = await apiCall<InvoicesPackageResponse>(`/invoices-package/${packageId}/mark-as-paid`, {
         method: "POST",
     });
+    return response.data;
+};
+
+// Interfaz para la respuesta del presupuesto usado por otros paquetes
+export interface UsedBudgetResponse {
+    success: boolean;
+    data: {
+        totalUsedBudget: number;
+        packageCount: number;
+        details: Array<{
+            packageId: string;
+            folio: number;
+            totalAuthorized: number;
+            invoicesTotal: number;
+            cashPaymentsTotal: number;
+            fechaPago: string;
+        }>;
+    };
+    message?: string;
+}
+
+// Servicio para obtener presupuesto usado por otros paquetes con la misma combinación
+export const getUsedBudgetByCompanyBrandBranchRoute = async (params: {
+    companyId: string;
+    brandId?: string;
+    branchId?: string;
+    routeId?: string;
+    month: string;
+    excludePackageId?: string;
+}): Promise<UsedBudgetResponse> => {
+    const queryParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            queryParams.append(key, value.toString());
+        }
+    });
+
+    const response = await apiCall<UsedBudgetResponse>(`/invoices-package/used-budget?${queryParams}`);
     return response.data;
 }; 

@@ -59,6 +59,29 @@ const paymentsByProviderSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'InvoicesPackage'
   }],
+  packageIds: [{
+    type: Schema.Types.ObjectId,
+    ref: 'InvoicesPackpage'
+  }],
+  referencia: {
+    type: String,
+    trim: true,
+  },
+  conciliado: {
+    type: Boolean,
+    default: false,
+  },
+  comentarioConciliacion: {
+    type: String,
+    trim: true,
+  },
+  fechaConciliacion: {
+    type: Date,
+  },
+  referenciaConciliacion: {
+    type: String,
+    trim: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -35,9 +35,9 @@ export default function FacturasTable({
             </tr>
           </thead>
           <tbody>
-            {facturas.map((factura) => (
+            {facturas.map((factura, index) => (
               <tr
-                key={factura._id}
+                key={`${factura._id}-${factura.packageFolio || 'pkg'}-${factura.importePagado || 0}-${index}`}
                 className={
                   selectedFactura === factura._id ? "table-active" : ""
                 }
