@@ -12,6 +12,8 @@ import {
 } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { BsCash, BsClipboard } from "react-icons/bs";
+import { PageProtection } from "@/components/common/PageProtection";
+import { usePermissionInterceptor } from "@/hooks/usePermissionInterceptor";
 import BudgetSummaryCards from "./components/BudgetSummaryCards";
 import {
   userProvidersService,
@@ -46,6 +48,7 @@ import { formatDate, getNextThursdayOfWeek } from "@/utils/dateUtils";
 import { routeService } from "../routes/services/routeService";
 
 const InvoicesPackagePage: React.FC = () => {
+  const { interceptCreate, canCreate } = usePermissionInterceptor();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [isNewPackage, setIsNewPackage] = useState(true);
@@ -1011,7 +1014,8 @@ const InvoicesPackagePage: React.FC = () => {
     : contadorTotalElementos + facturasGuardadasEnPaquete.length;
 
   return (
-    <Container fluid className=" p-0">
+    <PageProtection requiredPermission="ver">
+      <Container fluid className=" p-0">
       <div className="row gx-1 gy-1 mb-1">
         <BudgetSummaryCards
           tempPayments={tempPayments}
@@ -1194,11 +1198,19 @@ const InvoicesPackagePage: React.FC = () => {
                 </Button>
                 <Button
                   variant="success"
-                  onClick={() => setShowCashPaymentModal(true)}
+                  onClick={async () => {
+                    try {
+                      await interceptCreate(() => {
+                        setShowCashPaymentModal(true);
+                      });
+                    } catch (error) {
+                      // Error already handled by interceptor
+                    }
+                  }}
                   size="sm"
                   className="py-1 px-2 flex-fill"
                   disabled={
-                    !selectedCompany || !selectedBrand || !selectedBranch
+                    !selectedCompany || !selectedBrand || !selectedBranch || !canCreate()
                   }
                 >
                   <BsCash className="me-2" size={16} />
@@ -1361,9 +1373,12 @@ const InvoicesPackagePage: React.FC = () => {
                   variant="primary"
                   disabled={
                     contadorTotalElementos === 0 &&
-                    !(selectedPackageId && !isNewPackage)
+                    !(selectedPackageId && !isNewPackage) ||
+                    !canCreate()
                   }
-                  onClick={() => {
+                  onClick={async () => {
+                    try {
+                      await interceptCreate(async () => {
                     if (
                       contadorTotalElementos === 0 &&
                       !(selectedPackageId && !isNewPackage)
@@ -1425,6 +1440,10 @@ const InvoicesPackagePage: React.FC = () => {
                       paqueteExistenteSeleccionado
                     );
                     setShowEnviarPagoModal(true);
+                      });
+                    } catch (error) {
+                      // Error already handled by interceptor
+                    }
                   }}
                 >
                   <i className="bi bi-send me-2"></i>
@@ -1916,6 +1935,7 @@ const InvoicesPackagePage: React.FC = () => {
         departmentId={user?.departmentId || undefined}
       />
     </Container>
+    </PageProtection>
   );
 };
 

@@ -1193,7 +1193,13 @@ const NewPackpageDetailsPage: React.FC = () => {
       if (!pago) return;
       if (pago.autorizada === true) return;
 
-      await authorizeCashPaymentInPackage(packpage._id, pagoId);
+      const response = await authorizeCashPaymentInPackage(packpage._id, pagoId);
+
+      // Solo actualizar si la operación fue exitosa (no bloqueada por permisos)
+      if (response.success === false) {
+        // Operación bloqueada por permisos, no actualizar estado
+        return;
+      }
 
       // Actualizar el estado local
       setPackpage((prev) => {
@@ -1257,7 +1263,13 @@ const NewPackpageDetailsPage: React.FC = () => {
       if (!pago) return;
       if (pago.autorizada === false && pago.pagoRechazado === true) return;
 
-      await rejectCashPaymentInPackage(packpage._id, pagoId);
+      const response = await rejectCashPaymentInPackage(packpage._id, pagoId);
+
+      // Solo actualizar si la operación fue exitosa (no bloqueada por permisos)
+      if (response.success === false) {
+        // Operación bloqueada por permisos, no actualizar estado
+        return;
+      }
 
       // Actualizar el estado local
       setPackpage((prev) => {
@@ -1649,31 +1661,39 @@ const NewPackpageDetailsPage: React.FC = () => {
                       </div>
                       <div className="text-muted small">
                         Total: $
-                        {calcularPresupuestoTotal().toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                        })}
+                        {budgetValidationData?.presupuestoGeneral?.presupuestoTotalMes
+                          ? budgetValidationData.presupuestoGeneral.presupuestoTotalMes.toLocaleString("es-MX", {
+                              minimumFractionDigits: 2,
+                            })
+                          : calcularPresupuestoTotal().toLocaleString("es-MX", {
+                              minimumFractionDigits: 2,
+                            })}
+                      </div>
+                      <div className="text-muted small">
+                        Gastado: $
+                        {budgetValidationData?.presupuestoGeneral?.totalGastadoMes
+                          ? budgetValidationData.presupuestoGeneral.totalGastadoMes.toLocaleString("es-MX", {
+                              minimumFractionDigits: 2,
+                            })
+                          : "0.00"}
                       </div>
                       <div className="fw-bold text-danger">
                         Disponible: $
-                        {calcularPresupuestoTotal()
+                        {budgetValidationData?.presupuestoGeneral?.presupuestoDisponible !== undefined
+                          ? budgetValidationData.presupuestoGeneral.presupuestoDisponible.toLocaleString("es-MX", {
+                              minimumFractionDigits: 2,
+                            })
+                          : calcularPresupuestoTotal()
                           ? (
                               calcularPresupuestoTotal() -
                               (calcularTotalesFacturas().pagado +
                                 calcularTotalesPagosEfectivo().pagado) -
-                              13230
+                              usedBudgetByOthers
                             ).toLocaleString("es-MX", {
                               minimumFractionDigits: 2,
                             })
                           : "0.00"}
                       </div>
-                      {usedBudgetByOthers > 0 && (
-                        <div className="text-muted small">
-                          Usado por otros: $
-                          {usedBudgetByOthers.toLocaleString("es-MX", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>

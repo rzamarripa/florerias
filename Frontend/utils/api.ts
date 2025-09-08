@@ -99,6 +99,18 @@ export const apiCall = async <T>(
 
 
 
+  // Verificar errores de permisos (interceptor devuelve 200 con success: false)
+  if (data && data.success === false && data.permissionDenied) {
+    // Error de permisos: devolver respuesta "exitosa" pero con success: false
+    // Esto evita que Next.js muestre alertas de error, el toast ya se mostró
+    return {
+      success: false,
+      message: data.message || "Sin permisos para realizar esta operación",
+      data: null as any,
+      permissionDenied: true
+    } as ApiResponse<T>;
+  }
+
   if (!response.ok) {
     console.error("Error en la petición:", {
       status: response.status,

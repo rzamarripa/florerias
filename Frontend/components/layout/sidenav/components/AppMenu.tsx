@@ -4,9 +4,12 @@ import { useLayoutContext } from "@/context/useLayoutContext";
 import { scrollToElement } from "@/helpers/layout";
 import { MenuItemType } from "@/types/layout";
 import { menuItems } from "@/config/constants";
+import { useUserModulesStore } from "@/stores/userModulesStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { canAccessPage, isAdministrator, getPagePathFromRoute } from "@/utils/pagePermissions";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Collapse } from "react-bootstrap";
 import { TbChevronDown } from "react-icons/tb";
 
@@ -142,6 +145,59 @@ const MenuItem = ({ item }: { item: MenuItemType }) => {
 
 const AppMenu = () => {
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
+  const { allowedModules } = useUserModulesStore();
+  const { role } = useUserRoleStore();
+
+  // Filtrar elementos del menú según permisos
+  const filteredMenuItems = useMemo(() => {
+    const isAdmin = isAdministrator(role);
+
+    const filterMenuItem = (item: MenuItemType): MenuItemType | null => {
+      // Si es un título, siempre incluirlo
+      if (item.isTitle) {
+        return item;
+      }
+
+      // Si tiene children, filtrar recursivamente
+      if (item.children && item.children.length > 0) {
+        // Caso especial: Menú de Gestión solo para administradores
+        if (item.key === 'gestion' && !isAdmin) {
+          return null;
+        }
+
+        const filteredChildren = item.children
+          .map(child => filterMenuItem(child))
+          .filter(child => child !== null) as MenuItemType[];
+        
+        // Siempre mostrar el menú principal, incluso si no tiene páginas
+        // (los usuarios sin permisos verán el menú vacío)
+        
+        return {
+          ...item,
+          children: filteredChildren
+        };
+      }
+
+      // Si es un item simple con URL, verificar permisos
+      if (item.url) {
+        // Los administradores pueden ver todo
+        if (isAdmin) {
+          return item;
+        }
+        
+        // Para otros usuarios, verificar permisos basados en módulos
+        const pagePath = getPagePathFromRoute(item.url);
+        return canAccessPage(allowedModules, pagePath) ? item : null;
+      }
+
+      // Si no tiene URL ni children, incluirlo (podría ser un placeholder)
+      return item;
+    };
+
+    return menuItems
+      .map(item => filterMenuItem(item))
+      .filter(item => item !== null) as MenuItemType[];
+  }, [allowedModules, role]);
 
   const scrollToActiveLink = () => {
     const activeItem: HTMLAnchorElement | null = document.querySelector(
@@ -164,7 +220,7 @@ const AppMenu = () => {
 
   return (
     <ul className="side-nav">
-      {menuItems.map((item) =>
+      {filteredMenuItems.map((item) =>
         item.isTitle ? (
           <li className="side-nav-title" key={item.key}>
             {item.label}
