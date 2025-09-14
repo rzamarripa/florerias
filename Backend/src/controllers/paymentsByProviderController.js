@@ -1,6 +1,7 @@
 import { PaymentsByProvider } from "../models/PaymentsByProvider.js";
 import { BankNumber } from "../models/BankNumber.js";
 import { Provider } from "../models/Provider.js";
+import { BankLayout } from "../models/BankLayout.js";
 
 export const paymentsByProviderController = {
   getAll: async (req, res) => {
@@ -354,140 +355,133 @@ export const paymentsByProviderController = {
 
       console.log("Proveedores encontrados:", providers.length);
 
-      // Crear o actualizar registros en PaymentsByProvider
+      // Crear registros en PaymentsByProvider (siempre crear nuevos, nunca actualizar)
       const createdPayments = [];
-      const updatedPayments = [];
-
-      // Obtener fecha de inicio y fin del día actual para búsqueda
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
       for (const [rfc, group] of providerGroups) {
         console.log(`Procesando grupo ${rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
+        console.log(`Creando nueva agrupación para RFC ${rfc}`);
         
-        // Verificar si ya existe una agrupación del mismo proveedor, cuenta bancaria, empresa y fecha QUE NO ESTÉ CONCILIADA
-        const existingPayment = await PaymentsByProvider.findOne({
-          providerRfc: rfc,
-          debitedBankAccount: bankAccount._id,
-          companyId: companyId,
-          createdAt: { $gte: startOfDay, $lte: endOfDay },
-          conciliado: { $ne: true } // Solo buscar agrupaciones NO conciliadas
-        });
-
-        if (existingPayment) {
-          console.log(`Actualizando agrupación existente para RFC ${rfc} - ID: ${existingPayment._id}`);
+        if (group.isCashPayment) {
+          // Para pagos en efectivo, crear registro especial
+          const cashPayment = new PaymentsByProvider({
+            totalAmount: group.totalAmount,
+            providerRfc: rfc,
+            providerName: group.expenseConcept?.name || 'Pago en Efectivo',
+            branchName: 'N/A',
+            companyProvider: 'Pago en Efectivo',
+            bankNumber: '00000', // Número especial para pagos en efectivo
+            debitedBankAccount: bankAccount._id,
+            companyId: companyId,
+            facturas: group.invoices.map(invoice => invoice._id),
+            packageIds: packageIds,
+            referencia: generateReferenciaCode(),
+          });
           
-          // Actualizar el registro existente
-          const newFacturasIds = group.invoices.map(invoice => invoice._id);
-          const newPackageIds = packageIds;
-          
-          // Evitar duplicados en facturas
-          const existingFacturasIds = existingPayment.facturas.map(id => id.toString());
-          const uniqueNewFacturasIds = newFacturasIds.filter(id => 
-            !existingFacturasIds.includes(id.toString())
-          );
-          
-          // Evitar duplicados en packageIds
-          const existingPackageIds = existingPayment.packageIds.map(id => id.toString());
-          const uniqueNewPackageIds = newPackageIds.filter(id => 
-            !existingPackageIds.includes(id.toString())
-          );
-
-          const updatedPayment = await PaymentsByProvider.findByIdAndUpdate(
-            existingPayment._id,
-            {
-              $inc: { totalAmount: group.totalAmount },
-              $addToSet: { 
-                facturas: { $each: uniqueNewFacturasIds },
-                packageIds: { $each: uniqueNewPackageIds }
-              }
-            },
-            { new: true }
-          );
-
-          updatedPayments.push(updatedPayment);
-          console.log(`Agrupación actualizada para ${rfc} - Nuevo total: ${updatedPayment.totalAmount}`);
-          
+          await cashPayment.save();
+          createdPayments.push(cashPayment);
         } else {
-          console.log(`Creando nueva agrupación para RFC ${rfc}`);
+          // Para proveedores regulares
+          const provider = providers.find(p => p.rfc === rfc);
           
-          if (group.isCashPayment) {
-            // Para pagos en efectivo, crear registro especial
-            const cashPayment = new PaymentsByProvider({
+          if (provider) {
+            console.log("Procesando proveedor:", provider.rfc, provider.commercialName);
+            console.log("Banco del proveedor:", provider.bank?.name);
+            console.log("Sucursal del proveedor:", provider.sucursal?.name);
+            
+            // Buscar número de banco en BankNumber
+            const bankNumberRecord = await BankNumber.findOne({
+              bankDebited: bankAccount.bank._id,
+              bankCredited: provider.bank.name
+            });
+
+            console.log("Registro de número de banco encontrado:", bankNumberRecord ? "Sí" : "No");
+
+            const bankNumber = bankNumberRecord ? bankNumberRecord.bankNumber : '00000';
+
+            console.log(`Creando nueva agrupación para proveedor ${provider.rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
+            
+            const payment = new PaymentsByProvider({
               totalAmount: group.totalAmount,
-              providerRfc: rfc,
-              providerName: group.expenseConcept?.name || 'Pago en Efectivo',
-              branchName: 'N/A',
-              companyProvider: 'Pago en Efectivo',
-              bankNumber: '00000', // Número especial para pagos en efectivo
+              providerRfc: provider.rfc,
+              providerName: provider.commercialName,
+              branchName: provider.sucursal?.name || 'N/A',
+              companyProvider: provider.businessName,
+              bankNumber: bankNumber,
               debitedBankAccount: bankAccount._id,
               companyId: companyId,
               facturas: group.invoices.map(invoice => invoice._id),
               packageIds: packageIds,
               referencia: generateReferenciaCode(),
             });
-            
-            await cashPayment.save();
-            createdPayments.push(cashPayment);
+
+            await payment.save();
+            createdPayments.push(payment);
+            console.log("Nueva agrupación creada para proveedor:", provider.rfc);
           } else {
-            // Para proveedores regulares
-            const provider = providers.find(p => p.rfc === rfc);
-            
-            if (provider) {
-              console.log("Procesando proveedor:", provider.rfc, provider.commercialName);
-              console.log("Banco del proveedor:", provider.bank?.name);
-              console.log("Sucursal del proveedor:", provider.sucursal?.name);
-              
-              // Buscar número de banco en BankNumber
-              const bankNumberRecord = await BankNumber.findOne({
-                bankDebited: bankAccount.bank._id,
-                bankCredited: provider.bank.name
-              });
-
-              console.log("Registro de número de banco encontrado:", bankNumberRecord ? "Sí" : "No");
-
-              const bankNumber = bankNumberRecord ? bankNumberRecord.bankNumber : '00000';
-
-              console.log(`Creando nueva agrupación para proveedor ${provider.rfc}: totalAmount=${group.totalAmount}, facturas=${group.invoices.length}`);
-              
-              const payment = new PaymentsByProvider({
-                totalAmount: group.totalAmount,
-                providerRfc: provider.rfc,
-                providerName: provider.commercialName,
-                branchName: provider.sucursal?.name || 'N/A',
-                companyProvider: provider.businessName,
-                bankNumber: bankNumber,
-                debitedBankAccount: bankAccount._id,
-                companyId: companyId,
-                facturas: group.invoices.map(invoice => invoice._id),
-                packageIds: packageIds,
-                referencia: generateReferenciaCode(),
-              });
-
-              await payment.save();
-              createdPayments.push(payment);
-              console.log("Nueva agrupación creada para proveedor:", provider.rfc);
-            } else {
-              console.log("Proveedor no encontrado para RFC:", rfc);
-            }
+            console.log("Proveedor no encontrado para RFC:", rfc);
           }
         }
       }
 
       console.log("Pagos creados:", createdPayments.length);
-      console.log("Pagos actualizados:", updatedPayments.length);
 
-      const totalProcessed = createdPayments.length + updatedPayments.length;
-      const allPayments = [...createdPayments, ...updatedPayments];
+      // Crear registro de layout para agrupaciones
+      let layoutRecord = null;
+      if (createdPayments.length > 0) {
+        try {
+          // Obtener información de la empresa
+          let Company;
+          try {
+            const companyModule = await import("../models/Company.js");
+            Company = companyModule.Company;
+          } catch (importError) {
+            console.error("Error importando modelo Company:", importError);
+          }
+
+          const company = Company ? await Company.findById(companyId) : null;
+          
+          // Calcular total amount de todas las agrupaciones
+          const totalLayoutAmount = createdPayments.reduce((sum, payment) => sum + payment.totalAmount, 0);
+
+          layoutRecord = new BankLayout({
+            tipoLayout: 'grouped',
+            companyId: companyId,
+            companyName: company ? company.name : 'Empresa no encontrada',
+            companyRfc: company ? company.rfc : 'RFC no encontrado',
+            bankAccountId: bankAccount._id,
+            bankAccountNumber: bankAccount.accountNumber,
+            bankName: bankAccount.bank?.name || 'Banco desconocido',
+            packageIds: packageIds,
+            agrupaciones: createdPayments.map(payment => payment._id),
+            totalAmount: totalLayoutAmount,
+            totalRegistros: createdPayments.length,
+            totalPackages: packageIds.length,
+            metadatos: {
+              registrosExcel: createdPayments.length,
+              tiempoProcesamiento: 0,
+              version: '1.0'
+            }
+          });
+
+          await layoutRecord.save();
+          console.log(`Layout ${layoutRecord.layoutFolio} creado con ${createdPayments.length} agrupaciones`);
+
+        } catch (layoutError) {
+          console.error("Error creando registro de layout:", layoutError);
+          // No fallar la operación principal si falla la creación del layout
+        }
+      }
+
+      const totalProcessed = createdPayments.length;
+      const allPayments = [...createdPayments];
 
       let message = '';
-      if (createdPayments.length > 0 && updatedPayments.length > 0) {
-        message = `${createdPayments.length} nuevas agrupaciones creadas y ${updatedPayments.length} agrupaciones actualizadas exitosamente`;
-      } else if (createdPayments.length > 0) {
+      if (createdPayments.length > 0) {
         message = `${createdPayments.length} nuevas agrupaciones de pagos por proveedor creadas exitosamente`;
-      } else if (updatedPayments.length > 0) {
-        message = `${updatedPayments.length} agrupaciones de pagos por proveedor actualizadas exitosamente`;
+        if (layoutRecord) {
+          message += ` - Layout ${layoutRecord.layoutFolio} generado`;
+        }
       } else {
         message = 'No se procesaron agrupaciones de pagos por proveedor';
       }
@@ -496,9 +490,16 @@ export const paymentsByProviderController = {
         success: true,
         message: message,
         data: allPayments,
+        layout: layoutRecord ? {
+          id: layoutRecord._id,
+          folio: layoutRecord.layoutFolio,
+          tipo: layoutRecord.tipoLayout,
+          totalAmount: layoutRecord.totalAmount,
+          totalRegistros: layoutRecord.totalRegistros
+        } : null,
         summary: {
           created: createdPayments.length,
-          updated: updatedPayments.length,
+          updated: 0,
           total: totalProcessed
         }
       });
@@ -507,6 +508,85 @@ export const paymentsByProviderController = {
       res.status(500).json({
         success: false,
         message: "Error al agrupar facturas por proveedor",
+        error: error.message,
+      });
+    }
+  },
+
+  getBankLayouts: async (req, res) => {
+    try {
+      const { page = 1, limit = 10 } = req.query;
+      const skip = (page - 1) * limit;
+
+      // Obtener layouts sin populate para evitar errores de modelos no registrados
+      const layouts = await BankLayout.find({})
+        .sort({ fechaLayout: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+
+      const total = await BankLayout.countDocuments({});
+
+      // Procesar layouts para agregar información calculada
+      const processedLayouts = layouts.map(layout => {
+        let cantidadProveedores = 0;
+        let cantidadFacturas = 0;
+
+        if (layout.tipoLayout === 'grouped') {
+          // Para layouts agrupados, usar los campos ya calculados
+          cantidadProveedores = layout.agrupaciones ? layout.agrupaciones.length : 0;
+          // Para layouts agrupados, totalRegistros representa el número de agrupaciones, no facturas
+          // Necesitamos calcular las facturas de otra manera o usar un campo específico
+          cantidadFacturas = 0; // Por ahora, ponemos 0 hasta tener más datos
+        } else if (layout.tipoLayout === 'individual') {
+          // Para layouts individuales, contar proveedores únicos de las facturas
+          const rfcsUnicos = new Set();
+          if (layout.facturasIndividuales && layout.facturasIndividuales.length > 0) {
+            layout.facturasIndividuales.forEach(factura => {
+              if (factura.rfcEmisor) {
+                rfcsUnicos.add(factura.rfcEmisor);
+              }
+            });
+          }
+          cantidadProveedores = rfcsUnicos.size;
+          cantidadFacturas = layout.facturasIndividuales ? layout.facturasIndividuales.length : 0;
+        }
+
+        return {
+          _id: layout._id,
+          layoutFolio: layout.layoutFolio,
+          tipoLayout: layout.tipoLayout,
+          descripcionTipo: layout.tipoLayout === 'grouped' ? 'Agrupado por Proveedor' : 'Facturas Individuales',
+          fechaLayout: layout.fechaLayout,
+          companyName: layout.companyName,
+          companyRfc: layout.companyRfc,
+          bankName: layout.bankName,
+          bankAccountNumber: layout.bankAccountNumber,
+          cantidadProveedores,
+          cantidadFacturas,
+          cantidadPaquetes: layout.totalPackages,
+          totalAmount: layout.totalAmount,
+          totalRegistros: layout.totalRegistros,
+          estatus: layout.estatus,
+          createdAt: layout.createdAt,
+          updatedAt: layout.updatedAt
+        };
+      });
+
+      res.json({
+        success: true,
+        data: processedLayouts,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      });
+    } catch (error) {
+      console.error("Error obteniendo layouts bancarios:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al obtener layouts bancarios",
         error: error.message,
       });
     }
@@ -627,14 +707,93 @@ export const paymentsByProviderController = {
 
       console.log("Referencias generadas:", updatedInvoicesCount);
 
+      // Crear registro de layout para facturas individuales
+      let layoutRecord = null;
+      if (updatedInvoicesCount.embedded > 0) {
+        try {
+          // Recopilar información de todas las facturas procesadas
+          const facturasIndividuales = [];
+          let totalLayoutAmount = 0;
+
+          for (const pkg of packages) {
+            for (const factura of pkg.facturas) {
+              const importeAPagar = factura.importeAPagar && factura.importeAPagar.$numberDecimal
+                ? parseFloat(factura.importeAPagar.$numberDecimal)
+                : factura.importeAPagar || 0;
+              const importePagado = factura.importePagado && factura.importePagado.$numberDecimal
+                ? parseFloat(factura.importePagado.$numberDecimal)
+                : factura.importePagado || 0;
+
+              if ((importeAPagar > 0 || importePagado > 0) && factura.rfcEmisor && factura.referencia) {
+                const importeFactura = importePagado > 0 ? importePagado : importeAPagar;
+                
+                facturasIndividuales.push({
+                  facturaId: factura._id,
+                  packageId: pkg._id,
+                  uuid: factura.uuid,
+                  rfcEmisor: factura.rfcEmisor,
+                  nombreEmisor: factura.nombreEmisor,
+                  importe: importeFactura,
+                  referencia: factura.referencia,
+                  folio: factura.folio
+                });
+
+                totalLayoutAmount += importeFactura;
+              }
+            }
+          }
+
+          if (facturasIndividuales.length > 0) {
+            layoutRecord = new BankLayout({
+              tipoLayout: 'individual',
+              companyId: null, // En layouts individuales no tenemos companyId específico
+              companyName: 'Layout Individual',
+              companyRfc: 'INDIVIDUAL',
+              bankAccountId: null, // En layouts individuales no tenemos bankAccountId específico  
+              bankAccountNumber: 'Individual',
+              bankName: 'Layout Individual',
+              packageIds: packageIds,
+              facturasIndividuales: facturasIndividuales,
+              totalAmount: totalLayoutAmount,
+              totalRegistros: facturasIndividuales.length,
+              totalPackages: packageIds.length,
+              metadatos: {
+                registrosExcel: facturasIndividuales.length,
+                tiempoProcesamiento: 0,
+                version: '1.0'
+              }
+            });
+
+            await layoutRecord.save();
+            console.log(`Layout individual ${layoutRecord.layoutFolio} creado con ${facturasIndividuales.length} facturas`);
+          }
+
+        } catch (layoutError) {
+          console.error("Error creando registro de layout individual:", layoutError);
+          // No fallar la operación principal si falla la creación del layout
+        }
+      }
+
+      let message = `Referencias individuales generadas exitosamente para ${updatedInvoicesCount.embedded} facturas en ${updatedInvoicesCount.total} paquetes`;
+      if (layoutRecord) {
+        message += ` - Layout ${layoutRecord.layoutFolio} generado`;
+      }
+
       res.json({
         success: true,
-        message: `Referencias individuales generadas exitosamente para ${updatedInvoicesCount.embedded} facturas en ${updatedInvoicesCount.total} paquetes`,
+        message: message,
         data: {
           packagesProcessed: updatedInvoicesCount.total,
           embeddedInvoicesUpdated: updatedInvoicesCount.embedded,
           originalInvoicesUpdated: updatedInvoicesCount.original,
         },
+        layout: layoutRecord ? {
+          id: layoutRecord._id,
+          folio: layoutRecord.layoutFolio,
+          tipo: layoutRecord.tipoLayout,
+          totalAmount: layoutRecord.totalAmount,
+          totalRegistros: layoutRecord.totalRegistros
+        } : null,
       });
     } catch (error) {
       console.error("Error en generateIndividualInvoiceReferences:", error);

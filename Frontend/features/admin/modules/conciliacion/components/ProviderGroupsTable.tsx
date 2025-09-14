@@ -73,6 +73,7 @@ export default function ProviderGroupsTable({
               <th>Total Agrupado</th>
               <th>Total Facturas</th>
               <th>Número Banco</th>
+              <th>Referencia</th>
             </tr>
           </thead>
           <tbody>
@@ -108,6 +109,15 @@ export default function ProviderGroupsTable({
                 </td>
                 <td>
                   <span className="badge bg-primary">{group.bankNumber}</span>
+                </td>
+                <td>
+                  {group.referencia ? (
+                    <small className="text-primary font-monospace">
+                      {group.referencia}
+                    </small>
+                  ) : (
+                    <small className="text-muted">-</small>
+                  )}
                 </td>
               </tr>
             ))}

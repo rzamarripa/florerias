@@ -80,6 +80,7 @@ export default function MovimientosTable({
               <th>Cargo</th>
               <th>Abono</th>
               <th>Fecha</th>
+              <th>Referencia</th>
               <th>Estado</th>
             </tr>
           </thead>
@@ -115,19 +116,17 @@ export default function MovimientosTable({
                   })}
                 </td>
                 <td>
+                  {movimiento.referencia ? (
+                    <small className="text-primary font-monospace">
+                      {movimiento.referencia}
+                    </small>
+                  ) : (
+                    <small className="text-muted">-</small>
+                  )}
+                </td>
+                <td>
                   {movimiento.coinciliado ? (
-                    <div>
-                      <small className="text-success">✅ Conciliado</small>
-                      {movimiento.referenciaConciliacion && (
-                        <div>
-                          <small className="text-muted">
-                            Ref:{" "}
-                            {movimiento.referenciaConciliacion.substring(0, 8)}
-                            ...
-                          </small>
-                        </div>
-                      )}
-                    </div>
+                    <small className="text-success">✅ Conciliado</small>
                   ) : (
                     <small className="text-warning">⏳ Pendiente</small>
                   )}

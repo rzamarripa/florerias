@@ -118,6 +118,11 @@ export const menuItems: MenuItemType[] = [
         url: "/modulos/paquetes-facturas/listado-paquetes",
       },
       {
+        key: "layoutsBancarios",
+        label: "Layouts Bancarios",
+        url: "/modulos/paquetes-facturas/layouts-bancarios",
+      },
+      {
         key: "foliosAutorizacion",
         label: "Folios de Autorización",
         url: "/modulos/paquetes-facturas/folios-autorizacion",

@@ -2,6 +2,7 @@ export interface Factura {
   _id: string;
   uuid: string;
   nombreEmisor: string;
+  rfcEmisor: string;
   importeAPagar: number;
   importePagado: number;
   totalPagado?: number;
@@ -161,6 +162,8 @@ export interface ProviderGroup {
   updatedAt: string;
   totalInvoices?: number;
   facturas: string[];
+  referencia?: string;
+  referenciaConciliacion?: string;
 }
 
 export interface GetProviderGroupsResponse {

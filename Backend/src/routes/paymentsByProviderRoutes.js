@@ -4,6 +4,7 @@ import { paymentsByProviderController } from "../controllers/paymentsByProviderC
 const router = express.Router();
 
 router.get("/", paymentsByProviderController.getAll);
+router.get("/bank-layouts", paymentsByProviderController.getBankLayouts);
 router.get("/:id", paymentsByProviderController.getById);
 router.post("/", paymentsByProviderController.create);
 router.post("/group-invoices", paymentsByProviderController.groupInvoicesByProvider);

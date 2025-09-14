@@ -74,6 +74,7 @@ export default function FacturasIndividualesTable({
               <th>Importe Pagado</th>
               <th>Folio</th>
               <th>Paquete</th>
+              <th>Referencia</th>
               <th>Estado</th>
             </tr>
           </thead>
@@ -105,18 +106,17 @@ export default function FacturasIndividualesTable({
                 <td>{factura.folio || '-'}</td>
                 <td>#{factura.packageFolio}</td>
                 <td>
+                  {factura.numeroReferencia ? (
+                    <small className="text-primary font-monospace">
+                      {factura.numeroReferencia}
+                    </small>
+                  ) : (
+                    <small className="text-muted">-</small>
+                  )}
+                </td>
+                <td>
                   {factura.coinciliado ? (
-                    <div>
-                      <small className="text-success">✅ Conciliada</small>
-                      {factura.referenciaConciliacion && (
-                        <div>
-                          <small className="text-muted">
-                            Ref:{" "}
-                            {factura.referenciaConciliacion.substring(0, 8)}...
-                          </small>
-                        </div>
-                      )}
-                    </div>
+                    <small className="text-success">✅ Conciliada</small>
                   ) : (
                     <small className="text-warning">⏳ Pendiente</small>
                   )}
