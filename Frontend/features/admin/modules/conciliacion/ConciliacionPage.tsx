@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Row, Col, Button, Spinner, Alert } from "react-bootstrap";
+import { useRouter } from "next/navigation";
 import {
   FiltrosConciliacion,
   ProviderGroupsTable,
@@ -12,6 +13,7 @@ import {
 import { useConciliacion } from "./hooks/useConciliacion";
 
 export default function ConciliacionPage() {
+  const router = useRouter();
   const {
     providerGroups,
     facturasIndividuales,
@@ -62,7 +64,16 @@ export default function ConciliacionPage() {
     <div className="container-fluid">
       <Row className="mb-4">
         <Col>
-          <h2>Conciliación Bancaria</h2>
+          <div className="d-flex justify-content-between align-items-center">
+            <h2>Conciliación Bancaria</h2>
+            <Button 
+              variant="outline-info" 
+              onClick={() => router.push('/modulos/conciliacion/historial')}
+              size="sm"
+            >
+              📋 Ver Historial de Conciliaciones
+            </Button>
+          </div>
         </Col>
       </Row>
 

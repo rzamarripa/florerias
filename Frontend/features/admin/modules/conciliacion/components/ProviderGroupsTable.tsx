@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, Table, Form, Row, Col } from "react-bootstrap";
-import { format } from "date-fns";
+import { Card, Table, Form, Row, Col, Button } from "react-bootstrap";
 import { ProviderGroup } from "../types";
 import { formatCurrency } from "@/utils";
 
@@ -10,8 +9,12 @@ interface ProviderGroupsTableProps {
   providerGroups: ProviderGroup[];
   selectedProviderGroups: string[];
   onProviderGroupSelect: (providerGroupId: string) => void;
-  fechaFacturas: string;
-  onFechaFacturasChange: (fecha: string) => void;
+  fechaFacturas?: string;
+  onFechaFacturasChange?: (fecha: string) => void;
+  readOnly?: boolean;
+  title?: string;
+  hideeDateFilter?: boolean;
+  onEliminarConciliacion?: (providerGroupId: string) => void;
 }
 
 export default function ProviderGroupsTable({
@@ -20,52 +23,60 @@ export default function ProviderGroupsTable({
   onProviderGroupSelect,
   fechaFacturas,
   onFechaFacturasChange,
+  readOnly = false,
+  title = "Proveedores Agrupados",
+  hideeDateFilter = false,
+  onEliminarConciliacion,
 }: ProviderGroupsTableProps) {
   return (
     <Card>
       <Card.Header>
         <Row className="align-items-center">
-          <Col md={6}>
-            <h5 className="mb-0">Proveedores Agrupados</h5>
+          <Col md={hideeDateFilter ? 12 : 6}>
+            <h5 className="mb-0">{title}</h5>
             <small className="text-muted">Total: {providerGroups.length}</small>
           </Col>
-          <Col md={6}>
-            <Form.Group className="mb-0">
-              <Form.Label className="small mb-1">Fecha Facturas</Form.Label>
-              <Form.Control
-                type="date"
-                size="sm"
-                value={fechaFacturas}
-                onChange={(e) => onFechaFacturasChange(e.target.value)}
-              />
-            </Form.Group>
-          </Col>
+          {!hideeDateFilter && (
+            <Col md={6}>
+              <Form.Group className="mb-0">
+                <Form.Label className="small mb-1">Fecha Facturas</Form.Label>
+                <Form.Control
+                  type="date"
+                  size="sm"
+                  value={fechaFacturas}
+                  onChange={(e) => onFechaFacturasChange && onFechaFacturasChange(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
+          )}
         </Row>
       </Card.Header>
       <Card.Body style={{ maxHeight: "500px", overflowY: "auto" }}>
-        <Table striped bordered hover size="sm">
+        <Table striped bordered hover={!readOnly} size="sm">
           <thead>
             <tr>
-              <th style={{ width: "50px" }}>
-                <Form.Check
-                  type="checkbox"
-                  checked={
-                    selectedProviderGroups.length === providerGroups.length &&
-                    providerGroups.length > 0
-                  }
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      providerGroups.forEach((group) =>
-                        onProviderGroupSelect(group._id)
-                      );
-                    } else {
-                      selectedProviderGroups.forEach((id) =>
-                        onProviderGroupSelect(id)
-                      );
+              {!readOnly && (
+                <th style={{ width: "50px" }}>
+                  <Form.Check
+                    type="checkbox"
+                    checked={
+                      selectedProviderGroups.length === providerGroups.length &&
+                      providerGroups.length > 0
                     }
-                  }}
-                />
-              </th>
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        providerGroups.forEach((group) =>
+                          onProviderGroupSelect(group._id)
+                        );
+                      } else {
+                        selectedProviderGroups.forEach((id) =>
+                          onProviderGroupSelect(id)
+                        );
+                      }
+                    }}
+                  />
+                </th>
+              )}
               <th>Folio</th>
               <th>Proveedor</th>
               <th>Razón Social</th>
@@ -74,6 +85,8 @@ export default function ProviderGroupsTable({
               <th>Total Facturas</th>
               <th>Número Banco</th>
               <th>Referencia</th>
+              {readOnly && <th>Estado</th>}
+              {readOnly && onEliminarConciliacion && <th style={{ width: "100px" }}>Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -81,20 +94,26 @@ export default function ProviderGroupsTable({
               <tr
                 key={group._id}
                 className={
-                  selectedProviderGroups.includes(group._id)
+                  !readOnly && selectedProviderGroups.includes(group._id)
                     ? "table-success"
+                    : readOnly
+                    ? "table-info"
                     : ""
                 }
-                style={{ cursor: "pointer" }}
-                onClick={() => onProviderGroupSelect(group._id)}
+                style={{ cursor: readOnly ? "default" : "pointer" }}
+                onMouseEnter={readOnly ? undefined : (e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
+                onMouseLeave={readOnly ? undefined : (e) => e.currentTarget.style.backgroundColor = ""}
+                onClick={() => !readOnly && onProviderGroupSelect(group._id)}
               >
-                <td onClick={(e) => e.stopPropagation()}>
-                  <Form.Check
-                    type="checkbox"
-                    checked={selectedProviderGroups.includes(group._id)}
-                    onChange={() => onProviderGroupSelect(group._id)}
-                  />
-                </td>
+                {!readOnly && (
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <Form.Check
+                      type="checkbox"
+                      checked={selectedProviderGroups.includes(group._id)}
+                      onChange={() => onProviderGroupSelect(group._id)}
+                    />
+                  </td>
+                )}
                 <td>#{group.groupingFolio}</td>
                 <td className="fw-bold">{group.providerName}</td>
                 <td>{group.companyProvider}</td>
@@ -119,6 +138,26 @@ export default function ProviderGroupsTable({
                     <small className="text-muted">-</small>
                   )}
                 </td>
+                {readOnly && (
+                  <td>
+                    <small className="text-success">✅ Conciliada</small>
+                  </td>
+                )}
+                {readOnly && onEliminarConciliacion && (
+                  <td>
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEliminarConciliacion(group._id);
+                      }}
+                      title="Eliminar conciliación"
+                    >
+                      🗑️
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { Row, Col, Form, Button, Spinner } from "react-bootstrap";
-import { format } from "date-fns";
 import { Company, BankAccount } from "../types";
 import { companiesService, bankAccountsService } from "../services";
 
@@ -16,6 +15,8 @@ interface FiltrosConciliacionProps {
   loading: boolean;
   fechaFacturas: string;
   fechaMovimientos: string;
+  hideMovimientosDate?: boolean;
+  hideButtons?: boolean;
 }
 
 export default function FiltrosConciliacion({
@@ -25,6 +26,8 @@ export default function FiltrosConciliacion({
   loading,
   fechaFacturas,
   fechaMovimientos,
+  hideMovimientosDate = false,
+  hideButtons = false,
 }: FiltrosConciliacionProps) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -55,7 +58,7 @@ export default function FiltrosConciliacion({
   };
 
 
-  const isDataLoadEnabled = selectedCompany && selectedBankAccount && fechaFacturas && fechaMovimientos;
+  const isDataLoadEnabled = selectedCompany && selectedBankAccount && fechaFacturas && (hideMovimientosDate || fechaMovimientos);
 
 
   const loadCompanies = async () => {
@@ -131,24 +134,26 @@ export default function FiltrosConciliacion({
             </Form.Select>
           </Form.Group>
         </Col>
-        <Col md={3} className="d-flex align-items-end">
-          <Button
-            variant="outline-primary"
-            onClick={handleLoadData}
-            disabled={!isDataLoadEnabled || loading}
-            size="sm"
-            className="w-100"
-          >
-            {loading ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-1" />
-                Cargando...
-              </>
-            ) : (
-              "Cargar Datos"
-            )}
-          </Button>
-        </Col>
+        {!hideButtons && (
+          <Col md={3} className="d-flex align-items-end">
+            <Button
+              variant="outline-primary"
+              onClick={handleLoadData}
+              disabled={!isDataLoadEnabled || loading}
+              size="sm"
+              className="w-100"
+            >
+              {loading ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-1" />
+                  Cargando...
+                </>
+              ) : (
+                "Cargar Datos"
+              )}
+            </Button>
+          </Col>
+        )}
       </Row>
     </>
   );

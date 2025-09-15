@@ -1210,3 +1210,397 @@ export const conciliacionConValidaciones = async (req, res) => {
     });
   }
 };
+
+export const getProviderGroupsConciliados = async (req, res) => {
+  try {
+    const { companyId, bankAccountId, fecha } = req.query;
+
+    if (!companyId || !bankAccountId) {
+      return res.status(400).json({
+        success: false,
+        message: "companyId y bankAccountId son requeridos.",
+      });
+    }
+
+    let fechaFiltro, fechaFin;
+
+    if (fecha) {
+      const [year, month, day] = fecha.split("-").map(Number);
+      fechaFiltro = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      fechaFin = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+    } else {
+      fechaFiltro = new Date();
+      fechaFiltro.setUTCHours(0, 0, 0, 0);
+      fechaFin = new Date(fechaFiltro);
+      fechaFin.setUTCHours(23, 59, 59, 999);
+    }
+
+    const scheduledPayments = await ScheduledPayment.find({
+      companyId,
+      bankAccountId,
+    }).select('packageId');
+
+    if (scheduledPayments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const scheduledPackageIds = scheduledPayments.map(sp => sp.packageId);
+
+    const paquetesPagados = await InvoicesPackage.find({
+      _id: { $in: scheduledPackageIds },
+      estatus: "Pagado",
+    }).select('_id folio fechaPago');
+
+    if (paquetesPagados.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const packageIds = paquetesPagados.map(pkg => pkg._id);
+
+    const PaymentsByProvider = (await import("../models/PaymentsByProvider.js")).PaymentsByProvider;
+
+    const providerGroups = await PaymentsByProvider.find({
+      packageIds: { $in: packageIds },
+      conciliado: true, // Solo mostrar agrupaciones conciliadas
+      $expr: {
+        $eq: [
+          { $dateToString: { format: "%Y-%m-%d", date: "$fechaConciliacion" } },
+          { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } },
+        ],
+      },
+    }).sort({ fechaConciliacion: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: providerGroups,
+    });
+  } catch (error) {
+    console.error("Error en getProviderGroupsConciliados:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error interno del servidor.",
+    });
+  }
+};
+
+export const getFacturasIndividualesConciliadas = async (req, res) => {
+  try {
+    const { companyId, bankAccountId, fecha } = req.query;
+
+    if (!companyId || !bankAccountId) {
+      return res.status(400).json({
+        success: false,
+        message: "companyId y bankAccountId son requeridos.",
+      });
+    }
+
+    let fechaFiltro, fechaFin;
+
+    if (fecha) {
+      const [year, month, day] = fecha.split("-").map(Number);
+      fechaFiltro = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      fechaFin = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+    } else {
+      fechaFiltro = new Date();
+      fechaFiltro.setUTCHours(0, 0, 0, 0);
+      fechaFin = new Date(fechaFiltro);
+      fechaFin.setUTCHours(23, 59, 59, 999);
+    }
+
+    const scheduledPayments = await ScheduledPayment.find({
+      companyId,
+      bankAccountId,
+    }).select('packageId');
+
+    if (scheduledPayments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const scheduledPackageIds = scheduledPayments.map(sp => sp.packageId);
+
+    const paquetesPorFecha = await InvoicesPackage.find({
+      _id: { $in: scheduledPackageIds },
+      estatus: "Pagado",
+    }).select('_id folio fechaPago');
+
+    if (paquetesPorFecha.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const paquetesFechaIds = paquetesPorFecha.map(pkg => pkg._id);
+
+    const PaymentsByProvider = (await import("../models/PaymentsByProvider.js")).PaymentsByProvider;
+
+    const agrupaciones = await PaymentsByProvider.find({
+      packageIds: { $in: paquetesFechaIds },
+    }).select('packageIds');
+
+    const paquetesEnAgrupaciones = new Set();
+    agrupaciones.forEach(agrupacion => {
+      if (agrupacion.packageIds && Array.isArray(agrupacion.packageIds)) {
+        agrupacion.packageIds.forEach(packageId => {
+          paquetesEnAgrupaciones.add(packageId.toString());
+        });
+      }
+    });
+
+    const paquetesNoAgrupados = paquetesFechaIds.filter(pkgId => 
+      !paquetesEnAgrupaciones.has(pkgId.toString())
+    );
+
+    if (paquetesNoAgrupados.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const facturasIndividuales = await InvoicesPackage.aggregate([
+      {
+        $match: {
+          _id: { $in: paquetesNoAgrupados },
+          estatus: "Pagado",
+        },
+      },
+      {
+        $unwind: "$facturas",
+      },
+      {
+        $match: {
+          "facturas.coinciliado": true, // Solo facturas conciliadas
+          "facturas.autorizada": true,
+          "facturas.estadoPago": 2,
+          $expr: {
+            $eq: [
+              { $dateToString: { format: "%Y-%m-%d", date: "$facturas.fechaConciliacion" } },
+              { $dateToString: { format: "%Y-%m-%d", date: fechaFiltro } },
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          "facturas.importePagado": { $toDouble: "$facturas.importePagado" },
+          "facturas.importeAPagar": { $toDouble: "$facturas.importeAPagar" },
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [
+              "$facturas",
+              {
+                packageId: "$_id",
+                packageFolio: "$folio",
+                fechaPago: "$fechaPago",
+              },
+            ],
+          },
+        },
+      },
+      {
+        $sort: {
+          fechaConciliacion: -1,
+          nombreEmisor: 1,
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: facturasIndividuales,
+    });
+  } catch (error) {
+    console.error("Error en getFacturasIndividualesConciliadas:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error interno del servidor.",
+    });
+  }
+};
+
+export const eliminarConciliacion = async (req, res) => {
+  try {
+    const { itemId, tipo } = req.body;
+
+    if (!itemId || !tipo) {
+      return res.status(400).json({
+        success: false,
+        message: "itemId y tipo son requeridos.",
+      });
+    }
+
+    if (!['individual', 'grouped'].includes(tipo)) {
+      return res.status(400).json({
+        success: false,
+        message: "El tipo debe ser 'individual' o 'grouped'.",
+      });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      if (tipo === 'individual') {
+        // Buscar la factura en los paquetes y revertir su conciliación
+        const paquete = await InvoicesPackage.findOne(
+          { "facturas._id": itemId },
+          null,
+          { session }
+        );
+
+        if (!paquete) {
+          await session.abortTransaction();
+          return res.status(404).json({
+            success: false,
+            message: "Factura no encontrada.",
+          });
+        }
+
+        const factura = paquete.facturas.find(f => f._id.toString() === itemId);
+        
+        if (!factura || !factura.coinciliado) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            success: false,
+            message: "La factura no está conciliada.",
+          });
+        }
+
+        // Revertir conciliación de la factura
+        await InvoicesPackage.updateOne(
+          { 
+            _id: paquete._id,
+            "facturas._id": itemId 
+          },
+          {
+            $set: {
+              "facturas.$.coinciliado": false,
+              "facturas.$.comentarioConciliacion": "",
+              "facturas.$.fechaConciliacion": null,
+              "facturas.$.referenciaConciliacion": "",
+            },
+          },
+          { session }
+        );
+
+        // Buscar y revertir movimientos bancarios asociados
+        if (factura.referenciaConciliacion) {
+          await BankMovement.updateMany(
+            { referenciaConciliacion: factura.referenciaConciliacion },
+            {
+              coinciliado: false,
+              comentarioConciliacion: "",
+              fechaConciliacion: null,
+              referenciaConciliacion: "",
+            },
+            { session }
+          );
+        }
+
+      } else if (tipo === 'grouped') {
+        // Buscar la agrupación y revertir su conciliación
+        const PaymentsByProvider = (await import("../models/PaymentsByProvider.js")).PaymentsByProvider;
+        const providerGroup = await PaymentsByProvider.findById(itemId);
+
+        if (!providerGroup) {
+          await session.abortTransaction();
+          return res.status(404).json({
+            success: false,
+            message: "Agrupación no encontrada.",
+          });
+        }
+
+        if (!providerGroup.conciliado) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            success: false,
+            message: "La agrupación no está conciliada.",
+          });
+        }
+
+        // Revertir conciliación de la agrupación
+        await PaymentsByProvider.findByIdAndUpdate(
+          itemId,
+          {
+            conciliado: false,
+            comentarioConciliacion: "",
+            fechaConciliacion: null,
+            referenciaConciliacion: "",
+          },
+          { session }
+        );
+
+        // Revertir conciliación de todas las facturas de la agrupación
+        const facturaIds = providerGroup.facturas || [];
+        const packageIds = providerGroup.packageIds || [];
+        
+        for (const packageId of packageIds) {
+          for (const facturaId of facturaIds) {
+            await InvoicesPackage.updateOne(
+              { 
+                _id: packageId,
+                "facturas._id": facturaId 
+              },
+              {
+                $set: {
+                  "facturas.$.coinciliado": false,
+                  "facturas.$.comentarioConciliacion": "",
+                  "facturas.$.fechaConciliacion": null,
+                  "facturas.$.referenciaConciliacion": "",
+                },
+              },
+              { session }
+            );
+          }
+        }
+
+        // Revertir movimientos bancarios asociados
+        if (providerGroup.referenciaConciliacion) {
+          await BankMovement.updateMany(
+            { referenciaConciliacion: providerGroup.referenciaConciliacion },
+            {
+              coinciliado: false,
+              comentarioConciliacion: "",
+              fechaConciliacion: null,
+              referenciaConciliacion: "",
+            },
+            { session }
+          );
+        }
+      }
+
+      await session.commitTransaction();
+
+      res.status(200).json({
+        success: true,
+        data: { itemId, tipo },
+        message: `Conciliación ${tipo === 'grouped' ? 'de agrupación' : 'de factura'} eliminada exitosamente.`,
+      });
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  } catch (error) {
+    console.error("Error en eliminarConciliacion:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error interno del servidor.",
+    });
+  }
+};

@@ -125,4 +125,37 @@ export const conciliacionService = {
     });
     return response;
   },
+
+  getProviderGroupsConciliados: async (
+    companyId: string,
+    bankAccountId: string,
+    fecha: string
+  ): Promise<GetProviderGroupsResponse> => {
+    const response = await apiCall<GetProviderGroupsResponse["data"]>(
+      `/conciliacion/provider-groups-conciliados?companyId=${companyId}&bankAccountId=${bankAccountId}&fecha=${fecha}`
+    );
+    return response;
+  },
+
+  getFacturasIndividualesConciliadas: async (
+    companyId: string,
+    bankAccountId: string,
+    fecha: string
+  ): Promise<GetFacturasResponse> => {
+    const response = await apiCall<GetFacturasResponse["data"]>(
+      `/conciliacion/facturas-individuales-conciliadas?companyId=${companyId}&bankAccountId=${bankAccountId}&fecha=${fecha}`
+    );
+    return response;
+  },
+
+  eliminarConciliacion: async (
+    itemId: string,
+    tipo: 'individual' | 'grouped'
+  ): Promise<{ success: boolean; data: any; message: string }> => {
+    const response = await apiCall<any>("/conciliacion/eliminar", {
+      method: "POST",
+      body: JSON.stringify({ itemId, tipo }),
+    });
+    return response;
+  },
 }; 
