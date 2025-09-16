@@ -95,6 +95,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
     useState<BudgetByExpenseConceptResult | null>(null);
   const [loadingBudget, setLoadingBudget] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isBlacklisted, setIsBlacklisted] = useState(false);
   const { user } = useUserSessionStore();
 
   useEffect(() => {
@@ -102,6 +103,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
       const invoice = invoices.find((inv: any) => inv._id === invoiceId);
       if (invoice) {
         setIsEditing(invoice.importePagado > 0);
+        setIsBlacklisted(invoice.providerStatus === 'blacklist');
       }
     }
   }, [show, invoiceId, invoices]);
@@ -329,6 +331,15 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
           {isEditing ? "Editar Pago de Factura" : "Nuevo Pago de Factura"}
         </h4>
 
+        {isBlacklisted && (
+          <div className="alert alert-danger d-flex align-items-center mb-4" role="alert">
+            <i className="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>
+              <strong>Factura no pagable:</strong> Esta factura no puede ser pagada porque el proveedor está en la lista negra.
+            </div>
+          </div>
+        )}
+
         <div className="mb-3">
           <div className="text-center">
             <small className="text-muted">Saldo disponible:</small>
@@ -347,7 +358,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
             onChange={(e) => {
               setConceptoGasto(e.target.value);
             }}
-            disabled={loadingConceptos}
+            disabled={loadingConceptos || isBlacklisted}
             required
           >
             <option value="">Seleccione un concepto de gasto...</option>
@@ -450,6 +461,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
               onChange={(e) => setMonto(e.target.value)}
               placeholder="Cantidad"
               className=""
+              disabled={isBlacklisted}
             />
             <small className="text-muted">
               Saldo disponible: {formatCurrency(saldo)}
@@ -468,6 +480,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
             onChange={(e) => setDescripcion(e.target.value)}
             placeholder="Descripción del pago..."
             className="shadow-none"
+            disabled={isBlacklisted}
           />
         </Form.Group>
 
@@ -475,7 +488,7 @@ const PagoFacturaModal: React.FC<PagoFacturaModalProps> = ({
           <Button variant="light" onClick={handleClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleOk} disabled={loading}>
+          <Button variant="primary" onClick={handleOk} disabled={loading || isBlacklisted}>
             {loading
               ? "Procesando..."
               : isEditing

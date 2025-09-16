@@ -102,12 +102,14 @@ export const importedInvoicesService = {
   // Importar facturas en lote desde archivo ZIP
   bulkUpsert: async (
     invoices: RawInvoiceData[],
-    companyId?: string
+    companyId?: string,
+    providerStatus?: string
   ): Promise<BulkUpsertResponse> => {
     try {
       const payload = {
         invoices,
         companyId,
+        providerStatus,
       };
       const response = await apiCall<{ inserted: number; updated: number }>(
         "/imported-invoices/bulk-upsert",

@@ -19,6 +19,7 @@ import { useUserSessionStore } from '@/stores';
 const ImportInvoicesPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('');
+  const [providerStatus, setProviderStatus] = useState<string>('');
 
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [invoices, setInvoices] = useState<ImportedInvoice[]>([]);
@@ -104,6 +105,13 @@ const ImportInvoicesPage: React.FC = () => {
     }
   }, [selectedCompany, fetchDataForCompany]);
 
+  useEffect(() => {
+    // Reset provider status when company changes
+    if (!selectedCompany) {
+      setProviderStatus('');
+    }
+  }, [selectedCompany]);
+
   const handlePageChange = (page: number) => {
     if (isPreview) {
       setPreviewPage(page);
@@ -174,6 +182,11 @@ const ImportInvoicesPage: React.FC = () => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (!selectedCompany) {
       toast.warn('Por favor, seleccione una Razón Social antes de subir un archivo.');
+      return;
+    }
+
+    if (!providerStatus) {
+      toast.warn('Por favor, seleccione un Estatus de Proveedor antes de subir un archivo.');
       return;
     }
 
@@ -253,13 +266,13 @@ const ImportInvoicesPage: React.FC = () => {
         if (selectedCompany) fetchDataForCompany(selectedCompany);
       })
       .finally(() => setIsUploading(false));
-  }, [selectedCompany, companies, fetchDataForCompany]);
+  }, [selectedCompany, providerStatus, companies, fetchDataForCompany]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'application/zip': ['.zip'] },
     multiple: false,
-    disabled: !selectedCompany || isUploading || isSaving,
+    disabled: !selectedCompany || !providerStatus || isUploading || isSaving,
   });
 
   const handleSave = async () => {
@@ -275,7 +288,7 @@ const ImportInvoicesPage: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const response = await importedInvoicesService.bulkUpsert(parsedData, selectedCompany);
+      const response = await importedInvoicesService.bulkUpsert(parsedData, selectedCompany, providerStatus);
       if (response.success) {
         toast.success(response.message || 'Facturas importadas con éxito.');
         setParsedData([]);
@@ -297,7 +310,7 @@ const ImportInvoicesPage: React.FC = () => {
       <Card>
         <Card.Body>
           <Row className="g-3">
-            <Col md={6}>
+            <Col md={4}>
               <Form.Group>
                 <Form.Label>Razón Social <span className="text-danger">*</span></Form.Label>
                 <Form.Select
@@ -312,16 +325,32 @@ const ImportInvoicesPage: React.FC = () => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={6}>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label>Estatus de Proveedor <span className="text-danger">*</span></Form.Label>
+                <Form.Select
+                  value={providerStatus}
+                  onChange={e => setProviderStatus(e.target.value)}
+                  disabled={!selectedCompany || isSaving}
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="whitelist">Lista Blanca</option>
+                  <option value="blacklist">Lista Negra</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={4}>
               <Form.Label>Archivo ZIP de Metadatos</Form.Label>
-              <div {...getRootProps({ className: `dropzone text-center p-4 border-2 border-dashed ${isDragActive ? 'border-primary' : 'border-secondary'} ${!selectedCompany ? 'bg-light' : 'cursor-pointer'}` })}>
+              <div {...getRootProps({ className: `dropzone text-center p-4 border-2 border-dashed ${isDragActive ? 'border-primary' : 'border-secondary'} ${(!selectedCompany || !providerStatus) ? 'bg-light' : 'cursor-pointer'}` })}>
                 <input {...getInputProps()} />
                 <CloudUpload size={32} className="text-muted" />
                 {isUploading ? (
                   <p className="mt-2 mb-0">Procesando archivo...</p>
                 ) : (
                   <p className="mt-2 mb-0">
-                    {selectedCompany ? 'Arrastre un archivo ZIP o haga clic para seleccionar' : 'Seleccione una Razón Social para activar'}
+                    {!selectedCompany ? 'Seleccione una Razón Social para continuar' : 
+                     !providerStatus ? 'Seleccione un Estatus de Proveedor para activar' :
+                     'Arrastre un archivo ZIP o haga clic para seleccionar'}
                   </p>
                 )}
               </div>

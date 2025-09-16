@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Card, Table, Form, Row, Col, Button } from "react-bootstrap";
+import { Undo2 } from "lucide-react";
 import { formatCurrency } from "@/utils";
 
 interface FacturasIndividualesTableProps {
@@ -95,16 +96,8 @@ export default function FacturasIndividualesTable({
             {facturas.map((factura, index) => (
               <tr
                 key={`${factura._id}-${factura.packageId || factura.packageFolio || 'pkg'}-${factura.importePagado || 0}-${index}`}
-                className={
-                  !readOnly && selectedFacturas.includes(factura._id) 
-                    ? "table-active" 
-                    : readOnly
-                    ? "table-info"
-                    : ""
-                }
+className={""}
                 style={{ cursor: readOnly ? "default" : "pointer" }}
-                onMouseEnter={readOnly ? undefined : (e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
-                onMouseLeave={readOnly ? undefined : (e) => e.currentTarget.style.backgroundColor = ""}
                 onClick={() => !readOnly && onFacturaSelect(factura._id)}
               >
                 {!readOnly && (
@@ -143,7 +136,7 @@ export default function FacturasIndividualesTable({
                   )}
                 </td>
                 {readOnly && onEliminarConciliacion && (
-                  <td>
+                  <td className="text-center">
                     <Button
                       variant="outline-danger"
                       size="sm"
@@ -151,9 +144,9 @@ export default function FacturasIndividualesTable({
                         e.stopPropagation();
                         onEliminarConciliacion(factura._id);
                       }}
-                      title="Eliminar conciliación"
+                      title="Revertir conciliación"
                     >
-                      🗑️
+                      <Undo2 size={20} />
                     </Button>
                   </td>
                 )}

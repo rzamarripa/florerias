@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Card, Table, Form, Row, Col, Button } from "react-bootstrap";
+import { Undo2 } from "lucide-react";
 import { ProviderGroup } from "../types";
 import { formatCurrency } from "@/utils";
 
@@ -93,16 +94,8 @@ export default function ProviderGroupsTable({
             {providerGroups.map((group) => (
               <tr
                 key={group._id}
-                className={
-                  !readOnly && selectedProviderGroups.includes(group._id)
-                    ? "table-success"
-                    : readOnly
-                    ? "table-info"
-                    : ""
-                }
+className={""}
                 style={{ cursor: readOnly ? "default" : "pointer" }}
-                onMouseEnter={readOnly ? undefined : (e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
-                onMouseLeave={readOnly ? undefined : (e) => e.currentTarget.style.backgroundColor = ""}
                 onClick={() => !readOnly && onProviderGroupSelect(group._id)}
               >
                 {!readOnly && (
@@ -144,7 +137,7 @@ export default function ProviderGroupsTable({
                   </td>
                 )}
                 {readOnly && onEliminarConciliacion && (
-                  <td>
+                  <td className="text-center">
                     <Button
                       variant="outline-danger"
                       size="sm"
@@ -152,9 +145,9 @@ export default function ProviderGroupsTable({
                         e.stopPropagation();
                         onEliminarConciliacion(group._id);
                       }}
-                      title="Eliminar conciliación"
+                      title="Revertir conciliación"
                     >
-                      🗑️
+                      <Undo2 size={20} />
                     </Button>
                   </td>
                 )}

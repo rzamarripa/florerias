@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Row, Col, Button, Spinner, Form } from "react-bootstrap";
+import { Row, Col, Button, Spinner } from "react-bootstrap";
 import {
   FiltrosConciliacion,
   ProviderGroupsTable,
@@ -16,9 +16,12 @@ export default function ConciliacionHistorialPage() {
     loading,
     layoutType,
     fechaFacturas,
+    selectedProvider,
+    availableProviders,
+    hasLoadedData,
     loadAllData,
     handleLayoutTypeChange,
-    handleFechaFacturasChange,
+    handleProviderChange,
     handleEliminarConciliacion,
   } = useConciliacionHistorial();
 
@@ -73,22 +76,13 @@ export default function ConciliacionHistorialPage() {
         fechaMovimientos={fechaFacturas}
         hideMovimientosDate={true}
         hideButtons={false}
+        showProviderFilter={true}
+        availableProviders={availableProviders}
+        selectedProvider={selectedProvider}
+        onProviderChange={handleProviderChange}
+        hasLoadedData={hasLoadedData}
       />
 
-      {hasData && (
-        <Row className="mb-3">
-          <Col md={4}>
-            <Form.Group>
-              <Form.Label>Fecha de Conciliación</Form.Label>
-              <Form.Control
-                type="date"
-                value={fechaFacturas}
-                onChange={(e) => handleFechaFacturasChange(e.target.value)}
-              />
-            </Form.Group>
-          </Col>
-        </Row>
-      )}
 
       {hasData && (
         <Row>

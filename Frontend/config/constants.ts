@@ -170,6 +170,23 @@ export const menuItems: MenuItemType[] = [
     ],
   },
   {
+    key: "lista-negra",
+    label: "Lista Negra",
+    icon: ShieldUser,
+    children: [
+      {
+        key: "lista-negra",
+        label: "Lista Negra",
+        url: "/lista-negra/lista-negra",
+      },
+      {
+        key: "importar-lista-negra",
+        label: "Importar Lista Negra",
+        url: "/lista-negra/importar-lista-negra",
+      },
+    ],
+  },
+  {
     key: "modulos",
     label: "Módulos",
     icon: Component,

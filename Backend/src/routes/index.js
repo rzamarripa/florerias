@@ -36,6 +36,7 @@ import scheduledPaymentRoutes from "./scheduledPaymentRoutes.js";
 import bankMovementRoutes from "./bankMovementRoutes.js";
 import conciliacionRoutes from "./conciliacionRoutes.js";
 import fixIndexesRoutes from "./fixIndexesRoutes.js";
+import blackListProvidersRoutes from "./blackListProvidersRoutes.js";
 
 const router = Router();
 
@@ -75,5 +76,6 @@ router.use("/structure", structureRoutes);
 router.use("/bank-movements", bankMovementRoutes);
 router.use("/conciliacion", conciliacionRoutes);
 router.use("/fix", fixIndexesRoutes);
+router.use("/blacklist-providers", blackListProvidersRoutes);
 
 export default router;

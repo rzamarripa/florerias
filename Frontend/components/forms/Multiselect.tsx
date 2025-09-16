@@ -56,39 +56,40 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     control: (base, state) => ({
       ...base,
       minHeight: "38px",
-      borderColor: error ? "#dc3545" : state.isFocused ? "#86b7fe" : "#ced4da",
+      borderColor: error ? "#dc3545" : state.isFocused ? "#86b7fe" : "var(--bs-border-color, #ced4da)",
       boxShadow: state.isFocused
         ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
         : undefined,
       borderRadius: "0.375rem",
-      backgroundColor: disabled ? "#e9ecef" : "white",
+      backgroundColor: disabled ? "var(--bs-secondary-bg, #e9ecef)" : "var(--bs-body-bg, white)",
       "&:hover": {
         borderColor: error
           ? "#dc3545"
           : state.isFocused
           ? "#86b7fe"
-          : "#ced4da",
+          : "var(--bs-border-color, #ced4da)",
       },
     }),
 
     multiValue: (base) => ({
       ...base,
-      backgroundColor: "rgba(13, 110, 253, 0.1)",
+      backgroundColor: "var(--bs-body-bg, transparent)",
       borderRadius: "0.25rem",
+      border: "1px solid var(--bs-border-color, #dee2e6)",
     }),
 
     multiValueLabel: (base) => ({
       ...base,
-      color: "#0d6efd",
+      color: "var(--bs-body-color, #212529)",
       fontSize: "0.875rem",
       fontWeight: "500",
     }),
 
     multiValueRemove: (base) => ({
       ...base,
-      color: "#0d6efd",
+      color: "var(--bs-secondary, #6c757d)",
       ":hover": {
-        backgroundColor: "#0d6efd",
+        backgroundColor: "#dc3545",
         color: "white",
       },
     }),
@@ -103,7 +104,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       zIndex: 99999,
       borderRadius: "0.375rem",
       boxShadow: "0 0.5rem 1rem rgba(0, 0, 0, 0.15)",
-      border: "1px solid #dee2e6",
+      border: "1px solid var(--bs-border-color, #dee2e6)",
+      backgroundColor: "var(--bs-body-bg, white)",
     }),
 
     menuList: (base) => ({
@@ -114,13 +116,13 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     option: (base, state) => ({
       ...base,
       backgroundColor: state.isFocused
-        ? "#f8f9fa"
+        ? "var(--bs-secondary-bg, #f8f9fa)"
         : state.isSelected
-        ? "#e7f1ff"
-        : "white",
-      color: state.isSelected ? "#0d6efd" : "#212529",
+        ? "var(--bs-primary-bg-subtle, #e7f1ff)"
+        : "var(--bs-body-bg, white)",
+      color: state.isSelected ? "var(--bs-primary, #0d6efd)" : "var(--bs-body-color, #212529)",
       ":active": {
-        backgroundColor: "#e7f1ff",
+        backgroundColor: "var(--bs-primary-bg-subtle, #e7f1ff)",
       },
     }),
 

@@ -19,7 +19,7 @@ const parseDate = (dateString) => {
 
 export const bulkUpsertInvoices = async (req, res) => {
   try {
-    const { invoices, companyId } = req.body;
+    const { invoices, companyId, providerStatus } = req.body;
     
     // Mantener compatibilidad con el formato anterior
     const invoicesArray = Array.isArray(req.body) ? req.body : invoices;
@@ -28,6 +28,14 @@ export const bulkUpsertInvoices = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "El cuerpo de la petición debe contener un arreglo de facturas.",
+      });
+    }
+
+    // Validar providerStatus
+    if (!providerStatus || !['whitelist', 'blacklist'].includes(providerStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere un estatus de proveedor válido (whitelist o blacklist).",
       });
     }
 
@@ -59,6 +67,7 @@ export const bulkUpsertInvoices = async (req, res) => {
             estatus: parseInt(invoice.Estatus, 10),
             fechaCancelacion: parseDate(invoice.FechaCancelacion),
             razonSocial: new mongoose.Types.ObjectId(companyId),
+            providerStatus: providerStatus,
           };
 
           if (!invoiceData.uuid) {
@@ -129,6 +138,7 @@ export const bulkUpsertInvoices = async (req, res) => {
           estatus: parseInt(invoice.Estatus, 10),
           fechaCancelacion: parseDate(invoice.FechaCancelacion),
           razonSocial: typeof companyIdFromMap === 'string' ? new mongoose.Types.ObjectId(companyIdFromMap) : companyIdFromMap,
+          providerStatus: providerStatus,
         };
 
         if (!invoiceData.uuid) {
