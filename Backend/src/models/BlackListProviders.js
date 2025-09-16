@@ -3,37 +3,37 @@ import mongoose from 'mongoose';
 const BlackListProvidersSchema = new mongoose.Schema({
   rfc: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     uppercase: true,
     index: true
   },
   nombre: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxLength: 500
   },
   situacion: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxLength: 200
   },
   numeroFechaOficioGlobalPresuncion: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxLength: 300
   },
   publicacionPaginaSATPresuntos: {
     type: Date,
-    required: true,
+    required: false,
     index: true
   },
   publicacionDOFPresuntos: {
     type: Date,
-    required: true,
+    required: false,
     index: true
   },
   publicacionPaginaSATDesvirtuados: {

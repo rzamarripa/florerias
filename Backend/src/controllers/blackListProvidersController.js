@@ -81,26 +81,21 @@ export const bulkUpsertBlackListProviders = async (req, res) => {
           console.log('Backend - Primer proveedor procesado:', providerData);
         }
 
-        if (!providerData.rfc || !providerData.nombre) {
-          return null;
-        }
+        // Allow providers with missing data - no validation required
 
+        // Use index as identifier if RFC is missing
+        const identifier = providerData.rfc || `temp_${Date.now()}_${Math.random()}`;
+        
         return {
           updateOne: {
-            filter: { rfc: providerData.rfc },
-            update: { $set: providerData },
+            filter: { rfc: identifier },
+            update: { $set: { ...providerData, rfc: identifier } },
             upsert: true,
           },
         };
-      })
-      .filter((op) => op !== null);
-
-    if (operations.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No hay proveedores válidos para procesar.",
       });
-    }
+
+    // Remove validation - process all records even if empty
 
     const result = await BlackListProviders.bulkWrite(operations);
 

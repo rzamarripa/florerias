@@ -190,24 +190,11 @@ const ImportBlackListPage: React.FC = () => {
           }
           console.log(jsonData);
           const headers = jsonData[0] as string[];
-          const requiredHeaders = [
-            "RFC",
-            "Nombre",
-            "Situación",
-            "Número y fecha de oficio global de presunción",
-            "Publicación página SAT presuntos",
-            "Publicación DOF presuntos",
-          ];
           console.log(headers);
-          if (!requiredHeaders.every((h) => headers.includes(h))) {
-            throw new Error(
-              "El archivo no contiene las columnas requeridas: RFC, Nombre, Situación, Número y fecha de oficio global de presunción, Publicación página SAT presuntos, Publicación DOF presuntos"
-            );
-          }
 
           const rows = jsonData.slice(1) as any[][];
           const parsedProviders: RawBlackListProviderData[] = rows
-            .filter((row) => row.length > 0 && row[0]) // Filter empty rows
+            .filter((row) => row.length > 0) // Allow rows with any data
             .map((row) => {
               const provider: any = {};
               headers.forEach((header, index) => {
@@ -228,11 +215,7 @@ const ImportBlackListPage: React.FC = () => {
             },
           });
 
-          if (parsedProviders.length === 0) {
-            throw new Error(
-              "No se encontraron proveedores válidos en el archivo."
-            );
-          }
+          // Allow empty files - no validation for provider count
 
           setParsedData(parsedProviders);
           setPreviewPage(1);
@@ -322,8 +305,7 @@ const ImportBlackListPage: React.FC = () => {
                   </p>
                 )}
                 <small className="text-muted d-block mt-2">
-                  El archivo debe contener las columnas: RFC, Nombre, Situación,
-                  etc.
+                  El archivo puede contener cualquier combinación de columnas de datos.
                 </small>
               </div>
             </Col>
