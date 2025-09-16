@@ -263,10 +263,10 @@ export const checkProviderInBlackList = async (req, res) => {
       });
     }
 
+    // Verificar si el proveedor está en lista negra con situación "definitivo"
     const provider = await BlackListProviders.findOne({ 
       rfc: rfc.toUpperCase(),
-      publicacionPaginaSATDesvirtuados: null,
-      publicacionPaginaSATDefinitivos: null
+      situacion: { $regex: /definitivo/i }
     });
 
     res.status(200).json({

@@ -201,15 +201,6 @@ const ImportedInvoicesSchema = new mongoose.Schema({
     maxLength: 50,
     default: null
   },
-  providerStatus: {
-    type: String,
-    required: true,
-    enum: {
-      values: ['whitelist', 'blacklist'],
-      message: 'El estatus del proveedor debe ser whitelist o blacklist'
-    },
-    index: true
-  },
 }, {
   timestamps: true,
   collection: 'cc_imported_invoices',

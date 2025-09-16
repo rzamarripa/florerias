@@ -425,6 +425,8 @@ const FundingRequestModal: React.FC<FundingRequestModalProps> = ({
 
         const result = await generateIndividualInvoiceReferences({
           packageIds: selectedPackageIds,
+          bankAccountId: selectedBankAccountId,
+          companyId: selectedCompanyId,
         });
         
         if (!result.success) {

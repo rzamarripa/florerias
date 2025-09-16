@@ -595,7 +595,7 @@ export const paymentsByProviderController = {
   generateIndividualInvoiceReferences: async (req, res) => {
     try {
       console.log("Iniciando generateIndividualInvoiceReferences con datos:", req.body);
-      const { packageIds } = req.body;
+      const { packageIds, bankAccountId, companyId } = req.body;
 
       if (!packageIds || !Array.isArray(packageIds) || packageIds.length === 0) {
         console.log("Error: packageIds inválidos:", packageIds);
@@ -711,6 +711,30 @@ export const paymentsByProviderController = {
       let layoutRecord = null;
       if (updatedInvoicesCount.embedded > 0) {
         try {
+          // Obtener información de la cuenta bancaria y empresa si se proporcionaron
+          let bankAccount = null;
+          let company = null;
+
+          if (bankAccountId) {
+            try {
+              const bankAccountModule = await import("../models/BankAccount.js");
+              const BankAccount = bankAccountModule.BankAccount;
+              bankAccount = await BankAccount.findById(bankAccountId).populate("bank");
+            } catch (error) {
+              console.error("Error obteniendo cuenta bancaria:", error);
+            }
+          }
+
+          if (companyId) {
+            try {
+              const companyModule = await import("../models/Company.js");
+              const Company = companyModule.Company;
+              company = await Company.findById(companyId);
+            } catch (error) {
+              console.error("Error obteniendo empresa:", error);
+            }
+          }
+
           // Recopilar información de todas las facturas procesadas
           const facturasIndividuales = [];
           let totalLayoutAmount = 0;
@@ -746,12 +770,12 @@ export const paymentsByProviderController = {
           if (facturasIndividuales.length > 0) {
             layoutRecord = new BankLayout({
               tipoLayout: 'individual',
-              companyId: null, // En layouts individuales no tenemos companyId específico
-              companyName: 'Layout Individual',
-              companyRfc: 'INDIVIDUAL',
-              bankAccountId: null, // En layouts individuales no tenemos bankAccountId específico  
-              bankAccountNumber: 'Individual',
-              bankName: 'Layout Individual',
+              companyId: companyId || null,
+              companyName: company ? company.name : 'Layout Individual',
+              companyRfc: company ? company.rfc : 'INDIVIDUAL',
+              bankAccountId: bankAccountId || null,
+              bankAccountNumber: bankAccount ? bankAccount.accountNumber : 'Individual',
+              bankName: bankAccount ? (bankAccount.bank?.name || 'Banco desconocido') : 'Layout Individual',
               packageIds: packageIds,
               facturasIndividuales: facturasIndividuales,
               totalAmount: totalLayoutAmount,
@@ -800,6 +824,169 @@ export const paymentsByProviderController = {
       res.status(500).json({
         success: false,
         message: "Error al generar referencias individuales",
+        error: error.message,
+      });
+    }
+  },
+
+  revertBankLayout: async (req, res) => {
+    try {
+      console.log("Iniciando revertBankLayout con layoutId:", req.params.layoutId);
+      const { layoutId } = req.params;
+
+      if (!layoutId) {
+        return res.status(400).json({
+          success: false,
+          message: "Se requiere ID de layout",
+        });
+      }
+
+      // Obtener el layout bancario
+      const layout = await BankLayout.findById(layoutId);
+      if (!layout) {
+        return res.status(404).json({
+          success: false,
+          message: "Layout bancario no encontrado",
+        });
+      }
+
+      console.log(`Layout encontrado: ${layout.layoutFolio} - Tipo: ${layout.tipoLayout}`);
+
+      // Importar modelos necesarios
+      let InvoicesPackage;
+      try {
+        const invoicesPackageModule = await import("../models/InvoicesPackpage.js");
+        InvoicesPackage = invoicesPackageModule.InvoicesPackage;
+      } catch (importError) {
+        console.error("Error importando modelo InvoicesPackage:", importError);
+        return res.status(500).json({
+          success: false,
+          message: "Error interno del servidor al cargar modelos",
+          error: importError.message,
+        });
+      }
+
+      // Obtener todos los paquetes relacionados con el layout
+      const packages = await InvoicesPackage.find({ _id: { $in: layout.packageIds } });
+      console.log(`Paquetes encontrados: ${packages.length}`);
+
+      // Validar que se puede revertir el layout
+      const packagesWithIssues = [];
+      for (const pkg of packages) {
+        // Verificar si el paquete está en estatus que no permite reversión
+        if (pkg.estatus === "Pagado") {
+          packagesWithIssues.push({
+            folio: pkg.folio,
+            issue: `Paquete en estatus "${pkg.estatus}"`
+          });
+          continue;
+        }
+
+        // Verificar facturas conciliadas
+        const facturasConcialiadas = pkg.facturas.filter(factura => factura.coinciliado === true);
+        if (facturasConcialiadas.length > 0) {
+          packagesWithIssues.push({
+            folio: pkg.folio,
+            issue: `Contiene ${facturasConcialiadas.length} facturas conciliadas`
+          });
+        }
+      }
+
+      // Si hay paquetes con problemas, no permitir la reversión
+      if (packagesWithIssues.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No se puede revertir el layout. Algunos paquetes tienen restricciones:",
+          issues: packagesWithIssues
+        });
+      }
+
+      // Proceder con la reversión
+      console.log("Iniciando proceso de reversión...");
+
+      // Para layouts agrupados, eliminar registros de PaymentsByProvider
+      if (layout.tipoLayout === 'grouped' && layout.agrupaciones && layout.agrupaciones.length > 0) {
+        console.log(`Eliminando ${layout.agrupaciones.length} agrupaciones de PaymentsByProvider`);
+        const deleteResult = await PaymentsByProvider.deleteMany({ 
+          _id: { $in: layout.agrupaciones } 
+        });
+        console.log(`Agrupaciones eliminadas: ${deleteResult.deletedCount}`);
+      }
+
+      // Cambiar estatus de paquetes de "Generado" a "Programado"
+      const packagesToUpdate = packages.filter(pkg => pkg.estatus === "Generado");
+      console.log(`Paquetes a actualizar: ${packagesToUpdate.length}`);
+
+      const packageUpdatePromises = packagesToUpdate.map(pkg => {
+        console.log(`Cambiando estatus del paquete ${pkg.folio}: ${pkg.estatus} → Programado`);
+        return InvoicesPackage.findByIdAndUpdate(
+          pkg._id,
+          { $set: { estatus: "Programado" } },
+          { new: true }
+        );
+      });
+
+      const updatedPackages = await Promise.all(packageUpdatePromises);
+      console.log(`Paquetes actualizados exitosamente: ${updatedPackages.length}`);
+
+      // Para layouts individuales, limpiar referencias de facturas si es necesario
+      if (layout.tipoLayout === 'individual') {
+        // Limpiar referencias de facturas en los paquetes
+        for (const pkg of packages) {
+          let packageModified = false;
+          for (let i = 0; i < pkg.facturas.length; i++) {
+            if (pkg.facturas[i].referencia) {
+              pkg.facturas[i].referencia = null;
+              packageModified = true;
+            }
+          }
+          
+          if (packageModified) {
+            await pkg.save();
+            console.log(`Referencias limpiadas en paquete ${pkg.folio}`);
+          }
+        }
+
+        // También limpiar en la colección original ImportedInvoices
+        try {
+          const importedInvoicesModule = await import("../models/ImportedInvoices.js");
+          const ImportedInvoices = importedInvoicesModule.ImportedInvoices;
+          
+          // Obtener todas las facturas de los paquetes
+          const allFacturaIds = packages.flatMap(pkg => pkg.facturas.map(f => f._id));
+          
+          if (allFacturaIds.length > 0) {
+            const clearReferencesResult = await ImportedInvoices.updateMany(
+              { _id: { $in: allFacturaIds } },
+              { $unset: { referencia: "" } }
+            );
+            console.log(`Referencias limpiadas en ImportedInvoices: ${clearReferencesResult.modifiedCount}`);
+          }
+        } catch (error) {
+          console.error("Error limpiando referencias en ImportedInvoices:", error);
+          // No fallar la operación por esto
+        }
+      }
+
+      // Finalmente, eliminar el registro de layout
+      await BankLayout.findByIdAndDelete(layoutId);
+      console.log(`Layout ${layout.layoutFolio} eliminado exitosamente`);
+
+      res.json({
+        success: true,
+        message: `Layout ${layout.layoutFolio} revertido exitosamente. ${updatedPackages.length} paquetes regresaron a estatus "Programado"`,
+        data: {
+          layoutFolio: layout.layoutFolio,
+          tipoLayout: layout.tipoLayout,
+          packagesReverted: updatedPackages.length,
+          paymentsDeleted: layout.tipoLayout === 'grouped' ? layout.agrupaciones.length : 0
+        }
+      });
+    } catch (error) {
+      console.error("Error en revertBankLayout:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al revertir layout bancario",
         error: error.message,
       });
     }
