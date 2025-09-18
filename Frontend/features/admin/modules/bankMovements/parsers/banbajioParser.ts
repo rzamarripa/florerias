@@ -24,25 +24,70 @@ export function parseBanBajio(json: any[][]): MovimientoBancario[] {
   }
   function parseAfirmeDate(fechaStr: any): Date | null {
     if (!fechaStr || typeof fechaStr !== "string") return null;
-    const [dd, mm, aa] = fechaStr.split("/");
-    if (!dd || !mm || !aa) return null;
-    const year = Number(aa) < 100 ? 2000 + Number(aa) : Number(aa);
-    const date = new Date(year, Number(mm) - 1, Number(dd));
-    return isNaN(date.getTime()) ? null : date;
+    
+    // Limpiar la cadena de espacios y caracteres especiales
+    const cleanStr = fechaStr.trim();
+    const [dd, mm, aa] = cleanStr.split("/");
+    
+    if (!dd || !mm || !aa) {
+      console.warn(`Formato de fecha inválido: ${fechaStr}`);
+      return null;
+    }
+    
+    const dayNum = Number(dd);
+    const monthNum = Number(mm);
+    const yearNum = Number(aa);
+    
+    // Validar rangos básicos
+    if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+      console.warn(`Fecha fuera de rango: ${fechaStr}`);
+      return null;
+    }
+    
+    // Convertir año de 2 dígitos a 4 dígitos
+    const year = yearNum < 100 ? 2000 + yearNum : yearNum;
+    
+    // Crear fecha (mes - 1 porque Date usa 0-11 para meses)
+    const date = new Date(year, monthNum - 1, dayNum);
+    
+    // Verificar que la fecha es válida
+    if (isNaN(date.getTime())) {
+      console.warn(`Fecha inválida creada: ${fechaStr} -> ${date}`);
+      return null;
+    }
+    
+    // Verificar que los componentes de la fecha coinciden con los valores originales
+    if (date.getDate() !== dayNum || date.getMonth() !== (monthNum - 1) || date.getFullYear() !== year) {
+      console.warn(`Fecha inconsistente: ${fechaStr} -> ${date}`);
+      return null;
+    }
+    
+    return date;
   }
   return dataRows.map((row, i) => {
     const obj: Record<string, any> = {};
     headers.forEach((header: string, idx: number) => {
       obj[header] = row[idx];
     });
-    let fecha = obj["Fecha Movimiento"];
+    // Tomar fecha de la columna B (índice 1) directamente del array row
+    let fecha = row[1]; // Columna B (segunda columna) contiene la fecha en formato dd/mm/aa
     let hora = obj["Hora"];
     let fechaObj: Date | null = null;
     let advertencia = "";
+    
+    // Debug: Log de la fecha que se está procesando
+    if (i < 3) { // Solo para las primeras 3 filas para evitar spam
+      console.log(`Fila ${i}: Fecha de columna B =`, fecha, typeof fecha);
+    }
+    
     if (typeof fecha === "number") {
       fechaObj = parseExcelDate(fecha);
     } else if (typeof fecha === "string" && fecha.trim() !== "") {
-      fechaObj = parseAfirmeDate(fecha);
+      // Usar parseAfirmeDate para formato dd/mm/aa
+      fechaObj = parseAfirmeDate(fecha.trim());
+      if (i < 3) {
+        console.log(`Fila ${i}: Fecha parseada =`, fechaObj);
+      }
     }
     let horaStr = hora;
     if (typeof hora === "number") {

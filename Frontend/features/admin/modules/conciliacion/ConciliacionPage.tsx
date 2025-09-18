@@ -30,6 +30,9 @@ export default function ConciliacionPage() {
     layoutType,
     fechaFacturas,
     fechaMovimientos,
+    selectedProvider,
+    availableProviders,
+    hasLoadedData,
     loadAllData,
     handleProviderGroupSelect,
     handleFacturaIndividualSelect,
@@ -38,6 +41,7 @@ export default function ConciliacionPage() {
     handleLayoutTypeChange,
     handleFechaFacturasChange,
     handleFechaMovimientosChange,
+    handleProviderChange,
     handleConciliacionManual,
     handleConciliacionDirecta,
     handleCerrarConciliacion,
@@ -84,6 +88,11 @@ export default function ConciliacionPage() {
         loading={loading}
         fechaFacturas={fechaFacturas}
         fechaMovimientos={fechaMovimientos}
+        showProviderFilter={true}
+        availableProviders={availableProviders}
+        selectedProvider={selectedProvider}
+        onProviderChange={handleProviderChange}
+        hasLoadedData={hasLoadedData}
       />
 
       {hasData && (

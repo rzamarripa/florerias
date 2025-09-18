@@ -25,6 +25,26 @@ export const importBankMovements = async (req, res) => {
       const abonoNum = Number(mov.abono);
       const saldoNum = Number(mov.saldo);
 
+      // Convertir fecha a objeto Date válido
+      let fechaDate;
+      if (mov.fecha) {
+        if (typeof mov.fecha === 'string') {
+          fechaDate = new Date(mov.fecha);
+        } else if (mov.fecha instanceof Date) {
+          fechaDate = mov.fecha;
+        } else {
+          fechaDate = new Date();
+        }
+        
+        // Validar que la fecha es válida
+        if (isNaN(fechaDate.getTime())) {
+          console.warn(`Fecha inválida encontrada: ${mov.fecha}, usando fecha actual`);
+          fechaDate = new Date();
+        }
+      } else {
+        fechaDate = new Date();
+      }
+
       // Extraer número de referencia del concepto
       const extractReferenceFromConcept = (concepto) => {
         if (!concepto || typeof concepto !== 'string') return null;
@@ -53,6 +73,7 @@ export const importBankMovements = async (req, res) => {
 
       const movimientoEnriquecido = {
         ...mov,
+        fecha: fechaDate,  // Usar la fecha convertida
         cargo: cargoNum,
         abono: abonoNum,
         saldo: saldoNum,

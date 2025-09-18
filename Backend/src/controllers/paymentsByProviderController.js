@@ -527,16 +527,24 @@ export const paymentsByProviderController = {
       const total = await BankLayout.countDocuments({});
 
       // Procesar layouts para agregar información calculada
-      const processedLayouts = layouts.map(layout => {
+      const processedLayouts = await Promise.all(layouts.map(async layout => {
         let cantidadProveedores = 0;
         let cantidadFacturas = 0;
 
         if (layout.tipoLayout === 'grouped') {
           // Para layouts agrupados, usar los campos ya calculados
           cantidadProveedores = layout.agrupaciones ? layout.agrupaciones.length : 0;
-          // Para layouts agrupados, totalRegistros representa el número de agrupaciones, no facturas
-          // Necesitamos calcular las facturas de otra manera o usar un campo específico
-          cantidadFacturas = 0; // Por ahora, ponemos 0 hasta tener más datos
+          
+          // Calcular el total de facturas sumando las facturas de cada agrupación
+          if (layout.agrupaciones && layout.agrupaciones.length > 0) {
+            const agrupacionesConFacturas = await PaymentsByProvider.find({
+              _id: { $in: layout.agrupaciones }
+            }).select('facturas');
+            
+            cantidadFacturas = agrupacionesConFacturas.reduce((total, agrupacion) => {
+              return total + (agrupacion.facturas ? agrupacion.facturas.length : 0);
+            }, 0);
+          }
         } else if (layout.tipoLayout === 'individual') {
           // Para layouts individuales, contar proveedores únicos de las facturas
           const rfcsUnicos = new Set();
@@ -570,7 +578,7 @@ export const paymentsByProviderController = {
           createdAt: layout.createdAt,
           updatedAt: layout.updatedAt
         };
-      });
+      }));
 
       res.json({
         success: true,
@@ -894,9 +902,29 @@ export const paymentsByProviderController = {
 
       // Si hay paquetes con problemas, no permitir la reversión
       if (packagesWithIssues.length > 0) {
+        // Determinar el tipo de error para mostrar mensaje específico
+        const hasPagadoIssues = packagesWithIssues.some(issue => 
+          issue.issue.includes('estatus "Pagado"')
+        );
+        const hasConciliadoIssues = packagesWithIssues.some(issue => 
+          issue.issue.includes('conciliadas')
+        );
+
+        let errorMessage = "";
+        if (hasPagadoIssues && hasConciliadoIssues) {
+          errorMessage = "No se puede eliminar un layout con paquetes pagados y facturas conciliadas";
+        } else if (hasPagadoIssues) {
+          errorMessage = "No se puede eliminar un layout con paquetes pagados";
+        } else if (hasConciliadoIssues) {
+          errorMessage = "No se puede eliminar un layout con facturas conciliadas";
+        } else {
+          errorMessage = "No se puede eliminar el layout. Algunos paquetes tienen restricciones";
+        }
+
+
         return res.status(400).json({
           success: false,
-          message: "No se puede revertir el layout. Algunos paquetes tienen restricciones:",
+          message: errorMessage,
           issues: packagesWithIssues
         });
       }

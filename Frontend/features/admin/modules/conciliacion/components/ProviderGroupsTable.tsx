@@ -15,6 +15,7 @@ interface ProviderGroupsTableProps {
   readOnly?: boolean;
   title?: string;
   hideeDateFilter?: boolean;
+  hideActions?: boolean;
   onEliminarConciliacion?: (providerGroupId: string) => void;
 }
 
@@ -27,6 +28,7 @@ export default function ProviderGroupsTable({
   readOnly = false,
   title = "Proveedores Agrupados",
   hideeDateFilter = false,
+  hideActions = false,
   onEliminarConciliacion,
 }: ProviderGroupsTableProps) {
   return (
@@ -87,7 +89,7 @@ export default function ProviderGroupsTable({
               <th>Número Banco</th>
               <th>Referencia</th>
               {readOnly && <th>Estado</th>}
-              {readOnly && onEliminarConciliacion && <th style={{ width: "100px" }}>Acciones</th>}
+              {readOnly && !hideActions && onEliminarConciliacion && <th style={{ width: "100px" }}>Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -136,7 +138,7 @@ className={""}
                     <small className="text-success">✅ Conciliada</small>
                   </td>
                 )}
-                {readOnly && onEliminarConciliacion && (
+                {readOnly && !hideActions && onEliminarConciliacion && (
                   <td className="text-center">
                     <Button
                       variant="outline-danger"

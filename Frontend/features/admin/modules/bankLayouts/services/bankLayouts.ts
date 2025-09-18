@@ -14,7 +14,7 @@ export const getBankLayouts = async (params?: GetBankLayoutsParams): Promise<Api
 };
 
 export const revertBankLayout = async (layoutId: string): Promise<ApiResponse<any>> => {
-  return apiCall(`/payments-by-provider/revert-layout/${layoutId}`, {
+  return await apiCall(`/payments-by-provider/revert-layout/${layoutId}`, {
     method: "DELETE",
   });
 };

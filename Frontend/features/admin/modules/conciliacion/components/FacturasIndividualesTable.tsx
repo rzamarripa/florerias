@@ -14,6 +14,7 @@ interface FacturasIndividualesTableProps {
   readOnly?: boolean;
   title?: string;
   hideeDateFilter?: boolean;
+  hideActions?: boolean;
   onEliminarConciliacion?: (facturaId: string) => void;
 }
 
@@ -26,6 +27,7 @@ export default function FacturasIndividualesTable({
   readOnly = false,
   title = "Facturas Individuales (Estatus: Pagado y Autorizadas)",
   hideeDateFilter = false,
+  hideActions = false,
   onEliminarConciliacion,
 }: FacturasIndividualesTableProps) {
   return (
@@ -89,7 +91,7 @@ export default function FacturasIndividualesTable({
               <th>Paquete</th>
               <th>Referencia</th>
               <th>Estado</th>
-              {readOnly && onEliminarConciliacion && <th style={{ width: "100px" }}>Acciones</th>}
+              {readOnly && !hideActions && onEliminarConciliacion && <th style={{ width: "100px" }}>Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -135,7 +137,7 @@ className={""}
                     <small className="text-warning">⏳ Pendiente</small>
                   )}
                 </td>
-                {readOnly && onEliminarConciliacion && (
+                {readOnly && !hideActions && onEliminarConciliacion && (
                   <td className="text-center">
                     <Button
                       variant="outline-danger"

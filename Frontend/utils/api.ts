@@ -112,6 +112,17 @@ export const apiCall = async <T>(
   }
 
   if (!response.ok) {
+    // Para errores 400 (Bad Request) con mensaje del servidor, tratarlos como respuestas válidas
+    // Estos son errores de validación del negocio, no errores técnicos
+    if (response.status === 400 && data && data.message) {
+      return {
+        success: false,
+        message: data.message,
+        data: data.data || null,
+        issues: data.issues || null
+      } as ApiResponse<T>;
+    }
+
     console.error("Error en la petición:", {
       status: response.status,
       statusText: response.statusText,

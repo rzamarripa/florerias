@@ -22,7 +22,6 @@ export default function ConciliacionHistorialPage() {
     loadAllData,
     handleLayoutTypeChange,
     handleProviderChange,
-    handleEliminarConciliacion,
   } = useConciliacionHistorial();
 
   const [hasData, setHasData] = useState<boolean>(false);
@@ -95,7 +94,7 @@ export default function ConciliacionHistorialPage() {
                 readOnly={true}
                 title="Agrupaciones Conciliadas"
                 hideeDateFilter={true}
-                onEliminarConciliacion={(id) => handleEliminarConciliacion(id, 'grouped')}
+                hideActions={true}
               />
             ) : (
               <FacturasIndividualesTable
@@ -105,7 +104,7 @@ export default function ConciliacionHistorialPage() {
                 readOnly={true}
                 title="Facturas Individuales Conciliadas"
                 hideeDateFilter={true}
-                onEliminarConciliacion={(id) => handleEliminarConciliacion(id, 'individual')}
+                hideActions={true}
               />
             )}
           </Col>

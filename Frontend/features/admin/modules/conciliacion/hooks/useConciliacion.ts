@@ -11,8 +11,10 @@ import {
 import { conciliacionService } from '../services';
 
 export const useConciliacion = () => {
-  const [providerGroups, setProviderGroups] = useState<ProviderGroup[]>([]);
-  const [facturasIndividuales, setFacturasIndividuales] = useState<any[]>([]);
+  const [allProviderGroups, setAllProviderGroups] = useState<ProviderGroup[]>([]);
+  const [allFacturasIndividuales, setAllFacturasIndividuales] = useState<any[]>([]);
+  const [filteredProviderGroups, setFilteredProviderGroups] = useState<ProviderGroup[]>([]);
+  const [filteredFacturasIndividuales, setFilteredFacturasIndividuales] = useState<any[]>([]);
   const [movimientos, setMovimientos] = useState<MovimientoBancario[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -30,6 +32,45 @@ export const useConciliacion = () => {
   } | null>(null);
   const [fechaFacturas, setFechaFacturas] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [fechaMovimientos, setFechaMovimientos] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [selectedProvider, setSelectedProvider] = useState<string>("");
+  const [availableProviders, setAvailableProviders] = useState<Array<{name: string; rfc: string}>>([]);
+  const [hasLoadedData, setHasLoadedData] = useState<boolean>(false);
+
+  // Función para extraer proveedores únicos
+  const extractProviders = useCallback((providerGroups: ProviderGroup[], facturas: any[]) => {
+    const providersSet = new Set<string>();
+    const providersMap = new Map<string, {name: string; rfc: string}>();
+
+    // Extraer de agrupaciones
+    providerGroups.forEach(group => {
+      if (group.providerName && group.providerRfc) {
+        const key = `${group.providerRfc}-${group.providerName}`;
+        if (!providersSet.has(key)) {
+          providersSet.add(key);
+          providersMap.set(group.providerName, {
+            name: group.providerName,
+            rfc: group.providerRfc
+          });
+        }
+      }
+    });
+
+    // Extraer de facturas individuales
+    facturas.forEach(factura => {
+      if (factura.nombreEmisor && factura.rfcEmisor) {
+        const key = `${factura.rfcEmisor}-${factura.nombreEmisor}`;
+        if (!providersSet.has(key)) {
+          providersSet.add(key);
+          providersMap.set(factura.nombreEmisor, {
+            name: factura.nombreEmisor,
+            rfc: factura.rfcEmisor
+          });
+        }
+      }
+    });
+
+    return Array.from(providersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
 
   const loadFacturas = useCallback(async (filters: {
     companyId: string;
@@ -40,6 +81,7 @@ export const useConciliacion = () => {
     setLoading(true);
     setSelectedProviderGroups([]);
     setSelectedFacturasIndividuales([]);
+    setSelectedProvider(""); // Reset provider filter
     
     try {
       if (layoutType === 'grouped') {
@@ -50,9 +92,20 @@ export const useConciliacion = () => {
         );
 
         if (providerGroupsResponse.success) {
-          setProviderGroups(providerGroupsResponse.data);
+          const groups = providerGroupsResponse.data || [];
+          setAllProviderGroups(groups);
+          setFilteredProviderGroups(groups);
+          
+          // Extraer proveedores únicos solo de las agrupaciones
+          const providers = extractProviders(groups, []);
+          setAvailableProviders(providers);
+        } else {
+          setAllProviderGroups([]);
+          setFilteredProviderGroups([]);
+          setAvailableProviders([]);
         }
-        setFacturasIndividuales([]);
+        setAllFacturasIndividuales([]);
+        setFilteredFacturasIndividuales([]);
       } else {
         // Layout individual
         const facturasIndividualesResponse = await conciliacionService.getFacturasIndividualesParaConciliacion(
@@ -62,17 +115,31 @@ export const useConciliacion = () => {
         );
 
         if (facturasIndividualesResponse.success) {
-          setFacturasIndividuales(facturasIndividualesResponse.data);
+          const facturas = facturasIndividualesResponse.data || [];
+          setAllFacturasIndividuales(facturas);
+          setFilteredFacturasIndividuales(facturas);
+          
+          // Extraer proveedores únicos solo de las facturas
+          const providers = extractProviders([], facturas);
+          setAvailableProviders(providers);
+        } else {
+          setAllFacturasIndividuales([]);
+          setFilteredFacturasIndividuales([]);
+          setAvailableProviders([]);
         }
-        setProviderGroups([]);
+        setAllProviderGroups([]);
+        setFilteredProviderGroups([]);
       }
     } catch {
-      setProviderGroups([]);
-      setFacturasIndividuales([]);
+      setAllProviderGroups([]);
+      setAllFacturasIndividuales([]);
+      setFilteredProviderGroups([]);
+      setFilteredFacturasIndividuales([]);
+      setAvailableProviders([]);
     } finally {
       setLoading(false);
     }
-  }, [layoutType]);
+  }, [layoutType, extractProviders]);
 
   const loadMovimientos = useCallback(async (filters: {
     companyId: string;
@@ -113,6 +180,7 @@ export const useConciliacion = () => {
     setSelectedMovimiento('');
     setSelectedMovimientos([]);
     setCurrentFilters(filters);
+    setHasLoadedData(false);
     
     try {
       const promises = [
@@ -121,6 +189,7 @@ export const useConciliacion = () => {
       ];
       
       await Promise.all(promises);
+      setHasLoadedData(true);
     } finally {
       setLoading(false);
     }
@@ -146,14 +215,43 @@ export const useConciliacion = () => {
     });
   }, []);
 
+  // Función para filtrar por proveedor en frontend
+  const handleProviderChange = useCallback((providerName: string) => {
+    setSelectedProvider(providerName);
+    
+    if (!providerName) {
+      // Si no hay proveedor seleccionado, mostrar todos
+      setFilteredProviderGroups(allProviderGroups);
+      setFilteredFacturasIndividuales(allFacturasIndividuales);
+    } else {
+      // Filtrar por nombre del proveedor
+      if (layoutType === 'grouped') {
+        const filtered = allProviderGroups.filter(group => 
+          group.providerName === providerName
+        );
+        setFilteredProviderGroups(filtered);
+      } else {
+        const filtered = allFacturasIndividuales.filter(factura => 
+          factura.nombreEmisor === providerName
+        );
+        setFilteredFacturasIndividuales(filtered);
+      }
+    }
+  }, [allProviderGroups, allFacturasIndividuales, layoutType]);
+
   const handleLayoutTypeChange = useCallback((newLayoutType: 'grouped' | 'individual') => {
     setLayoutType(newLayoutType);
     setSelectedProviderGroups([]);
     setSelectedFacturasIndividuales([]);
     setSelectedMovimiento('');
     setSelectedMovimientos([]);
-    setProviderGroups([]);
-    setFacturasIndividuales([]);
+    setAllProviderGroups([]);
+    setAllFacturasIndividuales([]);
+    setFilteredProviderGroups([]);
+    setFilteredFacturasIndividuales([]);
+    setAvailableProviders([]);
+    setSelectedProvider("");
+    setHasLoadedData(false);
   }, []);
 
   const handleFechaFacturasChange = useCallback((nuevaFecha: string) => {
@@ -205,7 +303,7 @@ export const useConciliacion = () => {
           tipo: 'automatica' as const
         })));
 
-        setProviderGroupsRestantes(providerGroups.filter(pg => 
+        setProviderGroupsRestantes(allProviderGroups.filter(pg => 
           !coincidencias.some(c => pg.facturas?.includes(c.factura._id))
         ));
         setMovimientosRestantes(movimientosNoCoinciden);
@@ -227,7 +325,7 @@ export const useConciliacion = () => {
   };
 
   const handleConciliacionManual = (providerGroupId: string, movimientoId: string, comentario: string) => {
-    const providerGroup = providerGroups.find(pg => pg._id === providerGroupId);
+    const providerGroup = allProviderGroups.find(pg => pg._id === providerGroupId);
     if (!providerGroup) return;
 
     const nuevasConciliaciones: Conciliacion[] = providerGroup.facturas.map(facturaId => ({
@@ -445,8 +543,8 @@ export const useConciliacion = () => {
   };
 
   return {
-    providerGroups,
-    facturasIndividuales,
+    providerGroups: filteredProviderGroups,
+    facturasIndividuales: filteredFacturasIndividuales,
     movimientos,
     loading,
     showModal,
@@ -460,6 +558,9 @@ export const useConciliacion = () => {
     layoutType,
     fechaFacturas,
     fechaMovimientos,
+    selectedProvider,
+    availableProviders,
+    hasLoadedData,
     loadAllData,
     handleProviderGroupSelect,
     handleFacturaIndividualSelect,
@@ -468,6 +569,7 @@ export const useConciliacion = () => {
     handleLayoutTypeChange,
     handleFechaFacturasChange,
     handleFechaMovimientosChange,
+    handleProviderChange,
     handleConciliarAutomatico,
     handleConciliacionManual,
     handleConciliacionDirecta,

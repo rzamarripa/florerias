@@ -19,7 +19,11 @@ const EXCLUDED_URLS = [
   "/api/user/profile",
   "/users/login",
   "/auth/",
-  "/login"
+  "/login",
+  "/payments-by-provider/revert-layout",
+  "/__nextjs_original-stack-frames", // Next.js internal debugging
+  "/_next/", // Next.js assets
+  "/__next", // Next.js internal routes
 ];
 
 /**
@@ -156,7 +160,7 @@ XMLHttpRequest.prototype.send = function(data?: Document | XMLHttpRequestBodyIni
     
     if (!hasPermission(requiredPermission)) {
       const errorMessage = `No tienes permisos para realizar la acción "${requiredPermission}" en esta página`;
-      showPermissionError(errorMessage);
+      // showPermissionError(errorMessage); // COMENTADO - no mostrar toast
       
       // Simular respuesta 200 con success: false para manejo silencioso
       setTimeout(() => {

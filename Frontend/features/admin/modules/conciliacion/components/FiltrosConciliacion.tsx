@@ -98,7 +98,7 @@ export default function FiltrosConciliacion({
     <>
       {/* Primer renglón: 4 campos principales */}
       <Row className="mb-3">
-        <Col md={3}>
+        <Col md={4}>
           <Form.Group>
             <Form.Label>Razón Social</Form.Label>
             <Form.Select
@@ -115,7 +115,7 @@ export default function FiltrosConciliacion({
             </Form.Select>
           </Form.Group>
         </Col>
-        <Col md={3}>
+        <Col md={4}>
           <Form.Group>
             <Form.Label>Cuenta Bancaria</Form.Label>
             <Form.Select
@@ -133,7 +133,7 @@ export default function FiltrosConciliacion({
             </Form.Select>
           </Form.Group>
         </Col>
-        <Col md={3}>
+        <Col md={4}>
           <Form.Group>
             <Form.Label>Tipo de Layout</Form.Label>
             <Form.Select
@@ -148,24 +148,24 @@ export default function FiltrosConciliacion({
             </Form.Select>
           </Form.Group>
         </Col>
-        <Col md={3}>
-          <Form.Group>
-            <Form.Label>Fecha de Conciliación</Form.Label>
-            <Form.Control
-              type="date"
-              value={fechaFacturas}
-              onChange={() => {}}
-              readOnly
-              size="sm"
-            />
-          </Form.Group>
-        </Col>
       </Row>
 
       {/* Segundo renglón: Botón de cargar datos + Filtro de proveedor */}
       {!hideButtons && (
         <Row className="mb-3">
-          <Col md={6}>
+          <Col md={4}>
+            <Form.Group>
+              <Form.Label>Fecha de Conciliación</Form.Label>
+              <Form.Control
+                type="date"
+                value={fechaFacturas}
+                onChange={() => {}}
+                readOnly
+                size="sm"
+              />
+            </Form.Group>
+          </Col>
+          <Col md={4}>
             {hasLoadedData &&
             showProviderFilter &&
             availableProviders.length > 0 ? (
@@ -190,7 +190,7 @@ export default function FiltrosConciliacion({
               <div></div>
             )}
           </Col>
-          <Col md={6}>
+          <Col md={4}>
             <Form.Group>
               <Form.Label>&nbsp;</Form.Label>
               <Button
