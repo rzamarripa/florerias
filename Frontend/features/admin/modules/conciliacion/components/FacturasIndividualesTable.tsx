@@ -122,9 +122,9 @@ className={""}
                 <td>{factura.folio || '-'}</td>
                 <td>#{factura.packageFolio}</td>
                 <td>
-                  {factura.numeroReferencia ? (
+                  {factura.numeroReferencia || factura.referencia ? (
                     <small className="text-primary font-monospace">
-                      {factura.numeroReferencia}
+                      {factura.numeroReferencia || factura.referencia}
                     </small>
                   ) : (
                     <small className="text-muted">-</small>
