@@ -1,206 +1,47 @@
 import { type MenuItemType } from "@/types/layout";
 import {
-  Banknote,
-  CircleDollarSign,
-  Component,
-  Inbox,
-  LayoutDashboard,
-  PackageOpen,
   ShieldUser,
 } from "lucide-react";
 
 export const menuItems: MenuItemType[] = [
   { key: "menu", label: "Menu", isTitle: true },
   {
-    key: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    children: [
-      {
-        key: "dashboard-presupuestos",
-        label: "Dashboard Presupuestos",
-        url: "/dashboard/presupuestos",
-      },
-      {
-        key: "dashboard-conciliacion",
-        label: "Dashboard Conciliación",
-        url: "/dashboard/conciliacion",
-        parentKey: "dashboard",
-      },
-    ],
-  },
-  {
-    key: "catalogos",
-    label: "Catálogos",
-    icon: Inbox,
-    children: [
-      {
-        key: "razonesSociales",
-        label: "Razones Sociales",
-        url: "/catalogos/razones-sociales",
-      },
-      {
-        key: "marcas",
-        label: "Marcas",
-        url: "/catalogos/brand",
-      },
-      {
-        key: "unidades-de-negocio",
-        label: "Unidades de Negocio",
-        url: "/catalogos/unidades-de-negocio",
-      },
-      {
-        key: "sucursales",
-        label: "Sucursales",
-        url: "/catalogos/sucursales",
-      },
-      {
-        key: "rutas",
-        label: "Rutas",
-        url: "/catalogos/rutas",
-      },
-
-      {
-        key: "departamentos",
-        label: "Departamentos",
-        url: "/catalogos/departamentos",
-      },
-      {
-        key: "proveedores",
-        label: "Proveedores",
-        url: "/catalogos/providers",
-      },
-      {
-        key: "paises",
-        label: "Países",
-        url: "/catalogos/paises",
-      },
-      {
-        key: "estados",
-        label: "Estados",
-        url: "/catalogos/estados",
-      },
-      {
-        key: "municipios",
-        label: "Municipios",
-        url: "/catalogos/municipios",
-      },
-      {
-        key: "bancos",
-        label: "Bancos",
-        url: "/catalogos/bancos",
-      },
-      {
-        key: "categorias-de-gastos",
-        label: "Categorías de Gastos",
-        url: "/catalogos/categorias-de-gastos",
-      },
-      {
-        key: "conceptos-de-gastos",
-        label: "Conceptos de Gastos",
-        url: "/catalogos/conceptos-de-gastos",
-      },
-    ],
-  },
-  {
-    key: "paquetes",
-    label: "Paquetes",
-    icon: PackageOpen,
-    children: [
-      {
-        key: "solicitarPaquete",
-        label: "Solicitar Paquete",
-        url: "/modulos/paquetes-facturas",
-      },
-      {
-        key: "misPaquetes",
-        label: "Mis Paquetes",
-        url: "/modulos/paquetes-facturas/listado-paquetes",
-      },
-      {
-        key: "layoutsBancarios",
-        label: "Layouts Bancarios",
-        url: "/modulos/paquetes-facturas/layouts-bancarios",
-      },
-      {
-        key: "foliosAutorizacion",
-        label: "Folios de Autorización",
-        url: "/modulos/paquetes-facturas/folios-autorizacion",
-      }
-    ],
-  },
-  {
-    key: "presupuestos",
-    label: "Presupuestos",
-    icon: CircleDollarSign,
-    children: [
-      {
-        key: "asignarPresupuesto",
-        label: "Asignar Presupuesto",
-        url: "/presupuestos/asignar-presupuesto",
-      },
-      {
-        key: "presupuestosPorConceptos",
-        label: "Presupuestos Por Conceptos",
-        url: "/presupuestos/presupuestos-por-conceptos",
-      },
-    ],
-  },
-  {
-    key: "conciliacion",
-    label: "Conciliación",
-    icon: Banknote,
-    children: [
-      {
-        key: "conciliacion",
-        label: "Conciliar",
-        url: "/modulos/conciliacion",
-      },
-    ],
-  },
-  {
     key: "gestion",
-    label: "Gestión",
+    label: "GESTION",
     icon: ShieldUser,
     children: [
       { key: "roles", label: "Roles", url: "/gestion/roles" },
       { key: "pages", label: "Páginas", url: "/gestion/paginas" },
-      { key: "users", label: "Usuarios", url: "/gestion/usuarios" },
-      { key: "visibilidad", label: "Visibilidad", url: "/gestion/visibilidad" },
+      { key: "users", label: "Usuarios", url: "/gestion/usuarios" }
     ],
   },
   {
-    key: "lista-negra",
-    label: "Lista Negra",
+    key: "panel",
+    label: "PANEL DE CONTROL",
     icon: ShieldUser,
     children: [
       {
-        key: "lista-negra",
-        label: "Lista Negra",
-        url: "/lista-negra/lista-negra",
+        key: 'usuarios', 
+        label: 'USUARIOS',
+        children:[
+          { key: "clientes", label: "Clientes", url: "/panel/clientes" },
+          { key: "cajeros", label: "Cajeros", url: "/panel/cajeros" },
+          { key: "produccion", label: "Produccion", url: "/panel/produccion" },
+          { key: "reparto", label: "Reparto", url: "/panel/repartidores" },
+          { key: "gerentes", label: "Gerentes", url: "/panel/gerentes" },
+        ]
       },
       {
-        key: "importar-lista-negra",
-        label: "Importar Lista Negra",
-        url: "/lista-negra/importar-lista-negra",
+        key: 'sucursal', 
+        label: 'SUCURSAL',
+        children:[
+          { key: "nuevo_pedido", label: "NUEVO PEDIDO", url: "/sucursal/nuevo-pedido" },
+          { key: "ventas", label: "VENTAS", url: "/sucursal/ventas" },
+          { key: "produccion", label: "Produccion", url: "/sucursal/produccion" },
+          { key: "reparto", label: "Reparto", url: "/sucursal/reparto" },
+          { key: "nuevo_gasto", label: "NUEVO GASTO", url: "/sucursal/nuevo-gasto" },
+        ]
       },
-    ],
-  },
-  {
-    key: "modulos",
-    label: "Módulos",
-    icon: Component,
-    children: [
-      {
-        key: "importar-metadatos",
-        label: "Importar Metadatos",
-        url: "/modulos/importar-metadatos",
-      },
-      {
-        key: "importar-movimientos-bancario",
-        label: "Importar Movimientos Bancarios",
-        url: "/herramientas/importar-movimientos-bancarios",
-      }
     ],
   },
 ];

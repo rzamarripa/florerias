@@ -1,6 +1,5 @@
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
-import { Budget } from "../models/Budget.js";
 import {
   evaluateQuery,
   generateDirectResponse,
@@ -175,79 +174,12 @@ export const streamChatQuery = async (req, res) => {
 export const getChatContext = async (req, res) => {
   try {
     let exampleQueries = [
-      "¿Cuál es el presupuesto total de este mes?",
-      "¿Qué empresa tiene mayor presupuesto asignado?",
-      "Muéstrame los presupuestos por categoría",
-      "¿Cuánto se ha asignado en total este año?",
-      "¿Qué sucursal tiene menor presupuesto?"
+      "¿Cómo gestionar roles de usuario?",
+      "¿Qué páginas están disponibles en el sistema?",
+      "¿Cómo asignar permisos a usuarios?",
+      "¿Qué usuarios tienen acceso administrativo?",
+      "¿Cómo configurar la visibilidad de módulos?"
     ];
-
-    try {
-      const availableData = await Budget.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalBudgets: { $sum: 1 },
-            monthsAvailable: { $addToSet: "$month" },
-            totalAmount: { $sum: "$assignedAmount" }
-          }
-        }
-      ]);
-
-      const contextInfo = availableData[0];
-      if (contextInfo && contextInfo.totalBudgets > 0) {
-        const aiPrompt = `Genera 5 preguntas ejemplo prácticas para un sistema de gestión empresarial CAPREPA.
-
-          Datos disponibles:
-          - ${contextInfo.totalBudgets} presupuestos registrados
-          - Meses: ${contextInfo.monthsAvailable.join(', ')}
-          - Total: $${contextInfo.totalAmount.toLocaleString()}
-
-          Genera preguntas útiles para:
-          - Contadores
-          - Gerentes 
-          - Administradores
-          - Personal de finanzas
-
-          Requisitos:
-          1. Preguntas en ESPAÑOL
-          2. Enfoque en análisis financiero y presupuestario
-          3. Usar meses reales: ${contextInfo.monthsAvailable.slice(0, 3).join(', ')}
-          4. Prácticas para toma de decisiones empresariales
-          5. Sin términos técnicos de bases de datos
-
-          Devuelve JSON array de strings.`;
-
-        const exampleResult = await streamText({
-          model: openai('gpt-4o-mini'),
-          messages: [
-            { role: "system", content: "Eres un experto en finanzas empresariales que genera preguntas útiles para usuarios de sistemas de gestión. Responde en español con JSON válido." },
-            { role: "user", content: aiPrompt }
-          ],
-          temperature: 0.7,
-          maxTokens: 400,
-          maxSteps: 1
-        });
-
-        const chunks = [];
-        for await (const chunk of exampleResult.textStream) {
-          chunks.push(chunk);
-        }
-        const aiResponse = chunks.join('').trim();
-        if (aiResponse) {
-          try {
-            const parsedExamples = JSON.parse(aiResponse);
-            if (Array.isArray(parsedExamples) && parsedExamples.length > 0) {
-              exampleQueries = parsedExamples;
-            }
-          } catch (parseError) {
-            console.warn('Failed to parse AI examples, using defaults');
-          }
-        }
-      }
-    } catch (dataError) {
-      console.warn('Failed to get data for examples, using defaults:', dataError.message);
-    }
 
     const context = {
       exampleQueries

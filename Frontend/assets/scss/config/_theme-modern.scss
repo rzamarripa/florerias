@@ -92,13 +92,13 @@ $theme-modern-colors: (
 
         // Gradient Menu
         &[data-menu-color="gradient"] {
-            --#{$prefix}sidenav-bg:                       #{linear-gradient(135deg, #1a455f, #262549)};
+            --#{$prefix}sidenav-bg:                       #{linear-gradient(180deg, #7d4aa7 0%, #5a2a86 45%, #3a0d5f 100%)};
             --#{$prefix}sidenav-border-color:             null;
-            --#{$prefix}sidenav-item-color:             #799cb7;
-            --#{$prefix}sidenav-item-hover-color:       #bccee4;
-            --#{$prefix}sidenav-item-hover-bg:          #2f3742;
-            --#{$prefix}sidenav-item-active-color:      #cfdff1;
-            --#{$prefix}sidenav-item-active-bg:         #294461;
+            --#{$prefix}sidenav-item-color:             #cbb3db;
+            --#{$prefix}sidenav-item-hover-color:       #ffffff;
+            --#{$prefix}sidenav-item-hover-bg:          rgba(255, 255, 255, 0.08);
+            --#{$prefix}sidenav-item-active-color:      #ffffff;
+            --#{$prefix}sidenav-item-active-bg:         rgba(255, 255, 255, 0.12);
         }
 
         // Image Menu

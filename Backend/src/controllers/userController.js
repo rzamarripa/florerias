@@ -1,8 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Role } from "../models/Roles.js";
 import { User } from "../models/User.js";
-import { RsUserProvider } from "../models/UserProviders.js";
-import { Department } from "../models/Department.js";
 
 export const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -23,17 +21,11 @@ export const registerUser = async (req, res) => {
     const { username, email, phone, password, departmentId, profile, role } =
       userData;
 
-    // Validar departamento
+    // Validación de departamento simplificada (modelo eliminado)
     if (!departmentId) {
       return res
         .status(400)
         .json({ success: false, message: "El departamento es requerido" });
-    }
-    const departmentDoc = await Department.findById(departmentId);
-    if (!departmentDoc) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Departamento no encontrado" });
     }
 
     const userExists = await User.findOne({
@@ -298,16 +290,9 @@ export const updateUser = async (req, res) => {
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
 
-    // Validar departamento
+    // Validar departamento (simplificado)
     if (departmentId) {
-      const departmentDoc = await Department.findById(departmentId);
-      if (!departmentDoc) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Departamento no encontrado" });
-      }
-      updateData.departmentId = departmentDoc._id;
-      updateData.department = departmentDoc.name;
+      updateData.departmentId = departmentId;
     }
 
     if (profile) {
@@ -564,10 +549,9 @@ export const getUserProviders = async (req, res) => {
       });
     }
 
-    const total = await RsUserProvider.countDocuments({ userId });
-    const userProviders = await RsUserProvider.getProvidersByUser(userId)
-      .skip(skip)
-      .limit(limit);
+    // Proveedores simplificados (modelo eliminado)
+    const total = 0;
+    const userProviders = [];
 
     res.status(200).json({
       success: true,
@@ -600,22 +584,11 @@ export const assignProviders = async (req, res) => {
       });
     }
 
-    await RsUserProvider.deleteMany({ userId });
-
-    const relations = await Promise.all(
-      providerIds.map((providerId) =>
-        RsUserProvider.createRelation(userId, providerId)
-      )
-    );
-
-    const populatedRelations = await RsUserProvider.find({
-      _id: { $in: relations.map((r) => r._id) },
-    }).populate("providerId");
-
+    // Proveedores simplificados (modelo eliminado)
     res.status(200).json({
       success: true,
       message: "Providers assigned successfully",
-      data: populatedRelations,
+      data: [],
     });
   } catch (error) {
     res.status(500).json({
@@ -637,7 +610,7 @@ export const removeProvider = async (req, res) => {
       });
     }
 
-    await RsUserProvider.removeRelation(userId, providerId);
+    // Proveedores simplificados (modelo eliminado)
 
     res.status(200).json({
       success: true,

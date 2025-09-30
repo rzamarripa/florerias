@@ -1,8 +1,5 @@
 "use client";
 
-import logoDark from "@/assets/images/logo-black.png";
-import logoSm from "@/assets/images/logo-sm.png";
-import logo from "@/assets/images/logo.png";
 import { useLayoutContext } from "@/context/useLayoutContext";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,6 +7,7 @@ import { TbMenu4, TbX } from "react-icons/tb";
 import SimpleBar from "simplebar-react";
 import AppMenu from "./components/AppMenu";
 import UserProfile from "./components/UserProfile";
+import logoFile from "@/assets/images/corazon.png";
 
 const Sidenav = () => {
   const { sidenav, hideBackdrop, changeSideNavSize } = useLayoutContext();
@@ -31,28 +29,46 @@ const Sidenav = () => {
       <Link href="/" className="logo">
         <span className="logo logo-light">
           <span className="logo-lg">
-            <Image src={logo.src} alt="logo" width={93} height={26} />
+            <Image
+              src={logoFile}
+              alt="logo"
+              width={240}
+              height={72}
+              className="d-block mx-auto"
+              style={{ width: "50%", height: "auto", objectFit: "contain" }}
+            />
           </span>
           <span className="logo-sm">
             <Image
-              src={logoSm.src}
+              src={logoFile}
               alt="small logo"
-              width={30.55}
-              height={26}
+              width={120}
+              height={60}
+              className="d-block mx-auto"
+              style={{ width: "50%", height: "auto", objectFit: "contain" }}
             />
           </span>
         </span>
 
         <span className="logo logo-dark">
           <span className="logo-lg">
-            <Image src={logoDark.src} alt="dark logo" width={93} height={26} />
+            <Image
+              src={logoFile}
+              alt="dark logo"
+              width={240}
+              height={72}
+              className="d-block mx-auto"
+              style={{ width: "50%", height: "auto", objectFit: "contain" }}
+            />
           </span>
           <span className="logo-sm">
             <Image
-              src={logoSm.src}
+              src={logoFile}
               alt="small logo"
-              width={30.55}
-              height={26}
+              width={120}
+              height={60}
+              className="d-block mx-auto"
+              style={{ width: "50%", height: "auto", objectFit: "contain" }}
             />
           </span>
         </span>

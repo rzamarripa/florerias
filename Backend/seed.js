@@ -4,8 +4,7 @@ import { Role } from "./src/models/Roles.js";
 import { User } from "./src/models/User.js";
 import { Module } from "./src/models/Module.js";
 import { Page } from "./src/models/Page.js";
-import { ExpenseConceptCategory } from "./src/models/ExpenseConceptCategory.js";
-import { ExpenseConcept } from "./src/models/ExpenseConcept.js";
+import { Client } from "./src/models/Client.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -173,81 +172,50 @@ const createSeedData = async () => {
       console.log(`User created: ${user.username} (${user.profile.fullName})`);
     }
 
-    // Create expense concept categories
-    console.log("\nCreating expense concept categories...");
-    const expenseCategories = [
+
+    // Create clients
+    console.log("\nCreating clients...");
+    const clientsData = [
       {
-        name: "Servicios Públicos",
-        isActive: true
+        name: "Roberto",
+        lastName: "Fernández García",
+        phoneNumber: "555-1001",
+        points: 150,
+        status: true
       },
       {
-        name: "Mantenimiento",
-        isActive: true
+        name: "Isabella",
+        lastName: "Morales Ruiz",
+        phoneNumber: "555-1002", 
+        points: 320,
+        status: true
       },
       {
-        name: "Equipamiento",
-        isActive: true
+        name: "Diego",
+        lastName: "Vargas Mendoza",
+        phoneNumber: "555-1003",
+        points: 85,
+        status: true
       },
       {
-        name: "Materiales de Oficina",
-        isActive: true
+        name: "Valentina",
+        lastName: "Restrepo Silva",
+        phoneNumber: "555-1004",
+        points: 500,
+        status: false
       },
       {
-        name: "Servicios Profesionales",
-        isActive: true
+        name: "Sebastián",
+        lastName: "Herrera Castillo",
+        phoneNumber: "555-1005",
+        points: 275,
+        status: true
       }
     ];
 
-    const createdCategories = [];
-    for (const categoryData of expenseCategories) {
-      const category = await ExpenseConceptCategory.create(categoryData);
-      createdCategories.push(category);
-      console.log(`Expense category created: ${category.name}`);
-    }
-
-    // Create expense concepts
-    console.log("\nCreating expense concepts...");
-    const expenseConcepts = [
-      {
-        categoryId: createdCategories[0]._id, // Servicios Públicos
-        departmentId: department._id,
-        name: "Electricidad",
-        description: "Consumo de energía eléctrica mensual",
-        isActive: true
-      },
-      {
-        categoryId: createdCategories[0]._id, // Servicios Públicos
-        departmentId: department._id,
-        name: "Agua",
-        description: "Consumo de agua potable mensual",
-        isActive: true
-      },
-      {
-        categoryId: createdCategories[1]._id, // Mantenimiento
-        departmentId: department._id,
-        name: "Limpieza",
-        description: "Servicios de limpieza y aseo",
-        isActive: true
-      },
-      {
-        categoryId: createdCategories[2]._id, // Equipamiento
-        departmentId: department._id,
-        name: "Computadoras",
-        description: "Equipos de cómputo y tecnología",
-        isActive: true
-      },
-      {
-        categoryId: createdCategories[3]._id, // Materiales de Oficina
-        departmentId: department._id,
-        name: "Papelería",
-        description: "Materiales de escritura y papelería",
-        isActive: true
-      }
-    ];
-
-    for (const conceptData of expenseConcepts) {
-      const concept = await ExpenseConcept.create(conceptData);
-      console.log(`Expense concept created: ${concept.name} (${concept.description})`);
+    for (const clientData of clientsData) {
+      const client = await Client.create(clientData);
+      console.log(`Client created: ${client.name} ${client.lastName} - ${client.clientNumber} (${client.points} points)`);
     }
 
     console.log("\n=== SEED COMPLETED SUCCESSFULLY ===");
@@ -257,8 +225,7 @@ const createSeedData = async () => {
     console.log(`- 4 Modules for user management`);
     console.log(`- 2 Roles: ${adminRole.name}, ${userRole.name}`);
     console.log(`- 5 Users (1 admin, 4 regular users)`);
-    console.log(`- 5 Expense Concept Categories`);
-    console.log(`- 5 Expense Concepts`);
+    console.log(`- 5 Clients with sample data`);
     console.log("\nAdmin user credentials:");
     console.log(`Username: admin`);
     console.log(`Password: Admin123!`);

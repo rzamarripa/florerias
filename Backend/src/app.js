@@ -7,6 +7,7 @@ import morgan from "morgan";
 import connectDB from "./config/db.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
+import "./models/index.js"; // Import all models
 
 import router from "./routes/index.js";
 

@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
 import { openai } from '@ai-sdk/openai';
 import { generateObject, streamText } from 'ai';
-import { Budget } from "../models/Budget.js";
-import { Company } from "../models/Company.js";
-import { Branch } from "../models/Branch.js";
-import { Brand } from "../models/Brand.js";
-import { RsCompanyBrand } from "../models/CompanyBrands.js";
+import { User } from "../models/User.js";
+import { Role } from "../models/Roles.js";
+import { Page } from "../models/Page.js";
+import { RoleVisibility } from "../models/RoleVisibility.js";
+import { Module } from "../models/Module.js";
 import {
   EVALUATION_PROMPT,
   GENERAL_ASSISTANT_PROMPT,
@@ -28,17 +28,11 @@ const getModel = (name) => {
 };
 
 const collectionMap = {
-  'cc_budget': Budget,
-  'cc_companies': Company,
-  'cc_branch': Branch,
-  'cc_brand': Brand,
-  'rs_company_brand': RsCompanyBrand,
-  'cc_category': getModel('cc_category'),
-  'cc_route': getModel('cc_route'),
-  'rs_branch_brand': getModel('rs_branch_brand'),
-  'cc_country': getModel('cc_country'),
-  'cc_state': getModel('cc_state'),
-  'cc_municipality': getModel('cc_municipality')
+  'cc_users': User,
+  'cc_roles': Role,
+  'cc_pages': Page,
+  'cc_role_visibility': RoleVisibility,
+  'cc_modules': Module
 };
 
 function validateReadOnlyQuery(queryStr) {
@@ -67,7 +61,7 @@ async function executeMongoQuery(queryStr) {
   try {
     validateReadOnlyQuery(queryStr);
     
-    let targetCollection = Budget;
+    let targetCollection = User;
     let cleanQuery = queryStr;
     
     for (const [collectionName, model] of Object.entries(collectionMap)) {
@@ -94,8 +88,7 @@ async function executeMongoQuery(queryStr) {
         if (populateStr) {
           const populateFields = populateStr.replace(/['"]/g, '').split(',').map(f => f.trim());
           populateFields.forEach(field => {
-            const commonFields = ['routeId', 'brandId', 'companyId', 'branchId', 'categoryId', 
-                                'countryId', 'stateId', 'municipalityId'];
+            const commonFields = ['roleId', 'pageId', 'moduleId', 'userId'];
             if (commonFields.includes(field)) {
               query = query.populate(field);
             }
