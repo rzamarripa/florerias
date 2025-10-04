@@ -34,6 +34,13 @@ const clientSchema = new Schema(
       required: true,
       trim: true
     },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: "",
+      match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Por favor ingresa un correo válido']
+    },
     points: {
       type: Number,
       required: true,

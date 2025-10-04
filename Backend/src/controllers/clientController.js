@@ -64,7 +64,7 @@ export const getAllClients = async (req, res) => {
 
 export const createClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, points, status } = req.body;
+    const { name, lastName, phoneNumber, email, points, status } = req.body;
 
     // Validaciones básicas
     if (!name || !lastName || !phoneNumber) {
@@ -87,6 +87,7 @@ export const createClient = async (req, res) => {
       name,
       lastName,
       phoneNumber,
+      email: email || "",
       points: points || 0,
       status: status !== undefined ? status : true,
     };
@@ -104,6 +105,7 @@ export const createClient = async (req, res) => {
           fullName: client.getFullName(),
           clientNumber: client.clientNumber,
           phoneNumber: client.phoneNumber,
+          email: client.email,
           points: client.points,
           status: client.status,
           purchases: client.purchases,
@@ -150,12 +152,13 @@ export const getClientById = async (req, res) => {
 
 export const updateClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, points, status } = req.body;
+    const { name, lastName, phoneNumber, email, points, status } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
     if (lastName) updateData.lastName = lastName;
     if (phoneNumber) updateData.phoneNumber = phoneNumber;
+    if (email !== undefined) updateData.email = email;
     if (points !== undefined) updateData.points = points;
     if (status !== undefined) updateData.status = status;
 

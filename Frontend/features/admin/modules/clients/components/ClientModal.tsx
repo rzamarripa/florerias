@@ -22,6 +22,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
     name: "",
     lastName: "",
     phoneNumber: "",
+    email: "",
     points: 0,
     status: true,
   });
@@ -34,6 +35,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         name: client.name,
         lastName: client.lastName,
         phoneNumber: client.phoneNumber,
+        email: client.email || "",
         points: client.points,
         status: client.status,
       });
@@ -42,6 +44,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         name: "",
         lastName: "",
         phoneNumber: "",
+        email: "",
         points: 0,
         status: true,
       });
@@ -161,6 +164,24 @@ const ClientModal: React.FC<ClientModalProps> = ({
               </Form.Group>
             </Col>
 
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Correo Electrónico</Form.Label>
+                <Form.Control
+                  type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={formData.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  isInvalid={!!errors.email}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {errors.email}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Puntos Iniciales</Form.Label>

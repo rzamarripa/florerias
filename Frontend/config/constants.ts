@@ -44,4 +44,12 @@ export const menuItems: MenuItemType[] = [
       },
     ],
   },
+  {
+    key: "catalogos",
+    label: "CATÁLOGOS",
+    icon: ShieldUser,
+    children: [
+      { key: "productos", label: "Productos", url: "/catalogos/productos" },
+    ],
+  },
 ];

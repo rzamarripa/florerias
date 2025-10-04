@@ -11,6 +11,10 @@ import userRoutes from "./userRoutes.js";
 import fixIndexesRoutes from "./fixIndexesRoutes.js";
 import cashierRoutes from "./cashierRoutes.js";
 import productionRoutes from "./productionRoutes.js";
+import dealerRoutes from "./dealerRoutes.js";
+import managerRoutes from "./managerRoutes.js";
+import productRoutes from "./productRoutes.js";
+import orderRoutes from "./orderRoutes.js";
 
 const router = Router();
 
@@ -25,5 +29,9 @@ router.use("/role-visibility", roleVisibilityRoutes);
 router.use("/fix", fixIndexesRoutes);
 router.use("/cashiers", cashierRoutes);
 router.use("/production", productionRoutes);
+router.use("/delivery", dealerRoutes);
+router.use("/managers", managerRoutes);
+router.use("/products", productRoutes);
+router.use("/orders", orderRoutes);
 
 export default router;

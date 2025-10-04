@@ -242,6 +242,7 @@ const ClientsPage: React.FC = () => {
                   <th>Cliente</th>
                   <th>Número de Cliente</th>
                   <th>Teléfono</th>
+                  <th>Correo</th>
                   <th>Puntos</th>
                   <th>Estado</th>
                   <th>Fecha de Registro</th>
@@ -251,7 +252,7 @@ const ClientsPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-4">
+                    <td colSpan={9} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
                         <div
                           className="spinner-border text-primary mb-2"
@@ -267,7 +268,7 @@ const ClientsPage: React.FC = () => {
                   </tr>
                 ) : clients.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-4">
+                    <td colSpan={9} className="text-center py-4">
                       <div className="text-muted">
                         <Users size={48} className="mb-3 opacity-50" />
                         <div>No se encontraron clientes</div>
@@ -308,6 +309,11 @@ const ClientsPage: React.FC = () => {
                         </span>
                       </td>
                       <td>{client.phoneNumber}</td>
+                      <td>
+                        <div className="text-truncate" style={{ maxWidth: "200px" }}>
+                          {client.email || <span className="text-muted">-</span>}
+                        </div>
+                      </td>
                       <td>
                         <span className="badge bg-info bg-opacity-10 text-info">
                           {client.points} pts

@@ -13,6 +13,7 @@ export interface Client {
   fullName: string;
   clientNumber: string;
   phoneNumber: string;
+  email: string;
   points: number;
   status: boolean;
   purchases: string[];
@@ -25,6 +26,7 @@ export interface CreateClientData {
   name: string;
   lastName: string;
   phoneNumber: string;
+  email?: string;
   points?: number;
   status?: boolean;
 }
@@ -33,6 +35,7 @@ export interface UpdateClientData {
   name?: string;
   lastName?: string;
   phoneNumber?: string;
+  email?: string;
   points?: number;
   status?: boolean;
 }

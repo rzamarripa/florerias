@@ -254,7 +254,6 @@ const ManagersPage: React.FC = () => {
               >
                 <tr>
                   <th>#</th>
-                  <th>Foto</th>
                   <th>Nombre</th>
                   <th>Usuario</th>
                   <th>Dirección</th>
@@ -267,7 +266,7 @@ const ManagersPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-4">
+                    <td colSpan={8} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
                         <div
                           className="spinner-border text-primary mb-2"
@@ -283,7 +282,7 @@ const ManagersPage: React.FC = () => {
                   </tr>
                 ) : managers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-4">
+                    <td colSpan={8} className="text-center py-4">
                       <div className="text-muted">
                         <Users size={48} className="mb-3 opacity-50" />
                         <div>No se encontraron gerentes</div>
@@ -296,35 +295,6 @@ const ManagersPage: React.FC = () => {
                     <tr key={person._id}>
                       <td>
                         {(pagination.page - 1) * pagination.limit + index + 1}
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center justify-content-center">
-                          {person.foto ? (
-                            <img
-                              src={person.foto}
-                              alt={getFullName(person)}
-                              className="rounded-circle object-fit-cover"
-                              style={{ width: "40px", height: "40px" }}
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = "none";
-                                target.nextElementSibling!.classList.remove("d-none");
-                              }}
-                            />
-                          ) : null}
-                          <div
-                            className={`bg-primary text-white d-flex align-items-center justify-content-center fw-bold rounded-circle ${
-                              person.foto ? "d-none" : ""
-                            }`}
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              fontSize: "16px",
-                            }}
-                          >
-                            {person.nombre.charAt(0).toUpperCase()}
-                          </div>
-                        </div>
                       </td>
                       <td>
                         <div>
