@@ -5,9 +5,20 @@ export interface ClientInfo {
   email?: string;
 }
 
+export interface DeliveryData {
+  recipientName: string;
+  deliveryDateTime: string;
+  message?: string;
+  street?: string;
+  neighborhood?: string;
+  reference?: string;
+}
+
 export interface OrderItem {
   _id?: string;
-  productId: string;
+  isProduct: boolean;
+  productId?: string;
+  productName: string;
   quantity: number;
   unitPrice: number;
   amount: number;
@@ -18,11 +29,11 @@ export interface Order {
   clientInfo: ClientInfo;
   salesChannel: 'tienda' | 'whatsapp' | 'facebook';
   items: OrderItem[];
-  shippingType: 'envio' | 'tienda' | 'anonimo' | 'venta-rapida';
-  recipientName?: string;
-  deliveryDateTime?: string;
-  message?: string;
-  paymentMethod: 'efectivo' | 'deposito' | 'transferencia' | 'oxxo' | 'tarjeta-debito' | 'tarjeta-credito' | 'amex' | 'cheque' | 'inter' | 'credito';
+  shippingType: 'envio' | 'tienda';
+  anonymous: boolean;
+  quickSale: boolean;
+  deliveryData: DeliveryData;
+  paymentMethod: string; // ID del método de pago
   discount: number;
   discountType: 'porcentaje' | 'cantidad';
   subtotal: number;
@@ -42,11 +53,11 @@ export interface CreateOrderData {
   clientInfo: ClientInfo;
   salesChannel: 'tienda' | 'whatsapp' | 'facebook';
   items: OrderItem[];
-  shippingType: 'envio' | 'tienda' | 'anonimo' | 'venta-rapida';
-  recipientName?: string;
-  deliveryDateTime?: string;
-  message?: string;
-  paymentMethod: 'efectivo' | 'deposito' | 'transferencia' | 'oxxo' | 'tarjeta-debito' | 'tarjeta-credito' | 'amex' | 'cheque' | 'inter' | 'credito';
+  shippingType: 'envio' | 'tienda';
+  anonymous?: boolean;
+  quickSale?: boolean;
+  deliveryData: DeliveryData;
+  paymentMethod: string; // ID del método de pago
   discount?: number;
   discountType?: 'porcentaje' | 'cantidad';
   subtotal: number;
@@ -89,5 +100,4 @@ export interface OrderFilters {
 }
 
 export type SalesChannelType = 'tienda' | 'whatsapp' | 'facebook';
-export type ShippingType = 'envio' | 'tienda' | 'anonimo' | 'venta-rapida';
-export type PaymentMethodType = 'efectivo' | 'deposito' | 'transferencia' | 'oxxo' | 'tarjeta-debito' | 'tarjeta-credito' | 'amex' | 'cheque' | 'inter' | 'credito';
+export type ShippingType = 'envio' | 'tienda';

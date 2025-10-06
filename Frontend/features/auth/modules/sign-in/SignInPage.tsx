@@ -76,7 +76,10 @@ const SignInPage = () => {
 
         // Verificar que el token se guardó correctamente
         const storedToken = useUserSessionStore.getState().token;
-        console.debug("Token almacenado en el store:", storedToken ? "Presente" : "Ausente");
+        console.debug(
+          "Token almacenado en el store:",
+          storedToken ? "Presente" : "Ausente"
+        );
 
         router.push("/dashboard");
       } else {
@@ -106,7 +109,9 @@ const SignInPage = () => {
                   <div className="card-body">
                     <div className="auth-brand text-center mb-4">
                       <AppLogo />
-                      <h4 className="fw-bold mt-4">Bienvenido a Caprepa</h4>
+                      <h4 className="fw-bold mt-4">
+                        Bienvenido a Corazon de Violeta
+                      </h4>
                       <p className="text-muted w-lg-75 mx-auto">
                         Inicia sesión para acceder al panel de administración.
                       </p>
@@ -170,6 +175,15 @@ const SignInPage = () => {
                       <div className="d-grid">
                         <Button
                           type="submit"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "12px 24px",
+                            fontWeight: "600",
+                            boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
+                          }}
                           className="btn btn-primary fw-semibold py-2"
                           disabled={
                             isSubmitting ||
@@ -197,8 +211,8 @@ const SignInPage = () => {
                     </Form>
 
                     <p className="text-center text-muted mt-4 mb-0">
-                      © 2014 - {currentYear} Caprepa — by{" "}
-                      <span className="fw-semibold">{author}</span>
+                      © 2014 - {currentYear} Corazon de Violeta — by{" "}
+                      <span className="fw-semibold">Masoft</span>
                     </p>
                   </div>
                 </Col>

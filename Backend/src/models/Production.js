@@ -66,9 +66,7 @@ const productionSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// Índices para mejorar rendimiento
-productionSchema.index({ correo: 1 });
-productionSchema.index({ usuario: 1 });
+// Índices para mejorar rendimiento (correo y usuario ya tienen índice desde unique: true)
 productionSchema.index({ estatus: 1 });
 productionSchema.index({ nombre: 1, apellidoPaterno: 1 });
 

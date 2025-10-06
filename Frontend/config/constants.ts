@@ -50,6 +50,10 @@ export const menuItems: MenuItemType[] = [
     icon: ShieldUser,
     children: [
       { key: "productos", label: "Productos", url: "/catalogos/productos" },
+      { key: "materiales", label: "Materiales", url: "/catalogos/materiales" },
+      { key: "unidades", label: "Unidades de Medida", url: "/catalogos/unidades-medida" },
+      { key: "metodos-pago", label: "Metodos de Pago", url: "/catalogos/payment-method" },
     ],
+
   },
 ];

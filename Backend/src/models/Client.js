@@ -86,7 +86,7 @@ const clientSchema = new Schema(
   }
 );
 
-// Indexes for search optimization
+// Indexes for search optimization (clientNumber already has index from unique: true)
 clientSchema.index({ phoneNumber: 1 });
 clientSchema.index({ status: 1 });
 

@@ -70,9 +70,7 @@ const cashierSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// Índices para mejorar rendimiento
-cashierSchema.index({ correo: 1 });
-cashierSchema.index({ usuario: 1 });
+// Índices para mejorar rendimiento (correo y usuario ya tienen índice desde unique: true)
 cashierSchema.index({ estatus: 1 });
 cashierSchema.index({ nombre: 1, apellidoPaterno: 1 });
 

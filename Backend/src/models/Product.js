@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const insumoSchema = new mongoose.Schema({
+  materialId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Material',
+    required: true
+  },
   nombre: {
     type: String,
     required: true,

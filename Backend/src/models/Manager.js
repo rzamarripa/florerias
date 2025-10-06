@@ -62,9 +62,7 @@ const managerSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// Índices para mejorar rendimiento
-managerSchema.index({ correo: 1 });
-managerSchema.index({ usuario: 1 });
+// Índices para mejorar rendimiento (correo y usuario ya tienen índice desde unique: true)
 managerSchema.index({ estatus: 1 });
 managerSchema.index({ nombre: 1, apellidoPaterno: 1 });
 

@@ -48,8 +48,7 @@ const purchaseSchema = new Schema(
   }
 );
 
-// Indexes for search optimization
-purchaseSchema.index({ number: 1 });
+// Indexes for search optimization (number already has index from unique: true)
 purchaseSchema.index({ date: -1 });
 purchaseSchema.index({ processStatus: 1 });
 purchaseSchema.index({ processPayment: 1 });

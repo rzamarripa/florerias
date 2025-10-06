@@ -16,8 +16,9 @@ import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { productsService } from "./services/products";
 import { CreateProductData, Insumo, InsumoType, UnidadType } from "./types";
+import { materialsService } from "../materials/services/materials";
+import { Material } from "../materials/types";
 
-const INSUMOS_OPTIONS: InsumoType[] = ["100 rosas", "12 rosas", "50 rosas"];
 const UNIDADES_OPTIONS: UnidadType[] = ["pieza", "paquete"];
 
 const NewProductPage: React.FC = () => {
@@ -36,8 +37,9 @@ const NewProductPage: React.FC = () => {
     estatus: true,
   });
 
-  const [currentInsumo, setCurrentInsumo] = useState<Insumo>({
-    nombre: "100 rosas",
+  const [currentInsumo, setCurrentInsumo] = useState<Partial<Insumo>>({
+    materialId: "",
+    nombre: "",
     cantidad: 1,
     unidad: "pieza",
     importeCosto: 0,
@@ -51,6 +53,12 @@ const NewProductPage: React.FC = () => {
   const [editingInsumoIndex, setEditingInsumoIndex] = useState<number | null>(
     null
   );
+  const [materials, setMaterials] = useState<Material[]>([]);
+
+  // Cargar materiales activos
+  useEffect(() => {
+    loadMaterials();
+  }, []);
 
   // Cargar producto si estamos editando
   useEffect(() => {
@@ -58,6 +66,28 @@ const NewProductPage: React.FC = () => {
       loadProduct();
     }
   }, [productId]);
+
+  const loadMaterials = async () => {
+    try {
+      const response = await materialsService.getAllMaterials({ status: true, limit: 1000 });
+      setMaterials(response.data);
+
+      // Si hay materiales, establecer el primero como valor por defecto
+      if (response.data.length > 0) {
+        const firstMaterial = response.data[0];
+        setCurrentInsumo({
+          materialId: firstMaterial._id,
+          nombre: firstMaterial.name,
+          cantidad: 1,
+          unidad: firstMaterial.unit.abbreviation,
+          importeCosto: 0,
+          importeVenta: 0,
+        });
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error al cargar los materiales");
+    }
+  };
 
   const loadProduct = async () => {
     try {
@@ -108,20 +138,24 @@ const NewProductPage: React.FC = () => {
 
   // Cancelar edición de insumo
   const handleCancelEditInsumo = () => {
-    setCurrentInsumo({
-      nombre: "100 rosas",
-      cantidad: 1,
-      unidad: "pieza",
-      importeCosto: 0,
-      importeVenta: 0,
-    });
+    if (materials.length > 0) {
+      const firstMaterial = materials[0];
+      setCurrentInsumo({
+        materialId: firstMaterial._id,
+        nombre: firstMaterial.name,
+        cantidad: 1,
+        unidad: firstMaterial.unit.abbreviation,
+        importeCosto: 0,
+        importeVenta: 0,
+      });
+    }
     setEditingInsumoIndex(null);
     setError(null);
   };
 
   // Agregar o actualizar insumo
   const handleAddInsumo = () => {
-    if (!currentInsumo.nombre || currentInsumo.cantidad <= 0) {
+    if (!currentInsumo.materialId || !currentInsumo.nombre || (currentInsumo.cantidad || 0) <= 0) {
       setError("Por favor completa todos los campos del insumo");
       return;
     }
@@ -129,23 +163,27 @@ const NewProductPage: React.FC = () => {
     if (editingInsumoIndex !== null) {
       // Actualizar insumo existente
       const newInsumos = [...(formData.insumos || [])];
-      newInsumos[editingInsumoIndex] = { ...currentInsumo };
+      newInsumos[editingInsumoIndex] = currentInsumo as Insumo;
       setFormData({ ...formData, insumos: newInsumos });
       setEditingInsumoIndex(null);
     } else {
       // Agregar nuevo insumo
-      const newInsumos = [...(formData.insumos || []), { ...currentInsumo }];
+      const newInsumos = [...(formData.insumos || []), currentInsumo as Insumo];
       setFormData({ ...formData, insumos: newInsumos });
     }
 
     // Reset current insumo
-    setCurrentInsumo({
-      nombre: "100 rosas",
-      cantidad: 1,
-      unidad: "pieza",
-      importeCosto: 0,
-      importeVenta: 0,
-    });
+    if (materials.length > 0) {
+      const firstMaterial = materials[0];
+      setCurrentInsumo({
+        materialId: firstMaterial._id,
+        nombre: firstMaterial.name,
+        cantidad: 1,
+        unidad: firstMaterial.unit.abbreviation,
+        importeCosto: 0,
+        importeVenta: 0,
+      });
+    }
     setError(null);
   };
 
@@ -425,22 +463,31 @@ const NewProductPage: React.FC = () => {
             <Row className="g-3 mb-3">
               <Col md={editingInsumoIndex !== null ? 2 : 3}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold small">Insumo</Form.Label>
+                  <Form.Label className="fw-semibold small">Material</Form.Label>
                   <Form.Select
-                    value={currentInsumo.nombre}
-                    onChange={(e) =>
-                      setCurrentInsumo({
-                        ...currentInsumo,
-                        nombre: e.target.value,
-                      })
-                    }
+                    value={currentInsumo.materialId}
+                    onChange={(e) => {
+                      const selectedMaterial = materials.find(m => m._id === e.target.value);
+                      if (selectedMaterial) {
+                        setCurrentInsumo({
+                          ...currentInsumo,
+                          materialId: selectedMaterial._id,
+                          nombre: selectedMaterial.name,
+                          unidad: selectedMaterial.unit.abbreviation,
+                        });
+                      }
+                    }}
                     size="sm"
                   >
-                    {INSUMOS_OPTIONS.map((insumo) => (
-                      <option key={insumo} value={insumo}>
-                        {insumo}
-                      </option>
-                    ))}
+                    {materials.length === 0 ? (
+                      <option value="">No hay materiales disponibles</option>
+                    ) : (
+                      materials.map((material) => (
+                        <option key={material._id} value={material._id}>
+                          {material.name}
+                        </option>
+                      ))
+                    )}
                   </Form.Select>
                 </Form.Group>
               </Col>

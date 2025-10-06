@@ -1,5 +1,6 @@
 export interface Insumo {
   _id?: string;
+  materialId: string; // ID del material de la colección materials
   nombre: string;
   cantidad: number;
   unidad: string;

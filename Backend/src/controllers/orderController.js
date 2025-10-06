@@ -1,5 +1,6 @@
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
+import PaymentMethod from '../models/PaymentMethod.js';
 
 // Obtener todas las órdenes con filtros y paginación
 const getAllOrders = async (req, res) => {
@@ -39,6 +40,7 @@ const getAllOrders = async (req, res) => {
     const orders = await Order.find(filters)
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -74,7 +76,8 @@ const getOrderById = async (req, res) => {
 
     const order = await Order.findById(id)
       .populate('items.productId', 'nombre imagen')
-      .populate('clientInfo.clientId', 'name lastName phoneNumber email');
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation');
 
     if (!order) {
       return res.status(404).json({
@@ -105,9 +108,9 @@ const createOrder = async (req, res) => {
       salesChannel,
       items,
       shippingType,
-      recipientName,
-      deliveryDateTime,
-      message,
+      anonymous,
+      quickSale,
+      deliveryData,
       paymentMethod,
       discount,
       discountType,
@@ -135,14 +138,44 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Validar que los productos existan
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
+    // Validar deliveryData
+    if (!deliveryData || !deliveryData.recipientName || !deliveryData.deliveryDateTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Los datos de entrega (nombre de quien recibe y fecha/hora) son obligatorios'
+      });
+    }
+
+    // Validar que el método de pago exista
+    if (paymentMethod) {
+      const paymentMethodExists = await PaymentMethod.findById(paymentMethod);
+      if (!paymentMethodExists) {
         return res.status(404).json({
           success: false,
-          message: `Producto con ID ${item.productId} no encontrado`
+          message: 'Método de pago no encontrado'
         });
+      }
+    }
+
+    // Validar que los productos del catálogo existan
+    for (const item of items) {
+      // Solo validar si es un producto del catálogo
+      if (item.isProduct === true) {
+        const product = await Product.findById(item.productId);
+        if (!product) {
+          return res.status(404).json({
+            success: false,
+            message: `Producto con ID ${item.productId} no encontrado`
+          });
+        }
+      } else {
+        // Para productos manuales, asegurarse de que tengan nombre
+        if (!item.productName) {
+          return res.status(400).json({
+            success: false,
+            message: 'Los productos manuales deben tener un nombre'
+          });
+        }
       }
     }
 
@@ -152,10 +185,17 @@ const createOrder = async (req, res) => {
       salesChannel: salesChannel || 'tienda',
       items,
       shippingType: shippingType || 'tienda',
-      recipientName,
-      deliveryDateTime,
-      message,
-      paymentMethod: paymentMethod || 'efectivo',
+      anonymous: anonymous || false,
+      quickSale: quickSale || false,
+      deliveryData: {
+        recipientName: deliveryData.recipientName,
+        deliveryDateTime: deliveryData.deliveryDateTime,
+        message: deliveryData.message || '',
+        street: deliveryData.street || null,
+        neighborhood: deliveryData.neighborhood || null,
+        reference: deliveryData.reference || null
+      },
+      paymentMethod: paymentMethod,
       discount: discount || 0,
       discountType: discountType || 'porcentaje',
       subtotal,
@@ -172,7 +212,8 @@ const createOrder = async (req, res) => {
     // Popular la orden guardada antes de devolverla
     const populatedOrder = await Order.findById(savedOrder._id)
       .populate('items.productId', 'nombre imagen')
-      .populate('clientInfo.clientId', 'name lastName phoneNumber email');
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation');
 
     res.status(201).json({
       success: true,
@@ -213,15 +254,26 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    // Si se actualizan items, validar que los productos existan
+    // Si se actualizan items, validar según tipo de producto
     if (updateData.items && updateData.items.length > 0) {
       for (const item of updateData.items) {
-        const product = await Product.findById(item.productId);
-        if (!product) {
-          return res.status(404).json({
-            success: false,
-            message: `Producto con ID ${item.productId} no encontrado`
-          });
+        // Solo validar si es un producto del catálogo
+        if (item.isProduct === true) {
+          const product = await Product.findById(item.productId);
+          if (!product) {
+            return res.status(404).json({
+              success: false,
+              message: `Producto con ID ${item.productId} no encontrado`
+            });
+          }
+        } else {
+          // Para productos manuales, asegurarse de que tengan nombre
+          if (!item.productName) {
+            return res.status(400).json({
+              success: false,
+              message: 'Los productos manuales deben tener un nombre'
+            });
+          }
         }
       }
     }
@@ -232,7 +284,8 @@ const updateOrder = async (req, res) => {
       { new: true, runValidators: true }
     )
       .populate('items.productId', 'nombre imagen')
-      .populate('clientInfo.clientId', 'name lastName phoneNumber email');
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation');
 
     res.status(200).json({
       success: true,
@@ -285,7 +338,8 @@ const updateOrderStatus = async (req, res) => {
       { new: true, runValidators: true }
     )
       .populate('items.productId', 'nombre imagen')
-      .populate('clientInfo.clientId', 'name lastName phoneNumber email');
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation');
 
     if (!order) {
       return res.status(404).json({

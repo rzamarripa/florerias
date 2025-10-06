@@ -15,6 +15,9 @@ import dealerRoutes from "./dealerRoutes.js";
 import managerRoutes from "./managerRoutes.js";
 import productRoutes from "./productRoutes.js";
 import orderRoutes from "./orderRoutes.js";
+import materialRoutes from "./materialRoutes.js";
+import unitRoutes from "./unitRoutes.js";
+import paymentMethodRoutes from "./paymentMethodRoutes.js";
 
 const router = Router();
 
@@ -33,5 +36,8 @@ router.use("/delivery", dealerRoutes);
 router.use("/managers", managerRoutes);
 router.use("/products", productRoutes);
 router.use("/orders", orderRoutes);
+router.use("/materials", materialRoutes);
+router.use("/units", unitRoutes);
+router.use("/payment-methods", paymentMethodRoutes);
 
 export default router;

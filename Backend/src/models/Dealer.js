@@ -66,9 +66,7 @@ const dealerSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// Índices para mejorar rendimiento
-dealerSchema.index({ correo: 1 });
-dealerSchema.index({ usuario: 1 });
+// Índices para mejorar rendimiento (correo y usuario ya tienen índice desde unique: true)
 dealerSchema.index({ estatus: 1 });
 dealerSchema.index({ nombre: 1, apellidoPaterno: 1 });
 

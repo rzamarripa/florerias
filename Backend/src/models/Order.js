@@ -21,11 +21,55 @@ const clientInfoSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+const deliveryDataSchema = new mongoose.Schema({
+  recipientName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  deliveryDateTime: {
+    type: Date,
+    required: true
+  },
+  message: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  street: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  neighborhood: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  reference: {
+    type: String,
+    trim: true,
+    default: null
+  }
+}, { _id: false });
+
 const orderItemSchema = new mongoose.Schema({
+  isProduct: {
+    type: Boolean,
+    required: true,
+    default: false
+  },
   productId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
-    required: true
+    required: function() {
+      return this.isProduct === true;
+    }
+  },
+  productName: {
+    type: String,
+    required: true,
+    trim: true
   },
   quantity: {
     type: Number,
@@ -68,36 +112,25 @@ const orderSchema = new mongoose.Schema({
   shippingType: {
     type: String,
     required: true,
-    enum: ['envio', 'tienda', 'anonimo', 'venta-rapida'],
+    enum: ['envio', 'tienda'],
     default: 'tienda'
   },
-  recipientName: {
-    type: String,
-    trim: true
+  anonymous: {
+    type: Boolean,
+    default: false
   },
-  deliveryDateTime: {
-    type: Date
+  quickSale: {
+    type: Boolean,
+    default: false
   },
-  message: {
-    type: String,
-    trim: true
+  deliveryData: {
+    type: deliveryDataSchema,
+    required: true
   },
   paymentMethod: {
-    type: String,
-    required: true,
-    enum: [
-      'efectivo',
-      'deposito',
-      'transferencia',
-      'oxxo',
-      'tarjeta-debito',
-      'tarjeta-credito',
-      'amex',
-      'cheque',
-      'inter',
-      'credito'
-    ],
-    default: 'efectivo'
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PaymentMethod',
+    required: true
   },
   discount: {
     type: Number,
@@ -157,13 +190,12 @@ const orderSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// Índices para mejorar rendimiento
+// Índices para mejorar rendimiento (orderNumber ya tiene índice desde unique: true)
 orderSchema.index({ 'clientInfo.name': 1 });
 orderSchema.index({ 'clientInfo.phone': 1 });
 orderSchema.index({ salesChannel: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
-orderSchema.index({ orderNumber: 1 });
 
 // Middleware para generar número de orden antes de guardar
 orderSchema.pre('save', async function(next) {
