@@ -25,6 +25,5 @@ const paymentMethodSchema = new mongoose.Schema({
 
 // Índices para mejorar rendimiento
 paymentMethodSchema.index({ status: 1 });
-paymentMethodSchema.index({ name: 1 });
 
 export default mongoose.model('PaymentMethod', paymentMethodSchema);

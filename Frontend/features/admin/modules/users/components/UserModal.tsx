@@ -25,7 +25,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [removedExistingImage, setRemovedExistingImage] = useState<boolean>(false);
-  const [departments, setDepartments] = useState<{ _id: string; name: string }[]>([]);
 
   const isEditing = Boolean(user);
 
@@ -43,7 +42,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         fullName: "",
         estatus: true,
       },
-      department: "",
       role: "",
     },
   });
@@ -97,8 +95,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         setValue("profile.lastName", user.profile?.lastName || "");
         setValue("profile.fullName", user.profile?.fullName || "");
         setValue("profile.estatus", user.profile?.estatus ?? true);
-        setValue("department", user.department || "");
-        setValue("departmentId", user.departmentId || "");
         setValue("role", roleValue);
 
         // Configurar la imagen del usuario para edición
@@ -125,7 +121,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
             fullName: "",
             estatus: true,
           },
-          department: "",
           role: "",
         });
         setImagePreview(null);
@@ -133,14 +128,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     }
   }, [isOpen, isEditing, user, reset, setValue]);
 
-  useEffect(() => {
-    // Cargar departamentos dinámicamente
-    usersService.getAllDepartments().then((res) => {
-      if (res.success && res.data) {
-        setDepartments(res.data);
-      }
-    });
-  }, [isOpen]);
 
   // Efecto para actualizar automáticamente el fullName cuando cambien name o lastName
   useEffect(() => {
@@ -220,8 +207,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           username: data.username,
           email: data.email,
           phone: data.phone,
-          departmentId: data.departmentId,
-          department: data.department,
           profile: {
             name: data.profile.name,
             lastName: data.profile.lastName,
@@ -242,8 +227,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           email: data.email,
           phone: data.phone,
           password: data.password!,
-          departmentId: data.departmentId,
-          department: data.department,
           profile: {
             name: data.profile.name,
             lastName: data.profile.lastName,
@@ -636,38 +619,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                   />
                   <Form.Control.Feedback type="invalid">
                     {errors.role?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">Departamento:</Form.Label>
-                  <Controller
-                    name="departmentId"
-                    control={control}
-                    rules={{ required: "El departamento es requerido" }}
-                    render={({ field }) => (
-                      <Form.Select
-                        {...field}
-                        disabled={loading}
-                        isInvalid={!!errors.departmentId}
-                        onChange={e => {
-                          field.onChange(e);
-                          const dept = departments.find(d => d._id === e.target.value);
-                          setValue("department", dept ? dept.name : "");
-                        }}
-                        value={field.value || ""}
-                      >
-                        <option value="">Selecciona un departamento</option>
-                        {departments.map((dept) => (
-                          <option key={dept._id} value={dept._id}>{dept.name}</option>
-                        ))}
-                      </Form.Select>
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.departmentId?.message}
                   </Form.Control.Feedback>
                 </Form.Group>
               </Col>

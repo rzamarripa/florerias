@@ -18,15 +18,8 @@ export const registerUser = async (req, res) => {
       userData = req.body;
     }
 
-    const { username, email, phone, password, departmentId, profile, role } =
+    const { username, email, phone, password, profile, role } =
       userData;
-
-    // Validación de departamento simplificada (modelo eliminado)
-    if (!departmentId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "El departamento es requerido" });
-    }
 
     const userExists = await User.findOne({
       $or: [{ username }, { email }],
@@ -56,7 +49,6 @@ export const registerUser = async (req, res) => {
       email,
       phone,
       password,
-      departmentId: departmentDoc._id,
       profile: {
         name: profile?.name || "",
         lastName: profile?.lastName || "",
@@ -75,7 +67,6 @@ export const registerUser = async (req, res) => {
     }
 
     const user = await User.create(newUserData);
-    await user.populate('departmentId');
 
     res.status(201).json({
       success: true,
@@ -88,8 +79,6 @@ export const registerUser = async (req, res) => {
           phone: user.phone,
           profile: user.profile,
           role: user.role,
-          departmentId: user.departmentId?._id || user.departmentId,
-          department: user.departmentId?.name || "",
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -125,8 +114,7 @@ export const loginUser = async (req, res) => {
             select: "name path",
           },
         },
-      })
-      .populate('departmentId');
+      });
 
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({
@@ -171,11 +159,7 @@ export const loginUser = async (req, res) => {
       success: true,
       message: "Login successful",
       data: {
-        user: {
-          ...user.getPublicProfile(),
-          departmentId: user.departmentId?._id,
-          department: user.departmentId?.name,
-        },
+        user: user.getPublicProfile(),
         role: user.role?.name || null,
         allowedModules,
         token,
@@ -205,7 +189,6 @@ export const getAllUsers = async (req, res) => {
 
     const users = await User.find(filters)
       .populate("role", "name description")
-      .populate("departmentId", "name")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -222,8 +205,6 @@ export const getAllUsers = async (req, res) => {
         };
       }
 
-      userObj.department = userObj.departmentId?.name || "";
-      userObj.departmentId = userObj.departmentId?._id || userObj.departmentId;
       return userObj;
     });
 
@@ -282,18 +263,13 @@ export const updateUser = async (req, res) => {
       userData = req.body;
     }
 
-    const { username, email, phone, departmentId, profile, role } = userData;
+    const { username, email, phone, profile, role } = userData;
 
     const updateData = {};
 
     if (username) updateData.username = username;
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
-
-    // Validar departamento (simplificado)
-    if (departmentId) {
-      updateData.departmentId = departmentId;
-    }
 
     if (profile) {
       updateData.profile = {
@@ -354,8 +330,7 @@ export const updateUser = async (req, res) => {
     const user = await User.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
-    }).populate("role", "name description")
-      .populate("departmentId", "name");
+    }).populate("role", "name description");
 
     if (!user) {
       return res.status(404).json({
@@ -375,8 +350,6 @@ export const updateUser = async (req, res) => {
           phone: user.phone,
           profile: user.profile,
           role: user.role,
-          departmentId: user.departmentId?._id || user.departmentId,
-          department: user.departmentId?.name || user.department,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -534,95 +507,6 @@ export const assignRoles = async (req, res) => {
   }
 };
 
-export const getUserProviders = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Proveedores simplificados (modelo eliminado)
-    const total = 0;
-    const userProviders = [];
-
-    res.status(200).json({
-      success: true,
-      data: userProviders,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-export const assignProviders = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { providerIds } = req.body;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Proveedores simplificados (modelo eliminado)
-    res.status(200).json({
-      success: true,
-      message: "Providers assigned successfully",
-      data: [],
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-export const removeProvider = async (req, res) => {
-  try {
-    const { userId, providerId } = req.params;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Proveedores simplificados (modelo eliminado)
-
-    res.status(200).json({
-      success: true,
-      message: "Provider removed successfully",
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
 
 // Nueva función para actualizar solo la portada (profile.path)
 export const updateUserCover = async (req, res) => {

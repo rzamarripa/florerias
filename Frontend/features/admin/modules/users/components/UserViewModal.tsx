@@ -94,38 +94,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
           </div>
 
           <div className="row g-2">
-            <div className="col-6">
-              <div className="card border-0 bg-light">
-                <div className="card-body py-2">
-                  <div className="d-flex align-items-center">
-                    <div className="me-2">
-                      <div
-                        className="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
-                        style={{ width: "30px", height: "30px" }}
-                      >
-                        <span style={{ fontSize: "0.8rem" }}>🏢</span>
-                      </div>
-                    </div>
-                    <div className="flex-grow-1">
-                      <p
-                        className="text-muted mb-0"
-                        style={{ fontSize: "0.7rem", fontWeight: "500" }}
-                      >
-                        DEPARTAMENTO
-                      </p>
-                      <p
-                        className="text-dark mb-0 fw-medium"
-                        style={{ fontSize: "0.8rem" }}
-                      >
-                        {user.department || "No especificado"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-6">
+            <div className="col-12">
               <div className="card border-0 bg-light">
                 <div className="card-body py-2">
                   <div className="d-flex align-items-center">

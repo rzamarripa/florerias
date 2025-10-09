@@ -22,11 +22,6 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    departmentId: {
-      type: Schema.Types.ObjectId,
-      ref: "cc_department",
-      required: true
-    },
     profile: {
       name: {
         type: String,

@@ -5,7 +5,6 @@ import {
   Role,
   UpdateUserData,
   User,
-  UserProvider,
 } from "../types";
 
 const createFormData = (
@@ -142,56 +141,4 @@ export const usersService = {
     return response;
   },
 
-  getUserProviders: async (
-    userId: string,
-    params: { page?: number; limit?: number } = {}
-  ) => {
-    try {
-      const { page = 1, limit = 10 } = params;
-      const searchParams = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
-      const response = await apiCall<UserProvider[]>(
-        `/users/${userId}/providers?${searchParams}`
-      );
-      return response;
-    } catch (error: any) {
-      return { success: false, message: error.message, data: [] };
-    }
-  },
-
-  assignProviders: async (userId: string, providerIds: string[]) => {
-    try {
-      const response = await apiCall<UserProvider[]>(
-        `/users/${userId}/providers`,
-        {
-          method: "PUT",
-          body: JSON.stringify({ providerIds }),
-        }
-      );
-      return response;
-    } catch (error: any) {
-      return { success: false, message: error.message, data: [] };
-    }
-  },
-
-  removeProvider: async (userId: string, providerId: string) => {
-    try {
-      const response = await apiCall<void>(
-        `/users/${userId}/providers/${providerId}`,
-        {
-          method: "DELETE",
-        }
-      );
-      return response;
-    } catch (error: any) {
-      return { success: false, message: error.message, data: [] };
-    }
-  },
-
-  getAllDepartments: async () => {
-    const response = await apiCall<any>(`/departments`);
-    return response;
-  },
 };

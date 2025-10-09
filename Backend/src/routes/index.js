@@ -18,6 +18,8 @@ import orderRoutes from "./orderRoutes.js";
 import materialRoutes from "./materialRoutes.js";
 import unitRoutes from "./unitRoutes.js";
 import paymentMethodRoutes from "./paymentMethodRoutes.js";
+import companyRoutes from "./companyRoutes.js";
+import branchRoutes from "./branchRoutes.js";
 
 const router = Router();
 
@@ -39,5 +41,7 @@ router.use("/orders", orderRoutes);
 router.use("/materials", materialRoutes);
 router.use("/units", unitRoutes);
 router.use("/payment-methods", paymentMethodRoutes);
+router.use("/companies", companyRoutes);
+router.use("/branches", branchRoutes);
 
 export default router;

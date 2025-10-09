@@ -172,7 +172,6 @@ const UsersPage: React.FC = () => {
                   <th>Usuario</th>
                   <th>Email</th>
                   <th>Teléfono</th>
-                  <th>Departamento</th>
                   <th>Rol</th>
                   <th>Estado</th>
                   <th className="text-center">Acciones</th>
@@ -181,7 +180,7 @@ const UsersPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-4">
+                    <td colSpan={7} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
                         <div
                           className="spinner-border text-primary mb-2"
@@ -251,7 +250,6 @@ const UsersPage: React.FC = () => {
                       </td>
                       <td>{user.email || "-"}</td>
                       <td>{user.phone || "-"}</td>
-                      <td>{user.department}</td>
                       <td>
                         {typeof user.role === "object"
                           ? user.role.name

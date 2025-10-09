@@ -1,4 +1,3 @@
-import { PackageSearch, Store, UserCheck, UserPlus } from "lucide-react";
 import React, { useState } from "react";
 import { Spinner } from "react-bootstrap";
 import { BsCheck2 } from "react-icons/bs";
@@ -8,8 +7,6 @@ import { Role } from "../../roles/types";
 import { usersService } from "../services/users";
 import { User } from "../types";
 import UserModal from "./UserModal";
-import UserProvidersList from "./UserProvidersList";
-import UserProvidersModal from "./UserProvidersModal";
 
 interface UserActionsProps {
   user: User;
@@ -23,7 +20,6 @@ const UserActions: React.FC<UserActionsProps> = ({
   roles,
 }) => {
   const [isToggling, setIsToggling] = useState<boolean>(false);
-  const [showProvidersList, setShowProvidersList] = useState<boolean>(false);
 
   const handleToggleUser = async (id: string, currentStatus: boolean) => {
     try {
@@ -96,33 +92,6 @@ const UserActions: React.FC<UserActionsProps> = ({
           <BsCheck2 size={16} />
         )}
       </button>
-
-      <UserProvidersModal
-        user={user}
-        onProvidersSaved={onUserSaved}
-        buttonProps={{
-          variant: "light",
-          size: "sm",
-          className: "btn-icon rounded-circle",
-          title: "Asignar proveedores",
-        }}
-      >
-        <UserPlus size={16} />
-      </UserProvidersModal>
-
-      <button
-        className="btn btn-light btn-icon btn-sm rounded-circle"
-        title="Ver proveedores asignados"
-        onClick={() => setShowProvidersList(true)}
-      >
-        <UserCheck size={16} />
-      </button>
-
-      <UserProvidersList
-        user={user}
-        show={showProvidersList}
-        onClose={() => setShowProvidersList(false)}
-      />
     </div>
   );
 };

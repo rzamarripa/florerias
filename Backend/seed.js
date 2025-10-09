@@ -95,7 +95,6 @@ const createSeedData = async () => {
         email: "admin@caprepa.com",
         phone: "555-0001",
         password: "Admin123!",
-        departmentId: department._id,
         profile: {
           name: "Administrador",
           lastName: "Sistema",
@@ -110,7 +109,6 @@ const createSeedData = async () => {
         email: "juan.perez@caprepa.com",
         phone: "555-0002",
         password: "User123!",
-        departmentId: department._id,
         profile: {
           name: "Juan",
           lastName: "Pérez",
@@ -125,7 +123,6 @@ const createSeedData = async () => {
         email: "maria.garcia@caprepa.com",
         phone: "555-0003",
         password: "User123!",
-        departmentId: department._id,
         profile: {
           name: "María",
           lastName: "García",
@@ -140,7 +137,6 @@ const createSeedData = async () => {
         email: "carlos.lopez@caprepa.com",
         phone: "555-0004",
         password: "User123!",
-        departmentId: department._id,
         profile: {
           name: "Carlos",
           lastName: "López",
@@ -155,7 +151,6 @@ const createSeedData = async () => {
         email: "ana.martinez@caprepa.com",
         phone: "555-0005",
         password: "User123!",
-        departmentId: department._id,
         profile: {
           name: "Ana",
           lastName: "Martínez",

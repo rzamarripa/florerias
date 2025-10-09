@@ -12,7 +12,8 @@ export const menuItems: MenuItemType[] = [
     children: [
       { key: "roles", label: "Roles", url: "/gestion/roles" },
       { key: "pages", label: "Páginas", url: "/gestion/paginas" },
-      { key: "users", label: "Usuarios", url: "/gestion/usuarios" }
+      { key: "users", label: "Usuarios", url: "/gestion/usuarios" },
+      { key: "companies", label: "Empresas", url: "/gestion/empresas" }
     ],
   },
   {
@@ -21,7 +22,7 @@ export const menuItems: MenuItemType[] = [
     icon: ShieldUser,
     children: [
       {
-        key: 'usuarios', 
+        key: 'usuarios',
         label: 'USUARIOS',
         children:[
           { key: "clientes", label: "Clientes", url: "/panel/clientes" },
@@ -32,10 +33,11 @@ export const menuItems: MenuItemType[] = [
         ]
       },
       {
-        key: 'sucursal', 
+        key: 'sucursal',
         label: 'SUCURSAL',
         children:[
-          { key: "nuevo_pedido", label: "NUEVO PEDIDO", url: "/sucursal/nuevo-pedido" },
+          { key: "sucursales", label: "Sucursales", url: "/panel-de-control/sucursales" },
+          { key: "nuevo_pedido", label: "Nuevo Pedido", url: "/sucursal/nuevo-pedido" },
           { key: "ventas", label: "VENTAS", url: "/sucursal/ventas" },
           { key: "produccion", label: "Produccion", url: "/sucursal/produccion" },
           { key: "reparto", label: "Reparto", url: "/sucursal/reparto" },

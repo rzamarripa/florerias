@@ -18,8 +18,6 @@ export interface User {
   username: string;
   email: string;
   phone: string;
-  departmentId: string;
-  department?: string;
   profile: {
     name: string;
     lastName: string;
@@ -38,52 +36,11 @@ export interface User {
   updatedAt?: string;
 }
 
-export interface Provider {
-  _id: string;
-  commercialName: string;
-  businessName: string;
-  contactName: string;
-  countryId: {
-    _id: string;
-    name: string;
-  };
-  stateId: {
-    _id: string;
-    name: string;
-  };
-  municipalityId: {
-    _id: string;
-    name: string;
-  };
-  address: string;
-  phone: string;
-  email: string;
-  description: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UserProvider {
-  _id: string;
-  userId: string;
-  providerId: {
-    _id: string;
-    commercialName: string;
-    businessName: string;
-    contactName: string;
-    isActive: boolean;
-  };
-  createdAt: string;
-}
-
 export interface CreateUserData {
   username: string;
   email: string;
   phone: string;
   password: string;
-  departmentId: string;
-  department?: string;
   profile: {
     name: string;
     lastName: string;
@@ -98,8 +55,6 @@ export interface UpdateUserData {
   username?: string;
   email?: string;
   phone?: string;
-  departmentId?: string;
-  department?: string;
   profile?: {
     name: string;
     lastName: string;

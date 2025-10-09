@@ -9,3 +9,5 @@ import "./Roles.js";
 import "./User.js";
 import "./Cashier.js";
 import "./Production.js";
+import "./Company.js";
+import "./Branch.js";
