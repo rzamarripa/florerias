@@ -81,8 +81,8 @@ export const companiesService = {
     return response;
   },
 
-  getDistributors: async (): Promise<{ success: boolean; count: number; data: Distributor[] }> => {
-    const response = await apiCall<{ success: boolean; count: number; data: Distributor[] }>("/companies/distributors/list");
+  getAdministrators: async (): Promise<{ success: boolean; count: number; data: Distributor[] }> => {
+    const response = await apiCall<{ success: boolean; count: number; data: Distributor[] }>("/companies/administrators/list");
     return response;
   },
 

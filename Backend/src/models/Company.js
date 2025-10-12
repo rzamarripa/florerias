@@ -93,7 +93,7 @@ const companySchema = new Schema(
         ref: "cv_branch",
       },
     ],
-    distributor: {
+    administrator: {
       type: Schema.Types.ObjectId,
       ref: "cs_user",
       default: null,

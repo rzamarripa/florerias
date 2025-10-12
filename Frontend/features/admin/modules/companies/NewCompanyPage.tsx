@@ -40,8 +40,8 @@ const NewCompanyPage: React.FC = () => {
       email: "",
       phone: "",
     },
-    distributorId: "",
-    distributorData: {
+    administratorId: "",
+    administratorData: {
       username: "",
       email: "",
       phone: "",
@@ -71,10 +71,10 @@ const NewCompanyPage: React.FC = () => {
 
   const loadDistributors = async () => {
     try {
-      const response = await companiesService.getDistributors();
+      const response = await companiesService.getAdministrators();
       setDistributors(response.data || []);
     } catch (err: any) {
-      console.error("Error al cargar distribuidores:", err);
+      console.error("Error al cargar administradores:", err);
     }
   };
 
@@ -84,7 +84,7 @@ const NewCompanyPage: React.FC = () => {
       const response = await companiesService.getCompanyById(companyId);
       const company = response.data;
 
-      const distributorId = company.distributor?._id || "";
+      const administratorId = company.administrator?._id || "";
 
       setFormData({
         legalName: company.legalName,
@@ -93,15 +93,15 @@ const NewCompanyPage: React.FC = () => {
         legalForm: company.legalForm,
         fiscalAddress: company.fiscalAddress,
         primaryContact: company.primaryContact,
-        distributorId: distributorId,
-        distributorData: company.distributor ? {
-          username: company.distributor.username,
-          email: company.distributor.email,
-          phone: company.distributor.phone,
+        administratorId: administratorId,
+        administratorData: company.administrator ? {
+          username: company.administrator.username,
+          email: company.administrator.email,
+          phone: company.administrator.phone,
           password: "",
           profile: {
-            name: company.distributor.profile.name,
-            lastName: company.distributor.profile.lastName,
+            name: company.administrator.profile.name,
+            lastName: company.administrator.profile.lastName,
           },
         } : {
           username: "",
@@ -130,8 +130,8 @@ const NewCompanyPage: React.FC = () => {
       // Limpiar selección
       setFormData({
         ...formData,
-        distributorId: "",
-        distributorData: {
+        administratorId: "",
+        administratorData: {
           username: "",
           email: "",
           phone: "",
@@ -141,6 +141,11 @@ const NewCompanyPage: React.FC = () => {
             lastName: "",
           },
         },
+        primaryContact: {
+          name: "",
+          email: "",
+          phone: "",
+        },
       });
     } else {
       // Distribuidor existente seleccionado - rellenar campos
@@ -148,8 +153,8 @@ const NewCompanyPage: React.FC = () => {
       if (distributor) {
         setFormData({
           ...formData,
-          distributorId: selectedId,
-          distributorData: {
+          administratorId: selectedId,
+          administratorData: {
             username: distributor.username,
             email: distributor.email,
             phone: distributor.phone,
@@ -158,6 +163,11 @@ const NewCompanyPage: React.FC = () => {
               name: distributor.profile.name,
               lastName: distributor.profile.lastName,
             },
+          },
+          primaryContact: {
+            name: distributor.profile.fullName,
+            email: distributor.email,
+            phone: distributor.phone,
           },
         });
       }
@@ -168,8 +178,8 @@ const NewCompanyPage: React.FC = () => {
   const handleClearDistributor = () => {
     setFormData({
       ...formData,
-      distributorId: "",
-      distributorData: {
+      administratorId: "",
+      administratorData: {
         username: "",
         email: "",
         phone: "",
@@ -178,6 +188,11 @@ const NewCompanyPage: React.FC = () => {
           name: "",
           lastName: "",
         },
+      },
+      primaryContact: {
+        name: "",
+        email: "",
+        phone: "",
       },
     });
   };
@@ -202,9 +217,19 @@ const NewCompanyPage: React.FC = () => {
       return false;
     }
 
-    // Validar distribuidor
-    if (!formData.distributorId) {
-      setError("Debe seleccionar un distribuidor");
+    // Validar datos del usuario administrador
+    if (!formData.administratorData?.username ||
+        !formData.administratorData?.email ||
+        !formData.administratorData?.phone ||
+        !formData.administratorData?.profile?.name ||
+        !formData.administratorData?.profile?.lastName) {
+      setError("Por favor completa todos los campos del usuario administrador");
+      return false;
+    }
+
+    // Validar contraseña solo si se está creando un nuevo usuario (sin administratorId)
+    if (!isEditing && !formData.administratorId && !formData.administratorData?.password) {
+      setError("La contraseña es requerida para crear un nuevo usuario");
       return false;
     }
 
@@ -230,17 +255,38 @@ const NewCompanyPage: React.FC = () => {
         legalForm: formData.legalForm,
         fiscalAddress: formData.fiscalAddress,
         primaryContact: formData.primaryContact,
-        distributorId: formData.distributorId,
       };
 
-      if (isEditing) {
-        await companiesService.updateCompany(companyId, dataToSend);
-        toast.success("Empresa actualizada exitosamente");
-      } else {
-        await companiesService.createCompany(dataToSend);
-        toast.success("Empresa creada exitosamente");
+      // Si hay administratorId, enviarlo
+      if (formData.administratorId) {
+        dataToSend.administratorId = formData.administratorId;
       }
 
+      // Si no hay administratorId, enviar administratorData para crear nuevo usuario
+      if (!formData.administratorId && formData.administratorData) {
+        dataToSend.administratorData = formData.administratorData;
+      }
+
+      let response;
+
+      if (isEditing) {
+        response = await companiesService.updateCompany(companyId, dataToSend);
+      } else {
+        response = await companiesService.createCompany(dataToSend);
+      }
+
+      // Verificar si la operación fue exitosa
+      if (!response.success) {
+        // Si es error de permisos, el toast ya se mostró desde el interceptor
+        if ((response as any).permissionDenied) {
+          return;
+        }
+        // Para otros errores, mostrar mensaje
+        throw new Error(response.message || "Error al guardar la empresa");
+      }
+
+      // Solo mostrar success si realmente fue exitoso
+      toast.success(isEditing ? "Empresa actualizada exitosamente" : "Empresa creada exitosamente");
       router.push("/gestion/empresas");
     } catch (err: any) {
       setError(err.message || "Error al guardar la empresa");
@@ -483,6 +529,269 @@ const NewCompanyPage: React.FC = () => {
           </Card.Body>
         </Card>
 
+        {/* Usuario Administrador */}
+        <Card className="mb-4 border-0 shadow-sm">
+          <Card.Header className="bg-white border-0 py-3">
+            <div className="d-flex align-items-center justify-content-between">
+              <div className="d-flex align-items-center gap-2">
+                <UserPlus size={20} className="text-primary" />
+                <h5 className="mb-0 fw-bold">Usuario Administrador</h5>
+              </div>
+              {formData.administratorId && (
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={handleClearDistributor}
+                  className="d-flex align-items-center gap-1"
+                >
+                  <X size={16} />
+                  Limpiar
+                </Button>
+              )}
+            </div>
+          </Card.Header>
+          <Card.Body>
+            <Row className="g-3">
+              {/* Selector de Distribuidor */}
+              <Col md={12}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    Seleccionar Administrador (Opcional)
+                  </Form.Label>
+                  <Form.Select
+                    value={formData.administratorId || ""}
+                    onChange={handleDistributorChange}
+                    className="py-2"
+                  >
+                    <option value="">-- Seleccione un administrador existente o cree uno nuevo --</option>
+                    {distributors.map((dist) => (
+                      <option key={dist._id} value={dist._id}>
+                        {dist.profile.fullName} ({dist.email})
+                      </option>
+                    ))}
+                  </Form.Select>
+                  <Form.Text className="text-muted">
+                    {formData.administratorId
+                      ? "Administrador seleccionado. Puede editar sus datos abajo."
+                      : "Puede seleccionar un administrador existente o crear uno nuevo llenando los campos."}
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+
+              {/* Campos del Administrador - Siempre habilitados */}
+              {/* Nombre de Usuario */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Nombre de Usuario</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ingresa el nombre de usuario"
+                    value={formData.administratorData?.username || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        administratorData: formData.administratorData
+                          ? {
+                              ...formData.administratorData,
+                              username: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              {/* Email */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Email</Form.Label>
+                  <Form.Control
+                    type="email"
+                    placeholder="Ingresa el email"
+                    value={formData.administratorData?.email || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        administratorData: formData.administratorData
+                          ? {
+                              ...formData.administratorData,
+                              email: e.target.value,
+                            }
+                          : undefined,
+                        primaryContact: {
+                          ...formData.primaryContact,
+                          email: e.target.value,
+                        },
+                      })
+                    }
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              {/* Teléfono */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Teléfono</Form.Label>
+                  <Form.Control
+                    type="tel"
+                    placeholder="Ingresa el teléfono"
+                    value={formData.administratorData?.phone || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        administratorData: formData.administratorData
+                          ? {
+                              ...formData.administratorData,
+                              phone: e.target.value,
+                            }
+                          : undefined,
+                        primaryContact: {
+                          ...formData.primaryContact,
+                          phone: e.target.value,
+                        },
+                      })
+                    }
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              {/* Nombre */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Nombre</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ingresa el nombre"
+                    value={formData.administratorData?.profile.name || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        administratorData: formData.administratorData
+                          ? {
+                              ...formData.administratorData,
+                              profile: {
+                                ...formData.administratorData.profile,
+                                name: e.target.value,
+                              },
+                            }
+                          : undefined,
+                        primaryContact: {
+                          ...formData.primaryContact,
+                          name: `${e.target.value} ${formData.administratorData?.profile.lastName || ""}`.trim(),
+                        },
+                      })
+                    }
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              {/* Apellido */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Apellido</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ingresa el apellido"
+                    value={formData.administratorData?.profile.lastName || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        administratorData: formData.administratorData
+                          ? {
+                              ...formData.administratorData,
+                              profile: {
+                                ...formData.administratorData.profile,
+                                lastName: e.target.value,
+                              },
+                            }
+                          : undefined,
+                        primaryContact: {
+                          ...formData.primaryContact,
+                          name: `${formData.administratorData?.profile.name || ""} ${e.target.value}`.trim(),
+                        },
+                      })
+                    }
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              {/* Contraseña */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Contraseña</Form.Label>
+                  <Form.Control
+                    type="password"
+                    placeholder={
+                      formData.administratorId
+                        ? "●●●●●●●● (Sin cambios)"
+                        : "Ingresa la contraseña"
+                    }
+                    value={formData.administratorData?.password || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        administratorData: formData.administratorData
+                          ? {
+                              ...formData.administratorData,
+                              password: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                    className="py-2"
+                  />
+                  <Form.Text className="text-muted">
+                    {formData.administratorId
+                      ? "Dejar en blanco para mantener la contraseña actual"
+                      : "Requerida para crear nuevo usuario"}
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+
+              {/* Confirmar Contraseña */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Confirmar Contraseña</Form.Label>
+                  <Form.Control
+                    type="password"
+                    placeholder={
+                      formData.administratorId
+                        ? "●●●●●●●● (Sin cambios)"
+                        : "Confirma la contraseña"
+                    }
+                    className="py-2"
+                  />
+                  <Form.Text className="text-muted">
+                    {formData.administratorId && "Solo si desea cambiar la contraseña"}
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+
+              {/* Rol - Siempre Administrador por defecto */}
+              <Col md={12}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Rol</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value="Administrador"
+                    disabled
+                    className="py-2"
+                  />
+                  <Form.Text className="text-muted">
+                    Los usuarios de empresas siempre tienen rol Administrador
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+
         {/* Contacto Principal */}
         <Card className="mb-4 border-0 shadow-sm">
           <Card.Header className="bg-white border-0 py-3">
@@ -515,6 +824,9 @@ const NewCompanyPage: React.FC = () => {
                     required
                     className="py-2"
                   />
+                  <Form.Text className="text-muted">
+                    Se rellena automáticamente con los datos del usuario administrador
+                  </Form.Text>
                 </Form.Group>
               </Col>
 
@@ -563,191 +875,6 @@ const NewCompanyPage: React.FC = () => {
                       })
                     }
                     required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
-        </Card>
-
-        {/* Usuario Distribuidor */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center gap-2">
-                <UserPlus size={20} className="text-primary" />
-                <h5 className="mb-0 fw-bold">Usuario Distribuidor</h5>
-              </div>
-              {formData.distributorId && (
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={handleClearDistributor}
-                  className="d-flex align-items-center gap-1"
-                >
-                  <X size={16} />
-                  Limpiar
-                </Button>
-              )}
-            </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              {/* Selector de Distribuidor */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Seleccionar Distribuidor <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.distributorId || ""}
-                    onChange={handleDistributorChange}
-                    required
-                    className="py-2"
-                  >
-                    <option value="">-- Seleccione un distribuidor --</option>
-                    {distributors.map((dist) => (
-                      <option key={dist._id} value={dist._id}>
-                        {dist.profile.fullName} ({dist.email})
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    {formData.distributorId
-                      ? "Distribuidor seleccionado"
-                      : "Seleccione un distribuidor existente"}
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-
-              {/* Campos del Distribuidor - Siempre visibles y habilitados */}
-              {/* Username */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Usuario</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre de usuario"
-                    value={formData.distributorData?.username || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        distributorData: formData.distributorData
-                          ? {
-                              ...formData.distributorData,
-                              username: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    disabled
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              {/* Email */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Email</Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="email@ejemplo.com"
-                    value={formData.distributorData?.email || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        distributorData: formData.distributorData
-                          ? {
-                              ...formData.distributorData,
-                              email: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    disabled
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              {/* Teléfono */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Teléfono</Form.Label>
-                  <Form.Control
-                    type="tel"
-                    placeholder="1234567890"
-                    value={formData.distributorData?.phone || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        distributorData: formData.distributorData
-                          ? {
-                              ...formData.distributorData,
-                              phone: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    disabled
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              {/* Nombre */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Nombre</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre"
-                    value={formData.distributorData?.profile.name || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        distributorData: formData.distributorData
-                          ? {
-                              ...formData.distributorData,
-                              profile: {
-                                ...formData.distributorData.profile,
-                                name: e.target.value,
-                              },
-                            }
-                          : undefined,
-                      })
-                    }
-                    disabled
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              {/* Apellido */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Apellido</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Apellido"
-                    value={formData.distributorData?.profile.lastName || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        distributorData: formData.distributorData
-                          ? {
-                              ...formData.distributorData,
-                              profile: {
-                                ...formData.distributorData.profile,
-                                lastName: e.target.value,
-                              },
-                            }
-                          : undefined,
-                      })
-                    }
-                    disabled
                     className="py-2"
                   />
                 </Form.Group>

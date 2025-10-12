@@ -20,6 +20,7 @@ import unitRoutes from "./unitRoutes.js";
 import paymentMethodRoutes from "./paymentMethodRoutes.js";
 import companyRoutes from "./companyRoutes.js";
 import branchRoutes from "./branchRoutes.js";
+import productListRoutes from "./productListRoutes.js";
 
 const router = Router();
 
@@ -43,5 +44,6 @@ router.use("/units", unitRoutes);
 router.use("/payment-methods", paymentMethodRoutes);
 router.use("/companies", companyRoutes);
 router.use("/branches", branchRoutes);
+router.use("/product-lists", productListRoutes);
 
 export default router;

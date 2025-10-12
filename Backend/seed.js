@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { Department } from "./src/models/Department.js";
 import { Role } from "./src/models/Roles.js";
 import { User } from "./src/models/User.js";
 import { Module } from "./src/models/Module.js";
@@ -22,13 +21,6 @@ const connectDB = async () => {
 const createSeedData = async () => {
   try {
     console.log("Starting seed data creation...");
-
-    // Create a department
-    const department = await Department.create({
-      name: "Administración",
-      isActive: true
-    });
-    console.log("Department created:", department.name);
 
     // Create a page for user management
     const userManagementPage = await Page.create({
@@ -70,6 +62,15 @@ const createSeedData = async () => {
 
     console.log("Modules created for user management");
 
+    // Create Super Admin role with full permissions
+    const superAdminRole = await Role.create({
+      name: "Super Admin",
+      description: "Rol con permisos totales del sistema, puede crear distribuidores",
+      modules: [createUserModule._id, editUserModule._id, deleteUserModule._id, viewUsersModule._id],
+      estatus: true
+    });
+    console.log("Super Admin role created:", superAdminRole.name);
+
     // Create admin role with user management permissions
     const adminRole = await Role.create({
       name: "Administrador",
@@ -78,6 +79,15 @@ const createSeedData = async () => {
       estatus: true
     });
     console.log("Admin role created:", adminRole.name);
+
+    // Create Distribuidor role
+    const distributorRole = await Role.create({
+      name: "Distribuidor",
+      description: "Rol para distribuidores del sistema",
+      modules: [viewUsersModule._id],
+      estatus: true
+    });
+    console.log("Distribuidor role created:", distributorRole.name);
 
     // Create regular user role
     const userRole = await Role.create({
@@ -102,7 +112,7 @@ const createSeedData = async () => {
           path: "/admin/profile",
           estatus: true
         },
-        role: adminRole._id
+        role: superAdminRole._id
       },
       {
         username: "juan.perez",
@@ -215,13 +225,12 @@ const createSeedData = async () => {
 
     console.log("\n=== SEED COMPLETED SUCCESSFULLY ===");
     console.log("Created:");
-    console.log(`- 1 Department: ${department.name}`);
     console.log(`- 1 Page: ${userManagementPage.name}`);
     console.log(`- 4 Modules for user management`);
-    console.log(`- 2 Roles: ${adminRole.name}, ${userRole.name}`);
-    console.log(`- 5 Users (1 admin, 4 regular users)`);
+    console.log(`- 4 Roles: ${superAdminRole.name}, ${adminRole.name}, ${distributorRole.name}, ${userRole.name}`);
+    console.log(`- 5 Users (1 super admin, 4 regular users)`);
     console.log(`- 5 Clients with sample data`);
-    console.log("\nAdmin user credentials:");
+    console.log("\nSuper Admin user credentials:");
     console.log(`Username: admin`);
     console.log(`Password: Admin123!`);
     console.log(`Email: admin@caprepa.com`);

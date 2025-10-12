@@ -34,6 +34,7 @@ const NewProductPage: React.FC = () => {
     orden: 0,
     imagen: "",
     insumos: [],
+    labour: 0,
     estatus: true,
   });
 
@@ -54,6 +55,8 @@ const NewProductPage: React.FC = () => {
     null
   );
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [labourType, setLabourType] = useState<"fixed" | "percentage">("fixed");
+  const [labourPercentage, setLabourPercentage] = useState<number>(0);
 
   // Cargar materiales activos
   useEffect(() => {
@@ -76,6 +79,7 @@ const NewProductPage: React.FC = () => {
       if (response.data.length > 0) {
         const firstMaterial = response.data[0];
         setCurrentInsumo({
+          piecesPerPackage: firstMaterial.piecesPerPackage || 1,
           materialId: firstMaterial._id,
           nombre: firstMaterial.name,
           cantidad: 1,
@@ -101,12 +105,24 @@ const NewProductPage: React.FC = () => {
         orden: product.orden,
         imagen: product.imagen,
         insumos: product.insumos,
+        labour: product.labour || 0,
         estatus: product.estatus,
       });
 
       // Establecer preview de imagen si existe
       if (product.imagen) {
         setImagePreview(product.imagen);
+      }
+
+      // Detectar si labour es porcentaje o fijo
+      const totalVentaInsumos = product.insumos?.reduce((sum, insumo) => sum + insumo.importeVenta, 0) || 0;
+      if (totalVentaInsumos > 0 && product.labour > 0) {
+        const calculatedPercentage = (product.labour / totalVentaInsumos) * 100;
+        // Si el porcentaje es un número entero razonable (ej: 10%, 15%, 20%), asumimos que fue ingresado como porcentaje
+        if (calculatedPercentage % 1 === 0 && calculatedPercentage <= 100) {
+          setLabourType("percentage");
+          setLabourPercentage(calculatedPercentage);
+        }
       }
     } catch (err: any) {
       toast.error(err.message || "Error al cargar el producto");
@@ -141,6 +157,7 @@ const NewProductPage: React.FC = () => {
     if (materials.length > 0) {
       const firstMaterial = materials[0];
       setCurrentInsumo({
+          piecesPerPackage: firstMaterial.piecesPerPackage || 1,
         materialId: firstMaterial._id,
         nombre: firstMaterial.name,
         cantidad: 1,
@@ -176,6 +193,7 @@ const NewProductPage: React.FC = () => {
     if (materials.length > 0) {
       const firstMaterial = materials[0];
       setCurrentInsumo({
+          piecesPerPackage: firstMaterial.piecesPerPackage || 1,
         materialId: firstMaterial._id,
         nombre: firstMaterial.name,
         cantidad: 1,
@@ -474,6 +492,7 @@ const NewProductPage: React.FC = () => {
                           materialId: selectedMaterial._id,
                           nombre: selectedMaterial.name,
                           unidad: selectedMaterial.unit.abbreviation,
+                          piecesPerPackage: selectedMaterial.piecesPerPackage || 1,
                         });
                       }
                     }}
@@ -616,13 +635,19 @@ const NewProductPage: React.FC = () => {
                       <th>Insumo</th>
                       <th>Cantidad</th>
                       <th>Unidad</th>
+                      <th>Piezas Totales</th>
                       <th>Importe costo</th>
                       <th>Importe venta</th>
                       <th className="text-center">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {formData.insumos.map((insumo, index) => (
+                    {formData.insumos.map((insumo, index) => {
+                      const material = materials.find(m => m._id === insumo.materialId);
+                      const piecesPerPackage = material?.piecesPerPackage || 1;
+                      const totalPieces = insumo.cantidad * piecesPerPackage;
+
+                      return (
                       <tr
                         key={index}
                         className={
@@ -633,6 +658,9 @@ const NewProductPage: React.FC = () => {
                         <td>{insumo.nombre}</td>
                         <td>{insumo.cantidad}</td>
                         <td>{insumo.unidad}</td>
+                        <td className="text-info fw-semibold">
+                          {totalPieces} pzas
+                        </td>
                         <td className="text-success">
                           ${insumo.importeCosto.toFixed(2)}
                         </td>
@@ -662,11 +690,12 @@ const NewProductPage: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                   <tfoot className="table-light fw-bold">
                     <tr>
-                      <td colSpan={4} className="text-end">
+                      <td colSpan={5} className="text-end">
                         Totales:
                       </td>
                       <td className="text-success">${totalCosto.toFixed(2)}</td>
@@ -677,6 +706,106 @@ const NewProductPage: React.FC = () => {
                 </Table>
               </div>
             )}
+          </Card.Body>
+        </Card>
+
+        {/* Mano de Obra */}
+        <Card className="mb-4 border-0 shadow-sm">
+          <Card.Header className="bg-white border-0 py-3">
+            <div className="d-flex align-items-center gap-2">
+              <Package size={20} className="text-primary" />
+              <h5 className="mb-0 fw-bold">Mano de Obra</h5>
+            </div>
+          </Card.Header>
+          <Card.Body>
+            <Row className="g-3">
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Tipo de Cálculo</Form.Label>
+                  <Form.Select
+                    value={labourType}
+                    onChange={(e) => {
+                      const newType = e.target.value as "fixed" | "percentage";
+                      setLabourType(newType);
+                      // Si cambia a fijo, mantener el valor actual de labour
+                      // Si cambia a porcentaje, calcular el porcentaje basado en labour actual
+                      if (newType === "percentage" && totalVenta > 0 && formData.labour > 0) {
+                        const percentage = (formData.labour / totalVenta) * 100;
+                        setLabourPercentage(parseFloat(percentage.toFixed(2)));
+                      }
+                    }}
+                    className="py-2"
+                  >
+                    <option value="fixed">Monto Fijo</option>
+                    <option value="percentage">Porcentaje</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+
+              {labourType === "fixed" ? (
+                <Col md={8}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">Costo de Mano de Obra</Form.Label>
+                    <Form.Control
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.labour}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          labour: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="py-2"
+                    />
+                    <Form.Text className="text-muted">
+                      Ingresa el monto fijo de mano de obra
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              ) : (
+                <Col md={8}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">Porcentaje de Mano de Obra</Form.Label>
+                    <div className="d-flex gap-2 align-items-center">
+                      <Form.Control
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="0"
+                        value={labourPercentage}
+                        onChange={(e) => {
+                          const percentage = parseFloat(e.target.value) || 0;
+                          setLabourPercentage(percentage);
+                          // Calcular labour basado en el porcentaje del total de venta
+                          const calculatedLabour = (totalVenta * percentage) / 100;
+                          setFormData({
+                            ...formData,
+                            labour: parseFloat(calculatedLabour.toFixed(2)),
+                          });
+                        }}
+                        className="py-2"
+                      />
+                      <span className="fw-bold">%</span>
+                    </div>
+                    {labourPercentage > 0 ? (
+                      <div className="mt-2 p-2 bg-light rounded">
+                        <span className="fs-5 fw-bold text-primary">
+                          {labourPercentage}% de ${totalVenta.toFixed(2)} = ${formData.labour.toFixed(2)}
+                        </span>
+                      </div>
+                    ) : (
+                      <Form.Text className="text-muted">
+                        Ingresa el porcentaje sobre el total de venta de insumos
+                      </Form.Text>
+                    )}
+                  </Form.Group>
+                </Col>
+              )}
+            </Row>
           </Card.Body>
         </Card>
 

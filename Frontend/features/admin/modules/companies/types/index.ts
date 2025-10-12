@@ -15,7 +15,7 @@ export interface Company {
     email: string;
     phone: string;
   };
-  distributor?: {
+  administrator?: {
     _id: string;
     username: string;
     email: string;
@@ -26,6 +26,7 @@ export interface Company {
       fullName: string;
     };
   };
+  branches?: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -47,8 +48,8 @@ export interface CreateCompanyData {
     email: string;
     phone: string;
   };
-  distributorId?: string;
-  distributorData?: {
+  administratorId?: string;
+  administratorData?: {
     username: string;
     email: string;
     phone: string;

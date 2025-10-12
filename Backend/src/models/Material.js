@@ -22,6 +22,12 @@ const materialSchema = new mongoose.Schema({
     required: [true, 'El costo es requerido'],
     min: [0, 'El costo no puede ser negativo']
   },
+  piecesPerPackage: {
+    type: Number,
+    required: [true, 'Las piezas por paquete son requeridas'],
+    min: [1, 'Debe haber al menos 1 pieza por paquete'],
+    default: 1
+  },
   description: {
     type: String,
     trim: true,

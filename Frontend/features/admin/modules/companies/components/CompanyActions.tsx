@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { companiesService } from "../services/companies";
 import { Company } from "../types";
 import BranchesModal from "./BranchesModal";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface CompanyActionsProps {
   company: Company;
@@ -19,6 +20,7 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
   const router = useRouter();
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [showBranchesModal, setShowBranchesModal] = useState<boolean>(false);
+  const { getIsAdmin } = useUserRoleStore();
 
   const handleEdit = () => {
     router.push(`/gestion/empresas/${company._id}/editar`);
@@ -47,6 +49,11 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
   };
 
   const handleOpenBranchesModal = () => {
+    // Validar que solo administradores puedan asignar sucursales
+    if (!getIsAdmin()) {
+      toast.warning("Solo usuarios con rol Administrador o Super Admin pueden asignar sucursales");
+      return;
+    }
     setShowBranchesModal(true);
   };
 
@@ -91,25 +98,29 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
         )}
       </Button>
 
-      {/* Branches Button */}
-      <Button
-        variant="light"
-        size="sm"
-        className="rounded-circle"
-        style={{ width: "32px", height: "32px", padding: "0" }}
-        onClick={handleOpenBranchesModal}
-        title="Agregar sucursales"
-      >
-        <Building2 size={16} className="text-primary" />
-      </Button>
+      {/* Branches Button - Solo visible para Administradores */}
+      {getIsAdmin() && (
+        <Button
+          variant="light"
+          size="sm"
+          className="rounded-circle"
+          style={{ width: "32px", height: "32px", padding: "0" }}
+          onClick={handleOpenBranchesModal}
+          title="Agregar sucursales"
+        >
+          <Building2 size={16} className="text-primary" />
+        </Button>
+      )}
 
       {/* Branches Modal */}
-      <BranchesModal
-        show={showBranchesModal}
-        onHide={handleCloseBranchesModal}
-        company={company}
-        onBranchesUpdated={onCompanyUpdated}
-      />
+      {getIsAdmin() && (
+        <BranchesModal
+          show={showBranchesModal}
+          onHide={handleCloseBranchesModal}
+          company={company}
+          onBranchesUpdated={onCompanyUpdated}
+        />
+      )}
     </div>
   );
 };

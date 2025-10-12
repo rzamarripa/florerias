@@ -15,7 +15,7 @@ export const usePermissionInterceptor = () => {
    * Intercepta peticiones POST (CREATE)
    */
   const interceptCreate = async (originalFunction: () => Promise<any> | any) => {
-    // Los administradores pueden hacer todo
+    // Solo Super Admin tiene acceso total sin validaciones
     if (isAdmin()) {
       return await originalFunction();
     }
@@ -34,6 +34,7 @@ export const usePermissionInterceptor = () => {
    * Intercepta peticiones PUT/PATCH (UPDATE)
    */
   const interceptEdit = async (originalFunction: () => Promise<any> | any) => {
+    // Solo Super Admin tiene acceso total sin validaciones
     if (isAdmin()) {
       return await originalFunction();
     }
@@ -50,6 +51,7 @@ export const usePermissionInterceptor = () => {
    * Intercepta peticiones DELETE
    */
   const interceptDelete = async (originalFunction: () => Promise<any> | any) => {
+    // Solo Super Admin tiene acceso total sin validaciones
     if (isAdmin()) {
       return await originalFunction();
     }
@@ -66,6 +68,7 @@ export const usePermissionInterceptor = () => {
    * Función genérica para validar permisos antes de cualquier acción
    */
   const validatePermission = (action: 'crear' | 'editar' | 'eliminar'): boolean => {
+    // Solo Super Admin tiene acceso total
     if (isAdmin()) return true;
 
     switch (action) {

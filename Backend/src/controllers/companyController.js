@@ -13,8 +13,8 @@ export const createCompany = async (req, res) => {
       legalForm,
       fiscalAddress,
       primaryContact,
-      distributorId,
-      distributorData,
+      administratorId,
+      administratorData,
     } = req.body;
 
     // Verificar si ya existe una empresa con el mismo RFC
@@ -26,24 +26,24 @@ export const createCompany = async (req, res) => {
       });
     }
 
-    let finalDistributorId = distributorId;
+    let finalAdministratorId = administratorId;
 
-    // Si no se proporciona distributorId, crear un nuevo usuario distribuidor
-    if (!distributorId && distributorData) {
-      // Buscar el rol de Distribuidor
-      const distributorRole = await Role.findOne({ name: /^Distribuidor$/i });
-      if (!distributorRole) {
+    // Si no se proporciona administratorId, crear un nuevo usuario administrador
+    if (!administratorId && administratorData) {
+      // Buscar el rol de Administrador
+      const adminRole = await Role.findOne({ name: /^Administrador$/i });
+      if (!adminRole) {
         return res.status(400).json({
           success: false,
-          message: "No se encontró el rol de Distribuidor",
+          message: "No se encontró el rol de Administrador",
         });
       }
 
       // Verificar que no exista un usuario con el mismo username o email
       const existingUser = await User.findOne({
         $or: [
-          { username: distributorData.username },
-          { email: distributorData.email },
+          { username: administratorData.username },
+          { email: administratorData.email },
         ],
       });
 
@@ -51,47 +51,42 @@ export const createCompany = async (req, res) => {
         return res.status(400).json({
           success: false,
           message:
-            existingUser.username === distributorData.username
+            existingUser.username === administratorData.username
               ? "Ya existe un usuario con este nombre de usuario"
               : "Ya existe un usuario con este email",
         });
       }
 
-      // Crear el nuevo usuario distribuidor
-      const newDistributor = await User.create({
-        username: distributorData.username,
-        email: distributorData.email,
-        phone: distributorData.phone,
-        password: distributorData.password,
+      // Crear el nuevo usuario administrador
+      const newAdmin = await User.create({
+        username: administratorData.username,
+        email: administratorData.email,
+        phone: administratorData.phone,
+        password: administratorData.password,
         profile: {
-          name: distributorData.profile.name,
-          lastName: distributorData.profile.lastName,
-          fullName: `${distributorData.profile.name} ${distributorData.profile.lastName}`,
+          name: administratorData.profile.name,
+          lastName: administratorData.profile.lastName,
+          fullName: `${administratorData.profile.name} ${administratorData.profile.lastName}`,
           estatus: true,
         },
-        role: distributorRole._id,
+        role: adminRole._id,
       });
 
-      finalDistributorId = newDistributor._id;
-    } else if (distributorId) {
-      // Verificar que el usuario existe y tiene rol de distribuidor
-      const distributorUser = await User.findById(distributorId).populate(
-        "role"
-      );
-      if (!distributorUser) {
+      finalAdministratorId = newAdmin._id;
+    } else if (administratorId) {
+      // Verificar que el usuario existe y tiene rol de administrador
+      const adminUser = await User.findById(administratorId).populate("role");
+      if (!adminUser) {
         return res.status(404).json({
           success: false,
-          message: "Usuario distribuidor no encontrado",
+          message: "Usuario administrador no encontrado",
         });
       }
 
-      if (
-        !distributorUser.role ||
-        distributorUser.role.name !== "Distribuidor"
-      ) {
+      if (!adminUser.role || adminUser.role.name !== "Administrador") {
         return res.status(400).json({
           success: false,
-          message: "El usuario seleccionado no tiene el rol de Distribuidor",
+          message: "El usuario seleccionado no tiene el rol de Administrador",
         });
       }
     }
@@ -103,11 +98,11 @@ export const createCompany = async (req, res) => {
       legalForm,
       fiscalAddress,
       primaryContact,
-      distributor: finalDistributorId,
+      administrator: finalAdministratorId,
     });
 
     // Popular el distribuidor para la respuesta
-    await company.populate("distributor", "username email phone profile");
+    await company.populate("administrator", "username email phone profile");
 
     res.status(201).json({
       success: true,
@@ -152,7 +147,7 @@ export const getAllCompanies = async (req, res) => {
 
     const companies = await Company.find(filters)
       .populate("branches", "branchName branchCode isActive")
-      .populate("distributor", "username email profile.name profile.lastName profile.fullName")
+      .populate("administrator", "username email profile.name profile.lastName profile.fullName")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -183,7 +178,7 @@ export const getCompanyById = async (req, res) => {
   try {
     const company = await Company.findById(req.params.id)
       .populate("branches", "branchName branchCode address isActive")
-      .populate("distributor", "username email phone profile");
+      .populate("administrator", "username email phone profile");
 
     if (!company) {
       return res.status(404).json({
@@ -214,8 +209,8 @@ export const updateCompany = async (req, res) => {
       legalForm,
       fiscalAddress,
       primaryContact,
-      distributorId,
-      distributorData,
+      administratorId,
+      administratorData,
     } = req.body;
 
     // Si se está actualizando el RFC, verificar que no exista en otra empresa
@@ -242,49 +237,44 @@ export const updateCompany = async (req, res) => {
     if (primaryContact) updateData.primaryContact = primaryContact;
 
     // Manejar actualización del distribuidor
-    if (distributorId !== undefined) {
-      if (distributorId === null || distributorId === "") {
+    if (administratorId !== undefined) {
+      if (administratorId === null || administratorId === "") {
         // Si se pasa null o string vacío, remover el distribuidor
         updateData.distributor = null;
       } else {
-        // Verificar que el usuario existe y tiene rol de distribuidor
-        const distributorUser = await User.findById(distributorId).populate(
-          "role"
-        );
-        if (!distributorUser) {
+        // Verificar que el usuario existe y tiene rol de administrador
+        const adminUser = await User.findById(administratorId).populate("role");
+        if (!adminUser) {
           return res.status(404).json({
             success: false,
-            message: "Usuario distribuidor no encontrado",
+            message: "Usuario administrador no encontrado",
           });
         }
 
-        if (
-          !distributorUser.role ||
-          distributorUser.role.name !== "Distribuidor"
-        ) {
+        if (!adminUser.role || adminUser.role.name !== "Administrador") {
           return res.status(400).json({
             success: false,
             message:
-              "El usuario seleccionado no tiene el rol de Distribuidor",
+              "El usuario seleccionado no tiene el rol de Administrador",
           });
         }
 
-        updateData.distributor = distributorId;
+        updateData.distributor = administratorId;
       }
-    } else if (distributorData) {
-      // Crear nuevo distribuidor si se proporcionan datos
-      const distributorRole = await Role.findOne({ name: /^Distribuidor$/i });
-      if (!distributorRole) {
+    } else if (administratorData) {
+      // Crear nuevo administrador si se proporcionan datos
+      const adminRole = await Role.findOne({ name: /^Administrador$/i });
+      if (!adminRole) {
         return res.status(400).json({
           success: false,
-          message: "No se encontró el rol de Distribuidor",
+          message: "No se encontró el rol de Administrador",
         });
       }
 
       const existingUser = await User.findOne({
         $or: [
-          { username: distributorData.username },
-          { email: distributorData.email },
+          { username: administratorData.username },
+          { email: administratorData.email },
         ],
       });
 
@@ -292,27 +282,27 @@ export const updateCompany = async (req, res) => {
         return res.status(400).json({
           success: false,
           message:
-            existingUser.username === distributorData.username
+            existingUser.username === administratorData.username
               ? "Ya existe un usuario con este nombre de usuario"
               : "Ya existe un usuario con este email",
         });
       }
 
-      const newDistributor = await User.create({
-        username: distributorData.username,
-        email: distributorData.email,
-        phone: distributorData.phone,
-        password: distributorData.password,
+      const newAdmin = await User.create({
+        username: administratorData.username,
+        email: administratorData.email,
+        phone: administratorData.phone,
+        password: administratorData.password,
         profile: {
-          name: distributorData.profile.name,
-          lastName: distributorData.profile.lastName,
-          fullName: `${distributorData.profile.name} ${distributorData.profile.lastName}`,
+          name: administratorData.profile.name,
+          lastName: administratorData.profile.lastName,
+          fullName: `${administratorData.profile.name} ${administratorData.profile.lastName}`,
           estatus: true,
         },
-        role: distributorRole._id,
+        role: adminRole._id,
       });
 
-      updateData.distributor = newDistributor._id;
+      updateData.distributor = newAdmin._id;
     }
 
     const company = await Company.findByIdAndUpdate(
@@ -324,7 +314,7 @@ export const updateCompany = async (req, res) => {
       }
     )
       .populate("branches", "branchName branchCode isActive")
-      .populate("distributor", "username email phone profile");
+      .populate("administrator", "username email phone profile");
 
     if (!company) {
       return res.status(404).json({
@@ -362,7 +352,7 @@ export const deactivateCompany = async (req, res) => {
       { new: true }
     )
       .populate("branches", "branchName branchCode isActive")
-      .populate("distributor", "username email profile");
+      .populate("administrator", "username email profile");
 
     if (!company) {
       return res.status(404).json({
@@ -393,7 +383,7 @@ export const activateCompany = async (req, res) => {
       { new: true }
     )
       .populate("branches", "branchName branchCode isActive")
-      .populate("distributor", "username email profile");
+      .populate("administrator", "username email profile");
 
     if (!company) {
       return res.status(404).json({
@@ -452,27 +442,27 @@ export const deleteCompany = async (req, res) => {
   }
 };
 
-// Obtener usuarios con rol Distribuidor activos
-export const getDistributors = async (req, res) => {
+// Obtener usuarios con rol Administrador activos
+export const getAdministrators = async (req, res) => {
   try {
-    const distributorRole = await Role.findOne({ name: /^Distribuidor$/i });
+    const adminRole = await Role.findOne({ name: /^Administrador$/i });
 
-    if (!distributorRole) {
+    if (!adminRole) {
       return res.status(404).json({
         success: false,
-        message: "No se encontró el rol de Distribuidor",
+        message: "No se encontró el rol de Administrador",
       });
     }
 
-    const distributors = await User.find({
-      role: distributorRole._id,
+    const administrators = await User.find({
+      role: adminRole._id,
       "profile.estatus": true,
     }).select("username email phone profile");
 
     res.status(200).json({
       success: true,
-      count: distributors.length,
-      data: distributors,
+      count: administrators.length,
+      data: administrators,
     });
   } catch (error) {
     res.status(500).json({
@@ -486,6 +476,33 @@ export const getDistributors = async (req, res) => {
 export const updateCompanyBranches = async (req, res) => {
   try {
     const { branchIds } = req.body;
+
+    // Validación: Solo usuarios con rol Administrador o Super Admin pueden asignar sucursales
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    const currentUser = await User.findById(req.user._id).populate("role");
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario sin rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+    const isAdmin = userRole === "Administrador" || userRole === "Super Admin";
+
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Solo usuarios con rol Administrador o Super Admin pueden asignar sucursales a empresas",
+      });
+    }
 
     if (!branchIds || !Array.isArray(branchIds)) {
       return res.status(400).json({
@@ -523,7 +540,7 @@ export const updateCompanyBranches = async (req, res) => {
       { branches: branchIds },
       { new: true, runValidators: true }
     )
-      .populate("distributor", "username email profile")
+      .populate("administrator", "username email profile")
       .populate({
         path: "branches",
         select: "branchName branchCode address manager contactPhone contactEmail isActive",

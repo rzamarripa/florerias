@@ -31,20 +31,28 @@ export const canAccessPage = (
   allowedModules: PageModules[],
   pagePath: string
 ): boolean => {
-  const page = allowedModules.find(pageData => 
-    pageData.path === pagePath || 
-    pageData.path === `/${pagePath.replace(/^\//, '')}`
-  );
+  // Normalizar el path (asegurar que empiece con /)
+  const normalizedPath = pagePath.startsWith('/') ? pagePath : `/${pagePath}`;
+
+  const page = allowedModules.find(pageData => {
+    const normalizedPagePath = pageData.path.startsWith('/') ? pageData.path : `/${pageData.path}`;
+
+    // Comparar solo el último segmento de ambas rutas
+    const pageSegments = normalizedPagePath.split('/').filter(s => s.length > 0);
+    const searchSegments = normalizedPath.split('/').filter(s => s.length > 0);
+
+    const pageLastSegment = pageSegments.length > 0 ? pageSegments[pageSegments.length - 1] : normalizedPagePath;
+    const searchLastSegment = searchSegments.length > 0 ? searchSegments[searchSegments.length - 1] : normalizedPath;
+
+    return pageLastSegment === searchLastSegment;
+  });
 
   if (!page) {
     return false;
   }
 
-  // Verificar si tiene algún módulo básico (ver, crear, editar, eliminar)
-  const basicModules = ['ver', 'crear', 'editar', 'eliminar'];
-  return page.modules.some(module => 
-    basicModules.includes(module.name.toLowerCase())
-  );
+  // Si la página existe en allowedModules y tiene al menos un módulo, permitir acceso
+  return page.modules && page.modules.length > 0;
 };
 
 /**
@@ -67,7 +75,16 @@ export const getPagePermissions = (
 };
 
 /**
- * Verifica si el usuario es administrador (tiene rol 'Administrador')
+ * Verifica si el usuario es Super Admin (tiene acceso total al sistema)
+ */
+export const isSuperAdmin = (userRole: string | null): boolean => {
+  const role = userRole?.toLowerCase();
+  return role === 'super admin' || role === 'superadmin';
+};
+
+/**
+ * Verifica si el usuario es administrador (sin acceso total, debe validar permisos)
+ * @deprecated Use isSuperAdmin for full access checks
  */
 export const isAdministrator = (userRole: string | null): boolean => {
   return userRole?.toLowerCase() === 'administrador';

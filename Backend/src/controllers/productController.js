@@ -97,6 +97,7 @@ const createProduct = async (req, res) => {
       orden,
       imagen,
       insumos,
+      labour,
       estatus = true
     } = req.body;
 
@@ -116,6 +117,7 @@ const createProduct = async (req, res) => {
       orden: orden || 0,
       imagen: imagen || '',
       insumos: insumos || [],
+      labour: labour || 0,
       estatus
     });
 
@@ -156,6 +158,7 @@ const updateProduct = async (req, res) => {
       orden,
       imagen,
       insumos,
+      labour,
       estatus
     } = req.body;
 
@@ -176,6 +179,7 @@ const updateProduct = async (req, res) => {
     if (orden !== undefined) updateData.orden = orden;
     if (imagen !== undefined) updateData.imagen = imagen;
     if (insumos !== undefined) updateData.insumos = insumos;
+    if (labour !== undefined) updateData.labour = labour;
     if (estatus !== undefined) updateData.estatus = estatus;
 
     const updatedProduct = await Product.findByIdAndUpdate(

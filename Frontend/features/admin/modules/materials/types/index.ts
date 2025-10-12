@@ -6,6 +6,7 @@ export interface Material {
   unit: Unit;
   price: number;
   cost: number;
+  piecesPerPackage: number;
   description: string;
   status: boolean;
   createdAt: string;
@@ -17,6 +18,7 @@ export interface CreateMaterialData {
   unit: string; // ObjectId as string
   price: number;
   cost: number;
+  piecesPerPackage: number;
   description?: string;
   status?: boolean;
 }
@@ -26,6 +28,7 @@ export interface UpdateMaterialData {
   unit?: string;
   price?: number;
   cost?: number;
+  piecesPerPackage?: number;
   description?: string;
   status?: boolean;
 }

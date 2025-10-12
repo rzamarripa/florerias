@@ -7,24 +7,25 @@ import {
   deactivateCompany,
   activateCompany,
   deleteCompany,
-  getDistributors,
+  getAdministrators,
   updateCompanyBranches,
 } from "../controllers/companyController.js";
+import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Rutas públicas o protegidas según tu configuración de autenticación
-router.get("/", getAllCompanies);
-router.get("/distributors/list", getDistributors);
-router.get("/:id", getCompanyById);
+// Rutas protegidas con autenticación
+router.get("/", protect, getAllCompanies);
+router.get("/administrators/list", protect, getAdministrators);
+router.get("/:id", protect, getCompanyById);
 
-router.post("/", createCompany);
+router.post("/", protect, createCompany);
 
-router.put("/:id", updateCompany);
-router.put("/:id/activate", activateCompany);
-router.put("/:id/deactivate", deactivateCompany);
-router.put("/:id/branches", updateCompanyBranches);
+router.put("/:id", protect, updateCompany);
+router.put("/:id/activate", protect, activateCompany);
+router.put("/:id/deactivate", protect, deactivateCompany);
+router.put("/:id/branches", protect, updateCompanyBranches);
 
-router.delete("/:id", deleteCompany);
+router.delete("/:id", protect, deleteCompany);
 
 export default router;

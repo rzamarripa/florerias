@@ -160,7 +160,7 @@ const CompaniesPage: React.FC = () => {
                     <th className="px-4 py-3 fw-semibold text-muted">RAZÓN SOCIAL</th>
                     <th className="px-4 py-3 fw-semibold text-muted">RFC</th>
                     <th className="px-4 py-3 fw-semibold text-muted">NOMBRE COMERCIAL</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">DISTRIBUIDOR</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">ADMINISTRADOR</th>
                     <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
                     <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
                   </tr>
@@ -183,17 +183,17 @@ const CompaniesPage: React.FC = () => {
                         <td className="px-4 py-3">{company.rfc}</td>
                         <td className="px-4 py-3">{company.tradeName || "-"}</td>
                         <td className="px-4 py-3">
-                          {company.distributor ? (
+                          {company.administrator ? (
                             <div>
                               <div className="fw-semibold">
-                                {company.distributor.profile.fullName}
+                                {company.administrator.profile.fullName}
                               </div>
                               <small className="text-muted">
-                                {company.distributor.email}
+                                {company.administrator.email}
                               </small>
                             </div>
                           ) : (
-                            <span className="text-muted">Sin distribuidor</span>
+                            <span className="text-muted">Sin administrador</span>
                           )}
                         </td>
                         <td className="px-4 py-3">

@@ -20,6 +20,7 @@ interface BranchModalProps {
   onHide: () => void;
   branch?: Branch | null;
   onBranchSaved?: () => void;
+  userCompany?: any;
 }
 
 const BranchModal: React.FC<BranchModalProps> = ({
@@ -27,6 +28,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
   onHide,
   branch,
   onBranchSaved,
+  userCompany,
 }) => {
   const isEditing = !!branch;
 
@@ -64,7 +66,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
           branchCode: branch.branchCode || "",
           companyId: typeof branch.companyId === "string" ? branch.companyId : branch.companyId._id,
           address: branch.address,
-          manager: typeof branch.manager === "string" ? branch.manager : branch.manager._id,
+          manager: (branch.manager && typeof branch.manager !== "string") ? branch.manager._id : "",
           contactPhone: branch.contactPhone,
           contactEmail: branch.contactEmail,
         });
@@ -73,6 +75,16 @@ const BranchModal: React.FC<BranchModalProps> = ({
       }
     }
   }, [show, branch]);
+
+  // Preseleccionar la empresa del usuario cuando se monta el componente
+  useEffect(() => {
+    if (userCompany && !isEditing) {
+      setFormData(prev => ({
+        ...prev,
+        companyId: userCompany._id
+      }));
+    }
+  }, [userCompany, isEditing]);
 
   const loadCompanies = async () => {
     try {
@@ -130,11 +142,17 @@ const BranchModal: React.FC<BranchModalProps> = ({
       setSaving(true);
       setError(null);
 
+      // Preparar datos, convertir manager vacío a null
+      const dataToSend = {
+        ...formData,
+        manager: formData.manager || null,
+      };
+
       if (isEditing && branch) {
-        await branchesService.updateBranch(branch._id, formData);
+        await branchesService.updateBranch(branch._id, dataToSend);
         toast.success("Sucursal actualizada exitosamente");
       } else {
-        await branchesService.createBranch(formData);
+        await branchesService.createBranch(dataToSend);
         toast.success("Sucursal creada exitosamente");
       }
 
@@ -212,21 +230,15 @@ const BranchModal: React.FC<BranchModalProps> = ({
                   <Form.Label>
                     Empresa <span className="text-danger">*</span>
                   </Form.Label>
-                  <Form.Select
-                    value={formData.companyId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, companyId: e.target.value })
-                    }
-                    required
-                    disabled={isEditing}
-                  >
-                    <option value="">Seleccionar...</option>
-                    {companies.map((company) => (
-                      <option key={company._id} value={company._id}>
-                        {company.legalName}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  <Form.Control
+                    type="text"
+                    value={userCompany?.tradeName || userCompany?.legalName || ""}
+                    disabled
+                    readOnly
+                  />
+                  <Form.Text className="text-muted">
+                    Empresa asignada a tu usuario
+                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
@@ -368,21 +380,20 @@ const BranchModal: React.FC<BranchModalProps> = ({
             </Row>
 
             {/* Gerente */}
-            <h6 className="fw-semibold mb-3">Gerente</h6>
+            <h6 className="fw-semibold mb-3">Gerente (Opcional)</h6>
             <Row className="g-3 mb-4">
               <Col md={12}>
                 <Form.Group>
                   <Form.Label>
-                    Seleccionar Gerente <span className="text-danger">*</span>
+                    Seleccionar Gerente
                   </Form.Label>
                   <Form.Select
                     value={formData.manager}
                     onChange={(e) =>
                       setFormData({ ...formData, manager: e.target.value })
                     }
-                    required
                   >
-                    <option value="">Seleccionar gerente...</option>
+                    <option value="">Sin gerente asignado</option>
                     {managers.map((manager) => (
                       <option key={manager._id} value={manager._id}>
                         {manager.profile.fullName} - {manager.email}
@@ -390,7 +401,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     ))}
                   </Form.Select>
                   <Form.Text className="text-muted">
-                    Solo se muestran usuarios con rol Gerente
+                    Solo se muestran usuarios con rol Gerente. Este campo es opcional.
                   </Form.Text>
                 </Form.Group>
               </Col>

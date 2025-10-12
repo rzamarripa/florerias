@@ -8,6 +8,9 @@ import { branchesService } from "./services/branches";
 import { Branch } from "./types";
 import BranchActions from "./components/BranchActions";
 import BranchModal from "./components/BranchModal";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { companiesService } from "../companies/services/companies";
 
 const BranchesPage: React.FC = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -15,12 +18,36 @@ const BranchesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [userCompany, setUserCompany] = useState<any>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
     total: 0,
     pages: 0,
   });
+
+  const { getUserId } = useUserSessionStore();
+  const { getIsAdmin } = useUserRoleStore();
+  const userId = getUserId();
+  const isAdmin = getIsAdmin();
+
+  // Cargar la empresa del usuario administrador
+  const loadUserCompany = async () => {
+    try {
+      if (!userId) return;
+
+      const response = await companiesService.getAllCompanies({ limit: 1000 });
+
+      // Buscar la empresa donde el usuario es el administrador
+      const company = response.data.find(
+        (comp: any) => comp.administrator && comp.administrator._id === userId
+      );
+
+      setUserCompany(company || null);
+    } catch (error: any) {
+      console.error("Error al cargar empresa del usuario:", error);
+    }
+  };
 
   const loadBranches = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -41,6 +68,11 @@ const BranchesPage: React.FC = () => {
         filters.isActive = statusFilter === "true";
       }
 
+      // Si el usuario no es Super Admin y tiene empresa, filtrar por su empresa
+      if (!isAdmin && userCompany) {
+        filters.companyId = userCompany._id;
+      }
+
       const response = await branchesService.getAllBranches(filters);
 
       if (response.data) {
@@ -58,9 +90,17 @@ const BranchesPage: React.FC = () => {
     }
   };
 
+  // Cargar empresa del usuario al montar el componente
   useEffect(() => {
-    loadBranches(true, 1);
-  }, [searchTerm, statusFilter]);
+    loadUserCompany();
+  }, [userId]);
+
+  // Cargar sucursales cuando cambian los filtros o la empresa del usuario
+  useEffect(() => {
+    if (userCompany !== null) {
+      loadBranches(true, 1);
+    }
+  }, [searchTerm, statusFilter, userCompany]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
@@ -97,22 +137,24 @@ const BranchesPage: React.FC = () => {
           <h2 className="mb-1 fw-bold">Sucursales</h2>
           <p className="text-muted mb-0">Gestiona las sucursales del sistema</p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setShowCreateModal(true)}
-          className="d-flex align-items-center gap-2 px-4"
-          style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            border: "none",
-            borderRadius: "10px",
-            padding: "12px 24px",
-            fontWeight: "600",
-            boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
-          }}
-        >
-          <Plus size={20} />
-          Nueva Sucursal
-        </Button>
+        {isAdmin && (
+          <Button
+            variant="primary"
+            onClick={() => setShowCreateModal(true)}
+            className="d-flex align-items-center gap-2 px-4"
+            style={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              border: "none",
+              borderRadius: "10px",
+              padding: "12px 24px",
+              fontWeight: "600",
+              boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
+            }}
+          >
+            <Plus size={20} />
+            Nueva Sucursal
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -201,8 +243,8 @@ const BranchesPage: React.FC = () => {
                           {branch.address.city}, {branch.address.state}
                         </td>
                         <td className="px-4 py-3">
-                          {typeof branch.manager === "string" ? (
-                            "N/A"
+                          {!branch.manager || typeof branch.manager === "string" ? (
+                            <span className="text-muted">Sin gerente</span>
                           ) : (
                             <div>
                               <div className="fw-semibold">{branch.manager.profile.fullName}</div>
@@ -231,6 +273,7 @@ const BranchesPage: React.FC = () => {
                           <BranchActions
                             branch={branch}
                             onBranchUpdated={handleBranchUpdated}
+                            userCompany={userCompany}
                           />
                         </td>
                       </tr>
@@ -277,11 +320,14 @@ const BranchesPage: React.FC = () => {
       </div>
 
       {/* Create Modal */}
-      <BranchModal
-        show={showCreateModal}
-        onHide={() => setShowCreateModal(false)}
-        onBranchSaved={handleBranchUpdated}
-      />
+      {isAdmin && (
+        <BranchModal
+          show={showCreateModal}
+          onHide={() => setShowCreateModal(false)}
+          onBranchSaved={handleBranchUpdated}
+          userCompany={userCompany}
+        />
+      )}
     </div>
   );
 };

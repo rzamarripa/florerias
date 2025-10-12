@@ -42,6 +42,25 @@ export const registerUser = async (req, res) => {
           message: "Invalid role ID",
         });
       }
+
+      // Validación: Solo Super Admin puede crear usuarios con rol Distribuidor
+      if (roleExists.name === "Distribuidor") {
+        if (!req.user || !req.user._id) {
+          return res.status(401).json({
+            success: false,
+            message: "Usuario no autenticado",
+          });
+        }
+
+        const creatorUser = await User.findById(req.user._id).populate("role");
+
+        if (!creatorUser || !creatorUser.role || creatorUser.role.name !== "Super Admin") {
+          return res.status(403).json({
+            success: false,
+            message: "Solo usuarios con rol Super Admin pueden crear usuarios con rol Distribuidor",
+          });
+        }
+      }
     }
 
     const newUserData = {
@@ -303,6 +322,26 @@ export const updateUser = async (req, res) => {
           message: "Invalid role ID",
         });
       }
+
+      // Validación: Solo Super Admin puede asignar rol Distribuidor
+      if (roleExists.name === "Distribuidor") {
+        if (!req.user || !req.user._id) {
+          return res.status(401).json({
+            success: false,
+            message: "Usuario no autenticado",
+          });
+        }
+
+        const creatorUser = await User.findById(req.user._id).populate("role");
+
+        if (!creatorUser || !creatorUser.role || creatorUser.role.name !== "Super Admin") {
+          return res.status(403).json({
+            success: false,
+            message: "Solo usuarios con rol Super Admin pueden crear usuarios con rol Distribuidor",
+          });
+        }
+      }
+
       updateData.role = role;
     }
 

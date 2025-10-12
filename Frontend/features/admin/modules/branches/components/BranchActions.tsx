@@ -6,19 +6,24 @@ import { branchesService } from "../services/branches";
 import { Branch } from "../types";
 import BranchModal from "./BranchModal";
 import EmployeesModal from "./EmployeesModal";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface BranchActionsProps {
   branch: Branch;
   onBranchUpdated?: () => void;
+  userCompany?: any;
 }
 
 const BranchActions: React.FC<BranchActionsProps> = ({
   branch,
   onBranchUpdated,
+  userCompany,
 }) => {
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [showEmployeesModal, setShowEmployeesModal] = useState<boolean>(false);
+  const { getIsAdmin } = useUserRoleStore();
+  const isAdmin = getIsAdmin();
 
   const handleToggleStatus = async () => {
     try {
@@ -45,40 +50,44 @@ const BranchActions: React.FC<BranchActionsProps> = ({
   return (
     <>
       <div className="d-flex justify-content-center gap-2">
-        {/* Edit Button */}
-        <Button
-          variant="light"
-          size="sm"
-          className="rounded-circle"
-          style={{ width: "32px", height: "32px", padding: "0" }}
-          onClick={() => setShowEditModal(true)}
-          title="Editar sucursal"
-        >
-          <Edit2 size={16} />
-        </Button>
+        {/* Edit Button - Solo visible para Administradores */}
+        {isAdmin && (
+          <Button
+            variant="light"
+            size="sm"
+            className="rounded-circle"
+            style={{ width: "32px", height: "32px", padding: "0" }}
+            onClick={() => setShowEditModal(true)}
+            title="Editar sucursal"
+          >
+            <Edit2 size={16} />
+          </Button>
+        )}
 
-        {/* Toggle Status Button */}
-        <Button
-          variant={branch.isActive ? "light" : "light"}
-          size="sm"
-          className="rounded-circle"
-          style={{ width: "32px", height: "32px", padding: "0" }}
-          onClick={handleToggleStatus}
-          disabled={isToggling}
-          title={branch.isActive ? "Desactivar sucursal" : "Activar sucursal"}
-        >
-          {isToggling ? (
-            <Spinner
-              animation="border"
-              size="sm"
-              style={{ width: "16px", height: "16px" }}
-            />
-          ) : branch.isActive ? (
-            <XCircle size={16} className="text-danger" />
-          ) : (
-            <CheckCircle size={16} className="text-success" />
-          )}
-        </Button>
+        {/* Toggle Status Button - Solo visible para Administradores */}
+        {isAdmin && (
+          <Button
+            variant={branch.isActive ? "light" : "light"}
+            size="sm"
+            className="rounded-circle"
+            style={{ width: "32px", height: "32px", padding: "0" }}
+            onClick={handleToggleStatus}
+            disabled={isToggling}
+            title={branch.isActive ? "Desactivar sucursal" : "Activar sucursal"}
+          >
+            {isToggling ? (
+              <Spinner
+                animation="border"
+                size="sm"
+                style={{ width: "16px", height: "16px" }}
+              />
+            ) : branch.isActive ? (
+              <XCircle size={16} className="text-danger" />
+            ) : (
+              <CheckCircle size={16} className="text-success" />
+            )}
+          </Button>
+        )}
 
         {/* Employees Button */}
         <Button
@@ -93,13 +102,16 @@ const BranchActions: React.FC<BranchActionsProps> = ({
         </Button>
       </div>
 
-      {/* Edit Modal */}
-      <BranchModal
-        show={showEditModal}
-        onHide={() => setShowEditModal(false)}
-        branch={branch}
-        onBranchSaved={onBranchUpdated}
-      />
+      {/* Edit Modal - Solo para Administradores */}
+      {isAdmin && (
+        <BranchModal
+          show={showEditModal}
+          onHide={() => setShowEditModal(false)}
+          branch={branch}
+          onBranchSaved={onBranchUpdated}
+          userCompany={userCompany}
+        />
+      )}
 
       {/* Employees Modal */}
       <EmployeesModal

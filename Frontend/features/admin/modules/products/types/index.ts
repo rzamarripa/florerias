@@ -18,6 +18,7 @@ export interface Product {
   insumos: Insumo[];
   totalCosto: number;
   totalVenta: number;
+  labour: number;
   estatus: boolean;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +31,7 @@ export interface CreateProductData {
   orden?: number;
   imagen?: string;
   insumos?: Insumo[];
+  labour?: number;
   estatus?: boolean;
 }
 
@@ -40,6 +42,7 @@ export interface UpdateProductData {
   orden?: number;
   imagen?: string;
   insumos?: Insumo[];
+  labour?: number;
   estatus?: boolean;
 }
 

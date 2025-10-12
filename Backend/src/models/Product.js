@@ -74,6 +74,11 @@ const productSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  labour: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   estatus: {
     type: Boolean,
     default: true

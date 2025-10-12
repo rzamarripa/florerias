@@ -6,6 +6,7 @@ import { Button, Col, Form, Modal, Row } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
 import { BsPencil } from "react-icons/bs";
 import { toast } from "react-toastify";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 import { Role } from "../../roles/types";
 import { UserFormData, userFormSchema } from "../schemas/userSchema";
 import { usersService } from "../services/users";
@@ -27,6 +28,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const [removedExistingImage, setRemovedExistingImage] = useState<boolean>(false);
 
   const isEditing = Boolean(user);
+  const { getIsSuperAdmin } = useUserRoleStore();
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
@@ -201,6 +203,14 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const onSubmit = async (data: UserFormData) => {
     try {
       setLoading(true);
+
+      // Validación: Solo Super Admin puede crear/asignar rol Distribuidor
+      const selectedRole = roles.find(r => r._id === data.role);
+      if (selectedRole?.name === "Distribuidor" && !getIsSuperAdmin()) {
+        toast.warning("Solo usuarios con rol Super Admin pueden crear usuarios con rol Distribuidor");
+        setLoading(false);
+        return;
+      }
 
       if (isEditing && user) {
         const updateData = {
@@ -609,11 +619,19 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                         isInvalid={!!errors.role}
                       >
                         <option value="">Selecciona un rol</option>
-                        {roles.map((role) => (
-                          <option key={role._id} value={role._id}>
-                            {role.name}
-                          </option>
-                        ))}
+                        {roles
+                          .filter((role) => {
+                            // Solo Super Admin puede ver y asignar el rol Distribuidor
+                            if (role.name === "Distribuidor") {
+                              return getIsSuperAdmin();
+                            }
+                            return true;
+                          })
+                          .map((role) => (
+                            <option key={role._id} value={role._id}>
+                              {role.name}
+                            </option>
+                          ))}
                       </Form.Select>
                     )}
                   />

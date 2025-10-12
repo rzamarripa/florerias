@@ -25,11 +25,12 @@ export const useUserRoleStore = create<UserRoleStore>()(
 
       getIsAdmin: () => {
         const role = get().role?.toLowerCase();
-        return role === "admin" || role === "superadmin";
+        return role === "admin" || role === "administrador" || role === "super admin" || role === "superadmin";
       },
 
       getIsSuperAdmin: () => {
-        return get().role?.toLowerCase() === "superadmin";
+        const role = get().role?.toLowerCase();
+        return role === "super admin" || role === "superadmin";
       },
 
       setUserRole: (roleName: string | null) => {

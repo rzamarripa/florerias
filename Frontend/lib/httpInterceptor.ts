@@ -12,11 +12,7 @@ const HTTP_METHOD_TO_PERMISSION = {
 
 // URLs que deben ser excluidas de la validación de permisos
 const EXCLUDED_URLS = [
-  "/api/auth/",
-  "/api/login",
-  "/api/logout",
-  "/api/refresh",
-  "/api/user/profile",
+  "/api/", // Todas las rutas de API - la validación se hace en el backend
   "/users/login",
   "/auth/",
   "/login",
@@ -38,9 +34,9 @@ function shouldValidateUrl(url: string): boolean {
  */
 function getCurrentPagePath(): string {
   if (typeof window === 'undefined') return '';
-  
+
   const pathname = window.location.pathname;
-  
+
   // Extraer solo la parte final de la ruta (después del último '/')
   const segments = pathname.split('/').filter(segment => segment.length > 0);
   if (segments.length > 0) {
@@ -56,29 +52,40 @@ function hasPermission(requiredPermission: string): boolean {
   // Obtener datos del usuario desde los stores
   const userRoleStore = JSON.parse(localStorage.getItem('user-role') || '{}');
   const userModulesStore = JSON.parse(localStorage.getItem('user-modules') || '{}');
-  
+
   const userRole = userRoleStore.state?.role;
   const allowedModules = userModulesStore.state?.allowedModules || [];
-  
-  // Los administradores pueden hacer todo
-  if (userRole?.toLowerCase() === 'administrador') {
+
+  // Solo Super Admin tiene acceso total
+  if (userRole?.toLowerCase() === 'super admin' || userRole?.toLowerCase() === 'superadmin') {
     return true;
   }
-  
+
   const currentPagePath = getCurrentPagePath();
-  
-  // Buscar la página en los módulos permitidos
-  const page = allowedModules.find((pageData: any) => 
-    pageData.path === currentPagePath || 
-    pageData.path === `/${currentPagePath.replace(/^\//, '')}`
-  );
-  
+
+  // Normalizar paths para comparación
+  const normalizedCurrentPath = currentPagePath.startsWith('/') ? currentPagePath : `/${currentPagePath}`;
+
+  // Buscar la página en los módulos permitidos (comparando solo el último segmento)
+  const page = allowedModules.find((pageData: any) => {
+    const normalizedPagePath = pageData.path.startsWith('/') ? pageData.path : `/${pageData.path}`;
+
+    // Comparar solo el último segmento de ambas rutas
+    const pageSegments = normalizedPagePath.split('/').filter((s: string) => s.length > 0);
+    const currentSegments = normalizedCurrentPath.split('/').filter((s: string) => s.length > 0);
+
+    const pageLastSegment = pageSegments.length > 0 ? pageSegments[pageSegments.length - 1] : normalizedPagePath;
+    const currentLastSegment = currentSegments.length > 0 ? currentSegments[currentSegments.length - 1] : normalizedCurrentPath;
+
+    return pageLastSegment === currentLastSegment;
+  });
+
   if (!page) {
     return false;
   }
-  
+
   // Verificar si tiene el permiso específico
-  return page.modules.some((module: any) => 
+  return page.modules.some((module: any) =>
     module.name.toLowerCase() === requiredPermission.toLowerCase()
   );
 }

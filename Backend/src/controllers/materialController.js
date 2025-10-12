@@ -98,14 +98,15 @@ const createMaterial = async (req, res) => {
       unit,
       price,
       cost,
+      piecesPerPackage,
       description
     } = req.body;
 
     // Validar campos requeridos
-    if (!name || !unit || price === undefined || cost === undefined) {
+    if (!name || !unit || price === undefined || cost === undefined || piecesPerPackage === undefined) {
       return res.status(400).json({
         success: false,
-        message: 'Los campos nombre, unidad, precio y costo son obligatorios'
+        message: 'Los campos nombre, unidad, precio, costo y piezas por paquete son obligatorios'
       });
     }
 
@@ -124,6 +125,7 @@ const createMaterial = async (req, res) => {
       unit,
       price,
       cost,
+      piecesPerPackage,
       description: description || ''
     });
 

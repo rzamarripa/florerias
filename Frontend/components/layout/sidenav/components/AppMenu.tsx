@@ -6,7 +6,7 @@ import { MenuItemType } from "@/types/layout";
 import { menuItems } from "@/config/constants";
 import { useUserModulesStore } from "@/stores/userModulesStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
-import { canAccessPage, isAdministrator, getPagePathFromRoute } from "@/utils/pagePermissions";
+import { canAccessPage, isSuperAdmin, getPagePathFromRoute } from "@/utils/pagePermissions";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -150,7 +150,7 @@ const AppMenu = () => {
 
   // Filtrar elementos del menú según permisos
   const filteredMenuItems = useMemo(() => {
-    const isAdmin = isAdministrator(role);
+    const isAdmin = isSuperAdmin(role);
 
     const filterMenuItem = (item: MenuItemType): MenuItemType | null => {
       // Si es un título, siempre incluirlo
@@ -160,37 +160,31 @@ const AppMenu = () => {
 
       // Si tiene children, filtrar recursivamente
       if (item.children && item.children.length > 0) {
-        // Caso especial: Menú de Gestión solo para administradores
-        if (item.key === 'gestion' && !isAdmin) {
-          return null;
-        }
-
         const filteredChildren = item.children
           .map(child => filterMenuItem(child))
           .filter(child => child !== null) as MenuItemType[];
-        
-        // Siempre mostrar el menú principal, incluso si no tiene páginas
-        // (los usuarios sin permisos verán el menú vacío)
-        
+
+        // SIEMPRE mostrar menús y submenús principales (contenedores)
+        // incluso si sus children fueron filtrados
         return {
           ...item,
           children: filteredChildren
         };
       }
 
-      // Si es un item simple con URL, verificar permisos
+      // Si es un item con URL (página individual), verificar permisos
       if (item.url) {
-        // Los administradores pueden ver todo
+        // Super Admin puede ver todas las páginas
         if (isAdmin) {
           return item;
         }
-        
+
         // Para otros usuarios, verificar permisos basados en módulos
         const pagePath = getPagePathFromRoute(item.url);
         return canAccessPage(allowedModules, pagePath) ? item : null;
       }
 
-      // Si no tiene URL ni children, incluirlo (podría ser un placeholder)
+      // Si no tiene URL ni children, incluirlo (es un contenedor/separador)
       return item;
     };
 

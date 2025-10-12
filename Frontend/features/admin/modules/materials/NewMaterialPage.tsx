@@ -21,6 +21,7 @@ const NewMaterialPage: React.FC = () => {
     unit: "",
     price: 0,
     cost: 0,
+    piecesPerPackage: 1,
     description: "",
     status: true,
   });
@@ -65,6 +66,7 @@ const NewMaterialPage: React.FC = () => {
         unit: material.unit._id,
         price: material.price,
         cost: material.cost,
+        piecesPerPackage: material.piecesPerPackage,
         description: material.description,
         status: material.status,
       });
@@ -185,7 +187,7 @@ const NewMaterialPage: React.FC = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col md={4}>
+                  <Col md={6}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">
                         Unidad <span className="text-danger">*</span>
@@ -215,7 +217,31 @@ const NewMaterialPage: React.FC = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col md={4}>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        Piezas por Paquete <span className="text-danger">*</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="1"
+                        value={formData.piecesPerPackage}
+                        onChange={(e) =>
+                          setFormData({ ...formData, piecesPerPackage: parseInt(e.target.value) || 1 })
+                        }
+                        required
+                        className="border-0 bg-light"
+                        style={{ borderRadius: "10px", padding: "12px 16px" }}
+                      />
+                      <Form.Text className="text-muted">
+                        Cantidad de piezas que vienen por paquete
+                      </Form.Text>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">
                         Costo <span className="text-danger">*</span>
@@ -236,7 +262,7 @@ const NewMaterialPage: React.FC = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col md={4}>
+                  <Col md={6}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">
                         Precio de Venta <span className="text-danger">*</span>

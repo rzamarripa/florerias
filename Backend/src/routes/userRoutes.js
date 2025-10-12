@@ -12,21 +12,22 @@ import {
   updateUserCover,
 } from "../controllers/userController.js";
 import { uploadSingle } from "../middleware/multerUpload.js";
+import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/", getAllUsers);
-router.get("/:id", getUserById);
+router.get("/", protect, getAllUsers);
+router.get("/:id", protect, getUserById);
 
-router.post("/register", uploadSingle("image"), registerUser);
+router.post("/register", protect, uploadSingle("image"), registerUser);
 router.post("/login", loginUser);
 
-router.put("/:id", uploadSingle("image"), updateUser);
-router.put("/:id/password", changePassword);
-router.put("/:id/activate", activateUser);
-router.put("/:id/role", assignRoles);
-router.put("/:userId/cover", updateUserCover);
+router.put("/:id", protect, uploadSingle("image"), updateUser);
+router.put("/:id/password", protect, changePassword);
+router.put("/:id/activate", protect, activateUser);
+router.put("/:id/role", protect, assignRoles);
+router.put("/:userId/cover", protect, updateUserCover);
 
-router.delete("/:id", deleteUser);
+router.delete("/:id", protect, deleteUser);
 
 export default router;
