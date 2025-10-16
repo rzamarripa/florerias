@@ -3,16 +3,29 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Table, Spinner, Alert } from "react-bootstrap";
 import Select from "react-select";
-import { X, Save, UserPlus } from "lucide-react";
+import { X, Save, UserPlus, ShieldAlert } from "lucide-react";
 import { toast } from "react-toastify";
 import { Branch, Employee } from "../types";
 import { branchesService } from "../services/branches";
 import { apiCall } from "@/utils/api";
+import { useUserSessionStore } from "@/stores/userSessionStore";
 
 interface EmployeeOption {
   value: string;
   label: string;
   employee: Employee;
+}
+
+interface NewEmployeeData {
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  profile: {
+    name: string;
+    lastName: string;
+  };
+  role: string;
 }
 
 interface EmployeesModalProps {
@@ -28,12 +41,16 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
   branch,
   onEmployeesUpdated,
 }) => {
+  const { user } = useUserSessionStore();
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<EmployeeOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Verificar si el usuario tiene permisos (Gerente o Administrador)
+  const hasPermission = user?.role?.name === "Gerente" || user?.role?.name === "Administrador";
 
   useEffect(() => {
     if (show) {
@@ -164,6 +181,18 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
           </Alert>
         )}
 
+        {!hasPermission && (
+          <Alert variant="warning" className="d-flex align-items-center gap-2">
+            <ShieldAlert size={24} />
+            <div>
+              <strong>Permisos insuficientes</strong>
+              <p className="mb-0">
+                Solo los usuarios con rol <strong>Gerente</strong> o <strong>Administrador</strong> pueden gestionar los empleados de esta sucursal.
+              </p>
+            </div>
+          </Alert>
+        )}
+
         {loading ? (
           <div className="d-flex justify-content-center align-items-center py-5">
             <Spinner animation="border" variant="primary" />
@@ -177,10 +206,11 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
               </Form.Label>
               <Select
                 isMulti
+                isDisabled={!hasPermission}
                 options={getEmployeeOptions()}
                 value={selectedOptions}
                 onChange={handleEmployeeSelection}
-                placeholder="Selecciona empleados..."
+                placeholder={hasPermission ? "Selecciona empleados..." : "No tienes permisos para modificar empleados"}
                 noOptionsMessage={() => "No hay empleados disponibles"}
                 className="react-select-container"
                 classNamePrefix="react-select"
@@ -241,6 +271,7 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
                               className="p-0 text-danger"
                               onClick={() => handleRemoveEmployee(employee._id)}
                               title="Quitar empleado"
+                              disabled={!hasPermission}
                             >
                               <X size={18} />
                             </Button>
@@ -262,7 +293,7 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
         <Button
           variant="primary"
           onClick={handleSave}
-          disabled={saving || loading}
+          disabled={saving || loading || !hasPermission}
           className="d-flex align-items-center gap-2"
         >
           {saving ? (

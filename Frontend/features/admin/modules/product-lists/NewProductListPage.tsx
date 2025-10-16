@@ -8,7 +8,7 @@ import {
   Trash2,
   Save,
   ArrowLeft,
-  X,
+  List,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -18,6 +18,9 @@ import { productsService } from "../products/services/products";
 import { Product } from "../products/types";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { companiesService } from "../companies/services/companies";
+import { materialsService } from "../materials/services/materials";
+import { Material } from "../materials/types";
+import DesgloseModal from "./components/DesgloseModal";
 
 const NewProductListPage: React.FC = () => {
   const router = useRouter();
@@ -38,13 +41,19 @@ const NewProductListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<(Product & { cantidad: number })[]>([]);
   const [userCompany, setUserCompany] = useState<any>(null);
+  const [currentProductId, setCurrentProductId] = useState<string>("");
+  const [currentQuantity, setCurrentQuantity] = useState<number>(1);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [showDesglose, setShowDesglose] = useState(false);
+  const [desgloseProduct, setDesgloseProduct] = useState<Product & { cantidad: number } | null>(null);
 
   // Cargar productos disponibles
   useEffect(() => {
     loadProducts();
     loadUserCompany();
+    loadMaterials();
   }, []);
 
   // Cargar lista de productos si estamos editando
@@ -63,6 +72,15 @@ const NewProductListPage: React.FC = () => {
       setAvailableProducts(response.data);
     } catch (err: any) {
       toast.error(err.message || "Error al cargar los productos");
+    }
+  };
+
+  const loadMaterials = async () => {
+    try {
+      const response = await materialsService.getAllMaterials({ status: true, limit: 1000 });
+      setMaterials(response.data);
+    } catch (err: any) {
+      console.error("Error al cargar materiales:", err);
     }
   };
 
@@ -95,7 +113,10 @@ const NewProductListPage: React.FC = () => {
 
       setFormData({
         name: productList.name,
-        products: productList.products.map(p => p.productId),
+        products: productList.products.map(p => ({
+          productId: p.productId,
+          cantidad: p.cantidad
+        })),
         company: typeof productList.company === 'string' ? productList.company : productList.company._id,
         expirationDate: productList.expirationDate.split('T')[0], // Format for input[type="date"]
       });
@@ -110,6 +131,7 @@ const NewProductListPage: React.FC = () => {
           orden: embeddedProduct.orden,
           imagen: embeddedProduct.imagen,
           insumos: embeddedProduct.insumos,
+          cantidad: embeddedProduct.cantidad,
           totalCosto: embeddedProduct.totalCosto,
           totalVenta: embeddedProduct.totalVenta,
           labour: embeddedProduct.labour,
@@ -126,31 +148,62 @@ const NewProductListPage: React.FC = () => {
     }
   };
 
-  const handleAddProduct = (productId: string) => {
-    const product = availableProducts.find(p => p._id === productId);
+  const handleAddProduct = () => {
+    if (!currentProductId) {
+      toast.warning("Por favor selecciona un producto");
+      return;
+    }
+
+    if (currentQuantity < 1) {
+      toast.warning("La cantidad debe ser al menos 1");
+      return;
+    }
+
+    const product = availableProducts.find(p => p._id === currentProductId);
     if (!product) return;
 
     // Check if already added
-    if (formData.products.includes(productId)) {
+    if (formData.products.some(p => p.productId === currentProductId)) {
       toast.warning("Este producto ya está agregado");
       return;
     }
 
     setFormData(prev => ({
       ...prev,
-      products: [...prev.products, productId]
+      products: [...prev.products, { productId: currentProductId, cantidad: currentQuantity }]
     }));
 
-    setSelectedProducts(prev => [...prev, product]);
+    setSelectedProducts(prev => [...prev, { ...product, cantidad: currentQuantity }]);
+
+    // Reset
+    setCurrentProductId("");
+    setCurrentQuantity(1);
   };
 
   const handleRemoveProduct = (productId: string) => {
     setFormData(prev => ({
       ...prev,
-      products: prev.products.filter(id => id !== productId)
+      products: prev.products.filter(p => p.productId !== productId)
     }));
 
     setSelectedProducts(prev => prev.filter(p => p._id !== productId));
+  };
+
+  const calculateLotes = (product: Product & { cantidad: number }) => {
+    let totalLotes = 0;
+    product.insumos.forEach(insumo => {
+      const material = materials.find(m => m._id === insumo.materialId);
+      if (material && material.piecesPerPackage > 0) {
+        const lotes = (insumo.cantidad * product.cantidad) / material.piecesPerPackage;
+        totalLotes += lotes;
+      }
+    });
+    return totalLotes;
+  };
+
+  const handleShowDesglose = (product: Product & { cantidad: number }) => {
+    setDesgloseProduct(product);
+    setShowDesglose(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,8 +244,9 @@ const NewProductListPage: React.FC = () => {
     let gananciasBrutas = 0;
 
     selectedProducts.forEach((product) => {
-      totalGastado += product.totalCosto + product.labour;
-      gananciasBrutas += product.totalVenta;
+      const cantidad = product.cantidad || 1;
+      totalGastado += (product.totalCosto + product.labour) * cantidad;
+      gananciasBrutas += product.totalVenta * cantidad;
     });
 
     const gananciasNetas = gananciasBrutas - totalGastado;
@@ -305,16 +359,12 @@ const NewProductListPage: React.FC = () => {
           </Card.Header>
           <Card.Body>
             <Row className="g-3 mb-3">
-              <Col md={10}>
+              <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">Seleccionar Producto</Form.Label>
                   <Form.Select
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleAddProduct(e.target.value);
-                        e.target.value = ""; // Reset select
-                      }
-                    }}
+                    value={currentProductId}
+                    onChange={(e) => setCurrentProductId(e.target.value)}
                     className="py-2"
                   >
                     <option value="">-- Seleccionar un producto --</option>
@@ -326,6 +376,31 @@ const NewProductListPage: React.FC = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
+
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Cantidad</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="1"
+                    value={currentQuantity}
+                    onChange={(e) => setCurrentQuantity(parseInt(e.target.value) || 1)}
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={2} className="d-flex align-items-end">
+                <Button
+                  variant="success"
+                  onClick={handleAddProduct}
+                  className="w-100 py-2"
+                  disabled={!currentProductId}
+                >
+                  <Plus size={18} className="me-1" />
+                  Agregar
+                </Button>
+              </Col>
             </Row>
 
             {/* Lista de Productos Seleccionados */}
@@ -336,44 +411,64 @@ const NewProductListPage: React.FC = () => {
                     <tr>
                       <th>Producto</th>
                       <th>Unidad</th>
+                      <th className="text-center">Cantidad</th>
                       <th className="text-end">Total Costo</th>
                       <th className="text-end">Labour</th>
                       <th className="text-end">Total Venta</th>
+                      <th className="text-center">Lotes</th>
                       <th className="text-center">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedProducts.map((product) => (
-                      <tr key={product._id}>
-                        <td>{product.nombre}</td>
-                        <td>
-                          <Badge bg="secondary">{product.unidad}</Badge>
-                        </td>
-                        <td className="text-end text-danger">
-                          ${product.totalCosto.toFixed(2)}
-                        </td>
-                        <td className="text-end text-warning">
-                          ${product.labour.toFixed(2)}
-                        </td>
-                        <td className="text-end text-primary">
-                          ${product.totalVenta.toFixed(2)}
-                        </td>
-                        <td className="text-center">
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleRemoveProduct(product._id)}
-                            title="Eliminar"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                    {selectedProducts.map((product) => {
+                      const cantidad = product.cantidad || 1;
+                      const lotes = calculateLotes(product);
+                      return (
+                        <tr key={product._id}>
+                          <td>{product.nombre}</td>
+                          <td>
+                            <Badge bg="secondary">{product.unidad}</Badge>
+                          </td>
+                          <td className="text-center fw-bold">{cantidad}</td>
+                          <td className="text-end text-danger">
+                            ${(product.totalCosto * cantidad).toFixed(2)}
+                          </td>
+                          <td className="text-end text-warning">
+                            ${(product.labour * cantidad).toFixed(2)}
+                          </td>
+                          <td className="text-end text-primary">
+                            ${(product.totalVenta * cantidad).toFixed(2)}
+                          </td>
+                          <td className="text-center">
+                            <Badge bg="info">{lotes.toFixed(2)}</Badge>
+                          </td>
+                          <td className="text-center">
+                            <div className="d-flex gap-1 justify-content-center">
+                              <Button
+                                variant="outline-info"
+                                size="sm"
+                                onClick={() => handleShowDesglose(product)}
+                                title="Ver desglose"
+                              >
+                                <List size={14} />
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleRemoveProduct(product._id)}
+                                title="Eliminar"
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot className="table-light fw-bold">
                     <tr>
-                      <td colSpan={2} className="text-end">
+                      <td colSpan={3} className="text-end">
                         Totales ({totals.totalProducts} productos):
                       </td>
                       <td className="text-end text-danger">
@@ -383,10 +478,10 @@ const NewProductListPage: React.FC = () => {
                       <td className="text-end text-primary">
                         ${totals.gananciasBrutas.toFixed(2)}
                       </td>
-                      <td></td>
+                      <td colSpan={2}></td>
                     </tr>
                     <tr>
-                      <td colSpan={5} className="text-end">
+                      <td colSpan={7} className="text-end">
                         Ganancias Netas:
                       </td>
                       <td className="text-center">
@@ -426,6 +521,14 @@ const NewProductListPage: React.FC = () => {
           </Button>
         </div>
       </Form>
+
+      {/* Modal de Desglose */}
+      <DesgloseModal
+        show={showDesglose}
+        onHide={() => setShowDesglose(false)}
+        product={desgloseProduct}
+        materials={materials}
+      />
     </div>
   );
 };

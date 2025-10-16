@@ -89,6 +89,15 @@ const createSeedData = async () => {
     });
     console.log("Distribuidor role created:", distributorRole.name);
 
+    // Create Gerente role
+    const managerRole = await Role.create({
+      name: "Gerente",
+      description: "Rol para gerentes de sucursales",
+      modules: [viewUsersModule._id],
+      estatus: true
+    });
+    console.log("Gerente role created:", managerRole.name);
+
     // Create regular user role
     const userRole = await Role.create({
       name: "Usuario",

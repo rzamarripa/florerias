@@ -61,7 +61,7 @@ const branchSchema = new Schema(
     manager: {
       type: Schema.Types.ObjectId,
       ref: "cs_user",
-      default: null,
+      required: [true, "El gerente es requerido"],
     },
     contactPhone: {
       type: String,

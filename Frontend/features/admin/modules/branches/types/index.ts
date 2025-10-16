@@ -58,12 +58,24 @@ export interface Branch {
   updatedAt: string;
 }
 
+export interface ManagerData {
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  profile: {
+    name: string;
+    lastName: string;
+  };
+}
+
 export interface CreateBranchData {
   branchName: string;
   branchCode?: string;
   companyId: string;
   address: BranchAddress;
-  manager: string;
+  managerId?: string;
+  managerData?: ManagerData;
   contactPhone: string;
   contactEmail: string;
   employees?: string[];

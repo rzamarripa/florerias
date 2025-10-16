@@ -79,13 +79,12 @@ const NewProductPage: React.FC = () => {
       if (response.data.length > 0) {
         const firstMaterial = response.data[0];
         setCurrentInsumo({
-          piecesPerPackage: firstMaterial.piecesPerPackage || 1,
           materialId: firstMaterial._id,
           nombre: firstMaterial.name,
           cantidad: 1,
           unidad: firstMaterial.unit.abbreviation,
-          importeCosto: 0,
-          importeVenta: 0,
+          importeCosto: firstMaterial.cost,
+          importeVenta: firstMaterial.price,
         });
       }
     } catch (err: any) {
@@ -157,13 +156,12 @@ const NewProductPage: React.FC = () => {
     if (materials.length > 0) {
       const firstMaterial = materials[0];
       setCurrentInsumo({
-          piecesPerPackage: firstMaterial.piecesPerPackage || 1,
         materialId: firstMaterial._id,
         nombre: firstMaterial.name,
         cantidad: 1,
         unidad: firstMaterial.unit.abbreviation,
-        importeCosto: 0,
-        importeVenta: 0,
+        importeCosto: firstMaterial.cost,
+        importeVenta: firstMaterial.price,
       });
     }
     setEditingInsumoIndex(null);
@@ -193,13 +191,12 @@ const NewProductPage: React.FC = () => {
     if (materials.length > 0) {
       const firstMaterial = materials[0];
       setCurrentInsumo({
-          piecesPerPackage: firstMaterial.piecesPerPackage || 1,
         materialId: firstMaterial._id,
         nombre: firstMaterial.name,
         cantidad: 1,
         unidad: firstMaterial.unit.abbreviation,
-        importeCosto: 0,
-        importeVenta: 0,
+        importeCosto: firstMaterial.cost,
+        importeVenta: firstMaterial.price,
       });
     }
     setError(null);
@@ -492,7 +489,8 @@ const NewProductPage: React.FC = () => {
                           materialId: selectedMaterial._id,
                           nombre: selectedMaterial.name,
                           unidad: selectedMaterial.unit.abbreviation,
-                          piecesPerPackage: selectedMaterial.piecesPerPackage || 1,
+                          importeCosto: selectedMaterial.cost,
+                          importeVenta: selectedMaterial.price,
                         });
                       }
                     }}
@@ -635,7 +633,6 @@ const NewProductPage: React.FC = () => {
                       <th>Insumo</th>
                       <th>Cantidad</th>
                       <th>Unidad</th>
-                      <th>Piezas Totales</th>
                       <th>Importe costo</th>
                       <th>Importe venta</th>
                       <th className="text-center">Acciones</th>
@@ -643,10 +640,6 @@ const NewProductPage: React.FC = () => {
                   </thead>
                   <tbody>
                     {formData.insumos.map((insumo, index) => {
-                      const material = materials.find(m => m._id === insumo.materialId);
-                      const piecesPerPackage = material?.piecesPerPackage || 1;
-                      const totalPieces = insumo.cantidad * piecesPerPackage;
-
                       return (
                       <tr
                         key={index}
@@ -658,9 +651,6 @@ const NewProductPage: React.FC = () => {
                         <td>{insumo.nombre}</td>
                         <td>{insumo.cantidad}</td>
                         <td>{insumo.unidad}</td>
-                        <td className="text-info fw-semibold">
-                          {totalPieces} pzas
-                        </td>
                         <td className="text-success">
                           ${insumo.importeCosto.toFixed(2)}
                         </td>
@@ -695,7 +685,7 @@ const NewProductPage: React.FC = () => {
                   </tbody>
                   <tfoot className="table-light fw-bold">
                     <tr>
-                      <td colSpan={5} className="text-end">
+                      <td colSpan={4} className="text-end">
                         Totales:
                       </td>
                       <td className="text-success">${totalCosto.toFixed(2)}</td>

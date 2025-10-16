@@ -66,6 +66,12 @@ const embeddedProductSchema = new mongoose.Schema({
     default: ''
   },
   insumos: [embeddedInsumoSchema],
+  cantidad: {
+    type: Number,
+    required: true,
+    min: 1,
+    default: 1
+  },
   totalCosto: {
     type: Number,
     default: 0,

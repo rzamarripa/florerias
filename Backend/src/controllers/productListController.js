@@ -121,7 +121,11 @@ const createProductList = async (req, res) => {
     // Si se proporcionan productos, validar que existan y embeber sus datos completos
     let embeddedProducts = [];
     if (products && products.length > 0) {
-      for (const productId of products) {
+      for (const productData of products) {
+        // Extraer productId y cantidad del objeto
+        const productId = productData.productId || productData;
+        const cantidad = productData.cantidad || 1;
+
         const product = await Product.findById(productId);
         if (!product) {
           return res.status(404).json({
@@ -158,6 +162,7 @@ const createProductList = async (req, res) => {
           orden: product.orden,
           imagen: product.imagen,
           insumos: mappedInsumos,
+          cantidad: cantidad,
           totalCosto: product.totalCosto,
           totalVenta: product.totalVenta,
           labour: product.labour,
@@ -247,7 +252,11 @@ const updateProductList = async (req, res) => {
     if (products !== undefined) {
       let embeddedProducts = [];
       if (products.length > 0) {
-        for (const productId of products) {
+        for (const productData of products) {
+          // Extraer productId y cantidad del objeto
+          const productId = productData.productId || productData;
+          const cantidad = productData.cantidad || 1;
+
           const product = await Product.findById(productId);
           if (!product) {
             return res.status(404).json({
@@ -272,6 +281,7 @@ const updateProductList = async (req, res) => {
               importeCosto: insumo.importeCosto,
               importeVenta: insumo.importeVenta
             })),
+            cantidad: cantidad,
             totalCosto: product.totalCosto,
             totalVenta: product.totalVenta,
             labour: product.labour,

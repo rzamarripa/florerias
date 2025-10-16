@@ -18,6 +18,7 @@ export interface EmbeddedProduct {
   orden: number;
   imagen: string;
   insumos: EmbeddedInsumo[];
+  cantidad: number;
   totalCosto: number;
   totalVenta: number;
   labour: number;
@@ -44,10 +45,16 @@ export interface ProductList {
   updatedAt: string;
 }
 
+// Product with quantity for creating/updating lists
+export interface ProductWithQuantity {
+  productId: string;
+  cantidad: number;
+}
+
 // Create ProductList Data
 export interface CreateProductListData {
   name: string;
-  products: string[]; // Array of product IDs
+  products: ProductWithQuantity[]; // Array of products with quantities
   company: string; // Company ID
   expirationDate: string;
 }
@@ -55,7 +62,7 @@ export interface CreateProductListData {
 // Update ProductList Data
 export interface UpdateProductListData {
   name?: string;
-  products?: string[]; // Array of product IDs
+  products?: ProductWithQuantity[]; // Array of products with quantities
   company?: string; // Company ID
   expirationDate?: string;
   status?: boolean;

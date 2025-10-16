@@ -39,11 +39,11 @@ export const createCompany = async (req, res) => {
         });
       }
 
-      // Verificar que no exista un usuario con el mismo username o email
+      // Verificar que no exista un usuario con el mismo username o email (case-insensitive)
       const existingUser = await User.findOne({
         $or: [
-          { username: administratorData.username },
-          { email: administratorData.email },
+          { username: { $regex: new RegExp(`^${administratorData.username}$`, 'i') } },
+          { email: { $regex: new RegExp(`^${administratorData.email}$`, 'i') } },
         ],
       });
 
@@ -51,7 +51,7 @@ export const createCompany = async (req, res) => {
         return res.status(400).json({
           success: false,
           message:
-            existingUser.username === administratorData.username
+            existingUser.username.toLowerCase() === administratorData.username.toLowerCase()
               ? "Ya existe un usuario con este nombre de usuario"
               : "Ya existe un usuario con este email",
         });
@@ -87,6 +87,18 @@ export const createCompany = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: "El usuario seleccionado no tiene el rol de Administrador",
+        });
+      }
+
+      // Verificar que el administrador no esté asignado a otra empresa
+      const existingCompanyWithAdmin = await Company.findOne({
+        administrator: administratorId,
+      });
+
+      if (existingCompanyWithAdmin) {
+        return res.status(400).json({
+          success: false,
+          message: "El usuario administrador ya tiene una empresa asignada",
         });
       }
     }
@@ -259,7 +271,20 @@ export const updateCompany = async (req, res) => {
           });
         }
 
-        updateData.distributor = administratorId;
+        // Verificar que el administrador no esté asignado a otra empresa (excepto la actual)
+        const existingCompanyWithAdmin = await Company.findOne({
+          administrator: administratorId,
+          _id: { $ne: req.params.id },
+        });
+
+        if (existingCompanyWithAdmin) {
+          return res.status(400).json({
+            success: false,
+            message: "El usuario administrador ya tiene una empresa asignada",
+          });
+        }
+
+        updateData.administrator = administratorId;
       }
     } else if (administratorData) {
       // Crear nuevo administrador si se proporcionan datos
@@ -271,10 +296,11 @@ export const updateCompany = async (req, res) => {
         });
       }
 
+      // Verificar que no exista un usuario con el mismo username o email (case-insensitive)
       const existingUser = await User.findOne({
         $or: [
-          { username: administratorData.username },
-          { email: administratorData.email },
+          { username: { $regex: new RegExp(`^${administratorData.username}$`, 'i') } },
+          { email: { $regex: new RegExp(`^${administratorData.email}$`, 'i') } },
         ],
       });
 
@@ -282,7 +308,7 @@ export const updateCompany = async (req, res) => {
         return res.status(400).json({
           success: false,
           message:
-            existingUser.username === administratorData.username
+            existingUser.username.toLowerCase() === administratorData.username.toLowerCase()
               ? "Ya existe un usuario con este nombre de usuario"
               : "Ya existe un usuario con este email",
         });

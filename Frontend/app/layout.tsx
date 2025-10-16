@@ -7,12 +7,9 @@ import "flatpickr/dist/flatpickr.css";
 import "jsvectormap/dist/css/jsvectormap.min.css";
 import "simplebar-react/dist/simplebar.min.css";
 
-import favicon from "@/assets/images/favicon.ico";
-
 export const metadata: Metadata = {
-  title: "Caprepa",
+  title: "Corazon de Violeta",
   description: "Sistema de Control de Egresos",
-  icons: [favicon.src],
 };
 
 export default function RootLayout({

@@ -21,14 +21,18 @@ export const registerUser = async (req, res) => {
     const { username, email, phone, password, profile, role } =
       userData;
 
+    // Validación case-insensitive para username y email
     const userExists = await User.findOne({
-      $or: [{ username }, { email }],
+      $or: [
+        { username: { $regex: new RegExp(`^${username}$`, 'i') } },
+        { email: { $regex: new RegExp(`^${email}$`, 'i') } }
+      ],
     });
     if (userExists) {
       return res.status(400).json({
         success: false,
         message:
-          userExists.username === username
+          userExists.username.toLowerCase() === username.toLowerCase()
             ? "User already exists with this username"
             : "User already exists with this email",
       });
@@ -345,13 +349,20 @@ export const updateUser = async (req, res) => {
       updateData.role = role;
     }
 
-    // Verificar si el email o username ya existe en otro usuario
+    // Verificar si el email o username ya existe en otro usuario (case-insensitive)
     if (email || username) {
+      const orConditions = [];
+
+      if (email) {
+        orConditions.push({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
+      }
+
+      if (username) {
+        orConditions.push({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+      }
+
       const existingUser = await User.findOne({
-        $or: [
-          ...(email ? [{ email }] : []),
-          ...(username ? [{ username }] : []),
-        ],
+        $or: orConditions,
         _id: { $ne: req.params.id },
       });
 
@@ -359,7 +370,7 @@ export const updateUser = async (req, res) => {
         return res.status(400).json({
           success: false,
           message:
-            existingUser.email === email
+            email && existingUser.email.toLowerCase() === email.toLowerCase()
               ? "Email already exists"
               : "Username already exists",
         });

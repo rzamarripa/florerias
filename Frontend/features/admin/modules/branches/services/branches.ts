@@ -114,4 +114,9 @@ export const branchesService = {
     const response = await apiCall<{ success: boolean; data: Employee[] }>("/users?excludeRoles=Administrador,Super Admin,Distribuidor");
     return response;
   },
+
+  getAvailableManagers: async (): Promise<{ success: boolean; data: Employee[]; message?: string }> => {
+    const response = await apiCall<{ success: boolean; data: Employee[]; message?: string }>("/branches/available-managers");
+    return response;
+  },
 };
