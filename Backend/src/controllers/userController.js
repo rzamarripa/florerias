@@ -1,6 +1,9 @@
 import jwt from "jsonwebtoken";
 import { Role } from "../models/Roles.js";
 import { User } from "../models/User.js";
+import { getAllCompanies } from "./companyController.js";
+import { Company } from "../models/Company.js";
+import { Branch } from "../models/Branch.js";
 
 export const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -208,6 +211,31 @@ export const getAllUsers = async (req, res) => {
     }
     if (req.query.username) {
       filters.username = { $regex: req.query.username, $options: "i" };
+    }
+    const currentUser = req.user;
+    const userRole = currentUser.role.name;
+
+        if (userRole === "Distribuidor") {
+          const companies = await Company.find({
+            distributor: currentUser._id,
+          });
+        const administrators = companies.map((company) => company.administrator);
+        filters._id = { $in: administrators };
+        }
+    if (userRole === "Administrador") {
+      const branches = await Branch.find({
+        administrator: currentUser._id,
+      });
+      // Obtener todos los empleados y managers de las sucursales donde el usuario es administrador
+      const userIds = branches.reduce((acc, branch) => {
+        // Agregar el manager
+        if (branch.manager) {
+          acc.push(branch.manager);
+        }
+        // Agregar todos los empleados
+        return acc.concat(branch.employees);
+      }, []);
+      filters._id = { $in: userIds };
     }
 
     const users = await User.find(filters)

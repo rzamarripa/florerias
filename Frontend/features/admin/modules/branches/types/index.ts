@@ -69,6 +69,17 @@ export interface ManagerData {
   };
 }
 
+export interface EmployeeData {
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  profile: {
+    name: string;
+    lastName: string;
+  };
+}
+
 export interface CreateBranchData {
   branchName: string;
   branchCode?: string;
@@ -79,4 +90,5 @@ export interface CreateBranchData {
   contactPhone: string;
   contactEmail: string;
   employees?: string[];
+  employeesData?: EmployeeData[];
 }

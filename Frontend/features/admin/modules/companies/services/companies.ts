@@ -108,4 +108,9 @@ export const companiesService = {
     );
     return response;
   },
+
+  getMyCompany: async (): Promise<Company> => {
+    const response = await apiCall<Company>("/companies/my-company");
+    return response.data;
+  },
 };

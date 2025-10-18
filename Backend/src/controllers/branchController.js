@@ -161,6 +161,7 @@ export const createBranch = async (req, res) => {
       branchName,
       branchCode,
       companyId,
+      administrator: req.user._id, // El usuario en sesión que crea la sucursal
       address,
       manager: finalManagerId,
       contactPhone,
@@ -175,6 +176,7 @@ export const createBranch = async (req, res) => {
 
     // Popular los datos para la respuesta
     await branch.populate("companyId", "legalName tradeName rfc");
+    await branch.populate("administrator", "username email profile");
     await branch.populate("manager", "username email profile");
     await branch.populate("employees", "username email profile");
 
@@ -206,13 +208,54 @@ export const getAllBranches = async (req, res) => {
     const skip = (page - 1) * limit;
     const filters = {};
 
+    // Validar que el usuario esté autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(req.user._id).populate("role");
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario no tiene rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
+    // CASO 1: Si es Super Admin, puede ver todas o filtrar
+    if (userRole === "Super Admin") {
+      // Si envía companyId como filtro, aplicarlo (opcional para Super Admin)
+      if (req.query.companyId) {
+        filters.companyId = req.query.companyId;
+      }
+      // Si no envía filtro, verá todas las sucursales del sistema
+    }
+    // CASO 2: Si el usuario tiene rol "Administrador" (administrador de empresa)
+    else if (userRole === "Administrador") {
+      // Filtrar directamente por el campo administrator de la sucursal
+      filters.administrator = req.user._id;
+    }
+    // CASO 3: Si el usuario es Gerente
+    else if (userRole === "Gerente") {
+      // Buscar la sucursal donde el usuario es el gerente
+      filters.manager = req.user._id;
+    }
+    // CASO 4: Otros roles no tienen acceso
+    else {
+      return res.status(403).json({
+        success: false,
+        message: "No tienes permisos para ver sucursales",
+      });
+    }
+
     // Filtros opcionales
     if (req.query.isActive !== undefined) {
       filters.isActive = req.query.isActive === "true";
-    }
-
-    if (req.query.companyId) {
-      filters.companyId = req.query.companyId;
     }
 
     if (req.query.search) {
@@ -224,6 +267,7 @@ export const getAllBranches = async (req, res) => {
 
     const branches = await Branch.find(filters)
       .populate("companyId", "legalName tradeName rfc isActive")
+      .populate("administrator", "username email profile.name profile.lastName profile.fullName")
       .populate("manager", "username email profile.name profile.lastName profile.fullName")
       .populate("employees", "username email profile.name profile.lastName")
       .skip(skip)
@@ -256,6 +300,7 @@ export const getBranchById = async (req, res) => {
   try {
     const branch = await Branch.findById(req.params.id)
       .populate("companyId", "legalName tradeName rfc fiscalAddress isActive")
+      .populate("administrator", "username email phone profile.name profile.lastName profile.fullName")
       .populate("manager", "username email phone profile.name profile.lastName profile.fullName")
       .populate(
         "employees",
@@ -545,30 +590,97 @@ export const deleteBranch = async (req, res) => {
 // Agregar empleados a una sucursal
 export const addEmployeesToBranch = async (req, res) => {
   try {
-    const { employeeIds } = req.body;
+    const { employeeIds, employeesData } = req.body;
 
-    if (!employeeIds || !Array.isArray(employeeIds)) {
+    let createdEmployeeIds = [];
+
+    // CASO 1: Crear nuevos empleados desde employeesData
+    if (employeesData && Array.isArray(employeesData) && employeesData.length > 0) {
+      // Crear cada empleado
+      for (const empData of employeesData) {
+        // Validar que el rol esté presente
+        if (!empData.role) {
+          return res.status(400).json({
+            success: false,
+            message: "El rol es requerido para cada empleado",
+          });
+        }
+
+        // Verificar que el rol existe
+        const selectedRole = await Role.findById(empData.role);
+        if (!selectedRole) {
+          return res.status(400).json({
+            success: false,
+            message: `El rol especificado no existe`,
+          });
+        }
+
+        // Verificar que no exista un usuario con el mismo username o email
+        const existingUser = await User.findOne({
+          $or: [
+            { username: { $regex: new RegExp(`^${empData.username}$`, 'i') } },
+            { email: { $regex: new RegExp(`^${empData.email}$`, 'i') } },
+          ],
+        });
+
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message:
+              existingUser.username.toLowerCase() === empData.username.toLowerCase()
+                ? `Ya existe un usuario con el nombre de usuario "${empData.username}"`
+                : `Ya existe un usuario con el email "${empData.email}"`,
+          });
+        }
+
+        // Crear el empleado con el rol seleccionado desde el frontend
+        const newEmployee = await User.create({
+          username: empData.username,
+          email: empData.email,
+          phone: empData.phone,
+          password: empData.password,
+          profile: {
+            name: empData.profile.name,
+            lastName: empData.profile.lastName,
+            fullName: `${empData.profile.name} ${empData.profile.lastName}`,
+            estatus: true,
+          },
+          role: empData.role, // Usar el rol seleccionado desde el frontend
+        });
+
+        createdEmployeeIds.push(newEmployee._id);
+      }
+    }
+
+    // CASO 2: Agregar empleados existentes por IDs
+    if (employeeIds && Array.isArray(employeeIds) && employeeIds.length > 0) {
+      // Verificar que los empleados existen
+      const employeeCount = await User.countDocuments({
+        _id: { $in: employeeIds },
+      });
+
+      if (employeeCount !== employeeIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: "Uno o más empleados no existen",
+        });
+      }
+
+      createdEmployeeIds = [...createdEmployeeIds, ...employeeIds];
+    }
+
+    // Validar que se hayan proporcionado empleados
+    if (createdEmployeeIds.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Se requiere un array de IDs de empleados",
+        message: "Se requiere al menos un empleado para agregar (employeeIds o employeesData)",
       });
     }
 
-    // Verificar que los empleados existen
-    const employeeCount = await User.countDocuments({
-      _id: { $in: employeeIds },
-    });
-
-    if (employeeCount !== employeeIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Uno o más empleados no existen",
-      });
-    }
-
+    // Actualizar la sucursal agregando los empleados
     const branch = await Branch.findByIdAndUpdate(
       req.params.id,
-      { $addToSet: { employees: { $each: employeeIds } } },
+      { $addToSet: { employees: { $each: createdEmployeeIds } } },
       { new: true }
     )
       .populate("companyId", "legalName tradeName")

@@ -98,6 +98,11 @@ const companySchema = new Schema(
       ref: "cs_user",
       default: null,
     },
+    distributor: {
+      type: Schema.Types.ObjectId,
+      ref: "cs_user",
+      required: [true, "El distribuidor es requerido"],
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -125,6 +130,7 @@ companySchema.pre("save", function (next) {
 // Índice para búsquedas rápidas
 companySchema.index({ legalName: 1 });
 companySchema.index({ isActive: 1 });
+companySchema.index({ distributor: 1 });
 
 const Company = mongoose.model("cv_company", companySchema);
 export { Company };

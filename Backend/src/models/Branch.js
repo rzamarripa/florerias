@@ -20,6 +20,11 @@ const branchSchema = new Schema(
       ref: "cv_company",
       required: [true, "La referencia a la empresa es requerida"],
     },
+    administrator: {
+      type: Schema.Types.ObjectId,
+      ref: "cs_user",
+      required: [true, "El administrador de la sucursal es requerido"],
+    },
     address: {
       street: {
         type: String,
@@ -111,6 +116,7 @@ branchSchema.pre("save", function (next) {
 // Índices para búsquedas rápidas
 branchSchema.index({ branchName: 1 });
 branchSchema.index({ companyId: 1 });
+branchSchema.index({ administrator: 1 });
 branchSchema.index({ isActive: 1 });
 
 const Branch = mongoose.model("cv_branch", branchSchema);

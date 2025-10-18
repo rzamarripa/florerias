@@ -31,21 +31,18 @@ const BranchesPage: React.FC = () => {
   const userId = getUserId();
   const isAdmin = getIsAdmin();
 
-  // Cargar la empresa del usuario administrador
+  // Cargar la empresa del usuario administrador (solo para el modal de creación)
   const loadUserCompany = async () => {
     try {
-      if (!userId) return;
+      if (!userId || !isAdmin) return;
 
-      const response = await companiesService.getAllCompanies({ limit: 1000 });
-
-      // Buscar la empresa donde el usuario es el administrador
-      const company = response.data.find(
-        (comp: any) => comp.administrator && comp.administrator._id === userId
-      );
-
+      // Usar el nuevo endpoint que obtiene la empresa del usuario administrador autenticado
+      const company = await companiesService.getMyCompany();
       setUserCompany(company || null);
     } catch (error: any) {
       console.error("Error al cargar empresa del usuario:", error);
+      // Si no hay empresa asignada, establecer null
+      setUserCompany(null);
     }
   };
 
@@ -68,11 +65,8 @@ const BranchesPage: React.FC = () => {
         filters.isActive = statusFilter === "true";
       }
 
-      // Si el usuario no es Super Admin y tiene empresa, filtrar por su empresa
-      if (!isAdmin && userCompany) {
-        filters.companyId = userCompany._id;
-      }
-
+      // El backend se encarga del filtrado automático según el rol del usuario
+      // No es necesario enviar companyId desde el frontend
       const response = await branchesService.getAllBranches(filters);
 
       if (response.data) {
@@ -90,17 +84,15 @@ const BranchesPage: React.FC = () => {
     }
   };
 
-  // Cargar empresa del usuario al montar el componente
+  // Cargar empresa del usuario al montar el componente (solo para el modal)
   useEffect(() => {
     loadUserCompany();
   }, [userId]);
 
-  // Cargar sucursales cuando cambian los filtros o la empresa del usuario
+  // Cargar sucursales cuando cambian los filtros
   useEffect(() => {
-    if (userCompany !== null) {
-      loadBranches(true, 1);
-    }
-  }, [searchTerm, statusFilter, userCompany]);
+    loadBranches(true, 1);
+  }, [searchTerm, statusFilter]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);

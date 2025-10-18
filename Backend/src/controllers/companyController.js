@@ -103,6 +103,14 @@ export const createCompany = async (req, res) => {
       }
     }
 
+    // Obtener el distribuidor desde la sesión del usuario autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
     const company = await Company.create({
       legalName,
       tradeName,
@@ -111,10 +119,12 @@ export const createCompany = async (req, res) => {
       fiscalAddress,
       primaryContact,
       administrator: finalAdministratorId,
+      distributor: req.user._id,
     });
 
-    // Popular el distribuidor para la respuesta
+    // Popular el distribuidor y administrador para la respuesta
     await company.populate("administrator", "username email phone profile");
+    await company.populate("distributor", "username email profile");
 
     res.status(201).json({
       success: true,
@@ -139,10 +149,41 @@ export const createCompany = async (req, res) => {
 // Obtener todas las empresas
 export const getAllCompanies = async (req, res) => {
   try {
+    // Verificar que el usuario esté autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const filters = {};
+
+    // Obtener el rol del usuario
+    const currentUser = await User.findById(req.user._id).populate("role");
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario sin rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
+    // Filtrado por rol
+    if (userRole === "Super Admin") {
+      // Super Admin puede ver todas las empresas (no se agrega filtro)
+    } else if (userRole === "Administrador") {
+      // Administrador solo ve las empresas donde es el administrator
+      filters.administrator = req.user._id;
+    } else {
+      // Distribuidor u otros roles solo ven las empresas donde son distributor
+      filters.distributor = req.user._id;
+    }
 
     // Filtros opcionales
     if (req.query.isActive !== undefined) {
@@ -160,6 +201,7 @@ export const getAllCompanies = async (req, res) => {
     const companies = await Company.find(filters)
       .populate("branches", "branchName branchCode isActive")
       .populate("administrator", "username email profile.name profile.lastName profile.fullName")
+      .populate("distributor", "username email profile.name profile.lastName profile.fullName")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -188,9 +230,46 @@ export const getAllCompanies = async (req, res) => {
 // Obtener empresa por ID
 export const getCompanyById = async (req, res) => {
   try {
-    const company = await Company.findById(req.params.id)
+    // Verificar que el usuario esté autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    // Obtener el rol del usuario
+    const currentUser = await User.findById(req.user._id).populate("role");
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario sin rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
+    // Construir filtros
+    const filters = { _id: req.params.id };
+
+    // Filtrado por rol
+    if (userRole === "Super Admin") {
+      // Super Admin puede ver todas las empresas (no se agrega filtro adicional)
+    } else if (userRole === "Administrador") {
+      // Administrador solo ve las empresas donde es el administrator
+      filters.administrator = req.user._id;
+    } else {
+      // Distribuidor u otros roles solo ven las empresas donde son distributor
+      filters.distributor = req.user._id;
+    }
+
+    const company = await Company.findOne(filters)
       .populate("branches", "branchName branchCode address isActive")
-      .populate("administrator", "username email phone profile");
+      .populate("administrator", "username email phone profile")
+      .populate("distributor", "username email profile");
+
+    console.log('company', company)
 
     if (!company) {
       return res.status(404).json({
@@ -214,6 +293,48 @@ export const getCompanyById = async (req, res) => {
 // Actualizar empresa
 export const updateCompany = async (req, res) => {
   try {
+    // Verificar que el usuario esté autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    // Obtener el rol del usuario
+    const currentUser = await User.findById(req.user._id).populate("role");
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario sin rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
+    // Verificar que la empresa pertenezca al usuario (excepto Super Admin)
+    if (userRole !== "Super Admin") {
+      const filters = { _id: req.params.id };
+
+      if (userRole === "Administrador") {
+        // Administrador solo puede actualizar empresas donde es el administrator
+        filters.administrator = req.user._id;
+      } else {
+        // Distribuidor u otros roles solo pueden actualizar empresas donde son distributor
+        filters.distributor = req.user._id;
+      }
+
+      const existingCompany = await Company.findOne(filters);
+
+      if (!existingCompany) {
+        return res.status(404).json({
+          success: false,
+          message: "Empresa no encontrada o no tienes permisos para actualizarla",
+        });
+      }
+    }
+
     const {
       legalName,
       tradeName,
@@ -489,6 +610,62 @@ export const getAdministrators = async (req, res) => {
       success: true,
       count: administrators.length,
       data: administrators,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Obtener la empresa del usuario administrador autenticado
+export const getMyCompany = async (req, res) => {
+  try {
+    // Verificar que el usuario esté autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    // Obtener el rol del usuario
+    const currentUser = await User.findById(req.user._id).populate("role");
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario sin rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
+    // Solo usuarios con rol "Administrador" pueden usar este endpoint
+    if (userRole !== "Administrador") {
+      return res.status(403).json({
+        success: false,
+        message: "Solo usuarios con rol Administrador pueden acceder a este recurso",
+      });
+    }
+
+    // Buscar la empresa donde el usuario autenticado es el administrador
+    const company = await Company.findOne({ administrator: req.user._id })
+      .populate("branches", "branchName branchCode address isActive")
+      .populate("administrator", "username email phone profile")
+      .populate("distributor", "username email profile");
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontró una empresa asignada a tu usuario",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: company,
     });
   } catch (error) {
     res.status(500).json({

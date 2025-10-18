@@ -25,12 +25,12 @@ router.get("/:id", getBranchById);
 
 // Rutas POST
 router.post("/", createBranch);
+router.post("/:id/employees", addEmployeesToBranch);
 
 // Rutas PUT
 router.put("/:id", updateBranch);
 router.put("/:id/activate", activateBranch);
 router.put("/:id/deactivate", deactivateBranch);
-router.put("/:id/employees", addEmployeesToBranch);
 
 // Rutas DELETE
 router.delete("/:id", deleteBranch);

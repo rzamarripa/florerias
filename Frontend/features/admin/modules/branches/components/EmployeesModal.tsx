@@ -1,19 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Table, Spinner, Alert } from "react-bootstrap";
-import Select from "react-select";
-import { X, Save, UserPlus, ShieldAlert } from "lucide-react";
+import { Modal, Button, Form, Table, Row, Col, Spinner, Alert } from "react-bootstrap";
+import { X, Save, UserPlus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { Branch, Employee } from "../types";
+import { Branch } from "../types";
 import { branchesService } from "../services/branches";
-import { apiCall } from "@/utils/api";
 import { useUserSessionStore } from "@/stores/userSessionStore";
+import { apiCall } from "@/utils/api";
 
-interface EmployeeOption {
-  value: string;
-  label: string;
-  employee: Employee;
+interface Role {
+  _id: string;
+  name: string;
+  description?: string;
 }
 
 interface NewEmployeeData {
@@ -42,9 +41,22 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
   onEmployeesUpdated,
 }) => {
   const { user } = useUserSessionStore();
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
-  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
-  const [selectedOptions, setSelectedOptions] = useState<EmployeeOption[]>([]);
+
+  // Estado para el formulario de un solo empleado
+  const [formData, setFormData] = useState<NewEmployeeData>({
+    username: "",
+    email: "",
+    phone: "",
+    password: "",
+    profile: {
+      name: "",
+      lastName: "",
+    },
+    role: "",
+  });
+
+  const [employeesList, setEmployeesList] = useState<NewEmployeeData[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,88 +66,155 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
 
   useEffect(() => {
     if (show) {
-      loadEmployees();
+      loadRoles();
+      resetForm();
+      setEmployeesList([]);
+      setError(null);
     }
   }, [show]);
 
-  useEffect(() => {
-    if (allEmployees.length > 0 && branch) {
-      // Obtener IDs de empleados actuales
-      const currentEmployeeIds =
-        branch.employees?.map((emp: any) =>
-          typeof emp === "string" ? emp : emp._id
-        ) || [];
-
-      setSelectedEmployeeIds(currentEmployeeIds);
-
-      // Convertir a opciones
-      const options = currentEmployeeIds
-        .map((id) => {
-          const employee = allEmployees.find((e) => e._id === id);
-          if (employee) {
-            return {
-              value: employee._id,
-              label: `${employee.profile.fullName} (${employee.role.name}) - ${employee.email}`,
-              employee,
-            };
-          }
-          return null;
-        })
-        .filter((opt): opt is EmployeeOption => opt !== null);
-
-      setSelectedOptions(options);
-    }
-  }, [allEmployees, branch]);
-
-  const loadEmployees = async () => {
+  const loadRoles = async () => {
     try {
       setLoading(true);
-      setError(null);
+      const response = await apiCall<{ success: boolean; data: Role[] }>("/roles?estatus=true");
 
-      // Obtener todos los usuarios activos excluyendo los roles de admin
-      const response = await apiCall<{ success: boolean; data: Employee[] }>(
-        "/users?profile.estatus=true"
+      // Filtrar solo roles de empleados (excluir Super Admin, Administrador, Distribuidor)
+      const employeeRoles = (response.data || []).filter(
+        (role) =>
+          role.name !== "Super Admin" &&
+          role.name !== "Administrador" &&
+          role.name !== "Distribuidor"
       );
 
-      // Filtrar solo usuarios que no sean Admin, Super Admin o Distribuidor
-      const filteredEmployees = (response.data || []).filter(
-        (user) =>
-          user.role.name !== "Administrador" &&
-          user.role.name !== "Super Admin" &&
-          user.role.name !== "Distribuidor"
-      );
-
-      setAllEmployees(filteredEmployees);
+      setRoles(employeeRoles);
     } catch (err: any) {
-      console.error("Error al cargar empleados:", err);
-      setError(err.message || "Error al cargar los empleados");
+      console.error("Error al cargar roles:", err);
+      setError("Error al cargar los roles");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEmployeeSelection = (newValue: readonly EmployeeOption[]) => {
-    setSelectedOptions(newValue as EmployeeOption[]);
-    setSelectedEmployeeIds(newValue.map((opt) => opt.value));
+  const resetForm = () => {
+    setFormData({
+      username: "",
+      email: "",
+      phone: "",
+      password: "",
+      profile: {
+        name: "",
+        lastName: "",
+      },
+      role: "",
+    });
   };
 
-  const getEmployeeOptions = (): EmployeeOption[] => {
-    return allEmployees.map((employee) => ({
-      value: employee._id,
-      label: `${employee.profile.fullName} (${employee.role.name}) - ${employee.email}`,
-      employee,
-    }));
+  const handleInputChange = (field: string, value: string) => {
+    const keys = field.split(".");
+
+    if (keys.length === 1) {
+      setFormData({ ...formData, [keys[0]]: value });
+    } else if (keys.length === 2) {
+      setFormData({
+        ...formData,
+        [keys[0]]: {
+          ...(formData as any)[keys[0]],
+          [keys[1]]: value,
+        },
+      });
+    }
   };
 
-  const handleRemoveEmployee = (employeeId: string) => {
-    const newSelectedIds = selectedEmployeeIds.filter((id) => id !== employeeId);
-    const newSelectedOptions = selectedOptions.filter((opt) => opt.value !== employeeId);
-    setSelectedEmployeeIds(newSelectedIds);
-    setSelectedOptions(newSelectedOptions);
+  const validateEmployee = (): boolean => {
+    if (!formData.username.trim()) {
+      setError("El nombre de usuario es requerido");
+      return false;
+    }
+
+    if (!formData.email.trim()) {
+      setError("El email es requerido");
+      return false;
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("El email no es válido");
+      return false;
+    }
+
+    if (!formData.phone.trim()) {
+      setError("El teléfono es requerido");
+      return false;
+    }
+
+    if (!formData.password.trim()) {
+      setError("La contraseña es requerida");
+      return false;
+    }
+
+    if (!formData.profile.name.trim()) {
+      setError("El nombre es requerido");
+      return false;
+    }
+
+    if (!formData.profile.lastName.trim()) {
+      setError("El apellido es requerido");
+      return false;
+    }
+
+    if (!formData.role.trim()) {
+      setError("El rol es requerido");
+      return false;
+    }
+
+    // Verificar que el username no esté duplicado en la lista
+    const duplicateUsername = employeesList.find(
+      (emp) => emp.username.toLowerCase() === formData.username.toLowerCase()
+    );
+    if (duplicateUsername) {
+      setError("Ya existe un empleado con este nombre de usuario en la lista");
+      return false;
+    }
+
+    // Verificar que el email no esté duplicado en la lista
+    const duplicateEmail = employeesList.find(
+      (emp) => emp.email.toLowerCase() === formData.email.toLowerCase()
+    );
+    if (duplicateEmail) {
+      setError("Ya existe un empleado con este email en la lista");
+      return false;
+    }
+
+    return true;
   };
 
-  const getSelectedEmployees = (): Employee[] => {
-    return allEmployees.filter((emp) => selectedEmployeeIds.includes(emp._id));
+  const handleAddEmployee = () => {
+    setError(null);
+
+    if (!validateEmployee()) {
+      return;
+    }
+
+    // Agregar a la lista
+    setEmployeesList([...employeesList, { ...formData }]);
+
+    // Resetear formulario
+    resetForm();
+
+    toast.success("Empleado agregado a la lista");
+  };
+
+  const handleRemoveEmployee = (index: number) => {
+    const updated = [...employeesList];
+    updated.splice(index, 1);
+    setEmployeesList(updated);
+    toast.info("Empleado removido de la lista");
+  };
+
+  const getRoleName = (roleId: string): string => {
+    const role = roles.find((r) => r._id === roleId);
+    return role ? role.name : "N/A";
   };
 
   const handleSave = async () => {
@@ -143,16 +222,30 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
       setSaving(true);
       setError(null);
 
-      // Actualizar la sucursal con los nuevos empleados
-      await branchesService.updateBranch(branch._id, {
-        employees: selectedEmployeeIds,
+      if (employeesList.length === 0) {
+        setError("Debes agregar al menos un empleado a la lista");
+        setSaving(false);
+        return;
+      }
+
+      // Enviar empleados al backend para crearlos y asignarlos a la sucursal
+      const response = await branchesService.addEmployeesToBranch(branch._id, {
+        employeesData: employeesList,
       });
 
-      toast.success("Empleados actualizados exitosamente");
+      if (!response.success) {
+        const errorMsg = response.message || "Error al agregar empleados";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setSaving(false);
+        return;
+      }
+
+      toast.success(`${employeesList.length} empleado(s) agregado(s) exitosamente`);
       onEmployeesUpdated?.();
       onHide();
     } catch (err: any) {
-      const errorMessage = err.message || "Error al actualizar los empleados";
+      const errorMessage = err.message || "Error al agregar empleados";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -167,14 +260,14 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered>
+    <Modal show={show} onHide={handleClose} size="xl" centered>
       <Modal.Header closeButton>
         <Modal.Title>
           <UserPlus size={24} className="me-2" />
-          Gestionar Empleados - {branch.branchName}
+          Agregar Empleados - {branch.branchName}
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
         {error && (
           <Alert variant="danger" onClose={() => setError(null)} dismissible>
             {error}
@@ -183,11 +276,11 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
 
         {!hasPermission && (
           <Alert variant="warning" className="d-flex align-items-center gap-2">
-            <ShieldAlert size={24} />
+            <X size={24} />
             <div>
               <strong>Permisos insuficientes</strong>
               <p className="mb-0">
-                Solo los usuarios con rol <strong>Gerente</strong> o <strong>Administrador</strong> pueden gestionar los empleados de esta sucursal.
+                Solo los usuarios con rol <strong>Gerente</strong> o <strong>Administrador</strong> pueden agregar empleados.
               </p>
             </div>
           </Alert>
@@ -199,81 +292,175 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
           </div>
         ) : (
           <>
-            {/* Multiselect de Empleados con React-Select */}
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-semibold">
-                Seleccionar Empleados
-              </Form.Label>
-              <Select
-                isMulti
-                isDisabled={!hasPermission}
-                options={getEmployeeOptions()}
-                value={selectedOptions}
-                onChange={handleEmployeeSelection}
-                placeholder={hasPermission ? "Selecciona empleados..." : "No tienes permisos para modificar empleados"}
-                noOptionsMessage={() => "No hay empleados disponibles"}
-                className="react-select-container"
-                classNamePrefix="react-select"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    minHeight: "42px",
-                  }),
-                  menuPortal: (base) => ({
-                    ...base,
-                    zIndex: 9999,
-                  }),
-                }}
-                menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-              />
-              <Form.Text className="text-muted">
-                Solo se muestran usuarios con roles diferentes a Administrador, Super Admin y Distribuidor
-              </Form.Text>
-            </Form.Group>
+            {/* Formulario para agregar un empleado */}
+            <div className="border rounded p-3 mb-4" style={{ backgroundColor: "#f8f9fa" }}>
+              <h6 className="fw-semibold mb-3">Agregar Nuevo Empleado</h6>
+              <Row className="g-3">
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>
+                      Nombre de Usuario <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Nombre de usuario"
+                      value={formData.username}
+                      onChange={(e) => handleInputChange("username", e.target.value)}
+                      disabled={!hasPermission}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>
+                      Email <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="email"
+                      placeholder="Email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      disabled={!hasPermission}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>
+                      Teléfono <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="tel"
+                      placeholder="Teléfono"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      disabled={!hasPermission}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>
+                      Nombre <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Nombre"
+                      value={formData.profile.name}
+                      onChange={(e) => handleInputChange("profile.name", e.target.value)}
+                      disabled={!hasPermission}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>
+                      Apellido <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Apellido"
+                      value={formData.profile.lastName}
+                      onChange={(e) => handleInputChange("profile.lastName", e.target.value)}
+                      disabled={!hasPermission}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>
+                      Contraseña <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="password"
+                      placeholder="Contraseña"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      disabled={!hasPermission}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label>
+                      Rol <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Select
+                      value={formData.role}
+                      onChange={(e) => handleInputChange("role", e.target.value)}
+                      disabled={!hasPermission}
+                    >
+                      <option value="">-- Seleccione un rol --</option>
+                      {roles.map((role) => (
+                        <option key={role._id} value={role._id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+              <div className="text-end mt-3">
+                <Button
+                  variant="primary"
+                  onClick={handleAddEmployee}
+                  disabled={!hasPermission}
+                  className="d-flex align-items-center gap-2 ms-auto"
+                >
+                  <UserPlus size={18} />
+                  Agregar a la Lista
+                </Button>
+              </div>
+            </div>
 
-            {/* Tabla de Empleados Asignados */}
-            <div className="mt-4">
+            {/* Tabla de empleados agregados */}
+            <div>
               <h6 className="fw-semibold mb-3">
-                Empleados Asignados ({getSelectedEmployees().length})
+                Empleados a Agregar ({employeesList.length})
               </h6>
-              {getSelectedEmployees().length === 0 ? (
+              {employeesList.length === 0 ? (
                 <Alert variant="info">
-                  No hay empleados asignados. Selecciona empleados del listado
-                  superior.
+                  No hay empleados en la lista. Completa el formulario superior y haz clic en "Agregar a la Lista".
                 </Alert>
               ) : (
                 <div className="table-responsive">
-                  <Table striped bordered hover size="sm">
-                    <thead>
+                  <Table striped bordered hover>
+                    <thead className="table-light">
                       <tr>
-                        <th>Nombre</th>
-                        <th>Rol</th>
+                        <th>#</th>
+                        <th>Usuario</th>
+                        <th>Nombre Completo</th>
                         <th>Email</th>
                         <th>Teléfono</th>
-                        <th style={{ width: "60px" }}>Acciones</th>
+                        <th>Rol</th>
+                        <th style={{ width: "80px" }}>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {getSelectedEmployees().map((employee) => (
-                        <tr key={employee._id}>
-                          <td>{employee.profile.fullName}</td>
+                      {employeesList.map((employee, index) => (
+                        <tr key={index}>
+                          <td>{index + 1}</td>
+                          <td>{employee.username}</td>
                           <td>
-                            <span className="badge bg-info">
-                              {employee.role.name}
-                            </span>
+                            {employee.profile.name} {employee.profile.lastName}
                           </td>
                           <td>{employee.email}</td>
-                          <td>{employee.phone || "N/A"}</td>
+                          <td>{employee.phone}</td>
+                          <td>
+                            <span className="badge bg-info">
+                              {getRoleName(employee.role)}
+                            </span>
+                          </td>
                           <td className="text-center">
                             <Button
                               variant="link"
                               size="sm"
                               className="p-0 text-danger"
-                              onClick={() => handleRemoveEmployee(employee._id)}
-                              title="Quitar empleado"
+                              onClick={() => handleRemoveEmployee(index)}
+                              title="Quitar de la lista"
                               disabled={!hasPermission}
                             >
-                              <X size={18} />
+                              <Trash2 size={18} />
                             </Button>
                           </td>
                         </tr>
@@ -291,9 +478,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
           Cancelar
         </Button>
         <Button
-          variant="primary"
+          variant="success"
           onClick={handleSave}
-          disabled={saving || loading || !hasPermission}
+          disabled={saving || !hasPermission || employeesList.length === 0}
           className="d-flex align-items-center gap-2"
         >
           {saving ? (
@@ -308,7 +495,7 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
           ) : (
             <>
               <Save size={18} />
-              Guardar
+              Guardar ({employeesList.length})
             </>
           )}
         </Button>

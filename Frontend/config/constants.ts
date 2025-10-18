@@ -44,6 +44,13 @@ export const menuItems: MenuItemType[] = [
           { key: "nuevo_gasto", label: "NUEVO GASTO", url: "/sucursal/nuevo-gasto" },
         ]
       },
+      {
+        key: 'produccion',
+        label: 'PRODUCCION',
+        children:[
+          { key: "pizarron-ventas", label: "Pizarrón de Ventas", url: "/produccion/pizarron-ventas" },
+        ]
+      },
     ],
   },
   {
