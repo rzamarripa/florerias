@@ -5,10 +5,14 @@ import {
   createOrder,
   updateOrder,
   updateOrderStatus,
-  deleteOrder
+  deleteOrder,
+  getOrdersSummary
 } from '../controllers/orderController.js';
 
 const router = Router();
+
+// Ruta para resumen de ventas (debe ir antes de /:id para evitar conflictos)
+router.get('/summary', getOrdersSummary); // GET /api/orders/summary - Obtener resumen de ventas
 
 // Rutas para órdenes
 router.route('/')

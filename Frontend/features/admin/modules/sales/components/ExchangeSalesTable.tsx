@@ -9,6 +9,7 @@ interface ExchangeSalesTableProps {
     startDate: string;
     endDate: string;
     viewMode: "dia" | "semana" | "mes";
+    branchId?: string;
   };
 }
 

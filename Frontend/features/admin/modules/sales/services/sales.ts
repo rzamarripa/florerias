@@ -13,6 +13,7 @@ export const salesService = {
       paymentMethodId,
       startDate,
       endDate,
+      branchId,
     } = filters;
 
     const searchParams = new URLSearchParams({
@@ -27,14 +28,15 @@ export const salesService = {
     if (paymentMethodId) searchParams.append('paymentMethodId', paymentMethodId);
     if (startDate) searchParams.append('startDate', startDate);
     if (endDate) searchParams.append('endDate', endDate);
+    if (branchId) searchParams.append('branchId', branchId);
 
     const response = await apiCall<GetSalesResponse>(`/orders?${searchParams}`);
-    return response;
+    return response as any;
   },
 
   getSaleById: async (saleId: string): Promise<GetSaleResponse> => {
     const response = await apiCall<GetSaleResponse>(`/orders/${saleId}`);
-    return response;
+    return response as any;
   },
 
   // Método específico para ventas nuevas (del día actual)
@@ -76,5 +78,35 @@ export const salesService = {
       method: "DELETE",
     });
     return response;
+  },
+
+  // Obtener resumen de ventas
+  getSalesSummary: async (filters: { startDate?: string; endDate?: string; branchId?: string } = {}): Promise<{
+    success: boolean;
+    data: {
+      totalSales: { count: number; amount: number };
+      pendingPayment: { count: number; amount: number };
+      paidSales: { count: number; amount: number };
+      cancelledSales: { count: number; amount: number };
+    };
+  }> => {
+    const { startDate, endDate, branchId } = filters;
+
+    const searchParams = new URLSearchParams();
+
+    if (startDate) searchParams.append('startDate', startDate);
+    if (endDate) searchParams.append('endDate', endDate);
+    if (branchId) searchParams.append('branchId', branchId);
+
+    const response = await apiCall<{
+      success: boolean;
+      data: {
+        totalSales: { count: number; amount: number };
+        pendingPayment: { count: number; amount: number };
+        paidSales: { count: number; amount: number };
+        cancelledSales: { count: number; amount: number };
+      };
+    }>(`/orders/summary?${searchParams}`);
+    return response as any;
   },
 };

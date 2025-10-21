@@ -12,6 +12,7 @@ interface NewSalesTableProps {
     startDate: string;
     endDate: string;
     viewMode: "dia" | "semana" | "mes";
+    branchId?: string;
   };
 }
 
@@ -25,6 +26,7 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters }) => {
       const response = await salesService.getNewSales({
         startDate: filters.startDate,
         endDate: filters.endDate,
+        branchId: filters.branchId,
       });
 
       if (response.data) {

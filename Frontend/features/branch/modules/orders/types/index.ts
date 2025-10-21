@@ -26,6 +26,17 @@ export interface OrderItem {
 
 export interface Order {
   _id: string;
+  branchId: string | {
+    _id: string;
+    branchName: string;
+    branchCode?: string;
+  };
+  cashRegisterId?: string | {
+    _id: string;
+    name: string;
+    isOpen: boolean;
+    currentBalance?: number;
+  } | null;
   clientInfo: ClientInfo;
   salesChannel: 'tienda' | 'whatsapp' | 'facebook';
   items: OrderItem[];
@@ -50,6 +61,8 @@ export interface Order {
 }
 
 export interface CreateOrderData {
+  branchId: string;
+  cashRegisterId?: string | null;
   clientInfo: ClientInfo;
   salesChannel: 'tienda' | 'whatsapp' | 'facebook';
   items: OrderItem[];

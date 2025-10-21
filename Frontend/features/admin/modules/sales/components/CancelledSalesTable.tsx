@@ -12,6 +12,7 @@ interface CancelledSalesTableProps {
     startDate: string;
     endDate: string;
     viewMode: "dia" | "semana" | "mes";
+    branchId?: string;
   };
 }
 
@@ -25,6 +26,7 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({ filters }) =>
       const response = await salesService.getCancelledSales({
         startDate: filters.startDate,
         endDate: filters.endDate,
+        branchId: filters.branchId,
       });
 
       if (response.data) {

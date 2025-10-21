@@ -12,6 +12,7 @@ interface PendingPaymentsTableProps {
     startDate: string;
     endDate: string;
     viewMode: "dia" | "semana" | "mes";
+    branchId?: string;
   };
 }
 
@@ -25,6 +26,7 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) 
       const response = await salesService.getPendingSales({
         startDate: filters.startDate,
         endDate: filters.endDate,
+        branchId: filters.branchId,
       });
 
       if (response.data) {

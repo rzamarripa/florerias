@@ -10,6 +10,7 @@ import {
   addEmployeesToBranch,
   removeEmployeeFromBranch,
   getAvailableManagers,
+  getUserBranches,
 } from "../controllers/branchController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -20,6 +21,7 @@ router.use(protect);
 
 // Rutas GET
 router.get("/", getAllBranches);
+router.get("/user/branches", getUserBranches);
 router.get("/available-managers", getAvailableManagers);
 router.get("/:id", getBranchById);
 

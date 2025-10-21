@@ -37,6 +37,7 @@ export const menuItems: MenuItemType[] = [
         label: 'SUCURSAL',
         children:[
           { key: "sucursales", label: "Sucursales", url: "/panel-de-control/sucursales" },
+          { key: "cajas", label: "Cajas Registradoras", url: "/ventas/cajas" },
           { key: "nuevo_pedido", label: "Nuevo Pedido", url: "/sucursal/nuevo-pedido" },
           { key: "ventas", label: "VENTAS", url: "/sucursal/ventas" },
           { key: "produccion", label: "Produccion", url: "/sucursal/produccion" },
@@ -63,6 +64,14 @@ export const menuItems: MenuItemType[] = [
       { key: "materiales", label: "Materiales", url: "/catalogos/materiales" },
       { key: "unidades", label: "Unidades de Medida", url: "/catalogos/unidades-medida" },
       { key: "metodos-pago", label: "Metodos de Pago", url: "/catalogos/payment-method" },
+    ],
+
+  },
+  {
+    key: "ventas",
+    label: "VENTAS",
+    icon: ShieldUser,
+    children: [
     ],
 
   },

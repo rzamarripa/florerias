@@ -12,6 +12,7 @@ interface CreditSalesTableProps {
     startDate: string;
     endDate: string;
     viewMode: "dia" | "semana" | "mes";
+    branchId?: string;
   };
   creditPaymentMethodId?: string;
 }
@@ -31,6 +32,7 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
       const response = await salesService.getCreditSales(creditPaymentMethodId, {
         startDate: filters.startDate,
         endDate: filters.endDate,
+        branchId: filters.branchId,
       });
 
       if (response.data) {

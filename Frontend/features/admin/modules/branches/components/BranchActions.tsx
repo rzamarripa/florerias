@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { Spinner, Button } from "react-bootstrap";
-import { Edit2, CheckCircle, XCircle, UserPlus } from "lucide-react";
+import { Edit2, CheckCircle, XCircle, UserPlus, Users } from "lucide-react";
 import { toast } from "react-toastify";
 import { branchesService } from "../services/branches";
 import { Branch } from "../types";
 import BranchModal from "./BranchModal";
 import EmployeesModal from "./EmployeesModal";
+import ViewEmployeesModal from "./ViewEmployeesModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface BranchActionsProps {
@@ -22,6 +23,7 @@ const BranchActions: React.FC<BranchActionsProps> = ({
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [showEmployeesModal, setShowEmployeesModal] = useState<boolean>(false);
+  const [showViewEmployeesModal, setShowViewEmployeesModal] = useState<boolean>(false);
   const { getIsAdmin } = useUserRoleStore();
   const isAdmin = getIsAdmin();
 
@@ -89,14 +91,26 @@ const BranchActions: React.FC<BranchActionsProps> = ({
           </Button>
         )}
 
-        {/* Employees Button */}
+        {/* View Employees Button */}
+        <Button
+          variant="light"
+          size="sm"
+          className="rounded-circle"
+          style={{ width: "32px", height: "32px", padding: "0" }}
+          onClick={() => setShowViewEmployeesModal(true)}
+          title="Ver empleados"
+        >
+          <Users size={16} className="text-info" />
+        </Button>
+
+        {/* Add Employees Button */}
         <Button
           variant="light"
           size="sm"
           className="rounded-circle"
           style={{ width: "32px", height: "32px", padding: "0" }}
           onClick={() => setShowEmployeesModal(true)}
-          title="Gestionar empleados"
+          title="Agregar empleados"
         >
           <UserPlus size={16} className="text-primary" />
         </Button>
@@ -119,6 +133,13 @@ const BranchActions: React.FC<BranchActionsProps> = ({
         onHide={() => setShowEmployeesModal(false)}
         branch={branch}
         onEmployeesUpdated={onBranchUpdated}
+      />
+
+      {/* View Employees Modal */}
+      <ViewEmployeesModal
+        show={showViewEmployeesModal}
+        onHide={() => setShowViewEmployeesModal(false)}
+        branch={branch}
       />
     </>
   );

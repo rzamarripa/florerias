@@ -133,4 +133,9 @@ export const branchesService = {
     const response = await apiCall<{ success: boolean; data: Employee[]; message?: string }>("/branches/available-managers");
     return response as any;
   },
+
+  getUserBranches: async (): Promise<{ success: boolean; count: number; data: Branch[] }> => {
+    const response = await apiCall<{ success: boolean; count: number; data: Branch[] }>("/branches/user/branches");
+    return response as any;
+  },
 };

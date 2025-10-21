@@ -28,6 +28,10 @@ import { clientsService } from "@/features/admin/modules/clients/services/client
 import { Client } from "@/features/admin/modules/clients/types";
 import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
 import { PaymentMethod } from "@/features/admin/modules/payment-methods/types";
+import { branchesService } from "@/features/admin/modules/branches/services/branches";
+import { Branch } from "@/features/admin/modules/branches/types";
+import { cashRegistersService } from "@/features/admin/modules/cash-registers/services/cashRegisters";
+import { CashRegister } from "@/features/admin/modules/cash-registers/types";
 import { toast } from "react-toastify";
 
 const NewOrderPage = () => {
@@ -36,8 +40,15 @@ const NewOrderPage = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
+  const [loadingCashRegister, setLoadingCashRegister] = useState(false);
+  const [togglingCashRegister, setTogglingCashRegister] = useState(false);
 
   const [formData, setFormData] = useState<CreateOrderData>({
+    branchId: "",
+    cashRegisterId: null,
     clientInfo: {
       name: "",
       phone: "",
@@ -82,10 +93,12 @@ const NewOrderPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Cargar clientes y métodos de pago al montar el componente
+  // Cargar clientes, métodos de pago, sucursales y caja registradora al montar el componente
   useEffect(() => {
     fetchClients();
     fetchPaymentMethods();
+    fetchUserBranches();
+    fetchUserCashRegister();
   }, []);
 
   // Actualizar fecha y hora cuando se activa "Venta Rápida"
@@ -147,6 +160,76 @@ const NewOrderPage = () => {
       toast.error("Error al cargar los métodos de pago");
     } finally {
       setLoadingPaymentMethods(false);
+    }
+  };
+
+  // Obtener sucursales del usuario
+  const fetchUserBranches = async () => {
+    setLoadingBranches(true);
+    try {
+      const response = await branchesService.getUserBranches();
+      setBranches(response.data);
+      // Establecer la primera sucursal como predeterminada
+      if (response.data.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          branchId: response.data[0]._id
+        }));
+      }
+    } catch (err) {
+      console.error("Error al cargar sucursales:", err);
+      toast.error("Error al cargar las sucursales del usuario");
+    } finally {
+      setLoadingBranches(false);
+    }
+  };
+
+  // Obtener caja registradora del usuario
+  const fetchUserCashRegister = async () => {
+    setLoadingCashRegister(true);
+    try {
+      const response = await cashRegistersService.getUserCashRegister();
+      if (response.data) {
+        setCashRegister(response.data);
+        setFormData(prev => ({
+          ...prev,
+          cashRegisterId: response.data!._id
+        }));
+      } else {
+        setCashRegister(null);
+        setFormData(prev => ({
+          ...prev,
+          cashRegisterId: null
+        }));
+      }
+    } catch (err) {
+      console.error("Error al cargar caja registradora:", err);
+      toast.error("Error al cargar la caja registradora del usuario");
+    } finally {
+      setLoadingCashRegister(false);
+    }
+  };
+
+  // Abrir/Cerrar caja registradora
+  const handleToggleCashRegister = async () => {
+    if (!cashRegister) return;
+
+    setTogglingCashRegister(true);
+    try {
+      const response = await cashRegistersService.toggleOpen(
+        cashRegister._id,
+        !cashRegister.isOpen
+      );
+
+      if (response.success) {
+        setCashRegister(response.data);
+        toast.success(response.message);
+      }
+    } catch (err: any) {
+      console.error("Error al cambiar estado de caja:", err);
+      toast.error(err.message || "Error al cambiar estado de la caja");
+    } finally {
+      setTogglingCashRegister(false);
     }
   };
 
@@ -335,6 +418,8 @@ const NewOrderPage = () => {
       // Reset form after 2 seconds
       setTimeout(() => {
         setFormData({
+          branchId: branches.length > 0 ? branches[0]._id : "",
+          cashRegisterId: cashRegister ? cashRegister._id : null,
           clientInfo: {
             name: "",
             phone: "",
@@ -515,7 +600,7 @@ const NewOrderPage = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col md={12}>
+                  <Col md={6}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">
                         <Store size={16} className="me-2" />
@@ -526,7 +611,7 @@ const NewOrderPage = () => {
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            salesChannel: e.target.value,
+                            salesChannel: e.target.value as "tienda" | "whatsapp" | "facebook",
                           })
                         }
                         required
@@ -536,6 +621,80 @@ const NewOrderPage = () => {
                         <option value="whatsapp">WhatsApp</option>
                         <option value="facebook">Facebook</option>
                       </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <Store size={16} className="me-2" />
+                        Sucursal
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={
+                          loadingBranches
+                            ? "Cargando..."
+                            : branches.length > 0 && formData.branchId
+                            ? `${branches.find(b => b._id === formData.branchId)?.branchName || ""}${
+                                branches.find(b => b._id === formData.branchId)?.branchCode
+                                  ? ` (${branches.find(b => b._id === formData.branchId)?.branchCode})`
+                                  : ""
+                              }`
+                            : "No hay sucursales disponibles"
+                        }
+                        readOnly
+                        disabled
+                        className="py-2 bg-light"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <CreditCard size={16} className="me-2" />
+                        Caja Registradora
+                      </Form.Label>
+                      <div className="d-flex gap-2">
+                        <Form.Control
+                          type="text"
+                          value={
+                            loadingCashRegister
+                              ? "Cargando..."
+                              : cashRegister
+                              ? cashRegister.name
+                              : "No hay caja asignada"
+                          }
+                          readOnly
+                          disabled
+                          className="py-2 bg-light"
+                        />
+                        {cashRegister && (
+                          <Button
+                            variant={cashRegister.isOpen ? "success" : "warning"}
+                            onClick={handleToggleCashRegister}
+                            disabled={togglingCashRegister}
+                            className="d-flex align-items-center gap-2"
+                            style={{ minWidth: "120px" }}
+                          >
+                            {togglingCashRegister ? (
+                              "Procesando..."
+                            ) : cashRegister.isOpen ? (
+                              "Abierta"
+                            ) : (
+                              "Cerrada"
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                      {cashRegister && !cashRegister.isOpen && (
+                        <Alert variant="warning" className="mt-2 mb-0 py-2">
+                          <small>
+                            ⚠️ La caja está cerrada. Ábrela para registrar ventas.
+                          </small>
+                        </Alert>
+                      )}
                     </Form.Group>
                   </Col>
                 </Row>

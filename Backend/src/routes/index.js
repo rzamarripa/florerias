@@ -21,6 +21,7 @@ import paymentMethodRoutes from "./paymentMethodRoutes.js";
 import companyRoutes from "./companyRoutes.js";
 import branchRoutes from "./branchRoutes.js";
 import productListRoutes from "./productListRoutes.js";
+import cashRegisterRoutes from "./cashRegisterRoutes.js";
 
 const router = Router();
 
@@ -45,5 +46,6 @@ router.use("/payment-methods", paymentMethodRoutes);
 router.use("/companies", companyRoutes);
 router.use("/branches", branchRoutes);
 router.use("/product-lists", productListRoutes);
+router.use("/cash-registers", cashRegisterRoutes);
 
 export default router;

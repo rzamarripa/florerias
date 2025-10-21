@@ -64,6 +64,7 @@ export interface SaleFilters {
   startDate?: string;
   endDate?: string;
   viewMode?: 'dia' | 'semana' | 'mes';
+  branchId?: string;
 }
 
 // Response Types

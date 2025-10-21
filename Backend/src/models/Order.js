@@ -89,6 +89,16 @@ const orderItemSchema = new mongoose.Schema({
 }, { _id: true });
 
 const orderSchema = new mongoose.Schema({
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_branch',
+    required: [true, 'La sucursal es requerida']
+  },
+  cashRegisterId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CashRegister',
+    default: null
+  },
   clientInfo: {
     type: clientInfoSchema,
     required: true
@@ -191,6 +201,8 @@ const orderSchema = new mongoose.Schema({
 });
 
 // Índices para mejorar rendimiento (orderNumber ya tiene índice desde unique: true)
+orderSchema.index({ branchId: 1 });
+orderSchema.index({ cashRegisterId: 1 });
 orderSchema.index({ 'clientInfo.name': 1 });
 orderSchema.index({ 'clientInfo.phone': 1 });
 orderSchema.index({ salesChannel: 1 });
