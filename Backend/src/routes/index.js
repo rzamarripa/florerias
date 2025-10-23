@@ -22,6 +22,7 @@ import companyRoutes from "./companyRoutes.js";
 import branchRoutes from "./branchRoutes.js";
 import productListRoutes from "./productListRoutes.js";
 import cashRegisterRoutes from "./cashRegisterRoutes.js";
+import storageRoutes from "./storageRoutes.js";
 
 const router = Router();
 
@@ -47,5 +48,6 @@ router.use("/companies", companyRoutes);
 router.use("/branches", branchRoutes);
 router.use("/product-lists", productListRoutes);
 router.use("/cash-registers", cashRegisterRoutes);
+router.use("/storages", storageRoutes);
 
 export default router;

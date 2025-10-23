@@ -77,6 +77,12 @@ export const menuItems: MenuItemType[] = [
             url: "/sucursal/nuevo-gasto",
             icon: DollarSign,
           },
+          {
+            key: "almacenes",
+            label: "Almacenes",
+            url: "/sucursal/almacenes",
+            icon: DollarSign,
+          },
         ],
       },
       {

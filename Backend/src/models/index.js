@@ -11,3 +11,4 @@ import "./Cashier.js";
 import "./Production.js";
 import "./Company.js";
 import "./Branch.js";
+import "./Storage.js";
