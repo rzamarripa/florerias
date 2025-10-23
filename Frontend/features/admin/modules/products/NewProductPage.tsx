@@ -47,6 +47,13 @@ const NewProductPage: React.FC = () => {
     importeVenta: 0,
   });
 
+  // Precios unitarios para el insumo actual
+  const [unitCost, setUnitCost] = useState<number>(0);
+  const [unitPrice, setUnitPrice] = useState<number>(0);
+
+  // Precio de venta final editable
+  const [precioVentaEditable, setPrecioVentaEditable] = useState<number>(0);
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -72,7 +79,10 @@ const NewProductPage: React.FC = () => {
 
   const loadMaterials = async () => {
     try {
-      const response = await materialsService.getAllMaterials({ status: true, limit: 1000 });
+      const response = await materialsService.getAllMaterials({
+        status: true,
+        limit: 1000,
+      });
       setMaterials(response.data);
 
       // Si hay materiales, establecer el primero como valor por defecto
@@ -86,6 +96,8 @@ const NewProductPage: React.FC = () => {
           importeCosto: firstMaterial.cost,
           importeVenta: firstMaterial.price,
         });
+        setUnitCost(firstMaterial.cost);
+        setUnitPrice(firstMaterial.price);
       }
     } catch (err: any) {
       toast.error(err.message || "Error al cargar los materiales");
@@ -108,13 +120,22 @@ const NewProductPage: React.FC = () => {
         estatus: product.estatus,
       });
 
+      // Cargar precio de venta final si existe
+      if (product.precioVentaFinal) {
+        setPrecioVentaEditable(product.precioVentaFinal);
+      }
+
       // Establecer preview de imagen si existe
       if (product.imagen) {
         setImagePreview(product.imagen);
       }
 
       // Detectar si labour es porcentaje o fijo
-      const totalVentaInsumos = product.insumos?.reduce((sum, insumo) => sum + insumo.importeVenta, 0) || 0;
+      const totalVentaInsumos =
+        product.insumos?.reduce(
+          (sum, insumo) => sum + insumo.importeVenta,
+          0
+        ) || 0;
       if (totalVentaInsumos > 0 && product.labour > 0) {
         const calculatedPercentage = (product.labour / totalVentaInsumos) * 100;
         // Si el porcentaje es un número entero razonable (ej: 10%, 15%, 20%), asumimos que fue ingresado como porcentaje
@@ -131,6 +152,14 @@ const NewProductPage: React.FC = () => {
     }
   };
 
+  // Función para formatear números con separación de miles
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString("es-MX", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   // Calcular totales
   const calculateTotals = () => {
     const totalCosto =
@@ -139,7 +168,10 @@ const NewProductPage: React.FC = () => {
     const totalVenta =
       formData.insumos?.reduce((sum, insumo) => sum + insumo.importeVenta, 0) ||
       0;
-    return { totalCosto, totalVenta };
+    const precioVentaCalculado = totalVenta + formData.labour;
+    const precioVentaFinal =
+      precioVentaEditable > 0 ? precioVentaEditable : precioVentaCalculado;
+    return { totalCosto, totalVenta, precioVentaFinal, precioVentaCalculado };
   };
 
   // Cargar insumo para editar
@@ -147,6 +179,10 @@ const NewProductPage: React.FC = () => {
     const insumo = formData.insumos?.[index];
     if (insumo) {
       setCurrentInsumo({ ...insumo });
+      // Calcular precios unitarios basados en los importes y cantidad
+      const cantidad = insumo.cantidad || 1;
+      setUnitCost(insumo.importeCosto / cantidad);
+      setUnitPrice(insumo.importeVenta / cantidad);
       setEditingInsumoIndex(index);
     }
   };
@@ -163,6 +199,8 @@ const NewProductPage: React.FC = () => {
         importeCosto: firstMaterial.cost,
         importeVenta: firstMaterial.price,
       });
+      setUnitCost(firstMaterial.cost);
+      setUnitPrice(firstMaterial.price);
     }
     setEditingInsumoIndex(null);
     setError(null);
@@ -170,20 +208,35 @@ const NewProductPage: React.FC = () => {
 
   // Agregar o actualizar insumo
   const handleAddInsumo = () => {
-    if (!currentInsumo.materialId || !currentInsumo.nombre || (currentInsumo.cantidad || 0) <= 0) {
+    if (
+      !currentInsumo.materialId ||
+      !currentInsumo.nombre ||
+      (currentInsumo.cantidad || 0) <= 0
+    ) {
       setError("Por favor completa todos los campos del insumo");
       return;
     }
 
+    // Calcular importes basados en cantidad y precios unitarios
+    const cantidad = currentInsumo.cantidad || 0;
+    const importeCosto = cantidad * unitCost;
+    const importeVenta = cantidad * unitPrice;
+
+    const insumoToAdd = {
+      ...currentInsumo,
+      importeCosto,
+      importeVenta,
+    };
+
     if (editingInsumoIndex !== null) {
       // Actualizar insumo existente
       const newInsumos = [...(formData.insumos || [])];
-      newInsumos[editingInsumoIndex] = currentInsumo as Insumo;
+      newInsumos[editingInsumoIndex] = insumoToAdd as Insumo;
       setFormData({ ...formData, insumos: newInsumos });
       setEditingInsumoIndex(null);
     } else {
       // Agregar nuevo insumo
-      const newInsumos = [...(formData.insumos || []), currentInsumo as Insumo];
+      const newInsumos = [...(formData.insumos || []), insumoToAdd as Insumo];
       setFormData({ ...formData, insumos: newInsumos });
     }
 
@@ -198,6 +251,8 @@ const NewProductPage: React.FC = () => {
         importeCosto: firstMaterial.cost,
         importeVenta: firstMaterial.price,
       });
+      setUnitCost(firstMaterial.cost);
+      setUnitPrice(firstMaterial.price);
     }
     setError(null);
   };
@@ -229,9 +284,12 @@ const NewProductPage: React.FC = () => {
         const base64String = reader.result as string;
         console.log("Base64 generado, longitud:", base64String.length);
         setImagePreview(base64String);
-        setFormData(prev => {
+        setFormData((prev) => {
           const updated = { ...prev, imagen: base64String };
-          console.log("FormData actualizado, imagen length:", updated.imagen?.length);
+          console.log(
+            "FormData actualizado, imagen length:",
+            updated.imagen?.length
+          );
           return updated;
         });
       };
@@ -243,7 +301,7 @@ const NewProductPage: React.FC = () => {
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview("");
-    setFormData(prev => ({ ...prev, imagen: "" }));
+    setFormData((prev) => ({ ...prev, imagen: "" }));
   };
 
   // Enviar formulario
@@ -261,6 +319,7 @@ const NewProductPage: React.FC = () => {
       const productData: CreateProductData = {
         ...formData,
         imagen: formData.imagen || "",
+        precioVentaFinal: precioVentaEditable,
       };
 
       console.log("Datos a enviar:", productData);
@@ -283,7 +342,15 @@ const NewProductPage: React.FC = () => {
     }
   };
 
-  const { totalCosto, totalVenta } = calculateTotals();
+  const { totalCosto, totalVenta, precioVentaFinal, precioVentaCalculado } =
+    calculateTotals();
+
+  // Actualizar precio editable cuando cambien los cálculos
+  useEffect(() => {
+    if (precioVentaEditable === 0) {
+      setPrecioVentaEditable(precioVentaCalculado);
+    }
+  }, [precioVentaCalculado, precioVentaEditable]);
 
   if (loading && isEditing) {
     return (
@@ -396,6 +463,95 @@ const NewProductPage: React.FC = () => {
           </Card.Body>
         </Card>
 
+        {/* Precio de Venta Final */}
+        <Card className="mb-4">
+          <Card.Header className="bg-success text-white">
+            <h5 className="mb-0">
+              <Package className="me-2" />
+              Precio de Venta Final
+            </h5>
+          </Card.Header>
+          <Card.Body>
+            <Row className="align-items-center">
+              <Col md={6}>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <span className="fw-semibold">Total Insumos:</span>
+                  <span className="fs-5 text-primary">
+                    ${formatNumber(totalVenta)}
+                  </span>
+                </div>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <span className="fw-semibold">Mano de Obra:</span>
+                  <span className="fs-5 text-warning">
+                    ${formatNumber(formData.labour)}
+                  </span>
+                </div>
+                <hr />
+                <div className="d-flex justify-content-between align-items-center">
+                  <span className="fw-bold fs-4">Precio de Venta Final:</span>
+                  <div className="d-flex align-items-center gap-2">
+                    <Form.Control
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={precioVentaEditable}
+                      onChange={(e) =>
+                        setPrecioVentaEditable(parseFloat(e.target.value) || 0)
+                      }
+                      className="fs-3 fw-bold text-success border-success"
+                      style={{ width: "150px", textAlign: "right" }}
+                    />
+                    <span className="fs-3 fw-bold text-success">$</span>
+                    {precioVentaEditable !== precioVentaCalculado && (
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() =>
+                          setPrecioVentaEditable(precioVentaCalculado)
+                        }
+                        title="Resetear al precio calculado"
+                      >
+                        <X size={16} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Col>
+              <Col md={6}>
+                <div className="text-center">
+                  <div className="p-4 bg-light rounded">
+                    <h6 className="text-muted mb-2">Desglose del Precio</h6>
+                    <div className="fs-6">
+                      <div className="mb-1">
+                        <span className="text-primary">Insumos:</span> $
+                        {formatNumber(totalVenta)}
+                      </div>
+                      <div className="mb-1">
+                        <span className="text-warning">Mano de Obra:</span> $
+                        {formatNumber(formData.labour)}
+                      </div>
+                      <hr className="my-2" />
+                      <div className="fw-bold text-success">
+                        <span>Total:</span> ${formatNumber(precioVentaFinal)}
+                      </div>
+                      {precioVentaEditable !== precioVentaCalculado && (
+                        <div className="mt-2 p-2 bg-warning bg-opacity-25 rounded">
+                          <small className="text-warning">
+                            <strong>Ajuste:</strong> +$
+                            {formatNumber(
+                              precioVentaEditable - precioVentaCalculado
+                            )}
+                          </small>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+
         {/* Imagen */}
         <Card className="mb-4 border-0 shadow-sm">
           <Card.Header className="bg-white border-0 py-3">
@@ -478,11 +634,15 @@ const NewProductPage: React.FC = () => {
             <Row className="g-3 mb-3">
               <Col md={editingInsumoIndex !== null ? 2 : 3}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold small">Material</Form.Label>
+                  <Form.Label className="fw-semibold small">
+                    Material
+                  </Form.Label>
                   <Form.Select
                     value={currentInsumo.materialId}
                     onChange={(e) => {
-                      const selectedMaterial = materials.find(m => m._id === e.target.value);
+                      const selectedMaterial = materials.find(
+                        (m) => m._id === e.target.value
+                      );
                       if (selectedMaterial) {
                         setCurrentInsumo({
                           ...currentInsumo,
@@ -492,6 +652,8 @@ const NewProductPage: React.FC = () => {
                           importeCosto: selectedMaterial.cost,
                           importeVenta: selectedMaterial.price,
                         });
+                        setUnitCost(selectedMaterial.cost);
+                        setUnitPrice(selectedMaterial.price);
                       }
                     }}
                     size="sm"
@@ -554,18 +716,17 @@ const NewProductPage: React.FC = () => {
 
               <Col md={2}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold small">Costo</Form.Label>
+                  <Form.Label className="fw-semibold small">
+                    Costo Unit.
+                  </Form.Label>
                   <Form.Control
                     type="number"
                     min="0"
                     step="0.01"
                     placeholder="0.00"
-                    value={currentInsumo.importeCosto}
+                    value={unitCost}
                     onChange={(e) =>
-                      setCurrentInsumo({
-                        ...currentInsumo,
-                        importeCosto: parseFloat(e.target.value) || 0,
-                      })
+                      setUnitCost(parseFloat(e.target.value) || 0)
                     }
                     size="sm"
                   />
@@ -574,18 +735,17 @@ const NewProductPage: React.FC = () => {
 
               <Col md={2}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold small">Precio</Form.Label>
+                  <Form.Label className="fw-semibold small">
+                    Precio Unit.
+                  </Form.Label>
                   <Form.Control
                     type="number"
                     min="0"
                     step="0.01"
                     placeholder="0.00"
-                    value={currentInsumo.importeVenta}
+                    value={unitPrice}
                     onChange={(e) =>
-                      setCurrentInsumo({
-                        ...currentInsumo,
-                        importeVenta: parseFloat(e.target.value) || 0,
-                      })
+                      setUnitPrice(parseFloat(e.target.value) || 0)
                     }
                     size="sm"
                   />
@@ -641,45 +801,45 @@ const NewProductPage: React.FC = () => {
                   <tbody>
                     {formData.insumos.map((insumo, index) => {
                       return (
-                      <tr
-                        key={index}
-                        className={
-                          editingInsumoIndex === index ? "table-info" : ""
-                        }
-                      >
-                        <td>{index + 1}</td>
-                        <td>{insumo.nombre}</td>
-                        <td>{insumo.cantidad}</td>
-                        <td>{insumo.unidad}</td>
-                        <td className="text-success">
-                          ${insumo.importeCosto.toFixed(2)}
-                        </td>
-                        <td className="text-primary">
-                          ${insumo.importeVenta.toFixed(2)}
-                        </td>
-                        <td className="text-center">
-                          <div className="d-flex gap-1 justify-content-center">
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              onClick={() => handleEditInsumo(index)}
-                              disabled={editingInsumoIndex !== null}
-                              title="Editar"
-                            >
-                              <Edit2 size={14} />
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleRemoveInsumo(index)}
-                              disabled={editingInsumoIndex !== null}
-                              title="Eliminar"
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                        <tr
+                          key={index}
+                          className={
+                            editingInsumoIndex === index ? "table-info" : ""
+                          }
+                        >
+                          <td>{index + 1}</td>
+                          <td>{insumo.nombre}</td>
+                          <td>{insumo.cantidad}</td>
+                          <td>{insumo.unidad}</td>
+                          <td className="text-success">
+                            ${formatNumber(insumo.importeCosto)}
+                          </td>
+                          <td className="text-primary">
+                            ${formatNumber(insumo.importeVenta)}
+                          </td>
+                          <td className="text-center">
+                            <div className="d-flex gap-1 justify-content-center">
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                onClick={() => handleEditInsumo(index)}
+                                disabled={editingInsumoIndex !== null}
+                                title="Editar"
+                              >
+                                <Edit2 size={14} />
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleRemoveInsumo(index)}
+                                disabled={editingInsumoIndex !== null}
+                                title="Eliminar"
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
@@ -688,8 +848,12 @@ const NewProductPage: React.FC = () => {
                       <td colSpan={4} className="text-end">
                         Totales:
                       </td>
-                      <td className="text-success">${totalCosto.toFixed(2)}</td>
-                      <td className="text-primary">${totalVenta.toFixed(2)}</td>
+                      <td className="text-success">
+                        ${formatNumber(totalCosto)}
+                      </td>
+                      <td className="text-primary">
+                        ${formatNumber(totalVenta)}
+                      </td>
                       <td></td>
                     </tr>
                   </tfoot>
@@ -711,7 +875,9 @@ const NewProductPage: React.FC = () => {
             <Row className="g-3">
               <Col md={4}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Tipo de Cálculo</Form.Label>
+                  <Form.Label className="fw-semibold">
+                    Tipo de Cálculo
+                  </Form.Label>
                   <Form.Select
                     value={labourType}
                     onChange={(e) => {
@@ -719,7 +885,11 @@ const NewProductPage: React.FC = () => {
                       setLabourType(newType);
                       // Si cambia a fijo, mantener el valor actual de labour
                       // Si cambia a porcentaje, calcular el porcentaje basado en labour actual
-                      if (newType === "percentage" && totalVenta > 0 && formData.labour > 0) {
+                      if (
+                        newType === "percentage" &&
+                        totalVenta > 0 &&
+                        formData.labour > 0
+                      ) {
                         const percentage = (formData.labour / totalVenta) * 100;
                         setLabourPercentage(parseFloat(percentage.toFixed(2)));
                       }
@@ -735,7 +905,9 @@ const NewProductPage: React.FC = () => {
               {labourType === "fixed" ? (
                 <Col md={8}>
                   <Form.Group>
-                    <Form.Label className="fw-semibold">Costo de Mano de Obra</Form.Label>
+                    <Form.Label className="fw-semibold">
+                      Costo de Mano de Obra
+                    </Form.Label>
                     <Form.Control
                       type="number"
                       min="0"
@@ -758,7 +930,9 @@ const NewProductPage: React.FC = () => {
               ) : (
                 <Col md={8}>
                   <Form.Group>
-                    <Form.Label className="fw-semibold">Porcentaje de Mano de Obra</Form.Label>
+                    <Form.Label className="fw-semibold">
+                      Porcentaje de Mano de Obra
+                    </Form.Label>
                     <div className="d-flex gap-2 align-items-center">
                       <Form.Control
                         type="number"
@@ -771,7 +945,8 @@ const NewProductPage: React.FC = () => {
                           const percentage = parseFloat(e.target.value) || 0;
                           setLabourPercentage(percentage);
                           // Calcular labour basado en el porcentaje del total de venta
-                          const calculatedLabour = (totalVenta * percentage) / 100;
+                          const calculatedLabour =
+                            (totalVenta * percentage) / 100;
                           setFormData({
                             ...formData,
                             labour: parseFloat(calculatedLabour.toFixed(2)),
@@ -784,7 +959,8 @@ const NewProductPage: React.FC = () => {
                     {labourPercentage > 0 ? (
                       <div className="mt-2 p-2 bg-light rounded">
                         <span className="fs-5 fw-bold text-primary">
-                          {labourPercentage}% de ${totalVenta.toFixed(2)} = ${formData.labour.toFixed(2)}
+                          {labourPercentage}% de ${formatNumber(totalVenta)} = $
+                          {formatNumber(formData.labour)}
                         </span>
                       </div>
                     ) : (

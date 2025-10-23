@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner } from "react-bootstrap";
+import {
+  Button,
+  Table,
+  Badge,
+  Form,
+  InputGroup,
+  Spinner,
+} from "react-bootstrap";
 import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -21,7 +28,18 @@ const ProductListsPage: React.FC = () => {
   });
   const router = useRouter();
 
-  const loadProductLists = async (isInitial: boolean, page: number = pagination.page) => {
+  // Función para formatear números con separación de miles
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString("es-MX", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const loadProductLists = async (
+    isInitial: boolean,
+    page: number = pagination.page
+  ) => {
     try {
       if (isInitial) {
         setLoading(true);
@@ -121,7 +139,10 @@ const ProductListsPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
+      <div
+        className="card border-0 shadow-sm mb-4"
+        style={{ borderRadius: "15px" }}
+      >
         <div className="card-body p-4">
           <div className="row g-3">
             <div className="col-md-6">
@@ -153,7 +174,9 @@ const ProductListsPage: React.FC = () => {
             </div>
           ) : productLists.length === 0 ? (
             <div className="text-center py-5">
-              <p className="text-muted mb-0">No se encontraron listas de productos</p>
+              <p className="text-muted mb-0">
+                No se encontraron listas de productos
+              </p>
             </div>
           ) : (
             <>
@@ -164,12 +187,22 @@ const ProductListsPage: React.FC = () => {
                       <th className="border-0 px-4 py-3">Nombre</th>
                       <th className="border-0 px-4 py-3">Fecha Creación</th>
                       <th className="border-0 px-4 py-3">Fecha Expiración</th>
-                      <th className="border-0 px-4 py-3 text-center">Total Productos</th>
-                      <th className="border-0 px-4 py-3 text-end">Total Gastado</th>
-                      <th className="border-0 px-4 py-3 text-end">Ganancias Brutas</th>
-                      <th className="border-0 px-4 py-3 text-end">Ganancias Netas</th>
+                      <th className="border-0 px-4 py-3 text-center">
+                        Total Productos
+                      </th>
+                      <th className="border-0 px-4 py-3 text-end">
+                        Total Gastado
+                      </th>
+                      <th className="border-0 px-4 py-3 text-end">
+                        Ganancias Brutas
+                      </th>
+                      <th className="border-0 px-4 py-3 text-end">
+                        Ganancias Netas
+                      </th>
                       <th className="border-0 px-4 py-3 text-center">Estado</th>
-                      <th className="border-0 px-4 py-3 text-center">Acciones</th>
+                      <th className="border-0 px-4 py-3 text-center">
+                        Acciones
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -178,23 +211,31 @@ const ProductListsPage: React.FC = () => {
                       return (
                         <tr key={productList._id}>
                           <td className="px-4 py-3">
-                            <div className="fw-semibold">{productList.name}</div>
+                            <div className="fw-semibold">
+                              {productList.name}
+                            </div>
                             <small className="text-muted">
-                              {productList.company?.tradeName || productList.company?.legalName}
+                              {productList.company?.tradeName ||
+                                productList.company?.legalName}
                             </small>
                           </td>
                           <td className="px-4 py-3">
-                            {new Date(productList.createdAt).toLocaleDateString('es-MX', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
+                            {new Date(productList.createdAt).toLocaleDateString(
+                              "es-MX",
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
                           </td>
                           <td className="px-4 py-3">
-                            {new Date(productList.expirationDate).toLocaleDateString('es-MX', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
+                            {new Date(
+                              productList.expirationDate
+                            ).toLocaleDateString("es-MX", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
                             })}
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -203,18 +244,26 @@ const ProductListsPage: React.FC = () => {
                             </Badge>
                           </td>
                           <td className="px-4 py-3 text-end text-danger fw-semibold">
-                            ${totals.totalGastado.toFixed(2)}
+                            ${formatNumber(totals.totalGastado)}
                           </td>
                           <td className="px-4 py-3 text-end text-primary fw-semibold">
-                            ${totals.gananciasBrutas.toFixed(2)}
+                            ${formatNumber(totals.gananciasBrutas)}
                           </td>
                           <td className="px-4 py-3 text-end fw-bold">
-                            <span className={totals.gananciasNetas >= 0 ? "text-success" : "text-danger"}>
-                              ${totals.gananciasNetas.toFixed(2)}
+                            <span
+                              className={
+                                totals.gananciasNetas >= 0
+                                  ? "text-success"
+                                  : "text-danger"
+                              }
+                            >
+                              ${formatNumber(totals.gananciasNetas)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <Badge bg={productList.status ? "success" : "secondary"}>
+                            <Badge
+                              bg={productList.status ? "success" : "secondary"}
+                            >
                               {productList.status ? "Activo" : "Inactivo"}
                             </Badge>
                           </td>
@@ -235,9 +284,12 @@ const ProductListsPage: React.FC = () => {
               {pagination.pages > 1 && (
                 <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
                   <div className="text-muted small">
-                    Mostrando {((pagination.page - 1) * pagination.limit) + 1} a{" "}
-                    {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
-                    {pagination.total} resultados
+                    Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      pagination.total
+                    )}{" "}
+                    de {pagination.total} resultados
                   </div>
                   <div className="d-flex gap-2">
                     <Button

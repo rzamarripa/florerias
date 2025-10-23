@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, InputGroup, Spinner, Badge } from "react-bootstrap";
+import {
+  Card,
+  Form,
+  Button,
+  InputGroup,
+  Spinner,
+  Badge,
+} from "react-bootstrap";
 import { Search, Plus, Package } from "lucide-react";
 import { productsService } from "@/features/admin/modules/products/services/products";
 import { Product as ProductType } from "@/features/admin/modules/products/types";
@@ -22,7 +29,11 @@ interface ProductCatalogProps {
   itemsInOrder: OrderItem[];
 }
 
-const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, itemsInOrder }) => {
+const ProductCatalog: React.FC<ProductCatalogProps> = ({
+  onAddProduct,
+  storage,
+  itemsInOrder,
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
   const [products, setProducts] = useState<ProductType[]>([]);
@@ -48,7 +59,9 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, 
       });
 
       // Filtrar productos que existen en el storage
-      const storageProductIds = storage.products.map((p: any) => p.productId._id);
+      const storageProductIds = storage.products.map(
+        (p: any) => p.productId._id
+      );
       const availableProducts = response.data.filter((product) =>
         storageProductIds.includes(product._id)
       );
@@ -90,14 +103,27 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, 
     });
   };
 
-  const handleAddToOrder = (product: ProductType) => {
-    const cantidad = quantities[product._id] || 1;
-    // Calcular precio desde los insumos
-    const precio =
+  // Función para calcular el precio de venta final
+  const calculateFinalPrice = (product: ProductType) => {
+    const totalInsumos =
       product.insumos?.reduce(
         (sum, insumo) => sum + (insumo.importeVenta || 0),
         0
       ) || 0;
+    return totalInsumos + (product.labour || 0);
+  };
+
+  // Función para formatear números con separación de miles
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString("es-MX", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const handleAddToOrder = (product: ProductType) => {
+    const cantidad = quantities[product._id] || 1;
+    const precio = calculateFinalPrice(product);
 
     const productToAdd: Product = {
       _id: product._id,
@@ -169,11 +195,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, 
           ) : (
             <div className="d-flex flex-column gap-3">
               {filteredProducts.map((product) => {
-                const precio =
-                  product.insumos?.reduce(
-                    (sum, insumo) => sum + (insumo.importeVenta || 0),
-                    0
-                  ) || 0;
+                const precio = calculateFinalPrice(product);
 
                 const availableStock = getAvailableStock(product._id);
                 const isOutOfStock = availableStock <= 0;
@@ -182,7 +204,9 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, 
                 return (
                   <Card
                     key={product._id}
-                    className={`border shadow-sm product-card ${isOutOfStock ? 'opacity-50' : ''}`}
+                    className={`border shadow-sm product-card ${
+                      isOutOfStock ? "opacity-50" : ""
+                    }`}
                   >
                     <div className="row g-0">
                       <div className="col-4">
@@ -194,7 +218,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, 
                             style={{
                               width: "100%",
                               height: "120px",
-                              objectFit: "cover"
+                              objectFit: "cover",
                             }}
                           />
                         ) : (
@@ -221,10 +245,16 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, 
                                   className="text-success fw-bold mb-0"
                                   style={{ fontSize: "1.1rem" }}
                                 >
-                                  ${precio.toFixed(2)}
+                                  ${formatNumber(precio)}
                                 </p>
                                 <Badge
-                                  bg={isOutOfStock ? "danger" : availableStock < 5 ? "warning" : "success"}
+                                  bg={
+                                    isOutOfStock
+                                      ? "danger"
+                                      : availableStock < 5
+                                      ? "warning"
+                                      : "success"
+                                  }
                                   className="text-white"
                                 >
                                   Stock: {availableStock}
@@ -252,7 +282,10 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, 
                                 size="sm"
                                 className="flex-grow-1"
                                 onClick={() => handleAddToOrder(product)}
-                                disabled={isOutOfStock || currentQuantity > availableStock}
+                                disabled={
+                                  isOutOfStock ||
+                                  currentQuantity > availableStock
+                                }
                               >
                                 <Plus size={16} className="me-1" />
                                 {isOutOfStock ? "Sin stock" : "Agregar"}

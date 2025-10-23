@@ -20,6 +20,7 @@ import {
   FileText,
   UserCog,
   Building,
+  Warehouse,
 } from "lucide-react";
 
 export const menuItems: MenuItemType[] = [
@@ -60,12 +61,6 @@ export const menuItems: MenuItemType[] = [
             icon: ShoppingCart,
           },
           {
-            key: "produccion",
-            label: "Produccion",
-            url: "/sucursal/produccion",
-            icon: Package,
-          },
-          {
             key: "reparto",
             label: "Reparto",
             url: "/sucursal/reparto",
@@ -81,7 +76,7 @@ export const menuItems: MenuItemType[] = [
             key: "almacenes",
             label: "Almacenes",
             url: "/sucursal/almacenes",
-            icon: DollarSign,
+            icon: Warehouse,
           },
         ],
       },

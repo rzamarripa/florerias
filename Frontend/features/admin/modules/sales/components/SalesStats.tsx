@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ShoppingCart, Clock, CheckCircle, XCircle } from "lucide-react";
+import {
+  ShoppingCart,
+  Clock,
+  CheckCircle,
+  XCircle,
+  TrendingUp,
+} from "lucide-react";
 import { salesService } from "../services/sales";
 
 interface SalesStatsProps {
@@ -21,21 +27,31 @@ interface StatCardProps {
   iconColor: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, count, amount, icon, bgColor, iconColor }) => {
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  count,
+  amount,
+  icon,
+  bgColor,
+  iconColor,
+}) => {
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN'
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
     }).format(value);
   };
 
   return (
-    <div className="col-lg-3 col-md-6">
+    <div className="col-lg-2 col-md-4 col-sm-6">
       <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center justify-content-between mb-3">
             <div>
-              <h6 className="text-muted mb-0 fw-normal" style={{ fontSize: "13px" }}>
+              <h6
+                className="text-muted mb-0 fw-normal"
+                style={{ fontSize: "13px" }}
+              >
                 {title}
               </h6>
             </div>
@@ -48,9 +64,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, count, amount, icon, bgColor
                 background: bgColor,
               }}
             >
-              <div style={{ color: iconColor }}>
-                {icon}
-              </div>
+              <div style={{ color: iconColor }}>{icon}</div>
             </div>
           </div>
           <h2 className="mb-1 fw-bold" style={{ fontSize: "28px" }}>
@@ -60,7 +74,10 @@ const StatCard: React.FC<StatCardProps> = ({ title, count, amount, icon, bgColor
             <span className="text-muted" style={{ fontSize: "12px" }}>
               Total {title}
             </span>
-            <span className="ms-auto fw-semibold" style={{ fontSize: "13px", color: "#495057" }}>
+            <span
+              className="ms-auto fw-semibold"
+              style={{ fontSize: "13px", color: "#495057" }}
+            >
               {formatCurrency(amount)}
             </span>
           </div>
@@ -76,6 +93,7 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
     pendingPayment: { count: 0, amount: 0 },
     paidSales: { count: 0, amount: 0 },
     cancelledSales: { count: 0, amount: 0 },
+    averageTicket: { count: 0, amount: 0 },
   });
   const [loading, setLoading] = useState(false);
 
@@ -93,7 +111,21 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
       });
 
       if (response.success) {
-        setStats(response.data);
+        const data = response.data;
+
+        // Calcular ticket promedio
+        const averageTicketAmount =
+          data.totalSales.count > 0
+            ? data.totalSales.amount / data.totalSales.count
+            : 0;
+
+        setStats({
+          ...data,
+          averageTicket: {
+            count: data.totalSales.count,
+            amount: averageTicketAmount,
+          },
+        });
       }
     } catch (error) {
       console.error("Error al cargar estadísticas:", error);
@@ -105,9 +137,12 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
   if (loading) {
     return (
       <div className="row g-3 mb-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="col-lg-3 col-md-6">
-            <div className="card border-0 shadow-sm" style={{ borderRadius: "12px", height: "140px" }}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="col-lg-2 col-md-4 col-sm-6">
+            <div
+              className="card border-0 shadow-sm"
+              style={{ borderRadius: "12px", height: "140px" }}
+            >
               <div className="card-body p-4 d-flex align-items-center justify-content-center">
                 <div className="spinner-border text-primary" role="status">
                   <span className="visually-hidden">Cargando...</span>
@@ -153,6 +188,14 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
         icon={<XCircle size={24} />}
         bgColor="rgba(231, 76, 60, 0.1)"
         iconColor="#E74C3C"
+      />
+      <StatCard
+        title="Ticket Promedio"
+        count={stats.averageTicket.count}
+        amount={stats.averageTicket.amount}
+        icon={<TrendingUp size={24} />}
+        bgColor="rgba(155, 89, 182, 0.1)"
+        iconColor="#9B59B6"
       />
     </div>
   );

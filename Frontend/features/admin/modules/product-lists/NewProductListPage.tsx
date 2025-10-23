@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col, Table, Badge, Alert } from "react-bootstrap";
 import {
-  Package,
-  Plus,
-  Trash2,
-  Save,
-  ArrowLeft,
-  List,
-} from "lucide-react";
+  Card,
+  Form,
+  Button,
+  Row,
+  Col,
+  Table,
+  Badge,
+  Alert,
+} from "react-bootstrap";
+import { Package, Plus, Trash2, Save, ArrowLeft, List } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { productListsService } from "./services/productLists";
@@ -41,13 +43,25 @@ const NewProductListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<(Product & { cantidad: number })[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<
+    (Product & { cantidad: number })[]
+  >([]);
   const [userCompany, setUserCompany] = useState<any>(null);
   const [currentProductId, setCurrentProductId] = useState<string>("");
   const [currentQuantity, setCurrentQuantity] = useState<number>(1);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [showDesglose, setShowDesglose] = useState(false);
-  const [desgloseProduct, setDesgloseProduct] = useState<Product & { cantidad: number } | null>(null);
+  const [desgloseProduct, setDesgloseProduct] = useState<
+    (Product & { cantidad: number }) | null
+  >(null);
+
+  // Función para formatear números con separación de miles
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString("es-MX", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
 
   // Cargar productos disponibles
   useEffect(() => {
@@ -67,7 +81,7 @@ const NewProductListPage: React.FC = () => {
     try {
       const response = await productsService.getAllProducts({
         limit: 1000,
-        estatus: true
+        estatus: true,
       });
       setAvailableProducts(response.data);
     } catch (err: any) {
@@ -77,7 +91,10 @@ const NewProductListPage: React.FC = () => {
 
   const loadMaterials = async () => {
     try {
-      const response = await materialsService.getAllMaterials({ status: true, limit: 1000 });
+      const response = await materialsService.getAllMaterials({
+        status: true,
+        limit: 1000,
+      });
       setMaterials(response.data);
     } catch (err: any) {
       console.error("Error al cargar materiales:", err);
@@ -97,7 +114,7 @@ const NewProductListPage: React.FC = () => {
 
       if (company) {
         setUserCompany(company);
-        setFormData(prev => ({ ...prev, company: company._id }));
+        setFormData((prev) => ({ ...prev, company: company._id }));
       }
     } catch (err: any) {
       console.error("Error al cargar empresa del usuario:", err);
@@ -108,22 +125,27 @@ const NewProductListPage: React.FC = () => {
   const loadProductList = async () => {
     try {
       setLoading(true);
-      const response = await productListsService.getProductListById(productListId);
+      const response = await productListsService.getProductListById(
+        productListId
+      );
       const productList = response.data;
 
       setFormData({
         name: productList.name,
-        products: productList.products.map(p => ({
+        products: productList.products.map((p) => ({
           productId: p.productId,
-          cantidad: p.cantidad
+          cantidad: p.cantidad,
         })),
-        company: typeof productList.company === 'string' ? productList.company : productList.company._id,
-        expirationDate: productList.expirationDate.split('T')[0], // Format for input[type="date"]
+        company:
+          typeof productList.company === "string"
+            ? productList.company
+            : productList.company._id,
+        expirationDate: productList.expirationDate.split("T")[0], // Format for input[type="date"]
       });
 
       // Set selected products for display
       setSelectedProducts(
-        productList.products.map(embeddedProduct => ({
+        productList.products.map((embeddedProduct) => ({
           _id: embeddedProduct.productId,
           nombre: embeddedProduct.nombre,
           unidad: embeddedProduct.unidad,
@@ -136,8 +158,8 @@ const NewProductListPage: React.FC = () => {
           totalVenta: embeddedProduct.totalVenta,
           labour: embeddedProduct.labour,
           estatus: embeddedProduct.estatus,
-          createdAt: '',
-          updatedAt: ''
+          createdAt: "",
+          updatedAt: "",
         }))
       );
     } catch (err: any) {
@@ -159,21 +181,27 @@ const NewProductListPage: React.FC = () => {
       return;
     }
 
-    const product = availableProducts.find(p => p._id === currentProductId);
+    const product = availableProducts.find((p) => p._id === currentProductId);
     if (!product) return;
 
     // Check if already added
-    if (formData.products.some(p => p.productId === currentProductId)) {
+    if (formData.products.some((p) => p.productId === currentProductId)) {
       toast.warning("Este producto ya está agregado");
       return;
     }
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      products: [...prev.products, { productId: currentProductId, cantidad: currentQuantity }]
+      products: [
+        ...prev.products,
+        { productId: currentProductId, cantidad: currentQuantity },
+      ],
     }));
 
-    setSelectedProducts(prev => [...prev, { ...product, cantidad: currentQuantity }]);
+    setSelectedProducts((prev) => [
+      ...prev,
+      { ...product, cantidad: currentQuantity },
+    ]);
 
     // Reset
     setCurrentProductId("");
@@ -181,20 +209,21 @@ const NewProductListPage: React.FC = () => {
   };
 
   const handleRemoveProduct = (productId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      products: prev.products.filter(p => p.productId !== productId)
+      products: prev.products.filter((p) => p.productId !== productId),
     }));
 
-    setSelectedProducts(prev => prev.filter(p => p._id !== productId));
+    setSelectedProducts((prev) => prev.filter((p) => p._id !== productId));
   };
 
   const calculateLotes = (product: Product & { cantidad: number }) => {
     let totalLotes = 0;
-    product.insumos.forEach(insumo => {
-      const material = materials.find(m => m._id === insumo.materialId);
+    product.insumos.forEach((insumo) => {
+      const material = materials.find((m) => m._id === insumo.materialId);
       if (material && material.piecesPerPackage > 0) {
-        const lotes = (insumo.cantidad * product.cantidad) / material.piecesPerPackage;
+        const lotes =
+          (insumo.cantidad * product.cantidad) / material.piecesPerPackage;
         totalLotes += lotes;
       }
     });
@@ -213,7 +242,9 @@ const NewProductListPage: React.FC = () => {
 
     try {
       if (!formData.name || !formData.company || !formData.expirationDate) {
-        throw new Error("El nombre, empresa y fecha de expiración son obligatorios");
+        throw new Error(
+          "El nombre, empresa y fecha de expiración son obligatorios"
+        );
       }
 
       if (formData.products.length === 0) {
@@ -320,7 +351,10 @@ const NewProductListPage: React.FC = () => {
                     type="date"
                     value={formData.expirationDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, expirationDate: e.target.value })
+                      setFormData({
+                        ...formData,
+                        expirationDate: e.target.value,
+                      })
                     }
                     required
                     className="py-2"
@@ -335,7 +369,11 @@ const NewProductListPage: React.FC = () => {
                   </Form.Label>
                   <Form.Control
                     type="text"
-                    value={userCompany?.tradeName || userCompany?.legalName || "Cargando..."}
+                    value={
+                      userCompany?.tradeName ||
+                      userCompany?.legalName ||
+                      "Cargando..."
+                    }
                     disabled
                     readOnly
                     className="py-2"
@@ -361,7 +399,9 @@ const NewProductListPage: React.FC = () => {
             <Row className="g-3 mb-3">
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Seleccionar Producto</Form.Label>
+                  <Form.Label className="fw-semibold">
+                    Seleccionar Producto
+                  </Form.Label>
                   <Form.Select
                     value={currentProductId}
                     onChange={(e) => setCurrentProductId(e.target.value)}
@@ -384,7 +424,9 @@ const NewProductListPage: React.FC = () => {
                     type="number"
                     min="1"
                     value={currentQuantity}
-                    onChange={(e) => setCurrentQuantity(parseInt(e.target.value) || 1)}
+                    onChange={(e) =>
+                      setCurrentQuantity(parseInt(e.target.value) || 1)
+                    }
                     className="py-2"
                   />
                 </Form.Group>
@@ -431,16 +473,16 @@ const NewProductListPage: React.FC = () => {
                           </td>
                           <td className="text-center fw-bold">{cantidad}</td>
                           <td className="text-end text-danger">
-                            ${(product.totalCosto * cantidad).toFixed(2)}
+                            ${formatNumber(product.totalCosto * cantidad)}
                           </td>
                           <td className="text-end text-warning">
-                            ${(product.labour * cantidad).toFixed(2)}
+                            ${formatNumber(product.labour * cantidad)}
                           </td>
                           <td className="text-end text-primary">
-                            ${(product.totalVenta * cantidad).toFixed(2)}
+                            ${formatNumber(product.totalVenta * cantidad)}
                           </td>
                           <td className="text-center">
-                            <Badge bg="info">{lotes.toFixed(2)}</Badge>
+                            <Badge bg="info">{formatNumber(lotes)}</Badge>
                           </td>
                           <td className="text-center">
                             <div className="d-flex gap-1 justify-content-center">
@@ -472,11 +514,11 @@ const NewProductListPage: React.FC = () => {
                         Totales ({totals.totalProducts} productos):
                       </td>
                       <td className="text-end text-danger">
-                        ${totals.totalGastado.toFixed(2)}
+                        ${formatNumber(totals.totalGastado)}
                       </td>
                       <td></td>
                       <td className="text-end text-primary">
-                        ${totals.gananciasBrutas.toFixed(2)}
+                        ${formatNumber(totals.gananciasBrutas)}
                       </td>
                       <td colSpan={2}></td>
                     </tr>
@@ -485,8 +527,11 @@ const NewProductListPage: React.FC = () => {
                         Ganancias Netas:
                       </td>
                       <td className="text-center">
-                        <Badge bg={totals.gananciasNetas >= 0 ? "success" : "danger"} className="fs-6">
-                          ${totals.gananciasNetas.toFixed(2)}
+                        <Badge
+                          bg={totals.gananciasNetas >= 0 ? "success" : "danger"}
+                          className="fs-6"
+                        >
+                          ${formatNumber(totals.gananciasNetas)}
                         </Badge>
                       </td>
                     </tr>

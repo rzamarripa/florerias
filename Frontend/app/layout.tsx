@@ -11,9 +11,9 @@ export const metadata: Metadata = {
   title: "FloriSoft",
   description: "Sistema para Florerías",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: "/favicon-simple.svg",
+    shortcut: "/favicon-simple.svg",
+    apple: "/favicon-simple.svg",
   },
 };
 
@@ -34,6 +34,8 @@ export default function RootLayout({
     >
       <head>
         <link rel="stylesheet" href="/custom-sidebar.css" />
+        <link rel="icon" href="/favicon-simple.svg" type="image/svg+xml" />
+        <link rel="shortcut icon" href="/favicon-simple.svg" />
       </head>
       <body>
         <AppWrapper>{children}</AppWrapper>

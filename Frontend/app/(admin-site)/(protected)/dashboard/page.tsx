@@ -26,7 +26,7 @@ export default function Page() {
     xAxis: {
       type: "category",
       boundaryGap: false,
-      data: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      data: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
       axisLine: { lineStyle: { color: "#e9ecef" } },
       axisLabel: { color: "#6c757d" },
     },
@@ -37,7 +37,7 @@ export default function Page() {
     },
     series: [
       {
-        name: "Sessions",
+        name: "Ventas",
         type: "line",
         smooth: true,
         showSymbol: false,
@@ -53,7 +53,11 @@ export default function Page() {
 
   return (
     <div className="container-fluid">
-      <PageBreadcrumb title="Dashboard" subtitle="Overview" section="Admin" />
+      <PageBreadcrumb
+        title="Panel de Control"
+        subtitle="Resumen"
+        section="Admin"
+      />
 
       <div className="row g-3 mb-4">
         <div className="col-12 col-sm-6 col-xl-3">
@@ -66,9 +70,9 @@ export default function Page() {
                 <TbUsers size={22} />
               </div>
               <div className="ms-3">
-                <div className="text-muted small">Users</div>
+                <div className="text-muted small">Clientes</div>
                 <div className="fs-4 fw-semibold">
-                  <CountUpClient start={0} end={1280} duration={1.2} />
+                  <CountUpClient start={0} end={158} duration={1.2} />
                 </div>
               </div>
             </div>
@@ -84,7 +88,7 @@ export default function Page() {
                 <TbShoppingBag size={22} />
               </div>
               <div className="ms-3">
-                <div className="text-muted small">Orders</div>
+                <div className="text-muted small">Pedidos</div>
                 <div className="fs-4 fw-semibold">
                   <CountUpClient start={0} end={342} duration={1.2} />
                 </div>
@@ -102,9 +106,9 @@ export default function Page() {
                 <TbChartLine size={22} />
               </div>
               <div className="ms-3">
-                <div className="text-muted small">Growth</div>
+                <div className="text-muted small">Crecimiento</div>
                 <div className="fs-4 fw-semibold">
-                  <CountUpClient start={0} end={76} duration={1.2} suffix="%" />
+                  <CountUpClient start={0} end={25} duration={1.2} suffix="%" />
                 </div>
               </div>
             </div>
@@ -120,7 +124,7 @@ export default function Page() {
                 <TbCurrencyDollar size={22} />
               </div>
               <div className="ms-3">
-                <div className="text-muted small">Revenue</div>
+                <div className="text-muted small">Ingresos</div>
                 <div className="fs-4 fw-semibold">
                   $
                   <CountUpClient
@@ -140,8 +144,8 @@ export default function Page() {
         <div className="col-12">
           <div className="card">
             <div className="card-header d-flex align-items-center justify-content-between">
-              <h5 className="mb-0">Sessions Overview</h5>
-              <span className="text-muted small">Last 7 days</span>
+              <h5 className="mb-0">Resumen de Ventas</h5>
+              <span className="text-muted small">Últimos 7 días</span>
             </div>
             <div className="card-body">
               <EChartClient

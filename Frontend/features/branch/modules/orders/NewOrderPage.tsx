@@ -18,11 +18,7 @@ import {
   Search,
 } from "lucide-react";
 import { ordersService } from "./services/orders";
-import {
-  CreateOrderData,
-  OrderItem,
-  ShippingType,
-} from "./types";
+import { CreateOrderData, OrderItem, ShippingType } from "./types";
 import ProductCatalog from "./components/ProductCatalog";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
 import { Client } from "@/features/admin/modules/clients/types";
@@ -122,18 +118,18 @@ const NewOrderPage = () => {
       // Obtener fecha y hora actual en formato ISO para datetime-local
       const now = new Date();
       const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
       const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
 
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         deliveryData: {
           ...prev.deliveryData,
-          deliveryDateTime: currentDateTime
-        }
+          deliveryDateTime: currentDateTime,
+        },
       }));
     }
   }, [formData.quickSale]);
@@ -165,9 +161,9 @@ const NewOrderPage = () => {
       setPaymentMethods(response.data);
       // Establecer el primer método de pago como predeterminado
       if (response.data.length > 0) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          paymentMethod: response.data[0]._id
+          paymentMethod: response.data[0]._id,
         }));
       }
     } catch (err) {
@@ -186,9 +182,9 @@ const NewOrderPage = () => {
       setBranches(response.data);
       // Establecer la primera sucursal como predeterminada
       if (response.data.length > 0) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          branchId: response.data[0]._id
+          branchId: response.data[0]._id,
         }));
       }
     } catch (err) {
@@ -206,15 +202,15 @@ const NewOrderPage = () => {
       const response = await cashRegistersService.getUserCashRegister();
       if (response.data) {
         setCashRegister(response.data);
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          cashRegisterId: response.data!._id
+          cashRegisterId: response.data!._id,
         }));
       } else {
         setCashRegister(null);
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          cashRegisterId: null
+          cashRegisterId: null,
         }));
       }
     } catch (err) {
@@ -327,8 +323,8 @@ const NewOrderPage = () => {
     const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
     const discountAmount =
       formData.discountType === "porcentaje"
-        ? (subtotal * formData.discount) / 100
-        : formData.discount;
+        ? (subtotal * (formData.discount || 0)) / 100
+        : formData.discount || 0;
     const total = subtotal - discountAmount;
 
     setFormData({
@@ -336,7 +332,7 @@ const NewOrderPage = () => {
       items: updatedItems,
       subtotal,
       total,
-      remainingBalance: total - formData.advance,
+      remainingBalance: total - (formData.advance || 0),
     });
 
     // Reset current item
@@ -357,8 +353,8 @@ const NewOrderPage = () => {
     const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
     const discountAmount =
       formData.discountType === "porcentaje"
-        ? (subtotal * formData.discount) / 100
-        : formData.discount;
+        ? (subtotal * (formData.discount || 0)) / 100
+        : formData.discount || 0;
     const total = subtotal - discountAmount;
 
     setFormData({
@@ -366,7 +362,7 @@ const NewOrderPage = () => {
       items: updatedItems,
       subtotal,
       total,
-      remainingBalance: total - formData.advance,
+      remainingBalance: total - (formData.advance || 0),
     });
   };
 
@@ -384,7 +380,7 @@ const NewOrderPage = () => {
       discount: value,
       discountType: tipo,
       total,
-      remainingBalance: total - formData.advance,
+      remainingBalance: total - (formData.advance || 0),
     });
   };
 
@@ -421,7 +417,9 @@ const NewOrderPage = () => {
     );
 
     if (!productInStorage) {
-      toast.error(`El producto "${product.nombre}" no está disponible en este almacén`);
+      toast.error(
+        `El producto "${product.nombre}" no está disponible en este almacén`
+      );
       return;
     }
 
@@ -452,8 +450,8 @@ const NewOrderPage = () => {
     const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
     const discountAmount =
       formData.discountType === "porcentaje"
-        ? (subtotal * formData.discount) / 100
-        : formData.discount;
+        ? (subtotal * (formData.discount || 0)) / 100
+        : formData.discount || 0;
     const total = subtotal - discountAmount;
 
     setFormData({
@@ -461,7 +459,7 @@ const NewOrderPage = () => {
       items: updatedItems,
       subtotal,
       total,
-      remainingBalance: total - formData.advance,
+      remainingBalance: total - (formData.advance || 0),
     });
   };
 
@@ -482,7 +480,7 @@ const NewOrderPage = () => {
 
       const orderData = {
         ...formData,
-        storageId: selectedStorageId
+        storageId: selectedStorageId,
       };
 
       const response = await ordersService.createOrder(orderData);
@@ -690,7 +688,10 @@ const NewOrderPage = () => {
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            salesChannel: e.target.value as "tienda" | "whatsapp" | "facebook",
+                            salesChannel: e.target.value as
+                              | "tienda"
+                              | "whatsapp"
+                              | "facebook",
                           })
                         }
                         required
@@ -715,9 +716,19 @@ const NewOrderPage = () => {
                           loadingBranches
                             ? "Cargando..."
                             : branches.length > 0 && formData.branchId
-                            ? `${branches.find(b => b._id === formData.branchId)?.branchName || ""}${
-                                branches.find(b => b._id === formData.branchId)?.branchCode
-                                  ? ` (${branches.find(b => b._id === formData.branchId)?.branchCode})`
+                            ? `${
+                                branches.find(
+                                  (b) => b._id === formData.branchId
+                                )?.branchName || ""
+                              }${
+                                branches.find(
+                                  (b) => b._id === formData.branchId
+                                )?.branchCode
+                                  ? ` (${
+                                      branches.find(
+                                        (b) => b._id === formData.branchId
+                                      )?.branchCode
+                                    })`
                                   : ""
                               }`
                             : "No hay sucursales disponibles"
@@ -741,7 +752,11 @@ const NewOrderPage = () => {
                           loadingStorage
                             ? "Cargando..."
                             : storage
-                            ? `Almacén de ${branches.find(b => b._id === formData.branchId)?.branchName || ""}`
+                            ? `Almacén de ${
+                                branches.find(
+                                  (b) => b._id === formData.branchId
+                                )?.branchName || ""
+                              }`
                             : "No hay almacén asignado"
                         }
                         readOnly
@@ -751,7 +766,8 @@ const NewOrderPage = () => {
                       {!storage && !loadingStorage && formData.branchId && (
                         <Alert variant="danger" className="mt-2 mb-0 py-2">
                           <small>
-                            ⚠️ Esta sucursal no tiene almacén asignado. No se pueden agregar productos.
+                            ⚠️ Esta sucursal no tiene almacén asignado. No se
+                            pueden agregar productos.
                           </small>
                         </Alert>
                       )}
@@ -780,26 +796,27 @@ const NewOrderPage = () => {
                         />
                         {cashRegister && (
                           <Button
-                            variant={cashRegister.isOpen ? "success" : "warning"}
+                            variant={
+                              cashRegister.isOpen ? "success" : "warning"
+                            }
                             onClick={handleToggleCashRegister}
                             disabled={togglingCashRegister}
                             className="d-flex align-items-center gap-2"
                             style={{ minWidth: "120px" }}
                           >
-                            {togglingCashRegister ? (
-                              "Procesando..."
-                            ) : cashRegister.isOpen ? (
-                              "Abierta"
-                            ) : (
-                              "Cerrada"
-                            )}
+                            {togglingCashRegister
+                              ? "Procesando..."
+                              : cashRegister.isOpen
+                              ? "Abierta"
+                              : "Cerrada"}
                           </Button>
                         )}
                       </div>
                       {cashRegister && !cashRegister.isOpen && (
                         <Alert variant="warning" className="mt-2 mb-0 py-2">
                           <small>
-                            ⚠️ La caja está cerrada. Ábrela para registrar ventas.
+                            ⚠️ La caja está cerrada. Ábrela para registrar
+                            ventas.
                           </small>
                         </Alert>
                       )}
@@ -908,12 +925,12 @@ const NewOrderPage = () => {
                     <table className="table table-hover">
                       <thead className="table-light">
                         <tr>
-                          <th width="10%">Cantidad</th>
-                          <th width="40%">Nombre del Producto</th>
-                          <th width="10%">Tipo</th>
-                          <th width="15%">Precio Unit.</th>
-                          <th width="15%">Importe</th>
-                          <th width="10%" className="text-center">
+                          <th style={{ width: "10%" }}>Cantidad</th>
+                          <th style={{ width: "40%" }}>Nombre del Producto</th>
+                          <th style={{ width: "10%" }}>Tipo</th>
+                          <th style={{ width: "15%" }}>Precio Unit.</th>
+                          <th style={{ width: "15%" }}>Importe</th>
+                          <th style={{ width: "10%" }} className="text-center">
                             Quitar
                           </th>
                         </tr>
@@ -971,9 +988,7 @@ const NewOrderPage = () => {
                           type="radio"
                           id={`envio-${tipo}`}
                           name="envio"
-                          label={
-                            tipo.charAt(0).toUpperCase() + tipo.slice(1)
-                          }
+                          label={tipo.charAt(0).toUpperCase() + tipo.slice(1)}
                           value={tipo}
                           checked={formData.shippingType === tipo}
                           onChange={(e) =>
@@ -1197,9 +1212,13 @@ const NewOrderPage = () => {
                   <Col md={12}>
                     <div className="d-flex gap-2 flex-wrap">
                       {loadingPaymentMethods ? (
-                        <div className="text-muted">Cargando métodos de pago...</div>
+                        <div className="text-muted">
+                          Cargando métodos de pago...
+                        </div>
                       ) : paymentMethods.length === 0 ? (
-                        <div className="text-danger">No hay métodos de pago disponibles</div>
+                        <div className="text-danger">
+                          No hay métodos de pago disponibles
+                        </div>
                       ) : (
                         paymentMethods.map((method) => (
                           <Button
@@ -1241,7 +1260,7 @@ const NewOrderPage = () => {
                           onChange={(e) =>
                             handleDiscountChange(
                               parseFloat(e.target.value) || 0,
-                              formData.discountType
+                              formData.discountType || "porcentaje"
                             )
                           }
                           className="py-2"
@@ -1250,7 +1269,7 @@ const NewOrderPage = () => {
                           value={formData.discountType}
                           onChange={(e) =>
                             handleDiscountChange(
-                              formData.discount,
+                              formData.discount || 0,
                               e.target.value as "porcentaje" | "cantidad"
                             )
                           }
@@ -1275,8 +1294,8 @@ const NewOrderPage = () => {
                       <span className="text-danger fw-bold">
                         -$
                         {(formData.discountType === "porcentaje"
-                          ? (formData.subtotal * formData.discount) / 100
-                          : formData.discount
+                          ? (formData.subtotal * (formData.discount || 0)) / 100
+                          : formData.discount || 0
                         ).toFixed(2)}
                       </span>
                     </div>
@@ -1331,7 +1350,7 @@ const NewOrderPage = () => {
                       <Form.Label className="fw-semibold">Cambio</Form.Label>
                       <Form.Control
                         type="text"
-                        value={`$${formData.change.toFixed(2)}`}
+                        value={`$${(formData.change || 0).toFixed(2)}`}
                         disabled
                         className="py-2 bg-light"
                       />
@@ -1343,7 +1362,9 @@ const NewOrderPage = () => {
                       <Form.Label className="fw-semibold">Saldo</Form.Label>
                       <Form.Control
                         type="text"
-                        value={`$${formData.remainingBalance.toFixed(2)}`}
+                        value={`$${(formData.remainingBalance || 0).toFixed(
+                          2
+                        )}`}
                         disabled
                         className="py-2 bg-light fw-bold"
                       />
