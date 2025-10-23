@@ -57,15 +57,15 @@ $theme-modern-colors: (
         --#{$prefix}sidenav-sub-item-padding-x:              10px;
         --#{$prefix}sidenav-sub-item-padding-y:              7px;
 
-        // Background Light left-sidebar
+        // Premium Blue & White Sidebar
         &[data-menu-color="light"] {
-            --#{$prefix}sidenav-bg:                       #{$white};
-            --#{$prefix}sidenav-border-color:             #{$white};
-            --#{$prefix}sidenav-item-color:               #{$gray-700};
-            --#{$prefix}sidenav-item-hover-color:         #3c7de1;
-            --#{$prefix}sidenav-item-hover-bg:          #eaf2ff;
-            --#{$prefix}sidenav-item-active-color:        #3c7de1;
-            --#{$prefix}sidenav-item-active-bg:         #eaf2ff;
+            --#{$prefix}sidenav-bg:                       #{linear-gradient(180deg, #ffffff 0%, #f8fbff 50%, #e3f2fd 100%)} !important;
+            --#{$prefix}sidenav-border-color:             #e1f5fe !important;
+            --#{$prefix}sidenav-item-color:               #1565c0 !important;
+            --#{$prefix}sidenav-item-hover-color:         #0d47a1 !important;
+            --#{$prefix}sidenav-item-hover-bg:            #{linear-gradient(90deg, rgba(25, 118, 210, 0.08), rgba(25, 118, 210, 0.12))} !important;
+            --#{$prefix}sidenav-item-active-color:        #ffffff !important;
+            --#{$prefix}sidenav-item-active-bg:           #{linear-gradient(135deg, #1976d2, #1565c0)} !important;
         }
 
         // Background Gray left-sidebar
@@ -79,15 +79,15 @@ $theme-modern-colors: (
             --#{$prefix}sidenav-item-active-bg:         #e8e8ed;
         }
 
-        // Dark Left Sidebar - MODERN DESIGN (like reference image)
+        // Dark Left Sidebar - ChatGPT Style
         &[data-menu-color="dark"] {
-            --#{$prefix}sidenav-bg:                     #252630;
-            --#{$prefix}sidenav-border-color:           #2c2d38;
-            --#{$prefix}sidenav-item-color:             #adb5bf;
-            --#{$prefix}sidenav-item-hover-color:       #e0eeff;
-            --#{$prefix}sidenav-item-hover-bg:          #2d2e3c;
-            --#{$prefix}sidenav-item-active-color:      #ced6df;
-            --#{$prefix}sidenav-item-active-bg:         #1c262f;
+            --#{$prefix}sidenav-bg:                     #171717;
+            --#{$prefix}sidenav-border-color:           #2a2a2a;
+            --#{$prefix}sidenav-item-color:             #ececf1;
+            --#{$prefix}sidenav-item-hover-color:       #ffffff;
+            --#{$prefix}sidenav-item-hover-bg:          #2a2a2a;
+            --#{$prefix}sidenav-item-active-color:      #ffffff;
+            --#{$prefix}sidenav-item-active-bg:         #343541;
         }
 
         // Gradient Menu
@@ -99,6 +99,17 @@ $theme-modern-colors: (
             --#{$prefix}sidenav-item-hover-bg:          rgba(255, 255, 255, 0.08);
             --#{$prefix}sidenav-item-active-color:      #ffffff;
             --#{$prefix}sidenav-item-active-bg:         rgba(255, 255, 255, 0.12);
+        }
+
+        // ChatGPT Style Sidebar
+        &[data-menu-color="light-blue"] {
+            --#{$prefix}sidenav-bg:                       #171717 !important;
+            --#{$prefix}sidenav-border-color:             #2a2a2a !important;
+            --#{$prefix}sidenav-item-color:               #ececf1 !important;
+            --#{$prefix}sidenav-item-hover-color:         #ffffff !important;
+            --#{$prefix}sidenav-item-hover-bg:            #2a2a2a !important;
+            --#{$prefix}sidenav-item-active-color:        #ffffff !important;
+            --#{$prefix}sidenav-item-active-bg:           #343541 !important;
         }
 
         // Image Menu
@@ -206,6 +217,28 @@ $theme-modern-colors: (
 
                 --#{$prefix}theme-card-border-color:                 #293036;
             }
+        }
+    }
+
+    // Force sidebar styles with higher specificity
+    html[data-skin="modern"][data-menu-color="light"] {
+        .sidenav-menu {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 50%, #e3f2fd 100%) !important;
+            border-right-color: #e1f5fe !important;
+        }
+        
+        .side-nav-link {
+            color: #1565c0 !important;
+            
+            &:hover {
+                color: #0d47a1 !important;
+                background: linear-gradient(90deg, rgba(25, 118, 210, 0.08), rgba(25, 118, 210, 0.12)) !important;
+            }
+        }
+        
+        .side-nav-item.active > .side-nav-link {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #1976d2, #1565c0) !important;
         }
     }
 }

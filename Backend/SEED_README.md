@@ -1,6 +1,6 @@
-# Seed Data for Caprepa Backend
+# Seed Data for FloriSoft Backend
 
-This seed file creates initial data for the Caprepa application including users, roles, and permissions.
+This seed file creates initial data for the FloriSoft application including users, roles, and permissions.
 
 ## What it creates
 
@@ -68,7 +68,7 @@ After running the seed, you can login with:
 
 - **Username**: `admin`
 - **Password**: `Admin123!`
-- **Email**: `admin@caprepa.com`
+- **Email**: `admin@floriSoft.com`
 
 This user has full permissions to create, edit, delete, and view users.
 

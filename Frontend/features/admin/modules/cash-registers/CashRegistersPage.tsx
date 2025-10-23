@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner } from "react-bootstrap";
+import {
+  Button,
+  Table,
+  Badge,
+  Form,
+  InputGroup,
+  Spinner,
+} from "react-bootstrap";
 import { Plus, Search, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "./services/cashRegisters";
@@ -42,7 +49,10 @@ const CashRegistersPage: React.FC = () => {
     }
   };
 
-  const loadCashRegisters = async (isInitial: boolean, page: number = pagination.page) => {
+  const loadCashRegisters = async (
+    isInitial: boolean,
+    page: number = pagination.page
+  ) => {
     try {
       if (isInitial) {
         setLoading(true);
@@ -84,7 +94,9 @@ const CashRegistersPage: React.FC = () => {
     loadCashRegisters(true, 1);
   }, [branchFilter]);
 
-  const handleBranchFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+  const handleBranchFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ): void => {
     setBranchFilter(e.target.value);
   };
 
@@ -141,7 +153,9 @@ const CashRegistersPage: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="mb-1 fw-bold">Cajas Registradoras</h2>
-          <p className="text-muted mb-0">Gestiona las cajas registradoras del sistema</p>
+          <p className="text-muted mb-0">
+            Gestiona las cajas registradoras del sistema
+          </p>
         </div>
         {isAdmin && (
           <Button
@@ -164,7 +178,10 @@ const CashRegistersPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
+      <div
+        className="card border-0 shadow-sm mb-4"
+        style={{ borderRadius: "15px" }}
+      >
         <div className="card-body p-4">
           <div className="row g-3">
             <div className="col-md-6">
@@ -201,13 +218,23 @@ const CashRegistersPage: React.FC = () => {
                   <tr>
                     <th className="px-4 py-3 fw-semibold text-muted">#</th>
                     <th className="px-4 py-3 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">SUCURSAL</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      SUCURSAL
+                    </th>
                     <th className="px-4 py-3 fw-semibold text-muted">CAJERO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">GERENTE</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">SALDO ACTUAL</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ÚLTIMO CIERRE</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      GERENTE
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      SALDO ACTUAL
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      ÚLTIMO CIERRE
+                    </th>
                     <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
+                    <th className="px-4 py-3 fw-semibold text-muted text-center">
+                      ACCIONES
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -215,22 +242,35 @@ const CashRegistersPage: React.FC = () => {
                     <tr>
                       <td colSpan={9} className="text-center py-5 text-muted">
                         <Wallet size={48} className="mb-3 opacity-50" />
-                        <p className="mb-0">No se encontraron cajas registradoras</p>
+                        <p className="mb-0">
+                          No se encontraron cajas registradoras
+                        </p>
                       </td>
                     </tr>
                   ) : (
                     cashRegisters.map((cashRegister, index) => (
-                      <tr key={cashRegister._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
+                      <tr
+                        key={cashRegister._id}
+                        style={{ borderBottom: "1px solid #f1f3f5" }}
+                      >
                         <td className="px-4 py-3">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </td>
-                        <td className="px-4 py-3 fw-semibold">{cashRegister.name}</td>
-                        <td className="px-4 py-3">{getBranchName(cashRegister)}</td>
-                        <td className="px-4 py-3">
-                          <div className="fw-semibold">{getCashierName(cashRegister)}</div>
+                        <td className="px-4 py-3 fw-semibold">
+                          {cashRegister.name}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="fw-semibold">{getManagerName(cashRegister)}</div>
+                          {getBranchName(cashRegister)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="fw-semibold">
+                            {getCashierName(cashRegister)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="fw-semibold">
+                            {getManagerName(cashRegister)}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <span className="fw-bold text-success">
@@ -238,7 +278,9 @@ const CashRegistersPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <small className="text-muted">{formatDate(cashRegister.lastOpen)}</small>
+                          <small className="text-muted">
+                            {formatDate(cashRegister.lastOpen)}
+                          </small>
                         </td>
                         <td className="px-4 py-3">
                           <div className="d-flex flex-column gap-1">
@@ -285,7 +327,8 @@ const CashRegistersPage: React.FC = () => {
             <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} cajas
+                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                de {pagination.total} cajas
               </p>
               <div className="d-flex gap-2">
                 <Button

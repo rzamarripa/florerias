@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"name":{"$numberInt":"1"},"page":{"$numberInt":"1"}},"name":"name_1_page_1","background":true,"unique":true}],"uuid":"a45b0a93d0e64afaa6f312fd7de76958","collectionName":"ac_modules","type":"collection"}

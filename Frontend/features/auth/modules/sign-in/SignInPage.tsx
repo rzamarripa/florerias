@@ -109,9 +109,7 @@ const SignInPage = () => {
                   <div className="card-body">
                     <div className="auth-brand text-center mb-4">
                       <AppLogo />
-                      <h4 className="fw-bold mt-4">
-                        Bienvenido a Corazon de Violeta
-                      </h4>
+                      <h4 className="fw-bold mt-4">Bienvenido a FloriSoft</h4>
                       <p className="text-muted w-lg-75 mx-auto">
                         Inicia sesión para acceder al panel de administración.
                       </p>
@@ -211,7 +209,7 @@ const SignInPage = () => {
                     </Form>
 
                     <p className="text-center text-muted mt-4 mb-0">
-                      © 2014 - {currentYear} Corazon de Violeta — by{" "}
+                      © 2014 - {currentYear} FloriSoft — by{" "}
                       <span className="fw-semibold">Masoft</span>
                     </p>
                   </div>

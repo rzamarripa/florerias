@@ -27,7 +27,7 @@ const createSeedData = async () => {
       name: "Gestión de Usuarios",
       path: "/admin/users",
       description: "Página para administrar usuarios del sistema",
-      status: true
+      status: true,
     });
     console.log("Page created:", userManagementPage.name);
 
@@ -36,28 +36,28 @@ const createSeedData = async () => {
       name: "Crear Usuario",
       description: "Permite crear nuevos usuarios en el sistema",
       page: userManagementPage._id,
-      status: true
+      status: true,
     });
 
     const editUserModule = await Module.create({
       name: "Editar Usuario",
       description: "Permite editar usuarios existentes",
       page: userManagementPage._id,
-      status: true
+      status: true,
     });
 
     const deleteUserModule = await Module.create({
       name: "Eliminar Usuario",
       description: "Permite eliminar usuarios del sistema",
       page: userManagementPage._id,
-      status: true
+      status: true,
     });
 
     const viewUsersModule = await Module.create({
       name: "Ver Usuarios",
       description: "Permite ver la lista de usuarios",
       page: userManagementPage._id,
-      status: true
+      status: true,
     });
 
     console.log("Modules created for user management");
@@ -65,9 +65,15 @@ const createSeedData = async () => {
     // Create Super Admin role with full permissions
     const superAdminRole = await Role.create({
       name: "Super Admin",
-      description: "Rol con permisos totales del sistema, puede crear distribuidores",
-      modules: [createUserModule._id, editUserModule._id, deleteUserModule._id, viewUsersModule._id],
-      estatus: true
+      description:
+        "Rol con permisos totales del sistema, puede crear distribuidores",
+      modules: [
+        createUserModule._id,
+        editUserModule._id,
+        deleteUserModule._id,
+        viewUsersModule._id,
+      ],
+      estatus: true,
     });
     console.log("Super Admin role created:", superAdminRole.name);
 
@@ -75,8 +81,13 @@ const createSeedData = async () => {
     const adminRole = await Role.create({
       name: "Administrador",
       description: "Rol con permisos completos para gestionar usuarios",
-      modules: [createUserModule._id, editUserModule._id, deleteUserModule._id, viewUsersModule._id],
-      estatus: true
+      modules: [
+        createUserModule._id,
+        editUserModule._id,
+        deleteUserModule._id,
+        viewUsersModule._id,
+      ],
+      estatus: true,
     });
     console.log("Admin role created:", adminRole.name);
 
@@ -85,7 +96,7 @@ const createSeedData = async () => {
       name: "Distribuidor",
       description: "Rol para distribuidores del sistema",
       modules: [viewUsersModule._id],
-      estatus: true
+      estatus: true,
     });
     console.log("Distribuidor role created:", distributorRole.name);
 
@@ -94,7 +105,7 @@ const createSeedData = async () => {
       name: "Gerente",
       description: "Rol para gerentes de sucursales",
       modules: [viewUsersModule._id],
-      estatus: true
+      estatus: true,
     });
     console.log("Gerente role created:", managerRole.name);
 
@@ -103,7 +114,7 @@ const createSeedData = async () => {
       name: "Usuario",
       description: "Rol básico para usuarios regulares",
       modules: [viewUsersModule._id],
-      estatus: true
+      estatus: true,
     });
     console.log("User role created:", userRole.name);
 
@@ -111,7 +122,7 @@ const createSeedData = async () => {
     const users = [
       {
         username: "admin",
-        email: "admin@caprepa.com",
+        email: "admin@floriSoft.com",
         phone: "555-0001",
         password: "Admin123!",
         profile: {
@@ -119,13 +130,13 @@ const createSeedData = async () => {
           lastName: "Sistema",
           fullName: "Administrador del Sistema",
           path: "/admin/profile",
-          estatus: true
+          estatus: true,
         },
-        role: superAdminRole._id
+        role: superAdminRole._id,
       },
       {
         username: "juan.perez",
-        email: "juan.perez@caprepa.com",
+        email: "juan.perez@floriSoft.com",
         phone: "555-0002",
         password: "User123!",
         profile: {
@@ -133,13 +144,13 @@ const createSeedData = async () => {
           lastName: "Pérez",
           fullName: "Juan Pérez",
           path: "/users/juan/profile",
-          estatus: true
+          estatus: true,
         },
-        role: userRole._id
+        role: userRole._id,
       },
       {
         username: "maria.garcia",
-        email: "maria.garcia@caprepa.com",
+        email: "maria.garcia@floriSoft.com",
         phone: "555-0003",
         password: "User123!",
         profile: {
@@ -147,13 +158,13 @@ const createSeedData = async () => {
           lastName: "García",
           fullName: "María García",
           path: "/users/maria/profile",
-          estatus: true
+          estatus: true,
         },
-        role: userRole._id
+        role: userRole._id,
       },
       {
         username: "carlos.lopez",
-        email: "carlos.lopez@caprepa.com",
+        email: "carlos.lopez@floriSoft.com",
         phone: "555-0004",
         password: "User123!",
         profile: {
@@ -161,13 +172,13 @@ const createSeedData = async () => {
           lastName: "López",
           fullName: "Carlos López",
           path: "/users/carlos/profile",
-          estatus: true
+          estatus: true,
         },
-        role: userRole._id
+        role: userRole._id,
       },
       {
         username: "ana.martinez",
-        email: "ana.martinez@caprepa.com",
+        email: "ana.martinez@floriSoft.com",
         phone: "555-0005",
         password: "User123!",
         profile: {
@@ -175,17 +186,16 @@ const createSeedData = async () => {
           lastName: "Martínez",
           fullName: "Ana Martínez",
           path: "/users/ana/profile",
-          estatus: true
+          estatus: true,
         },
-        role: userRole._id
-      }
+        role: userRole._id,
+      },
     ];
 
     for (const userData of users) {
       const user = await User.create(userData);
       console.log(`User created: ${user.username} (${user.profile.fullName})`);
     }
-
 
     // Create clients
     console.log("\nCreating clients...");
@@ -195,55 +205,58 @@ const createSeedData = async () => {
         lastName: "Fernández García",
         phoneNumber: "555-1001",
         points: 150,
-        status: true
+        status: true,
       },
       {
         name: "Isabella",
         lastName: "Morales Ruiz",
-        phoneNumber: "555-1002", 
+        phoneNumber: "555-1002",
         points: 320,
-        status: true
+        status: true,
       },
       {
         name: "Diego",
         lastName: "Vargas Mendoza",
         phoneNumber: "555-1003",
         points: 85,
-        status: true
+        status: true,
       },
       {
         name: "Valentina",
         lastName: "Restrepo Silva",
         phoneNumber: "555-1004",
         points: 500,
-        status: false
+        status: false,
       },
       {
         name: "Sebastián",
         lastName: "Herrera Castillo",
         phoneNumber: "555-1005",
         points: 275,
-        status: true
-      }
+        status: true,
+      },
     ];
 
     for (const clientData of clientsData) {
       const client = await Client.create(clientData);
-      console.log(`Client created: ${client.name} ${client.lastName} - ${client.clientNumber} (${client.points} points)`);
+      console.log(
+        `Client created: ${client.name} ${client.lastName} - ${client.clientNumber} (${client.points} points)`
+      );
     }
 
     console.log("\n=== SEED COMPLETED SUCCESSFULLY ===");
     console.log("Created:");
     console.log(`- 1 Page: ${userManagementPage.name}`);
     console.log(`- 4 Modules for user management`);
-    console.log(`- 4 Roles: ${superAdminRole.name}, ${adminRole.name}, ${distributorRole.name}, ${userRole.name}`);
+    console.log(
+      `- 4 Roles: ${superAdminRole.name}, ${adminRole.name}, ${distributorRole.name}, ${userRole.name}`
+    );
     console.log(`- 5 Users (1 super admin, 4 regular users)`);
     console.log(`- 5 Clients with sample data`);
     console.log("\nSuper Admin user credentials:");
     console.log(`Username: admin`);
     console.log(`Password: Admin123!`);
-    console.log(`Email: admin@caprepa.com`);
-
+    console.log(`Email: admin@floriSoft.com`);
   } catch (error) {
     console.error("Error creating seed data:", error);
   } finally {
@@ -258,4 +271,4 @@ const runSeed = async () => {
   process.exit(0);
 };
 
-runSeed(); 
+runSeed();

@@ -6,7 +6,11 @@ import { MenuItemType } from "@/types/layout";
 import { menuItems } from "@/config/constants";
 import { useUserModulesStore } from "@/stores/userModulesStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
-import { canAccessPage, isSuperAdmin, getPagePathFromRoute } from "@/utils/pagePermissions";
+import {
+  canAccessPage,
+  isSuperAdmin,
+  getPagePathFromRoute,
+} from "@/utils/pagePermissions";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -66,6 +70,19 @@ const MenuItemWithChildren = ({
         onClick={toggleOpen}
         className="side-nav-link"
         aria-expanded={isOpen}
+        style={{
+          color: "#e2e8f0",
+          transition: "all 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = "#ffffff";
+          e.currentTarget.style.background =
+            "linear-gradient(90deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15))";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = "#e2e8f0";
+          e.currentTarget.style.background = "transparent";
+        }}
       >
         {item.icon && (
           <span className="menu-icon">
@@ -126,6 +143,33 @@ const MenuItem = ({ item }: { item: MenuItemType }) => {
         className={`side-nav-link  ${isActive ? "active" : ""} ${
           item.isDisabled ? "disabled" : ""
         } ${item.isSpecial ? "special-menu" : ""}`}
+        style={{
+          color: isActive ? "#ffffff" : "#e2e8f0",
+          background: isActive
+            ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+            : "transparent",
+          transition: "all 0.3s ease",
+          borderRadius: isActive ? "8px" : "0px",
+          margin: isActive ? "2px 8px" : "0px",
+          position: "relative",
+        }}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.color = "#ffffff";
+            e.currentTarget.style.background =
+              "linear-gradient(90deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15))";
+            e.currentTarget.style.borderRadius = "8px";
+            e.currentTarget.style.margin = "2px 8px";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.color = "#e2e8f0";
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.borderRadius = "0px";
+            e.currentTarget.style.margin = "0px";
+          }
+        }}
       >
         {item.icon && (
           <span className="menu-icon">
@@ -137,6 +181,21 @@ const MenuItem = ({ item }: { item: MenuItemType }) => {
           <span className={`badge text-bg-${item.badge.variant} opacity-50`}>
             {item.badge.text}
           </span>
+        )}
+        {isActive && (
+          <span
+            style={{
+              position: "absolute",
+              right: "12px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              background: "#fbbf24",
+              boxShadow: "0 0 8px rgba(251, 191, 36, 0.6)",
+            }}
+          />
         )}
       </Link>
     </li>
@@ -161,14 +220,14 @@ const AppMenu = () => {
       // Si tiene children, filtrar recursivamente
       if (item.children && item.children.length > 0) {
         const filteredChildren = item.children
-          .map(child => filterMenuItem(child))
-          .filter(child => child !== null) as MenuItemType[];
+          .map((child) => filterMenuItem(child))
+          .filter((child) => child !== null) as MenuItemType[];
 
         // SIEMPRE mostrar menús y submenús principales (contenedores)
         // incluso si sus children fueron filtrados
         return {
           ...item,
-          children: filteredChildren
+          children: filteredChildren,
         };
       }
 
@@ -189,8 +248,8 @@ const AppMenu = () => {
     };
 
     return menuItems
-      .map(item => filterMenuItem(item))
-      .filter(item => item !== null) as MenuItemType[];
+      .map((item) => filterMenuItem(item))
+      .filter((item) => item !== null) as MenuItemType[];
   }, [allowedModules, role]);
 
   const scrollToActiveLink = () => {
@@ -216,7 +275,20 @@ const AppMenu = () => {
     <ul className="side-nav">
       {filteredMenuItems.map((item) =>
         item.isTitle ? (
-          <li className="side-nav-title" key={item.key}>
+          <li
+            className="side-nav-title"
+            key={item.key}
+            style={{
+              color: "#94a3b8",
+              fontSize: "11px",
+              fontWeight: "600",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              marginTop: "20px",
+              marginBottom: "8px",
+              paddingLeft: "20px",
+            }}
+          >
             {item.label}
           </li>
         ) : item.children ? (

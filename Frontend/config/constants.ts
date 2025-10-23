@@ -1,78 +1,197 @@
 import { type MenuItemType } from "@/types/layout";
 import {
   ShieldUser,
+  Users,
+  User,
+  UserCheck,
+  Truck,
+  Building2,
+  Wallet,
+  Plus,
+  ShoppingCart,
+  Package,
+  Truck as DeliveryTruck,
+  DollarSign,
+  ClipboardList,
+  Package2,
+  Scale,
+  CreditCard,
+  Settings,
+  FileText,
+  UserCog,
+  Building,
 } from "lucide-react";
 
 export const menuItems: MenuItemType[] = [
   { key: "menu", label: "Menu", isTitle: true },
-  {
-    key: "gestion",
-    label: "GESTION",
-    icon: ShieldUser,
-    children: [
-      { key: "roles", label: "Roles", url: "/gestion/roles" },
-      { key: "pages", label: "Páginas", url: "/gestion/paginas" },
-      { key: "users", label: "Usuarios", url: "/gestion/usuarios" },
-      { key: "companies", label: "Empresas", url: "/gestion/empresas" }
-    ],
-  },
+
   {
     key: "panel",
-    label: "PANEL DE CONTROL",
+    label: "Panel de Control",
     icon: ShieldUser,
     children: [
       {
-        key: 'usuarios',
-        label: 'USUARIOS',
-        children:[
-          { key: "clientes", label: "Clientes", url: "/panel/clientes" },
-          { key: "cajeros", label: "Cajeros", url: "/panel/cajeros" },
-          { key: "produccion", label: "Produccion", url: "/panel/produccion" },
-          { key: "reparto", label: "Reparto", url: "/panel/repartidores" },
-          { key: "gerentes", label: "Gerentes", url: "/panel/gerentes" },
-        ]
+        key: "sucursal",
+        label: "Sucursal",
+        icon: Building2,
+        children: [
+          {
+            key: "sucursales",
+            label: "Sucursales",
+            url: "/panel-de-control/sucursales",
+            icon: Building,
+          },
+          {
+            key: "cajas",
+            label: "Cajas Registradoras",
+            url: "/ventas/cajas",
+            icon: Wallet,
+          },
+          {
+            key: "nuevo_pedido",
+            label: "Nuevo Pedido",
+            url: "/sucursal/nuevo-pedido",
+            icon: Plus,
+          },
+          {
+            key: "ventas",
+            label: "Ventas",
+            url: "/sucursal/ventas",
+            icon: ShoppingCart,
+          },
+          {
+            key: "produccion",
+            label: "Produccion",
+            url: "/sucursal/produccion",
+            icon: Package,
+          },
+          {
+            key: "reparto",
+            label: "Reparto",
+            url: "/sucursal/reparto",
+            icon: DeliveryTruck,
+          },
+          {
+            key: "nuevo_gasto",
+            label: "Nuevo Gasto",
+            url: "/sucursal/nuevo-gasto",
+            icon: DollarSign,
+          },
+        ],
       },
       {
-        key: 'sucursal',
-        label: 'SUCURSAL',
-        children:[
-          { key: "sucursales", label: "Sucursales", url: "/panel-de-control/sucursales" },
-          { key: "cajas", label: "Cajas Registradoras", url: "/ventas/cajas" },
-          { key: "nuevo_pedido", label: "Nuevo Pedido", url: "/sucursal/nuevo-pedido" },
-          { key: "ventas", label: "VENTAS", url: "/sucursal/ventas" },
-          { key: "produccion", label: "Produccion", url: "/sucursal/produccion" },
-          { key: "reparto", label: "Reparto", url: "/sucursal/reparto" },
-          { key: "nuevo_gasto", label: "NUEVO GASTO", url: "/sucursal/nuevo-gasto" },
-        ]
+        key: "produccion",
+        label: "Producción",
+        icon: Package,
+        children: [
+          {
+            key: "pizarron-ventas",
+            label: "Pizarrón de Ventas",
+            url: "/produccion/pizarron-ventas",
+            icon: ClipboardList,
+          },
+        ],
       },
       {
-        key: 'produccion',
-        label: 'PRODUCCION',
-        children:[
-          { key: "pizarron-ventas", label: "Pizarrón de Ventas", url: "/produccion/pizarron-ventas" },
-        ]
+        key: "usuarios",
+        label: "Usuarios",
+        icon: Users,
+        children: [
+          {
+            key: "clientes",
+            label: "Clientes",
+            url: "/panel/clientes",
+            icon: User,
+          },
+          {
+            key: "cajeros",
+            label: "Cajeros",
+            url: "/panel/cajeros",
+            icon: UserCheck,
+          },
+          {
+            key: "produccion",
+            label: "Producción",
+            url: "/panel/produccion",
+            icon: Package,
+          },
+          {
+            key: "reparto",
+            label: "Reparto",
+            url: "/panel/repartidores",
+            icon: Truck,
+          },
+          {
+            key: "gerentes",
+            label: "Gerentes",
+            url: "/panel/gerentes",
+            icon: UserCog,
+          },
+        ],
       },
     ],
   },
   {
     key: "catalogos",
-    label: "CATÁLOGOS",
-    icon: ShieldUser,
+    label: "Catálogos",
+    icon: Package2,
     children: [
-      { key: "productos", label: "Productos", url: "/catalogos/productos" },
-      { key: "listas-productos", label: "Listas de Productos", url: "/catalogos/listas-productos" },
-      { key: "materiales", label: "Materiales", url: "/catalogos/materiales" },
-      { key: "unidades", label: "Unidades de Medida", url: "/catalogos/unidades-medida" },
-      { key: "metodos-pago", label: "Metodos de Pago", url: "/catalogos/payment-method" },
+      {
+        key: "productos",
+        label: "Productos",
+        url: "/catalogos/productos",
+        icon: Package,
+      },
+      {
+        key: "listas-productos",
+        label: "Listas de Productos",
+        url: "/catalogos/listas-productos",
+        icon: ClipboardList,
+      },
+      {
+        key: "materiales",
+        label: "Materiales",
+        url: "/catalogos/materiales",
+        icon: Package2,
+      },
+      {
+        key: "unidades",
+        label: "Unidades de Medida",
+        url: "/catalogos/unidades-medida",
+        icon: Scale,
+      },
+      {
+        key: "metodos-pago",
+        label: "Metodos de Pago",
+        url: "/catalogos/payment-method",
+        icon: CreditCard,
+      },
     ],
-
   },
   {
-    key: "ventas",
-    label: "VENTAS",
-    icon: ShieldUser,
+    key: "gestion",
+    label: "Gestión",
+    icon: Settings,
     children: [
+      { key: "roles", label: "Roles", url: "/gestion/roles", icon: ShieldUser },
+      {
+        key: "pages",
+        label: "Páginas",
+        url: "/gestion/paginas",
+        icon: FileText,
+      },
+      {
+        key: "users",
+        label: "Usuarios",
+        url: "/gestion/usuarios",
+        icon: Users,
+      },
+      {
+        key: "companies",
+        label: "Empresas",
+        url: "/gestion/empresas",
+        icon: Building,
+      },
     ],
-
   },
 ];

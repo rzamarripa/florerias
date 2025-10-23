@@ -1,0 +1,59 @@
+/* Custom Sidebar Styles - Direct CSS for maximum compatibility */
+html[data-skin="modern"][data-menu-color="light"] .sidenav-menu {
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f8fbff 50%,
+    #e3f2fd 100%
+  ) !important;
+  border-right-color: #e1f5fe !important;
+}
+
+html[data-skin="modern"][data-menu-color="light"] .side-nav-link {
+  color: #1565c0 !important;
+}
+
+html[data-skin="modern"][data-menu-color="light"] .side-nav-link:hover {
+  color: #0d47a1 !important;
+  background: linear-gradient(
+    90deg,
+    rgba(25, 118, 210, 0.08),
+    rgba(25, 118, 210, 0.12)
+  ) !important;
+}
+
+html[data-skin="modern"][data-menu-color="light"]
+  .side-nav-item.active
+  > .side-nav-link {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #1976d2, #1565c0) !important;
+}
+
+html[data-skin="modern"][data-menu-color="light"] .side-nav-title {
+  color: #1565c0 !important;
+}
+
+html[data-skin="modern"][data-menu-color="light"] .menu-icon {
+  color: #1565c0 !important;
+}
+
+html[data-skin="modern"][data-menu-color="light"]
+  .side-nav-item.active
+  .menu-icon {
+  color: #ffffff !important;
+}
+
+html[data-skin="modern"][data-menu-color="light"] .sub-menu .side-nav-link {
+  color: #1565c0 !important;
+}
+
+html[data-skin="modern"][data-menu-color="light"]
+  .sub-menu
+  .side-nav-link:hover {
+  color: #0d47a1 !important;
+  background: linear-gradient(
+    90deg,
+    rgba(25, 118, 210, 0.08),
+    rgba(25, 118, 210, 0.12)
+  ) !important;
+}

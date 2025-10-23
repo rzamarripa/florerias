@@ -105,7 +105,7 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
           <div className="d-flex align-items-center">
             <MessageSquare className="me-2 text-primary" size={20} />
             <h3 className="h5 mb-0 fw-semibold text-dark">
-              Asistente de CAPREPA
+              Asistente de Florisoft
             </h3>
           </div>
           <div className="d-flex align-items-center gap-2">
@@ -129,7 +129,7 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
             <div className="text-center text-muted mt-5">
               <MessageSquare className="mx-auto mb-3 text-muted" size={48} />
               <p className="mb-0">
-                ¡Pregúntame cualquier cosa sobre el sistema CAPREPA!
+                ¡Pregúntame cualquier cosa sobre el sistema Florisoft!
               </p>
               {context && (
                 <div className="p-1 bg-light rounded mb-3">
@@ -229,7 +229,7 @@ const ChatModal = ({ isOpen, onClose }: ChatModalProps) => {
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
-              placeholder="Preguntame sobre el sistema CAPREPA..."
+              placeholder="Preguntame sobre el sistema Florisoft..."
               className="form-control"
               disabled={status === "streaming"}
             />
