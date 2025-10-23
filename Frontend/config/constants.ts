@@ -39,10 +39,10 @@ export const menuItems: MenuItemType[] = [
           { key: "sucursales", label: "Sucursales", url: "/panel-de-control/sucursales" },
           { key: "cajas", label: "Cajas Registradoras", url: "/ventas/cajas" },
           { key: "nuevo_pedido", label: "Nuevo Pedido", url: "/sucursal/nuevo-pedido" },
-          { key: "ventas", label: "VENTAS", url: "/sucursal/ventas" },
+          { key: "ventas", label: "Ventas", url: "/sucursal/ventas" },
           { key: "produccion", label: "Produccion", url: "/sucursal/produccion" },
           { key: "reparto", label: "Reparto", url: "/sucursal/reparto" },
-          { key: "nuevo_gasto", label: "NUEVO GASTO", url: "/sucursal/nuevo-gasto" },
+          { key: "nuevo_gasto", label: "Nuevo Gasto", url: "/sucursal/nuevo-gasto" },
         ]
       },
       {
