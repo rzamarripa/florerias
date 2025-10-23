@@ -63,6 +63,7 @@ export interface Order {
 export interface CreateOrderData {
   branchId: string;
   cashRegisterId?: string | null;
+  storageId?: string;
   clientInfo: ClientInfo;
   salesChannel: 'tienda' | 'whatsapp' | 'facebook';
   items: OrderItem[];

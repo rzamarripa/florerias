@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, InputGroup, Spinner } from "react-bootstrap";
+import { Card, Form, Button, InputGroup, Spinner, Badge } from "react-bootstrap";
 import { Search, Plus, Package } from "lucide-react";
 import { productsService } from "@/features/admin/modules/products/services/products";
 import { Product as ProductType } from "@/features/admin/modules/products/types";
+import { Storage } from "@/features/admin/modules/storage/types";
+import { OrderItem } from "../types";
 
 interface Product {
   _id: string;
@@ -16,27 +18,42 @@ interface Product {
 
 interface ProductCatalogProps {
   onAddProduct: (product: Product, cantidad: number) => void;
+  storage: Storage | null;
+  itemsInOrder: OrderItem[];
 }
 
-const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct }) => {
+const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct, storage, itemsInOrder }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
   const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Cargar productos al montar el componente
+  // Cargar productos solo cuando hay un storage seleccionado
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    if (storage) {
+      fetchProducts();
+    } else {
+      setProducts([]);
+    }
+  }, [storage]);
 
   const fetchProducts = async () => {
+    if (!storage) return;
+
     setLoading(true);
     try {
       const response = await productsService.getAllProducts({
         limit: 1000,
         estatus: true,
       });
-      setProducts(response.data);
+
+      // Filtrar productos que existen en el storage
+      const storageProductIds = storage.products.map((p: any) => p.productId._id);
+      const availableProducts = response.data.filter((product) =>
+        storageProductIds.includes(product._id)
+      );
+
+      setProducts(availableProducts);
     } catch (error) {
       console.error("Error al cargar productos:", error);
     } finally {
@@ -47,6 +64,24 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct }) => {
   const filteredProducts = products.filter((product) =>
     product.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Función para obtener el stock disponible de un producto
+  const getAvailableStock = (productId: string): number => {
+    if (!storage) return 0;
+
+    const productInStorage = storage.products.find(
+      (p: any) => p.productId._id === productId
+    );
+
+    if (!productInStorage) return 0;
+
+    // Restar cantidad ya agregada en la orden
+    const quantityInOrder = itemsInOrder
+      .filter((item) => item.productId === productId)
+      .reduce((sum, item) => sum + item.quantity, 0);
+
+    return productInStorage.quantity - quantityInOrder;
+  };
 
   const handleQuantityChange = (productId: string, value: number) => {
     setQuantities({
@@ -110,13 +145,20 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct }) => {
               <Spinner animation="border" variant="primary" className="mb-3" />
               <p className="text-muted mb-0">Cargando productos...</p>
             </div>
+          ) : !storage ? (
+            <div className="text-center py-5">
+              <Package size={64} className="text-muted opacity-25 mb-3" />
+              <p className="text-muted mb-0">
+                Selecciona un almacén para ver productos
+              </p>
+            </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-5">
               <Package size={64} className="text-muted opacity-25 mb-3" />
               <p className="text-muted mb-0">
                 {searchTerm
                   ? "No se encontraron productos"
-                  : "No hay productos disponibles"}
+                  : "No hay productos disponibles en este almacén"}
               </p>
               {searchTerm && (
                 <small className="text-muted">
@@ -133,10 +175,14 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct }) => {
                     0
                   ) || 0;
 
+                const availableStock = getAvailableStock(product._id);
+                const isOutOfStock = availableStock <= 0;
+                const currentQuantity = quantities[product._id] || 1;
+
                 return (
                   <Card
                     key={product._id}
-                    className="border shadow-sm product-card"
+                    className={`border shadow-sm product-card ${isOutOfStock ? 'opacity-50' : ''}`}
                   >
                     <div className="row g-0">
                       <div className="col-4">
@@ -170,18 +216,27 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct }) => {
                               >
                                 {product.nombre}
                               </h6>
-                              <p
-                                className="text-success fw-bold mb-2"
-                                style={{ fontSize: "1.1rem" }}
-                              >
-                                ${precio.toFixed(2)}
-                              </p>
+                              <div className="d-flex justify-content-between align-items-center mb-2">
+                                <p
+                                  className="text-success fw-bold mb-0"
+                                  style={{ fontSize: "1.1rem" }}
+                                >
+                                  ${precio.toFixed(2)}
+                                </p>
+                                <Badge
+                                  bg={isOutOfStock ? "danger" : availableStock < 5 ? "warning" : "success"}
+                                  className="text-white"
+                                >
+                                  Stock: {availableStock}
+                                </Badge>
+                              </div>
                             </div>
                             <div className="d-flex gap-2 align-items-center">
                               <Form.Control
                                 type="number"
                                 min="1"
-                                value={quantities[product._id] || 1}
+                                max={availableStock}
+                                value={currentQuantity}
                                 onChange={(e) =>
                                   handleQuantityChange(
                                     product._id,
@@ -190,15 +245,17 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({ onAddProduct }) => {
                                 }
                                 className="form-control-sm"
                                 style={{ width: "70px" }}
+                                disabled={isOutOfStock}
                               />
                               <Button
                                 variant="primary"
                                 size="sm"
                                 className="flex-grow-1"
                                 onClick={() => handleAddToOrder(product)}
+                                disabled={isOutOfStock || currentQuantity > availableStock}
                               >
                                 <Plus size={16} className="me-1" />
-                                Agregar
+                                {isOutOfStock ? "Sin stock" : "Agregar"}
                               </Button>
                             </div>
                           </div>

@@ -32,6 +32,8 @@ import { branchesService } from "@/features/admin/modules/branches/services/bran
 import { Branch } from "@/features/admin/modules/branches/types";
 import { cashRegistersService } from "@/features/admin/modules/cash-registers/services/cashRegisters";
 import { CashRegister } from "@/features/admin/modules/cash-registers/types";
+import { storageService } from "@/features/admin/modules/storage/services/storage";
+import { Storage } from "@/features/admin/modules/storage/types";
 import { toast } from "react-toastify";
 
 const NewOrderPage = () => {
@@ -45,6 +47,9 @@ const NewOrderPage = () => {
   const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
   const [loadingCashRegister, setLoadingCashRegister] = useState(false);
   const [togglingCashRegister, setTogglingCashRegister] = useState(false);
+  const [storage, setStorage] = useState<Storage | null>(null);
+  const [loadingStorage, setLoadingStorage] = useState(false);
+  const [selectedStorageId, setSelectedStorageId] = useState<string>("");
 
   const [formData, setFormData] = useState<CreateOrderData>({
     branchId: "",
@@ -100,6 +105,16 @@ const NewOrderPage = () => {
     fetchUserBranches();
     fetchUserCashRegister();
   }, []);
+
+  // Cargar storage cuando cambia la sucursal
+  useEffect(() => {
+    if (formData.branchId) {
+      fetchStorageByBranch(formData.branchId);
+    } else {
+      setStorage(null);
+      setSelectedStorageId("");
+    }
+  }, [formData.branchId]);
 
   // Actualizar fecha y hora cuando se activa "Venta Rápida"
   useEffect(() => {
@@ -207,6 +222,31 @@ const NewOrderPage = () => {
       toast.error("Error al cargar la caja registradora del usuario");
     } finally {
       setLoadingCashRegister(false);
+    }
+  };
+
+  // Obtener almacén por sucursal
+  const fetchStorageByBranch = async (branchId: string) => {
+    setLoadingStorage(true);
+    try {
+      const response = await storageService.getStorageByBranch(branchId);
+      if (response.data) {
+        setStorage(response.data);
+        setSelectedStorageId(response.data._id);
+      } else {
+        setStorage(null);
+        setSelectedStorageId("");
+        toast.warning("No hay almacén asignado a esta sucursal");
+      }
+    } catch (err: any) {
+      console.error("Error al cargar almacén:", err);
+      setStorage(null);
+      setSelectedStorageId("");
+      if (err.message !== "No se encontró almacén para esta sucursal") {
+        toast.error("Error al cargar el almacén de la sucursal");
+      }
+    } finally {
+      setLoadingStorage(false);
     }
   };
 
@@ -369,6 +409,36 @@ const NewOrderPage = () => {
 
   // Agregar producto desde catálogo
   const handleAddProductFromCatalog = (product: any, quantity: number) => {
+    // Validar que haya un storage seleccionado
+    if (!storage) {
+      toast.error("Debes seleccionar un almacén primero");
+      return;
+    }
+
+    // Buscar el producto en el storage para verificar stock
+    const productInStorage = storage.products.find(
+      (p: any) => p.productId._id === product._id
+    );
+
+    if (!productInStorage) {
+      toast.error(`El producto "${product.nombre}" no está disponible en este almacén`);
+      return;
+    }
+
+    // Calcular cantidad ya agregada de este producto en la orden
+    const quantityInOrder = formData.items
+      .filter((item) => item.productId === product._id)
+      .reduce((sum, item) => sum + item.quantity, 0);
+
+    const totalRequested = quantityInOrder + quantity;
+
+    if (totalRequested > productInStorage.quantity) {
+      toast.error(
+        `Stock insuficiente. Disponible: ${productInStorage.quantity}, Ya en orden: ${quantityInOrder}, Solicitado: ${quantity}`
+      );
+      return;
+    }
+
     const newItem: OrderItem = {
       isProduct: true, // Producto del catálogo
       productId: product._id, // ID del producto
@@ -406,7 +476,16 @@ const NewOrderPage = () => {
         throw new Error("Debes agregar al menos un producto");
       }
 
-      const response = await ordersService.createOrder(formData);
+      if (!selectedStorageId) {
+        throw new Error("Debes seleccionar un almacén");
+      }
+
+      const orderData = {
+        ...formData,
+        storageId: selectedStorageId
+      };
+
+      const response = await ordersService.createOrder(orderData);
 
       // Mostrar toast de éxito
       toast.success(
@@ -647,6 +726,35 @@ const NewOrderPage = () => {
                         disabled
                         className="py-2 bg-light"
                       />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <Package size={16} className="me-2" />
+                        Almacén
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={
+                          loadingStorage
+                            ? "Cargando..."
+                            : storage
+                            ? `Almacén de ${branches.find(b => b._id === formData.branchId)?.branchName || ""}`
+                            : "No hay almacén asignado"
+                        }
+                        readOnly
+                        disabled
+                        className="py-2 bg-light"
+                      />
+                      {!storage && !loadingStorage && formData.branchId && (
+                        <Alert variant="danger" className="mt-2 mb-0 py-2">
+                          <small>
+                            ⚠️ Esta sucursal no tiene almacén asignado. No se pueden agregar productos.
+                          </small>
+                        </Alert>
+                      )}
                     </Form.Group>
                   </Col>
 
@@ -1290,7 +1398,11 @@ const NewOrderPage = () => {
             className="position-sticky"
             style={{ top: "20px", height: "calc(100vh - 160px)" }}
           >
-            <ProductCatalog onAddProduct={handleAddProductFromCatalog} />
+            <ProductCatalog
+              onAddProduct={handleAddProductFromCatalog}
+              storage={storage}
+              itemsInOrder={formData.items}
+            />
           </div>
         </Col>
       </Row>

@@ -3,6 +3,7 @@ import Product from '../models/Product.js';
 import PaymentMethod from '../models/PaymentMethod.js';
 import { Branch } from '../models/Branch.js';
 import CashRegister from '../models/CashRegister.js';
+import { Storage } from '../models/Storage.js';
 
 // Obtener todas las órdenes con filtros y paginación
 const getAllOrders = async (req, res) => {
@@ -141,6 +142,7 @@ const createOrder = async (req, res) => {
     const {
       branchId,
       cashRegisterId,
+      storageId,
       clientInfo,
       salesChannel,
       items,
@@ -165,6 +167,13 @@ const createOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'La sucursal es obligatoria'
+      });
+    }
+
+    if (!storageId) {
+      return res.status(400).json({
+        success: false,
+        message: 'El almacén es obligatorio'
       });
     }
 
@@ -217,7 +226,24 @@ const createOrder = async (req, res) => {
       }
     }
 
-    // Validar que los productos del catálogo existan
+    // Validar que el almacén exista
+    const storage = await Storage.findById(storageId);
+    if (!storage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Almacén no encontrado'
+      });
+    }
+
+    // Validar que el almacén corresponda a la sucursal
+    if (storage.branch.toString() !== branchId) {
+      return res.status(400).json({
+        success: false,
+        message: 'El almacén no pertenece a la sucursal seleccionada'
+      });
+    }
+
+    // Validar que los productos del catálogo existan y haya stock disponible
     for (const item of items) {
       // Solo validar si es un producto del catálogo
       if (item.isProduct === true) {
@@ -226,6 +252,25 @@ const createOrder = async (req, res) => {
           return res.status(404).json({
             success: false,
             message: `Producto con ID ${item.productId} no encontrado`
+          });
+        }
+
+        // Verificar stock en el almacén
+        const productInStorage = storage.products.find(
+          (p) => p.productId.toString() === item.productId
+        );
+
+        if (!productInStorage) {
+          return res.status(400).json({
+            success: false,
+            message: `El producto "${item.productName}" no está disponible en el almacén`
+          });
+        }
+
+        if (productInStorage.quantity < item.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Stock insuficiente para "${item.productName}". Disponible: ${productInStorage.quantity}, Solicitado: ${item.quantity}`
           });
         }
       } else {
@@ -270,6 +315,29 @@ const createOrder = async (req, res) => {
     });
 
     const savedOrder = await newOrder.save();
+
+    // Descontar productos del almacén
+    for (const item of items) {
+      // Solo descontar si es un producto del catálogo
+      if (item.isProduct === true && item.productId) {
+        const productInStorageIndex = storage.products.findIndex(
+          (p) => p.productId.toString() === item.productId
+        );
+
+        if (productInStorageIndex !== -1) {
+          storage.products[productInStorageIndex].quantity -= item.quantity;
+
+          // Si la cantidad llega a 0, remover el producto del array
+          if (storage.products[productInStorageIndex].quantity === 0) {
+            storage.products.splice(productInStorageIndex, 1);
+          }
+        }
+      }
+    }
+
+    // Actualizar fecha de último egreso y guardar el almacén
+    storage.lastOutcome = Date.now();
+    await storage.save();
 
     // Si hay caja registradora asignada, actualizar su balance
     if (cashRegisterId) {

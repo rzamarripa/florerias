@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Table, Badge, Spinner } from "react-bootstrap";
-import { X, Package, Calendar, MapPin, User } from "lucide-react";
-import { Storage, Product } from "../types";
+import { Modal, Button, Table, Badge, Spinner, Form } from "react-bootstrap";
+import { X, Package, Calendar, MapPin, User, Save, Edit2 } from "lucide-react";
+import { toast } from "react-toastify";
+import { Storage } from "../types";
 import { storageService } from "../services/storage";
 
 interface ViewStorageModalProps {
@@ -11,6 +12,12 @@ interface ViewStorageModalProps {
   onHide: () => void;
   storage: Storage | null;
   onStorageUpdated: () => void;
+}
+
+interface ProductQuantityEdit {
+  productId: string;
+  quantity: number;
+  originalQuantity: number;
 }
 
 const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
@@ -21,6 +28,9 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
 }) => {
   const [storage, setStorage] = useState<Storage | null>(initialStorage);
   const [loading, setLoading] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [editedQuantities, setEditedQuantities] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (show && initialStorage) {
@@ -35,11 +45,89 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
       setLoading(true);
       const response = await storageService.getStorageById(initialStorage._id);
       setStorage(response.data);
+      setEditMode(false);
+      setEditedQuantities({});
     } catch (error) {
       console.error("Error loading storage details:", error);
       setStorage(initialStorage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEnterEditMode = () => {
+    if (!storage) return;
+
+    // Inicializar las cantidades editadas con las cantidades actuales
+    const quantities: Record<string, number> = {};
+    storage.products.forEach((item) => {
+      const productId = typeof item.productId === "string" ? item.productId : item.productId._id;
+      quantities[productId] = item.quantity;
+    });
+    setEditedQuantities(quantities);
+    setEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditMode(false);
+    setEditedQuantities({});
+  };
+
+  const handleQuantityChange = (productId: string, newQuantity: number) => {
+    setEditedQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max(0, newQuantity),
+    }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!storage) return;
+
+    try {
+      setSaving(true);
+
+      // Identificar qué productos han cambiado
+      const changedProducts: ProductQuantityEdit[] = [];
+      storage.products.forEach((item) => {
+        const productId = typeof item.productId === "string" ? item.productId : item.productId._id;
+        const newQuantity = editedQuantities[productId];
+
+        if (newQuantity !== undefined && newQuantity !== item.quantity) {
+          changedProducts.push({
+            productId,
+            quantity: newQuantity,
+            originalQuantity: item.quantity,
+          });
+        }
+      });
+
+      if (changedProducts.length === 0) {
+        toast.info("No hay cambios para guardar");
+        setEditMode(false);
+        return;
+      }
+
+      // Actualizar cada producto individualmente
+      for (const change of changedProducts) {
+        await storageService.updateProductQuantity(storage._id, {
+          productId: change.productId,
+          quantity: change.quantity,
+        });
+      }
+
+      toast.success("Cantidades actualizadas exitosamente");
+      setEditMode(false);
+      setEditedQuantities({});
+      onStorageUpdated();
+
+      // Recargar los detalles del almacén
+      const response = await storageService.getStorageById(storage._id);
+      setStorage(response.data);
+    } catch (error: any) {
+      toast.error(error.message || "Error al actualizar las cantidades");
+      console.error("Error updating quantities:", error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -85,7 +173,14 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
   };
 
   const getTotalQuantity = () => {
+    if (editMode) {
+      return Object.values(editedQuantities).reduce((sum, qty) => sum + qty, 0);
+    }
     return storage?.products.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  };
+
+  const getProductId = (productItem: any): string => {
+    return typeof productItem.productId === "string" ? productItem.productId : productItem.productId._id;
   };
 
   return (
@@ -215,7 +310,20 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
             {/* Productos */}
             <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
               <div className="card-body p-4">
-                <h6 className="mb-3 fw-bold">Productos en Almacén</h6>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h6 className="mb-0 fw-bold">Productos en Almacén</h6>
+                  {!editMode && storage.products.length > 0 && (
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={handleEnterEditMode}
+                      className="d-flex align-items-center gap-1"
+                    >
+                      <Edit2 size={16} />
+                      Editar Cantidades
+                    </Button>
+                  )}
+                </div>
 
                 {storage.products.length === 0 ? (
                   <div className="text-center py-4 text-muted">
@@ -234,20 +342,36 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {storage.products.map((item, index) => (
-                          <tr key={item._id}>
-                            <td className="px-3 py-3">{index + 1}</td>
-                            <td className="px-3 py-3 fw-semibold">{getProductName(item)}</td>
-                            <td className="px-3 py-3">
-                              <Badge bg="secondary">{getProductUnit(item)}</Badge>
-                            </td>
-                            <td className="px-3 py-3 text-end">
-                              <Badge bg="primary" pill className="px-3">
-                                {item.quantity}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
+                        {storage.products.map((item, index) => {
+                          const productId = getProductId(item);
+                          return (
+                            <tr key={item._id}>
+                              <td className="px-3 py-3">{index + 1}</td>
+                              <td className="px-3 py-3 fw-semibold">{getProductName(item)}</td>
+                              <td className="px-3 py-3">
+                                <Badge bg="secondary">{getProductUnit(item)}</Badge>
+                              </td>
+                              <td className="px-3 py-3 text-end">
+                                {editMode ? (
+                                  <Form.Control
+                                    type="number"
+                                    min="0"
+                                    value={editedQuantities[productId] || 0}
+                                    onChange={(e) =>
+                                      handleQuantityChange(productId, parseInt(e.target.value) || 0)
+                                    }
+                                    size="sm"
+                                    style={{ width: "100px", display: "inline-block" }}
+                                  />
+                                ) : (
+                                  <Badge bg="primary" pill className="px-3">
+                                    {item.quantity}
+                                  </Badge>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </Table>
                   </div>
@@ -263,9 +387,35 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
       </Modal.Body>
 
       <Modal.Footer className="border-0">
-        <Button variant="secondary" onClick={onHide}>
-          Cerrar
-        </Button>
+        {editMode ? (
+          <>
+            <Button variant="secondary" onClick={handleCancelEdit} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSaveChanges}
+              disabled={saving}
+              className="d-flex align-items-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <Spinner animation="border" size="sm" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save size={18} />
+                  Guardar Cambios
+                </>
+              )}
+            </Button>
+          </>
+        ) : (
+          <Button variant="secondary" onClick={onHide}>
+            Cerrar
+          </Button>
+        )}
       </Modal.Footer>
     </Modal>
   );
