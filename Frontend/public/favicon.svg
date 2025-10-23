@@ -1,0 +1,36 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo circular con gradiente -->
+  <circle cx="16" cy="16" r="16" fill="url(#gradient)"/>
+  
+  <!-- Pétalos de la flor -->
+  <g transform="translate(16, 16)">
+    <!-- Pétalo 1 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="6" fill="#ffffff" opacity="0.9" transform="rotate(0)"/>
+    <!-- Pétalo 2 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="6" fill="#ffffff" opacity="0.9" transform="rotate(45)"/>
+    <!-- Pétalo 3 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="6" fill="#ffffff" opacity="0.9" transform="rotate(90)"/>
+    <!-- Pétalo 4 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="6" fill="#ffffff" opacity="0.9" transform="rotate(135)"/>
+    <!-- Pétalo 5 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="6" fill="#ffffff" opacity="0.9" transform="rotate(180)"/>
+    <!-- Pétalo 6 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="6" fill="#ffffff" opacity="0.9" transform="rotate(225)"/>
+    <!-- Pétalo 7 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="6" fill="#ffffff" opacity="0.9" transform="rotate(270)"/>
+    <!-- Pétalo 8 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="6" fill="#ffffff" opacity="0.9" transform="rotate(315)"/>
+    
+    <!-- Centro de la flor -->
+    <circle cx="0" cy="0" r="3" fill="#fbbf24"/>
+  </g>
+  
+  <!-- Gradiente de fondo -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

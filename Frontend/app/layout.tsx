@@ -10,6 +10,11 @@ import "simplebar-react/dist/simplebar.min.css";
 export const metadata: Metadata = {
   title: "FloriSoft",
   description: "Sistema para Florerías",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
