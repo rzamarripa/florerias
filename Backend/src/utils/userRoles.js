@@ -4,9 +4,7 @@ export const userRoles = [
   "Gerente",
   "Revisor",
   "Asistente",
-  "Egresos",
   "Direccion",
-  "EgresosCreate",
   "GerenteFiscal",
   "RevisorFiscal1",
   "PrepagadoFiscal1",
@@ -14,5 +12,5 @@ export const userRoles = [
   "PrepagadoFiscal3",
   "RevisorFiscal2",
   "RevisorFiscal3",
-  "PrepagadoFiscal4"
+  "PrepagadoFiscal4",
 ];

@@ -8,8 +8,13 @@ import "jsvectormap/dist/css/jsvectormap.min.css";
 import "simplebar-react/dist/simplebar.min.css";
 
 export const metadata: Metadata = {
-  title: "Corazon de Violeta",
-  description: "Sistema de Control de Egresos",
+  title: "FloriSoft",
+  description: "Sistema para Florerías",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -21,13 +26,15 @@ export default function RootLayout({
     <html
       lang="en"
       data-skin="modern"
-      data-menu-color="dark"
+      data-menu-color="light"
       data-topbar-color="light"
       data-layout-position="fixed"
       data-sidenav-size="default"
       data-sidenav-user="true"
     >
-      <head></head>
+      <head>
+        <link rel="stylesheet" href="/custom-sidebar.css" />
+      </head>
       <body>
         <AppWrapper>{children}</AppWrapper>
       </body>
