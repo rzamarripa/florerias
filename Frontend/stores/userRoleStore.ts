@@ -14,6 +14,7 @@ interface UserRoleGetters {
   hasRole: (roleName: string) => boolean;
   getIsAdmin: () => boolean;
   getIsSuperAdmin: () => boolean;
+  getIsCashier: () => boolean;
 }
 
 type UserRoleStore = UserRoleState & UserRoleActions & UserRoleGetters;
@@ -31,6 +32,11 @@ export const useUserRoleStore = create<UserRoleStore>()(
       getIsSuperAdmin: () => {
         const role = get().role?.toLowerCase();
         return role === "super admin" || role === "superadmin";
+      },
+
+      getIsCashier: () => {
+        const role = get().role?.toLowerCase();
+        return role === "cajero" || role === "cashier";
       },
 
       setUserRole: (roleName: string | null) => {

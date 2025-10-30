@@ -11,6 +11,8 @@ import {
   deactivateStorage,
   activateStorage,
   deleteStorage,
+  reserveStock,
+  releaseStock,
 } from "../controllers/storageController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -28,6 +30,8 @@ router.get("/branch/:branchId", getStorageByBranch);
 router.post("/", createStorage);
 router.post("/:id/add-products", addProductsToStorage);
 router.post("/:id/remove-products", removeProductsFromStorage);
+router.post("/:id/reserve-stock", reserveStock);
+router.post("/:id/release-stock", releaseStock);
 
 // Rutas PUT
 router.put("/:id", updateStorage);

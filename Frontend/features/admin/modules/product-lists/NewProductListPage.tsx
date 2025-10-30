@@ -23,6 +23,8 @@ import { companiesService } from "../companies/services/companies";
 import { materialsService } from "../materials/services/materials";
 import { Material } from "../materials/types";
 import DesgloseModal from "./components/DesgloseModal";
+import { branchesService } from "../branches/services/branches";
+import { Branch } from "../branches/types";
 
 const NewProductListPage: React.FC = () => {
   const router = useRouter();
@@ -37,6 +39,7 @@ const NewProductListPage: React.FC = () => {
     name: "",
     products: [],
     company: "",
+    branch: "",
     expirationDate: "",
   });
 
@@ -47,6 +50,7 @@ const NewProductListPage: React.FC = () => {
     (Product & { cantidad: number })[]
   >([]);
   const [userCompany, setUserCompany] = useState<any>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [currentProductId, setCurrentProductId] = useState<string>("");
   const [currentQuantity, setCurrentQuantity] = useState<number>(1);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -69,6 +73,13 @@ const NewProductListPage: React.FC = () => {
     loadUserCompany();
     loadMaterials();
   }, []);
+
+  // Cargar sucursales cuando se selecciona una empresa
+  useEffect(() => {
+    if (formData.company) {
+      loadBranches();
+    }
+  }, [formData.company]);
 
   // Cargar lista de productos si estamos editando
   useEffect(() => {
@@ -122,6 +133,23 @@ const NewProductListPage: React.FC = () => {
     }
   };
 
+  const loadBranches = async () => {
+    try {
+      if (!formData.company) return;
+
+      const response = await branchesService.getAllBranches({
+        companyId: formData.company,
+        limit: 1000,
+        isActive: true,
+      });
+
+      setBranches(response.data);
+    } catch (err: any) {
+      console.error("Error al cargar sucursales:", err);
+      toast.error(err.message || "Error al cargar sucursales");
+    }
+  };
+
   const loadProductList = async () => {
     try {
       setLoading(true);
@@ -140,6 +168,10 @@ const NewProductListPage: React.FC = () => {
           typeof productList.company === "string"
             ? productList.company
             : productList.company._id,
+        branch:
+          typeof productList.branch === "string"
+            ? productList.branch
+            : productList.branch._id,
         expirationDate: productList.expirationDate.split("T")[0], // Format for input[type="date"]
       });
 
@@ -241,9 +273,9 @@ const NewProductListPage: React.FC = () => {
     setError(null);
 
     try {
-      if (!formData.name || !formData.company || !formData.expirationDate) {
+      if (!formData.name || !formData.company || !formData.branch || !formData.expirationDate) {
         throw new Error(
-          "El nombre, empresa y fecha de expiración son obligatorios"
+          "El nombre, empresa, sucursal y fecha de expiración son obligatorios"
         );
       }
 
@@ -255,8 +287,12 @@ const NewProductListPage: React.FC = () => {
         await productListsService.updateProductList(productListId, formData);
         toast.success("Lista de productos actualizada exitosamente");
       } else {
-        await productListsService.createProductList(formData);
-        toast.success("Lista de productos creada exitosamente");
+        const response = await productListsService.createProductList(formData);
+        if (response.data?.status === false) {
+          toast.success("Lista de productos creada exitosamente. Se creó como inactiva porque ya existe una lista activa para esta sucursal");
+        } else {
+          toast.success("Lista de productos creada exitosamente y activada");
+        }
       }
 
       router.push("/catalogos/listas-productos");
@@ -362,7 +398,7 @@ const NewProductListPage: React.FC = () => {
                 </Form.Group>
               </Col>
 
-              <Col md={12}>
+              <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">
                     Empresa <span className="text-danger">*</span>
@@ -380,6 +416,33 @@ const NewProductListPage: React.FC = () => {
                   />
                   <Form.Text className="text-muted">
                     Empresa asignada a tu usuario
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    Sucursal <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Select
+                    value={formData.branch}
+                    onChange={(e) =>
+                      setFormData({ ...formData, branch: e.target.value })
+                    }
+                    required
+                    className="py-2"
+                    disabled={!formData.company || branches.length === 0}
+                  >
+                    <option value="">-- Seleccionar sucursal --</option>
+                    {branches.map((branch) => (
+                      <option key={branch._id} value={branch._id}>
+                        {branch.branchName}
+                      </option>
+                    ))}
+                  </Form.Select>
+                  <Form.Text className="text-muted">
+                    Puede haber múltiples listas por sucursal, pero solo una estará activa
                   </Form.Text>
                 </Form.Group>
               </Col>

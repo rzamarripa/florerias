@@ -11,10 +11,14 @@ import { Storage } from "./types";
 import { Branch } from "../branches/types";
 import StorageActions from "./components/StorageActions";
 import CreateStorageModal from "./components/CreateStorageModal";
+import ViewStorageModal from "./components/ViewStorageModal";
+import AddProductsModal from "./components/AddProductsModal";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useSearchParams } from "next/navigation";
 
 const StoragePage: React.FC = () => {
+  const searchParams = useSearchParams();
   const [storages, setStorages] = useState<Storage[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -28,6 +32,13 @@ const StoragePage: React.FC = () => {
     total: 0,
     pages: 0,
   });
+
+  // Estados para modales desde NewOrderPage
+  const [showViewStorageModal, setShowViewStorageModal] = useState<boolean>(false);
+  const [showAddProductsModal, setShowAddProductsModal] = useState<boolean>(false);
+  const [selectedStorage, setSelectedStorage] = useState<Storage | null>(null);
+  const [fromOrder, setFromOrder] = useState<boolean>(false);
+  const [targetProductId, setTargetProductId] = useState<string>("");
 
   const { getUserId } = useUserSessionStore();
   const { getIsAdmin, hasRole } = useUserRoleStore();
@@ -44,6 +55,54 @@ const StoragePage: React.FC = () => {
       loadStorages(true, 1);
     }
   }, [searchTerm, branchFilter, statusFilter, userBranches]);
+
+  // Detectar si viene desde NewOrderPage y abrir modal correspondiente
+  useEffect(() => {
+    const fromOrderParam = searchParams.get('fromOrder');
+    const productId = searchParams.get('productId');
+    const branchId = searchParams.get('branchId');
+    const hasStockParam = searchParams.get('hasStock');
+
+    if (fromOrderParam === 'true' && productId && branchId) {
+      setFromOrder(true);
+      setTargetProductId(productId);
+
+      // Cargar el storage de la sucursal
+      loadStorageForOrder(branchId, productId, hasStockParam === 'true');
+    }
+  }, [searchParams]);
+
+  // Cargar storage cuando viene desde NewOrderPage
+  const loadStorageForOrder = async (branchId: string, productId: string, productNotInStorage: boolean) => {
+    try {
+      setLoading(true);
+      const response = await storageService.getStorageByBranch(branchId);
+
+      if (response.data) {
+        setSelectedStorage(response.data);
+
+        // Verificar si el producto existe en el storage
+        const productExists = response.data.products.some(
+          (p: any) => p.productId._id === productId || p.productId === productId
+        );
+
+        if (productExists) {
+          // Producto existe pero cantidad = 0, abrir ViewStorageModal
+          setShowViewStorageModal(true);
+        } else {
+          // Producto no existe en storage, abrir AddProductsModal
+          setShowAddProductsModal(true);
+        }
+      } else {
+        toast.error("No se encontró almacén para esta sucursal");
+      }
+    } catch (error: any) {
+      console.error("Error loading storage for order:", error);
+      toast.error("Error al cargar el almacén");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Cargar las sucursales del usuario según su rol
   const loadUserBranches = async () => {
@@ -397,6 +456,38 @@ const StoragePage: React.FC = () => {
           onHide={() => setShowCreateModal(false)}
           onStorageSaved={handleStorageUpdated}
           branches={userBranches}
+        />
+      )}
+
+      {/* View Storage Modal - Cuando viene desde Order */}
+      {selectedStorage && (
+        <ViewStorageModal
+          show={showViewStorageModal}
+          onHide={() => {
+            setShowViewStorageModal(false);
+            setSelectedStorage(null);
+            setFromOrder(false);
+          }}
+          storage={selectedStorage}
+          onStorageUpdated={handleStorageUpdated}
+          fromOrder={fromOrder}
+          targetProductId={targetProductId}
+        />
+      )}
+
+      {/* Add Products Modal - Cuando viene desde Order */}
+      {selectedStorage && (
+        <AddProductsModal
+          show={showAddProductsModal}
+          onHide={() => {
+            setShowAddProductsModal(false);
+            setSelectedStorage(null);
+            setFromOrder(false);
+          }}
+          storage={selectedStorage}
+          onProductsAdded={handleStorageUpdated}
+          fromOrder={fromOrder}
+          targetProductId={targetProductId}
         />
       )}
     </div>

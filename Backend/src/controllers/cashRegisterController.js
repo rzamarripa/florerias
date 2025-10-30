@@ -1,4 +1,5 @@
 import CashRegister from '../models/CashRegister.js';
+import CashRegisterLog from '../models/CashRegisterLog.js';
 import { Branch } from '../models/Branch.js';
 
 // Obtener todas las cajas registradoras con filtros y paginación
@@ -12,8 +13,39 @@ const getAllCashRegisters = async (req, res) => {
       isActive
     } = req.query;
 
+    // Obtener el ID del usuario desde el token
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    // Obtener el rol del usuario
+    const userRole = req.user?.role?.name?.toLowerCase();
+
     // Construir filtros
     const filters = {};
+
+    // Aplicar filtros según el rol
+    if (userRole === 'cajero' || userRole === 'cashier') {
+      // Los cajeros ven todas las cajas de las sucursales donde son empleados
+      const userBranches = await Branch.find({ employees: userId }).select('_id');
+      const branchIds = userBranches.map(branch => branch._id);
+
+      if (branchIds.length > 0) {
+        filters.branchId = { $in: branchIds };
+      } else {
+        // Si no tiene sucursales asignadas, no ver ninguna caja
+        filters._id = null;
+      }
+    } else if (userRole === 'gerente' || userRole === 'manager') {
+      // Los gerentes solo ven las cajas donde son managerId
+      filters.managerId = userId;
+    }
+    // Si es Admin o Super Admin, puede ver todas las cajas (no se aplica filtro de usuario)
 
     if (branchId) {
       filters.branchId = branchId;
@@ -102,16 +134,15 @@ const createCashRegister = async (req, res) => {
     const {
       name,
       branchId,
-      cashierId,
       managerId,
       initialBalance
     } = req.body;
 
-    // Validar campos requeridos
-    if (!name || !branchId || !cashierId || !managerId) {
+    // Validar campos requeridos (cashierId es opcional, se asigna al abrir la caja)
+    if (!name || !branchId || !managerId) {
       return res.status(400).json({
         success: false,
-        message: 'Todos los campos son obligatorios'
+        message: 'El nombre, sucursal y gerente son obligatorios'
       });
     }
 
@@ -136,11 +167,11 @@ const createCashRegister = async (req, res) => {
       });
     }
 
-    // Crear nueva caja registradora
+    // Crear nueva caja registradora (cashierId se asigna al abrir la caja)
     const newCashRegister = new CashRegister({
       name,
       branchId,
-      cashierId,
+      cashierId: null,
       managerId,
       currentBalance: parsedInitialBalance,
       initialBalance: parsedInitialBalance,
@@ -287,7 +318,7 @@ const toggleActiveCashRegister = async (req, res) => {
   }
 };
 
-// Abrir/Cerrar caja (gerentes y cajeros de la misma sucursal)
+// Abrir/Cerrar caja (solo cajeros)
 const toggleOpenCashRegister = async (req, res) => {
   try {
     const { id } = req.params;
@@ -300,11 +331,27 @@ const toggleOpenCashRegister = async (req, res) => {
       });
     }
 
+    // Obtener el ID del usuario desde el token (req.user debe estar disponible por middleware de autenticación)
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
     // Preparar datos de actualización
     const updateData = { isOpen };
 
-    // Si se está cerrando la caja (isOpen = false), actualizar lastOpen con la fecha actual
+    // Si se está abriendo la caja (isOpen = true), asignar el usuario actual como cajero
+    if (isOpen === true) {
+      updateData.cashierId = userId;
+    }
+
+    // Si se está cerrando la caja (isOpen = false), limpiar cashierId y actualizar lastOpen
     if (isOpen === false) {
+      updateData.cashierId = null;
       updateData.lastOpen = new Date();
     }
 
@@ -498,6 +545,348 @@ const getUserCashRegister = async (req, res) => {
   }
 };
 
+// Obtener resumen de la caja registradora para cierre
+const getCashRegisterSummary = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Obtener la caja registradora
+    const cashRegister = await CashRegister.findById(id)
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashierId', 'username email profile')
+      .populate('managerId', 'username email profile')
+      .populate({
+        path: 'lastRegistry.orderId',
+        select: 'orderNumber total advance shippingType clientInfo deliveryData createdAt status items paymentMethod',
+        populate: {
+          path: 'paymentMethod',
+          select: 'name'
+        }
+      });
+
+    if (!cashRegister) {
+      return res.status(404).json({
+        success: false,
+        message: 'Caja registradora no encontrada'
+      });
+    }
+
+    // Calcular totales
+    const initialBalance = cashRegister.initialBalance;
+    let totalSales = 0;
+    let totalExpenses = 0;
+
+    // Calcular total de ventas (suma de advances de todas las órdenes)
+    const orders = cashRegister.lastRegistry.map(reg => reg.orderId).filter(order => order !== null);
+    totalSales = orders.reduce((sum, order) => sum + (order.advance || 0), 0);
+
+    // Calcular total de gastos
+    totalExpenses = cashRegister.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+    // Calcular totales por método de pago
+    const salesByPaymentType = {
+      efectivo: 0,
+      credito: 0,
+      transferencia: 0,
+      intercambio: 0
+    };
+
+    orders.forEach(order => {
+      const paymentMethodName = order.paymentMethod?.name?.toLowerCase() || '';
+      const advance = order.advance || 0;
+
+      if (paymentMethodName.includes('efectivo')) {
+        salesByPaymentType.efectivo += advance;
+      } else if (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito') || paymentMethodName.includes('tarjeta')) {
+        salesByPaymentType.credito += advance;
+      } else if (paymentMethodName.includes('transferencia') || paymentMethodName.includes('depósito') || paymentMethodName.includes('deposito')) {
+        salesByPaymentType.transferencia += advance;
+      } else if (paymentMethodName.includes('intercambio')) {
+        salesByPaymentType.intercambio += advance;
+      } else {
+        // Si no coincide con ninguna categoría, agregarlo a efectivo por defecto
+        salesByPaymentType.efectivo += advance;
+      }
+    });
+
+    const summary = {
+      cashRegister: {
+        _id: cashRegister._id,
+        name: cashRegister.name,
+        branchId: cashRegister.branchId,
+        cashierId: cashRegister.cashierId,
+        managerId: cashRegister.managerId,
+        isOpen: cashRegister.isOpen,
+        lastOpen: cashRegister.lastOpen
+      },
+      totals: {
+        initialBalance,
+        totalSales,
+        totalExpenses,
+        currentBalance: cashRegister.currentBalance
+      },
+      salesByPaymentType,
+      orders: orders.map(order => ({
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        clientName: order.clientInfo?.name || 'N/A',
+        recipientName: order.deliveryData?.recipientName || 'N/A',
+        total: order.total,
+        advance: order.advance,
+        shippingType: order.shippingType,
+        paymentMethod: order.paymentMethod?.name || 'N/A',
+        status: order.status,
+        createdAt: order.createdAt,
+        itemsCount: order.items?.length || 0
+      })),
+      expenses: cashRegister.expenses
+    };
+
+    res.status(200).json({
+      success: true,
+      data: summary
+    });
+  } catch (error) {
+    console.error('Error al obtener resumen de caja:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
+// Cerrar caja y reiniciar datos
+const closeCashRegister = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Obtener la caja registradora con todos los datos necesarios para el log
+    const cashRegister = await CashRegister.findById(id)
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashierId', 'username email profile')
+      .populate('managerId', 'username email profile')
+      .populate({
+        path: 'lastRegistry.orderId',
+        select: 'orderNumber total advance shippingType clientInfo deliveryData createdAt status items paymentMethod',
+        populate: {
+          path: 'paymentMethod',
+          select: 'name'
+        }
+      });
+
+    if (!cashRegister) {
+      return res.status(404).json({
+        success: false,
+        message: 'Caja registradora no encontrada'
+      });
+    }
+
+    // Verificar que la caja esté abierta
+    if (!cashRegister.isOpen) {
+      return res.status(400).json({
+        success: false,
+        message: 'La caja ya está cerrada'
+      });
+    }
+
+    // Calcular totales para el log
+    const initialBalance = cashRegister.initialBalance;
+    const orders = cashRegister.lastRegistry.map(reg => reg.orderId).filter(order => order !== null);
+    const totalSales = orders.reduce((sum, order) => sum + (order.advance || 0), 0);
+    const totalExpenses = cashRegister.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const finalBalance = cashRegister.currentBalance;
+
+    // Calcular totales por método de pago
+    const salesByPaymentType = {
+      efectivo: 0,
+      credito: 0,
+      transferencia: 0,
+      intercambio: 0
+    };
+
+    orders.forEach(order => {
+      const paymentMethodName = order.paymentMethod?.name?.toLowerCase() || '';
+      const advance = order.advance || 0;
+
+      if (paymentMethodName.includes('efectivo')) {
+        salesByPaymentType.efectivo += advance;
+      } else if (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito') || paymentMethodName.includes('tarjeta')) {
+        salesByPaymentType.credito += advance;
+      } else if (paymentMethodName.includes('transferencia') || paymentMethodName.includes('depósito') || paymentMethodName.includes('deposito')) {
+        salesByPaymentType.transferencia += advance;
+      } else if (paymentMethodName.includes('intercambio')) {
+        salesByPaymentType.intercambio += advance;
+      } else {
+        salesByPaymentType.efectivo += advance;
+      }
+    });
+
+    // Crear el log del cierre de caja
+    const cashRegisterLog = new CashRegisterLog({
+      cashRegisterId: cashRegister._id,
+      cashRegisterName: cashRegister.name,
+      branchId: cashRegister.branchId._id,
+      cashierId: cashRegister.cashierId?._id || null,
+      managerId: cashRegister.managerId._id,
+      openedAt: cashRegister.lastOpen,
+      closedAt: new Date(),
+      totals: {
+        initialBalance,
+        totalSales,
+        totalExpenses,
+        finalBalance
+      },
+      salesByPaymentType,
+      orders: orders.map(order => ({
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        clientName: order.clientInfo?.name || 'N/A',
+        recipientName: order.deliveryData?.recipientName || 'N/A',
+        total: order.total,
+        advance: order.advance,
+        shippingType: order.shippingType,
+        paymentMethod: order.paymentMethod?.name || 'N/A',
+        status: order.status,
+        saleDate: order.createdAt,
+        itemsCount: order.items?.length || 0
+      })),
+      expenses: cashRegister.expenses.map(expense => ({
+        expenseConcept: expense.expenseConcept,
+        amount: expense.amount,
+        expenseDate: expense.expenseDate
+      }))
+    });
+
+    // Guardar el log
+    await cashRegisterLog.save();
+
+    // Actualizar caja registradora - cerrar y reiniciar datos
+    cashRegister.isOpen = false;
+    cashRegister.cashierId = null;
+    cashRegister.currentBalance = 0;
+    cashRegister.initialBalance = 0;
+    cashRegister.lastRegistry = [];
+    cashRegister.expenses = [];
+    cashRegister.lastOpen = new Date();
+
+    await cashRegister.save();
+
+    // Popular la caja registradora actualizada
+    const updatedCashRegister = await CashRegister.findById(id)
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashierId', 'username email profile')
+      .populate('managerId', 'username email profile')
+      .populate('lastRegistry.orderId', 'orderNumber total');
+
+    res.status(200).json({
+      success: true,
+      data: updatedCashRegister,
+      message: 'Caja cerrada y reiniciada exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al cerrar caja:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
+// Registrar un gasto en la caja registradora
+const registerExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { expenseConcept, amount } = req.body;
+
+    // Validar campos requeridos
+    if (!expenseConcept || amount === undefined || amount === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'El concepto y el monto del gasto son obligatorios'
+      });
+    }
+
+    // Validar que el monto sea válido
+    const parsedAmount = parseFloat(amount);
+    if (parsedAmount < 0 || isNaN(parsedAmount)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El monto del gasto debe ser un número positivo'
+      });
+    }
+
+    // Verificar si la caja registradora existe
+    const cashRegister = await CashRegister.findById(id);
+    if (!cashRegister) {
+      return res.status(404).json({
+        success: false,
+        message: 'Caja registradora no encontrada'
+      });
+    }
+
+    // Verificar que la caja esté abierta
+    if (!cashRegister.isOpen) {
+      return res.status(400).json({
+        success: false,
+        message: 'La caja debe estar abierta para registrar gastos'
+      });
+    }
+
+    // Verificar que haya suficiente saldo
+    if (cashRegister.currentBalance < parsedAmount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Saldo insuficiente en la caja para registrar este gasto'
+      });
+    }
+
+    // Crear objeto de gasto
+    const expense = {
+      expenseConcept: expenseConcept.trim(),
+      amount: parsedAmount,
+      expenseDate: new Date()
+    };
+
+    // Agregar el gasto al arreglo y actualizar el saldo
+    cashRegister.expenses.push(expense);
+    cashRegister.currentBalance -= parsedAmount;
+
+    // Guardar cambios
+    await cashRegister.save();
+
+    // Popular la caja registradora actualizada
+    const updatedCashRegister = await CashRegister.findById(id)
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashierId', 'username email profile')
+      .populate('managerId', 'username email profile')
+      .populate('lastRegistry.orderId', 'orderNumber total');
+
+    res.status(200).json({
+      success: true,
+      data: updatedCashRegister,
+      message: 'Gasto registrado exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al registrar gasto:', error);
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Error de validación',
+        errors: Object.values(error.errors).map(err => err.message)
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 export {
   getAllCashRegisters,
   getCashRegisterById,
@@ -507,5 +896,8 @@ export {
   toggleOpenCashRegister,
   deleteCashRegister,
   getCashiersAndManagersByAdmin,
-  getUserCashRegister
+  getUserCashRegister,
+  registerExpense,
+  getCashRegisterSummary,
+  closeCashRegister
 };

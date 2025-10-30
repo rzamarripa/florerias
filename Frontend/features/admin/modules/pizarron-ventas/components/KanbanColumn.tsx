@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "react-bootstrap";
-import { Plus } from "lucide-react";
+import { useDrop } from "react-dnd";
 import { Order } from "../types";
 import KanbanCard from "./KanbanCard";
 
@@ -9,6 +9,7 @@ interface KanbanColumnProps {
   count: number;
   orders: Order[];
   color: string;
+  status: string;
   onViewDetails?: (order: Order) => void;
   onChangeStatus?: (order: Order, newStatus: string) => void;
 }
@@ -18,9 +19,45 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   count,
   orders,
   color,
+  status,
   onViewDetails,
   onChangeStatus,
 }) => {
+  // Configurar drop zone
+  const [{ isOver, canDrop }, drop] = useDrop(() => ({
+    accept: "ORDER_CARD",
+    drop: (item: { order: Order }) => {
+      // Solo actualizar si el estado es diferente
+      if (item.order.status !== status) {
+        onChangeStatus?.(item.order, status);
+      }
+    },
+    canDrop: (item: { order: Order }) => {
+      // No permitir drop si el orden viene de "completado"
+      return item.order.status !== "completado" && item.order.status !== status;
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  }), [status, onChangeStatus]);
+
+  // Estilos para feedback visual del drop zone
+  const getDropZoneStyle = () => {
+    if (isOver && canDrop) {
+      return {
+        backgroundColor: `${color}15`,
+        border: `2px dashed ${color}`,
+      };
+    }
+    if (canDrop && !isOver) {
+      return {
+        border: `2px dashed transparent`,
+      };
+    }
+    return {};
+  };
+
   return (
     <div className="h-100">
       {/* Column Header */}
@@ -44,30 +81,21 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             {count}
           </div>
         </div>
-
-        {/* Optional Add Button - Hidden for now since orders come from backend */}
-        {/* <button
-          className="btn btn-sm border-0 p-1"
-          style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "50%",
-            backgroundColor: "#f8f9fa",
-            color: color,
-          }}
-        >
-          <Plus size={18} />
-        </button> */}
       </div>
 
-      {/* Column Content */}
+      {/* Column Content - Drop Zone */}
       <div
+        ref={drop}
         className="kanban-column-content"
         style={{
           height: "calc(100vh - 280px)",
           overflowY: "auto",
           overflowX: "hidden",
           paddingRight: "8px",
+          borderRadius: "12px",
+          padding: "12px",
+          transition: "all 0.3s ease",
+          ...getDropZoneStyle(),
         }}
       >
         {orders.length === 0 ? (
@@ -89,7 +117,6 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               key={order._id}
               order={order}
               onViewDetails={onViewDetails}
-              onChangeStatus={onChangeStatus}
             />
           ))
         )}

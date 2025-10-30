@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Spinner, Button } from "react-bootstrap";
-import { Edit2, CheckCircle, XCircle, DoorOpen, DoorClosed } from "lucide-react";
+import { Edit2, CheckCircle, XCircle, DoorOpen, DoorClosed, Receipt } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "../services/cashRegisters";
 import { CashRegister } from "../types";
 import CashRegisterModal from "./CashRegisterModal";
+import ExpenseModal from "./ExpenseModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 
@@ -17,23 +19,20 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
   cashRegister,
   onCashRegisterUpdated,
 }) => {
+  const router = useRouter();
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [isTogglingOpen, setIsTogglingOpen] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [showExpenseModal, setShowExpenseModal] = useState<boolean>(false);
 
-  const { getIsAdmin } = useUserRoleStore();
-  const { getUserId } = useUserSessionStore();
+  const { getIsAdmin, getIsCashier } = useUserRoleStore();
   const isAdmin = getIsAdmin();
-  const userId = getUserId();
+  const isCashier = getIsCashier();
 
   // Verificar si el usuario actual puede abrir/cerrar esta caja
-  // Administradores pueden controlar cualquier caja
-  // Cajeros y gerentes solo pueden controlar su caja asignada
+  // Solo usuarios con rol "Cajero" pueden abrir/cerrar cajas
   const canToggleOpen = () => {
-    if (isAdmin) return true;
-    const cashierId = typeof cashRegister.cashierId === "string" ? cashRegister.cashierId : cashRegister.cashierId._id;
-    const managerId = typeof cashRegister.managerId === "string" ? cashRegister.managerId : cashRegister.managerId._id;
-    return userId === cashierId || userId === managerId;
+    return isCashier;
   };
 
   const handleToggleActive = async () => {
@@ -59,19 +58,20 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
 
   const handleToggleOpen = async () => {
     try {
+      // Si la caja está abierta y se quiere cerrar, navegar a la página de resumen
+      if (cashRegister.isOpen) {
+        router.push(`/ventas/cajas/cerrar?id=${cashRegister._id}`);
+        return;
+      }
+
+      // Si la caja está cerrada, abrirla normalmente
       setIsTogglingOpen(true);
-      await cashRegistersService.toggleOpen(cashRegister._id, !cashRegister.isOpen);
-      toast.success(
-        cashRegister.isOpen
-          ? "Caja registradora cerrada correctamente"
-          : "Caja registradora abierta correctamente"
-      );
+      await cashRegistersService.toggleOpen(cashRegister._id, true);
+      toast.success("Caja registradora abierta correctamente");
       onCashRegisterUpdated?.();
     } catch (error: any) {
       console.error("Error toggling cash register open status:", error);
-      const errorMessage =
-        error.message ||
-        `Error al ${cashRegister.isOpen ? "cerrar" : "abrir"} la caja registradora`;
+      const errorMessage = error.message || "Error al abrir la caja registradora";
       toast.error(errorMessage);
     } finally {
       setIsTogglingOpen(false);
@@ -144,6 +144,20 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
             )}
           </Button>
         )}
+
+        {/* Expense Button - Solo visible si la caja está abierta */}
+        {cashRegister.isOpen && cashRegister.isActive && (
+          <Button
+            variant="light"
+            size="sm"
+            className="rounded-circle"
+            style={{ width: "32px", height: "32px", padding: "0" }}
+            onClick={() => setShowExpenseModal(true)}
+            title="Registrar gasto"
+          >
+            <Receipt size={16} className="text-primary" />
+          </Button>
+        )}
       </div>
 
       {/* Edit Modal - Solo para Administradores */}
@@ -153,6 +167,18 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
           onHide={() => setShowEditModal(false)}
           cashRegister={cashRegister}
           onCashRegisterSaved={onCashRegisterUpdated}
+        />
+      )}
+
+      {/* Expense Modal - Visible si la caja está abierta */}
+      {cashRegister.isOpen && cashRegister.isActive && (
+        <ExpenseModal
+          show={showExpenseModal}
+          onHide={() => setShowExpenseModal(false)}
+          cashRegister={cashRegister}
+          onExpenseRegistered={() => {
+            onCashRegisterUpdated?.();
+          }}
         />
       )}
     </>

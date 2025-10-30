@@ -16,7 +16,11 @@ import {
   Plus,
   Trash2,
   Search,
+  ExternalLink,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { ordersService } from "./services/orders";
 import { CreateOrderData, OrderItem, ShippingType } from "./types";
 import ProductCatalog from "./components/ProductCatalog";
@@ -31,8 +35,13 @@ import { CashRegister } from "@/features/admin/modules/cash-registers/types";
 import { storageService } from "@/features/admin/modules/storage/services/storage";
 import { Storage } from "@/features/admin/modules/storage/types";
 import { toast } from "react-toastify";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 const NewOrderPage = () => {
+  const router = useRouter();
+  const { getIsCashier } = useUserRoleStore();
+  const isCashier = getIsCashier();
+
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
@@ -46,6 +55,7 @@ const NewOrderPage = () => {
   const [storage, setStorage] = useState<Storage | null>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
   const [selectedStorageId, setSelectedStorageId] = useState<string>("");
+  const [showClientInfo, setShowClientInfo] = useState(false);
 
   const [formData, setFormData] = useState<CreateOrderData>({
     branchId: "",
@@ -348,7 +358,27 @@ const NewOrderPage = () => {
   };
 
   // Eliminar item
-  const handleRemoveItem = (index: number) => {
+  const handleRemoveItem = async (index: number) => {
+    const itemToRemove = formData.items[index];
+
+    // Solo liberar stock si es un producto del catálogo (isProduct: true)
+    if (itemToRemove.isProduct && itemToRemove.productId && storage) {
+      try {
+        // Liberar el stock en el almacén
+        const response = await storageService.releaseStock(storage._id, {
+          productId: itemToRemove.productId,
+          quantity: itemToRemove.quantity,
+        });
+
+        // Actualizar el storage local con los datos actualizados
+        setStorage(response.data);
+      } catch (err: any) {
+        console.error("Error al liberar stock:", err);
+        toast.error(err.message || "Error al liberar el stock");
+        return; // No continuar con la eliminación si falla la liberación
+      }
+    }
+
     const updatedItems = formData.items.filter((_, i) => i !== index);
     const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
     const discountAmount =
@@ -364,6 +394,10 @@ const NewOrderPage = () => {
       total,
       remainingBalance: total - (formData.advance || 0),
     });
+
+    if (itemToRemove.isProduct) {
+      toast.success("Producto eliminado y stock restaurado");
+    }
   };
 
   // Manejar cambio de descuento
@@ -404,7 +438,10 @@ const NewOrderPage = () => {
   };
 
   // Agregar producto desde catálogo
-  const handleAddProductFromCatalog = (product: any, quantity: number) => {
+  const handleAddProductFromCatalog = async (
+    product: any,
+    quantity: number
+  ) => {
     // Validar que haya un storage seleccionado
     if (!storage) {
       toast.error("Debes seleccionar un almacén primero");
@@ -437,30 +474,46 @@ const NewOrderPage = () => {
       return;
     }
 
-    const newItem: OrderItem = {
-      isProduct: true, // Producto del catálogo
-      productId: product._id, // ID del producto
-      productName: product.nombre, // Nombre del producto
-      quantity,
-      unitPrice: product.precio,
-      amount: quantity * product.precio,
-    };
+    try {
+      // Reservar el stock en el almacén
+      const response = await storageService.reserveStock(storage._id, {
+        productId: product._id,
+        quantity,
+      });
 
-    const updatedItems = [...formData.items, newItem];
-    const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
-    const discountAmount =
-      formData.discountType === "porcentaje"
-        ? (subtotal * (formData.discount || 0)) / 100
-        : formData.discount || 0;
-    const total = subtotal - discountAmount;
+      // Actualizar el storage local con los datos actualizados
+      setStorage(response.data);
 
-    setFormData({
-      ...formData,
-      items: updatedItems,
-      subtotal,
-      total,
-      remainingBalance: total - (formData.advance || 0),
-    });
+      const newItem: OrderItem = {
+        isProduct: true, // Producto del catálogo
+        productId: product._id, // ID del producto
+        productName: product.nombre, // Nombre del producto
+        quantity,
+        unitPrice: product.precio,
+        amount: quantity * product.precio,
+      };
+
+      const updatedItems = [...formData.items, newItem];
+      const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
+      const discountAmount =
+        formData.discountType === "porcentaje"
+          ? (subtotal * (formData.discount || 0)) / 100
+          : formData.discount || 0;
+      const total = subtotal - discountAmount;
+
+      setFormData({
+        ...formData,
+        items: updatedItems,
+        subtotal,
+        total,
+        remainingBalance: total - (formData.advance || 0),
+      });
+
+      toast.success("Producto agregado correctamente");
+    } catch (err: any) {
+      console.error("Error al reservar stock:", err);
+      toast.error(err.message || "Error al agregar el producto");
+    }
   };
 
   // Enviar formulario
@@ -569,14 +622,35 @@ const NewOrderPage = () => {
             {/* Información del Cliente */}
             <Card className="mb-4 border-0 shadow-sm">
               <Card.Header className="bg-white border-0 py-3">
-                <div className="d-flex align-items-center gap-2">
-                  <User size={20} className="text-primary" />
-                  <h5 className="mb-0 fw-bold">Información del Cliente</h5>
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2">
+                    <User size={20} className="text-primary" />
+                    <h5 className="mb-0 fw-bold">Información del Cliente</h5>
+                  </div>
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={() => setShowClientInfo(!showClientInfo)}
+                    className="d-flex align-items-center gap-2 mx-2"
+                  >
+                    {showClientInfo ? (
+                      <>
+                        <EyeOff size={16} />
+                        Ocultar Detalles
+                      </>
+                    ) : (
+                      <>
+                        <Eye size={16} />
+                        Ver Detalles
+                      </>
+                    )}
+                  </Button>
                 </div>
               </Card.Header>
               <Card.Body>
                 <Row className="g-3">
-                  <Col md={12}>
+                  {/* Campos siempre visibles */}
+                  <Col md={6}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">
                         <Search size={16} className="me-2" />
@@ -604,179 +678,6 @@ const NewOrderPage = () => {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">
-                        <User size={16} className="me-2" />
-                        Cliente
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="Nombre del cliente"
-                        value={formData.clientInfo.name}
-                        onChange={(e) => {
-                          setFormData({
-                            ...formData,
-                            clientInfo: {
-                              ...formData.clientInfo,
-                              name: e.target.value,
-                            },
-                          });
-                          setSelectedClientId("");
-                        }}
-                        required
-                        className="py-2"
-                      />
-                    </Form.Group>
-                  </Col>
-
-                  <Col md={3}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <Phone size={16} className="me-2" />
-                        Teléfono
-                      </Form.Label>
-                      <Form.Control
-                        type="tel"
-                        placeholder="Teléfono"
-                        value={formData.clientInfo.phone}
-                        onChange={(e) => {
-                          setFormData({
-                            ...formData,
-                            clientInfo: {
-                              ...formData.clientInfo,
-                              phone: e.target.value,
-                            },
-                          });
-                          setSelectedClientId("");
-                        }}
-                        className="py-2"
-                      />
-                    </Form.Group>
-                  </Col>
-
-                  <Col md={3}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <Mail size={16} className="me-2" />
-                        Correo
-                      </Form.Label>
-                      <Form.Control
-                        type="email"
-                        placeholder="Correo electrónico"
-                        value={formData.clientInfo.email}
-                        onChange={(e) => {
-                          setFormData({
-                            ...formData,
-                            clientInfo: {
-                              ...formData.clientInfo,
-                              email: e.target.value,
-                            },
-                          });
-                          setSelectedClientId("");
-                        }}
-                        className="py-2"
-                      />
-                    </Form.Group>
-                  </Col>
-
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <Store size={16} className="me-2" />
-                        Canal de Venta
-                      </Form.Label>
-                      <Form.Select
-                        value={formData.salesChannel}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            salesChannel: e.target.value as
-                              | "tienda"
-                              | "whatsapp"
-                              | "facebook",
-                          })
-                        }
-                        required
-                        className="py-2"
-                      >
-                        <option value="tienda">Tienda</option>
-                        <option value="whatsapp">WhatsApp</option>
-                        <option value="facebook">Facebook</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <Store size={16} className="me-2" />
-                        Sucursal
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={
-                          loadingBranches
-                            ? "Cargando..."
-                            : branches.length > 0 && formData.branchId
-                            ? `${
-                                branches.find(
-                                  (b) => b._id === formData.branchId
-                                )?.branchName || ""
-                              }${
-                                branches.find(
-                                  (b) => b._id === formData.branchId
-                                )?.branchCode
-                                  ? ` (${
-                                      branches.find(
-                                        (b) => b._id === formData.branchId
-                                      )?.branchCode
-                                    })`
-                                  : ""
-                              }`
-                            : "No hay sucursales disponibles"
-                        }
-                        readOnly
-                        disabled
-                        className="py-2 bg-light"
-                      />
-                    </Form.Group>
-                  </Col>
-
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <Package size={16} className="me-2" />
-                        Almacén
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={
-                          loadingStorage
-                            ? "Cargando..."
-                            : storage
-                            ? `Almacén de ${
-                                branches.find(
-                                  (b) => b._id === formData.branchId
-                                )?.branchName || ""
-                              }`
-                            : "No hay almacén asignado"
-                        }
-                        readOnly
-                        disabled
-                        className="py-2 bg-light"
-                      />
-                      {!storage && !loadingStorage && formData.branchId && (
-                        <Alert variant="danger" className="mt-2 mb-0 py-2">
-                          <small>
-                            ⚠️ Esta sucursal no tiene almacén asignado. No se
-                            pueden agregar productos.
-                          </small>
-                        </Alert>
-                      )}
-                    </Form.Group>
-                  </Col>
-
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
                         <CreditCard size={16} className="me-2" />
                         Caja Registradora
                       </Form.Label>
@@ -794,7 +695,7 @@ const NewOrderPage = () => {
                           disabled
                           className="py-2 bg-light"
                         />
-                        {cashRegister && (
+                        {cashRegister ? (
                           <Button
                             variant={
                               cashRegister.isOpen ? "success" : "warning"
@@ -810,6 +711,19 @@ const NewOrderPage = () => {
                               ? "Abierta"
                               : "Cerrada"}
                           </Button>
+                        ) : (
+                          !loadingCashRegister &&
+                          isCashier && (
+                            <Button
+                              variant="primary"
+                              onClick={() => router.push("/ventas/cajas")}
+                              className="d-flex align-items-center gap-2"
+                              style={{ minWidth: "160px" }}
+                            >
+                              <ExternalLink size={16} />
+                              Ir a Cajas
+                            </Button>
+                          )
                         )}
                       </div>
                       {cashRegister && !cashRegister.isOpen && (
@@ -820,8 +734,124 @@ const NewOrderPage = () => {
                           </small>
                         </Alert>
                       )}
+                      {!cashRegister && !loadingCashRegister && isCashier && (
+                        <Alert variant="info" className="mt-2 mb-0 py-2">
+                          <small>
+                            ℹ️ No tienes una caja asignada. Dirígete a la página
+                            de Cajas Registradoras para abrir una.
+                          </small>
+                        </Alert>
+                      )}
                     </Form.Group>
                   </Col>
+
+                  {/* Detalles del cliente - solo visibles cuando showClientInfo es true */}
+                  {showClientInfo && (
+                    <>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <User size={16} className="me-2" />
+                            Cliente
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            placeholder="Nombre del cliente"
+                            value={formData.clientInfo.name}
+                            onChange={(e) => {
+                              setFormData({
+                                ...formData,
+                                clientInfo: {
+                                  ...formData.clientInfo,
+                                  name: e.target.value,
+                                },
+                              });
+                              setSelectedClientId("");
+                            }}
+                            required
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={3}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Phone size={16} className="me-2" />
+                            Teléfono
+                          </Form.Label>
+                          <Form.Control
+                            type="tel"
+                            placeholder="Teléfono"
+                            value={formData.clientInfo.phone}
+                            onChange={(e) => {
+                              setFormData({
+                                ...formData,
+                                clientInfo: {
+                                  ...formData.clientInfo,
+                                  phone: e.target.value,
+                                },
+                              });
+                              setSelectedClientId("");
+                            }}
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={3}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Mail size={16} className="me-2" />
+                            Correo
+                          </Form.Label>
+                          <Form.Control
+                            type="email"
+                            placeholder="Correo electrónico"
+                            value={formData.clientInfo.email}
+                            onChange={(e) => {
+                              setFormData({
+                                ...formData,
+                                clientInfo: {
+                                  ...formData.clientInfo,
+                                  email: e.target.value,
+                                },
+                              });
+                              setSelectedClientId("");
+                            }}
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={12}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Store size={16} className="me-2" />
+                            Canal de Venta
+                          </Form.Label>
+                          <Form.Select
+                            value={formData.salesChannel}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                salesChannel: e.target.value as
+                                  | "tienda"
+                                  | "whatsapp"
+                                  | "facebook",
+                              })
+                            }
+                            required
+                            className="py-2"
+                          >
+                            <option value="tienda">Tienda</option>
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="facebook">Facebook</option>
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
+                    </>
+                  )}
                 </Row>
               </Card.Body>
             </Card>
@@ -1421,8 +1451,9 @@ const NewOrderPage = () => {
           >
             <ProductCatalog
               onAddProduct={handleAddProductFromCatalog}
-              storage={storage}
+              branchId={formData.branchId}
               itemsInOrder={formData.items}
+              storage={storage}
             />
           </div>
         </Col>

@@ -108,4 +108,33 @@ export const cashRegistersService = {
     const response = await apiCall<{ success: boolean; data: CashRegister | null; message?: string }>("/cash-registers/user/cash-register");
     return response as any;
   },
+
+  registerExpense: async (
+    cashRegisterId: string,
+    expenseData: { expenseConcept: string; amount: number }
+  ): Promise<{ success: boolean; data: CashRegister; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: CashRegister; message: string }>(
+      `/cash-registers/${cashRegisterId}/expense`,
+      {
+        method: "POST",
+        body: JSON.stringify(expenseData),
+      }
+    );
+    return response as any;
+  },
+
+  getCashRegisterSummary: async (cashRegisterId: string): Promise<{ success: boolean; data: any }> => {
+    const response = await apiCall<{ success: boolean; data: any }>(`/cash-registers/${cashRegisterId}/summary`);
+    return response as any;
+  },
+
+  closeCashRegister: async (cashRegisterId: string): Promise<{ success: boolean; data: CashRegister; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: CashRegister; message: string }>(
+      `/cash-registers/${cashRegisterId}/close`,
+      {
+        method: "POST",
+      }
+    );
+    return response as any;
+  },
 };

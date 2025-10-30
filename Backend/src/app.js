@@ -3,8 +3,10 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import morgan from "morgan";
+import { createServer } from "http";
 
 import connectDB from "./config/db.js";
+import { initializeSocket } from "./config/socket.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 import "./models/index.js"; // Import all models
@@ -50,14 +52,20 @@ app.use("*", (req, res) => {
 
 app.use(errorHandler);
 
-process.on("unhandledRejection", (err, promise) => {
+// Crear servidor HTTP
+const httpServer = createServer(app);
+
+// Inicializar Socket.IO
+initializeSocket(httpServer);
+
+process.on("unhandledRejection", (err) => {
   console.error("❌ Unhandled Promise Rejection:", err.message);
-  server.close(() => {
+  httpServer.close(() => {
     process.exit(1);
   });
 });
 
-const server = app.listen(PORT, "0.0.0.0", () => {
+httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(
     `🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
   );

@@ -9,6 +9,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { salesService } from "../services/sales";
+import { useOrderSocket } from "@/hooks/useOrderSocket";
 
 interface SalesStatsProps {
   filters: {
@@ -133,6 +134,27 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
       setLoading(false);
     }
   };
+
+  // Escuchar cambios en tiempo real y recargar stats
+  useOrderSocket({
+    filters: {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      branchId: filters.branchId,
+    },
+    onOrderCreated: () => {
+      // Recargar estadísticas cuando se crea una orden
+      loadStats();
+    },
+    onOrderUpdated: () => {
+      // Recargar estadísticas cuando se actualiza una orden
+      loadStats();
+    },
+    onOrderDeleted: () => {
+      // Recargar estadísticas cuando se elimina una orden
+      loadStats();
+    },
+  });
 
   if (loading) {
     return (

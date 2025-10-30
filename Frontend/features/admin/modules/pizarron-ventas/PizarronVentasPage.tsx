@@ -12,6 +12,9 @@ import {
 } from "react-bootstrap";
 import { Search } from "lucide-react";
 import { toast } from "react-toastify";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { ordersService } from "./services/orders";
 import { Order, OrderStatus, KanbanColumn as KanbanColumnType } from "./types";
 import KanbanColumn from "./components/KanbanColumn";
@@ -74,6 +77,45 @@ const PizarronVentasPage: React.FC = () => {
     loadOrders();
   }, [searchTerm, productFilter]);
 
+  // Usar el hook especializado para escuchar cambios en órdenes
+  const { isConnected } = useOrderSocket({
+    onOrderCreated: (newOrder: Order) => {
+      console.log("📩 [PizarronVentas] Nueva orden recibida:", newOrder);
+
+      // Solo agregar si no está cancelada
+      if (newOrder.status !== "cancelado") {
+        setOrders((prevOrders) => {
+          // Verificar que no exista ya en el array
+          const exists = prevOrders.some((o) => o._id === newOrder._id);
+          if (exists) return prevOrders;
+
+          return [newOrder, ...prevOrders];
+        });
+        toast.info(`Nueva orden: ${newOrder.orderNumber}`);
+      }
+    },
+    onOrderUpdated: (updatedOrder: Order) => {
+      console.log("📝 [PizarronVentas] Orden actualizada:", updatedOrder);
+
+      setOrders((prevOrders) =>
+        prevOrders.map((o) =>
+          o._id === updatedOrder._id ? updatedOrder : o
+        )
+      );
+    },
+    onOrderDeleted: (data: { orderId: string }) => {
+      console.log("🗑️ [PizarronVentas] Orden eliminada:", data.orderId);
+
+      setOrders((prevOrders) =>
+        prevOrders.filter((o) => o._id !== data.orderId)
+      );
+      toast.info("Una orden ha sido eliminada");
+    },
+    filters: {
+      status: ["pendiente", "en-proceso", "completado"], // Excluir cancelado
+    },
+  });
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
   };
@@ -92,8 +134,17 @@ const PizarronVentasPage: React.FC = () => {
   const handleChangeStatus = async (order: Order, newStatus: string) => {
     try {
       await ordersService.updateOrderStatus(order._id, newStatus);
+
+      // Actualizar el estado local directamente sin hacer refresh
+      setOrders(prevOrders =>
+        prevOrders.map(o =>
+          o._id === order._id
+            ? { ...o, status: newStatus as OrderStatus }
+            : o
+        )
+      );
+
       toast.success("Estado actualizado correctamente");
-      loadOrders();
     } catch (error: any) {
       toast.error(error.message || "Error al actualizar el estado");
       console.error("Error updating order status:", error);
@@ -172,20 +223,23 @@ const PizarronVentasPage: React.FC = () => {
           <p className="mt-3 text-muted">Cargando órdenes...</p>
         </div>
       ) : (
-        <Row className="g-4">
-          {columns.map((column) => (
-            <Col key={column.id} lg={4} md={6} xs={12}>
-              <KanbanColumn
-                title={column.title}
-                count={getOrdersByStatus(column.id).length}
-                orders={getOrdersByStatus(column.id)}
-                color={column.color}
-                onViewDetails={handleViewDetails}
-                onChangeStatus={handleChangeStatus}
-              />
-            </Col>
-          ))}
-        </Row>
+        <DndProvider backend={HTML5Backend}>
+          <Row className="g-4">
+            {columns.map((column) => (
+              <Col key={column.id} lg={4} md={6} xs={12}>
+                <KanbanColumn
+                  title={column.title}
+                  count={getOrdersByStatus(column.id).length}
+                  orders={getOrdersByStatus(column.id)}
+                  color={column.color}
+                  status={column.id}
+                  onViewDetails={handleViewDetails}
+                  onChangeStatus={handleChangeStatus}
+                />
+              </Col>
+            ))}
+          </Row>
+        </DndProvider>
       )}
 
       {/* Order Detail Modal */}

@@ -28,13 +28,12 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   const [formData, setFormData] = useState<CreateCashRegisterData>({
     name: "",
     branchId: "",
-    cashierId: "",
+    cashierId: null,
     managerId: "",
     initialBalance: 0,
   });
 
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [cashiers, setCashiers] = useState<User[]>([]);
   const [managers, setManagers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,7 +46,9 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
         setFormData({
           name: cashRegister.name,
           branchId: typeof cashRegister.branchId === "string" ? cashRegister.branchId : cashRegister.branchId._id,
-          cashierId: typeof cashRegister.cashierId === "string" ? cashRegister.cashierId : cashRegister.cashierId._id,
+          cashierId: cashRegister.cashierId
+            ? (typeof cashRegister.cashierId === "string" ? cashRegister.cashierId : cashRegister.cashierId._id)
+            : null,
           managerId: typeof cashRegister.managerId === "string" ? cashRegister.managerId : cashRegister.managerId._id,
           initialBalance: cashRegister.initialBalance,
         });
@@ -65,7 +66,6 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
 
       if (response.data) {
         setBranches(response.data.branches || []);
-        setCashiers(response.data.cashiers || []);
         setManagers(response.data.managers || []);
       }
     } catch (err: any) {
@@ -80,7 +80,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     setFormData({
       name: "",
       branchId: "",
-      cashierId: "",
+      cashierId: null,
       managerId: "",
       initialBalance: 0,
     });
@@ -135,8 +135,8 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     e.preventDefault();
     setError(null);
 
-    if (!formData.name || !formData.branchId || !formData.cashierId || !formData.managerId) {
-      setError("Todos los campos son obligatorios");
+    if (!formData.name || !formData.branchId || !formData.managerId) {
+      setError("El nombre, sucursal y gerente son obligatorios");
       return;
     }
 
@@ -144,7 +144,9 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
       setSaving(true);
 
       if (isEditing && cashRegister) {
-        await cashRegistersService.updateCashRegister(cashRegister._id, formData);
+        // Al editar, no enviar cashierId para no modificarlo
+        const { cashierId, ...updateData } = formData;
+        await cashRegistersService.updateCashRegister(cashRegister._id, updateData);
         toast.success("Caja registradora actualizada exitosamente");
       } else {
         await cashRegistersService.createCashRegister(formData);
@@ -260,30 +262,13 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                 </Form.Group>
               </Col>
 
-              {/* Cajero */}
+              {/* Nota sobre el cajero */}
               <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Cajero <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    name="cashierId"
-                    value={formData.cashierId}
-                    onChange={handleInputChange}
-                    required
-                    style={{ borderRadius: "8px" }}
-                  >
-                    <option value="">Seleccione un cajero</option>
-                    {cashiers.map((cashier) => (
-                      <option key={cashier._id} value={cashier._id}>
-                        {cashier.profile.fullName} - {cashier.email}
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    Solo cajeros de las sucursales asignadas
-                  </Form.Text>
-                </Form.Group>
+                <Alert variant="info" className="mb-0">
+                  <small>
+                    <strong>Nota:</strong> El cajero se asignará automáticamente cuando un usuario con rol "Cajero" abra la caja registradora.
+                  </small>
+                </Alert>
               </Col>
 
               {/* Saldo Inicial */}

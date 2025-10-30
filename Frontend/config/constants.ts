@@ -21,6 +21,7 @@ import {
   UserCog,
   Building,
   Warehouse,
+  History,
 } from "lucide-react";
 
 export const menuItems: MenuItemType[] = [
@@ -90,6 +91,19 @@ export const menuItems: MenuItemType[] = [
             label: "Pizarrón de Ventas",
             url: "/produccion/pizarron-ventas",
             icon: ClipboardList,
+          },
+        ],
+      },
+      {
+        key: "cajas-control",
+        label: "Cajas",
+        icon: Wallet,
+        children: [
+          {
+            key: "historial-cajas",
+            label: "Historial",
+            url: "/panel-de-control/cajas/historial",
+            icon: History,
           },
         ],
       },

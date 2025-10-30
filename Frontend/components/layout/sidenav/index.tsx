@@ -25,15 +25,7 @@ const Sidenav = () => {
   };
 
   return (
-    <div
-      className="sidenav-menu"
-      style={{
-        background:
-          "linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
-        borderRightColor: "#2d3748",
-        boxShadow: "2px 0 10px rgba(0, 0, 0, 0.3)",
-      }}
-    >
+    <div className="sidenav-menu">
       <Link href="/" className="logo">
         <span
           className="logo logo-light"

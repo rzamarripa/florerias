@@ -3,16 +3,19 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Spinner, Table, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
-import { X, Package, Save } from "lucide-react";
+import { X, Package, Save, ArrowLeft } from "lucide-react";
 import { storageService } from "../services/storage";
 import { productsService } from "../../products/services/products";
 import { Storage, Product } from "../types";
+import { useRouter } from "next/navigation";
 
 interface AddProductsModalProps {
   show: boolean;
   onHide: () => void;
   onProductsAdded: () => void;
   storage: Storage | null;
+  fromOrder?: boolean;
+  targetProductId?: string;
 }
 
 interface ProductWithQuantity extends Product {
@@ -24,11 +27,16 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
   onHide,
   onProductsAdded,
   storage,
+  fromOrder = false,
+  targetProductId = "",
 }) => {
+  const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingData, setLoadingData] = useState<boolean>(false);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<ProductWithQuantity[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<
+    ProductWithQuantity[]
+  >([]);
 
   useEffect(() => {
     if (show && storage) {
@@ -39,12 +47,16 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
   const loadProducts = async () => {
     try {
       setLoadingData(true);
-      const response = await productsService.getAllProducts({ limit: 1000, estatus: true });
+      const response = await productsService.getAllProducts({
+        limit: 1000,
+        estatus: true,
+      });
 
       // Filtrar productos que NO están en el almacén
-      const storageProductIds = storage?.products.map((p) =>
-        typeof p.productId === "string" ? p.productId : p.productId._id
-      ) || [];
+      const storageProductIds =
+        storage?.products.map((p) =>
+          typeof p.productId === "string" ? p.productId : p.productId._id
+        ) || [];
 
       const available = response.data.filter(
         (product) => !storageProductIds.includes(product._id)
@@ -106,7 +118,9 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
       const validProducts = selectedProducts.filter((p) => p.quantityToAdd > 0);
 
       if (validProducts.length === 0) {
-        toast.error("Debes agregar al menos un producto con cantidad mayor a 0");
+        toast.error(
+          "Debes agregar al menos un producto con cantidad mayor a 0"
+        );
         return;
       }
 
@@ -135,6 +149,11 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
     onHide();
   };
 
+  const handleBackToOrder = () => {
+    handleClose();
+    router.push("/sucursal/nueva-orden");
+  };
+
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
       <Modal.Header className="border-0 pb-0">
@@ -150,7 +169,11 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
                 </p>
               )}
             </div>
-            <Button variant="link" onClick={handleClose} className="text-muted p-0">
+            <Button
+              variant="link"
+              onClick={handleClose}
+              className="text-muted p-0"
+            >
               <X size={24} />
             </Button>
           </div>
@@ -168,8 +191,13 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
             {/* Select para agregar productos */}
             <div className="mb-4">
               <Form.Group>
-                <Form.Label className="fw-semibold">Seleccionar Producto</Form.Label>
-                <Form.Select onChange={handleProductSelect} disabled={availableProducts.length === 0}>
+                <Form.Label className="fw-semibold">
+                  Seleccionar Producto
+                </Form.Label>
+                <Form.Select
+                  onChange={handleProductSelect}
+                  disabled={availableProducts.length === 0}
+                >
                   <option value="">
                     {availableProducts.length === 0
                       ? "No hay productos disponibles"
@@ -203,9 +231,16 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
                   <Table hover className="mb-0">
                     <thead style={{ background: "#f8f9fa" }}>
                       <tr>
-                        <th className="px-3 py-2 fw-semibold text-muted">PRODUCTO</th>
-                        <th className="px-3 py-2 fw-semibold text-muted">UNIDAD</th>
-                        <th className="px-3 py-2 fw-semibold text-muted" style={{ width: "150px" }}>
+                        <th className="px-3 py-2 fw-semibold text-muted">
+                          PRODUCTO
+                        </th>
+                        <th className="px-3 py-2 fw-semibold text-muted">
+                          UNIDAD
+                        </th>
+                        <th
+                          className="px-3 py-2 fw-semibold text-muted"
+                          style={{ width: "150px" }}
+                        >
                           CANTIDAD
                         </th>
                         <th
@@ -219,7 +254,9 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
                     <tbody>
                       {selectedProducts.map((product) => (
                         <tr key={product._id}>
-                          <td className="px-3 py-2 fw-semibold">{product.nombre}</td>
+                          <td className="px-3 py-2 fw-semibold">
+                            {product.nombre}
+                          </td>
                           <td className="px-3 py-2">
                             <Badge bg="secondary">{product.unidad}</Badge>
                           </td>
@@ -229,7 +266,10 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
                               min="0"
                               value={product.quantityToAdd}
                               onChange={(e) =>
-                                handleQuantityChange(product._id, parseInt(e.target.value) || 0)
+                                handleQuantityChange(
+                                  product._id,
+                                  parseInt(e.target.value) || 0
+                                )
                               }
                               size="sm"
                             />
@@ -256,27 +296,48 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
       </Modal.Body>
 
       <Modal.Footer className="border-0">
-        <Button variant="secondary" onClick={handleClose} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={loading || loadingData || selectedProducts.length === 0}
-          className="d-flex align-items-center gap-2"
-        >
-          {loading ? (
-            <>
-              <Spinner animation="border" size="sm" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save size={18} />
-              Guardar Productos
-            </>
-          )}
-        </Button>
+        <div className="d-flex justify-content-between w-100">
+          <div>
+            {fromOrder && (
+              <Button
+                variant="outline-primary"
+                onClick={handleBackToOrder}
+                className="d-flex align-items-center gap-2"
+                disabled={loading}
+              >
+                <ArrowLeft size={18} />
+                Regresar a Orden
+              </Button>
+            )}
+          </div>
+          <div className="d-flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleClose}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={loading || loadingData || selectedProducts.length === 0}
+              className="d-flex align-items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Spinner animation="border" size="sm" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save size={18} />
+                  Guardar Productos
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </Modal.Footer>
     </Modal>
   );

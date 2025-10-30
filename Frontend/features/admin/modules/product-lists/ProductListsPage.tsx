@@ -185,11 +185,9 @@ const ProductListsPage: React.FC = () => {
                   <thead className="bg-light">
                     <tr>
                       <th className="border-0 px-4 py-3">Nombre</th>
+                      <th className="border-0 px-4 py-3">Sucursal</th>
                       <th className="border-0 px-4 py-3">Fecha Creación</th>
                       <th className="border-0 px-4 py-3">Fecha Expiración</th>
-                      <th className="border-0 px-4 py-3 text-center">
-                        Total Productos
-                      </th>
                       <th className="border-0 px-4 py-3 text-end">
                         Total Gastado
                       </th>
@@ -220,6 +218,13 @@ const ProductListsPage: React.FC = () => {
                             </small>
                           </td>
                           <td className="px-4 py-3">
+                            <div className="fw-semibold">
+                              {productList.branch && typeof productList.branch === 'object'
+                                ? (productList.branch as any).branchName || 'Sin nombre'
+                                : 'Sin sucursal'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
                             {new Date(productList.createdAt).toLocaleDateString(
                               "es-MX",
                               {
@@ -237,11 +242,6 @@ const ProductListsPage: React.FC = () => {
                               month: "short",
                               day: "numeric",
                             })}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <Badge bg="info" pill>
-                              {totals.totalProducts}
-                            </Badge>
                           </td>
                           <td className="px-4 py-3 text-end text-danger fw-semibold">
                             ${formatNumber(totals.totalGastado)}

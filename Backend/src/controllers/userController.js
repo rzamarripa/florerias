@@ -5,10 +5,19 @@ import { getAllCompanies } from "./companyController.js";
 import { Company } from "../models/Company.js";
 import { Branch } from "../models/Branch.js";
 
-export const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
-  });
+export const generateToken = (userId, role, branchIds = []) => {
+  return jwt.sign(
+    {
+      id: userId,        // Mantener compatibilidad con código existente
+      userId,            // Campo explícito para sockets
+      role,
+      branchIds          // Array de sucursales que administra el usuario
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRE,
+    }
+  );
 };
 
 export const registerUser = async (req, res) => {
@@ -179,7 +188,16 @@ export const loginUser = async (req, res) => {
       allowedModules = Object.values(modulesByPage);
     }
 
-    const token = generateToken(user._id);
+    // Obtener las sucursales que administra el usuario
+    const userBranches = await Branch.find({ administrator: user._id }).select('_id');
+    const branchIds = userBranches.map(branch => branch._id.toString());
+
+    console.log(`\n👤 [Login] Usuario: ${user.username} (${user._id})`);
+    console.log(`   Sucursales encontradas: ${userBranches.length}`);
+    console.log(`   branchIds:`, branchIds);
+
+    const token = generateToken(user._id, user.role?.name || null, branchIds);
+    console.log(`   Token generado con branchIds incluidos\n`);
 
     res.status(200).json({
       success: true,

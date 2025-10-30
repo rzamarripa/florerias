@@ -5,7 +5,8 @@ import {
   createProductList,
   updateProductList,
   updateProductListStatus,
-  deleteProductList
+  deleteProductList,
+  getProductListByBranch
 } from '../controllers/productListController.js';
 
 const router = Router();
@@ -14,6 +15,9 @@ const router = Router();
 router.route('/')
   .get(getAllProductLists)        // GET /api/product-lists - Obtener todas las listas
   .post(createProductList);       // POST /api/product-lists - Crear nueva lista
+
+// Ruta especial para obtener por sucursal (debe estar antes de /:id)
+router.get('/by-branch/:branchId', getProductListByBranch); // GET /api/product-lists/by-branch/:branchId
 
 router.route('/:id')
   .get(getProductListById)        // GET /api/product-lists/:id - Obtener lista por ID

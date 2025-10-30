@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Table, Badge, Button, Spinner } from "react-bootstrap";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../services/sales";
 import { Sale } from "../types";
 
@@ -50,13 +51,63 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
     loadSales();
   }, [filters, creditPaymentMethodId]);
 
+  // Socket listeners para actualizaciones en tiempo real
+  useOrderSocket({
+    filters: {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      branchId: filters.branchId,
+      status: ["pendiente", "en-proceso", "completado"],
+    },
+    onOrderCreated: (newOrder) => {
+      // Solo agregar si usa el método de pago de crédito
+      const orderPaymentMethodId = typeof newOrder.paymentMethod === 'string'
+        ? newOrder.paymentMethod
+        : newOrder.paymentMethod?._id;
+
+      if (orderPaymentMethodId === creditPaymentMethodId) {
+        setSales((prev) => {
+          const exists = prev.some((s) => s._id === newOrder._id);
+          if (exists) return prev;
+          return [newOrder as Sale, ...prev];
+        });
+        toast.info(`Nueva venta a crédito: ${newOrder.orderNumber || newOrder._id}`);
+      }
+    },
+    onOrderUpdated: (updatedOrder) => {
+      const orderPaymentMethodId = typeof updatedOrder.paymentMethod === 'string'
+        ? updatedOrder.paymentMethod
+        : updatedOrder.paymentMethod?._id;
+
+      const shouldInclude =
+        orderPaymentMethodId === creditPaymentMethodId &&
+        ["pendiente", "en-proceso", "completado"].includes(updatedOrder.status);
+
+      setSales((prev) => {
+        if (shouldInclude) {
+          const exists = prev.some((s) => s._id === updatedOrder._id);
+          if (exists) {
+            return prev.map((s) => (s._id === updatedOrder._id ? updatedOrder as Sale : s));
+          } else {
+            return [updatedOrder as Sale, ...prev];
+          }
+        } else {
+          return prev.filter((s) => s._id !== updatedOrder._id);
+        }
+      });
+    },
+    onOrderDeleted: (data) => {
+      setSales((prev) => prev.filter((s) => s._id !== data.orderId));
+    },
+  });
+
   const handleDelete = async (saleId: string) => {
     if (!confirm("¿Estás seguro de eliminar esta venta?")) return;
 
     try {
       await salesService.deleteSale(saleId);
       toast.success("Venta eliminada exitosamente");
-      loadSales();
+      // No llamar loadSales() - el socket actualizará automáticamente
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar la venta");
     }

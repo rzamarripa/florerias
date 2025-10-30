@@ -613,3 +613,123 @@ export const deleteStorage = async (req, res) => {
     });
   }
 };
+
+// Reservar stock temporalmente (para cuando se agrega a la orden)
+export const reserveStock = async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+
+    if (!productId || !quantity || quantity <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere productId y quantity válida",
+      });
+    }
+
+    const storage = await Storage.findById(req.params.id);
+
+    if (!storage) {
+      return res.status(404).json({
+        success: false,
+        message: "Almacén no encontrado",
+      });
+    }
+
+    const existingProductIndex = storage.products.findIndex(
+      (p) => p.productId.toString() === productId
+    );
+
+    if (existingProductIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Producto no encontrado en el almacén",
+      });
+    }
+
+    const currentQuantity = storage.products[existingProductIndex].quantity;
+
+    if (currentQuantity < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Stock insuficiente. Disponible: ${currentQuantity}, Solicitado: ${quantity}`,
+      });
+    }
+
+    // Reducir el stock temporalmente
+    storage.products[existingProductIndex].quantity -= quantity;
+
+    // Si la cantidad llega a 0, no remover el producto, dejarlo en 0
+    await storage.save();
+
+    // Popular los datos para la respuesta
+    await storage.populate("branch", "branchName branchCode");
+    await storage.populate("warehouseManager", "username email profile");
+    await storage.populate("products.productId", "nombre unidad imagen totalCosto totalVenta");
+
+    res.status(200).json({
+      success: true,
+      message: "Stock reservado temporalmente",
+      data: storage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Liberar stock (para cuando se elimina de la orden)
+export const releaseStock = async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+
+    if (!productId || !quantity || quantity <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere productId y quantity válida",
+      });
+    }
+
+    const storage = await Storage.findById(req.params.id);
+
+    if (!storage) {
+      return res.status(404).json({
+        success: false,
+        message: "Almacén no encontrado",
+      });
+    }
+
+    const existingProductIndex = storage.products.findIndex(
+      (p) => p.productId.toString() === productId
+    );
+
+    if (existingProductIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Producto no encontrado en el almacén",
+      });
+    }
+
+    // Incrementar el stock nuevamente
+    storage.products[existingProductIndex].quantity += quantity;
+
+    await storage.save();
+
+    // Popular los datos para la respuesta
+    await storage.populate("branch", "branchName branchCode");
+    await storage.populate("warehouseManager", "username email profile");
+    await storage.populate("products.productId", "nombre unidad imagen totalCosto totalVenta");
+
+    res.status(200).json({
+      success: true,
+      message: "Stock liberado exitosamente",
+      data: storage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

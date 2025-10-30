@@ -16,7 +16,8 @@ const cashRegisterSchema = new Schema(
     cashierId: {
       type: Schema.Types.ObjectId,
       ref: "cs_user",
-      required: [true, "El cajero es requerido"],
+      required: false, // Campo temporal que se asigna al abrir la caja
+      default: null,
     },
     managerId: {
       type: Schema.Types.ObjectId,
@@ -45,6 +46,24 @@ const cashRegisterSchema = new Schema(
         },
         saleDate: {
           type: Date,
+        },
+      },
+    ],
+    expenses: [
+      {
+        expenseConcept: {
+          type: String,
+          required: [true, "El concepto del gasto es requerido"],
+          trim: true,
+        },
+        amount: {
+          type: Number,
+          required: [true, "El monto del gasto es requerido"],
+          min: [0, "El monto del gasto no puede ser negativo"],
+        },
+        expenseDate: {
+          type: Date,
+          default: Date.now,
         },
       },
     ],

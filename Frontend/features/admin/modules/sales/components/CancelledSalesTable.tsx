@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Table, Badge, Button, Spinner } from "react-bootstrap";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../services/sales";
 import { Sale } from "../types";
 
@@ -44,13 +45,53 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({ filters }) =>
     loadSales();
   }, [filters]);
 
+  // Socket listeners para actualizaciones en tiempo real
+  useOrderSocket({
+    filters: {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      branchId: filters.branchId,
+      status: "cancelado",
+    },
+    onOrderCreated: (newOrder) => {
+      // Agregar si es cancelada
+      if (newOrder.status === "cancelado") {
+        setSales((prev) => {
+          const exists = prev.some((s) => s._id === newOrder._id);
+          if (exists) return prev;
+          return [newOrder as Sale, ...prev];
+        });
+        toast.info(`Nueva venta cancelada: ${newOrder.orderNumber || newOrder._id}`);
+      }
+    },
+    onOrderUpdated: (updatedOrder) => {
+      setSales((prev) => {
+        if (updatedOrder.status === "cancelado") {
+          // Actualizar o agregar
+          const exists = prev.some((s) => s._id === updatedOrder._id);
+          if (exists) {
+            return prev.map((s) => (s._id === updatedOrder._id ? updatedOrder as Sale : s));
+          } else {
+            return [updatedOrder as Sale, ...prev];
+          }
+        } else {
+          // Remover si cambió a otro estado
+          return prev.filter((s) => s._id !== updatedOrder._id);
+        }
+      });
+    },
+    onOrderDeleted: (data) => {
+      setSales((prev) => prev.filter((s) => s._id !== data.orderId));
+    },
+  });
+
   const handleDelete = async (saleId: string) => {
     if (!confirm("¿Estás seguro de eliminar esta venta?")) return;
 
     try {
       await salesService.deleteSale(saleId);
       toast.success("Venta eliminada exitosamente");
-      loadSales();
+      // No llamar loadSales() - el socket actualizará automáticamente
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar la venta");
     }

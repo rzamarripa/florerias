@@ -149,4 +149,32 @@ export const storageService = {
     });
     return response as any;
   },
+
+  reserveStock: async (
+    storageId: string,
+    data: { productId: string; quantity: number }
+  ): Promise<{ success: boolean; data: Storage; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: Storage; message: string }>(
+      `/storages/${storageId}/reserve-stock`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    return response as any;
+  },
+
+  releaseStock: async (
+    storageId: string,
+    data: { productId: string; quantity: number }
+  ): Promise<{ success: boolean; data: Storage; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: Storage; message: string }>(
+      `/storages/${storageId}/release-stock`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    return response as any;
+  },
 };

@@ -109,6 +109,11 @@ const productListSchema = new mongoose.Schema({
     ref: 'cv_company',
     required: [true, 'Company is required']
   },
+  branch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_branch',
+    required: [true, 'Branch is required']
+  },
   expirationDate: {
     type: Date,
     required: [true, 'Expiration date is required']
@@ -124,8 +129,11 @@ const productListSchema = new mongoose.Schema({
 
 // Índices
 productListSchema.index({ company: 1, status: 1 });
+productListSchema.index({ branch: 1, status: 1 });
 productListSchema.index({ expirationDate: 1 });
 productListSchema.index({ createdAt: -1 });
+
+// Permitir múltiples listas por sucursal (sin índice único)
 
 const ProductList = mongoose.model('ProductList', productListSchema);
 

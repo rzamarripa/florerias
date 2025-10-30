@@ -2,16 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Table, Badge, Spinner, Form } from "react-bootstrap";
-import { X, Package, Calendar, MapPin, User, Save, Edit2 } from "lucide-react";
+import { X, Package, Calendar, MapPin, User, Save, Edit2, ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
 import { Storage } from "../types";
 import { storageService } from "../services/storage";
+import { useRouter } from "next/navigation";
 
 interface ViewStorageModalProps {
   show: boolean;
   onHide: () => void;
   storage: Storage | null;
   onStorageUpdated: () => void;
+  fromOrder?: boolean;
+  targetProductId?: string;
 }
 
 interface ProductQuantityEdit {
@@ -25,7 +28,10 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
   onHide,
   storage: initialStorage,
   onStorageUpdated,
+  fromOrder = false,
+  targetProductId = "",
 }) => {
+  const router = useRouter();
   const [storage, setStorage] = useState<Storage | null>(initialStorage);
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -78,6 +84,11 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
       ...prev,
       [productId]: Math.max(0, newQuantity),
     }));
+  };
+
+  const handleBackToOrder = () => {
+    onHide();
+    router.push("/ventas/nueva-orden");
   };
 
   const handleSaveChanges = async () => {
@@ -387,35 +398,51 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
       </Modal.Body>
 
       <Modal.Footer className="border-0">
-        {editMode ? (
-          <>
-            <Button variant="secondary" onClick={handleCancelEdit} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSaveChanges}
-              disabled={saving}
-              className="d-flex align-items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <Spinner animation="border" size="sm" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Save size={18} />
-                  Guardar Cambios
-                </>
-              )}
-            </Button>
-          </>
-        ) : (
-          <Button variant="secondary" onClick={onHide}>
-            Cerrar
-          </Button>
-        )}
+        <div className="d-flex justify-content-between w-100">
+          <div>
+            {fromOrder && (
+              <Button
+                variant="outline-primary"
+                onClick={handleBackToOrder}
+                className="d-flex align-items-center gap-2"
+              >
+                <ArrowLeft size={18} />
+                Regresar a Orden
+              </Button>
+            )}
+          </div>
+          <div className="d-flex gap-2">
+            {editMode ? (
+              <>
+                <Button variant="secondary" onClick={handleCancelEdit} disabled={saving}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSaveChanges}
+                  disabled={saving}
+                  className="d-flex align-items-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <Spinner animation="border" size="sm" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={18} />
+                      Guardar Cambios
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button variant="secondary" onClick={onHide}>
+                Cerrar
+              </Button>
+            )}
+          </div>
+        </div>
       </Modal.Footer>
     </Modal>
   );

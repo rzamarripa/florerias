@@ -25,6 +25,12 @@ export interface EmbeddedProduct {
   estatus: boolean;
 }
 
+// Embedded Product with available stock (from ProductList + Storage)
+export interface EmbeddedProductWithStock extends EmbeddedProduct {
+  availableQuantity: number;
+  hasStock: boolean;
+}
+
 // Company info
 export interface Company {
   _id: string;
@@ -33,12 +39,20 @@ export interface Company {
   rfc: string;
 }
 
+// Branch info
+export interface Branch {
+  _id: string;
+  name?: string;
+  branchName?: string;
+}
+
 // ProductList main interface
 export interface ProductList {
   _id: string;
   name: string;
   products: EmbeddedProduct[];
   company: Company;
+  branch: Branch;
   expirationDate: string;
   status: boolean;
   createdAt: string;
@@ -56,6 +70,7 @@ export interface CreateProductListData {
   name: string;
   products: ProductWithQuantity[]; // Array of products with quantities
   company: string; // Company ID
+  branch: string; // Branch ID
   expirationDate: string;
 }
 
@@ -64,6 +79,7 @@ export interface UpdateProductListData {
   name?: string;
   products?: ProductWithQuantity[]; // Array of products with quantities
   company?: string; // Company ID
+  branch?: string; // Branch ID
   expirationDate?: string;
   status?: boolean;
 }
@@ -103,4 +119,14 @@ export interface ProductListFilters {
   name?: string;
   companyId?: string;
   status?: boolean;
+}
+
+// ProductList with stock information
+export interface ProductListWithStock extends Omit<ProductList, 'products'> {
+  products: EmbeddedProductWithStock[];
+}
+
+export interface GetProductListByBranchResponse {
+  success: boolean;
+  data: ProductListWithStock;
 }

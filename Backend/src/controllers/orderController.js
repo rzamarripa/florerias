@@ -4,6 +4,8 @@ import PaymentMethod from '../models/PaymentMethod.js';
 import { Branch } from '../models/Branch.js';
 import CashRegister from '../models/CashRegister.js';
 import { Storage } from '../models/Storage.js';
+import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted } from '../sockets/orderSocket.js';
+import mongoose from 'mongoose';
 
 // Obtener todas las órdenes con filtros y paginación
 const getAllOrders = async (req, res) => {
@@ -20,8 +22,36 @@ const getAllOrders = async (req, res) => {
       endDate
     } = req.query;
 
+    // Obtener el ID del usuario autenticado
+    const userId = req.user?._id;
+
+    // Buscar todas las sucursales donde el usuario es administrador o gerente
+    const userBranches = await Branch.find({
+      $or: [
+        { administrator: userId },
+        { manager: userId }
+      ]
+    }).select('_id');
+    const branchIds = userBranches.map(branch => branch._id);
+
+    if (branchIds.length === 0) {
+      // Si el usuario no administra ni gestiona ninguna sucursal, retornar vacío
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: 0,
+          pages: 0
+        }
+      });
+    }
+
     // Construir filtros
-    const filters = {};
+    const filters = {
+      branchId: { $in: branchIds } // Filtrar solo órdenes de sucursales donde el usuario es administrador o gerente
+    };
 
     if (status) {
       filters.status = status;
@@ -40,7 +70,25 @@ const getAllOrders = async (req, res) => {
     }
 
     if (branchId) {
-      filters.branchId = branchId;
+      // Si se proporciona branchId específico, verificar que esté en las sucursales del usuario
+      const specificBranchId = new mongoose.Types.ObjectId(branchId);
+      const isBranchAllowed = branchIds.some(id => id.equals(specificBranchId));
+
+      if (isBranchAllowed) {
+        filters.branchId = specificBranchId;
+      } else {
+        // Si intenta acceder a una sucursal que no administra, retornar vacío
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
     }
 
     // Filtros de fecha
@@ -371,6 +419,9 @@ const createOrder = async (req, res) => {
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation');
 
+    // Emitir evento de socket para notificar a otros usuarios
+    emitOrderCreated(populatedOrder);
+
     res.status(201).json({
       success: true,
       data: populatedOrder,
@@ -445,6 +496,9 @@ const updateOrder = async (req, res) => {
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation');
 
+    // Emitir evento de socket para notificar a otros usuarios
+    emitOrderUpdated(updatedOrder);
+
     res.status(200).json({
       success: true,
       data: updatedOrder,
@@ -508,6 +562,9 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
+    // Emitir evento de socket para notificar a otros usuarios
+    emitOrderUpdated(order);
+
     res.status(200).json({
       success: true,
       data: order,
@@ -537,6 +594,10 @@ const deleteOrder = async (req, res) => {
       });
     }
 
+    // Emitir evento de socket para notificar a otros usuarios
+    const branchId = deletedOrder.branchId?._id || deletedOrder.branchId;
+    emitOrderDeleted(id, branchId);
+
     res.status(200).json({
       success: true,
       message: 'Orden eliminada exitosamente'
@@ -560,11 +621,55 @@ const getOrdersSummary = async (req, res) => {
       endDate
     } = req.query;
 
+    // Obtener el ID del usuario autenticado
+    const userId = req.user?._id;
+
+    // Buscar todas las sucursales donde el usuario es administrador o gerente
+    const userBranches = await Branch.find({
+      $or: [
+        { administrator: userId },
+        { manager: userId }
+      ]
+    }).select('_id');
+    const branchIds = userBranches.map(branch => branch._id);
+
+    if (branchIds.length === 0) {
+      // Si el usuario no administra ni gestiona ninguna sucursal, retornar estadísticas vacías
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalSales: { count: 0, amount: 0 },
+          pendingPayment: { count: 0, amount: 0 },
+          paidSales: { count: 0, amount: 0 },
+          cancelledSales: { count: 0, amount: 0 }
+        }
+      });
+    }
+
     // Construir filtros base
-    const filters = {};
+    const filters = {
+      branchId: { $in: branchIds } // Filtrar solo órdenes de sucursales donde el usuario es administrador o gerente
+    };
 
     if (branchId) {
-      filters.branchId = branchId;
+      // Si se proporciona branchId específico, verificar que esté en las sucursales del usuario
+      const specificBranchId = new mongoose.Types.ObjectId(branchId);
+      const isBranchAllowed = branchIds.some(id => id.equals(specificBranchId));
+
+      if (isBranchAllowed) {
+        filters.branchId = specificBranchId;
+      } else {
+        // Si intenta acceder a una sucursal que no administra, retornar estadísticas vacías
+        return res.status(200).json({
+          success: true,
+          data: {
+            totalSales: { count: 0, amount: 0 },
+            pendingPayment: { count: 0, amount: 0 },
+            paidSales: { count: 0, amount: 0 },
+            cancelledSales: { count: 0, amount: 0 }
+          }
+        });
+      }
     }
 
     // Filtros de fecha

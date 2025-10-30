@@ -1,6 +1,7 @@
 import ProductList from '../models/ProductList.js';
 import Product from '../models/Product.js';
 import { Company } from '../models/Company.js';
+import { Storage } from '../models/Storage.js';
 
 // Obtener todas las listas de productos con filtros y paginación
 const getAllProductLists = async (req, res) => {
@@ -34,6 +35,7 @@ const getAllProductLists = async (req, res) => {
     // Obtener listas con paginación
     const productLists = await ProductList.find(filters)
       .populate('company', 'legalName tradeName rfc')
+      .populate('branch', 'branchName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -68,7 +70,8 @@ const getProductListById = async (req, res) => {
     const { id } = req.params;
 
     const productList = await ProductList.findById(id)
-      .populate('company', 'legalName tradeName rfc');
+      .populate('company', 'legalName tradeName rfc')
+      .populate('branch', 'branchName');
 
     if (!productList) {
       return res.status(404).json({
@@ -98,14 +101,15 @@ const createProductList = async (req, res) => {
       name,
       products,
       company,
+      branch,
       expirationDate
     } = req.body;
 
     // Validar campos requeridos
-    if (!name || !company || !expirationDate) {
+    if (!name || !company || !branch || !expirationDate) {
       return res.status(400).json({
         success: false,
-        message: 'Los campos name, company y expirationDate son obligatorios'
+        message: 'Los campos name, company, branch y expirationDate son obligatorios'
       });
     }
 
@@ -117,6 +121,12 @@ const createProductList = async (req, res) => {
         message: 'La empresa especificada no existe'
       });
     }
+
+    // Verificar si ya existe una lista activa para esta sucursal
+    const activeList = await ProductList.findOne({ branch, status: true });
+
+    // Si existe una lista activa, la nueva lista se creará como inactiva
+    const newListStatus = activeList ? false : true;
 
     // Si se proporcionan productos, validar que existan y embeber sus datos completos
     let embeddedProducts = [];
@@ -176,14 +186,17 @@ const createProductList = async (req, res) => {
       name,
       products: embeddedProducts,
       company,
-      expirationDate
+      branch,
+      expirationDate,
+      status: newListStatus
     });
 
     const savedProductList = await newProductList.save();
 
     // Popular la lista guardada antes de devolverla
     const populatedProductList = await ProductList.findById(savedProductList._id)
-      .populate('company', 'legalName tradeName rfc');
+      .populate('company', 'legalName tradeName rfc')
+      .populate('branch', 'branchName');
 
     res.status(201).json({
       success: true,
@@ -217,6 +230,7 @@ const updateProductList = async (req, res) => {
       name,
       products,
       company,
+      branch,
       expirationDate,
       status
     } = req.body;
@@ -246,6 +260,23 @@ const updateProductList = async (req, res) => {
         });
       }
       updateData.company = company;
+    }
+
+    // Si se actualiza la sucursal, simplemente permitirlo (puede haber múltiples listas por sucursal)
+    if (branch && branch !== existingProductList.branch.toString()) {
+      updateData.branch = branch;
+    }
+
+    // Si se está actualizando el estado a activo, desactivar otras listas de la misma sucursal
+    if (status === true) {
+      await ProductList.updateMany(
+        {
+          branch: updateData.branch || existingProductList.branch,
+          _id: { $ne: id },
+          status: true
+        },
+        { status: false }
+      );
     }
 
     // Si se actualizan los productos, validar y embeber
@@ -296,7 +327,8 @@ const updateProductList = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate('company', 'legalName tradeName rfc');
+    ).populate('company', 'legalName tradeName rfc')
+     .populate('branch', 'branchName');
 
     res.status(200).json({
       success: true,
@@ -335,18 +367,34 @@ const updateProductListStatus = async (req, res) => {
       });
     }
 
-    const productList = await ProductList.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true, runValidators: true }
-    ).populate('company', 'legalName tradeName rfc');
-
-    if (!productList) {
+    // Obtener la lista que se va a actualizar
+    const targetList = await ProductList.findById(id);
+    if (!targetList) {
       return res.status(404).json({
         success: false,
         message: 'Lista de productos no encontrada'
       });
     }
+
+    // Si se está activando esta lista, desactivar todas las demás de la misma sucursal
+    if (status === true) {
+      await ProductList.updateMany(
+        {
+          branch: targetList.branch,
+          _id: { $ne: id },
+          status: true
+        },
+        { status: false }
+      );
+    }
+
+    // Actualizar el estado de la lista objetivo
+    const productList = await ProductList.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true }
+    ).populate('company', 'legalName tradeName rfc')
+     .populate('branch', 'branchName');
 
     res.status(200).json({
       success: true,
@@ -391,11 +439,71 @@ const deleteProductList = async (req, res) => {
   }
 };
 
+// Obtener lista de productos por sucursal con cantidades de almacén
+const getProductListByBranch = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    // Buscar la lista de productos para esta sucursal
+    const productList = await ProductList.findOne({ branch: branchId, status: true })
+      .populate('company', 'legalName tradeName rfc')
+      .populate('branch', 'branchName');
+
+    if (!productList) {
+      return res.status(404).json({
+        success: false,
+        message: 'No se encontró una lista de productos para esta sucursal'
+      });
+    }
+
+    // Obtener el almacén correspondiente a la sucursal
+    const storage = await Storage.findOne({ branch: branchId });
+
+    // Mapear los productos de la lista con las cantidades del almacén
+    const productsWithStock = productList.products.map(product => {
+      let availableQuantity = 0;
+
+      // Buscar el producto en el almacén
+      if (storage) {
+        const storageProduct = storage.products.find(
+          sp => sp.productId.toString() === product.productId.toString()
+        );
+        if (storageProduct) {
+          availableQuantity = storageProduct.quantity || 0;
+        }
+      }
+
+      // Obtener el producto original para el precio
+      return {
+        ...product.toObject(),
+        availableQuantity,
+        hasStock: availableQuantity > 0
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...productList.toObject(),
+        products: productsWithStock
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener lista de productos por sucursal:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 export {
   getAllProductLists,
   getProductListById,
   createProductList,
   updateProductList,
   updateProductListStatus,
-  deleteProductList
+  deleteProductList,
+  getProductListByBranch
 };

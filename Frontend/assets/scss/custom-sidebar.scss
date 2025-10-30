@@ -1,45 +1,46 @@
-// Custom Sidebar Styles - Force Application
-html[data-skin="modern"][data-menu-color="light"] {
+// Custom Sidebar Styles - Dark Theme (Inspinia Modern Default)
+html[data-skin="modern"][data-menu-color="dark"] {
   .sidenav-menu {
-    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 50%, #e3f2fd 100%) !important;
-    border-right-color: #e1f5fe !important;
+    background: #171717 !important;
+    border-right-color: #2a2a2a !important;
   }
-  
+
   .side-nav-link {
-    color: #1565c0 !important;
-    
+    color: #ececf1 !important;
+
     &:hover {
-      color: #0d47a1 !important;
-      background: linear-gradient(90deg, rgba(25, 118, 210, 0.08), rgba(25, 118, 210, 0.12)) !important;
+      color: #ffffff !important;
+      background: #2a2a2a !important;
     }
   }
-  
+
   .side-nav-item.active > .side-nav-link {
     color: #ffffff !important;
-    background: linear-gradient(135deg, #1976d2, #1565c0) !important;
+    background: #343541 !important;
   }
-  
+
   .side-nav-title {
-    color: #1565c0 !important;
+    color: #ececf1 !important;
+    opacity: 0.6;
   }
-  
+
   .menu-icon {
-    color: #1565c0 !important;
+    color: #ececf1 !important;
   }
-  
+
   .side-nav-item.active .menu-icon {
     color: #ffffff !important;
   }
 }
 
 // Additional specificity for submenu items
-html[data-skin="modern"][data-menu-color="light"] .sub-menu {
+html[data-skin="modern"][data-menu-color="dark"] .sub-menu {
   .side-nav-link {
-    color: #1565c0 !important;
-    
+    color: #ececf1 !important;
+
     &:hover {
-      color: #0d47a1 !important;
-      background: linear-gradient(90deg, rgba(25, 118, 210, 0.08), rgba(25, 118, 210, 0.12)) !important;
+      color: #ffffff !important;
+      background: #2a2a2a !important;
     }
   }
 }

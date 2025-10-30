@@ -1,6 +1,5 @@
 import { apiCall } from "@/utils/api";
 import {
-  ProductList,
   ProductListFilters,
   CreateProductListData,
   UpdateProductListData,
@@ -8,6 +7,7 @@ import {
   GetProductListByIdResponse,
   CreateProductListResponse,
   UpdateProductListResponse,
+  GetProductListByBranchResponse,
 } from "../types";
 
 export const productListsService = {
@@ -67,5 +67,10 @@ export const productListsService = {
       method: "DELETE",
     });
     return response;
+  },
+
+  getProductListByBranch: async (branchId: string): Promise<GetProductListByBranchResponse> => {
+    const response = await apiCall<GetProductListByBranchResponse>(`/product-lists/by-branch/${branchId}`);
+    return response as any;
   },
 };

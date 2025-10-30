@@ -1,15 +1,26 @@
 import React from "react";
-import { Card, Badge, Dropdown } from "react-bootstrap";
-import { MoreVertical, Calendar, User, Package } from "lucide-react";
+import { Card, Badge } from "react-bootstrap";
+import { Calendar, User, Package } from "lucide-react";
+import { useDrag } from "react-dnd";
 import { Order } from "../types";
 
 interface KanbanCardProps {
   order: Order;
   onViewDetails?: (order: Order) => void;
-  onChangeStatus?: (order: Order, newStatus: string) => void;
 }
 
-const KanbanCard: React.FC<KanbanCardProps> = ({ order, onViewDetails, onChangeStatus }) => {
+const KanbanCard: React.FC<KanbanCardProps> = ({ order, onViewDetails }) => {
+  // Configurar drag - no permitir drag si el estado es "completado"
+  const canDrag = order.status !== "completado";
+
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: "ORDER_CARD",
+    item: { order },
+    canDrag: () => canDrag,
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }), [order, canDrag]);
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pendiente':
@@ -52,63 +63,41 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ order, onViewDetails, onChangeS
   };
 
   return (
-    <Card
-      className="mb-3 border-0 shadow-sm position-relative"
-      style={{
-        borderRadius: "12px",
-        transition: "all 0.3s ease",
-        cursor: "pointer",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
-      }}
-      onClick={() => onViewDetails?.(order)}
-    >
-      <Card.Body className="p-3">
-        {/* Header with Status Badge and Actions */}
-        <div className="d-flex justify-content-between align-items-start mb-2">
-          <Badge
-            bg={getStatusColor(order.status)}
-            className="px-2 py-1"
-            style={{ fontSize: "0.7rem", fontWeight: "600" }}
-          >
-            {getStatusText(order.status)}
-          </Badge>
-
-          <Dropdown
-            onClick={(e) => e.stopPropagation()}
-            align="end"
-          >
-            <Dropdown.Toggle
-              variant="link"
-              className="p-0 text-muted border-0 shadow-none"
-              style={{ width: "24px", height: "24px" }}
+    <div ref={canDrag ? drag : null}>
+      <Card
+        className="mb-3 border-0 shadow-sm position-relative"
+        style={{
+          borderRadius: "12px",
+          transition: "all 0.3s ease",
+          cursor: canDrag ? "move" : "pointer",
+          opacity: isDragging ? 0.5 : 1,
+          transform: isDragging ? "scale(1.05)" : "scale(1)",
+        }}
+        onMouseEnter={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.transform = "translateY(-2px)";
+            e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+          }
+        }}
+        onClick={() => onViewDetails?.(order)}
+      >
+        <Card.Body className="p-3">
+          {/* Header with Status Badge */}
+          <div className="d-flex justify-content-between align-items-start mb-2">
+            <Badge
+              bg={getStatusColor(order.status)}
+              className="px-2 py-1"
+              style={{ fontSize: "0.7rem", fontWeight: "600" }}
             >
-              <MoreVertical size={16} />
-            </Dropdown.Toggle>
-
-            <Dropdown.Menu style={{ borderRadius: "8px", border: "1px solid #e0e0e0" }}>
-              <Dropdown.Item onClick={() => onViewDetails?.(order)}>
-                Ver detalles
-              </Dropdown.Item>
-              {order.status !== 'en-proceso' && (
-                <Dropdown.Item onClick={() => onChangeStatus?.(order, 'en-proceso')}>
-                  Marcar en proceso
-                </Dropdown.Item>
-              )}
-              {order.status !== 'completado' && (
-                <Dropdown.Item onClick={() => onChangeStatus?.(order, 'completado')}>
-                  Marcar completado
-                </Dropdown.Item>
-              )}
-            </Dropdown.Menu>
-          </Dropdown>
-        </div>
+              {getStatusText(order.status)}
+            </Badge>
+          </div>
 
         {/* Order Number */}
         <h6 className="mb-2 fw-bold" style={{ fontSize: "0.95rem", color: "#2c3e50" }}>
@@ -170,6 +159,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ order, onViewDetails, onChangeS
         )}
       </Card.Body>
     </Card>
+    </div>
   );
 };
 

@@ -26,7 +26,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-skin="modern"
-      data-menu-color="light"
+      data-menu-color="dark"
       data-topbar-color="light"
       data-layout-position="fixed"
       data-sidenav-size="default"

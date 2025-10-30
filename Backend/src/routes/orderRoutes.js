@@ -8,8 +8,12 @@ import {
   deleteOrder,
   getOrdersSummary
 } from '../controllers/orderController.js';
+import { protect } from '../middleware/auth.js';
 
 const router = Router();
+
+// Aplicar middleware de autenticación a todas las rutas
+router.use(protect);
 
 // Ruta para resumen de ventas (debe ir antes de /:id para evitar conflictos)
 router.get('/summary', getOrdersSummary); // GET /api/orders/summary - Obtener resumen de ventas

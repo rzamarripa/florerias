@@ -6,10 +6,9 @@ import {
   Table,
   Badge,
   Form,
-  InputGroup,
   Spinner,
 } from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "./services/cashRegisters";
 import { CashRegister, Branch } from "./types";
@@ -32,13 +31,15 @@ const CashRegistersPage: React.FC = () => {
     pages: 0,
   });
 
-  const { getUserId } = useUserSessionStore();
-  const { getIsAdmin } = useUserRoleStore();
-  const userId = getUserId();
+  const { getIsAdmin, getIsCashier } = useUserRoleStore();
   const isAdmin = getIsAdmin();
+  const isCashier = getIsCashier();
 
-  // Cargar sucursales disponibles para el filtro
+  // Cargar sucursales disponibles para el filtro (solo para admins)
   const loadBranches = async () => {
+    // Solo los admins pueden ver todas las sucursales para filtrar
+    if (!isAdmin) return;
+
     try {
       const response = await branchesService.getAllBranches({ limit: 100 });
       if (response.data) {
@@ -84,10 +85,12 @@ const CashRegistersPage: React.FC = () => {
     }
   };
 
-  // Cargar sucursales al montar el componente
+  // Cargar sucursales al montar el componente (solo para admins)
   useEffect(() => {
-    loadBranches();
-  }, []);
+    if (isAdmin) {
+      loadBranches();
+    }
+  }, [isAdmin]);
 
   // Cargar cajas registradoras cuando cambian los filtros
   useEffect(() => {
@@ -116,6 +119,9 @@ const CashRegistersPage: React.FC = () => {
   };
 
   const getCashierName = (cashRegister: CashRegister): string => {
+    if (!cashRegister.cashierId) {
+      return "Sin asignar";
+    }
     if (typeof cashRegister.cashierId === "string") {
       return "N/A";
     }
@@ -152,9 +158,15 @@ const CashRegistersPage: React.FC = () => {
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="mb-1 fw-bold">Cajas Registradoras</h2>
+          <h2 className="mb-1 fw-bold">
+            {isAdmin ? "Cajas Registradoras" : "Mis Cajas Registradoras"}
+          </h2>
           <p className="text-muted mb-0">
-            Gestiona las cajas registradoras del sistema
+            {isAdmin
+              ? "Gestiona las cajas registradoras del sistema"
+              : isCashier
+              ? "Visualiza todas las cajas de tus sucursales asignadas"
+              : "Visualiza las cajas registradoras donde eres gerente"}
           </p>
         </div>
         {isAdmin && (
@@ -177,31 +189,33 @@ const CashRegistersPage: React.FC = () => {
         )}
       </div>
 
-      {/* Filters */}
-      <div
-        className="card border-0 shadow-sm mb-4"
-        style={{ borderRadius: "15px" }}
-      >
-        <div className="card-body p-4">
-          <div className="row g-3">
-            <div className="col-md-6">
-              <Form.Select
-                value={branchFilter}
-                onChange={handleBranchFilterChange}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
-              >
-                <option value="">Todas las sucursales</option>
-                {branches.map((branch) => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.branchName}
-                  </option>
-                ))}
-              </Form.Select>
+      {/* Filters - Solo para admins */}
+      {isAdmin && (
+        <div
+          className="card border-0 shadow-sm mb-4"
+          style={{ borderRadius: "15px" }}
+        >
+          <div className="card-body p-4">
+            <div className="row g-3">
+              <div className="col-md-6">
+                <Form.Select
+                  value={branchFilter}
+                  onChange={handleBranchFilterChange}
+                  className="border-0 bg-light"
+                  style={{ borderRadius: "10px" }}
+                >
+                  <option value="">Todas las sucursales</option>
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.branchName}
+                    </option>
+                  ))}
+                </Form.Select>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Table */}
       <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
