@@ -34,6 +34,8 @@ import { cashRegistersService } from "@/features/admin/modules/cash-registers/se
 import { CashRegister } from "@/features/admin/modules/cash-registers/types";
 import { storageService } from "@/features/admin/modules/storage/services/storage";
 import { Storage } from "@/features/admin/modules/storage/types";
+import { neighborhoodsService } from "@/features/admin/modules/neighborhoods/services/neighborhoods";
+import { Neighborhood } from "@/features/admin/modules/neighborhoods/types";
 import { toast } from "react-toastify";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 
@@ -55,6 +57,8 @@ const NewOrderPage = () => {
   const [storage, setStorage] = useState<Storage | null>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
   const [selectedStorageId, setSelectedStorageId] = useState<string>("");
+  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
+  const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
   const [showClientInfo, setShowClientInfo] = useState(false);
 
   const [formData, setFormData] = useState<CreateOrderData>({
@@ -75,7 +79,8 @@ const NewOrderPage = () => {
       deliveryDateTime: "",
       message: "",
       street: "",
-      neighborhood: "",
+      neighborhoodId: "",
+      deliveryPrice: 0,
       reference: "",
     },
     paymentMethod: "",
@@ -103,46 +108,6 @@ const NewOrderPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  // Cargar clientes, métodos de pago, sucursales y caja registradora al montar el componente
-  useEffect(() => {
-    fetchClients();
-    fetchPaymentMethods();
-    fetchUserBranches();
-    fetchUserCashRegister();
-  }, []);
-
-  // Cargar storage cuando cambia la sucursal
-  useEffect(() => {
-    if (formData.branchId) {
-      fetchStorageByBranch(formData.branchId);
-    } else {
-      setStorage(null);
-      setSelectedStorageId("");
-    }
-  }, [formData.branchId]);
-
-  // Actualizar fecha y hora cuando se activa "Venta Rápida"
-  useEffect(() => {
-    if (formData.quickSale) {
-      // Obtener fecha y hora actual en formato ISO para datetime-local
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      const hours = String(now.getHours()).padStart(2, "0");
-      const minutes = String(now.getMinutes()).padStart(2, "0");
-      const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-
-      setFormData((prev) => ({
-        ...prev,
-        deliveryData: {
-          ...prev.deliveryData,
-          deliveryDateTime: currentDateTime,
-        },
-      }));
-    }
-  }, [formData.quickSale]);
 
   // Obtener todos los clientes
   const fetchClients = async () => {
@@ -256,6 +221,64 @@ const NewOrderPage = () => {
     }
   };
 
+  // Obtener colonias activas
+  const fetchActiveNeighborhoods = async () => {
+    setLoadingNeighborhoods(true);
+    try {
+      const response = await neighborhoodsService.getAllNeighborhoods({
+        limit: 1000,
+        status: "active",
+      });
+      setNeighborhoods(response.data);
+    } catch (err) {
+      console.error("Error al cargar colonias:", err);
+      toast.error("Error al cargar las colonias");
+    } finally {
+      setLoadingNeighborhoods(false);
+    }
+  };
+
+  // Cargar clientes, métodos de pago, sucursales, caja registradora y colonias al montar el componente
+  useEffect(() => {
+    fetchClients();
+    fetchPaymentMethods();
+    fetchUserBranches();
+    fetchUserCashRegister();
+    fetchActiveNeighborhoods();
+  }, []);
+
+  // Cargar storage cuando cambia la sucursal
+  useEffect(() => {
+    if (formData.branchId) {
+      fetchStorageByBranch(formData.branchId);
+    } else {
+      setStorage(null);
+      setSelectedStorageId("");
+    }
+  }, [formData.branchId]);
+
+  // Actualizar fecha y hora cuando se activa "Venta Rápida"
+  useEffect(() => {
+    if (formData.quickSale) {
+      // Obtener fecha y hora actual en formato ISO para datetime-local
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+      setFormData((prev) => ({
+        ...prev,
+        deliveryData: {
+          ...prev.deliveryData,
+          deliveryDateTime: currentDateTime,
+        },
+      }));
+    }
+  }, [formData.quickSale]);
+
   // Abrir/Cerrar caja registradora
   const handleToggleCashRegister = async () => {
     if (!cashRegister) return;
@@ -315,6 +338,28 @@ const NewOrderPage = () => {
     return currentItem.quantity * currentItem.unitPrice;
   };
 
+  // Función helper para recalcular totales incluyendo precio de envío
+  const recalculateTotals = (
+    items: OrderItem[],
+    discount: number,
+    discountType: "porcentaje" | "cantidad",
+    deliveryPrice: number,
+    advance: number
+  ) => {
+    const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+    const discountAmount =
+      discountType === "porcentaje"
+        ? (subtotal * discount) / 100
+        : discount;
+    const total = subtotal - discountAmount + deliveryPrice;
+
+    return {
+      subtotal,
+      total,
+      remainingBalance: total - advance,
+    };
+  };
+
   // Agregar item a la lista
   const handleAddItem = () => {
     if (!currentProductName || currentItem.unitPrice <= 0) {
@@ -330,19 +375,18 @@ const NewOrderPage = () => {
     };
 
     const updatedItems = [...formData.items, newItem];
-    const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
-    const discountAmount =
-      formData.discountType === "porcentaje"
-        ? (subtotal * (formData.discount || 0)) / 100
-        : formData.discount || 0;
-    const total = subtotal - discountAmount;
+    const totals = recalculateTotals(
+      updatedItems,
+      formData.discount || 0,
+      formData.discountType || "porcentaje",
+      formData.deliveryData.deliveryPrice || 0,
+      formData.advance || 0
+    );
 
     setFormData({
       ...formData,
       items: updatedItems,
-      subtotal,
-      total,
-      remainingBalance: total - (formData.advance || 0),
+      ...totals,
     });
 
     // Reset current item
@@ -380,19 +424,18 @@ const NewOrderPage = () => {
     }
 
     const updatedItems = formData.items.filter((_, i) => i !== index);
-    const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
-    const discountAmount =
-      formData.discountType === "porcentaje"
-        ? (subtotal * (formData.discount || 0)) / 100
-        : formData.discount || 0;
-    const total = subtotal - discountAmount;
+    const totals = recalculateTotals(
+      updatedItems,
+      formData.discount || 0,
+      formData.discountType || "porcentaje",
+      formData.deliveryData.deliveryPrice || 0,
+      formData.advance || 0
+    );
 
     setFormData({
       ...formData,
       items: updatedItems,
-      subtotal,
-      total,
-      remainingBalance: total - (formData.advance || 0),
+      ...totals,
     });
 
     if (itemToRemove.isProduct) {
@@ -405,35 +448,95 @@ const NewOrderPage = () => {
     value: number,
     tipo: "porcentaje" | "cantidad"
   ) => {
-    const discountAmount =
-      tipo === "porcentaje" ? (formData.subtotal * value) / 100 : value;
-    const total = formData.subtotal - discountAmount;
+    const totals = recalculateTotals(
+      formData.items,
+      value,
+      tipo,
+      formData.deliveryData.deliveryPrice || 0,
+      formData.advance || 0
+    );
 
     setFormData({
       ...formData,
       discount: value,
       discountType: tipo,
-      total,
-      remainingBalance: total - (formData.advance || 0),
+      ...totals,
     });
   };
 
   // Manejar cambio de anticipo
   const handleAdvanceChange = (value: number) => {
+    const advance = isNaN(value) ? 0 : value;
+    const remainingBalance = formData.total - advance;
+    // Cambio = Pagó con - Anticipo
+    const changeAmount = (formData.paidWith || 0) - advance;
+
     setFormData({
       ...formData,
-      advance: value,
-      remainingBalance: formData.total - value,
+      advance: advance,
+      remainingBalance: remainingBalance,
+      change: changeAmount > 0 ? changeAmount : 0,
     });
   };
 
   // Manejar cambio de pago con
   const handlePaidWithChange = (value: number) => {
-    const changeAmount = value - formData.total;
+    const paidWith = isNaN(value) ? 0 : value;
+    const remainingBalance = formData.total - (formData.advance || 0);
+    // Cambio = Pagó con - Anticipo
+    const changeAmount = paidWith - (formData.advance || 0);
+
     setFormData({
       ...formData,
-      paidWith: value,
+      paidWith: paidWith,
       change: changeAmount > 0 ? changeAmount : 0,
+    });
+  };
+
+  // Manejar cambio de tipo de envío
+  const handleShippingTypeChange = (shippingType: ShippingType) => {
+    const deliveryPrice = shippingType === "tienda" ? 0 : formData.deliveryData.deliveryPrice || 0;
+    const totals = recalculateTotals(
+      formData.items,
+      formData.discount || 0,
+      formData.discountType || "porcentaje",
+      deliveryPrice,
+      formData.advance || 0
+    );
+
+    setFormData({
+      ...formData,
+      shippingType,
+      deliveryData: {
+        ...formData.deliveryData,
+        deliveryPrice: shippingType === "tienda" ? 0 : formData.deliveryData.deliveryPrice || 0,
+        neighborhoodId: shippingType === "tienda" ? "" : formData.deliveryData.neighborhoodId,
+      },
+      ...totals,
+    });
+  };
+
+  // Manejar cambio de colonia
+  const handleNeighborhoodChange = (neighborhoodId: string) => {
+    const selectedNeighborhood = neighborhoods.find((n) => n._id === neighborhoodId);
+    const deliveryPrice = selectedNeighborhood ? selectedNeighborhood.priceDelivery : 0;
+
+    const totals = recalculateTotals(
+      formData.items,
+      formData.discount || 0,
+      formData.discountType || "porcentaje",
+      deliveryPrice,
+      formData.advance || 0
+    );
+
+    setFormData({
+      ...formData,
+      deliveryData: {
+        ...formData.deliveryData,
+        neighborhoodId,
+        deliveryPrice,
+      },
+      ...totals,
     });
   };
 
@@ -494,19 +597,18 @@ const NewOrderPage = () => {
       };
 
       const updatedItems = [...formData.items, newItem];
-      const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
-      const discountAmount =
-        formData.discountType === "porcentaje"
-          ? (subtotal * (formData.discount || 0)) / 100
-          : formData.discount || 0;
-      const total = subtotal - discountAmount;
+      const totals = recalculateTotals(
+        updatedItems,
+        formData.discount || 0,
+        formData.discountType || "porcentaje",
+        formData.deliveryData.deliveryPrice || 0,
+        formData.advance || 0
+      );
 
       setFormData({
         ...formData,
         items: updatedItems,
-        subtotal,
-        total,
-        remainingBalance: total - (formData.advance || 0),
+        ...totals,
       });
 
       toast.success("Producto agregado correctamente");
@@ -531,12 +633,26 @@ const NewOrderPage = () => {
         throw new Error("Debes seleccionar un almacén");
       }
 
+      if (!formData.paymentMethod) {
+        throw new Error("Debes seleccionar un método de pago");
+      }
+
       const orderData = {
         ...formData,
         storageId: selectedStorageId,
       };
 
       const response = await ordersService.createOrder(orderData);
+
+      // Validar que la respuesta sea exitosa
+      if (!response || !response.success) {
+        throw new Error(response?.message || "Error al crear la orden");
+      }
+
+      // Validar que la respuesta tenga datos
+      if (!response.data) {
+        throw new Error("No se recibió respuesta del servidor");
+      }
 
       // Mostrar toast de éxito
       toast.success(
@@ -565,7 +681,8 @@ const NewOrderPage = () => {
             deliveryDateTime: "",
             message: "",
             street: "",
-            neighborhood: "",
+            neighborhoodId: "",
+            deliveryPrice: 0,
             reference: "",
           },
           paymentMethod: paymentMethods.length > 0 ? paymentMethods[0]._id : "",
@@ -1022,10 +1139,7 @@ const NewOrderPage = () => {
                           value={tipo}
                           checked={formData.shippingType === tipo}
                           onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              shippingType: e.target.value as ShippingType,
-                            })
+                            handleShippingTypeChange(e.target.value as ShippingType)
                           }
                           className="custom-radio"
                         />
@@ -1163,21 +1277,19 @@ const NewOrderPage = () => {
                           <Form.Label className="fw-semibold">
                             Colonia
                           </Form.Label>
-                          <Form.Control
-                            type="text"
-                            placeholder="Nombre de la colonia"
-                            value={formData.deliveryData.neighborhood}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                deliveryData: {
-                                  ...formData.deliveryData,
-                                  neighborhood: e.target.value,
-                                },
-                              })
-                            }
+                          <Form.Select
+                            value={formData.deliveryData.neighborhoodId}
+                            onChange={(e) => handleNeighborhoodChange(e.target.value)}
                             className="py-2"
-                          />
+                            disabled={loadingNeighborhoods}
+                          >
+                            <option value="">Seleccionar colonia...</option>
+                            {neighborhoods.map((neighborhood) => (
+                              <option key={neighborhood._id} value={neighborhood._id}>
+                                {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
+                              </option>
+                            ))}
+                          </Form.Select>
                         </Form.Group>
                       </Col>
 
@@ -1246,9 +1358,10 @@ const NewOrderPage = () => {
                           Cargando métodos de pago...
                         </div>
                       ) : paymentMethods.length === 0 ? (
-                        <div className="text-danger">
-                          No hay métodos de pago disponibles
-                        </div>
+                        <Alert variant="danger" className="mb-0 w-100">
+                          No hay métodos de pago disponibles. Debes crear al
+                          menos un método de pago para poder crear órdenes.
+                        </Alert>
                       ) : (
                         paymentMethods.map((method) => (
                           <Button
@@ -1329,6 +1442,14 @@ const NewOrderPage = () => {
                         ).toFixed(2)}
                       </span>
                     </div>
+                    {formData.shippingType === "envio" && (formData.deliveryData.deliveryPrice || 0) > 0 && (
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="text-muted">Costo de Envío:</span>
+                        <span className="text-success fw-bold">
+                          +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                     <div className="d-flex justify-content-between align-items-center py-2 border-top">
                       <span className="fs-5 fw-bold">Total:</span>
                       <span className="fs-4 fw-bold text-primary">
@@ -1434,7 +1555,12 @@ const NewOrderPage = () => {
                 type="submit"
                 variant="primary"
                 size="lg"
-                disabled={loading || formData.items.length === 0}
+                disabled={
+                  loading ||
+                  formData.items.length === 0 ||
+                  !formData.paymentMethod ||
+                  !selectedStorageId
+                }
                 className="px-5"
               >
                 {loading ? "Procesando..." : "Aceptar"}

@@ -4,6 +4,7 @@ import PaymentMethod from '../models/PaymentMethod.js';
 import { Branch } from '../models/Branch.js';
 import CashRegister from '../models/CashRegister.js';
 import { Storage } from '../models/Storage.js';
+import OrderPayment from '../models/OrderPayment.js';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted } from '../sockets/orderSocket.js';
 import mongoose from 'mongoose';
 
@@ -123,6 +124,14 @@ const getAllOrders = async (req, res) => {
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -161,7 +170,15 @@ const getOrderById = async (req, res) => {
       .populate('cashRegisterId', 'name isOpen currentBalance')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
-      .populate('paymentMethod', 'name abbreviation');
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      });
 
     if (!order) {
       return res.status(404).json({
@@ -347,7 +364,8 @@ const createOrder = async (req, res) => {
         deliveryDateTime: deliveryData.deliveryDateTime,
         message: deliveryData.message || '',
         street: deliveryData.street || null,
-        neighborhood: deliveryData.neighborhood || null,
+        neighborhoodId: deliveryData.neighborhoodId || null,
+        deliveryPrice: deliveryData.deliveryPrice || 0,
         reference: deliveryData.reference || null
       },
       paymentMethod: paymentMethod,
@@ -359,10 +377,30 @@ const createOrder = async (req, res) => {
       paidWith: paidWith || 0,
       change: change || 0,
       remainingBalance: remainingBalance || 0,
+      payments: [],
       sendToProduction: sendToProduction || false
     });
 
     const savedOrder = await newOrder.save();
+
+    // Si hay un anticipo (advance > 0), crear el registro en OrderPayment
+    if (advance && advance > 0 && cashRegisterId) {
+      const orderPayment = new OrderPayment({
+        orderId: savedOrder._id,
+        amount: advance,
+        paymentMethod: paymentMethod,
+        cashRegisterId: cashRegisterId,
+        date: new Date(),
+        registeredBy: req.user?._id || null,
+        notes: 'Pago inicial al crear la orden'
+      });
+
+      const savedPayment = await orderPayment.save();
+
+      // Agregar la referencia del pago a la orden
+      savedOrder.payments.push(savedPayment._id);
+      await savedOrder.save();
+    }
 
     // Descontar productos del almacén
     for (const item of items) {
@@ -388,15 +426,13 @@ const createOrder = async (req, res) => {
     await storage.save();
 
     // Si hay caja registradora asignada, actualizar su balance
-    if (cashRegisterId) {
+    if (cashRegisterId && advance > 0) {
       try {
-        // Calcular el monto a agregar: subtotal - remainingBalance
-        const amountToAdd = subtotal - (remainingBalance || 0);
-
+        // Agregar el monto del anticipo a la caja
         await CashRegister.findByIdAndUpdate(
           cashRegisterId,
           {
-            $inc: { currentBalance: amountToAdd },
+            $inc: { currentBalance: advance },
             $push: {
               lastRegistry: {
                 orderId: savedOrder._id,
@@ -417,7 +453,15 @@ const createOrder = async (req, res) => {
       .populate('cashRegisterId', 'name isOpen currentBalance')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
-      .populate('paymentMethod', 'name abbreviation');
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      });
 
     // Emitir evento de socket para notificar a otros usuarios
     emitOrderCreated(populatedOrder);
@@ -494,7 +538,15 @@ const updateOrder = async (req, res) => {
       .populate('cashRegisterId', 'name isOpen currentBalance')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
-      .populate('paymentMethod', 'name abbreviation');
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      });
 
     // Emitir evento de socket para notificar a otros usuarios
     emitOrderUpdated(updatedOrder);
@@ -553,7 +605,15 @@ const updateOrderStatus = async (req, res) => {
       .populate('cashRegisterId', 'name isOpen currentBalance')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
-      .populate('paymentMethod', 'name abbreviation');
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      });
 
     if (!order) {
       return res.status(404).json({

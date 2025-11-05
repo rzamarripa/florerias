@@ -10,7 +10,8 @@ export interface DeliveryData {
   deliveryDateTime: string;
   message?: string;
   street?: string;
-  neighborhood?: string;
+  neighborhoodId?: string;
+  deliveryPrice?: number;
   reference?: string;
 }
 
@@ -23,6 +24,33 @@ export interface OrderItem {
   unitPrice: number;
   amount: number;
 }
+
+export interface OrderPayment {
+  _id?: string;
+  orderId: string;
+  amount: number;
+  paymentMethod: string | {
+    _id: string;
+    name: string;
+    abbreviation?: string;
+  };
+  cashRegisterId: string | {
+    _id: string;
+    name: string;
+  };
+  date: string;
+  registeredBy?: string | {
+    _id: string;
+    name: string;
+    email?: string;
+  } | null;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Mantener Payment como alias para compatibilidad temporal
+export type Payment = OrderPayment;
 
 export interface Order {
   _id: string;
@@ -53,6 +81,7 @@ export interface Order {
   paidWith: number;
   change: number;
   remainingBalance: number;
+  payments: (string | OrderPayment)[];
   sendToProduction: boolean;
   status: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado';
   orderNumber?: string;
@@ -115,3 +144,22 @@ export interface OrderFilters {
 
 export type SalesChannelType = 'tienda' | 'whatsapp' | 'facebook';
 export type ShippingType = 'envio' | 'tienda';
+
+// Tipos para la gestión de pagos
+export interface CreateOrderPaymentData {
+  orderId: string;
+  amount: number;
+  paymentMethod: string;
+  cashRegisterId: string;
+  registeredBy: string;
+  notes?: string;
+}
+
+export interface OrderPaymentResponse {
+  message: string;
+  payment: OrderPayment;
+  order: {
+    advance: number;
+    remainingBalance: number;
+  };
+}

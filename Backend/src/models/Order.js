@@ -41,10 +41,15 @@ const deliveryDataSchema = new mongoose.Schema({
     trim: true,
     default: null
   },
-  neighborhood: {
-    type: String,
-    trim: true,
+  neighborhoodId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_neighborhood',
     default: null
+  },
+  deliveryPrice: {
+    type: Number,
+    default: 0,
+    min: 0
   },
   reference: {
     type: String,
@@ -87,6 +92,7 @@ const orderItemSchema = new mongoose.Schema({
     min: 0
   }
 }, { _id: true });
+
 
 const orderSchema = new mongoose.Schema({
   branchId: {
@@ -182,6 +188,10 @@ const orderSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  payments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'OrderPayment'
+  }],
   sendToProduction: {
     type: Boolean,
     default: false

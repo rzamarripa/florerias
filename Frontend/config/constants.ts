@@ -22,6 +22,8 @@ import {
   Building,
   Warehouse,
   History,
+  Calendar,
+  MapPinHouse,
 } from "lucide-react";
 
 export const menuItems: MenuItemType[] = [
@@ -79,6 +81,12 @@ export const menuItems: MenuItemType[] = [
             url: "/sucursal/almacenes",
             icon: Warehouse,
           },
+      {
+        key: "eventos",
+        label: "Eventos",
+        url: "/sucursal/eventos",
+        icon: Calendar,
+      },
         ],
       },
       {
@@ -181,6 +189,25 @@ export const menuItems: MenuItemType[] = [
         url: "/catalogos/payment-method",
         icon: CreditCard,
       },
+      {
+        key: "gastos",
+        label: "Gastos",
+        url: "/catalogos/gastos",
+        icon: DollarSign,
+      },
+      {
+        key: "compras",
+        label: "Compras",
+        url: "/catalogos/compras",
+        icon: ShoppingCart,
+      },
+      {
+        key: "colonias",
+        label: "Colonias",
+        url: "/catalogos/colonias",
+        icon: MapPinHouse,
+      },
+      
     ],
   },
   {
@@ -206,6 +233,19 @@ export const menuItems: MenuItemType[] = [
         label: "Empresas",
         url: "/gestion/empresas",
         icon: Building,
+      },
+    ],
+  },
+  {
+    key: "finanzas",
+    label: "Finanzas",
+    icon: DollarSign,
+    children: [
+      {
+        key: "finanzas",
+        label: "Finanzas",
+        url: "/finanzas/finanzas",
+        icon: DollarSign,
       },
     ],
   },

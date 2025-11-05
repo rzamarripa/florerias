@@ -51,20 +51,8 @@ const cashRegisterSchema = new Schema(
     ],
     expenses: [
       {
-        expenseConcept: {
-          type: String,
-          required: [true, "El concepto del gasto es requerido"],
-          trim: true,
-        },
-        amount: {
-          type: Number,
-          required: [true, "El monto del gasto es requerido"],
-          min: [0, "El monto del gasto no puede ser negativo"],
-        },
-        expenseDate: {
-          type: Date,
-          default: Date.now,
-        },
+        type: Schema.Types.ObjectId,
+        ref: "cv_expense",
       },
     ],
     lastOpen: {

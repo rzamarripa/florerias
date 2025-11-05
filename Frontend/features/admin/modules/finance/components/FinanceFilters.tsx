@@ -1,0 +1,273 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Form, Button, Row, Col, Card } from "react-bootstrap";
+import { Search } from "lucide-react";
+import Select from "react-select";
+import { clientsService } from "../../clients/services/clients";
+import { paymentMethodsService } from "../../payment-methods/services/paymentMethods";
+import { branchesService } from "../../branches/services/branches";
+import { Client } from "../../clients/types";
+import { PaymentMethod } from "../types";
+
+interface FinanceFiltersProps {
+  onSearch: (filters: {
+    startDate: string;
+    endDate: string;
+    clientIds?: string[];
+    paymentMethods?: string[];
+    branchId?: string;
+  }) => void;
+}
+
+const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
+  const [startDate, setStartDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [endDate, setEndDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [clients, setClients] = useState<Client[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedClients, setSelectedClients] = useState<any[]>([]);
+  const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<any[]>(
+    []
+  );
+  const [branchId, setBranchId] = useState<string>("");
+  const [loadingBranches, setLoadingBranches] = useState(false);
+
+  useEffect(() => {
+    loadClients();
+    loadPaymentMethods();
+    loadUserBranches();
+  }, []);
+
+  const loadClients = async () => {
+    try {
+      const response = await clientsService.getAllClients({
+        page: 1,
+        limit: 1000,
+        status: true,
+      });
+      if (response.data) {
+        setClients(response.data);
+      }
+    } catch (error) {
+      console.error("Error loading clients:", error);
+    }
+  };
+
+  const loadPaymentMethods = async () => {
+    try {
+      const response = await paymentMethodsService.getAllPaymentMethods({
+        status: true,
+      });
+      if (response.data) {
+        setPaymentMethods(response.data);
+      }
+    } catch (error) {
+      console.error("Error loading payment methods:", error);
+    }
+  };
+
+  const loadUserBranches = async () => {
+    try {
+      setLoadingBranches(true);
+      const response = await branchesService.getUserBranches();
+      if (response.success) {
+        setBranches(response.data);
+        // Si solo hay una sucursal, seleccionarla automáticamente
+        if (response.data.length === 1) {
+          setBranchId(response.data[0]._id);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading branches:", error);
+    } finally {
+      setLoadingBranches(false);
+    }
+  };
+
+  const handleSearch = () => {
+    // El backend resolverá automáticamente las sucursales según el rol
+    // Si branchId está vacío, el backend buscará en todas las sucursales de la empresa del admin
+    onSearch({
+      startDate,
+      endDate,
+      clientIds: selectedClients.map((client) => client.value),
+      paymentMethods: selectedPaymentMethods.map((method) => method.value),
+      branchId: branchId || undefined,
+    });
+  };
+
+  const clientOptions = clients.map((client) => ({
+    value: client._id,
+    label: `${client.name} ${client.lastName}`,
+  }));
+
+  const paymentMethodOptions = paymentMethods.map((method) => ({
+    value: method._id,
+    label: method.name,
+  }));
+
+  const customStyles = {
+    control: (base: any) => ({
+      ...base,
+      minHeight: "42px",
+      borderRadius: "10px",
+      borderColor: "#dee2e6",
+      "&:hover": {
+        borderColor: "#667eea",
+      },
+    }),
+    multiValue: (base: any) => ({
+      ...base,
+      backgroundColor: "#e7eaf6",
+      borderRadius: "6px",
+    }),
+    multiValueLabel: (base: any) => ({
+      ...base,
+      color: "#667eea",
+      fontWeight: "500",
+    }),
+    multiValueRemove: (base: any) => ({
+      ...base,
+      color: "#667eea",
+      "&:hover": {
+        backgroundColor: "#667eea",
+        color: "white",
+      },
+    }),
+  };
+
+  return (
+    <Card className="border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
+      <Card.Body className="p-3">
+        <Row className="g-3">
+          <Col md={3}>
+            <Form.Group>
+              <Form.Label className="fw-semibold text-muted small">
+                Fecha Inicial *
+              </Form.Label>
+              <Form.Control
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{
+                  borderRadius: "10px",
+                  border: "1px solid #dee2e6",
+                  padding: "10px 14px",
+                }}
+              />
+            </Form.Group>
+          </Col>
+
+          <Col md={3}>
+            <Form.Group>
+              <Form.Label className="fw-semibold text-muted small">
+                Fecha Final *
+              </Form.Label>
+              <Form.Control
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{
+                  borderRadius: "10px",
+                  border: "1px solid #dee2e6",
+                  padding: "10px 14px",
+                }}
+              />
+            </Form.Group>
+          </Col>
+
+          <Col md={3}>
+            <Form.Group>
+              <Form.Label className="fw-semibold text-muted small">
+                Sucursal *
+              </Form.Label>
+              <Form.Select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                style={{
+                  borderRadius: "10px",
+                  border: "1px solid #dee2e6",
+                  padding: "10px 14px",
+                }}
+                disabled={loadingBranches}
+              >
+                <option value="">
+                  {branches.length > 1
+                    ? "Selecciona una sucursal"
+                    : "Cargando..."}
+                </option>
+                {branches.map((branch) => (
+                  <option key={branch._id} value={branch._id}>
+                    {branch.branchName}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+
+          <Col md={3}>
+            <Form.Group>
+              <Form.Label className="fw-semibold text-muted small">
+                Cliente
+              </Form.Label>
+              <Select
+                isMulti
+                options={clientOptions}
+                value={selectedClients}
+                onChange={(selected) => setSelectedClients(selected as any[])}
+                placeholder="Selecciona cliente(s)"
+                styles={customStyles}
+                noOptionsMessage={() => "No hay clientes disponibles"}
+              />
+            </Form.Group>
+          </Col>
+
+          <Col md={3}>
+            <Form.Group>
+              <Form.Label className="fw-semibold text-muted small">
+                Forma de Pago
+              </Form.Label>
+              <Select
+                isMulti
+                options={paymentMethodOptions}
+                value={selectedPaymentMethods}
+                onChange={(selected) =>
+                  setSelectedPaymentMethods(selected as any[])
+                }
+                placeholder="Selecciona método(s)"
+                styles={customStyles}
+                noOptionsMessage={() => "No hay métodos disponibles"}
+              />
+            </Form.Group>
+          </Col>
+
+          <Col xs={12} className="d-flex justify-content-end mt-3">
+            <Button
+              variant="primary"
+              onClick={handleSearch}
+              className="d-flex align-items-center gap-2 px-4"
+              style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                border: "none",
+                borderRadius: "10px",
+                padding: "12px 32px",
+                fontWeight: "600",
+                boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
+              }}
+            >
+              <Search size={18} />
+              Calcular
+            </Button>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
+  );
+};
+
+export default FinanceFilters;

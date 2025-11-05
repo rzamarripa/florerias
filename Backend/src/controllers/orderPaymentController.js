@@ -1,0 +1,373 @@
+import OrderPayment from '../models/OrderPayment.js';
+import Order from '../models/Order.js';
+import CashRegister from '../models/CashRegister.js';
+
+// Crear un nuevo pago para una orden
+export const createOrderPayment = async (req, res) => {
+  try {
+    const { orderId, amount, paymentMethod, cashRegisterId, registeredBy, notes } = req.body;
+
+    // Validar que la orden existe
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Orden no encontrada' });
+    }
+
+    // Validar que el monto no exceda el saldo pendiente
+    if (amount > order.remainingBalance) {
+      return res.status(400).json({
+        message: 'El monto del pago excede el saldo pendiente',
+        remainingBalance: order.remainingBalance
+      });
+    }
+
+    // Validar que la caja registradora existe
+    const cashRegister = await CashRegister.findById(cashRegisterId);
+    if (!cashRegister) {
+      return res.status(404).json({ message: 'Caja registradora no encontrada' });
+    }
+
+    // Crear el pago
+    const payment = new OrderPayment({
+      orderId,
+      amount,
+      paymentMethod,
+      cashRegisterId,
+      registeredBy,
+      notes,
+      date: new Date()
+    });
+
+    await payment.save();
+
+    // Actualizar la orden
+    order.advance += amount;
+    order.remainingBalance -= amount;
+    order.payments.push(payment._id);
+    await order.save();
+
+    // Actualizar el balance de la caja registradora
+    cashRegister.currentBalance += amount;
+    await cashRegister.save();
+
+    // Obtener el pago con sus referencias pobladas
+    const populatedPayment = await OrderPayment.findById(payment._id)
+      .populate('paymentMethod')
+      .populate('registeredBy')
+      .populate('cashRegisterId');
+
+    res.status(201).json({
+      message: 'Pago registrado exitosamente',
+      payment: populatedPayment,
+      order: {
+        advance: order.advance,
+        remainingBalance: order.remainingBalance
+      }
+    });
+  } catch (error) {
+    console.error('Error al crear pago:', error);
+    res.status(500).json({ message: 'Error al registrar el pago', error: error.message });
+  }
+};
+
+// Obtener todos los pagos de una orden específica
+export const getOrderPayments = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const payments = await OrderPayment.find({ orderId })
+      .populate('paymentMethod')
+      .populate('registeredBy')
+      .populate('cashRegisterId')
+      .sort({ date: -1 });
+
+    res.status(200).json(payments);
+  } catch (error) {
+    console.error('Error al obtener pagos:', error);
+    res.status(500).json({ message: 'Error al obtener los pagos', error: error.message });
+  }
+};
+
+// Obtener un pago específico por ID
+export const getOrderPaymentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const payment = await OrderPayment.findById(id)
+      .populate('orderId')
+      .populate('paymentMethod')
+      .populate('registeredBy')
+      .populate('cashRegisterId');
+
+    if (!payment) {
+      return res.status(404).json({ message: 'Pago no encontrado' });
+    }
+
+    res.status(200).json(payment);
+  } catch (error) {
+    console.error('Error al obtener pago:', error);
+    res.status(500).json({ message: 'Error al obtener el pago', error: error.message });
+  }
+};
+
+// Eliminar un pago (con reversión de saldos)
+export const deleteOrderPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const payment = await OrderPayment.findById(id);
+    if (!payment) {
+      return res.status(404).json({ message: 'Pago no encontrado' });
+    }
+
+    // Obtener la orden
+    const order = await Order.findById(payment.orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Orden no encontrada' });
+    }
+
+    // Revertir los cambios en la orden
+    order.advance -= payment.amount;
+    order.remainingBalance += payment.amount;
+    order.payments = order.payments.filter(p => p.toString() !== id);
+    await order.save();
+
+    // Revertir el cambio en la caja registradora
+    const cashRegister = await CashRegister.findById(payment.cashRegisterId);
+    if (cashRegister) {
+      cashRegister.currentBalance -= payment.amount;
+      await cashRegister.save();
+    }
+
+    // Eliminar el pago
+    await OrderPayment.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: 'Pago eliminado exitosamente',
+      order: {
+        advance: order.advance,
+        remainingBalance: order.remainingBalance
+      }
+    });
+  } catch (error) {
+    console.error('Error al eliminar pago:', error);
+    res.status(500).json({ message: 'Error al eliminar el pago', error: error.message });
+  }
+};
+
+// Obtener todos los pagos (con filtros opcionales)
+export const getAllOrderPayments = async (req, res) => {
+  try {
+    const { cashRegisterId, startDate, endDate, page = 1, limit = 50 } = req.query;
+
+    const query = {};
+
+    if (cashRegisterId) {
+      query.cashRegisterId = cashRegisterId;
+    }
+
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+
+    const payments = await OrderPayment.find(query)
+      .populate('orderId')
+      .populate('paymentMethod')
+      .populate('registeredBy')
+      .populate('cashRegisterId')
+      .sort({ date: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const count = await OrderPayment.countDocuments(query);
+
+    res.status(200).json({
+      payments,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      totalPayments: count
+    });
+  } catch (error) {
+    console.error('Error al obtener pagos:', error);
+    res.status(500).json({ message: 'Error al obtener los pagos', error: error.message });
+  }
+};
+
+// Obtener pagos de órdenes filtrados por sucursal (para finanzas)
+export const getOrderPaymentsByBranch = async (req, res) => {
+  try {
+    const { branchId, startDate, endDate, clientIds, paymentMethods } = req.query;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    // Obtener el usuario con su rol
+    const User = (await import('../models/User.js')).User;
+    const Role = (await import('../models/Roles.js')).Role;
+    const Branch = (await import('../models/Branch.js')).Branch;
+    const Company = (await import('../models/Company.js')).Company;
+
+    const user = await User.findById(userId).populate('role');
+    if (!user || !user.role) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuario no tiene rol asignado'
+      });
+    }
+
+    const userRole = user.role.name;
+    let branchIdsToSearch = [];
+
+    // Construir query para órdenes
+    const orderQuery = {};
+
+    // Si se especifica una sucursal específica, usarla
+    if (branchId) {
+      branchIdsToSearch = [branchId];
+    }
+    // Si no se especifica sucursal, obtener todas según el rol
+    else {
+      if (userRole === 'Administrador') {
+        // 1. Buscar la empresa donde el usuario es administrator
+        const company = await Company.findOne({ administrator: userId });
+
+        if (!company) {
+          return res.status(404).json({
+            success: false,
+            message: 'No se encontró empresa asociada al administrador'
+          });
+        }
+
+        // 2. Buscar todas las sucursales de esa empresa
+        const branches = await Branch.find({
+          companyId: company._id,
+          isActive: true
+        }).select('_id');
+
+        branchIdsToSearch = branches.map(b => b._id);
+
+        console.log(`Admin ${userId} - Company: ${company._id} - Found ${branchIdsToSearch.length} branches`);
+      }
+      else if (userRole === 'Gerente') {
+        // Para gerentes, buscar su sucursal
+        const branch = await Branch.findOne({
+          manager: userId,
+          isActive: true
+        }).select('_id');
+
+        if (!branch) {
+          return res.status(404).json({
+            success: false,
+            message: 'No se encontró sucursal asociada al gerente'
+          });
+        }
+
+        branchIdsToSearch = [branch._id];
+      }
+      else {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para ver pagos de órdenes'
+        });
+      }
+    }
+
+    // Validar que tengamos sucursales para buscar
+    if (branchIdsToSearch.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No se encontraron sucursales',
+        data: []
+      });
+    }
+
+    // Aplicar filtro de sucursales
+    if (branchIdsToSearch.length === 1) {
+      orderQuery.branchId = branchIdsToSearch[0];
+    } else {
+      orderQuery.branchId = { $in: branchIdsToSearch };
+    }
+
+    // Filtrar por clientes si se especifica
+    if (clientIds) {
+      const clientIdsArray = Array.isArray(clientIds) ? clientIds : [clientIds];
+      orderQuery['clientInfo.clientId'] = { $in: clientIdsArray };
+    }
+
+    const orders = await Order.find(orderQuery).select('_id');
+    const orderIds = orders.map(order => order._id);
+
+    console.log(`Found ${orders.length} orders matching criteria`);
+
+    // Si no hay órdenes, retornar array vacío
+    if (orderIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No se encontraron órdenes para las sucursales especificadas',
+        data: []
+      });
+    }
+
+    // Ahora buscar los pagos de esas órdenes
+    const paymentQuery = {
+      orderId: { $in: orderIds }
+    };
+
+    // Filtrar por fechas
+    if (startDate || endDate) {
+      paymentQuery.date = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        paymentQuery.date.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        paymentQuery.date.$lte = end;
+      }
+    }
+
+    // Filtrar por métodos de pago
+    if (paymentMethods) {
+      const paymentMethodsArray = Array.isArray(paymentMethods) ? paymentMethods : [paymentMethods];
+      paymentQuery.paymentMethod = { $in: paymentMethodsArray };
+    }
+
+    const payments = await OrderPayment.find(paymentQuery)
+      .populate({
+        path: 'orderId',
+        select: 'orderNumber clientInfo branchId',
+        populate: {
+          path: 'branchId',
+          select: 'name'
+        }
+      })
+      .populate('paymentMethod', 'name')
+      .populate('registeredBy', 'name lastName')
+      .populate('cashRegisterId', 'name')
+      .sort({ date: -1 });
+
+    console.log(`Found ${payments.length} payments for ${branchIdsToSearch.length} branches`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Pagos obtenidos exitosamente',
+      data: payments
+    });
+  } catch (error) {
+    console.error('Error al obtener pagos por sucursal:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener los pagos',
+      error: error.message
+    });
+  }
+};
