@@ -6,6 +6,7 @@ import "@/assets/scss/app.scss";
 import "flatpickr/dist/flatpickr.css";
 import "jsvectormap/dist/css/jsvectormap.min.css";
 import "simplebar-react/dist/simplebar.min.css";
+import "@/assets/scss/custom-sidebar.scss";
 
 export const metadata: Metadata = {
   title: "FloriSoft",
@@ -33,7 +34,6 @@ export default function RootLayout({
       data-sidenav-user="true"
     >
       <head>
-        <link rel="stylesheet" href="/custom-sidebar.css" />
         <link rel="icon" href="/favicon-simple.svg" type="image/svg+xml" />
         <link rel="shortcut icon" href="/favicon-simple.svg" />
       </head>

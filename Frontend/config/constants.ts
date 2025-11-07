@@ -24,7 +24,40 @@ import {
   History,
   Calendar,
   MapPinHouse,
+  LogOut,
+  LockKeyhole,
+  HelpCircle,
 } from "lucide-react";
+
+export interface UserDropdownItem {
+  label: string;
+  url?: string;
+  icon?: any;
+  isHeader?: boolean;
+  isDivider?: boolean;
+  class?: string;
+}
+
+export const userDropdownItems: UserDropdownItem[] = [
+  { label: "Bienvenido!", isHeader: true },
+  { label: "Mi cuenta", url: "/pages/profile", icon: User, class: "" },
+  { label: "Configuración", url: "/pages/setting", icon: Settings, class: "" },
+  { label: "Soporte", url: "/pages/support", icon: HelpCircle, class: "" },
+  { isDivider: true, label: "" },
+  {
+    label: "Cambiar contraseña",
+    url: "/pages/change-password",
+    icon: LockKeyhole,
+    class: "",
+  },
+  { isDivider: true, label: "" },
+  {
+    label: "Cerrar sesión",
+    url: "/auth/logout",
+    icon: LogOut,
+    class: "text-danger",
+  },
+];
 
 export const menuItems: MenuItemType[] = [
   { key: "menu", label: "Menu", isTitle: true },

@@ -254,4 +254,57 @@ $theme-modern-colors: (
             background: #343541 !important;
         }
     }
+
+    // Force sidebar styles for blue-dark theme
+    html[data-skin="modern"][data-menu-color="blue-dark"] {
+        .sidenav-menu {
+            background: linear-gradient(180deg, #1a2942 0%, #152238 50%, #0f1a2e 100%) !important;
+            border-right: 1px solid #1e3a5f !important;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .side-nav-link {
+            color: #a8c5e3 !important;
+
+            &:hover {
+                color: #ffffff !important;
+                background: rgba(66, 133, 244, 0.15) !important;
+            }
+
+            .menu-icon {
+                color: #a8c5e3 !important;
+            }
+
+            &:hover .menu-icon {
+                color: #ffffff !important;
+            }
+        }
+
+        .side-nav-item.active > .side-nav-link {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #4285f4, #1967d2) !important;
+            box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3) !important;
+
+            .menu-icon {
+                color: #ffffff !important;
+            }
+        }
+
+        .side-nav-title {
+            color: #7a9dc2 !important;
+        }
+
+        .sub-menu {
+            background: rgba(15, 26, 46, 0.4) !important;
+        }
+
+        .sidenav-user {
+            background: rgba(66, 133, 244, 0.08) !important;
+            border: 1px solid rgba(66, 133, 244, 0.15) !important;
+
+            .sidenav-user-name {
+                color: #ffffff !important;
+            }
+        }
+    }
 }
