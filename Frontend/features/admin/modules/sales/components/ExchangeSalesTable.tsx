@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Table, Badge, Button } from "react-bootstrap";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, DollarSign } from "lucide-react";
+import PaymentModal from "./PaymentModal";
 
 interface ExchangeSalesTableProps {
   filters: {
@@ -15,6 +16,22 @@ interface ExchangeSalesTableProps {
 
 const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
   const sales = [];
+  const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const handleOpenPaymentModal = (sale: any) => {
+    setSelectedSale(sale);
+    setShowPaymentModal(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
+    setSelectedSale(null);
+  };
+
+  const handlePaymentAdded = () => {
+    // Recargar datos si es necesario
+  };
 
   return (
     <>
@@ -78,6 +95,16 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
                       <Button
                         variant="light"
                         size="sm"
+                        onClick={() => handleOpenPaymentModal(sale)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Gestionar pagos"
+                      >
+                        <DollarSign size={16} className="text-success" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
                         className="border-0"
                         style={{ borderRadius: "8px" }}
                         title="Ver detalles"
@@ -120,6 +147,15 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
           </div>
         </div>
       </div>
+
+      {selectedSale && (
+        <PaymentModal
+          show={showPaymentModal}
+          onHide={handleClosePaymentModal}
+          sale={selectedSale}
+          onPaymentAdded={handlePaymentAdded}
+        />
+      )}
     </>
   );
 };

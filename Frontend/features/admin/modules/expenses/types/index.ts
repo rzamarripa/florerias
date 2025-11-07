@@ -21,12 +21,19 @@ export interface CashRegister {
   currentBalance: number;
 }
 
+export interface ExpenseConcept {
+  _id: string;
+  name: string;
+  description?: string;
+  department: string;
+}
+
 export interface Expense {
   _id: string;
   paymentDate: string;
   user: User;
   folio: number;
-  concept: string;
+  concept: ExpenseConcept;
   total: number;
   expenseType: "check_transfer" | "petty_cash";
   branch: Branch;

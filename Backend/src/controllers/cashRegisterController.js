@@ -887,6 +887,44 @@ const registerExpense = async (req, res) => {
   }
 };
 
+// Obtener cajas abiertas por sucursal
+const getOpenCashRegistersByBranch = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    if (!branchId) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID de la sucursal es requerido'
+      });
+    }
+
+    // Buscar cajas que estén abiertas y activas en la sucursal especificada
+    const cashRegisters = await CashRegister.find({
+      branchId,
+      isOpen: true,
+      isActive: true
+    })
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashierId', 'username email profile')
+      .populate('managerId', 'username email profile')
+      .select('_id name branchId cashierId managerId currentBalance isOpen')
+      .sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: cashRegisters
+    });
+  } catch (error) {
+    console.error('Error al obtener cajas abiertas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 export {
   getAllCashRegisters,
   getCashRegisterById,
@@ -899,5 +937,6 @@ export {
   getUserCashRegister,
   registerExpense,
   getCashRegisterSummary,
-  closeCashRegister
+  closeCashRegister,
+  getOpenCashRegistersByBranch
 };

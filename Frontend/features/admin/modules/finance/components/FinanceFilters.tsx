@@ -17,6 +17,7 @@ interface FinanceFiltersProps {
     clientIds?: string[];
     paymentMethods?: string[];
     branchId?: string;
+    cashierId?: string;
   }) => void;
 }
 
@@ -30,18 +31,31 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
+  const [cashiers, setCashiers] = useState<any[]>([]);
   const [selectedClients, setSelectedClients] = useState<any[]>([]);
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<any[]>(
     []
   );
   const [branchId, setBranchId] = useState<string>("");
+  const [cashierId, setCashierId] = useState<string>("");
   const [loadingBranches, setLoadingBranches] = useState(false);
+  const [loadingCashiers, setLoadingCashiers] = useState(false);
 
   useEffect(() => {
     loadClients();
     loadPaymentMethods();
     loadUserBranches();
   }, []);
+
+  // Cargar cajeros cuando se selecciona una sucursal
+  useEffect(() => {
+    if (branchId) {
+      loadCashiers(branchId);
+    } else {
+      setCashiers([]);
+      setCashierId("");
+    }
+  }, [branchId]);
 
   const loadClients = async () => {
     try {
@@ -89,6 +103,21 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
     }
   };
 
+  const loadCashiers = async (selectedBranchId: string) => {
+    try {
+      setLoadingCashiers(true);
+      const response = await branchesService.getCashiersByBranch(selectedBranchId);
+      if (response.success) {
+        setCashiers(response.data);
+      }
+    } catch (error) {
+      console.error("Error loading cashiers:", error);
+      setCashiers([]);
+    } finally {
+      setLoadingCashiers(false);
+    }
+  };
+
   const handleSearch = () => {
     // El backend resolverá automáticamente las sucursales según el rol
     // Si branchId está vacío, el backend buscará en todas las sucursales de la empresa del admin
@@ -98,6 +127,7 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
       clientIds: selectedClients.map((client) => client.value),
       paymentMethods: selectedPaymentMethods.map((method) => method.value),
       branchId: branchId || undefined,
+      cashierId: cashierId || undefined,
     });
   };
 
@@ -204,6 +234,37 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
                 {branches.map((branch) => (
                   <option key={branch._id} value={branch._id}>
                     {branch.branchName}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+
+          <Col md={3}>
+            <Form.Group>
+              <Form.Label className="fw-semibold text-muted small">
+                Cajero
+              </Form.Label>
+              <Form.Select
+                value={cashierId}
+                onChange={(e) => setCashierId(e.target.value)}
+                style={{
+                  borderRadius: "10px",
+                  border: "1px solid #dee2e6",
+                  padding: "10px 14px",
+                }}
+                disabled={!branchId || loadingCashiers}
+              >
+                <option value="">
+                  {!branchId
+                    ? "Selecciona una sucursal primero"
+                    : loadingCashiers
+                    ? "Cargando cajeros..."
+                    : "Todos los cajeros"}
+                </option>
+                {cashiers.map((cashier) => (
+                  <option key={cashier._id} value={cashier._id}>
+                    {cashier.profile?.fullName || `${cashier.profile?.name} ${cashier.profile?.lastName}`}
                   </option>
                 ))}
               </Form.Select>

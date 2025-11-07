@@ -105,6 +105,11 @@ const orderSchema = new mongoose.Schema({
     ref: 'CashRegister',
     default: null
   },
+  cashier: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cs_user',
+    required: [true, 'El cajero es requerido']
+  },
   clientInfo: {
     type: clientInfoSchema,
     required: true
@@ -213,6 +218,7 @@ const orderSchema = new mongoose.Schema({
 // Índices para mejorar rendimiento (orderNumber ya tiene índice desde unique: true)
 orderSchema.index({ branchId: 1 });
 orderSchema.index({ cashRegisterId: 1 });
+orderSchema.index({ cashier: 1 });
 orderSchema.index({ 'clientInfo.name': 1 });
 orderSchema.index({ 'clientInfo.phone': 1 });
 orderSchema.index({ salesChannel: 1 });

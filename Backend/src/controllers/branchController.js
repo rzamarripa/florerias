@@ -865,3 +865,119 @@ export const getUserBranches = async (req, res) => {
     });
   }
 };
+
+// Obtener cajeros de una sucursal
+export const getCashiersByBranch = async (req, res) => {
+  try {
+    const branchId = req.params.id; // El parámetro en la ruta se llama :id, no :branchId
+
+    console.log('\n=== GET CASHIERS BY BRANCH ===');
+    console.log('BranchId recibido:', branchId);
+    console.log('Usuario:', req.user?._id);
+
+    // Validar que el usuario esté autenticado
+    if (!req.user || !req.user._id) {
+      console.log('ERROR: Usuario no autenticado');
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(req.user._id).populate("role");
+    if (!currentUser || !currentUser.role) {
+      console.log('ERROR: Usuario no tiene rol asignado');
+      return res.status(403).json({
+        success: false,
+        message: "Usuario no tiene rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+    console.log('Rol del usuario:', userRole);
+
+    // Verificar que la sucursal existe
+    const branch = await Branch.findById(branchId).populate('employees', '_id username role');
+    if (!branch) {
+      console.log('ERROR: Sucursal no encontrada con ID:', branchId);
+      return res.status(404).json({
+        success: false,
+        message: "Sucursal no encontrada",
+      });
+    }
+
+    console.log('Sucursal encontrada:', branch.branchName);
+    console.log('Total empleados en sucursal:', branch.employees?.length || 0);
+    console.log('Administrator:', branch.administrator?.toString());
+    console.log('Manager:', branch.manager?.toString());
+
+    // Verificar permisos: solo Administrador y Gerente pueden ver cajeros
+    if (userRole !== "Administrador" && userRole !== "Gerente") {
+      console.log('ERROR: Usuario no tiene permisos (rol inválido)');
+      return res.status(403).json({
+        success: false,
+        message: "No tienes permisos para ver los cajeros",
+      });
+    }
+
+    // Si es Administrador, verificar que sea el administrador de la sucursal
+    if (userRole === "Administrador" && branch.administrator.toString() !== req.user._id.toString()) {
+      console.log('ERROR: Administrador no coincide');
+      console.log('Branch administrator:', branch.administrator.toString());
+      console.log('Current user:', req.user._id.toString());
+      return res.status(403).json({
+        success: false,
+        message: "No tienes permisos para ver los cajeros de esta sucursal",
+      });
+    }
+
+    // Si es Gerente, verificar que sea el gerente de la sucursal
+    if (userRole === "Gerente" && branch.manager.toString() !== req.user._id.toString()) {
+      console.log('ERROR: Gerente no coincide');
+      return res.status(403).json({
+        success: false,
+        message: "No tienes permisos para ver los cajeros de esta sucursal",
+      });
+    }
+
+    // Buscar el rol de Cajero
+    const cashierRole = await Role.findOne({ name: /^Cajero$/i });
+    if (!cashierRole) {
+      console.log('ERROR: No se encontró el rol de Cajero en el sistema');
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: [],
+        message: "No se encontró el rol de Cajero en el sistema",
+      });
+    }
+
+    console.log('Rol Cajero encontrado:', cashierRole._id);
+    console.log('Buscando usuarios con IDs:', branch.employees.map(e => e._id || e));
+
+    // Obtener todos los empleados de la sucursal que sean cajeros
+    const cashiers = await User.find({
+      _id: { $in: branch.employees },
+      role: cashierRole._id,
+      "profile.estatus": true,
+    }).select("username email profile.name profile.lastName profile.fullName role").populate('role', 'name');
+
+    console.log('Cajeros encontrados:', cashiers.length);
+    cashiers.forEach(c => {
+      console.log(`  - ${c.profile?.fullName || c.username} (${c.role?.name})`);
+    });
+
+    res.status(200).json({
+      success: true,
+      count: cashiers.length,
+      data: cashiers,
+    });
+  } catch (error) {
+    console.error('ERROR en getCashiersByBranch:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

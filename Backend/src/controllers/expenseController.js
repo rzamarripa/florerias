@@ -105,6 +105,7 @@ const getAllExpenses = async (req, res) => {
       .populate('user', 'username email profile')
       .populate('branch', 'branchName branchCode')
       .populate('cashRegister', 'name currentBalance')
+      .populate('concept', 'name description department')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -149,7 +150,8 @@ const getExpenseById = async (req, res) => {
     const expense = await Expense.findById(id)
       .populate('user', 'username email profile')
       .populate('branch', 'branchName branchCode')
-      .populate('cashRegister', 'name currentBalance');
+      .populate('cashRegister', 'name currentBalance')
+      .populate('concept', 'name description department');
 
     if (!expense) {
       return res.status(404).json({
@@ -341,7 +343,8 @@ const createExpense = async (req, res) => {
     const populatedExpense = await Expense.findById(savedExpense._id)
       .populate('user', 'username email profile')
       .populate('branch', 'branchName branchCode')
-      .populate('cashRegister', 'name currentBalance');
+      .populate('cashRegister', 'name currentBalance')
+      .populate('concept', 'name description department');
 
     res.status(201).json({
       success: true,
@@ -430,7 +433,8 @@ const updateExpense = async (req, res) => {
     )
       .populate('user', 'username email profile')
       .populate('branch', 'branchName branchCode')
-      .populate('cashRegister', 'name currentBalance');
+      .populate('cashRegister', 'name currentBalance')
+      .populate('concept', 'name description department');
 
     res.status(200).json({
       success: true,

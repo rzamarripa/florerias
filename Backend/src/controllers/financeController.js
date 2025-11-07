@@ -316,7 +316,7 @@ export const getPayments = async (req, res) => {
  */
 export const getDiscountedSales = async (req, res) => {
   try {
-    const { branchId, startDate, endDate, clientIds, paymentMethods } = req.query;
+    const { branchId, startDate, endDate, clientIds, paymentMethods, cashierId } = req.query;
     const userId = req.user?._id;
 
     if (!userId) {
@@ -401,6 +401,11 @@ export const getDiscountedSales = async (req, res) => {
       });
     }
 
+    // Convertir branchIdsToSearch a ObjectId explícitamente
+    const branchObjectIds = branchIdsToSearch.map(id =>
+      typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id
+    );
+
     // Construir filtro de fechas
     const dateFilter = {};
     if (startDate) {
@@ -415,7 +420,7 @@ export const getDiscountedSales = async (req, res) => {
 
     // Construir match para órdenes
     const orderMatch = {
-      branchId: branchIdsToSearch.length === 1 ? branchIdsToSearch[0] : { $in: branchIdsToSearch },
+      branchId: branchObjectIds.length === 1 ? branchObjectIds[0] : { $in: branchObjectIds },
       discount: { $gt: 0 }, // Solo órdenes con descuento > 0
     };
 
@@ -433,6 +438,14 @@ export const getDiscountedSales = async (req, res) => {
       orderMatch.paymentMethod = { $in: paymentMethods.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
+    // Filtro de cajero (si se proporciona)
+    if (cashierId) {
+      orderMatch.cashier = new mongoose.Types.ObjectId(cashierId);
+    }
+
+    console.log('DiscountedSales OrderMatch:', JSON.stringify(orderMatch, null, 2));
+    console.log('BranchIds:', branchObjectIds.map(id => id.toString()));
+
     // Obtener las órdenes con descuento
     const discountedSales = await Order.find(orderMatch)
       .populate('paymentMethod', 'name')
@@ -440,7 +453,7 @@ export const getDiscountedSales = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    console.log(`Found ${discountedSales.length} discounted sales for ${branchIdsToSearch.length} branches`);
+    console.log(`Found ${discountedSales.length} discounted sales for ${branchObjectIds.length} branches`);
 
     // Formatear los datos para la respuesta
     const formattedSales = discountedSales.map((sale) => ({

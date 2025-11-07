@@ -88,6 +88,7 @@ export interface FinanceFilters {
   paymentMethods?: string[];
   branchId?: string;
   branchIds?: string[];
+  cashierId?: string;
 }
 
 export interface FinanceStats {

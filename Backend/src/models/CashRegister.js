@@ -44,6 +44,12 @@ const cashRegisterSchema = new Schema(
           type: Schema.Types.ObjectId,
           ref: "Order",
         },
+        paymentIds: [
+          {
+            type: Schema.Types.ObjectId,
+            ref: "OrderPayment",
+          },
+        ],
         saleDate: {
           type: Date,
         },

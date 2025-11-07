@@ -6,6 +6,7 @@ import { expensesService } from "../services/expenses";
 import { Expense, CreateExpenseData, UpdateExpenseData } from "../types";
 import { cashRegistersService } from "../../cash-registers/services/cashRegisters";
 import { branchesService } from "../../branches/services/branches";
+import { expenseConceptsService } from "../../expenseConcepts/services/expenseConcepts";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { toast } from "react-toastify";
@@ -26,6 +27,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingCashRegisters, setLoadingCashRegisters] = useState<boolean>(false);
   const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
+  const [loadingConcepts, setLoadingConcepts] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     paymentDate: new Date().toISOString().split("T")[0],
     concept: "",
@@ -37,6 +39,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   const [cashRegisters, setCashRegisters] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
+  const [expenseConcepts, setExpenseConcepts] = useState<any[]>([]);
 
   const { getUserId } = useUserSessionStore();
   const { role, hasRole } = useUserRoleStore();
@@ -65,11 +68,18 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     }
   }, [show, formData.expenseType, formData.branchId, isAdmin, isManager]);
 
+  // Cargar conceptos de gasto cuando se abre el modal
+  useEffect(() => {
+    if (show) {
+      loadExpenseConcepts();
+    }
+  }, [show]);
+
   useEffect(() => {
     if (expense) {
       setFormData({
         paymentDate: new Date(expense.paymentDate).toISOString().split("T")[0],
-        concept: expense.concept,
+        concept: expense.concept?._id || "",
         total: expense.total.toString(),
         expenseType: expense.expenseType,
         cashRegisterId: expense.cashRegister?._id || "",
@@ -136,6 +146,24 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
       toast.error("Error al cargar las cajas");
     } finally {
       setLoadingCashRegisters(false);
+    }
+  };
+
+  const loadExpenseConcepts = async () => {
+    try {
+      setLoadingConcepts(true);
+      const response = await expenseConceptsService.getAllExpenseConcepts({
+        isActive: true,
+        limit: 1000,
+      });
+      if (response.success) {
+        setExpenseConcepts(response.data);
+      }
+    } catch (error) {
+      console.error("Error loading expense concepts:", error);
+      toast.error("Error al cargar los conceptos de gastos");
+    } finally {
+      setLoadingConcepts(false);
     }
   };
 
@@ -393,19 +421,29 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 <Form.Label className="fw-semibold">
                   Concepto <span className="text-danger">*</span>
                 </Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
+                <Form.Select
                   name="concept"
                   value={formData.concept}
                   onChange={handleChange}
-                  placeholder="Describe el concepto del gasto"
                   required
+                  disabled={loadingConcepts}
                   style={{
                     borderRadius: "8px",
                     border: "2px solid #e9ecef",
                   }}
-                />
+                >
+                  <option value="">
+                    {loadingConcepts
+                      ? "Cargando conceptos..."
+                      : "Selecciona un concepto"}
+                  </option>
+                  {expenseConcepts.map((concept) => (
+                    <option key={concept._id} value={concept._id}>
+                      {concept.name}
+                      {concept.description && ` - ${concept.description}`}
+                    </option>
+                  ))}
+                </Form.Select>
               </Form.Group>
             </div>
 

@@ -202,6 +202,12 @@ export const menuItems: MenuItemType[] = [
         icon: ShoppingCart,
       },
       {
+        key: "conceptos-gastos",
+        label: "Conceptos de gastos",
+        url: "/catalogos/conceptos-gastos",
+        icon: ShoppingCart,
+      },
+      {
         key: "colonias",
         label: "Colonias",
         url: "/catalogos/colonias",
@@ -232,6 +238,12 @@ export const menuItems: MenuItemType[] = [
         key: "companies",
         label: "Empresas",
         url: "/gestion/empresas",
+        icon: Building,
+      },
+      {
+        key: "proveedores",
+        label: "Proveedores",
+        url: "/gestion/proveedores",
         icon: Building,
       },
     ],

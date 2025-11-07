@@ -27,6 +27,7 @@ const FinancePage: React.FC = () => {
     clientIds?: string[];
     paymentMethods?: string[];
     branchId?: string;
+    cashierId?: string;
   }) => {
     setFilters({
       startDate: searchFilters.startDate,
@@ -34,6 +35,7 @@ const FinancePage: React.FC = () => {
       clientIds: searchFilters.clientIds || [],
       paymentMethods: searchFilters.paymentMethods || [],
       branchId: searchFilters.branchId,
+      cashierId: searchFilters.cashierId,
     });
     setHasSearched(true);
   };

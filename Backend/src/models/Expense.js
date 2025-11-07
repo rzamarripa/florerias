@@ -18,9 +18,9 @@ const expenseSchema = new Schema(
       type: Number,
     },
     concept: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "cv_expense_concept",
       required: [true, "El concepto es requerido"],
-      trim: true,
     },
     total: {
       type: Number,

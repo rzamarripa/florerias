@@ -1,3 +1,10 @@
+export interface ExpenseConcept {
+  _id: string;
+  name: string;
+  description?: string;
+  department: string;
+}
+
 export interface Buy {
   _id: string;
   paymentDate: string;
@@ -7,12 +14,19 @@ export interface Buy {
     email: string;
   };
   folio: number;
-  concept: string;
+  concept: ExpenseConcept;
   amount: number;
   paymentMethod: {
     _id: string;
     name: string;
     abbreviation: string;
+  };
+  provider?: {
+    _id: string;
+    contactName: string;
+    tradeName: string;
+    legalName: string;
+    rfc: string;
   };
   description: string;
   branch: {
@@ -29,6 +43,7 @@ export interface CreateBuyData {
   concept: string;
   amount: number;
   paymentMethod: string;
+  provider?: string;
   description?: string;
 }
 
@@ -37,6 +52,7 @@ export interface UpdateBuyData {
   concept?: string;
   amount?: number;
   paymentMethod?: string;
+  provider?: string;
   description?: string;
 }
 

@@ -68,6 +68,19 @@ $theme-modern-colors: (
             --#{$prefix}sidenav-item-active-bg:           #{linear-gradient(135deg, #1976d2, #1565c0)} !important;
         }
 
+        // Modern Dark Blue Sidebar (Inspinia Style)
+        &[data-menu-color="blue-dark"] {
+            --#{$prefix}sidenav-bg:                       #{linear-gradient(180deg, #1a2942 0%, #152238 50%, #0f1a2e 100%)};
+            --#{$prefix}sidenav-border-color:             #1e3a5f;
+            --#{$prefix}sidenav-item-color:               #a8c5e3;
+            --#{$prefix}sidenav-item-hover-color:         #ffffff;
+            --#{$prefix}sidenav-item-hover-bg:            rgba(66, 133, 244, 0.15);
+            --#{$prefix}sidenav-item-active-color:        #ffffff;
+            --#{$prefix}sidenav-item-active-bg:           #{linear-gradient(135deg, #4285f4, #1967d2)};
+            --#{$prefix}sidenav-sub-bg:                   rgba(15, 26, 46, 0.4);
+            --#{$prefix}sidenav-sub-item-hover-bg:        rgba(66, 133, 244, 0.1);
+        }
+
         // Background Gray left-sidebar
         &[data-menu-color="gray"] {
             --#{$prefix}sidenav-bg:                       #f1f2f7;

@@ -7,6 +7,10 @@ import { buysService } from "../services/buys";
 import { Buy, CreateBuyData } from "../types";
 import { paymentMethodsService } from "../../payment-methods/services/paymentMethods";
 import { PaymentMethod } from "../../payment-methods/types";
+import { providersService } from "../../providers/services/providers";
+import { Provider } from "../../providers/types";
+import { expenseConceptsService } from "../../expenseConcepts/services/expenseConcepts";
+import { ExpenseConcept } from "../../expenseConcepts/types";
 
 interface BuyModalProps {
   show: boolean;
@@ -17,34 +21,53 @@ interface BuyModalProps {
 
 const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy }) => {
   const [loading, setLoading] = useState(false);
+  const [loadingConcepts, setLoadingConcepts] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [expenseConcepts, setExpenseConcepts] = useState<ExpenseConcept[]>([]);
   const [formData, setFormData] = useState<CreateBuyData>({
     paymentDate: new Date().toISOString().split("T")[0],
     concept: "",
     amount: 0,
     paymentMethod: "",
+    provider: "",
     description: "",
   });
 
   const isEditing = !!buy;
 
-  // Cargar métodos de pago
+  // Cargar métodos de pago, proveedores y conceptos
   useEffect(() => {
-    const loadPaymentMethods = async () => {
+    const loadData = async () => {
       try {
-        const response = await paymentMethodsService.getAllPaymentMethods({
-          status: true,
-        });
-        if (response.data) {
-          setPaymentMethods(response.data);
+        setLoadingConcepts(true);
+        const [paymentMethodsResponse, providersResponse, conceptsResponse] = await Promise.all([
+          paymentMethodsService.getAllPaymentMethods({ status: true }),
+          providersService.getAllProviders({ page: 1, limit: 1000, isActive: true }),
+          expenseConceptsService.getAllExpenseConcepts({ isActive: true, limit: 1000 })
+        ]);
+
+        if (paymentMethodsResponse.data) {
+          setPaymentMethods(paymentMethodsResponse.data);
+        }
+
+        if (providersResponse.data) {
+          setProviders(providersResponse.data);
+        }
+
+        if (conceptsResponse.success) {
+          setExpenseConcepts(conceptsResponse.data);
         }
       } catch (error) {
-        console.error("Error loading payment methods:", error);
+        console.error("Error loading data:", error);
+        toast.error("Error al cargar los datos");
+      } finally {
+        setLoadingConcepts(false);
       }
     };
 
     if (show) {
-      loadPaymentMethods();
+      loadData();
     }
   }, [show]);
 
@@ -53,11 +76,12 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy }) => 
     if (buy) {
       setFormData({
         paymentDate: buy.paymentDate.split("T")[0],
-        concept: buy.concept,
+        concept: buy.concept?._id || "",
         amount: buy.amount,
         paymentMethod: typeof buy.paymentMethod === "string"
           ? buy.paymentMethod
           : buy.paymentMethod._id,
+        provider: buy.provider ? (typeof buy.provider === "string" ? buy.provider : buy.provider._id) : "",
         description: buy.description || "",
       });
     } else {
@@ -66,6 +90,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy }) => 
         concept: "",
         amount: 0,
         paymentMethod: "",
+        provider: "",
         description: "",
       });
     }
@@ -74,7 +99,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy }) => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.concept.trim()) {
+    if (!formData.concept) {
       toast.error("El concepto es obligatorio");
       return;
     }
@@ -115,6 +140,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy }) => 
       concept: "",
       amount: 0,
       paymentMethod: "",
+      provider: "",
       description: "",
     });
     onHide();
@@ -175,19 +201,51 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy }) => 
             <Col md={12}>
               <Form.Group>
                 <Form.Label className="fw-semibold">
-                  Concepto <span className="text-danger">*</span>
+                  Proveedor
                 </Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Ej: COMPRA DE FLORES"
-                  value={formData.concept}
+                <Form.Select
+                  value={formData.provider}
                   onChange={(e) =>
-                    setFormData({ ...formData, concept: e.target.value.toUpperCase() })
+                    setFormData({ ...formData, provider: e.target.value })
                   }
-                  required
                   className="border-0 bg-light"
                   style={{ borderRadius: "10px", padding: "12px 16px" }}
-                />
+                >
+                  <option value="">Seleccionar proveedor (opcional)...</option>
+                  {providers.map((provider) => (
+                    <option key={provider._id} value={provider._id}>
+                      {provider.tradeName} - {provider.rfc}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+
+            <Col md={12}>
+              <Form.Group>
+                <Form.Label className="fw-semibold">
+                  Concepto <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Select
+                  value={formData.concept}
+                  onChange={(e) =>
+                    setFormData({ ...formData, concept: e.target.value })
+                  }
+                  required
+                  disabled={loadingConcepts}
+                  className="border-0 bg-light"
+                  style={{ borderRadius: "10px", padding: "12px 16px" }}
+                >
+                  <option value="">
+                    {loadingConcepts ? "Cargando conceptos..." : "Seleccionar concepto..."}
+                  </option>
+                  {expenseConcepts.map((concept) => (
+                    <option key={concept._id} value={concept._id}>
+                      {concept.name}
+                      {concept.description && ` - ${concept.description}`}
+                    </option>
+                  ))}
+                </Form.Select>
               </Form.Group>
             </Col>
 

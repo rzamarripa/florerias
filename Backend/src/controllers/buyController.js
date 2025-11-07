@@ -106,6 +106,8 @@ const getAllBuys = async (req, res) => {
       .populate('user', 'username email profile')
       .populate('branch', 'branchName branchCode')
       .populate('paymentMethod', 'name abbreviation')
+      .populate('provider', 'contactName tradeName legalName rfc')
+      .populate('concept', 'name description department')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -150,7 +152,9 @@ const getBuyById = async (req, res) => {
     const buy = await Buy.findById(id)
       .populate('user', 'username email profile')
       .populate('branch', 'branchName branchCode')
-      .populate('paymentMethod', 'name abbreviation');
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('provider', 'contactName tradeName legalName rfc')
+      .populate('concept', 'name description department');
 
     if (!buy) {
       return res.status(404).json({
@@ -199,6 +203,7 @@ const createBuy = async (req, res) => {
       concept,
       amount,
       paymentMethod,
+      provider,
       description
     } = req.body;
 
@@ -250,6 +255,7 @@ const createBuy = async (req, res) => {
       concept,
       amount,
       paymentMethod,
+      provider: provider || null,
       description: description || '',
       branch: userBranch._id
     });
@@ -260,7 +266,9 @@ const createBuy = async (req, res) => {
     const populatedBuy = await Buy.findById(savedBuy._id)
       .populate('user', 'username email profile')
       .populate('branch', 'branchName branchCode')
-      .populate('paymentMethod', 'name abbreviation');
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('provider', 'contactName tradeName legalName rfc')
+      .populate('concept', 'name description department');
 
     res.status(201).json({
       success: true,
@@ -350,7 +358,9 @@ const updateBuy = async (req, res) => {
     )
       .populate('user', 'username email profile')
       .populate('branch', 'branchName branchCode')
-      .populate('paymentMethod', 'name abbreviation');
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('provider', 'contactName tradeName legalName rfc')
+      .populate('concept', 'name description department');
 
     res.status(200).json({
       success: true,

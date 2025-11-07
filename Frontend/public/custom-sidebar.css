@@ -1,47 +1,151 @@
-/* Custom Sidebar Styles - Dark Theme (Inspinia Modern Default) */
-html[data-skin="modern"][data-menu-color="dark"] .sidenav-menu {
+html[data-skin=modern][data-menu-color=dark] .sidenav-menu {
   background: #171717 !important;
   border-right-color: #2a2a2a !important;
 }
-
-html[data-skin="modern"][data-menu-color="dark"] .side-nav-link {
+html[data-skin=modern][data-menu-color=dark] .side-nav-link {
   color: #ececf1 !important;
 }
-
-html[data-skin="modern"][data-menu-color="dark"] .side-nav-link:hover {
+html[data-skin=modern][data-menu-color=dark] .side-nav-link:hover {
   color: #ffffff !important;
   background: #2a2a2a !important;
 }
-
-html[data-skin="modern"][data-menu-color="dark"]
-  .side-nav-item.active
-  > .side-nav-link {
+html[data-skin=modern][data-menu-color=dark] .side-nav-item.active > .side-nav-link {
   color: #ffffff !important;
   background: #343541 !important;
 }
-
-html[data-skin="modern"][data-menu-color="dark"] .side-nav-title {
+html[data-skin=modern][data-menu-color=dark] .side-nav-title {
   color: #ececf1 !important;
   opacity: 0.6;
 }
-
-html[data-skin="modern"][data-menu-color="dark"] .menu-icon {
+html[data-skin=modern][data-menu-color=dark] .menu-icon {
   color: #ececf1 !important;
 }
-
-html[data-skin="modern"][data-menu-color="dark"]
-  .side-nav-item.active
-  .menu-icon {
+html[data-skin=modern][data-menu-color=dark] .side-nav-item.active .menu-icon {
   color: #ffffff !important;
 }
 
-html[data-skin="modern"][data-menu-color="dark"] .sub-menu .side-nav-link {
+html[data-skin=modern][data-menu-color=dark] .sub-menu .side-nav-link {
   color: #ececf1 !important;
 }
-
-html[data-skin="modern"][data-menu-color="dark"]
-  .sub-menu
-  .side-nav-link:hover {
+html[data-skin=modern][data-menu-color=dark] .sub-menu .side-nav-link:hover {
   color: #ffffff !important;
   background: #2a2a2a !important;
 }
+
+html[data-skin=modern][data-menu-color=blue-dark] .sidenav-menu {
+  background: linear-gradient(180deg, #1a2942 0%, #152238 50%, #0f1a2e 100%) !important;
+  border-right: 1px solid #1e3a5f !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+html[data-skin=modern][data-menu-color=blue-dark] .logo {
+  background: rgba(15, 26, 46, 0.3);
+  border-bottom: 1px solid rgba(66, 133, 244, 0.1);
+}
+html[data-skin=modern][data-menu-color=blue-dark] .logo .logo-light {
+  display: block !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .logo .logo-dark {
+  display: none !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .side-nav-link {
+  color: #a8c5e3 !important;
+  transition: all 0.3s ease;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .side-nav-link:hover {
+  color: #ffffff !important;
+  background: rgba(66, 133, 244, 0.15) !important;
+  transform: translateX(2px);
+}
+html[data-skin=modern][data-menu-color=blue-dark] .side-nav-link .menu-icon {
+  color: #a8c5e3 !important;
+  transition: color 0.3s ease;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .side-nav-link:hover .menu-icon {
+  color: #ffffff !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .side-nav-item.active > .side-nav-link {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #4285f4, #1967d2) !important;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+  font-weight: 500;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .side-nav-item.active > .side-nav-link .menu-icon {
+  color: #ffffff !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .side-nav-title {
+  color: #7a9dc2 !important;
+  opacity: 0.8;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sub-menu {
+  background: rgba(15, 26, 46, 0.4) !important;
+  border-radius: 6px;
+  padding: 5px 0;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sub-menu .side-nav-link {
+  color: #a8c5e3 !important;
+  padding-left: 45px;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sub-menu .side-nav-link:hover {
+  color: #ffffff !important;
+  background: rgba(66, 133, 244, 0.1) !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sub-menu .side-nav-item.active > .side-nav-link {
+  color: #ffffff !important;
+  background: rgba(66, 133, 244, 0.2) !important;
+  position: relative;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sub-menu .side-nav-item.active > .side-nav-link::before {
+  content: "";
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: #4285f4;
+  border-radius: 50%;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sidenav-user {
+  background: rgba(66, 133, 244, 0.08) !important;
+  border: 1px solid rgba(66, 133, 244, 0.15);
+  border-radius: 8px;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sidenav-user .sidenav-user-name {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sidenav-user .fs-12 {
+  color: #a8c5e3 !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sidenav-user .dropdown-toggle {
+  color: #a8c5e3 !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .sidenav-user .dropdown-toggle:hover {
+  color: #ffffff !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .button-on-hover {
+  color: #a8c5e3 !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .button-on-hover:hover {
+  color: #4285f4 !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .button-close-offcanvas {
+  color: #a8c5e3 !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .button-close-offcanvas:hover {
+  color: #ffffff !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .menu-arrow {
+  color: #7a9dc2 !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .badge {
+  background: rgba(66, 133, 244, 0.2) !important;
+  color: #ffffff !important;
+}
+html[data-skin=modern][data-menu-color=blue-dark] .simplebar-scrollbar::before {
+  background: rgba(66, 133, 244, 0.3) !important;
+}
+
+/*# sourceMappingURL=custom-sidebar.css.map */

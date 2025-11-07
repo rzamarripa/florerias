@@ -11,6 +11,7 @@ import {
   removeEmployeeFromBranch,
   getAvailableManagers,
   getUserBranches,
+  getCashiersByBranch,
 } from "../controllers/branchController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -23,6 +24,7 @@ router.use(protect);
 router.get("/", getAllBranches);
 router.get("/user/branches", getUserBranches);
 router.get("/available-managers", getAvailableManagers);
+router.get("/:id/cashiers", getCashiersByBranch);
 router.get("/:id", getBranchById);
 
 // Rutas POST

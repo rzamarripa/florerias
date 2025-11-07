@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { Table, Badge, Button, Spinner } from "react-bootstrap";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, DollarSign } from "lucide-react";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../services/sales";
 import { Sale } from "../types";
+import PaymentModal from "./PaymentModal";
 
 interface PendingPaymentsTableProps {
   filters: {
@@ -20,6 +21,8 @@ interface PendingPaymentsTableProps {
 const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const loadSales = async () => {
     try {
@@ -95,6 +98,20 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) 
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar la venta");
     }
+  };
+
+  const handleOpenPaymentModal = (sale: Sale) => {
+    setSelectedSale(sale);
+    setShowPaymentModal(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
+    setSelectedSale(null);
+  };
+
+  const handlePaymentAdded = () => {
+    loadSales();
   };
 
   const getStatusBadge = (status: string) => {
@@ -183,6 +200,16 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) 
                       <Button
                         variant="light"
                         size="sm"
+                        onClick={() => handleOpenPaymentModal(sale)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Gestionar pagos"
+                      >
+                        <DollarSign size={16} className="text-success" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
                         className="border-0"
                         style={{ borderRadius: "8px" }}
                         title="Ver detalles"
@@ -226,6 +253,15 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) 
           </div>
         </div>
       </div>
+
+      {selectedSale && (
+        <PaymentModal
+          show={showPaymentModal}
+          onHide={handleClosePaymentModal}
+          sale={selectedSale}
+          onPaymentAdded={handlePaymentAdded}
+        />
+      )}
     </>
   );
 };

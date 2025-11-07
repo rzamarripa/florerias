@@ -85,7 +85,7 @@ const BuysPage: React.FC = () => {
           filteredBuys = response.data.filter(
             (buy) =>
               buy.folio.toString().includes(searchTerm.toLowerCase()) ||
-              buy.concept.toLowerCase().includes(searchTerm.toLowerCase())
+              buy.concept?.name?.toLowerCase().includes(searchTerm.toLowerCase())
           );
         }
         setBuys(filteredBuys);
@@ -308,7 +308,7 @@ const BuysPage: React.FC = () => {
                         <td className="px-4 py-3">
                           {buy.paymentMethod?.name || "N/A"}
                         </td>
-                        <td className="px-4 py-3 fw-semibold">{buy.concept}</td>
+                        <td className="px-4 py-3 fw-semibold">{buy.concept?.name || "N/A"}</td>
                         <td className="px-4 py-3">{buy.description || "-"}</td>
                         <td className="px-4 py-3 text-end fw-semibold">
                           ${buy.amount.toLocaleString("es-MX", {

@@ -2,6 +2,7 @@
 export interface Sale {
   _id: string;
   orderNumber: string;
+  branchId: string | { _id: string; branchName: string; branchCode: string };
   clientInfo: {
     clientId?: string | null;
     name: string;

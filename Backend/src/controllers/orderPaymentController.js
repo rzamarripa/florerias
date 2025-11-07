@@ -44,10 +44,34 @@ export const createOrderPayment = async (req, res) => {
     order.advance += amount;
     order.remainingBalance -= amount;
     order.payments.push(payment._id);
+
+    // Si el saldo llega a 0, cambiar estatus a completado (Pagado)
+    if (order.remainingBalance === 0) {
+      order.status = 'completado';
+    }
+
     await order.save();
 
     // Actualizar el balance de la caja registradora
     cashRegister.currentBalance += amount;
+
+    // Buscar si ya existe un registro de esta orden en lastRegistry
+    const existingRegistryIndex = cashRegister.lastRegistry.findIndex(
+      reg => reg.orderId.toString() === orderId.toString()
+    );
+
+    if (existingRegistryIndex !== -1) {
+      // Si ya existe, agregar el nuevo paymentId al array
+      cashRegister.lastRegistry[existingRegistryIndex].paymentIds.push(payment._id);
+    } else {
+      // Si no existe, crear nuevo registro (aunque normalmente ya debería existir)
+      cashRegister.lastRegistry.push({
+        orderId: orderId,
+        paymentIds: [payment._id],
+        saleDate: new Date()
+      });
+    }
+
     await cashRegister.save();
 
     // Obtener el pago con sus referencias pobladas
@@ -136,6 +160,20 @@ export const deleteOrderPayment = async (req, res) => {
     const cashRegister = await CashRegister.findById(payment.cashRegisterId);
     if (cashRegister) {
       cashRegister.currentBalance -= payment.amount;
+
+      // Remover el paymentId del lastRegistry
+      const registryIndex = cashRegister.lastRegistry.findIndex(
+        reg => reg.orderId.toString() === payment.orderId.toString()
+      );
+
+      if (registryIndex !== -1) {
+        // Filtrar el paymentId del array
+        cashRegister.lastRegistry[registryIndex].paymentIds =
+          cashRegister.lastRegistry[registryIndex].paymentIds.filter(
+            payId => payId.toString() !== id.toString()
+          );
+      }
+
       await cashRegister.save();
     }
 
@@ -198,7 +236,7 @@ export const getAllOrderPayments = async (req, res) => {
 // Obtener pagos de órdenes filtrados por sucursal (para finanzas)
 export const getOrderPaymentsByBranch = async (req, res) => {
   try {
-    const { branchId, startDate, endDate, clientIds, paymentMethods } = req.query;
+    const { branchId, startDate, endDate, clientIds, paymentMethods, cashierId } = req.query;
     const userId = req.user?._id;
 
     if (!userId) {
@@ -288,23 +326,42 @@ export const getOrderPaymentsByBranch = async (req, res) => {
       });
     }
 
+    // Importar mongoose para conversión de ObjectId
+    const mongoose = (await import('mongoose')).default;
+
+    // Convertir branchIdsToSearch a ObjectId
+    const branchObjectIds = branchIdsToSearch.map(id =>
+      typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id
+    );
+
     // Aplicar filtro de sucursales
-    if (branchIdsToSearch.length === 1) {
-      orderQuery.branchId = branchIdsToSearch[0];
+    if (branchObjectIds.length === 1) {
+      orderQuery.branchId = branchObjectIds[0];
     } else {
-      orderQuery.branchId = { $in: branchIdsToSearch };
+      orderQuery.branchId = { $in: branchObjectIds };
     }
 
     // Filtrar por clientes si se especifica
     if (clientIds) {
       const clientIdsArray = Array.isArray(clientIds) ? clientIds : [clientIds];
-      orderQuery['clientInfo.clientId'] = { $in: clientIdsArray };
+      orderQuery['clientInfo.clientId'] = { $in: clientIdsArray.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
-    const orders = await Order.find(orderQuery).select('_id');
+    // Filtrar por cajero si se especifica
+    if (cashierId) {
+      orderQuery.cashier = new mongoose.Types.ObjectId(cashierId);
+    }
+
+    console.log('OrderQuery:', JSON.stringify(orderQuery, null, 2));
+    console.log('BranchIds:', branchObjectIds.map(id => id.toString()));
+
+    const orders = await Order.find(orderQuery).select('_id branchId cashier');
     const orderIds = orders.map(order => order._id);
 
     console.log(`Found ${orders.length} orders matching criteria`);
+    if (orders.length > 0) {
+      console.log('Sample order:', orders[0]);
+    }
 
     // Si no hay órdenes, retornar array vacío
     if (orderIds.length === 0) {

@@ -18,9 +18,9 @@ const buySchema = new Schema(
       type: Number,
     },
     concept: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "cv_expense_concept",
       required: [true, "El concepto es requerido"],
-      trim: true,
     },
     amount: {
       type: Number,
@@ -31,6 +31,10 @@ const buySchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "PaymentMethod",
       required: [true, "La forma de pago es requerida"],
+    },
+    provider: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_provider",
     },
     description: {
       type: String,
@@ -84,6 +88,7 @@ buySchema.pre("save", function (next) {
 buySchema.index({ branch: 1, folio: 1 }, { unique: true });
 buySchema.index({ user: 1 });
 buySchema.index({ paymentMethod: 1 });
+buySchema.index({ provider: 1 });
 buySchema.index({ paymentDate: 1 });
 buySchema.index({ createdAt: -1 });
 

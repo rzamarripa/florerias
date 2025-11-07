@@ -12,7 +12,7 @@ export type TopBarType = {
 
 export type SideNavType = {
     size: 'default' | 'compact' | 'condensed' | 'on-hover' | 'on-hover-active' | 'offcanvas';
-    color: 'light' | 'dark' | 'gray' | 'gradient' | 'image';
+    color: 'light' | 'dark' | 'gray' | 'gradient' | 'image' | 'blue-dark';
     user: boolean;
     isMobileMenuOpen: boolean;
 };

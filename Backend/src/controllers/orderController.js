@@ -121,6 +121,7 @@ const getAllOrders = async (req, res) => {
     const orders = await Order.find(filters)
       .populate('branchId', 'branchName branchCode')
       .populate('cashRegisterId', 'name isOpen')
+      .populate('cashier', 'name email')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
@@ -168,6 +169,7 @@ const getOrderById = async (req, res) => {
     const order = await Order.findById(id)
       .populate('branchId', 'branchName branchCode')
       .populate('cashRegisterId', 'name isOpen currentBalance')
+      .populate('cashier', 'name email')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
@@ -349,10 +351,19 @@ const createOrder = async (req, res) => {
       }
     }
 
+    // Validar que haya un usuario autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
     // Crear nueva orden
     const newOrder = new Order({
       branchId,
       cashRegisterId: cashRegisterId || null,
+      cashier: req.user._id, // Guardar el ID del usuario (cajero) que crea la orden
       clientInfo,
       salesChannel: salesChannel || 'tienda',
       items,
@@ -383,6 +394,9 @@ const createOrder = async (req, res) => {
 
     const savedOrder = await newOrder.save();
 
+    // Variable para guardar el ID del pago (si se crea uno)
+    let savedPaymentId = null;
+
     // Si hay un anticipo (advance > 0), crear el registro en OrderPayment
     if (advance && advance > 0 && cashRegisterId) {
       const orderPayment = new OrderPayment({
@@ -396,6 +410,7 @@ const createOrder = async (req, res) => {
       });
 
       const savedPayment = await orderPayment.save();
+      savedPaymentId = savedPayment._id;
 
       // Agregar la referencia del pago a la orden
       savedOrder.payments.push(savedPayment._id);
@@ -428,7 +443,7 @@ const createOrder = async (req, res) => {
     // Si hay caja registradora asignada, actualizar su balance
     if (cashRegisterId && advance > 0) {
       try {
-        // Agregar el monto del anticipo a la caja
+        // Agregar el monto del anticipo a la caja y registrar la orden con su pago
         await CashRegister.findByIdAndUpdate(
           cashRegisterId,
           {
@@ -436,6 +451,7 @@ const createOrder = async (req, res) => {
             $push: {
               lastRegistry: {
                 orderId: savedOrder._id,
+                paymentIds: savedPaymentId ? [savedPaymentId] : [], // Agregar el ID del pago en el array
                 saleDate: new Date()
               }
             }
@@ -451,6 +467,7 @@ const createOrder = async (req, res) => {
     const populatedOrder = await Order.findById(savedOrder._id)
       .populate('branchId', 'branchName branchCode')
       .populate('cashRegisterId', 'name isOpen currentBalance')
+      .populate('cashier', 'name email')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
@@ -536,6 +553,7 @@ const updateOrder = async (req, res) => {
     )
       .populate('branchId', 'branchName branchCode')
       .populate('cashRegisterId', 'name isOpen currentBalance')
+      .populate('cashier', 'name email')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
@@ -603,6 +621,7 @@ const updateOrderStatus = async (req, res) => {
     )
       .populate('branchId', 'branchName branchCode')
       .populate('cashRegisterId', 'name isOpen currentBalance')
+      .populate('cashier', 'name email')
       .populate('items.productId', 'nombre imagen')
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')

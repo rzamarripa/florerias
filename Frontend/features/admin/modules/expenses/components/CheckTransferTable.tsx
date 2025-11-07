@@ -120,7 +120,7 @@ const CheckTransferTable: React.FC<CheckTransferTableProps> = ({
                     <td className="py-3 px-4">
                       {new Date(expense.paymentDate).toLocaleDateString("es-MX")}
                     </td>
-                    <td className="py-3 px-4">{expense.concept}</td>
+                    <td className="py-3 px-4">{expense.concept?.name || "N/A"}</td>
                     <td className="py-3 px-4">
                       {expense.user?.profile?.fullName || expense.user?.username}
                     </td>

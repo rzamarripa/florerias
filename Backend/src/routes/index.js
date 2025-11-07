@@ -31,6 +31,8 @@ import eventRoutes from "./eventRoutes.js";
 import eventPaymentRoutes from "./eventPaymentRoutes.js";
 import financeRoutes from "./financeRoutes.js";
 import neighborhoodRoutes from "./neighborhoodRoutes.js";
+import providerRoutes from "./providerRoutes.js";
+import expenseConceptRoutes from "./expenseConceptRoutes.js";
 
 const router = Router();
 
@@ -65,5 +67,7 @@ router.use("/events", eventRoutes);
 router.use("/event-payments", eventPaymentRoutes);
 router.use("/finance", financeRoutes);
 router.use("/neighborhoods", neighborhoodRoutes);
+router.use("/providers", providerRoutes);
+router.use("/expense-concepts", expenseConceptRoutes);
 
 export default router;

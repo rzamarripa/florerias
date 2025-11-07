@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { Table, Badge, Button, Spinner } from "react-bootstrap";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, DollarSign } from "lucide-react";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../services/sales";
 import { Sale } from "../types";
+import PaymentModal from "./PaymentModal";
 
 interface CreditSalesTableProps {
   filters: {
@@ -21,6 +22,8 @@ interface CreditSalesTableProps {
 const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaymentMethodId }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const loadSales = async () => {
     if (!creditPaymentMethodId) {
@@ -113,6 +116,20 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
     }
   };
 
+  const handleOpenPaymentModal = (sale: Sale) => {
+    setSelectedSale(sale);
+    setShowPaymentModal(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
+    setSelectedSale(null);
+  };
+
+  const handlePaymentAdded = () => {
+    loadSales();
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { bg: string; text: string }> = {
       pendiente: { bg: "warning", text: "Pendiente" },
@@ -199,6 +216,16 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
                       <Button
                         variant="light"
                         size="sm"
+                        onClick={() => handleOpenPaymentModal(sale)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Gestionar pagos"
+                      >
+                        <DollarSign size={16} className="text-success" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
                         className="border-0"
                         style={{ borderRadius: "8px" }}
                         title="Ver detalles"
@@ -242,6 +269,15 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
           </div>
         </div>
       </div>
+
+      {selectedSale && (
+        <PaymentModal
+          show={showPaymentModal}
+          onHide={handleClosePaymentModal}
+          sale={selectedSale}
+          onPaymentAdded={handlePaymentAdded}
+        />
+      )}
     </>
   );
 };
