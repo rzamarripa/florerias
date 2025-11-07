@@ -220,7 +220,8 @@ const LayoutProvider = ({ children }: ChildrenType) => {
       settings.theme === "system" ? getSystemTheme() : settings.theme
     );
     toggleAttribute("data-topbar-color", settings.topBar.color);
-    toggleAttribute("data-menu-color", settings.sidenav.color);
+    // Forzar siempre el tema moderno con sidebar azul y blanco
+    toggleAttribute("data-menu-color", "light");
     toggleAttribute("data-sidenav-size", settings.sidenav.size);
     toggleAttribute("data-sidenav-user", settings.sidenav.user.toString());
     toggleAttribute("data-layout-position", settings.position);
