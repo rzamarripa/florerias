@@ -40,24 +40,15 @@ const UserProfile = () => {
                   height: "40px",
                   borderRadius: "50%",
                   fontSize: "16px",
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                  border: "2px solid rgba(255, 255, 255, 0.1)",
                 }}
               >
                 {user?.username.charAt(0).toUpperCase() || "U"}
               </div>
             )}
-            <span
-              className="sidenav-user-name fw-bold"
-              style={{ color: "#ffffff" }}
-            >
+            <span className="sidenav-user-name fw-bold">
               {user?.profile.fullName}
             </span>
-            <span
-              className="fs-12 fw-semibold"
-              data-lang="user-role"
-              style={{ color: "#94a3b8" }}
-            >
+            <span className="fs-12 fw-semibold" data-lang="user-role">
               {user?.role?.name || "Rol desconocido"}
             </span>
           </Link>

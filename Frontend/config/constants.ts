@@ -30,64 +30,58 @@ export const menuItems: MenuItemType[] = [
   { key: "menu", label: "Menu", isTitle: true },
 
   {
-    key: "panel",
-    label: "Panel de Control",
-    icon: ShieldUser,
+    key: "sucursal",
+    label: "Sucursal",
+    icon: Building2,
     children: [
       {
-        key: "sucursal",
-        label: "Sucursal",
-        icon: Building2,
-        children: [
-          {
-            key: "sucursales",
-            label: "Sucursales",
-            url: "/panel-de-control/sucursales",
-            icon: Building,
-          },
-          {
-            key: "cajas",
-            label: "Cajas Registradoras",
-            url: "/ventas/cajas",
-            icon: Wallet,
-          },
-          {
-            key: "nuevo_pedido",
-            label: "Nuevo Pedido",
-            url: "/sucursal/nuevo-pedido",
-            icon: Plus,
-          },
-          {
-            key: "ventas",
-            label: "Ventas",
-            url: "/sucursal/ventas",
-            icon: ShoppingCart,
-          },
-          {
-            key: "reparto",
-            label: "Reparto",
-            url: "/sucursal/reparto",
-            icon: DeliveryTruck,
-          },
-          {
-            key: "nuevo_gasto",
-            label: "Nuevo Gasto",
-            url: "/sucursal/nuevo-gasto",
-            icon: DollarSign,
-          },
-          {
-            key: "almacenes",
-            label: "Almacenes",
-            url: "/sucursal/almacenes",
-            icon: Warehouse,
-          },
+        key: "sucursales",
+        label: "Sucursales",
+        url: "/panel-de-control/sucursales",
+        icon: Building,
+      },
+
+      {
+        key: "nuevo_pedido",
+        label: "Nuevo Pedido",
+        url: "/sucursal/nuevo-pedido",
+        icon: Plus,
+      },
+      {
+        key: "ventas",
+        label: "Ventas",
+        url: "/sucursal/ventas",
+        icon: ShoppingCart,
+      },
+      {
+        key: "reparto",
+        label: "Reparto",
+        url: "/sucursal/reparto",
+        icon: DeliveryTruck,
+      },
+      {
+        key: "nuevo_gasto",
+        label: "Nuevo Gasto",
+        url: "/sucursal/nuevo-gasto",
+        icon: DollarSign,
+      },
+      {
+        key: "almacenes",
+        label: "Almacenes",
+        url: "/sucursal/almacenes",
+        icon: Warehouse,
+      },
       {
         key: "eventos",
         label: "Eventos",
         url: "/sucursal/eventos",
         icon: Calendar,
       },
-        ],
+      {
+        key: "cajas",
+        label: "Cajas Registradoras",
+        url: "/ventas/cajas",
+        icon: Wallet,
       },
       {
         key: "produccion",
@@ -213,7 +207,6 @@ export const menuItems: MenuItemType[] = [
         url: "/catalogos/colonias",
         icon: MapPinHouse,
       },
-      
     ],
   },
   {
