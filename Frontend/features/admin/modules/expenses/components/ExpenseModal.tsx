@@ -5,10 +5,9 @@ import { Modal, Button, Form, Spinner } from "react-bootstrap";
 import { expensesService } from "../services/expenses";
 import { Expense, CreateExpenseData, UpdateExpenseData } from "../types";
 import { cashRegistersService } from "../../cash-registers/services/cashRegisters";
-import { branchesService } from "../../branches/services/branches";
 import { expenseConceptsService } from "../../expenseConcepts/services/expenseConcepts";
-import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { toast } from "react-toastify";
 
 interface ExpenseModalProps {
@@ -26,7 +25,6 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingCashRegisters, setLoadingCashRegisters] = useState<boolean>(false);
-  const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
   const [loadingConcepts, setLoadingConcepts] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     paymentDate: new Date().toISOString().split("T")[0],
@@ -38,22 +36,20 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   });
 
   const [cashRegisters, setCashRegisters] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
   const [expenseConcepts, setExpenseConcepts] = useState<any[]>([]);
 
-  const { getUserId } = useUserSessionStore();
-  const { role, hasRole } = useUserRoleStore();
+  const { hasRole } = useUserRoleStore();
+  const { activeBranch } = useActiveBranchStore();
 
-  const userId = getUserId();
   const isAdmin = hasRole("Administrador") || hasRole("Admin");
   const isManager = hasRole("Gerente") || hasRole("Manager");
 
-  // Cargar sucursales si el usuario es Administrador
+  // Si es administrador con sucursal activa, usarla automáticamente
   useEffect(() => {
-    if (show && isAdmin) {
-      loadBranches();
+    if (show && isAdmin && activeBranch) {
+      setFormData((prev) => ({ ...prev, branchId: activeBranch._id }));
     }
-  }, [show, isAdmin]);
+  }, [show, isAdmin, activeBranch]);
 
   // Cargar cajas cuando se selecciona tipo "petty_cash"
   useEffect(() => {
@@ -61,12 +57,15 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
       if (isManager) {
         // Si es gerente, cargar sus cajas directamente
         loadCashRegistersByManager();
-      } else if (isAdmin && formData.branchId) {
-        // Si es admin y ya seleccionó una sucursal, cargar las cajas de esa sucursal
-        loadCashRegistersByBranch(formData.branchId);
+      } else if (isAdmin && (formData.branchId || activeBranch)) {
+        // Si es admin y ya seleccionó una sucursal o tiene sucursal activa, cargar las cajas de esa sucursal
+        const branchIdToUse = formData.branchId || activeBranch?._id;
+        if (branchIdToUse) {
+          loadCashRegistersByBranch(branchIdToUse);
+        }
       }
     }
-  }, [show, formData.expenseType, formData.branchId, isAdmin, isManager]);
+  }, [show, formData.expenseType, formData.branchId, isAdmin, isManager, activeBranch]);
 
   // Cargar conceptos de gasto cuando se abre el modal
   useEffect(() => {
@@ -96,21 +95,6 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
       });
     }
   }, [expense, show]);
-
-  const loadBranches = async () => {
-    try {
-      setLoadingBranches(true);
-      const response = await branchesService.getUserBranches();
-      if (response.success) {
-        setBranches(response.data);
-      }
-    } catch (error) {
-      console.error("Error loading branches:", error);
-      toast.error("Error al cargar las sucursales");
-    } finally {
-      setLoadingBranches(false);
-    }
-  };
 
   const loadCashRegistersByManager = async () => {
     try {
@@ -195,7 +179,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
     // Validar caja chica
     if (formData.expenseType === "petty_cash") {
-      if (isAdmin && !formData.branchId) {
+      if (isAdmin && !formData.branchId && !activeBranch) {
         toast.error("Por favor selecciona una sucursal");
         return;
       }
@@ -319,50 +303,42 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
             </div>
 
             {/* Sucursal (solo para Admin con petty_cash) */}
-            {formData.expenseType === "petty_cash" && isAdmin && (
+            {formData.expenseType === "petty_cash" && isAdmin && activeBranch && (
               <div className="col-md-6">
                 <Form.Group>
                   <Form.Label className="fw-semibold">
                     Sucursal <span className="text-danger">*</span>
                   </Form.Label>
-                  <Form.Select
-                    name="branchId"
-                    value={formData.branchId}
-                    onChange={(e) => {
-                      handleChange(e);
-                      // Resetear caja al cambiar sucursal
-                      setFormData((prev) => ({
-                        ...prev,
-                        branchId: e.target.value,
-                        cashRegisterId: "",
-                      }));
-                      setCashRegisters([]);
-                    }}
-                    required
-                    disabled={loadingBranches}
+                  <Form.Control
+                    type="text"
+                    value={activeBranch.branchName}
+                    disabled
+                    readOnly
                     style={{
                       borderRadius: "8px",
                       border: "2px solid #e9ecef",
+                      backgroundColor: "#f8f9fa",
                     }}
-                  >
-                    <option value="">
-                      {loadingBranches
-                        ? "Cargando sucursales..."
-                        : "Selecciona una sucursal"}
-                    </option>
-                    {branches.map((branch) => (
-                      <option key={branch._id} value={branch._id}>
-                        {branch.branchName}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  />
+                  <Form.Text className="text-muted">
+                    Sucursal activa asignada
+                  </Form.Text>
                 </Form.Group>
+              </div>
+            )}
+
+            {/* Alerta si no tiene sucursal seleccionada */}
+            {formData.expenseType === "petty_cash" && isAdmin && !activeBranch && (
+              <div className="col-12">
+                <div className="alert alert-warning mb-0" role="alert">
+                  <strong>Sucursal no seleccionada:</strong> Debes seleccionar una sucursal desde el menú lateral antes de crear un gasto de caja chica.
+                </div>
               </div>
             )}
 
             {/* Caja Registradora (para petty_cash) */}
             {formData.expenseType === "petty_cash" &&
-              ((isManager) || (isAdmin && formData.branchId)) && (
+              ((isManager) || (isAdmin && (formData.branchId || activeBranch))) && (
                 <div className="col-md-6">
                   <Form.Group>
                     <Form.Label className="fw-semibold">
@@ -513,7 +489,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
           </Button>
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || (isAdmin && !activeBranch && formData.expenseType === "petty_cash")}
             style={{
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               border: "none",

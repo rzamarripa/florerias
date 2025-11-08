@@ -15,6 +15,8 @@ import { toast } from "react-toastify";
 import { productListsService } from "./services/productLists";
 import { ProductList, ProductListFilters } from "./types";
 import ProductListActions from "./components/ProductListActions";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 const ProductListsPage: React.FC = () => {
   const [productLists, setProductLists] = useState<ProductList[]>([]);
@@ -27,6 +29,9 @@ const ProductListsPage: React.FC = () => {
     pages: 0,
   });
   const router = useRouter();
+  const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
 
   // Función para formatear números con separación de miles
   const formatNumber = (num: number): string => {
@@ -54,6 +59,15 @@ const ProductListsPage: React.FC = () => {
         filters.name = searchTerm;
       }
 
+      // Si es admin y tiene sucursal activa, filtrar por esa sucursal
+      if (isAdmin && activeBranch) {
+        filters.branchId = activeBranch._id;
+        console.log("🔍 [ProductLists] Filtrando por sucursal:", activeBranch.branchName, activeBranch._id);
+      } else {
+        console.log("🔍 [ProductLists] Sin filtro de sucursal - isAdmin:", isAdmin, "activeBranch:", activeBranch);
+      }
+
+      console.log("🔍 [ProductLists] Filtros enviados:", filters);
       const response = await productListsService.getAllProductLists(filters);
 
       if (response.data) {
@@ -73,7 +87,7 @@ const ProductListsPage: React.FC = () => {
 
   useEffect(() => {
     loadProductLists(true, 1);
-  }, [searchTerm]);
+  }, [searchTerm, activeBranch]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);

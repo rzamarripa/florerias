@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import { CashRegister, CreateCashRegisterData, Branch, User } from "../types";
 import { cashRegistersService } from "../services/cashRegisters";
 import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface CashRegisterModalProps {
   show: boolean;
@@ -23,7 +25,13 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
 }) => {
   const isEditing = !!cashRegister;
   const { getUserId } = useUserSessionStore();
+  const { activeBranch } = useActiveBranchStore();
+  const { role } = useUserRoleStore();
   const userId = getUserId();
+  const isAdministrator = role?.toLowerCase() === "administrador";
+
+  // Para administradores: verificar si hay sucursal seleccionada
+  const canCreate = !isAdministrator || (isAdministrator && activeBranch) || isEditing;
 
   const [formData, setFormData] = useState<CreateCashRegisterData>({
     name: "",
@@ -54,9 +62,16 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
         });
       } else {
         resetForm();
+        // Para administradores: pre-seleccionar activeBranch si existe
+        if (isAdministrator && activeBranch) {
+          setFormData(prev => ({
+            ...prev,
+            branchId: activeBranch._id
+          }));
+        }
       }
     }
-  }, [show, cashRegister, userId]);
+  }, [show, cashRegister, userId, isAdministrator, activeBranch]);
 
   const loadEmployeesByAdmin = async () => {
     try {
@@ -135,6 +150,12 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     e.preventDefault();
     setError(null);
 
+    // Validar sucursal para administradores
+    if (isAdministrator && !isEditing && !activeBranch) {
+      toast.error("Debes seleccionar una sucursal antes de crear una caja registradora");
+      return;
+    }
+
     if (!formData.name || !formData.branchId || !formData.managerId) {
       setError("El nombre, sucursal y gerente son obligatorios");
       return;
@@ -182,6 +203,17 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
 
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="p-4">
+          {/* Alerta para administradores sin sucursal seleccionada */}
+          {isAdministrator && !activeBranch && !isEditing && (
+            <Alert variant="warning" className="mb-3">
+              <Alert.Heading className="fs-6 fw-bold">Sucursal requerida</Alert.Heading>
+              <p className="mb-0 small">
+                Debes seleccionar una sucursal antes de crear una caja registradora.
+                Ve a tu perfil y selecciona una sucursal activa.
+              </p>
+            </Alert>
+          )}
+
           {error && (
             <Alert variant="danger" onClose={() => setError(null)} dismissible>
               {error}
@@ -213,28 +245,46 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                 </Form.Group>
               </Col>
 
-              {/* Sucursal */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Sucursal <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    name="branchId"
-                    value={formData.branchId}
-                    onChange={handleBranchChange}
-                    required
-                    style={{ borderRadius: "8px" }}
-                  >
-                    <option value="">Seleccione una sucursal</option>
-                    {branches.map((branch) => (
-                      <option key={branch._id} value={branch._id}>
-                        {branch.branchName}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+              {/* Sucursal - Solo mostrar select para NO administradores o cuando está editando */}
+              {(!isAdministrator || isEditing) && (
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">
+                      Sucursal <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Select
+                      name="branchId"
+                      value={formData.branchId}
+                      onChange={handleBranchChange}
+                      required
+                      disabled={isEditing}
+                      style={{ borderRadius: "8px" }}
+                    >
+                      <option value="">Seleccione una sucursal</option>
+                      {branches.map((branch) => (
+                        <option key={branch._id} value={branch._id}>
+                          {branch.branchName}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    {isEditing && (
+                      <Form.Text className="text-muted">
+                        La sucursal no puede modificarse al editar
+                      </Form.Text>
+                    )}
+                  </Form.Group>
+                </Col>
+              )}
+
+              {/* Mostrar nombre de sucursal seleccionada para administradores en modo creación */}
+              {isAdministrator && !isEditing && activeBranch && (
+                <Col md={12}>
+                  <Alert variant="info" className="d-flex align-items-center">
+                    <strong className="me-2">Sucursal:</strong>
+                    {activeBranch.branchName}
+                  </Alert>
+                </Col>
+              )}
 
               {/* Gerente */}
               <Col md={12}>
@@ -312,7 +362,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
           <Button
             type="submit"
             variant="primary"
-            disabled={saving || loading}
+            disabled={saving || loading || !canCreate}
             className="px-4"
             style={{
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",

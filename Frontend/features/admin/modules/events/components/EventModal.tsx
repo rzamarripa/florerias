@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
+import { Modal, Button, Form, Row, Col, Spinner, Alert } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { eventsService } from "../services/events";
 import { Event, CreateEventData, PaymentMethod } from "../types";
 import { clientsService } from "../../clients/services/clients";
 import { paymentMethodsService } from "../../payment-methods/services/paymentMethods";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface Client {
   _id: string;
@@ -37,7 +39,13 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
     paymentMethod: "",
   });
 
+  const { activeBranch } = useActiveBranchStore();
+  const { role } = useUserRoleStore();
+  const isAdministrator = role?.toLowerCase() === "administrador";
   const isEditing = !!event;
+
+  // Para administradores: verificar si hay sucursal seleccionada
+  const canCreate = !isAdministrator || (isAdministrator && activeBranch);
 
   // Cargar clientes activos y métodos de pago
   useEffect(() => {
@@ -96,6 +104,12 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validar sucursal para administradores
+    if (isAdministrator && !isEditing && !activeBranch) {
+      toast.error("Debes seleccionar una sucursal antes de crear un evento");
+      return;
+    }
+
     if (!formData.client) {
       toast.error("Selecciona un cliente");
       return;
@@ -124,11 +138,17 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
     try {
       setLoading(true);
 
+      // Para administradores: incluir branch en los datos
+      const dataToSend = {
+        ...formData,
+        ...(isAdministrator && activeBranch && !isEditing ? { branch: activeBranch._id } : {})
+      };
+
       if (isEditing && event) {
-        await eventsService.updateEvent(event._id, formData);
+        await eventsService.updateEvent(event._id, dataToSend);
         toast.success("Evento actualizado exitosamente");
       } else {
-        await eventsService.createEvent(formData);
+        await eventsService.createEvent(dataToSend);
         toast.success("Evento creado exitosamente");
       }
 
@@ -167,6 +187,17 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="p-4">
+          {/* Alerta para administradores sin sucursal seleccionada */}
+          {isAdministrator && !activeBranch && !isEditing && (
+            <Alert variant="warning" className="mb-3">
+              <Alert.Heading className="fs-6 fw-bold">Sucursal requerida</Alert.Heading>
+              <p className="mb-0 small">
+                Debes seleccionar una sucursal antes de crear un evento.
+                Ve a tu perfil y selecciona una sucursal activa.
+              </p>
+            </Alert>
+          )}
+
           <Row className="g-3">
             <Col md={12}>
               <Form.Group>
@@ -310,7 +341,7 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
           <Button
             type="submit"
             variant="primary"
-            disabled={loading}
+            disabled={loading || (!canCreate && !isEditing)}
             style={{
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               border: "none",

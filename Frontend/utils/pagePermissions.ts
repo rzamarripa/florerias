@@ -25,7 +25,7 @@ export const hasPagePermission = (
 };
 
 /**
- * Verifica si el usuario puede acceder a una página (debe tener al menos un módulo básico)
+ * Verifica si el usuario puede acceder a una página (debe tener el módulo 'ver')
  */
 export const canAccessPage = (
   allowedModules: PageModules[],
@@ -51,8 +51,10 @@ export const canAccessPage = (
     return false;
   }
 
-  // Si la página existe en allowedModules y tiene al menos un módulo, permitir acceso
-  return page.modules && page.modules.length > 0;
+  // Verificar que el usuario tenga el módulo 'ver' para esta página
+  return page.modules && page.modules.some(
+    (module) => module.name.toLowerCase() === 'ver'
+  );
 };
 
 /**

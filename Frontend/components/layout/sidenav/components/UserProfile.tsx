@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Settings } from "lucide-react";
 import {
   Dropdown,
@@ -7,13 +7,24 @@ import {
   DropdownItem,
   DropdownMenu,
   DropdownToggle,
+  Badge,
 } from "react-bootstrap";
 import { userDropdownItems } from "@/config/constants";
 import { useUserSessionStore } from "@/stores";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import Image from "next/image";
+import BranchSelectionModal from "@/components/branches/BranchSelectionModal";
+import { TbBuildingStore } from "react-icons/tb";
 
 const UserProfile = () => {
   const { user } = useUserSessionStore();
+  const { role } = useUserRoleStore();
+  const { activeBranch } = useActiveBranchStore();
+  const [showBranchModal, setShowBranchModal] = useState(false);
+
+  // Verificar si el usuario es Administrador
+  const isAdministrator = role?.toLowerCase() === "administrador";
 
   return (
     <div className="sidenav-user">
@@ -62,6 +73,21 @@ const UserProfile = () => {
             <span className="fs-12 fw-semibold" data-lang="user-role">
               {user?.role?.name || "Usuario"}
             </span>
+            {isAdministrator && activeBranch && (
+              <Badge
+                bg="success"
+                className="mt-1 d-inline-block text-truncate"
+                style={{
+                  fontSize: "11px",
+                  padding: "4px 8px",
+                  maxWidth: "100%"
+                }}
+                title={activeBranch.branchName}
+              >
+                <TbBuildingStore size={12} className="me-1" style={{ display: "inline" }} />
+                {activeBranch.branchName}
+              </Badge>
+            )}
           </Link>
         </div>
         <Dropdown>
@@ -97,9 +123,29 @@ const UserProfile = () => {
                 )}
               </Fragment>
             ))}
+
+            {/* Opción de Seleccionar Sucursales solo para Administradores */}
+            {isAdministrator && (
+              <>
+                <DropdownDivider />
+                <DropdownItem
+                  onClick={() => setShowBranchModal(true)}
+                  className="text-primary"
+                >
+                  <TbBuildingStore className="me-2 fs-17 align-middle" size={17} />
+                  <span className="align-middle">Seleccionar Sucursales</span>
+                </DropdownItem>
+              </>
+            )}
           </DropdownMenu>
         </Dropdown>
       </div>
+
+      {/* Modal de Selección de Sucursales */}
+      <BranchSelectionModal
+        show={showBranchModal}
+        onHide={() => setShowBranchModal(false)}
+      />
     </div>
   );
 };

@@ -15,6 +15,8 @@ import { toast } from "react-toastify";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 import { ordersService } from "./services/orders";
 import { Order, OrderStatus, KanbanColumn as KanbanColumnType } from "./types";
 import KanbanColumn from "./components/KanbanColumn";
@@ -26,6 +28,10 @@ const PizarronVentasPage: React.FC = () => {
   const [productFilter, setProductFilter] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
+
+  const { activeBranch } = useActiveBranchStore();
+  const { role } = useUserRoleStore();
+  const isAdministrator = role?.toLowerCase() === "administrador";
 
   // Definir las columnas del Kanban
   const columns: KanbanColumnType[] = [
@@ -56,6 +62,8 @@ const PizarronVentasPage: React.FC = () => {
       const response = await ordersService.getAllOrders({
         searchTerm,
         product: productFilter,
+        // Para administradores: usar activeBranch si existe
+        ...(isAdministrator && activeBranch ? { branchId: activeBranch._id } : {})
       });
 
       if (response.data) {
@@ -75,7 +83,7 @@ const PizarronVentasPage: React.FC = () => {
 
   useEffect(() => {
     loadOrders();
-  }, [searchTerm, productFilter]);
+  }, [searchTerm, productFilter, activeBranch]);
 
   // Usar el hook especializado para escuchar cambios en órdenes
   const { isConnected } = useOrderSocket({

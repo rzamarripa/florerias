@@ -168,8 +168,12 @@ const AppMenu = () => {
           .map((child) => filterMenuItem(child))
           .filter((child) => child !== null) as MenuItemType[];
 
-        // SIEMPRE mostrar menús y submenús principales (contenedores)
-        // incluso si sus children fueron filtrados
+        // Solo mostrar el menú dropdown si tiene al menos un hijo visible
+        // Si después del filtrado no quedan children, NO mostrar este menú
+        if (filteredChildren.length === 0) {
+          return null;
+        }
+
         return {
           ...item,
           children: filteredChildren,

@@ -118,6 +118,7 @@ export interface ProductListFilters {
   limit?: number;
   name?: string;
   companyId?: string;
+  branchId?: string;
   status?: boolean;
 }
 

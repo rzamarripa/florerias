@@ -49,10 +49,13 @@ const getAllOrders = async (req, res) => {
       });
     }
 
-    // Construir filtros
-    const filters = {
-      branchId: { $in: branchIds } // Filtrar solo órdenes de sucursales donde el usuario es administrador o gerente
-    };
+    // Construir filtros base
+    const filters = {};
+
+    // Si el usuario tiene sucursales asignadas, filtrar por ellas por defecto
+    if (branchIds.length > 0) {
+      filters.branchId = { $in: branchIds };
+    }
 
     if (status) {
       filters.status = status;
@@ -70,25 +73,32 @@ const getAllOrders = async (req, res) => {
       filters.orderNumber = { $regex: orderNumber, $options: 'i' };
     }
 
+    // Si se proporciona branchId específico, aplicar ese filtro
     if (branchId) {
-      // Si se proporciona branchId específico, verificar que esté en las sucursales del usuario
       const specificBranchId = new mongoose.Types.ObjectId(branchId);
-      const isBranchAllowed = branchIds.some(id => id.equals(specificBranchId));
 
-      if (isBranchAllowed) {
-        filters.branchId = specificBranchId;
+      // Si el usuario tiene sucursales asignadas, verificar que tenga acceso
+      if (branchIds.length > 0) {
+        const isBranchAllowed = branchIds.some(id => id.equals(specificBranchId));
+
+        if (isBranchAllowed) {
+          filters.branchId = specificBranchId;
+        } else {
+          // Si intenta acceder a una sucursal que no administra, retornar vacío
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
       } else {
-        // Si intenta acceder a una sucursal que no administra, retornar vacío
-        return res.status(200).json({
-          success: true,
-          data: [],
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total: 0,
-            pages: 0
-          }
-        });
+        // Si el usuario no tiene sucursales asignadas pero se proporciona branchId, filtrar por ese
+        filters.branchId = specificBranchId;
       }
     }
 

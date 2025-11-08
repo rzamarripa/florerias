@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Form, Button, Row, Col, Card } from "react-bootstrap";
+import { Form, Button, Row, Col, Card, Alert } from "react-bootstrap";
 import { Search } from "lucide-react";
 import Select from "react-select";
 import { clientsService } from "../../clients/services/clients";
@@ -9,6 +9,8 @@ import { paymentMethodsService } from "../../payment-methods/services/paymentMet
 import { branchesService } from "../../branches/services/branches";
 import { Client } from "../../clients/types";
 import { PaymentMethod } from "../types";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface FinanceFiltersProps {
   onSearch: (filters: {
@@ -41,11 +43,27 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [loadingCashiers, setLoadingCashiers] = useState(false);
 
+  const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
+
   useEffect(() => {
     loadClients();
     loadPaymentMethods();
-    loadUserBranches();
-  }, []);
+    // Solo cargar sucursales si NO es administrador
+    if (!isAdmin) {
+      loadUserBranches();
+    }
+  }, [isAdmin]);
+
+  // Si es administrador con sucursal activa, usarla automáticamente
+  useEffect(() => {
+    if (isAdmin && activeBranch) {
+      setBranchId(activeBranch._id);
+    } else if (isAdmin && !activeBranch) {
+      setBranchId(""); // Sin sucursal
+    }
+  }, [isAdmin, activeBranch]);
 
   // Cargar cajeros cuando se selecciona una sucursal
   useEffect(() => {
@@ -211,65 +229,95 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
             </Form.Group>
           </Col>
 
-          <Col md={3}>
-            <Form.Group>
-              <Form.Label className="fw-semibold text-muted small">
-                Sucursal *
-              </Form.Label>
-              <Form.Select
-                value={branchId}
-                onChange={(e) => setBranchId(e.target.value)}
-                style={{
-                  borderRadius: "10px",
-                  border: "1px solid #dee2e6",
-                  padding: "10px 14px",
-                }}
-                disabled={loadingBranches}
-              >
-                <option value="">
-                  {branches.length > 1
-                    ? "Selecciona una sucursal"
-                    : "Cargando..."}
-                </option>
-                {branches.map((branch) => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.branchName}
+          {isAdmin && activeBranch ? (
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="fw-semibold text-muted small">
+                  Sucursal *
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  value={activeBranch.branchName}
+                  disabled
+                  readOnly
+                  style={{
+                    borderRadius: "10px",
+                    border: "1px solid #dee2e6",
+                    padding: "10px 14px",
+                    backgroundColor: "#f8f9fa",
+                  }}
+                />
+              </Form.Group>
+            </Col>
+          ) : isAdmin && !activeBranch ? (
+            <Col md={3}>
+              <Alert variant="warning" className="mb-0 p-2 small">
+                <strong>Sin sucursal:</strong> Los resultados incluirán todas las sucursales
+              </Alert>
+            </Col>
+          ) : (
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="fw-semibold text-muted small">
+                  Sucursal *
+                </Form.Label>
+                <Form.Select
+                  value={branchId}
+                  onChange={(e) => setBranchId(e.target.value)}
+                  style={{
+                    borderRadius: "10px",
+                    border: "1px solid #dee2e6",
+                    padding: "10px 14px",
+                  }}
+                  disabled={loadingBranches}
+                >
+                  <option value="">
+                    {branches.length > 1
+                      ? "Selecciona una sucursal"
+                      : "Cargando..."}
                   </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-          </Col>
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.branchName}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+          )}
 
-          <Col md={3}>
-            <Form.Group>
-              <Form.Label className="fw-semibold text-muted small">
-                Cajero
-              </Form.Label>
-              <Form.Select
-                value={cashierId}
-                onChange={(e) => setCashierId(e.target.value)}
-                style={{
-                  borderRadius: "10px",
-                  border: "1px solid #dee2e6",
-                  padding: "10px 14px",
-                }}
-                disabled={!branchId || loadingCashiers}
-              >
-                <option value="">
-                  {!branchId
-                    ? "Selecciona una sucursal primero"
-                    : loadingCashiers
-                    ? "Cargando cajeros..."
-                    : "Todos los cajeros"}
-                </option>
-                {cashiers.map((cashier) => (
-                  <option key={cashier._id} value={cashier._id}>
-                    {cashier.profile?.fullName || `${cashier.profile?.name} ${cashier.profile?.lastName}`}
+          {(isAdmin && activeBranch) || !isAdmin ? (
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="fw-semibold text-muted small">
+                  Cajero
+                </Form.Label>
+                <Form.Select
+                  value={cashierId}
+                  onChange={(e) => setCashierId(e.target.value)}
+                  style={{
+                    borderRadius: "10px",
+                    border: "1px solid #dee2e6",
+                    padding: "10px 14px",
+                  }}
+                  disabled={!branchId || loadingCashiers}
+                >
+                  <option value="">
+                    {!branchId
+                      ? "Selecciona una sucursal primero"
+                      : loadingCashiers
+                      ? "Cargando cajeros..."
+                      : "Todos los cajeros"}
                   </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-          </Col>
+                  {cashiers.map((cashier) => (
+                    <option key={cashier._id} value={cashier._id}>
+                      {cashier.profile?.fullName || `${cashier.profile?.name} ${cashier.profile?.lastName}`}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+          ) : null}
 
           <Col md={3}>
             <Form.Group>

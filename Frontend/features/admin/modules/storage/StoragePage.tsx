@@ -15,6 +15,7 @@ import ViewStorageModal from "./components/ViewStorageModal";
 import AddProductsModal from "./components/AddProductsModal";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useSearchParams } from "next/navigation";
 
 const StoragePage: React.FC = () => {
@@ -42,6 +43,7 @@ const StoragePage: React.FC = () => {
 
   const { getUserId } = useUserSessionStore();
   const { getIsAdmin, hasRole } = useUserRoleStore();
+  const { activeBranch } = useActiveBranchStore();
   const userId = getUserId();
   const isAdmin = getIsAdmin();
   const isManager = hasRole("Gerente");
@@ -54,7 +56,7 @@ const StoragePage: React.FC = () => {
     if (userBranches.length > 0) {
       loadStorages(true, 1);
     }
-  }, [searchTerm, branchFilter, statusFilter, userBranches]);
+  }, [searchTerm, branchFilter, statusFilter, userBranches, activeBranch]);
 
   // Detectar si viene desde NewOrderPage y abrir modal correspondiente
   useEffect(() => {
@@ -150,7 +152,11 @@ const StoragePage: React.FC = () => {
         filters.search = searchTerm;
       }
 
-      if (branchFilter) {
+      // Para administradores: usar activeBranch del store
+      // Para otros roles: usar branchFilter
+      if (isAdmin && activeBranch) {
+        filters.branch = activeBranch._id;
+      } else if (!isAdmin && branchFilter) {
         filters.branch = branchFilter;
       }
 
@@ -293,8 +299,8 @@ const StoragePage: React.FC = () => {
               </InputGroup>
             </div>
 
-            {/* Filtro de sucursal solo para administradores */}
-            {isAdmin && (
+            {/* Filtro de sucursal solo para NO administradores (gerentes, etc.) */}
+            {!isAdmin && (
               <div className="col-md-4">
                 <Form.Select
                   value={branchFilter}
@@ -312,7 +318,7 @@ const StoragePage: React.FC = () => {
               </div>
             )}
 
-            <div className={isAdmin ? "col-md-4" : "col-md-8"}>
+            <div className={!isAdmin ? "col-md-4" : "col-md-8"}>
               <Form.Select
                 value={statusFilter}
                 onChange={handleStatusFilterChange}

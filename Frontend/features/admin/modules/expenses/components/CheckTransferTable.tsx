@@ -6,6 +6,8 @@ import { Pencil, Trash2 } from "lucide-react";
 import { expensesService } from "../services/expenses";
 import { Expense } from "../types";
 import { toast } from "react-toastify";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface CheckTransferTableProps {
   onEdit: (expense: Expense) => void;
@@ -21,15 +23,29 @@ const CheckTransferTable: React.FC<CheckTransferTableProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
+  const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const response = await expensesService.getAllExpenses({
+      const filters: any = {
         expenseType: "check_transfer",
         page: currentPage,
         limit: 10,
-      });
+      };
+
+      // Si es admin y tiene sucursal activa, filtrar por esa sucursal
+      if (isAdmin && activeBranch) {
+        filters.branchId = activeBranch._id;
+        console.log("🔍 [CheckTransfer] Filtrando por sucursal:", activeBranch.branchName, activeBranch._id);
+      } else {
+        console.log("🔍 [CheckTransfer] Sin filtro - isAdmin:", isAdmin, "activeBranch:", activeBranch);
+      }
+
+      console.log("🔍 [CheckTransfer] Filtros enviados:", filters);
+      const response = await expensesService.getAllExpenses(filters);
 
       if (response.success) {
         setExpenses(response.data);
@@ -46,7 +62,7 @@ const CheckTransferTable: React.FC<CheckTransferTableProps> = ({
 
   useEffect(() => {
     fetchExpenses();
-  }, [currentPage, refreshTrigger]);
+  }, [currentPage, refreshTrigger, activeBranch]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("¿Estás seguro de eliminar este gasto?")) {

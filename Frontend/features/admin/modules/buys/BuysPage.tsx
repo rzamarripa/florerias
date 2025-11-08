@@ -10,6 +10,8 @@ import BuyModal from "./components/BuyModal";
 import BuyActions from "./components/BuyActions";
 import { branchesService } from "../branches/services/branches";
 import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 const BuysPage: React.FC = () => {
   const [buys, setBuys] = useState<Buy[]>([]);
@@ -31,12 +33,15 @@ const BuysPage: React.FC = () => {
     pages: 0,
   });
   const userId = useUserSessionStore((state) => state.getUserId());
+  const { hasRole } = useUserRoleStore();
+  const { activeBranch } = useActiveBranchStore();
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
 
-  // Cargar sucursales del usuario
+  // Cargar sucursales del usuario (solo para no administradores)
   useEffect(() => {
     const loadUserBranches = async () => {
       try {
-        if (!userId) return;
+        if (!userId || isAdmin) return;
         const response = await branchesService.getUserBranches();
         if (response.data) {
           setUserBranches(response.data);
@@ -51,7 +56,16 @@ const BuysPage: React.FC = () => {
     };
 
     loadUserBranches();
-  }, [userId]);
+  }, [userId, isAdmin]);
+
+  // Si es administrador con sucursal activa, usarla automáticamente
+  useEffect(() => {
+    if (isAdmin && activeBranch) {
+      setSelectedBranch(activeBranch._id);
+    } else if (isAdmin && !activeBranch) {
+      setSelectedBranch(""); // Permitir búsqueda sin filtro
+    }
+  }, [isAdmin, activeBranch]);
 
   const loadBuys = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -74,8 +88,13 @@ const BuysPage: React.FC = () => {
 
       if (selectedBranch) {
         filters.branchId = selectedBranch;
+        console.log("🔍 [Buys] Filtrando por sucursal selectedBranch:", selectedBranch);
+      } else {
+        console.log("🔍 [Buys] Sin filtro de sucursal - selectedBranch:", selectedBranch);
       }
 
+      console.log("🔍 [Buys] isAdmin:", isAdmin, "activeBranch:", activeBranch);
+      console.log("🔍 [Buys] Filtros enviados:", filters);
       const response = await buysService.getAllBuys(filters);
 
       if (response.data) {
@@ -103,10 +122,12 @@ const BuysPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (userBranches.length > 0) {
+    // Para administradores: cargar siempre (con o sin sucursal)
+    // Para no administradores: cargar solo si hay sucursales
+    if (isAdmin || userBranches.length > 0) {
       loadBuys(true, 1);
     }
-  }, [startDate, endDate, selectedBranch, searchTerm, userBranches]);
+  }, [startDate, endDate, selectedBranch, searchTerm, userBranches, isAdmin]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);

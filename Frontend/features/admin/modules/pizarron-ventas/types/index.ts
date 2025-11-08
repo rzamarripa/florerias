@@ -79,6 +79,7 @@ export interface OrderFilters {
   status?: OrderStatus;
   searchTerm?: string;
   product?: string;
+  branchId?: string;
 }
 
 // API Response

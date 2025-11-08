@@ -16,6 +16,7 @@ import CashRegisterActions from "./components/CashRegisterActions";
 import CashRegisterModal from "./components/CashRegisterModal";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { branchesService } from "../branches/services/branches";
 
 const CashRegistersPage: React.FC = () => {
@@ -32,13 +33,14 @@ const CashRegistersPage: React.FC = () => {
   });
 
   const { getIsAdmin, getIsCashier } = useUserRoleStore();
+  const { activeBranch } = useActiveBranchStore();
   const isAdmin = getIsAdmin();
   const isCashier = getIsCashier();
 
-  // Cargar sucursales disponibles para el filtro (solo para admins)
+  // Cargar sucursales disponibles para el filtro (solo para NO admins - gerentes, etc.)
   const loadBranches = async () => {
-    // Solo los admins pueden ver todas las sucursales para filtrar
-    if (!isAdmin) return;
+    // Solo los NO admins necesitan el select de sucursales
+    if (isAdmin) return;
 
     try {
       const response = await branchesService.getAllBranches({ limit: 100 });
@@ -64,7 +66,11 @@ const CashRegistersPage: React.FC = () => {
         limit: pagination.limit,
       };
 
-      if (branchFilter) {
+      // Para administradores: usar activeBranch del store
+      // Para otros roles: usar branchFilter
+      if (isAdmin && activeBranch) {
+        filters.branchId = activeBranch._id;
+      } else if (!isAdmin && branchFilter) {
         filters.branchId = branchFilter;
       }
 
@@ -85,17 +91,17 @@ const CashRegistersPage: React.FC = () => {
     }
   };
 
-  // Cargar sucursales al montar el componente (solo para admins)
+  // Cargar sucursales al montar el componente (solo para NO admins)
   useEffect(() => {
-    if (isAdmin) {
+    if (!isAdmin) {
       loadBranches();
     }
   }, [isAdmin]);
 
-  // Cargar cajas registradoras cuando cambian los filtros
+  // Cargar cajas registradoras cuando cambian los filtros o activeBranch
   useEffect(() => {
     loadCashRegisters(true, 1);
-  }, [branchFilter]);
+  }, [branchFilter, activeBranch]);
 
   const handleBranchFilterChange = (
     e: React.ChangeEvent<HTMLSelectElement>
@@ -189,8 +195,8 @@ const CashRegistersPage: React.FC = () => {
         )}
       </div>
 
-      {/* Filters - Solo para admins */}
-      {isAdmin && (
+      {/* Filters - Solo para NO admins (gerentes, cajeros, etc.) */}
+      {!isAdmin && (
         <div
           className="card border-0 shadow-sm mb-4"
           style={{ borderRadius: "15px" }}

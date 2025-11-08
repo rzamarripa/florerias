@@ -25,6 +25,9 @@ import { Material } from "../materials/types";
 import DesgloseModal from "./components/DesgloseModal";
 import { branchesService } from "../branches/services/branches";
 import { Branch } from "../branches/types";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { isAdministrator } from "@/utils/pagePermissions";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 const NewProductListPage: React.FC = () => {
   const router = useRouter();
@@ -34,6 +37,9 @@ const NewProductListPage: React.FC = () => {
 
   const { getUserId } = useUserSessionStore();
   const userId = getUserId();
+  const { role } = useUserRoleStore();
+  const { activeBranch } = useActiveBranchStore();
+  const isAdmin = isAdministrator(role);
 
   const [formData, setFormData] = useState<CreateProductListData>({
     name: "",
@@ -74,12 +80,19 @@ const NewProductListPage: React.FC = () => {
     loadMaterials();
   }, []);
 
-  // Cargar sucursales cuando se selecciona una empresa
+  // Cargar sucursales cuando se selecciona una empresa (solo para no administradores)
   useEffect(() => {
-    if (formData.company) {
+    if (formData.company && !isAdmin) {
       loadBranches();
     }
-  }, [formData.company]);
+  }, [formData.company, isAdmin]);
+
+  // Si es administrador y tiene sucursal activa, usarla automáticamente
+  useEffect(() => {
+    if (isAdmin && activeBranch) {
+      setFormData((prev) => ({ ...prev, branch: activeBranch._id }));
+    }
+  }, [isAdmin, activeBranch]);
 
   // Cargar lista de productos si estamos editando
   useEffect(() => {
@@ -420,32 +433,61 @@ const NewProductListPage: React.FC = () => {
                 </Form.Group>
               </Col>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Sucursal <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.branch}
-                    onChange={(e) =>
-                      setFormData({ ...formData, branch: e.target.value })
-                    }
-                    required
-                    className="py-2"
-                    disabled={!formData.company || branches.length === 0}
-                  >
-                    <option value="">-- Seleccionar sucursal --</option>
-                    {branches.map((branch) => (
-                      <option key={branch._id} value={branch._id}>
-                        {branch.branchName}
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    Puede haber múltiples listas por sucursal, pero solo una estará activa
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+              {isAdmin && activeBranch ? (
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">
+                      Sucursal <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={activeBranch.branchName}
+                      disabled
+                      readOnly
+                      className="py-2"
+                    />
+                    <Form.Text className="text-muted">
+                      Sucursal activa asignada
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              ) : isAdmin && !activeBranch ? (
+                <Col md={6}>
+                  <Alert variant="warning" className="mb-0">
+                    <Alert.Heading className="h6">Sucursal no seleccionada</Alert.Heading>
+                    <p className="mb-0 small">
+                      Debes seleccionar una sucursal desde el menú lateral antes de crear una lista de productos.
+                    </p>
+                  </Alert>
+                </Col>
+              ) : (
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">
+                      Sucursal <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Select
+                      value={formData.branch}
+                      onChange={(e) =>
+                        setFormData({ ...formData, branch: e.target.value })
+                      }
+                      required
+                      className="py-2"
+                      disabled={!formData.company || branches.length === 0}
+                    >
+                      <option value="">-- Seleccionar sucursal --</option>
+                      {branches.map((branch) => (
+                        <option key={branch._id} value={branch._id}>
+                          {branch.branchName}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Text className="text-muted">
+                      Puede haber múltiples listas por sucursal, pero solo una estará activa
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              )}
             </Row>
           </Card.Body>
         </Card>
@@ -621,7 +663,7 @@ const NewProductListPage: React.FC = () => {
             type="submit"
             variant="primary"
             size="lg"
-            disabled={loading}
+            disabled={loading || (isAdmin && !activeBranch)}
             className="d-flex align-items-center gap-2 px-5"
           >
             <Save size={18} />

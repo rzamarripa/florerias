@@ -209,7 +209,8 @@ const createEvent = async (req, res) => {
       orderDate,
       totalAmount,
       totalPaid,
-      paymentMethod
+      paymentMethod,
+      branch: branchId
     } = req.body;
 
     const userId = req.user?._id;
@@ -257,19 +258,40 @@ const createEvent = async (req, res) => {
       }
     }
 
-    // Buscar la sucursal del usuario (administrador o gerente)
-    const userBranch = await Branch.findOne({
-      $or: [
-        { administrator: userId },
-        { manager: userId }
-      ]
-    });
+    // Determinar la sucursal a usar
+    let userBranch;
 
-    if (!userBranch) {
-      return res.status(403).json({
-        success: false,
-        message: 'El usuario no está asignado como administrador o gerente de ninguna sucursal'
+    if (branchId) {
+      // Si se proporciona branchId, verificar que el usuario tenga acceso a esa sucursal
+      userBranch = await Branch.findOne({
+        _id: branchId,
+        $or: [
+          { administrator: userId },
+          { manager: userId }
+        ]
       });
+
+      if (!userBranch) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para crear eventos en esta sucursal'
+        });
+      }
+    } else {
+      // Si no se proporciona branchId, buscar la primera sucursal del usuario
+      userBranch = await Branch.findOne({
+        $or: [
+          { administrator: userId },
+          { manager: userId }
+        ]
+      });
+
+      if (!userBranch) {
+        return res.status(403).json({
+          success: false,
+          message: 'El usuario no está asignado como administrador o gerente de ninguna sucursal'
+        });
+      }
     }
 
     // Crear nuevo evento
