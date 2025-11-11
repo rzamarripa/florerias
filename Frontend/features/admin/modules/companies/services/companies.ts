@@ -113,4 +113,27 @@ export const companiesService = {
     const response = await apiCall<Company>("/companies/my-company");
     return response.data;
   },
+
+  getCompanyByBranchId: async (branchId: string) => {
+    const response = await apiCall<{
+      success: boolean;
+      data: {
+        companyName: string;
+        rfc: string;
+        address: {
+          street: string;
+          externalNumber: string;
+          internalNumber?: string;
+          neighborhood: string;
+          city: string;
+          state: string;
+          postalCode: string;
+        };
+        phone: string;
+        email: string;
+        branchName: string;
+      }
+    }>(`/companies/branch/${branchId}`);
+    return response as any;
+  },
 };

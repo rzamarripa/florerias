@@ -17,9 +17,10 @@ interface BuyModalProps {
   onHide: () => void;
   onSuccess?: () => void;
   buy?: Buy;
+  branchId?: string;
 }
 
-const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy }) => {
+const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branchId }) => {
   const [loading, setLoading] = useState(false);
   const [loadingConcepts, setLoadingConcepts] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -121,7 +122,9 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy }) => 
         await buysService.updateBuy(buy._id, formData);
         toast.success("Compra actualizada exitosamente");
       } else {
-        await buysService.createBuy(formData);
+        // Incluir el branchId en la creación si se proporciona
+        const createData = branchId ? { ...formData, branch: branchId } : formData;
+        await buysService.createBuy(createData);
         toast.success("Compra creada exitosamente");
       }
 

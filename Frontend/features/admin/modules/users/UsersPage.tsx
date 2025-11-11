@@ -10,8 +10,14 @@ import UserActions from "./components/Actions";
 import UserModal from "./components/UserModal";
 import { usersService } from "./services/users";
 import { User } from "./types";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 const UsersPage: React.FC = () => {
+  const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
+
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -44,12 +50,24 @@ const UsersPage: React.FC = () => {
       if (isInitial) {
         setLoading(true);
       }
-      const response = await usersService.getAllUsers({
+
+      const params: any = {
         page,
         limit: pagination.limit,
         ...(searchTerm && { username: searchTerm }),
         ...(statusFilter && { estatus: statusFilter }),
-      });
+      };
+
+      // Si es admin y tiene sucursal activa, filtrar por esa sucursal
+      if (isAdmin && activeBranch) {
+        params.branchId = activeBranch._id;
+        console.log("🔍 [Users] Filtrando por sucursal:", activeBranch.branchName, activeBranch._id);
+      } else {
+        console.log("🔍 [Users] Sin filtro de sucursal - isAdmin:", isAdmin, "activeBranch:", activeBranch);
+      }
+
+      console.log("🔍 [Users] Filtros enviados:", params);
+      const response = await usersService.getAllUsers(params);
 
       console.log(response.data);
 
@@ -74,7 +92,7 @@ const UsersPage: React.FC = () => {
 
   useEffect(() => {
     loadUsers(true, 1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, activeBranch]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);

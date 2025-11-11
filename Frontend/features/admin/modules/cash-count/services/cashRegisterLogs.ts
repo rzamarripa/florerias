@@ -5,6 +5,7 @@ export interface CashRegisterLogFilters {
   page?: number;
   limit?: number;
   cashRegisterId?: string;
+  branchId?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -22,7 +23,7 @@ export interface GetCashRegisterLogsResponse {
 
 export const cashRegisterLogsService = {
   getAllCashRegisterLogs: async (filters: CashRegisterLogFilters = {}): Promise<GetCashRegisterLogsResponse> => {
-    const { page = 1, limit = 10, cashRegisterId, startDate, endDate } = filters;
+    const { page = 1, limit = 10, cashRegisterId, branchId, startDate, endDate } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -30,6 +31,7 @@ export const cashRegisterLogsService = {
     });
 
     if (cashRegisterId) searchParams.append('cashRegisterId', cashRegisterId);
+    if (branchId) searchParams.append('branchId', branchId);
     if (startDate) searchParams.append('startDate', startDate);
     if (endDate) searchParams.append('endDate', endDate);
 

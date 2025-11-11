@@ -386,6 +386,7 @@ const BuysPage: React.FC = () => {
         show={showModal}
         onHide={() => setShowModal(false)}
         onSuccess={handleBuySaved}
+        branchId={activeBranch?._id}
       />
     </div>
   );

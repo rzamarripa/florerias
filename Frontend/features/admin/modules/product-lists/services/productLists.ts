@@ -12,7 +12,7 @@ import {
 
 export const productListsService = {
   getAllProductLists: async (filters: ProductListFilters = {}): Promise<GetProductListsResponse> => {
-    const { page = 1, limit = 10, name, companyId, status } = filters;
+    const { page = 1, limit = 10, name, companyId, branchId, status } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -21,15 +21,16 @@ export const productListsService = {
 
     if (name) searchParams.append('name', name);
     if (companyId) searchParams.append('companyId', companyId);
+    if (branchId) searchParams.append('branchId', branchId);
     if (status !== undefined) searchParams.append('status', status.toString());
 
     const response = await apiCall<GetProductListsResponse>(`/product-lists?${searchParams}`);
-    return response;
+    return response as any;
   },
 
   getProductListById: async (productListId: string): Promise<GetProductListByIdResponse> => {
     const response = await apiCall<GetProductListByIdResponse>(`/product-lists/${productListId}`);
-    return response;
+    return response as any;
   },
 
   createProductList: async (productListData: CreateProductListData): Promise<CreateProductListResponse> => {
@@ -37,7 +38,7 @@ export const productListsService = {
       method: "POST",
       body: JSON.stringify(productListData),
     });
-    return response;
+    return response as any;
   },
 
   updateProductList: async (
@@ -48,7 +49,7 @@ export const productListsService = {
       method: "PUT",
       body: JSON.stringify(productListData),
     });
-    return response;
+    return response as any;
   },
 
   updateProductListStatus: async (
@@ -59,14 +60,14 @@ export const productListsService = {
       method: "PUT",
       body: JSON.stringify({ status }),
     });
-    return response;
+    return response as any;
   },
 
   deleteProductList: async (productListId: string): Promise<{ success: boolean; message: string }> => {
     const response = await apiCall<{ success: boolean; message: string }>(`/product-lists/${productListId}`, {
       method: "DELETE",
     });
-    return response;
+    return response as any;
   },
 
   getProductListByBranch: async (branchId: string): Promise<GetProductListByBranchResponse> => {

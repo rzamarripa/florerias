@@ -224,6 +224,10 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
           ...(formData.expenseType === "petty_cash" && {
             cashRegisterId: formData.cashRegisterId,
           }),
+          // Enviar branchId si el usuario es administrador con sucursal activa
+          ...(isAdmin && activeBranch && {
+            branchId: activeBranch._id,
+          }),
         };
 
         const response = await expensesService.createExpense(createData);

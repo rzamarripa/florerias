@@ -223,6 +223,7 @@ export const getAllUsers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const filters = {};
+    const branchId = req.query.branchId;
 
     if (req.query.estatus !== undefined) {
       filters["profile.estatus"] = req.query.estatus === "true";
@@ -241,10 +242,18 @@ export const getAllUsers = async (req, res) => {
         filters._id = { $in: administrators };
         }
     if (userRole === "Administrador") {
-      const branches = await Branch.find({
-        administrator: currentUser._id,
-      });
-      // Obtener todos los empleados y managers de las sucursales donde el usuario es administrador
+      let branchQuery = {
+        administrator: currentUser._id
+      };
+
+      // Si se proporciona un branchId específico, filtrar solo por esa sucursal
+      if (branchId) {
+        branchQuery._id = branchId;
+      }
+
+      const branches = await Branch.find(branchQuery);
+
+      // Obtener todos los empleados y managers de las sucursales filtradas
       const userIds = branches.reduce((acc, branch) => {
         // Agregar el manager
         if (branch.manager) {

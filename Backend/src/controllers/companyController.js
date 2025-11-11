@@ -761,3 +761,61 @@ export const updateCompanyBranches = async (req, res) => {
     });
   }
 };
+
+// Obtener datos de empresa por ID de sucursal (para tickets de venta)
+export const getCompanyByBranchId = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    // Buscar la sucursal
+    const branch = await Branch.findById(branchId);
+
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Sucursal no encontrada",
+      });
+    }
+
+    // Buscar la empresa asociada a la sucursal
+    const company = await Company.findById(branch.companyId).select(
+      "legalName tradeName rfc fiscalAddress primaryContact"
+    );
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Empresa no encontrada",
+      });
+    }
+
+    // Construir la respuesta con los datos necesarios para el ticket
+    const ticketData = {
+      companyName: company.tradeName || company.legalName,
+      rfc: company.rfc,
+      address: {
+        street: branch.address.street,
+        externalNumber: branch.address.externalNumber,
+        internalNumber: branch.address.internalNumber || "",
+        neighborhood: branch.address.neighborhood,
+        city: branch.address.city,
+        state: branch.address.state,
+        postalCode: branch.address.postalCode,
+      },
+      phone: branch.contactPhone,
+      email: branch.contactEmail,
+      branchName: branch.branchName,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: ticketData,
+    });
+  } catch (error) {
+    console.error("Error al obtener datos de empresa por sucursal:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error al obtener datos de la empresa",
+    });
+  }
+};

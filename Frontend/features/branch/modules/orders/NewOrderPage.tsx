@@ -38,10 +38,14 @@ import { neighborhoodsService } from "@/features/admin/modules/neighborhoods/ser
 import { Neighborhood } from "@/features/admin/modules/neighborhoods/types";
 import { toast } from "react-toastify";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { companiesService } from "@/features/admin/modules/companies/services/companies";
+import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 
 const NewOrderPage = () => {
   const router = useRouter();
   const { getIsCashier } = useUserRoleStore();
+  const { user } = useUserSessionStore();
   const isCashier = getIsCashier();
 
   const [clients, setClients] = useState<Client[]>([]);
@@ -618,6 +622,87 @@ const NewOrderPage = () => {
     }
   };
 
+  // Generar e imprimir ticket de venta
+  const generateAndPrintSaleTicket = async (orderData: any) => {
+    if (!user) {
+      console.error("No hay usuario logueado");
+      return;
+    }
+
+    try {
+      // Obtener datos de la empresa/sucursal
+      const companyResponse = await companiesService.getCompanyByBranchId(orderData.branchId._id);
+
+      if (!companyResponse.success || !companyResponse.data) {
+        throw new Error("No se pudieron obtener los datos de la empresa");
+      }
+
+      // Buscar el método de pago seleccionado para obtener su nombre
+      const selectedPaymentMethod = paymentMethods.find(
+        (pm) => pm._id === (typeof orderData.paymentMethod === 'string' ? orderData.paymentMethod : orderData.paymentMethod._id)
+      );
+
+      // Construir datos para el ticket
+      const ticketData: SaleTicketData = {
+        order: {
+          orderNumber: orderData.orderNumber,
+          createdAt: orderData.createdAt,
+          clientInfo: {
+            name: orderData.clientInfo.name,
+            phone: orderData.clientInfo.phone || "",
+          },
+          deliveryData: {
+            recipientName: orderData.deliveryData.recipientName,
+            deliveryDateTime: orderData.deliveryData.deliveryDateTime,
+            message: orderData.deliveryData.message || "",
+            street: orderData.deliveryData.street,
+            reference: orderData.deliveryData.reference,
+          },
+          items: orderData.items.map((item: any) => ({
+            quantity: item.quantity,
+            productName: item.productName,
+            amount: item.amount,
+          })),
+          subtotal: orderData.subtotal,
+          discount: orderData.discount,
+          discountType: orderData.discountType,
+          total: orderData.total,
+          advance: orderData.advance,
+          remainingBalance: orderData.remainingBalance,
+          shippingType: orderData.shippingType,
+          deliveryPrice: orderData.deliveryData?.deliveryPrice || 0,
+          paymentMethod: selectedPaymentMethod?.name || "N/A",
+        },
+        company: companyResponse.data,
+        cashier: {
+          fullName: user.profile?.fullName || "Cajero",
+        },
+        payments: orderData.payments || [],
+      };
+
+      // Generar HTML del ticket
+      const ticketHTML = generateSaleTicket(ticketData);
+
+      // Crear ventana para imprimir
+      const printWindow = window.open("", "_blank", "width=800,height=600");
+
+      if (printWindow) {
+        printWindow.document.write(ticketHTML);
+        printWindow.document.close();
+
+        // Esperar a que se cargue el contenido
+        printWindow.onload = () => {
+          printWindow.focus();
+        };
+      } else {
+        toast.error("No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador.");
+      }
+    } catch (error) {
+      console.error("Error generando ticket de venta:", error);
+      toast.error("Error al generar el ticket de venta");
+    }
+  };
+
   // Enviar formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -658,6 +743,9 @@ const NewOrderPage = () => {
       toast.success(
         `¡Orden ${response.data.orderNumber || ""} creada exitosamente!`
       );
+
+      // Generar e imprimir ticket de venta
+      generateAndPrintSaleTicket(response.data);
 
       setSuccess(true);
 

@@ -26,14 +26,16 @@ export const usersService = {
       limit?: number;
       username?: string;
       estatus?: string;
+      branchId?: string;
     } = {}
   ) => {
-    const { page = 1, limit = 10, username, estatus } = params;
+    const { page = 1, limit = 10, username, estatus, branchId } = params;
     const searchParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       ...(username && { username }),
       ...(estatus && { estatus }),
+      ...(branchId && { branchId }),
     });
     const response = await apiCall<User[]>(`/users?${searchParams}`);
     return response;

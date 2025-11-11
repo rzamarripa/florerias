@@ -2,12 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import { Table, Badge, Button, Spinner } from "react-bootstrap";
-import { Eye, Edit, Trash2, DollarSign } from "lucide-react";
+import { Eye, Edit, Trash2, DollarSign, Printer } from "lucide-react";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../services/sales";
 import { Sale } from "../types";
 import PaymentModal from "./PaymentModal";
+import SaleDetailModal from "./SaleDetailModal";
+import { reprintSaleTicket } from "../utils/reprintSaleTicket";
+import { useUserSessionStore } from "@/stores/userSessionStore";
 
 interface CreditSalesTableProps {
   filters: {
@@ -24,6 +27,8 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
   const [loading, setLoading] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const { user } = useUserSessionStore();
 
   const loadSales = async () => {
     if (!creditPaymentMethodId) {
@@ -130,6 +135,20 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
     loadSales();
   };
 
+  const handleReprintTicket = async (sale: Sale) => {
+    await reprintSaleTicket(sale, user?.profile?.fullName);
+  };
+
+  const handleOpenDetailModal = (sale: Sale) => {
+    setSelectedSale(sale);
+    setShowDetailModal(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedSale(null);
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { bg: string; text: string }> = {
       pendiente: { bg: "warning", text: "Pendiente" },
@@ -226,6 +245,17 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
                       <Button
                         variant="light"
                         size="sm"
+                        onClick={() => handleReprintTicket(sale)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Reimprimir ticket"
+                      >
+                        <Printer size={16} className="text-primary" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
+                        onClick={() => handleOpenDetailModal(sale)}
                         className="border-0"
                         style={{ borderRadius: "8px" }}
                         title="Ver detalles"
@@ -278,6 +308,13 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
           onPaymentAdded={handlePaymentAdded}
         />
       )}
+
+      {/* Sale Detail Modal */}
+      <SaleDetailModal
+        show={showDetailModal}
+        onHide={handleCloseDetailModal}
+        sale={selectedSale}
+      />
     </>
   );
 };

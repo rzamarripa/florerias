@@ -203,7 +203,8 @@ const createExpense = async (req, res) => {
       concept,
       total,
       expenseType,
-      cashRegisterId
+      cashRegisterId,
+      branchId // ID de la sucursal seleccionada (para administradores)
     } = req.body;
 
     const userId = req.user?._id;
@@ -247,21 +248,51 @@ const createExpense = async (req, res) => {
       });
     }
 
-    // Buscar la sucursal del usuario (administrador o gerente)
-    const userBranch = await Branch.findOne({
-      $or: [
-        { administrator: userId },
-        { manager: userId }
-      ]
-    });
+    // Determinar la sucursal a utilizar
+    let userBranch;
 
-    if (!userBranch) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(403).json({
-        success: false,
-        message: 'El usuario no está asignado como administrador o gerente de ninguna sucursal'
+    if (branchId) {
+      // Si se proporciona branchId (administrador con sucursal seleccionada), usarlo
+      userBranch = await Branch.findById(branchId);
+
+      if (!userBranch) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({
+          success: false,
+          message: 'La sucursal seleccionada no existe'
+        });
+      }
+
+      // Verificar que el usuario tenga permisos sobre esta sucursal
+      const isAdminOfBranch = userBranch.administrator && userBranch.administrator.equals(userId);
+      const isManagerOfBranch = userBranch.manager && userBranch.manager.equals(userId);
+
+      if (!isAdminOfBranch && !isManagerOfBranch) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para crear gastos en esta sucursal'
+        });
+      }
+    } else {
+      // Si no se proporciona branchId, buscar la sucursal del usuario (comportamiento original para gerentes)
+      userBranch = await Branch.findOne({
+        $or: [
+          { administrator: userId },
+          { manager: userId }
+        ]
       });
+
+      if (!userBranch) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(403).json({
+          success: false,
+          message: 'El usuario no está asignado como administrador o gerente de ninguna sucursal'
+        });
+      }
     }
 
     let cashRegister = null;

@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import { Spinner, Button } from "react-bootstrap";
-import { Edit2, CheckCircle, XCircle, DoorOpen, DoorClosed, Receipt } from "lucide-react";
+import { Edit2, CheckCircle, XCircle, DoorOpen, DoorClosed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "../services/cashRegisters";
 import { CashRegister } from "../types";
 import CashRegisterModal from "./CashRegisterModal";
-import ExpenseModal from "./ExpenseModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
-import { useUserSessionStore } from "@/stores/userSessionStore";
 
 interface CashRegisterActionsProps {
   cashRegister: CashRegister;
@@ -23,7 +21,6 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [isTogglingOpen, setIsTogglingOpen] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
-  const [showExpenseModal, setShowExpenseModal] = useState<boolean>(false);
 
   const { getIsAdmin, getIsCashier } = useUserRoleStore();
   const isAdmin = getIsAdmin();
@@ -144,20 +141,6 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
             )}
           </Button>
         )}
-
-        {/* Expense Button - Solo visible si la caja está abierta */}
-        {cashRegister.isOpen && cashRegister.isActive && (
-          <Button
-            variant="light"
-            size="sm"
-            className="rounded-circle"
-            style={{ width: "32px", height: "32px", padding: "0" }}
-            onClick={() => setShowExpenseModal(true)}
-            title="Registrar gasto"
-          >
-            <Receipt size={16} className="text-primary" />
-          </Button>
-        )}
       </div>
 
       {/* Edit Modal - Solo para Administradores */}
@@ -167,18 +150,6 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
           onHide={() => setShowEditModal(false)}
           cashRegister={cashRegister}
           onCashRegisterSaved={onCashRegisterUpdated}
-        />
-      )}
-
-      {/* Expense Modal - Visible si la caja está abierta */}
-      {cashRegister.isOpen && cashRegister.isActive && (
-        <ExpenseModal
-          show={showExpenseModal}
-          onHide={() => setShowExpenseModal(false)}
-          cashRegister={cashRegister}
-          onExpenseRegistered={() => {
-            onCashRegisterUpdated?.();
-          }}
         />
       )}
     </>

@@ -128,11 +128,15 @@ export const cashRegistersService = {
     return response as any;
   },
 
-  closeCashRegister: async (cashRegisterId: string): Promise<{ success: boolean; data: CashRegister; message: string }> => {
+  closeCashRegister: async (
+    cashRegisterId: string,
+    remainingBalance: number
+  ): Promise<{ success: boolean; data: CashRegister; message: string }> => {
     const response = await apiCall<{ success: boolean; data: CashRegister; message: string }>(
       `/cash-registers/${cashRegisterId}/close`,
       {
         method: "POST",
+        body: JSON.stringify({ remainingBalance }),
       }
     );
     return response as any;

@@ -45,6 +45,7 @@ export interface CreateBuyData {
   paymentMethod: string;
   provider?: string;
   description?: string;
+  branch?: string;
 }
 
 export interface UpdateBuyData {

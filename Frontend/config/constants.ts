@@ -267,6 +267,12 @@ export const menuItems: MenuItemType[] = [
         icon: Building,
       },
       {
+        key: "dashboard-company",
+        label: "Dashboard Empresa",
+        url: "/gestion/dashboard-empresa",
+        icon: Building,
+      },
+      {
         key: "proveedores",
         label: "Proveedores",
         url: "/gestion/proveedores",

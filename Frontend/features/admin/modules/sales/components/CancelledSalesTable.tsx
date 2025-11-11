@@ -2,11 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { Table, Badge, Button, Spinner } from "react-bootstrap";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, Printer } from "lucide-react";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../services/sales";
 import { Sale } from "../types";
+import SaleDetailModal from "./SaleDetailModal";
+import { reprintSaleTicket } from "../utils/reprintSaleTicket";
+import { useUserSessionStore } from "@/stores/userSessionStore";
 
 interface CancelledSalesTableProps {
   filters: {
@@ -20,6 +23,9 @@ interface CancelledSalesTableProps {
 const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({ filters }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const { user } = useUserSessionStore();
 
   const loadSales = async () => {
     try {
@@ -95,6 +101,20 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({ filters }) =>
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar la venta");
     }
+  };
+
+  const handleReprintTicket = async (sale: Sale) => {
+    await reprintSaleTicket(sale, user?.profile?.fullName);
+  };
+
+  const handleOpenDetailModal = (sale: Sale) => {
+    setSelectedSale(sale);
+    setShowDetailModal(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedSale(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -183,6 +203,17 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({ filters }) =>
                       <Button
                         variant="light"
                         size="sm"
+                        onClick={() => handleReprintTicket(sale)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Reimprimir ticket"
+                      >
+                        <Printer size={16} className="text-primary" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
+                        onClick={() => handleOpenDetailModal(sale)}
                         className="border-0"
                         style={{ borderRadius: "8px" }}
                         title="Ver detalles"
@@ -226,6 +257,13 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({ filters }) =>
           </div>
         </div>
       </div>
+
+      {/* Sale Detail Modal */}
+      <SaleDetailModal
+        show={showDetailModal}
+        onHide={handleCloseDetailModal}
+        sale={selectedSale}
+      />
     </>
   );
 };

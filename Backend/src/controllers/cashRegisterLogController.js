@@ -9,6 +9,7 @@ const getAllCashRegisterLogs = async (req, res) => {
       page = 1,
       limit = 10,
       cashRegisterId,
+      branchId,
       startDate,
       endDate
     } = req.query;
@@ -62,6 +63,11 @@ const getAllCashRegisterLogs = async (req, res) => {
       }
     }
     // Si es Super Admin, puede ver todos los logs (no se aplica filtro)
+
+    // Filtro opcional por sucursal específica (enviado desde el frontend)
+    if (branchId) {
+      filters.branchId = branchId;
+    }
 
     // Filtro por caja registradora específica
     if (cashRegisterId) {

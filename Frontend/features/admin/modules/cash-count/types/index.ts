@@ -62,6 +62,7 @@ export interface CashRegisterLog {
     totalSales: number;
     totalExpenses: number;
     finalBalance: number;
+    remainingBalance: number;
   };
   salesByPaymentType: {
     efectivo: number;

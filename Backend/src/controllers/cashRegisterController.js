@@ -1,6 +1,7 @@
 import CashRegister from '../models/CashRegister.js';
 import CashRegisterLog from '../models/CashRegisterLog.js';
 import { Branch } from '../models/Branch.js';
+import { Expense } from '../models/Expense.js';
 
 // Obtener todas las cajas registradoras con filtros y paginación
 const getAllCashRegisters = async (req, res) => {
@@ -580,8 +581,17 @@ const getCashRegisterSummary = async (req, res) => {
     const orders = cashRegister.lastRegistry.map(reg => reg.orderId).filter(order => order !== null);
     totalSales = orders.reduce((sum, order) => sum + (order.advance || 0), 0);
 
-    // Calcular total de gastos
-    totalExpenses = cashRegister.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    // Obtener gastos de la colección cv_expenses relacionados con esta caja
+    const expensesFromDB = await Expense.find({
+      cashRegister: id,
+      expenseType: 'petty_cash'
+    })
+      .populate('user', 'username email profile')
+      .populate('concept', 'name description')
+      .sort({ paymentDate: -1 });
+
+    // Calcular total de gastos desde cv_expenses
+    totalExpenses = expensesFromDB.reduce((sum, expense) => sum + (expense.total || 0), 0);
 
     // Calcular totales por método de pago
     const salesByPaymentType = {
@@ -639,7 +649,16 @@ const getCashRegisterSummary = async (req, res) => {
         createdAt: order.createdAt,
         itemsCount: order.items?.length || 0
       })),
-      expenses: cashRegister.expenses
+      expenses: expensesFromDB.map(expense => ({
+        _id: expense._id,
+        folio: expense.folio,
+        concept: expense.concept?.name || 'N/A',
+        conceptDescription: expense.concept?.description || '',
+        total: expense.total,
+        paymentDate: expense.paymentDate,
+        user: expense.user?.profile?.fullName || expense.user?.username || 'N/A',
+        expenseType: expense.expenseType
+      }))
     };
 
     res.status(200).json({
@@ -660,6 +679,25 @@ const getCashRegisterSummary = async (req, res) => {
 const closeCashRegister = async (req, res) => {
   try {
     const { id } = req.params;
+    const { remainingBalance } = req.body;
+
+    // Validar que remainingBalance esté presente
+    if (remainingBalance === undefined || remainingBalance === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'El saldo restante es requerido'
+      });
+    }
+
+    const parsedRemainingBalance = Number(remainingBalance);
+
+    // Validar que sea un número válido
+    if (isNaN(parsedRemainingBalance) || parsedRemainingBalance < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'El saldo restante debe ser un número válido no negativo'
+      });
+    }
 
     // Obtener la caja registradora con todos los datos necesarios para el log
     const cashRegister = await CashRegister.findById(id)
@@ -691,11 +729,25 @@ const closeCashRegister = async (req, res) => {
     }
 
     // Calcular totales para el log
-    const initialBalance = cashRegister.initialBalance;
+    const initialBalance = Number(cashRegister.initialBalance) || 0;
     const orders = cashRegister.lastRegistry.map(reg => reg.orderId).filter(order => order !== null);
-    const totalSales = orders.reduce((sum, order) => sum + (order.advance || 0), 0);
-    const totalExpenses = cashRegister.expenses.reduce((sum, expense) => sum + expense.amount, 0);
-    const finalBalance = cashRegister.currentBalance;
+    const totalSales = orders.reduce((sum, order) => {
+      const advance = Number(order.advance) || 0;
+      return sum + advance;
+    }, 0);
+    const totalExpenses = cashRegister.expenses.reduce((sum, expense) => {
+      const amount = Number(expense.amount) || 0;
+      return sum + amount;
+    }, 0);
+    const finalBalance = Number(cashRegister.currentBalance) || 0;
+
+    // Validar que el saldo restante no sea mayor al saldo actual de la caja
+    if (parsedRemainingBalance > finalBalance) {
+      return res.status(400).json({
+        success: false,
+        message: `El saldo restante ($${parsedRemainingBalance.toFixed(2)}) no puede ser mayor al saldo actual de la caja ($${finalBalance.toFixed(2)})`
+      });
+    }
 
     // Calcular totales por método de pago
     const salesByPaymentType = {
@@ -707,7 +759,7 @@ const closeCashRegister = async (req, res) => {
 
     orders.forEach(order => {
       const paymentMethodName = order.paymentMethod?.name?.toLowerCase() || '';
-      const advance = order.advance || 0;
+      const advance = Number(order.advance) || 0;
 
       if (paymentMethodName.includes('efectivo')) {
         salesByPaymentType.efectivo += advance;
@@ -735,7 +787,8 @@ const closeCashRegister = async (req, res) => {
         initialBalance,
         totalSales,
         totalExpenses,
-        finalBalance
+        finalBalance,
+        remainingBalance: parsedRemainingBalance
       },
       salesByPaymentType,
       orders: orders.map(order => ({
@@ -743,8 +796,8 @@ const closeCashRegister = async (req, res) => {
         orderNumber: order.orderNumber,
         clientName: order.clientInfo?.name || 'N/A',
         recipientName: order.deliveryData?.recipientName || 'N/A',
-        total: order.total,
-        advance: order.advance,
+        total: Number(order.total) || 0,
+        advance: Number(order.advance) || 0,
         shippingType: order.shippingType,
         paymentMethod: order.paymentMethod?.name || 'N/A',
         status: order.status,
@@ -753,7 +806,7 @@ const closeCashRegister = async (req, res) => {
       })),
       expenses: cashRegister.expenses.map(expense => ({
         expenseConcept: expense.expenseConcept,
-        amount: expense.amount,
+        amount: Number(expense.amount) || 0,
         expenseDate: expense.expenseDate
       }))
     });
@@ -761,11 +814,11 @@ const closeCashRegister = async (req, res) => {
     // Guardar el log
     await cashRegisterLog.save();
 
-    // Actualizar caja registradora - cerrar y reiniciar datos
+    // Actualizar caja registradora - cerrar y reiniciar datos con el saldo restante
     cashRegister.isOpen = false;
     cashRegister.cashierId = null;
-    cashRegister.currentBalance = 0;
-    cashRegister.initialBalance = 0;
+    cashRegister.currentBalance = parsedRemainingBalance;
+    cashRegister.initialBalance = parsedRemainingBalance;
     cashRegister.lastRegistry = [];
     cashRegister.expenses = [];
     cashRegister.lastOpen = new Date();

@@ -11,6 +11,7 @@ const getAllProductLists = async (req, res) => {
       limit = 10,
       name,
       companyId,
+      branchId,
       status
     } = req.query;
 
@@ -23,6 +24,10 @@ const getAllProductLists = async (req, res) => {
 
     if (companyId) {
       filters.company = companyId;
+    }
+
+    if (branchId) {
+      filters.branch = branchId;
     }
 
     if (status !== undefined) {

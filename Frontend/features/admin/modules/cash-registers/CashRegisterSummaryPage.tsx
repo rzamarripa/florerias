@@ -15,15 +15,20 @@ import {
 import { toast } from "react-toastify";
 import { cashRegistersService } from "./services/cashRegisters";
 import { CashRegisterSummary } from "./types";
+import { generateCashRegisterTicket } from "./utils/generateCashRegisterTicket";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import CloseConfirmDialog from "./components/CloseConfirmDialog";
 
 const CashRegisterSummaryPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cashRegisterId = searchParams.get("id");
+  const { user } = useUserSessionStore();
 
   const [summary, setSummary] = useState<CashRegisterSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
 
   useEffect(() => {
     if (cashRegisterId) {
@@ -52,18 +57,71 @@ const CashRegisterSummaryPage: React.FC = () => {
     }
   };
 
-  const handleCloseCashRegister = async () => {
+  const generateAndPrintTicket = (remainingBalance: number) => {
+    if (!summary || !user) return;
+
+    try {
+      // Generar número de folio único basado en timestamp
+      const folioNumber = `CORTE-${summary.cashRegister._id.slice(-6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+
+      // Obtener nombre del cajero
+      const closedBy = user.profile?.fullName || "Cajero";
+
+      // Fecha de cierre
+      const closureDate = new Date().toISOString();
+
+      // Generar el HTML del ticket
+      const ticketHTML = generateCashRegisterTicket(summary, {
+        closedBy,
+        closureDate,
+        folioNumber,
+        remainingBalance,
+      });
+
+      // Crear una nueva ventana para imprimir
+      const printWindow = window.open("", "_blank", "width=800,height=600");
+
+      if (printWindow) {
+        printWindow.document.write(ticketHTML);
+        printWindow.document.close();
+
+        // Esperar a que se cargue el contenido antes de imprimir
+        printWindow.onload = () => {
+          printWindow.focus();
+        };
+      } else {
+        toast.error("No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador.");
+      }
+    } catch (error) {
+      console.error("Error generando ticket:", error);
+      toast.error("Error al generar el ticket de cierre");
+    }
+  };
+
+  const handleCloseCashRegister = async (remainingBalance: number) => {
     if (!cashRegisterId) return;
 
     try {
       setClosing(true);
       const response = await cashRegistersService.closeCashRegister(
-        cashRegisterId
+        cashRegisterId,
+        remainingBalance
       );
 
       if (response.success) {
         toast.success(response.message || "Caja cerrada exitosamente");
-        router.push("/ventas/cajas");
+
+        // Generar e imprimir el ticket después del cierre exitoso
+        generateAndPrintTicket(remainingBalance);
+
+        // Cerrar el diálogo
+        setShowCloseDialog(false);
+
+        // Pequeño delay para dar tiempo a que se abra la ventana de impresión
+        // antes de redirigir
+        setTimeout(() => {
+          router.push("/ventas/cajas");
+        }, 500);
       }
     } catch (error: any) {
       toast.error(error.message || "Error al cerrar la caja");
@@ -346,6 +404,69 @@ const CashRegisterSummaryPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Expenses Table Section */}
+      {summary.expenses && summary.expenses.length > 0 && (
+        <div
+          className="card border-0 shadow-sm mb-4"
+          style={{ borderRadius: "15px" }}
+        >
+          <div className="card-body p-0">
+            <div className="p-4 border-bottom">
+              <h5 className="fw-bold mb-0">Detalle de Gastos</h5>
+            </div>
+
+            <div className="table-responsive">
+              <Table hover className="mb-0">
+                <thead style={{ background: "#f8f9fa" }}>
+                  <tr>
+                    <th className="px-4 py-3 fw-semibold text-muted">FOLIO</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">FECHA</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      CONCEPTO
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      USUARIO
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">IMPORTE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.expenses.map((expense) => (
+                    <tr
+                      key={expense._id}
+                      style={{ borderBottom: "1px solid #f1f3f5" }}
+                    >
+                      <td className="px-4 py-3">
+                        <span className="fw-semibold">#{expense.folio}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <small>{formatDate(expense.paymentDate)}</small>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="fw-semibold">{expense.concept}</div>
+                        {expense.conceptDescription && (
+                          <small className="text-muted">
+                            {expense.conceptDescription}
+                          </small>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-muted">{expense.user}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="fw-bold text-danger">
+                          {formatCurrency(expense.total)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sales Table Section */}
       <div
         className="card border-0 shadow-sm mb-4"
@@ -457,7 +578,7 @@ const CashRegisterSummaryPage: React.FC = () => {
         <Button
           variant="danger"
           size="lg"
-          onClick={handleCloseCashRegister}
+          onClick={() => setShowCloseDialog(true)}
           disabled={closing}
           className="px-5 py-3"
           style={{
@@ -466,26 +587,19 @@ const CashRegisterSummaryPage: React.FC = () => {
             boxShadow: "0 4px 15px rgba(231, 76, 60, 0.3)",
           }}
         >
-          {closing ? (
-            <>
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-2"
-              />
-              Cerrando Caja...
-            </>
-          ) : (
-            <>
-              <DoorClosed size={20} className="me-2" />
-              Cerrar Caja
-            </>
-          )}
+          <DoorClosed size={20} className="me-2" />
+          Cerrar Caja
         </Button>
       </div>
+
+      {/* Close Confirmation Dialog */}
+      <CloseConfirmDialog
+        show={showCloseDialog}
+        onHide={() => setShowCloseDialog(false)}
+        onConfirm={handleCloseCashRegister}
+        currentBalance={summary.totals.currentBalance}
+        isClosing={closing}
+      />
     </div>
   );
 };

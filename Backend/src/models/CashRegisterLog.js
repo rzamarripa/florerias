@@ -54,6 +54,10 @@ const cashRegisterLogSchema = new Schema(
         type: Number,
         default: 0,
       },
+      remainingBalance: {
+        type: Number,
+        default: 0,
+      },
     },
     salesByPaymentType: {
       efectivo: {

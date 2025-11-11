@@ -2,8 +2,11 @@
 
 import React, { useState } from "react";
 import { Table, Badge, Button } from "react-bootstrap";
-import { Eye, Edit, Trash2, DollarSign } from "lucide-react";
+import { Eye, Edit, Trash2, DollarSign, Printer } from "lucide-react";
 import PaymentModal from "./PaymentModal";
+import SaleDetailModal from "./SaleDetailModal";
+import { reprintSaleTicket } from "../utils/reprintSaleTicket";
+import { useUserSessionStore } from "@/stores/userSessionStore";
 
 interface ExchangeSalesTableProps {
   filters: {
@@ -15,9 +18,11 @@ interface ExchangeSalesTableProps {
 }
 
 const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
-  const sales = [];
+  const sales: any[] = [];
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const { user } = useUserSessionStore();
 
   const handleOpenPaymentModal = (sale: any) => {
     setSelectedSale(sale);
@@ -31,6 +36,20 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
 
   const handlePaymentAdded = () => {
     // Recargar datos si es necesario
+  };
+
+  const handleReprintTicket = async (sale: any) => {
+    await reprintSaleTicket(sale, user?.profile?.fullName);
+  };
+
+  const handleOpenDetailModal = (sale: any) => {
+    setSelectedSale(sale);
+    setShowDetailModal(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedSale(null);
   };
 
   return (
@@ -105,6 +124,17 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
                       <Button
                         variant="light"
                         size="sm"
+                        onClick={() => handleReprintTicket(sale)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Reimprimir ticket"
+                      >
+                        <Printer size={16} className="text-primary" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
+                        onClick={() => handleOpenDetailModal(sale)}
                         className="border-0"
                         style={{ borderRadius: "8px" }}
                         title="Ver detalles"
@@ -156,6 +186,13 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
           onPaymentAdded={handlePaymentAdded}
         />
       )}
+
+      {/* Sale Detail Modal */}
+      <SaleDetailModal
+        show={showDetailModal}
+        onHide={handleCloseDetailModal}
+        sale={selectedSale}
+      />
     </>
   );
 };

@@ -48,6 +48,7 @@ export interface CreateExpenseData {
   total: number;
   expenseType: "check_transfer" | "petty_cash";
   cashRegisterId?: string;
+  branchId?: string; // ID de la sucursal seleccionada (para administradores)
 }
 
 export interface UpdateExpenseData {

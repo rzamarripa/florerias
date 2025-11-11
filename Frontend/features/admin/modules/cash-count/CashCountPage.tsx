@@ -7,8 +7,15 @@ import { toast } from "react-toastify";
 import { cashRegisterLogsService } from "./services/cashRegisterLogs";
 import { CashRegisterLog, CashRegisterRef } from "./types";
 import CashCountDetailModal from "./components/CashCountDetailModal";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 const CashCountPage: React.FC = () => {
+  const { activeBranch } = useActiveBranchStore();
+  const { getIsCashier, getIsAdmin } = useUserRoleStore();
+  const isCashier = getIsCashier();
+  const isAdmin = getIsAdmin();
+
   const [logs, setLogs] = useState<CashRegisterLog[]>([]);
   const [cashRegisters, setCashRegisters] = useState<CashRegisterRef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +46,17 @@ const CashCountPage: React.FC = () => {
     loadLogs();
   }, [filters.page, filters.limit]);
 
+  // Recargar logs cuando cambie la sucursal activa
+  useEffect(() => {
+    loadLogs();
+  }, [activeBranch?._id]);
+
   const loadCashRegisters = async () => {
+    // Los cajeros no necesitan cargar la lista de cajas porque el filtro se aplica automáticamente en el backend
+    if (isCashier) {
+      return;
+    }
+
     try {
       const response = await cashRegisterLogsService.getUserCashRegisters();
       if (response.success) {
@@ -53,7 +70,20 @@ const CashCountPage: React.FC = () => {
   const loadLogs = async () => {
     try {
       setLoading(true);
-      const response = await cashRegisterLogsService.getAllCashRegisterLogs(filters);
+
+      // Para cajeros: no enviar cashRegisterId ya que el backend filtra automáticamente por su sucursal
+      // Para admins: incluir el branchId de la sucursal activa si existe
+      const filtersToSend = isCashier
+        ? {
+            ...filters,
+            cashRegisterId: undefined, // Eliminar el filtro de caja para cajeros
+          }
+        : {
+            ...filters,
+            ...(activeBranch?._id && { branchId: activeBranch._id })
+          };
+
+      const response = await cashRegisterLogsService.getAllCashRegisterLogs(filtersToSend);
 
       if (response.success) {
         setLogs(response.data);
@@ -172,34 +202,37 @@ const CashCountPage: React.FC = () => {
               </Form.Group>
             </Col>
 
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  <DollarSign size={16} className="me-2" />
-                  Caja Registradora
-                </Form.Label>
-                <Form.Select
-                  value={filters.cashRegisterId}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      cashRegisterId: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Todas las cajas</option>
-                  {cashRegisters.map((cashRegister) => (
-                    <option key={cashRegister._id} value={cashRegister._id}>
-                      {cashRegister.name}
-                      {cashRegister.branchId &&
-                        ` - ${cashRegister.branchId.branchName}`}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
+            {/* Ocultar selector de caja para cajeros - el backend filtra automáticamente por su sucursal */}
+            {!isCashier && (
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    <DollarSign size={16} className="me-2" />
+                    Caja Registradora
+                  </Form.Label>
+                  <Form.Select
+                    value={filters.cashRegisterId}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        cashRegisterId: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Todas las cajas</option>
+                    {cashRegisters.map((cashRegister) => (
+                      <option key={cashRegister._id} value={cashRegister._id}>
+                        {cashRegister.name}
+                        {cashRegister.branchId &&
+                          ` - ${cashRegister.branchId.branchName}`}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            )}
 
-            <Col md={2} className="d-flex align-items-end gap-2">
+            <Col md={isCashier ? 4 : 2} className="d-flex align-items-end gap-2">
               <Button
                 variant="primary"
                 onClick={handleSearch}

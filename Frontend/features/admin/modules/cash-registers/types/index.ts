@@ -36,6 +36,17 @@ export interface Expense {
   expenseDate: string;
 }
 
+export interface ExpenseSummary {
+  _id: string;
+  folio: number;
+  concept: string;
+  conceptDescription: string;
+  total: number;
+  paymentDate: string;
+  user: string;
+  expenseType: string;
+}
+
 export interface CashRegister {
   _id: string;
   name: string;
@@ -105,5 +116,5 @@ export interface CashRegisterSummary {
     intercambio: number;
   };
   orders: OrderSummary[];
-  expenses: Expense[];
+  expenses: ExpenseSummary[];
 }

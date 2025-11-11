@@ -10,6 +10,7 @@ import {
   getAdministrators,
   updateCompanyBranches,
   getMyCompany,
+  getCompanyByBranchId,
 } from "../controllers/companyController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -19,6 +20,7 @@ const router = express.Router();
 router.get("/", protect, getAllCompanies);
 router.get("/administrators/list", protect, getAdministrators);
 router.get("/my-company", protect, getMyCompany);
+router.get("/branch/:branchId", protect, getCompanyByBranchId);
 router.get("/:id", protect, getCompanyById);
 
 router.post("/", protect, createCompany);

@@ -5,25 +5,20 @@ import {
   Button,
   Table,
   Badge,
-  Form,
   Spinner,
 } from "react-bootstrap";
 import { Plus, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "./services/cashRegisters";
-import { CashRegister, Branch } from "./types";
+import { CashRegister } from "./types";
 import CashRegisterActions from "./components/CashRegisterActions";
 import CashRegisterModal from "./components/CashRegisterModal";
-import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
-import { branchesService } from "../branches/services/branches";
 
 const CashRegistersPage: React.FC = () => {
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [branchFilter, setBranchFilter] = useState<string>("");
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -36,21 +31,6 @@ const CashRegistersPage: React.FC = () => {
   const { activeBranch } = useActiveBranchStore();
   const isAdmin = getIsAdmin();
   const isCashier = getIsCashier();
-
-  // Cargar sucursales disponibles para el filtro (solo para NO admins - gerentes, etc.)
-  const loadBranches = async () => {
-    // Solo los NO admins necesitan el select de sucursales
-    if (isAdmin) return;
-
-    try {
-      const response = await branchesService.getAllBranches({ limit: 100 });
-      if (response.data) {
-        setBranches(response.data);
-      }
-    } catch (error: any) {
-      console.error("Error al cargar sucursales:", error);
-    }
-  };
 
   const loadCashRegisters = async (
     isInitial: boolean,
@@ -67,11 +47,9 @@ const CashRegistersPage: React.FC = () => {
       };
 
       // Para administradores: usar activeBranch del store
-      // Para otros roles: usar branchFilter
+      // Para cajeros y gerentes: el backend filtra automáticamente según el usuario
       if (isAdmin && activeBranch) {
         filters.branchId = activeBranch._id;
-      } else if (!isAdmin && branchFilter) {
-        filters.branchId = branchFilter;
       }
 
       const response = await cashRegistersService.getAllCashRegisters(filters);
@@ -91,23 +69,10 @@ const CashRegistersPage: React.FC = () => {
     }
   };
 
-  // Cargar sucursales al montar el componente (solo para NO admins)
-  useEffect(() => {
-    if (!isAdmin) {
-      loadBranches();
-    }
-  }, [isAdmin]);
-
-  // Cargar cajas registradoras cuando cambian los filtros o activeBranch
+  // Cargar cajas registradoras cuando cambia activeBranch
   useEffect(() => {
     loadCashRegisters(true, 1);
-  }, [branchFilter, activeBranch]);
-
-  const handleBranchFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setBranchFilter(e.target.value);
-  };
+  }, [activeBranch]);
 
   const handlePageChange = (page: number) => {
     loadCashRegisters(true, page);
@@ -194,34 +159,6 @@ const CashRegistersPage: React.FC = () => {
           </Button>
         )}
       </div>
-
-      {/* Filters - Solo para NO admins (gerentes, cajeros, etc.) */}
-      {!isAdmin && (
-        <div
-          className="card border-0 shadow-sm mb-4"
-          style={{ borderRadius: "15px" }}
-        >
-          <div className="card-body p-4">
-            <div className="row g-3">
-              <div className="col-md-6">
-                <Form.Select
-                  value={branchFilter}
-                  onChange={handleBranchFilterChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px" }}
-                >
-                  <option value="">Todas las sucursales</option>
-                  {branches.map((branch) => (
-                    <option key={branch._id} value={branch._id}>
-                      {branch.branchName}
-                    </option>
-                  ))}
-                </Form.Select>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Table */}
       <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
