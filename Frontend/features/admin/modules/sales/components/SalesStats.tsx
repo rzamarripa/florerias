@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { salesService } from "../services/sales";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
+import { Col } from "react-bootstrap";
 
 interface SalesStatsProps {
   filters: {
@@ -44,23 +45,40 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   return (
-    <div className="col-lg-2 col-md-4 col-sm-6">
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
+    <div className="col-xl-2 col-lg-4 col-md-6 col-sm-6 mb-3">
+      <div
+        className="card border-0 shadow-sm h-100"
+        style={{
+          borderRadius: "12px",
+          transition: "transform 0.2s ease, box-shadow 0.2s ease",
+          cursor: "pointer",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-4px)";
+          e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+        }}
+      >
         <div className="card-body p-4">
           <div className="d-flex align-items-center justify-content-between mb-3">
-            <div>
-              <h6
-                className="text-muted mb-0 fw-normal"
-                style={{ fontSize: "13px" }}
-              >
-                {title}
-              </h6>
-            </div>
+            <h6
+              className="text-muted mb-0 fw-semibold"
+              style={{
+                fontSize: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              {title}
+            </h6>
             <div
               className="d-flex align-items-center justify-content-center"
               style={{
-                width: "48px",
-                height: "48px",
+                width: "50px",
+                height: "50px",
                 borderRadius: "12px",
                 background: bgColor,
               }}
@@ -68,16 +86,25 @@ const StatCard: React.FC<StatCardProps> = ({
               <div style={{ color: iconColor }}>{icon}</div>
             </div>
           </div>
-          <h2 className="mb-1 fw-bold" style={{ fontSize: "28px" }}>
-            {count}
+          <h2
+            className="mb-2 fw-bold"
+            style={{ fontSize: "32px", color: "#2c3e50", lineHeight: "1.2" }}
+          >
+            {count.toLocaleString("es-MX")}
           </h2>
-          <div className="d-flex align-items-center">
-            <span className="text-muted" style={{ fontSize: "12px" }}>
-              Total {title}
+          <div
+            className="d-flex align-items-center justify-content-between pt-2"
+            style={{ borderTop: "1px solid #f1f3f5" }}
+          >
+            <span
+              className="text-muted"
+              style={{ fontSize: "11px", fontWeight: "500" }}
+            >
+              Monto Total
             </span>
             <span
-              className="ms-auto fw-semibold"
-              style={{ fontSize: "13px", color: "#495057" }}
+              className="fw-bold"
+              style={{ fontSize: "14px", color: iconColor }}
             >
               {formatCurrency(amount)}
             </span>
@@ -160,10 +187,10 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
     return (
       <div className="row g-3 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="col-lg-2 col-md-4 col-sm-6">
+          <div key={i} className="col-xl-2 col-lg-4 col-md-6 col-sm-6 mb-3">
             <div
-              className="card border-0 shadow-sm"
-              style={{ borderRadius: "12px", height: "140px" }}
+              className="card border-0 shadow-sm h-100"
+              style={{ borderRadius: "12px", minHeight: "160px" }}
             >
               <div className="card-body p-4 d-flex align-items-center justify-content-center">
                 <div className="spinner-border text-primary" role="status">
@@ -179,6 +206,7 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
 
   return (
     <div className="row g-3 mb-4">
+      <Col md={1}></Col>
       <StatCard
         title="Ventas Totales"
         count={stats.totalSales.count}

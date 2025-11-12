@@ -216,7 +216,7 @@ const SignInPage = () => {
                 </Col>
                 <Col lg={6} className="d-none d-lg-block">
                   <div className="h-100 position-relative card-side-img rounded-end-4 rounded-end rounded-0 overflow-hidden">
-                    <div className="p-4 card-img-overlay rounded-4 rounded-start-0 auth-overlay d-flex align-items-end justify-content-center"></div>
+                    <div className="p-4 card-img-overlay rounded-4 rounded-start-0 d-flex align-items-end justify-content-center"></div>
                   </div>
                 </Col>
               </Row>

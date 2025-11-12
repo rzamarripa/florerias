@@ -2,7 +2,17 @@ import mongoose from "mongoose";
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    // Deshabilitar transacciones explícitamente para MongoDB local sin réplica set
+    mongoose.set('autoCreate', true);
+    mongoose.set('autoIndex', true);
+
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      // Asegurar que no se usen transacciones ni sesiones
+      readPreference: 'primary',
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
 

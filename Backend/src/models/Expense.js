@@ -35,7 +35,7 @@ const expenseSchema = new Schema(
     cashRegister: {
       type: Schema.Types.ObjectId,
       ref: "CashRegister",
-      required: function() {
+      required: function () {
         return this.expenseType === "petty_cash";
       },
     },
@@ -63,10 +63,16 @@ expenseSchema.pre("validate", async function (next) {
   if (this.isNew && !this.folio) {
     try {
       const counterId = `expense_${this.branch}`;
-      const counter = await Counter.findByIdAndUpdate(
-        counterId,
+      // Usar findOneAndUpdate sin sesión para MongoDB standalone
+      const counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
         { $inc: { seq: 1 } },
-        { new: true, upsert: true }
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true,
+          session: null // Deshabilitar sesiones explícitamente
+        }
       );
       this.folio = counter.seq;
     } catch (error) {

@@ -94,25 +94,27 @@ const NewCompanyPage: React.FC = () => {
         fiscalAddress: company.fiscalAddress,
         primaryContact: company.primaryContact,
         administratorId: administratorId,
-        administratorData: company.administrator ? {
-          username: company.administrator.username,
-          email: company.administrator.email,
-          phone: company.administrator.phone,
-          password: "",
-          profile: {
-            name: company.administrator.profile.name,
-            lastName: company.administrator.profile.lastName,
-          },
-        } : {
-          username: "",
-          email: "",
-          phone: "",
-          password: "",
-          profile: {
-            name: "",
-            lastName: "",
-          },
-        },
+        administratorData: company.administrator
+          ? {
+              username: company.administrator.username,
+              email: company.administrator.email,
+              phone: company.administrator.phone,
+              password: "",
+              profile: {
+                name: company.administrator.profile.name,
+                lastName: company.administrator.profile.lastName,
+              },
+            }
+          : {
+              username: "",
+              email: "",
+              phone: "",
+              password: "",
+              profile: {
+                name: "",
+                lastName: "",
+              },
+            },
       });
     } catch (err: any) {
       toast.error(err.message || "Error al cargar la empresa");
@@ -205,30 +207,43 @@ const NewCompanyPage: React.FC = () => {
       return false;
     }
 
-    if (!formData.fiscalAddress.street || !formData.fiscalAddress.city ||
-        !formData.fiscalAddress.state || !formData.fiscalAddress.postalCode) {
+    if (
+      !formData.fiscalAddress.street ||
+      !formData.fiscalAddress.city ||
+      !formData.fiscalAddress.state ||
+      !formData.fiscalAddress.postalCode
+    ) {
       setError("Por favor completa todos los campos de la dirección fiscal");
       return false;
     }
 
-    if (!formData.primaryContact.name || !formData.primaryContact.email ||
-        !formData.primaryContact.phone) {
+    if (
+      !formData.primaryContact.name ||
+      !formData.primaryContact.email ||
+      !formData.primaryContact.phone
+    ) {
       setError("Por favor completa todos los campos del contacto principal");
       return false;
     }
 
     // Validar datos del usuario administrador
-    if (!formData.administratorData?.username ||
-        !formData.administratorData?.email ||
-        !formData.administratorData?.phone ||
-        !formData.administratorData?.profile?.name ||
-        !formData.administratorData?.profile?.lastName) {
+    if (
+      !formData.administratorData?.username ||
+      !formData.administratorData?.email ||
+      !formData.administratorData?.phone ||
+      !formData.administratorData?.profile?.name ||
+      !formData.administratorData?.profile?.lastName
+    ) {
       setError("Por favor completa todos los campos del usuario administrador");
       return false;
     }
 
     // Validar contraseña solo si se está creando un nuevo usuario (sin administratorId)
-    if (!isEditing && !formData.administratorId && !formData.administratorData?.password) {
+    if (
+      !isEditing &&
+      !formData.administratorId &&
+      !formData.administratorData?.password
+    ) {
       setError("La contraseña es requerida para crear un nuevo usuario");
       return false;
     }
@@ -286,7 +301,11 @@ const NewCompanyPage: React.FC = () => {
       }
 
       // Solo mostrar success si realmente fue exitoso
-      toast.success(isEditing ? "Empresa actualizada exitosamente" : "Empresa creada exitosamente");
+      toast.success(
+        isEditing
+          ? "Empresa actualizada exitosamente"
+          : "Empresa creada exitosamente"
+      );
       router.push("/gestion/empresas");
     } catch (err: any) {
       setError(err.message || "Error al guardar la empresa");
@@ -376,7 +395,10 @@ const NewCompanyPage: React.FC = () => {
                     placeholder="RFC de la empresa"
                     value={formData.rfc}
                     onChange={(e) =>
-                      setFormData({ ...formData, rfc: e.target.value.toUpperCase() })
+                      setFormData({
+                        ...formData,
+                        rfc: e.target.value.toUpperCase(),
+                      })
                     }
                     required
                     maxLength={13}
@@ -563,7 +585,10 @@ const NewCompanyPage: React.FC = () => {
                     onChange={handleDistributorChange}
                     className="py-2"
                   >
-                    <option value="">-- Seleccione un administrador existente o cree uno nuevo --</option>
+                    <option value="">
+                      -- Seleccione un administrador existente o cree uno nuevo
+                      --
+                    </option>
                     {distributors.map((dist) => (
                       <option key={dist._id} value={dist._id}>
                         {dist.profile.fullName} ({dist.email})
@@ -579,23 +604,32 @@ const NewCompanyPage: React.FC = () => {
               </Col>
 
               {/* Campos del Administrador - Siempre habilitados */}
-              {/* Nombre de Usuario */}
+              {/* Nombre */}
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Nombre de Usuario</Form.Label>
+                  <Form.Label className="fw-semibold">Nombre</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Ingresa el nombre de usuario"
-                    value={formData.administratorData?.username || ""}
+                    placeholder="Ingresa el nombre"
+                    value={formData.administratorData?.profile.name || ""}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
                         administratorData: formData.administratorData
                           ? {
                               ...formData.administratorData,
-                              username: e.target.value,
+                              profile: {
+                                ...formData.administratorData.profile,
+                                name: e.target.value,
+                              },
                             }
                           : undefined,
+                        primaryContact: {
+                          ...formData.primaryContact,
+                          name: `${e.target.value} ${
+                            formData.administratorData?.profile.lastName || ""
+                          }`.trim(),
+                        },
                       })
                     }
                     className="py-2"
@@ -603,26 +637,31 @@ const NewCompanyPage: React.FC = () => {
                 </Form.Group>
               </Col>
 
-              {/* Email */}
+              {/* Apellido */}
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Email</Form.Label>
+                  <Form.Label className="fw-semibold">Apellido</Form.Label>
                   <Form.Control
-                    type="email"
-                    placeholder="Ingresa el email"
-                    value={formData.administratorData?.email || ""}
+                    type="text"
+                    placeholder="Ingresa el apellido"
+                    value={formData.administratorData?.profile.lastName || ""}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
                         administratorData: formData.administratorData
                           ? {
                               ...formData.administratorData,
-                              email: e.target.value,
+                              profile: {
+                                ...formData.administratorData.profile,
+                                lastName: e.target.value,
+                              },
                             }
                           : undefined,
                         primaryContact: {
                           ...formData.primaryContact,
-                          email: e.target.value,
+                          name: `${
+                            formData.administratorData?.profile.name || ""
+                          } ${e.target.value}`.trim(),
                         },
                       })
                     }
@@ -659,29 +698,26 @@ const NewCompanyPage: React.FC = () => {
                 </Form.Group>
               </Col>
 
-              {/* Nombre */}
+              {/* Email */}
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Nombre</Form.Label>
+                  <Form.Label className="fw-semibold">Email</Form.Label>
                   <Form.Control
-                    type="text"
-                    placeholder="Ingresa el nombre"
-                    value={formData.administratorData?.profile.name || ""}
+                    type="email"
+                    placeholder="Ingresa el email"
+                    value={formData.administratorData?.email || ""}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
                         administratorData: formData.administratorData
                           ? {
                               ...formData.administratorData,
-                              profile: {
-                                ...formData.administratorData.profile,
-                                name: e.target.value,
-                              },
+                              email: e.target.value,
                             }
                           : undefined,
                         primaryContact: {
                           ...formData.primaryContact,
-                          name: `${e.target.value} ${formData.administratorData?.profile.lastName || ""}`.trim(),
+                          email: e.target.value,
                         },
                       })
                     }
@@ -690,34 +726,45 @@ const NewCompanyPage: React.FC = () => {
                 </Form.Group>
               </Col>
 
-              {/* Apellido */}
+              {/* Nombre de Usuario */}
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Apellido</Form.Label>
+                  <Form.Label className="fw-semibold">
+                    Nombre de Usuario
+                  </Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Ingresa el apellido"
-                    value={formData.administratorData?.profile.lastName || ""}
+                    placeholder="Ingresa el nombre de usuario"
+                    value={formData.administratorData?.username || ""}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
                         administratorData: formData.administratorData
                           ? {
                               ...formData.administratorData,
-                              profile: {
-                                ...formData.administratorData.profile,
-                                lastName: e.target.value,
-                              },
+                              username: e.target.value,
                             }
                           : undefined,
-                        primaryContact: {
-                          ...formData.primaryContact,
-                          name: `${formData.administratorData?.profile.name || ""} ${e.target.value}`.trim(),
-                        },
                       })
                     }
                     className="py-2"
                   />
+                </Form.Group>
+              </Col>
+
+              {/* Rol - Siempre Administrador por defecto */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">Rol</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value="Administrador"
+                    disabled
+                    className="py-2"
+                  />
+                  <Form.Text className="text-muted">
+                    Los usuarios de empresas siempre tienen rol Administrador
+                  </Form.Text>
                 </Form.Group>
               </Col>
 
@@ -757,7 +804,9 @@ const NewCompanyPage: React.FC = () => {
               {/* Confirmar Contraseña */}
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Confirmar Contraseña</Form.Label>
+                  <Form.Label className="fw-semibold">
+                    Confirmar Contraseña
+                  </Form.Label>
                   <Form.Control
                     type="password"
                     placeholder={
@@ -768,23 +817,8 @@ const NewCompanyPage: React.FC = () => {
                     className="py-2"
                   />
                   <Form.Text className="text-muted">
-                    {formData.administratorId && "Solo si desea cambiar la contraseña"}
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-
-              {/* Rol - Siempre Administrador por defecto */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Rol</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value="Administrador"
-                    disabled
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Los usuarios de empresas siempre tienen rol Administrador
+                    {formData.administratorId &&
+                      "Solo si desea cambiar la contraseña"}
                   </Form.Text>
                 </Form.Group>
               </Col>
@@ -825,7 +859,8 @@ const NewCompanyPage: React.FC = () => {
                     className="py-2"
                   />
                   <Form.Text className="text-muted">
-                    Se rellena automáticamente con los datos del usuario administrador
+                    Se rellena automáticamente con los datos del usuario
+                    administrador
                   </Form.Text>
                 </Form.Group>
               </Col>

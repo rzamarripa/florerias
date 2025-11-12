@@ -72,34 +72,45 @@ const BranchModal: React.FC<BranchModalProps> = ({
       loadCompanies();
       loadManagers();
       if (branch) {
-        const managerId = (branch.manager && typeof branch.manager !== "string") ? branch.manager._id : "";
-        const manager = (branch.manager && typeof branch.manager !== "string") ? branch.manager : null;
+        const managerId =
+          branch.manager && typeof branch.manager !== "string"
+            ? branch.manager._id
+            : "";
+        const manager =
+          branch.manager && typeof branch.manager !== "string"
+            ? branch.manager
+            : null;
 
         setFormData({
           branchName: branch.branchName,
           branchCode: branch.branchCode || "",
-          companyId: typeof branch.companyId === "string" ? branch.companyId : branch.companyId._id,
+          companyId:
+            typeof branch.companyId === "string"
+              ? branch.companyId
+              : branch.companyId._id,
           address: branch.address,
           managerId: managerId,
-          managerData: manager ? {
-            username: manager.username,
-            email: manager.email,
-            phone: manager.phone,
-            password: "",
-            profile: {
-              name: manager.profile.name,
-              lastName: manager.profile.lastName,
-            },
-          } : {
-            username: "",
-            email: "",
-            phone: "",
-            password: "",
-            profile: {
-              name: "",
-              lastName: "",
-            },
-          },
+          managerData: manager
+            ? {
+                username: manager.username,
+                email: manager.email,
+                phone: manager.phone,
+                password: "",
+                profile: {
+                  name: manager.profile.name,
+                  lastName: manager.profile.lastName,
+                },
+              }
+            : {
+                username: "",
+                email: "",
+                phone: "",
+                password: "",
+                profile: {
+                  name: "",
+                  lastName: "",
+                },
+              },
           contactPhone: branch.contactPhone,
           contactEmail: branch.contactEmail,
         });
@@ -108,9 +119,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
         resetForm();
         if (userCompany?._id) {
           console.log("Estableciendo companyId:", userCompany._id);
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            companyId: userCompany._id
+            companyId: userCompany._id,
           }));
         } else {
           console.warn("userCompany no está disponible o no tiene _id");
@@ -122,7 +133,10 @@ const BranchModal: React.FC<BranchModalProps> = ({
   const loadCompanies = async () => {
     try {
       setLoading(true);
-      const response = await companiesService.getAllCompanies({ isActive: true, limit: 1000 });
+      const response = await companiesService.getAllCompanies({
+        isActive: true,
+        limit: 1000,
+      });
       setCompanies(response.data || []);
     } catch (err: any) {
       // Silenciar error si no hay empresas, es un caso válido
@@ -248,30 +262,43 @@ const BranchModal: React.FC<BranchModalProps> = ({
   const validateForm = (): boolean => {
     // Validar empresa
     if (!formData.companyId || formData.companyId.trim() === "") {
-      setError("No se ha seleccionado una empresa. Por favor, verifica que tengas una empresa asignada.");
+      setError(
+        "No se ha seleccionado una empresa. Por favor, verifica que tengas una empresa asignada."
+      );
       return false;
     }
 
     // Validar datos básicos
-    if (!formData.branchName || !formData.contactPhone || !formData.contactEmail) {
+    if (
+      !formData.branchName ||
+      !formData.contactPhone ||
+      !formData.contactEmail
+    ) {
       setError("Por favor completa todos los campos requeridos de la sucursal");
       return false;
     }
 
     // Validar dirección
-    if (!formData.address.street || !formData.address.externalNumber ||
-        !formData.address.neighborhood || !formData.address.city ||
-        !formData.address.state || !formData.address.postalCode) {
+    if (
+      !formData.address.street ||
+      !formData.address.externalNumber ||
+      !formData.address.neighborhood ||
+      !formData.address.city ||
+      !formData.address.state ||
+      !formData.address.postalCode
+    ) {
       setError("Por favor completa todos los campos de la dirección");
       return false;
     }
 
     // Validar datos del gerente (SIEMPRE OBLIGATORIO)
-    if (!formData.managerData?.username ||
-        !formData.managerData?.email ||
-        !formData.managerData?.phone ||
-        !formData.managerData?.profile?.name ||
-        !formData.managerData?.profile?.lastName) {
+    if (
+      !formData.managerData?.username ||
+      !formData.managerData?.email ||
+      !formData.managerData?.phone ||
+      !formData.managerData?.profile?.name ||
+      !formData.managerData?.profile?.lastName
+    ) {
       setError("Por favor completa todos los campos del gerente");
       return false;
     }
@@ -336,7 +363,11 @@ const BranchModal: React.FC<BranchModalProps> = ({
         return;
       }
 
-      toast.success(isEditing ? "Sucursal actualizada exitosamente" : "Sucursal creada exitosamente");
+      toast.success(
+        isEditing
+          ? "Sucursal actualizada exitosamente"
+          : "Sucursal creada exitosamente"
+      );
       onBranchSaved?.();
       onHide();
     } catch (err: any) {
@@ -402,7 +433,10 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     placeholder="Código (opcional)"
                     value={formData.branchCode}
                     onChange={(e) =>
-                      setFormData({ ...formData, branchCode: e.target.value.toUpperCase() })
+                      setFormData({
+                        ...formData,
+                        branchCode: e.target.value.toUpperCase(),
+                      })
                     }
                   />
                 </Form.Group>
@@ -414,12 +448,18 @@ const BranchModal: React.FC<BranchModalProps> = ({
                   </Form.Label>
                   <Form.Control
                     type="text"
-                    value={userCompany?.tradeName || userCompany?.legalName || "Cargando..."}
+                    value={
+                      userCompany?.tradeName ||
+                      userCompany?.legalName ||
+                      "Cargando..."
+                    }
                     disabled
                     readOnly
                   />
                   <Form.Text className="text-muted">
-                    {userCompany ? "Empresa asignada a tu usuario" : "Esperando empresa..."}
+                    {userCompany
+                      ? "Empresa asignada a tu usuario"
+                      : "Esperando empresa..."}
                   </Form.Text>
                   {!userCompany && (
                     <Form.Text className="text-danger d-block mt-1">
@@ -445,7 +485,10 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        address: { ...formData.address, street: e.target.value },
+                        address: {
+                          ...formData.address,
+                          street: e.target.value,
+                        },
                       })
                     }
                     required
@@ -464,7 +507,10 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        address: { ...formData.address, externalNumber: e.target.value },
+                        address: {
+                          ...formData.address,
+                          externalNumber: e.target.value,
+                        },
                       })
                     }
                     required
@@ -481,7 +527,10 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        address: { ...formData.address, internalNumber: e.target.value },
+                        address: {
+                          ...formData.address,
+                          internalNumber: e.target.value,
+                        },
                       })
                     }
                   />
@@ -499,7 +548,10 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        address: { ...formData.address, neighborhood: e.target.value },
+                        address: {
+                          ...formData.address,
+                          neighborhood: e.target.value,
+                        },
                       })
                     }
                     required
@@ -557,7 +609,10 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        address: { ...formData.address, postalCode: e.target.value },
+                        address: {
+                          ...formData.address,
+                          postalCode: e.target.value,
+                        },
                       })
                     }
                     required
@@ -570,7 +625,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
             <div className="d-flex align-items-center justify-content-between mb-3">
               <div className="d-flex align-items-center gap-2">
                 <UserPlus size={20} className="text-primary" />
-                <h6 className="fw-semibold mb-0">Usuario Gerente <span className="text-danger">*</span></h6>
+                <h6 className="fw-semibold mb-0">
+                  Usuario Gerente <span className="text-danger">*</span>
+                </h6>
               </div>
               {formData.managerId && (
                 <Button
@@ -608,7 +665,13 @@ const BranchModal: React.FC<BranchModalProps> = ({
                       </option>
                     ))}
                   </Form.Select>
-                  <Form.Text className={managersMessage && managers.length === 0 ? "text-warning" : "text-muted"}>
+                  <Form.Text
+                    className={
+                      managersMessage && managers.length === 0
+                        ? "text-warning"
+                        : "text-muted"
+                    }
+                  >
                     {managersMessage && managers.length === 0
                       ? managersMessage
                       : formData.managerId
@@ -619,81 +682,6 @@ const BranchModal: React.FC<BranchModalProps> = ({
               </Col>
 
               {/* Campos del Gerente - Siempre habilitados */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre de Usuario <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ingresa el nombre de usuario"
-                    value={formData.managerData?.username || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              username: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Email <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="Ingresa el email"
-                    value={formData.managerData?.email || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              email: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Teléfono <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="tel"
-                    placeholder="Ingresa el teléfono"
-                    value={formData.managerData?.phone || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              phone: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">
@@ -753,7 +741,85 @@ const BranchModal: React.FC<BranchModalProps> = ({
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">
-                    Contraseña {!formData.managerId && <span className="text-danger">*</span>}
+                    Teléfono <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="tel"
+                    placeholder="Ingresa el teléfono"
+                    value={formData.managerData?.phone || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        managerData: formData.managerData
+                          ? {
+                              ...formData.managerData,
+                              phone: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    Email <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="email"
+                    placeholder="Ingresa el email"
+                    value={formData.managerData?.email || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        managerData: formData.managerData
+                          ? {
+                              ...formData.managerData,
+                              email: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    Nombre de Usuario <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ingresa el nombre de usuario"
+                    value={formData.managerData?.username || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        managerData: formData.managerData
+                          ? {
+                              ...formData.managerData,
+                              username: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                    className="py-2"
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    Contraseña{" "}
+                    {!formData.managerId && (
+                      <span className="text-danger">*</span>
+                    )}
                   </Form.Label>
                   <Form.Control
                     type="password"

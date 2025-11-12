@@ -82,14 +82,19 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
 
       // Cargar sucursales si no se pasan como prop
       if (!propBranches) {
-        const branchesResponse = await branchesService.getAllBranches({ limit: 100 });
+        const branchesResponse = await branchesService.getAllBranches({
+          limit: 100,
+        });
         setBranches(branchesResponse.data);
       } else {
         setBranches(propBranches);
       }
 
       // Cargar productos activos
-      const productsResponse = await productsService.getAllProducts({ limit: 1000, estatus: true });
+      const productsResponse = await productsService.getAllProducts({
+        limit: 1000,
+        estatus: true,
+      });
       setProducts(productsResponse.data);
     } catch (error: any) {
       toast.error(error.message || "Error al cargar datos");
@@ -134,7 +139,11 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
     setProductEntries(newEntries);
   };
 
-  const handleProductChange = (index: number, field: string, value: string | number) => {
+  const handleProductChange = (
+    index: number,
+    field: string,
+    value: string | number
+  ) => {
     const newEntries = [...productEntries];
     newEntries[index] = {
       ...newEntries[index],
@@ -208,7 +217,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
       setLoading(true);
 
       // Filtrar productos válidos
-      const validProducts = productEntries.filter((p) => p.productId && p.quantity > 0);
+      const validProducts = productEntries.filter(
+        (p) => p.productId && p.quantity > 0
+      );
 
       // Preparar datos para enviar al backend
       const storageData: any = {
@@ -272,7 +283,11 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
         <div className="w-100">
           <div className="d-flex justify-content-between align-items-center">
             <h5 className="mb-0 fw-bold">Crear Nuevo Almacén</h5>
-            <Button variant="link" onClick={handleClose} className="text-muted p-0">
+            <Button
+              variant="link"
+              onClick={handleClose}
+              className="text-muted p-0"
+            >
               <X size={24} />
             </Button>
           </div>
@@ -289,7 +304,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
           <Form onSubmit={handleSubmit}>
             {/* Sucursal */}
             <div className="mb-4">
-              <h6 className="mb-3 fw-bold text-primary">Información del Almacén</h6>
+              <h6 className="mb-3 fw-bold text-primary">
+                Información del Almacén
+              </h6>
               <Form.Group className="mb-3">
                 <Form.Label>
                   Sucursal <span className="text-danger">*</span>
@@ -302,7 +319,8 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                   <option value="">Seleccionar sucursal...</option>
                   {branches.map((branch) => (
                     <option key={branch._id} value={branch._id}>
-                      {branch.branchName} {branch.branchCode ? `(${branch.branchCode})` : ""}
+                      {branch.branchName}{" "}
+                      {branch.branchCode ? `(${branch.branchCode})` : ""}
                     </option>
                   ))}
                 </Form.Select>
@@ -316,27 +334,32 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>
-                      Nombre de Usuario <span className="text-danger">*</span>
+                      Nombre <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
                       type="text"
-                      placeholder="Nombre de usuario"
-                      value={managerData.username}
-                      onChange={(e) => handleManagerChange("username", e.target.value)}
+                      placeholder="Nombre"
+                      value={managerData.profile.name}
+                      onChange={(e) =>
+                        handleManagerChange("profile.name", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
                 </Col>
+
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>
-                      Email <span className="text-danger">*</span>
+                      Apellido <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
-                      type="email"
-                      placeholder="correo@ejemplo.com"
-                      value={managerData.email}
-                      onChange={(e) => handleManagerChange("email", e.target.value)}
+                      type="text"
+                      placeholder="Apellido"
+                      value={managerData.profile.lastName}
+                      onChange={(e) =>
+                        handleManagerChange("profile.lastName", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
@@ -353,21 +376,26 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="tel"
                       placeholder="1234567890"
                       value={managerData.phone}
-                      onChange={(e) => handleManagerChange("phone", e.target.value)}
+                      onChange={(e) =>
+                        handleManagerChange("phone", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
                 </Col>
+
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>
-                      Nombre <span className="text-danger">*</span>
+                      Email <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
-                      type="text"
-                      placeholder="Nombre"
-                      value={managerData.profile.name}
-                      onChange={(e) => handleManagerChange("profile.name", e.target.value)}
+                      type="email"
+                      placeholder="correo@ejemplo.com"
+                      value={managerData.email}
+                      onChange={(e) =>
+                        handleManagerChange("email", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
@@ -375,20 +403,25 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
               </Row>
 
               <Row>
-                <Col md={6}>
+                <Col md={12}>
                   <Form.Group className="mb-3">
                     <Form.Label>
-                      Apellido <span className="text-danger">*</span>
+                      Nombre de Usuario <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
                       type="text"
-                      placeholder="Apellido"
-                      value={managerData.profile.lastName}
-                      onChange={(e) => handleManagerChange("profile.lastName", e.target.value)}
+                      placeholder="Nombre de usuario"
+                      value={managerData.username}
+                      onChange={(e) =>
+                        handleManagerChange("username", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
                 </Col>
+              </Row>
+
+              <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>
@@ -398,25 +431,27 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="password"
                       placeholder="Mínimo 6 caracteres"
                       value={managerData.password}
-                      onChange={(e) => handleManagerChange("password", e.target.value)}
+                      onChange={(e) =>
+                        handleManagerChange("password", e.target.value)
+                      }
                       required
                       minLength={6}
                     />
                   </Form.Group>
                 </Col>
-              </Row>
-
-              <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>
-                      Confirmar Contraseña <span className="text-danger">*</span>
+                      Confirmar Contraseña{" "}
+                      <span className="text-danger">*</span>
                     </Form.Label>
                     <Form.Control
                       type="password"
                       placeholder="Confirmar contraseña"
                       value={managerData.confirmPassword}
-                      onChange={(e) => handleManagerChange("confirmPassword", e.target.value)}
+                      onChange={(e) =>
+                        handleManagerChange("confirmPassword", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
@@ -426,7 +461,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
 
             {/* Dirección */}
             <div className="mb-4">
-              <h6 className="mb-3 fw-bold text-primary">Dirección del Almacén</h6>
+              <h6 className="mb-3 fw-bold text-primary">
+                Dirección del Almacén
+              </h6>
               <Row>
                 <Col md={8}>
                   <Form.Group className="mb-3">
@@ -437,7 +474,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="text"
                       placeholder="Nombre de la calle"
                       value={address.street}
-                      onChange={(e) => handleAddressChange("street", e.target.value)}
+                      onChange={(e) =>
+                        handleAddressChange("street", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
@@ -451,7 +490,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="text"
                       placeholder="123"
                       value={address.externalNumber}
-                      onChange={(e) => handleAddressChange("externalNumber", e.target.value)}
+                      onChange={(e) =>
+                        handleAddressChange("externalNumber", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
@@ -463,7 +504,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="text"
                       placeholder="A"
                       value={address.internalNumber}
-                      onChange={(e) => handleAddressChange("internalNumber", e.target.value)}
+                      onChange={(e) =>
+                        handleAddressChange("internalNumber", e.target.value)
+                      }
                     />
                   </Form.Group>
                 </Col>
@@ -479,7 +522,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="text"
                       placeholder="Colonia"
                       value={address.neighborhood}
-                      onChange={(e) => handleAddressChange("neighborhood", e.target.value)}
+                      onChange={(e) =>
+                        handleAddressChange("neighborhood", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
@@ -493,7 +538,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="text"
                       placeholder="Ciudad"
                       value={address.city}
-                      onChange={(e) => handleAddressChange("city", e.target.value)}
+                      onChange={(e) =>
+                        handleAddressChange("city", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
@@ -510,7 +557,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="text"
                       placeholder="Estado"
                       value={address.state}
-                      onChange={(e) => handleAddressChange("state", e.target.value)}
+                      onChange={(e) =>
+                        handleAddressChange("state", e.target.value)
+                      }
                       required
                     />
                   </Form.Group>
@@ -524,7 +573,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="text"
                       placeholder="00000"
                       value={address.postalCode}
-                      onChange={(e) => handleAddressChange("postalCode", e.target.value)}
+                      onChange={(e) =>
+                        handleAddressChange("postalCode", e.target.value)
+                      }
                       maxLength={5}
                       required
                     />
@@ -536,7 +587,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
             {/* Productos Iniciales */}
             <div className="mb-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h6 className="mb-0 fw-bold text-primary">Productos Iniciales (Opcional)</h6>
+                <h6 className="mb-0 fw-bold text-primary">
+                  Productos Iniciales (Opcional)
+                </h6>
                 <Button
                   variant="outline-primary"
                   size="sm"
@@ -554,7 +607,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                   <Col md={7}>
                     <Form.Select
                       value={entry.productId}
-                      onChange={(e) => handleProductChange(index, "productId", e.target.value)}
+                      onChange={(e) =>
+                        handleProductChange(index, "productId", e.target.value)
+                      }
                     >
                       <option value="">Seleccionar producto...</option>
                       {products.map((product) => (
@@ -569,7 +624,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
                       type="number"
                       min="0"
                       value={entry.quantity}
-                      onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
+                      onChange={(e) =>
+                        handleProductChange(index, "quantity", e.target.value)
+                      }
                       placeholder="Cantidad"
                     />
                   </Col>
@@ -595,7 +652,11 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
         <Button variant="secondary" onClick={handleClose} disabled={loading}>
           Cancelar
         </Button>
-        <Button variant="primary" onClick={handleSubmit} disabled={loading || loadingData}>
+        <Button
+          variant="primary"
+          onClick={handleSubmit}
+          disabled={loading || loadingData}
+        >
           {loading ? (
             <>
               <Spinner animation="border" size="sm" className="me-2" />

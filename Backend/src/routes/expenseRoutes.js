@@ -1,26 +1,23 @@
-import { Router } from 'express';
+import express from "express";
 import {
   getAllExpenses,
   getExpenseById,
   createExpense,
   updateExpense,
-  deleteExpense
-} from '../controllers/expenseController.js';
-import { protect } from '../middleware/auth.js';
+  deleteExpense,
+} from "../controllers/expenseController.js";
+import { protect } from "../middleware/auth.js";
 
-const router = Router();
+const router = express.Router();
 
-// Aplicar middleware de autenticación a todas las rutas
-router.use(protect);
+// Rutas protegidas con autenticación
+router.get("/", protect, getAllExpenses);
+router.get("/:id", protect, getExpenseById);
 
-// Rutas para gastos
-router.route('/')
-  .get(getAllExpenses)        // GET /api/expenses - Obtener todos los gastos
-  .post(createExpense);       // POST /api/expenses - Crear nuevo gasto
+router.post("/", protect, createExpense);
 
-router.route('/:id')
-  .get(getExpenseById)        // GET /api/expenses/:id - Obtener gasto por ID
-  .put(updateExpense)         // PUT /api/expenses/:id - Actualizar gasto
-  .delete(deleteExpense);     // DELETE /api/expenses/:id - Eliminar gasto
+router.put("/:id", protect, updateExpense);
+
+router.delete("/:id", protect, deleteExpense);
 
 export default router;

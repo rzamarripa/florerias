@@ -31,7 +31,8 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   const isAdministrator = role?.toLowerCase() === "administrador";
 
   // Para administradores: verificar si hay sucursal seleccionada
-  const canCreate = !isAdministrator || (isAdministrator && activeBranch) || isEditing;
+  const canCreate =
+    !isAdministrator || (isAdministrator && activeBranch) || isEditing;
 
   const [formData, setFormData] = useState<CreateCashRegisterData>({
     name: "",
@@ -53,20 +54,28 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
       if (cashRegister) {
         setFormData({
           name: cashRegister.name,
-          branchId: typeof cashRegister.branchId === "string" ? cashRegister.branchId : cashRegister.branchId._id,
+          branchId:
+            typeof cashRegister.branchId === "string"
+              ? cashRegister.branchId
+              : cashRegister.branchId._id,
           cashierId: cashRegister.cashierId
-            ? (typeof cashRegister.cashierId === "string" ? cashRegister.cashierId : cashRegister.cashierId._id)
+            ? typeof cashRegister.cashierId === "string"
+              ? cashRegister.cashierId
+              : cashRegister.cashierId._id
             : null,
-          managerId: typeof cashRegister.managerId === "string" ? cashRegister.managerId : cashRegister.managerId._id,
+          managerId:
+            typeof cashRegister.managerId === "string"
+              ? cashRegister.managerId
+              : cashRegister.managerId._id,
           initialBalance: cashRegister.initialBalance,
         });
       } else {
         resetForm();
         // Para administradores: pre-seleccionar activeBranch si existe
         if (isAdministrator && activeBranch) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            branchId: activeBranch._id
+            branchId: activeBranch._id,
           }));
         }
       }
@@ -77,7 +86,9 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     try {
       if (!userId) return;
       setLoading(true);
-      const response = await cashRegistersService.getCashiersAndManagersByAdmin(userId);
+      const response = await cashRegistersService.getCashiersAndManagersByAdmin(
+        userId
+      );
 
       if (response.data) {
         setBranches(response.data.branches || []);
@@ -102,7 +113,11 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     setError(null);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value } = e.target;
 
     // Si es el campo initialBalance, convertir a número
@@ -128,7 +143,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     }));
 
     // Buscar el gerente de esta sucursal
-    const selectedBranch = branches.find(b => b._id === branchId);
+    const selectedBranch = branches.find((b) => b._id === branchId);
     if (selectedBranch && managers.length > 0) {
       // Asumiendo que cada sucursal tiene un gerente específico
       // El backend ya filtra los gerentes correctamente
@@ -152,7 +167,9 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
 
     // Validar sucursal para administradores
     if (isAdministrator && !isEditing && !activeBranch) {
-      toast.error("Debes seleccionar una sucursal antes de crear una caja registradora");
+      toast.error(
+        "Debes seleccionar una sucursal antes de crear una caja registradora"
+      );
       return;
     }
 
@@ -167,7 +184,10 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
       if (isEditing && cashRegister) {
         // Al editar, no enviar cashierId para no modificarlo
         const { cashierId, ...updateData } = formData;
-        await cashRegistersService.updateCashRegister(cashRegister._id, updateData);
+        await cashRegistersService.updateCashRegister(
+          cashRegister._id,
+          updateData
+        );
         toast.success("Caja registradora actualizada exitosamente");
       } else {
         await cashRegistersService.createCashRegister(formData);
@@ -194,7 +214,13 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" backdrop="static" centered>
+    <Modal
+      show={show}
+      onHide={handleClose}
+      size="lg"
+      backdrop="static"
+      centered
+    >
       <Modal.Header closeButton style={{ borderBottom: "2px solid #f1f3f5" }}>
         <Modal.Title className="fw-bold">
           {isEditing ? "Editar Caja Registradora" : "Nueva Caja Registradora"}
@@ -206,10 +232,12 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
           {/* Alerta para administradores sin sucursal seleccionada */}
           {isAdministrator && !activeBranch && !isEditing && (
             <Alert variant="warning" className="mb-3">
-              <Alert.Heading className="fs-6 fw-bold">Sucursal requerida</Alert.Heading>
+              <Alert.Heading className="fs-6 fw-bold">
+                Sucursal requerida
+              </Alert.Heading>
               <p className="mb-0 small">
-                Debes seleccionar una sucursal antes de crear una caja registradora.
-                Ve a tu perfil y selecciona una sucursal activa.
+                Debes seleccionar una sucursal antes de crear una caja
+                registradora. Ve a tu perfil y selecciona una sucursal activa.
               </p>
             </Alert>
           )}
@@ -316,7 +344,9 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
               <Col md={12}>
                 <Alert variant="info" className="mb-0">
                   <small>
-                    <strong>Nota:</strong> El cajero se asignará automáticamente cuando un usuario con rol "Cajero" abra la caja registradora.
+                    <strong>Nota:</strong> El cajero se asignará automáticamente
+                    cuando un usuario con rol "Cajero" abra la caja
+                    registradora.
                   </small>
                 </Alert>
               </Col>
@@ -339,7 +369,8 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                       style={{ borderRadius: "8px" }}
                     />
                     <Form.Text className="text-muted">
-                      El saldo inicial con el que abre la caja (opcional, por defecto 0)
+                      El saldo inicial con el que abre la caja (opcional, por
+                      defecto 0)
                     </Form.Text>
                   </Form.Group>
                 </Col>

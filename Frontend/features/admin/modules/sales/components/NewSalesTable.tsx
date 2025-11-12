@@ -73,13 +73,19 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters }) => {
     onOrderUpdated: (updatedOrder) => {
       setSales((prev) => {
         // Si la orden actualizada debe estar en esta tabla
-        const shouldInclude = ["pendiente", "en-proceso", "completado"].includes(updatedOrder.status);
+        const shouldInclude = [
+          "pendiente",
+          "en-proceso",
+          "completado",
+        ].includes(updatedOrder.status);
 
         if (shouldInclude) {
           // Actualizar o agregar
           const exists = prev.some((s) => s._id === updatedOrder._id);
           if (exists) {
-            return prev.map((s) => (s._id === updatedOrder._id ? updatedOrder as Sale : s));
+            return prev.map((s) =>
+              s._id === updatedOrder._id ? (updatedOrder as Sale) : s
+            );
           } else {
             return [updatedOrder as Sale, ...prev];
           }
@@ -168,7 +174,10 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters }) => {
   };
 
   const totalPaid = sales.reduce((sum, sale) => sum + (sale.advance || 0), 0);
-  const totalBalance = sales.reduce((sum, sale) => sum + (sale.remainingBalance || 0), 0);
+  const totalBalance = sales.reduce(
+    (sum, sale) => sum + (sale.remainingBalance || 0),
+    0
+  );
 
   if (loading) {
     return (
@@ -187,13 +196,21 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters }) => {
             <tr>
               <th className="px-4 py-3 fw-semibold text-muted">Folio</th>
               <th className="px-4 py-3 fw-semibold text-muted">Clientes</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Fecha Entrega</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Estatus Prod.</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Estatus Pago.</th>
+              <th className="px-4 py-3 fw-semibold text-muted">
+                Fecha Entrega
+              </th>
+              <th className="px-4 py-3 fw-semibold text-muted">
+                Estatus Prod.
+              </th>
+              <th className="px-4 py-3 fw-semibold text-muted">
+                Estatus Pago.
+              </th>
               <th className="px-4 py-3 fw-semibold text-muted">Fecha Pedido</th>
               <th className="px-4 py-3 fw-semibold text-muted">Pagado</th>
               <th className="px-4 py-3 fw-semibold text-muted">Saldo</th>
-              <th className="px-4 py-3 fw-semibold text-muted text-center">Acciones</th>
+              <th className="px-4 py-3 fw-semibold text-muted text-center">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -205,17 +222,28 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters }) => {
               </tr>
             ) : (
               sales.map((sale) => (
-                <tr key={sale._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
+                <tr
+                  key={sale._id}
+                  style={{ borderBottom: "1px solid #f1f3f5" }}
+                >
                   <td className="px-4 py-3 fw-semibold">{sale.orderNumber}</td>
-                  <td className="px-4 py-3">{sale.clientInfo?.name || "N/A"}</td>
                   <td className="px-4 py-3">
-                    {sale.deliveryData?.deliveryDateTime ? formatDate(sale.deliveryData.deliveryDateTime) : "N/A"}
+                    {sale.clientInfo?.name || "N/A"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {sale.deliveryData?.deliveryDateTime
+                      ? formatDate(sale.deliveryData.deliveryDateTime)
+                      : "N/A"}
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(sale.status)}</td>
                   <td className="px-4 py-3">{getStatusBadge(sale.status)}</td>
                   <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
-                  <td className="px-4 py-3 fw-semibold text-success">${(sale.advance || 0).toFixed(2)}</td>
-                  <td className="px-4 py-3 fw-semibold text-danger">${(sale.remainingBalance || 0).toFixed(2)}</td>
+                  <td className="px-4 py-3 fw-semibold text-success">
+                    ${(sale.advance || 0).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 fw-semibold text-danger">
+                    ${(sale.remainingBalance || 0).toFixed(2)}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="d-flex justify-content-center gap-2">
                       <Button
@@ -272,19 +300,30 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters }) => {
                 </tr>
               ))
             )}
+            <tr
+              style={{ background: "#f8f9fa", borderTop: "2px solid #dee2e6" }}
+            >
+              <td colSpan={8} className="text-end px-4 py-3">
+                <span className="fw-bold me-5">Total</span>
+                <span className="fw-bold text-success me-5">
+                  $
+                  {totalPaid.toLocaleString("es-MX", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                <span className="fw-bold text-danger">
+                  $
+                  {totalBalance.toLocaleString("es-MX", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </td>
+              <td></td>
+            </tr>
           </tbody>
         </Table>
-      </div>
-
-      {/* Total Row */}
-      <div className="border-top px-4 py-3">
-        <div className="row">
-          <div className="col text-end">
-            <span className="fw-bold me-5">Total</span>
-            <span className="fw-bold text-success me-5">${totalPaid.toFixed(2)}</span>
-            <span className="fw-bold text-danger">${totalBalance.toFixed(2)}</span>
-          </div>
-        </div>
       </div>
 
       {/* Payment Modal */}

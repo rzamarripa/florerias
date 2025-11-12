@@ -61,7 +61,18 @@ export const userDropdownItems: UserDropdownItem[] = [
 
 export const menuItems: MenuItemType[] = [
   { key: "menu", label: "Menu", isTitle: true },
-
+  {
+    key: "companies",
+    label: "Empresas",
+    url: "/gestion/empresas",
+    icon: Building,
+  },
+  {
+    key: "dashboard-company",
+    label: "Dashboard Empresa",
+    url: "/gestion/dashboard-empresa",
+    icon: Building,
+  },
   {
     key: "sucursal",
     label: "Sucursal",
@@ -91,6 +102,19 @@ export const menuItems: MenuItemType[] = [
         label: "Reparto",
         url: "/sucursal/reparto",
         icon: DeliveryTruck,
+      },
+
+      {
+        key: "gastos",
+        label: "Gastos",
+        url: "/catalogos/gastos",
+        icon: DollarSign,
+      },
+      {
+        key: "compras",
+        label: "Compras",
+        url: "/catalogos/compras",
+        icon: ShoppingCart,
       },
       {
         key: "nuevo_gasto",
@@ -187,6 +211,12 @@ export const menuItems: MenuItemType[] = [
     icon: Package2,
     children: [
       {
+        key: "proveedores",
+        label: "Proveedores",
+        url: "/gestion/proveedores",
+        icon: Building,
+      },
+      {
         key: "productos",
         label: "Productos",
         url: "/catalogos/productos",
@@ -217,18 +247,6 @@ export const menuItems: MenuItemType[] = [
         icon: CreditCard,
       },
       {
-        key: "gastos",
-        label: "Gastos",
-        url: "/catalogos/gastos",
-        icon: DollarSign,
-      },
-      {
-        key: "compras",
-        label: "Compras",
-        url: "/catalogos/compras",
-        icon: ShoppingCart,
-      },
-      {
         key: "conceptos-gastos",
         label: "Conceptos de gastos",
         url: "/catalogos/conceptos-gastos",
@@ -239,6 +257,19 @@ export const menuItems: MenuItemType[] = [
         label: "Colonias",
         url: "/catalogos/colonias",
         icon: MapPinHouse,
+      },
+    ],
+  },
+  {
+    key: "reportes",
+    label: "Reportes",
+    icon: FileText,
+    children: [
+      {
+        key: "finanzas",
+        label: "Finanzas",
+        url: "/finanzas/finanzas",
+        icon: DollarSign,
       },
     ],
   },
@@ -259,37 +290,6 @@ export const menuItems: MenuItemType[] = [
         label: "Usuarios",
         url: "/gestion/usuarios",
         icon: Users,
-      },
-      {
-        key: "companies",
-        label: "Empresas",
-        url: "/gestion/empresas",
-        icon: Building,
-      },
-      {
-        key: "dashboard-company",
-        label: "Dashboard Empresa",
-        url: "/gestion/dashboard-empresa",
-        icon: Building,
-      },
-      {
-        key: "proveedores",
-        label: "Proveedores",
-        url: "/gestion/proveedores",
-        icon: Building,
-      },
-    ],
-  },
-  {
-    key: "finanzas",
-    label: "Finanzas",
-    icon: DollarSign,
-    children: [
-      {
-        key: "finanzas",
-        label: "Finanzas",
-        url: "/finanzas/finanzas",
-        icon: DollarSign,
       },
     ],
   },

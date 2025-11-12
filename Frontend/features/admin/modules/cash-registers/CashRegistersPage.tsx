@@ -1,12 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Button,
-  Table,
-  Badge,
-  Spinner,
-} from "react-bootstrap";
+import { Button, Table, Badge, Spinner } from "react-bootstrap";
 import { Plus, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "./services/cashRegisters";
