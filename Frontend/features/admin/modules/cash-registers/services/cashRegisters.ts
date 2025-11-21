@@ -104,6 +104,11 @@ export const cashRegistersService = {
     return response as any;
   },
 
+  getManagerBranch: async (managerId: string): Promise<GetEmployeesByAdminResponse> => {
+    const response = await apiCall<GetEmployeesByAdminResponse>(`/cash-registers/manager/${managerId}/branch`);
+    return response as any;
+  },
+
   getUserCashRegister: async (): Promise<{ success: boolean; data: CashRegister | null; message?: string }> => {
     const response = await apiCall<{ success: boolean; data: CashRegister | null; message?: string }>("/cash-registers/user/cash-register");
     return response as any;
@@ -139,6 +144,22 @@ export const cashRegistersService = {
         body: JSON.stringify({ remainingBalance }),
       }
     );
+    return response as any;
+  },
+
+  getSocialMediaCashRegisters: async (filters: CashRegisterFilters = {}): Promise<GetCashRegistersResponse> => {
+    const { page = 1, limit = 10, branchId, isOpen, isActive } = filters;
+
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (branchId) searchParams.append('branchId', branchId);
+    if (isOpen !== undefined) searchParams.append('isOpen', isOpen.toString());
+    if (isActive !== undefined) searchParams.append('isActive', isActive.toString());
+
+    const response = await apiCall<GetCashRegistersResponse>(`/cash-registers/social-media?${searchParams}`);
     return response as any;
   },
 };

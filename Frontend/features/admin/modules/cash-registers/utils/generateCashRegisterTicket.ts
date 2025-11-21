@@ -27,20 +27,6 @@ export const generateCashRegisterTicket = (
     });
   };
 
-  const getPaymentMethodBadgeColor = (paymentMethod: string): string => {
-    const method = paymentMethod.toLowerCase();
-    if (method.includes("efectivo")) return "#28a745";
-    if (
-      method.includes("crédito") ||
-      method.includes("credito") ||
-      method.includes("tarjeta")
-    )
-      return "#007bff";
-    if (method.includes("transferencia")) return "#17a2b8";
-    if (method.includes("intercambio")) return "#ffc107";
-    return "#6c757d";
-  };
-
   return `
 <!DOCTYPE html>
 <html lang="es">
@@ -358,44 +344,6 @@ export const generateCashRegisterTicket = (
             </div>
         </div>
 
-        <!-- Desglose por Forma de Pago -->
-        <div class="section-title">Desglose por Forma de Pago</div>
-        <div class="payment-types">
-            <div class="payment-card">
-                <div class="payment-label">Efectivo</div>
-                <div class="payment-amount" style="color: #28a745;">
-                    ${formatCurrency(summary.salesByPaymentType.efectivo)}
-                </div>
-            </div>
-
-            <div class="payment-card">
-                <div class="payment-label">Tarjeta de Crédito</div>
-                <div class="payment-amount" style="color: #007bff;">
-                    ${formatCurrency(summary.salesByPaymentType.credito)}
-                </div>
-            </div>
-
-            <div class="payment-card">
-                <div class="payment-label">Transferencia</div>
-                <div class="payment-amount" style="color: #17a2b8;">
-                    ${formatCurrency(summary.salesByPaymentType.transferencia)}
-                </div>
-            </div>
-
-            <div class="payment-card">
-                <div class="payment-label">Intercambio</div>
-                <div class="payment-amount" style="color: #ffc107;">
-                    ${formatCurrency(summary.salesByPaymentType.intercambio)}
-                </div>
-            </div>
-        </div>
-
-        <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
-            <div style="font-weight: bold; font-size: 12pt; color: #856404;">
-                Total Efectivo en Caja: ${formatCurrency(summary.salesByPaymentType.efectivo)}
-            </div>
-        </div>
-
         <!-- Detalle de Ventas -->
         <div class="section-title">Detalle de Ventas</div>
         <table>
@@ -421,11 +369,17 @@ export const generateCashRegisterTicket = (
                         <td>${index + 1}</td>
                         <td style="font-size: 8pt;">${formatDate(order.createdAt)}</td>
                         <td>
-                            <span class="payment-badge" style="background-color: ${getPaymentMethodBadgeColor(
-                              order.paymentMethod
-                            )};">
-                                ${order.paymentMethod}
-                            </span>
+                            ${order.paymentMethod.split(', ').map((method: string) => {
+                              let bgColor = '#6c757d'; // default gray
+                              if (method.toLowerCase().includes('efectivo')) {
+                                bgColor = '#28a745'; // green
+                              } else if (method.toLowerCase().includes('tarjeta') || method.toLowerCase().includes('crédito') || method.toLowerCase().includes('credito')) {
+                                bgColor = '#17a2b8'; // info blue
+                              } else if (method.toLowerCase().includes('transferencia')) {
+                                bgColor = '#007bff'; // primary blue
+                              }
+                              return `<span class="payment-badge" style="background-color: ${bgColor}; margin: 2px;">${method}</span>`;
+                            }).join(' ')}
                         </td>
                         <td>
                             <div style="font-weight: 600;">${order.clientName}</div>
@@ -434,6 +388,80 @@ export const generateCashRegisterTicket = (
                         <td style="font-weight: 600;">${order.orderNumber}</td>
                         <td style="text-align: center;">${order.itemsCount}</td>
                         <td style="text-align: right; font-weight: bold;">${formatCurrency(order.advance)}</td>
+                    </tr>
+                `
+                        )
+                        .join("")
+                }
+            </tbody>
+        </table>
+
+        <!-- Detalle de Gastos -->
+        <div class="section-title">Detalle de Gastos</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Folio</th>
+                    <th style="width: 20%;">Fecha</th>
+                    <th style="width: 25%;">Concepto</th>
+                    <th style="width: 25%;">Usuario</th>
+                    <th style="width: 20%; text-align: right;">Importe</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${
+                  summary.expenses.length === 0
+                    ? '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #6c757d;">No se registraron gastos</td></tr>'
+                    : summary.expenses
+                        .map(
+                          (expense) => `
+                    <tr>
+                        <td style="font-weight: 600;">${expense.folio}</td>
+                        <td style="font-size: 8pt;">${formatDate(expense.paymentDate)}</td>
+                        <td>
+                            <div style="font-weight: 600;">${expense.concept}</div>
+                            ${expense.conceptDescription ? `<div style="font-size: 8pt; color: #6c757d;">${expense.conceptDescription}</div>` : ''}
+                        </td>
+                        <td>${expense.user}</td>
+                        <td style="text-align: right; font-weight: bold; color: #dc3545;">${formatCurrency(expense.total)}</td>
+                    </tr>
+                `
+                        )
+                        .join("")
+                }
+            </tbody>
+        </table>
+
+        <!-- Detalle de Compras en Efectivo -->
+        <div class="section-title">Detalle de Compras en Efectivo</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 8%;">Folio</th>
+                    <th style="width: 15%;">Fecha</th>
+                    <th style="width: 20%;">Concepto</th>
+                    <th style="width: 20%;">Proveedor</th>
+                    <th style="width: 17%;">Usuario</th>
+                    <th style="width: 20%; text-align: right;">Importe</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${
+                  summary.buys.length === 0
+                    ? '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #6c757d;">No se registraron compras en efectivo</td></tr>'
+                    : summary.buys
+                        .map(
+                          (buy) => `
+                    <tr>
+                        <td style="font-weight: 600;">${buy.folio}</td>
+                        <td style="font-size: 8pt;">${formatDate(buy.paymentDate)}</td>
+                        <td>
+                            <div style="font-weight: 600;">${buy.concept}</div>
+                            ${buy.description ? `<div style="font-size: 8pt; color: #6c757d;">${buy.description}</div>` : ''}
+                        </td>
+                        <td>${buy.provider}</td>
+                        <td>${buy.user}</td>
+                        <td style="text-align: right; font-weight: bold; color: #856404;">${formatCurrency(buy.amount)}</td>
                     </tr>
                 `
                         )

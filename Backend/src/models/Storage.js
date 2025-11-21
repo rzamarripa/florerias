@@ -26,10 +26,15 @@ const storageSchema = new Schema(
       required: [true, "La sucursal es requerida"],
       unique: true, // Una sucursal solo puede tener un almacén
     },
+    name: {
+      type: String,
+      required: [true, "El nombre del almacén es requerido"],
+      trim: true,
+    },
     warehouseManager: {
       type: Schema.Types.ObjectId,
       ref: "cs_user",
-      required: [true, "El gerente de almacén es requerido"],
+      required: false,
     },
     products: {
       type: [productItemSchema],
@@ -46,12 +51,12 @@ const storageSchema = new Schema(
     address: {
       street: {
         type: String,
-        required: [true, "La calle es requerida"],
+        required: false,
         trim: true,
       },
       externalNumber: {
         type: String,
-        required: [true, "El número exterior es requerido"],
+        required: false,
         trim: true,
       },
       internalNumber: {
@@ -61,22 +66,22 @@ const storageSchema = new Schema(
       },
       neighborhood: {
         type: String,
-        required: [true, "La colonia es requerida"],
+        required: false,
         trim: true,
       },
       city: {
         type: String,
-        required: [true, "La ciudad es requerida"],
+        required: false,
         trim: true,
       },
       state: {
         type: String,
-        required: [true, "El estado es requerido"],
+        required: false,
         trim: true,
       },
       postalCode: {
         type: String,
-        required: [true, "El código postal es requerido"],
+        required: false,
         trim: true,
         match: [/^\d{5}$/, "El código postal debe tener 5 dígitos"],
       },

@@ -1,3 +1,4 @@
+import StageCatalogActions from "@/features/admin/modules/stageCatalogs/components/StageCatalogActions";
 import { type MenuItemType } from "@/types/layout";
 import {
   ShieldUser,
@@ -27,6 +28,7 @@ import {
   LogOut,
   LockKeyhole,
   HelpCircle,
+  ChartPie,
 } from "lucide-react";
 
 export interface UserDropdownItem {
@@ -117,12 +119,6 @@ export const menuItems: MenuItemType[] = [
         icon: ShoppingCart,
       },
       {
-        key: "nuevo_gasto",
-        label: "Nuevo Gasto",
-        url: "/sucursal/nuevo-gasto",
-        icon: DollarSign,
-      },
-      {
         key: "almacenes",
         label: "Almacenes",
         url: "/sucursal/almacenes",
@@ -133,12 +129,6 @@ export const menuItems: MenuItemType[] = [
         label: "Eventos",
         url: "/sucursal/eventos",
         icon: Calendar,
-      },
-      {
-        key: "cajas",
-        label: "Cajas Registradoras",
-        url: "/ventas/cajas",
-        icon: Wallet,
       },
       {
         key: "produccion",
@@ -163,6 +153,18 @@ export const menuItems: MenuItemType[] = [
             label: "Historial",
             url: "/panel-de-control/cajas/historial",
             icon: History,
+          },
+          {
+            key: "cajas",
+            label: "Cajas Registradoras",
+            url: "/ventas/cajas",
+            icon: Wallet,
+          },
+          {
+            key: "cajas-redes",
+            label: "Cajas de Redes",
+            url: "/ventas/cajas-redes-sociales",
+            icon: Wallet,
           },
         ],
       },
@@ -211,6 +213,12 @@ export const menuItems: MenuItemType[] = [
     icon: Package2,
     children: [
       {
+        key: "catalogo-etapas",
+        label: "Etapas de Ventas",
+        url: "/catalogos/etapas",
+        icon: ChartPie,
+      },
+      {
         key: "proveedores",
         label: "Proveedores",
         url: "/gestion/proveedores",
@@ -220,6 +228,12 @@ export const menuItems: MenuItemType[] = [
         key: "productos",
         label: "Productos",
         url: "/catalogos/productos",
+        icon: Package,
+      },
+      {
+        key: "categorias-productos",
+        label: "Categorias de productos",
+        url: "/catalogos/categorias-productos",
         icon: Package,
       },
       {
@@ -270,7 +284,7 @@ export const menuItems: MenuItemType[] = [
         label: "Finanzas",
         url: "/finanzas/finanzas",
         icon: DollarSign,
-      },
+      }
     ],
   },
   {

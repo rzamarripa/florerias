@@ -61,6 +61,12 @@ const cashRegisterSchema = new Schema(
         ref: "cv_expense",
       },
     ],
+    buys: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "cv_buy",
+      },
+    ],
     lastOpen: {
       type: Date,
       default: null,
@@ -68,6 +74,16 @@ const cashRegisterSchema = new Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isSocialMediaBox: {
+      type: Boolean,
+      default: false,
+    },
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_company",
+      required: false, // Solo requerido cuando isSocialMediaBox = true
+      default: null,
     },
   },
   {
@@ -81,6 +97,8 @@ cashRegisterSchema.index({ cashierId: 1 });
 cashRegisterSchema.index({ managerId: 1 });
 cashRegisterSchema.index({ isOpen: 1 });
 cashRegisterSchema.index({ isActive: 1 });
+cashRegisterSchema.index({ isSocialMediaBox: 1 });
+cashRegisterSchema.index({ companyId: 1 });
 
 const CashRegister = mongoose.model("CashRegister", cashRegisterSchema);
 export default CashRegister;

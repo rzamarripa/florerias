@@ -44,9 +44,10 @@ import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 
 const NewOrderPage = () => {
   const router = useRouter();
-  const { getIsCashier } = useUserRoleStore();
+  const { getIsCashier, getIsSocialMedia } = useUserRoleStore();
   const { user } = useUserSessionStore();
   const isCashier = getIsCashier();
+  const isSocialMedia = getIsSocialMedia();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
@@ -55,12 +56,15 @@ const NewOrderPage = () => {
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
+  const [companyBranches, setCompanyBranches] = useState<Branch[]>([]); // Para usuarios Redes
+  const [loadingCompanyBranches, setLoadingCompanyBranches] = useState(false);
   const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
   const [loadingCashRegister, setLoadingCashRegister] = useState(false);
   const [togglingCashRegister, setTogglingCashRegister] = useState(false);
   const [storage, setStorage] = useState<Storage | null>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
   const [selectedStorageId, setSelectedStorageId] = useState<string>("");
+  const [hasNoStorage, setHasNoStorage] = useState(false);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
   const [showClientInfo, setShowClientInfo] = useState(false);
@@ -97,6 +101,9 @@ const NewOrderPage = () => {
     change: 0,
     remainingBalance: 0,
     sendToProduction: false,
+    orderDate: new Date().toISOString().slice(0, 16), // Fecha y hora actual por defecto
+    isSocialMediaOrder: false,
+    socialMedia: null,
   });
 
   const [currentItem, setCurrentItem] = useState<OrderItem>({
@@ -153,7 +160,7 @@ const NewOrderPage = () => {
     }
   };
 
-  // Obtener sucursales del usuario
+  // Obtener sucursales del usuario Cajero
   const fetchUserBranches = async () => {
     setLoadingBranches(true);
     try {
@@ -171,6 +178,21 @@ const NewOrderPage = () => {
       toast.error("Error al cargar las sucursales del usuario");
     } finally {
       setLoadingBranches(false);
+    }
+  };
+
+  // Obtener sucursales de la empresa para usuario Redes
+  const fetchCompanyBranches = async () => {
+    setLoadingCompanyBranches(true);
+    try {
+      const response = await companiesService.getRedesUserBranches();
+      setCompanyBranches(response.data);
+      // NO establecer automáticamente una sucursal - el usuario debe seleccionar
+    } catch (err) {
+      console.error("Error al cargar sucursales de la empresa:", err);
+      toast.error("Error al cargar las sucursales de tu empresa");
+    } finally {
+      setLoadingCompanyBranches(false);
     }
   };
 
@@ -203,23 +225,23 @@ const NewOrderPage = () => {
   // Obtener almacén por sucursal
   const fetchStorageByBranch = async (branchId: string) => {
     setLoadingStorage(true);
+    setHasNoStorage(false);
     try {
       const response = await storageService.getStorageByBranch(branchId);
       if (response.data) {
         setStorage(response.data);
         setSelectedStorageId(response.data._id);
+        setHasNoStorage(false);
       } else {
         setStorage(null);
         setSelectedStorageId("");
-        toast.warning("No hay almacén asignado a esta sucursal");
+        setHasNoStorage(true);
       }
     } catch (err: any) {
       console.error("Error al cargar almacén:", err);
       setStorage(null);
       setSelectedStorageId("");
-      if (err.message !== "No se encontró almacén para esta sucursal") {
-        toast.error("Error al cargar el almacén de la sucursal");
-      }
+      setHasNoStorage(true);
     } finally {
       setLoadingStorage(false);
     }
@@ -246,10 +268,31 @@ const NewOrderPage = () => {
   useEffect(() => {
     fetchClients();
     fetchPaymentMethods();
-    fetchUserBranches();
+
+    // Para usuarios Redes, cargar sucursales de su empresa
+    if (isSocialMedia) {
+      fetchCompanyBranches();
+    } else {
+      // Para usuarios Cajero, cargar sus sucursales asignadas
+      fetchUserBranches();
+    }
+
     fetchUserCashRegister();
     fetchActiveNeighborhoods();
-  }, []);
+  }, [isSocialMedia]);
+
+  // Configurar valores iniciales para usuarios de Redes
+  useEffect(() => {
+    if (isSocialMedia) {
+      setFormData((prev) => ({
+        ...prev,
+        shippingType: "redes_sociales",
+        isSocialMediaOrder: true,
+        socialMedia: "whatsapp", // Valor por defecto
+        salesChannel: "whatsapp", // Sincronizar con socialMedia
+      }));
+    }
+  }, [isSocialMedia]);
 
   // Cargar storage cuando cambia la sucursal
   useEffect(() => {
@@ -258,8 +301,17 @@ const NewOrderPage = () => {
     } else {
       setStorage(null);
       setSelectedStorageId("");
+      setHasNoStorage(false);
     }
   }, [formData.branchId]);
+
+  // Función para manejar cambio de sucursal por usuario Redes
+  const handleBranchChange = (branchId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      branchId: branchId,
+    }));
+  };
 
   // Actualizar fecha y hora cuando se activa "Venta Rápida"
   useEffect(() => {
@@ -551,7 +603,7 @@ const NewOrderPage = () => {
   ) => {
     // Validar que haya un storage seleccionado
     if (!storage) {
-      toast.error("Debes seleccionar un almacén primero");
+      toast.error("No hay almacén asignado a esta sucursal. No puedes agregar productos del catálogo sin stock disponible.");
       return;
     }
 
@@ -714,17 +766,40 @@ const NewOrderPage = () => {
         throw new Error("Debes agregar al menos un producto");
       }
 
-      if (!selectedStorageId) {
-        throw new Error("Debes seleccionar un almacén");
+      // Validar que haya una caja registradora asignada
+      if (!cashRegister) {
+        throw new Error("Debes tener una caja registradora asignada para crear órdenes");
+      }
+
+      // Validar que la caja esté abierta
+      if (!cashRegister.isOpen) {
+        throw new Error("La caja registradora debe estar abierta para crear órdenes");
+      }
+
+      // Validar si hay productos del catálogo que requieren almacén
+      const hasProductsFromCatalog = formData.items.some(item => item.isProduct === true);
+
+      if (hasProductsFromCatalog && !selectedStorageId) {
+        throw new Error("Hay productos del catálogo en la orden pero no hay almacén asignado a la sucursal");
       }
 
       if (!formData.paymentMethod) {
         throw new Error("Debes seleccionar un método de pago");
       }
 
+      // Validar que usuarios de Redes hayan seleccionado una sucursal
+      if (isSocialMedia && !formData.branchId) {
+        throw new Error("Debes seleccionar una sucursal antes de crear la orden");
+      }
+
+      // Validar que usuarios de Redes usen cajas de redes sociales
+      if (isSocialMedia && cashRegister && !cashRegister.isSocialMediaBox) {
+        throw new Error("Los usuarios de Redes Sociales deben usar cajas de redes sociales");
+      }
+
       const orderData = {
         ...formData,
-        storageId: selectedStorageId,
+        storageId: selectedStorageId || null, // Puede ser null si solo hay productos manuales
       };
 
       const response = await ordersService.createOrder(orderData);
@@ -752,16 +827,18 @@ const NewOrderPage = () => {
       // Reset form after 2 seconds
       setTimeout(() => {
         setFormData({
-          branchId: branches.length > 0 ? branches[0]._id : "",
+          // Para Redes usuarios, resetear branchId a vacío para que seleccionen de nuevo
+          // Para Cajeros, mantener la sucursal actual
+          branchId: isSocialMedia ? "" : (branches.length > 0 ? branches[0]._id : ""),
           cashRegisterId: cashRegister ? cashRegister._id : null,
           clientInfo: {
             name: "",
             phone: "",
             email: "",
           },
-          salesChannel: "tienda",
+          salesChannel: isSocialMedia ? "whatsapp" : "tienda",
           items: [],
-          shippingType: "tienda",
+          shippingType: isSocialMedia ? "redes_sociales" : "tienda",
           anonymous: false,
           quickSale: false,
           deliveryData: {
@@ -783,6 +860,9 @@ const NewOrderPage = () => {
           change: 0,
           remainingBalance: 0,
           sendToProduction: false,
+          orderDate: new Date().toISOString().slice(0, 16), // Resetear a fecha y hora actual
+          isSocialMediaOrder: isSocialMedia,
+          socialMedia: isSocialMedia ? "whatsapp" : null,
         });
         setSelectedClientId("");
         setSuccess(false);
@@ -823,7 +903,70 @@ const NewOrderPage = () => {
             </Alert>
           )}
 
+          {hasNoStorage && (
+            <Alert
+              variant="warning"
+              className="mb-3 d-flex align-items-center gap-2"
+            >
+              <Package size={20} />
+              <div>
+                <strong>No hay almacén asignado a esta sucursal</strong>
+                <p className="mb-0 small">
+                  Los productos del catálogo se mostrarán con stock en 0. Para poder crear órdenes con productos del catálogo, necesitas crear un almacén para esta sucursal.
+                </p>
+              </div>
+            </Alert>
+          )}
+
           <Form onSubmit={handleSubmit}>
+            {/* Selector de Sucursal - Solo para usuarios Redes */}
+            {isSocialMedia && (
+              <Card className="mb-4 border-0 shadow-sm">
+                <Card.Header className="bg-primary text-white border-0 py-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <Store size={20} />
+                    <h5 className="mb-0 fw-bold">Seleccionar Sucursal</h5>
+                  </div>
+                </Card.Header>
+                <Card.Body>
+                  <Alert variant="info" className="mb-3">
+                    <strong>⚠️ Importante:</strong> Debes seleccionar una sucursal antes de agregar productos. Los productos y almacenes disponibles dependen de la sucursal seleccionada.
+                  </Alert>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">
+                      <Store size={16} className="me-2" />
+                      Sucursal
+                    </Form.Label>
+                    <Form.Select
+                      value={formData.branchId}
+                      onChange={(e) => handleBranchChange(e.target.value)}
+                      required
+                      className="py-2"
+                      disabled={loadingCompanyBranches}
+                    >
+                      <option value="">
+                        {loadingCompanyBranches
+                          ? "Cargando sucursales..."
+                          : "-- Selecciona una sucursal --"}
+                      </option>
+                      {companyBranches.map((branch) => (
+                        <option key={branch._id} value={branch._id}>
+                          {branch.branchName} - {branch.branchCode}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    {companyBranches.length === 0 && !loadingCompanyBranches && (
+                      <Alert variant="warning" className="mt-2 mb-0 py-2">
+                        <small>
+                          No hay sucursales asignadas a tu empresa. Contacta al administrador.
+                        </small>
+                      </Alert>
+                    )}
+                  </Form.Group>
+                </Card.Body>
+              </Card>
+            )}
+
             {/* Información del Cliente */}
             <Card className="mb-4 border-0 shadow-sm">
               <Card.Header className="bg-white border-0 py-3">
@@ -917,11 +1060,16 @@ const NewOrderPage = () => {
                               : "Cerrada"}
                           </Button>
                         ) : (
-                          !loadingCashRegister &&
-                          isCashier && (
+                          !loadingCashRegister && (
                             <Button
                               variant="primary"
-                              onClick={() => router.push("/ventas/cajas")}
+                              onClick={() =>
+                                router.push(
+                                  isSocialMedia
+                                    ? "/ventas/cajas-redes-sociales"
+                                    : "/ventas/cajas"
+                                )
+                              }
                               className="d-flex align-items-center gap-2"
                               style={{ minWidth: "160px" }}
                             >
@@ -939,7 +1087,7 @@ const NewOrderPage = () => {
                           </small>
                         </Alert>
                       )}
-                      {!cashRegister && !loadingCashRegister && isCashier && (
+                      {!cashRegister && !loadingCashRegister && (
                         <Alert variant="info" className="mt-2 mb-0 py-2">
                           <small>
                             ℹ️ No tienes una caja asignada. Dirígete a la página
@@ -1029,32 +1177,37 @@ const NewOrderPage = () => {
                         </Form.Group>
                       </Col>
 
-                      <Col md={12}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            <Store size={16} className="me-2" />
-                            Canal de Venta
-                          </Form.Label>
-                          <Form.Select
-                            value={formData.salesChannel}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                salesChannel: e.target.value as
-                                  | "tienda"
-                                  | "whatsapp"
-                                  | "facebook",
-                              })
-                            }
-                            required
-                            className="py-2"
-                          >
-                            <option value="tienda">Tienda</option>
-                            <option value="whatsapp">WhatsApp</option>
-                            <option value="facebook">Facebook</option>
-                          </Form.Select>
-                        </Form.Group>
-                      </Col>
+                      {/* Solo mostrar Canal de Venta si NO es usuario de Redes */}
+                      {!isSocialMedia && (
+                        <Col md={12}>
+                          <Form.Group>
+                            <Form.Label className="fw-semibold">
+                              <Store size={16} className="me-2" />
+                              Canal de Venta
+                            </Form.Label>
+                            <Form.Select
+                              value={formData.salesChannel}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  salesChannel: e.target.value as
+                                    | "tienda"
+                                    | "whatsapp"
+                                    | "facebook"
+                                    | "instagram",
+                                })
+                              }
+                              required
+                              className="py-2"
+                            >
+                              <option value="tienda">Tienda</option>
+                              <option value="whatsapp">WhatsApp</option>
+                              <option value="facebook">Facebook</option>
+                              <option value="instagram">Instagram</option>
+                            </Form.Select>
+                          </Form.Group>
+                        </Col>
+                      )}
                     </>
                   )}
                 </Row>
@@ -1215,52 +1368,103 @@ const NewOrderPage = () => {
               </Card.Header>
               <Card.Body>
                 <Row className="g-3">
-                  <Col md={12}>
-                    <div className="d-flex gap-4 flex-wrap align-items-center">
-                      {["envio", "tienda"].map((tipo) => (
-                        <Form.Check
-                          key={tipo}
-                          type="radio"
-                          id={`envio-${tipo}`}
-                          name="envio"
-                          label={tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-                          value={tipo}
-                          checked={formData.shippingType === tipo}
-                          onChange={(e) =>
-                            handleShippingTypeChange(e.target.value as ShippingType)
-                          }
-                          className="custom-radio"
-                        />
-                      ))}
+                  {/* Para usuarios de Redes, mostrar solo "Redes Sociales" y el select de plataforma */}
+                  {isSocialMedia ? (
+                    <>
+                      <Col md={12}>
+                        <Alert variant="info" className="mb-3">
+                          Como usuario de Redes Sociales, solo puedes crear órdenes de tipo "Redes Sociales"
+                        </Alert>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Store size={16} className="me-2" />
+                            Tipo de Envío
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            value="Redes Sociales"
+                            disabled
+                            className="py-2 bg-light"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Store size={16} className="me-2" />
+                            Plataforma de Redes Sociales
+                          </Form.Label>
+                          <Form.Select
+                            value={formData.socialMedia || "whatsapp"}
+                            onChange={(e) => {
+                              const platform = e.target.value as "whatsapp" | "facebook" | "instagram";
+                              setFormData({
+                                ...formData,
+                                socialMedia: platform,
+                                salesChannel: platform, // Sincronizar salesChannel con socialMedia
+                              });
+                            }}
+                            required
+                            className="py-2"
+                          >
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="instagram">Instagram</option>
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
+                    </>
+                  ) : (
+                    /* Para usuarios normales, mostrar opciones de envío tradicionales */
+                    <Col md={12}>
+                      <div className="d-flex gap-4 flex-wrap align-items-center">
+                        {["envio", "tienda"].map((tipo) => (
+                          <Form.Check
+                            key={tipo}
+                            type="radio"
+                            id={`envio-${tipo}`}
+                            name="envio"
+                            label={tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                            value={tipo}
+                            checked={formData.shippingType === tipo}
+                            onChange={(e) =>
+                              handleShippingTypeChange(e.target.value as ShippingType)
+                            }
+                            className="custom-radio"
+                          />
+                        ))}
 
-                      <div className="border-start ps-3 d-flex gap-3">
-                        <Form.Check
-                          type="checkbox"
-                          id="anonimo-check"
-                          label="Anónimo"
-                          checked={formData.anonymous}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              anonymous: e.target.checked,
-                            })
-                          }
-                        />
-                        <Form.Check
-                          type="checkbox"
-                          id="venta-rapida-check"
-                          label="Venta Rápida"
-                          checked={formData.quickSale}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              quickSale: e.target.checked,
-                            })
-                          }
-                        />
+                        <div className="border-start ps-3 d-flex gap-3">
+                          <Form.Check
+                            type="checkbox"
+                            id="anonimo-check"
+                            label="Anónimo"
+                            checked={formData.anonymous}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                anonymous: e.target.checked,
+                              })
+                            }
+                          />
+                          <Form.Check
+                            type="checkbox"
+                            id="venta-rapida-check"
+                            label="Venta Rápida"
+                            checked={formData.quickSale}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                quickSale: e.target.checked,
+                              })
+                            }
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </Col>
+                    </Col>
+                  )}
 
                   <Col md={6}>
                     <Form.Group>
@@ -1335,6 +1539,7 @@ const NewOrderPage = () => {
                     </Form.Group>
                   </Col>
 
+                  {/* Campos de dirección solo para tipo de envío "envio" */}
                   {formData.shippingType === "envio" && (
                     <>
                       <Col md={6}>
@@ -1439,7 +1644,31 @@ const NewOrderPage = () => {
               </Card.Header>
               <Card.Body>
                 <Row className="g-3">
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <Calendar size={16} className="me-2" />
+                        Fecha y Hora de Orden
+                      </Form.Label>
+                      <Form.Control
+                        type="datetime-local"
+                        value={formData.orderDate}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            orderDate: e.target.value,
+                          })
+                        }
+                        required
+                        className="py-2"
+                      />
+                    </Form.Group>
+                  </Col>
+
                   <Col md={12}>
+                    <Form.Label className="fw-semibold">
+                      Método de Pago
+                    </Form.Label>
                     <div className="d-flex gap-2 flex-wrap">
                       {loadingPaymentMethods ? (
                         <div className="text-muted">
@@ -1451,28 +1680,42 @@ const NewOrderPage = () => {
                           menos un método de pago para poder crear órdenes.
                         </Alert>
                       ) : (
-                        paymentMethods.map((method) => (
-                          <Button
-                            key={method._id}
-                            variant={
-                              formData.paymentMethod === method._id
-                                ? "primary"
-                                : "outline-secondary"
-                            }
-                            size="sm"
-                            onClick={() =>
-                              setFormData({
-                                ...formData,
-                                paymentMethod: method._id,
-                              })
-                            }
-                            className="px-3"
-                          >
-                            {method.name}
-                          </Button>
-                        ))
+                        paymentMethods.map((method) => {
+                          // Deshabilitar método "Efectivo" para usuarios de Redes
+                          const isDisabled = isSocialMedia && method.name.toLowerCase() === "efectivo";
+
+                          return (
+                            <Button
+                              key={method._id}
+                              variant={
+                                formData.paymentMethod === method._id
+                                  ? "primary"
+                                  : "outline-secondary"
+                              }
+                              size="sm"
+                              onClick={() =>
+                                setFormData({
+                                  ...formData,
+                                  paymentMethod: method._id,
+                                })
+                              }
+                              disabled={isDisabled}
+                              className="px-3"
+                              title={isDisabled ? "Los usuarios de Redes Sociales no pueden usar efectivo" : ""}
+                            >
+                              {method.name}
+                            </Button>
+                          );
+                        })
                       )}
                     </div>
+                    {isSocialMedia && (
+                      <Alert variant="warning" className="mt-2 mb-0 py-2">
+                        <small>
+                          ℹ️ Los usuarios de Redes Sociales no pueden usar el método de pago "Efectivo"
+                        </small>
+                      </Alert>
+                    )}
                   </Col>
 
                   <Col md={12}>
@@ -1647,7 +1890,9 @@ const NewOrderPage = () => {
                   loading ||
                   formData.items.length === 0 ||
                   !formData.paymentMethod ||
-                  !selectedStorageId
+                  !cashRegister || // Validar que haya caja asignada (para todos los usuarios)
+                  (formData.items.some(item => item.isProduct === true) && !selectedStorageId) ||
+                  (isSocialMedia && !formData.branchId) // Validar que Redes usuarios hayan seleccionado sucursal
                 }
                 className="px-5"
               >

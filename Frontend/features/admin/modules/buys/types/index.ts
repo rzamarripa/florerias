@@ -29,6 +29,11 @@ export interface Buy {
     rfc: string;
   };
   description: string;
+  cashRegister?: {
+    _id: string;
+    name: string;
+    currentBalance: number;
+  };
   branch: {
     _id: string;
     branchName: string;
@@ -45,6 +50,7 @@ export interface CreateBuyData {
   paymentMethod: string;
   provider?: string;
   description?: string;
+  cashRegister?: string;
   branch?: string;
 }
 

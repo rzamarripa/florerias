@@ -13,6 +13,7 @@ import {
   deleteStorage,
   reserveStock,
   releaseStock,
+  checkStorageExists,
 } from "../controllers/storageController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -25,6 +26,7 @@ router.use(protect);
 router.get("/", getAllStorages);
 router.get("/:id", getStorageById);
 router.get("/branch/:branchId", getStorageByBranch);
+router.get("/check-exists/:branchId", checkStorageExists);
 
 // Rutas POST
 router.post("/", createStorage);

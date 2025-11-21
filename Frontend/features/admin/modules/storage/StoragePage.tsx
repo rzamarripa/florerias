@@ -1,8 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner } from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight, Warehouse } from "lucide-react";
+import {
+  Button,
+  Table,
+  Badge,
+  Form,
+  InputGroup,
+  Spinner,
+} from "react-bootstrap";
+import {
+  Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Warehouse,
+} from "lucide-react";
 import { toast } from "react-toastify";
 import { storageService } from "./services/storage";
 import { companiesService } from "../companies/services/companies";
@@ -35,8 +48,10 @@ const StoragePage: React.FC = () => {
   });
 
   // Estados para modales desde NewOrderPage
-  const [showViewStorageModal, setShowViewStorageModal] = useState<boolean>(false);
-  const [showAddProductsModal, setShowAddProductsModal] = useState<boolean>(false);
+  const [showViewStorageModal, setShowViewStorageModal] =
+    useState<boolean>(false);
+  const [showAddProductsModal, setShowAddProductsModal] =
+    useState<boolean>(false);
   const [selectedStorage, setSelectedStorage] = useState<Storage | null>(null);
   const [fromOrder, setFromOrder] = useState<boolean>(false);
   const [targetProductId, setTargetProductId] = useState<string>("");
@@ -47,6 +62,7 @@ const StoragePage: React.FC = () => {
   const userId = getUserId();
   const isAdmin = getIsAdmin();
   const isManager = hasRole("Gerente");
+  const isCashier = hasRole("Cajero");
 
   useEffect(() => {
     loadUserBranches();
@@ -60,22 +76,26 @@ const StoragePage: React.FC = () => {
 
   // Detectar si viene desde NewOrderPage y abrir modal correspondiente
   useEffect(() => {
-    const fromOrderParam = searchParams.get('fromOrder');
-    const productId = searchParams.get('productId');
-    const branchId = searchParams.get('branchId');
-    const hasStockParam = searchParams.get('hasStock');
+    const fromOrderParam = searchParams.get("fromOrder");
+    const productId = searchParams.get("productId");
+    const branchId = searchParams.get("branchId");
+    const hasStockParam = searchParams.get("hasStock");
 
-    if (fromOrderParam === 'true' && productId && branchId) {
+    if (fromOrderParam === "true" && productId && branchId) {
       setFromOrder(true);
       setTargetProductId(productId);
 
       // Cargar el storage de la sucursal
-      loadStorageForOrder(branchId, productId, hasStockParam === 'true');
+      loadStorageForOrder(branchId, productId, hasStockParam === "true");
     }
   }, [searchParams]);
 
   // Cargar storage cuando viene desde NewOrderPage
-  const loadStorageForOrder = async (branchId: string, productId: string, productNotInStorage: boolean) => {
+  const loadStorageForOrder = async (
+    branchId: string,
+    productId: string,
+    productNotInStorage: boolean
+  ) => {
     try {
       setLoading(true);
       const response = await storageService.getStorageByBranch(branchId);
@@ -116,11 +136,13 @@ const StoragePage: React.FC = () => {
         const company = await companiesService.getMyCompany();
         if (company && company.branches) {
           // Cargar todas las sucursales de la empresa
-          const branchesResponse = await branchesService.getAllBranches({ limit: 100 });
+          const branchesResponse = await branchesService.getAllBranches({
+            limit: 100,
+          });
           setUserBranches(branchesResponse.data);
         }
-      } else if (isManager) {
-        // Si es gerente, buscar solo su sucursal
+      } else if (isManager || isCashier) {
+        // Si es gerente o cajero, buscar solo su(s) sucursal(es)
         const branchesResponse = await branchesService.getUserBranches();
         setUserBranches(branchesResponse.data);
       }
@@ -130,7 +152,10 @@ const StoragePage: React.FC = () => {
     }
   };
 
-  const loadStorages = async (isInitial: boolean, page: number = pagination.page) => {
+  const loadStorages = async (
+    isInitial: boolean,
+    page: number = pagination.page
+  ) => {
     try {
       if (isInitial) {
         setLoading(true);
@@ -171,9 +196,10 @@ const StoragePage: React.FC = () => {
         // Filtrar los storages según las sucursales del usuario
         const branchIds = userBranches.map((b) => b._id);
         const filteredStorages = response.data.filter((storage) => {
-          const storageBranchId = typeof storage.branch === "string"
-            ? storage.branch
-            : storage.branch._id;
+          const storageBranchId =
+            typeof storage.branch === "string"
+              ? storage.branch
+              : storage.branch._id;
           return branchIds.includes(storageBranchId);
         });
 
@@ -197,11 +223,15 @@ const StoragePage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleBranchFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+  const handleBranchFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ): void => {
     setBranchFilter(e.target.value);
   };
 
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+  const handleStatusFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ): void => {
     setStatusFilter(e.target.value);
   };
 
@@ -228,6 +258,9 @@ const StoragePage: React.FC = () => {
   };
 
   const getManagerName = (storage: Storage): string => {
+    if (!storage.warehouseManager) {
+      return "N/A";
+    }
     if (typeof storage.warehouseManager === "string") {
       return "N/A";
     }
@@ -257,9 +290,11 @@ const StoragePage: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="mb-1 fw-bold">Almacenes</h2>
-          <p className="text-muted mb-0">Gestiona los almacenes y su inventario</p>
+          <p className="text-muted mb-0">
+            Gestiona los almacenes y su inventario
+          </p>
         </div>
-        {isAdmin && (
+        {(isAdmin || isManager || isCashier) && (
           <Button
             variant="primary"
             onClick={() => setShowCreateModal(true)}
@@ -280,7 +315,10 @@ const StoragePage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
+      <div
+        className="card border-0 shadow-sm mb-4"
+        style={{ borderRadius: "15px" }}
+      >
         <div className="card-body p-4">
           <div className="row g-3">
             <div className="col-md-4">
@@ -311,7 +349,8 @@ const StoragePage: React.FC = () => {
                   <option value="">Todas las sucursales</option>
                   {userBranches.map((branch) => (
                     <option key={branch._id} value={branch._id}>
-                      {branch.branchName} {branch.branchCode ? `(${branch.branchCode})` : ""}
+                      {branch.branchName}{" "}
+                      {branch.branchCode ? `(${branch.branchCode})` : ""}
                     </option>
                   ))}
                 </Form.Select>
@@ -348,13 +387,25 @@ const StoragePage: React.FC = () => {
                 <thead style={{ background: "#f8f9fa" }}>
                   <tr>
                     <th className="px-4 py-3 fw-semibold text-muted">#</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">SUCURSAL</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">GERENTE</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">PRODUCTOS</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">CANTIDAD TOTAL</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ÚLTIMO INGRESO</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      SUCURSAL
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      GERENTE
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      PRODUCTOS
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      CANTIDAD TOTAL
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      ÚLTIMO INGRESO
+                    </th>
                     <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
+                    <th className="px-4 py-3 fw-semibold text-muted text-center">
+                      ACCIONES
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -367,15 +418,22 @@ const StoragePage: React.FC = () => {
                     </tr>
                   ) : (
                     storages.map((storage, index) => (
-                      <tr key={storage._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
+                      <tr
+                        key={storage._id}
+                        style={{ borderBottom: "1px solid #f1f3f5" }}
+                      >
                         <td className="px-4 py-3">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </td>
                         <td className="px-4 py-3">
                           <div>
-                            <div className="fw-semibold">{getBranchName(storage)}</div>
+                            <div className="fw-semibold">
+                              {getBranchName(storage)}
+                            </div>
                             {getBranchCode(storage) && (
-                              <small className="text-muted">{getBranchCode(storage)}</small>
+                              <small className="text-muted">
+                                {getBranchCode(storage)}
+                              </small>
                             )}
                           </div>
                         </td>
@@ -424,8 +482,8 @@ const StoragePage: React.FC = () => {
             <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
-                {pagination.total} almacenes
+                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                de {pagination.total} almacenes
               </p>
               <div className="d-flex gap-2">
                 <Button
@@ -456,7 +514,7 @@ const StoragePage: React.FC = () => {
       </div>
 
       {/* Create Modal */}
-      {isAdmin && (
+      {(isAdmin || isManager || isCashier) && (
         <CreateStorageModal
           show={showCreateModal}
           onHide={() => setShowCreateModal(false)}

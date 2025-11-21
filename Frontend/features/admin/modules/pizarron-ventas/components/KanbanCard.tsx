@@ -1,15 +1,26 @@
 import React from "react";
-import { Card, Badge } from "react-bootstrap";
-import { Calendar, User, Package } from "lucide-react";
+import { Card, Badge, Button } from "react-bootstrap";
+import { Calendar, User, Package, Send } from "lucide-react";
 import { useDrag } from "react-dnd";
 import { Order } from "../types";
 
 interface KanbanCardProps {
   order: Order;
+  isLastProductionStage?: boolean;
+  stageName?: string;
+  stageColor?: string;
   onViewDetails?: (order: Order) => void;
+  onSendToShipping?: (order: Order) => void;
 }
 
-const KanbanCard: React.FC<KanbanCardProps> = ({ order, onViewDetails }) => {
+const KanbanCard: React.FC<KanbanCardProps> = ({
+  order,
+  isLastProductionStage = false,
+  stageName,
+  stageColor,
+  onViewDetails,
+  onSendToShipping
+}) => {
   // Configurar drag - no permitir drag si el estado es "completado"
   const canDrag = order.status !== "completado";
 
@@ -88,14 +99,18 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ order, onViewDetails }) => {
         onClick={() => onViewDetails?.(order)}
       >
         <Card.Body className="p-3">
-          {/* Header with Status Badge */}
+          {/* Header with Stage Badge */}
           <div className="d-flex justify-content-between align-items-start mb-2">
             <Badge
-              bg={getStatusColor(order.status)}
               className="px-2 py-1"
-              style={{ fontSize: "0.7rem", fontWeight: "600" }}
+              style={{
+                fontSize: "0.7rem",
+                fontWeight: "600",
+                backgroundColor: stageColor || getStatusColor(order.status),
+                border: "none",
+              }}
             >
-              {getStatusText(order.status)}
+              {stageName || getStatusText(order.status)}
             </Badge>
           </div>
 
@@ -155,6 +170,29 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ order, onViewDetails }) => {
             <Badge bg="danger" className="w-100 py-1" style={{ fontSize: "0.75rem" }}>
               Saldo pendiente: {formatCurrency(order.remainingBalance)}
             </Badge>
+          </div>
+        )}
+
+        {/* Send to Shipping Button - Only show in last production stage */}
+        {isLastProductionStage && onSendToShipping && (
+          <div className="mt-3">
+            <Button
+              variant="success"
+              size="sm"
+              className="w-100 d-flex align-items-center justify-content-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation(); // Evitar que se abra el modal de detalles
+                onSendToShipping(order);
+              }}
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: "600",
+                borderRadius: "8px",
+              }}
+            >
+              <Send size={16} />
+              Enviar a Envío
+            </Button>
           </div>
         )}
       </Card.Body>

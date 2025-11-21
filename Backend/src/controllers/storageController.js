@@ -7,7 +7,7 @@ import Product from "../models/Product.js";
 // Crear nuevo almacén
 export const createStorage = async (req, res) => {
   try {
-    const { branch, warehouseManagerData, products, address } = req.body;
+    const { branch, name, warehouseManagerData, products, address } = req.body;
 
     // Validar que el usuario esté autenticado
     if (!req.user || !req.user._id) {
@@ -17,17 +17,83 @@ export const createStorage = async (req, res) => {
       });
     }
 
+    // Validar que se proporcione el nombre del almacén
+    if (!name || name.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "El nombre del almacén es requerido",
+      });
+    }
+
+    // Obtener el usuario autenticado con su rol
+    const currentUser = await User.findById(req.user._id).populate("role");
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    console.log("Usuario actual:", {
+      id: currentUser._id,
+      username: currentUser.username,
+      roleName: currentUser.role?.name
+    });
+
+    let branchId = branch;
+
+    // Si el usuario es Gerente, buscar su sucursal por campo manager
+    if (currentUser.role && currentUser.role.name === "Gerente") {
+      console.log("Buscando sucursal para gerente:", currentUser._id);
+      const managerBranch = await Branch.findOne({ manager: currentUser._id });
+      console.log("Sucursal encontrada:", managerBranch);
+
+      if (!managerBranch) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró una sucursal asignada a este gerente",
+        });
+      }
+      branchId = managerBranch._id;
+      console.log("BranchId asignado:", branchId);
+    }
+    // Si el usuario es Cajero, buscar su sucursal por campo employees
+    else if (currentUser.role && currentUser.role.name === "Cajero") {
+      console.log("Buscando sucursal para cajero:", currentUser._id);
+      const cashierBranch = await Branch.findOne({ employees: currentUser._id });
+      console.log("Sucursal encontrada:", cashierBranch);
+
+      if (!cashierBranch) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró una sucursal asignada a este cajero",
+        });
+      }
+      branchId = cashierBranch._id;
+      console.log("BranchId asignado:", branchId);
+    }
+    else if (!branchId) {
+      // Si es administrador y no se proporciona branch, error
+      return res.status(400).json({
+        success: false,
+        message: "La sucursal es requerida",
+      });
+    }
+
     // Verificar que la sucursal existe
-    const branchExists = await Branch.findById(branch);
+    const branchExists = await Branch.findById(branchId);
     if (!branchExists) {
+      console.log("Sucursal no encontrada con ID:", branchId);
       return res.status(404).json({
         success: false,
         message: "Sucursal no encontrada",
       });
     }
+    console.log("Sucursal existe:", branchExists.branchName);
 
     // Verificar que no exista ya un almacén para esta sucursal
-    const existingStorage = await Storage.findOne({ branch });
+    const existingStorage = await Storage.findOne({ branch: branchId });
+    console.log("Almacén existente:", existingStorage);
     if (existingStorage) {
       return res.status(400).json({
         success: false,
@@ -35,55 +101,63 @@ export const createStorage = async (req, res) => {
       });
     }
 
-    // Verificar que se proporcionaron datos del gerente de almacén
-    if (!warehouseManagerData) {
-      return res.status(400).json({
-        success: false,
-        message: "Los datos del gerente de almacén son requeridos",
+    // Crear el almacén con datos básicos
+    const storageData = {
+      branch: branchId,
+      name: name.trim(),
+      products: products || [],
+      lastIncome: products && products.length > 0 ? Date.now() : null,
+    };
+    console.log("Datos del almacén a crear:", storageData);
+
+    // Si se proporcionan datos del gerente de almacén (flujo antiguo para compatibilidad)
+    if (warehouseManagerData) {
+      const warehouseManagerRole = await Role.findOne({ name: /^Gerente$/i });
+      if (!warehouseManagerRole) {
+        return res.status(400).json({
+          success: false,
+          message: "No se encontró el rol de Gerente en el sistema",
+        });
+      }
+
+      const existingUser = await User.findOne({
+        $or: [
+          { username: { $regex: new RegExp(`^${warehouseManagerData.username}$`, 'i') } },
+          { email: { $regex: new RegExp(`^${warehouseManagerData.email}$`, 'i') } },
+        ],
       });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message:
+            existingUser.username.toLowerCase() === warehouseManagerData.username.toLowerCase()
+              ? "Ya existe un usuario con este nombre de usuario"
+              : "Ya existe un usuario con este email",
+        });
+      }
+
+      const newWarehouseManager = await User.create({
+        username: warehouseManagerData.username,
+        email: warehouseManagerData.email,
+        phone: warehouseManagerData.phone,
+        password: warehouseManagerData.password,
+        profile: {
+          name: warehouseManagerData.profile.name,
+          lastName: warehouseManagerData.profile.lastName,
+          fullName: `${warehouseManagerData.profile.name} ${warehouseManagerData.profile.lastName}`,
+          estatus: true,
+        },
+        role: warehouseManagerRole._id,
+      });
+
+      storageData.warehouseManager = newWarehouseManager._id;
     }
 
-    // Buscar el rol de Gerente de Almacén (o Gerente)
-    const warehouseManagerRole = await Role.findOne({ name: /^Gerente$/i });
-    if (!warehouseManagerRole) {
-      return res.status(400).json({
-        success: false,
-        message: "No se encontró el rol de Gerente en el sistema",
-      });
+    // Si se proporciona dirección
+    if (address) {
+      storageData.address = address;
     }
-
-    // Verificar que no exista un usuario con el mismo username o email
-    const existingUser = await User.findOne({
-      $or: [
-        { username: { $regex: new RegExp(`^${warehouseManagerData.username}$`, 'i') } },
-        { email: { $regex: new RegExp(`^${warehouseManagerData.email}$`, 'i') } },
-      ],
-    });
-
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message:
-          existingUser.username.toLowerCase() === warehouseManagerData.username.toLowerCase()
-            ? "Ya existe un usuario con este nombre de usuario"
-            : "Ya existe un usuario con este email",
-      });
-    }
-
-    // Crear el nuevo usuario gerente de almacén
-    const newWarehouseManager = await User.create({
-      username: warehouseManagerData.username,
-      email: warehouseManagerData.email,
-      phone: warehouseManagerData.phone,
-      password: warehouseManagerData.password,
-      profile: {
-        name: warehouseManagerData.profile.name,
-        lastName: warehouseManagerData.profile.lastName,
-        fullName: `${warehouseManagerData.profile.name} ${warehouseManagerData.profile.lastName}`,
-        estatus: true,
-      },
-      role: warehouseManagerRole._id,
-    });
 
     // Validar productos si se proporcionan
     if (products && products.length > 0) {
@@ -99,17 +173,15 @@ export const createStorage = async (req, res) => {
       }
     }
 
-    const storage = await Storage.create({
-      branch,
-      warehouseManager: newWarehouseManager._id,
-      products: products || [],
-      address,
-      lastIncome: products && products.length > 0 ? Date.now() : null,
-    });
+    console.log("Intentando crear almacén...");
+    const storage = await Storage.create(storageData);
+    console.log("Almacén creado exitosamente:", storage._id);
 
     // Popular los datos para la respuesta
     await storage.populate("branch", "branchName branchCode");
-    await storage.populate("warehouseManager", "username email profile");
+    if (storage.warehouseManager) {
+      await storage.populate("warehouseManager", "username email profile");
+    }
     await storage.populate("products.productId", "nombre unidad");
 
     res.status(201).json({
@@ -118,6 +190,11 @@ export const createStorage = async (req, res) => {
       data: storage,
     });
   } catch (error) {
+    console.error("Error al crear almacén:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Error name:", error.name);
+    console.error("Error code:", error.code);
+
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -255,9 +332,13 @@ export const getStorageByBranch = async (req, res) => {
 // Actualizar almacén
 export const updateStorage = async (req, res) => {
   try {
-    const { warehouseManager, address } = req.body;
+    const { name, warehouseManager, address } = req.body;
 
     const updateData = {};
+
+    if (name && name.trim() !== "") {
+      updateData.name = name.trim();
+    }
 
     if (warehouseManager) {
       // Verificar que el gerente existe
@@ -725,6 +806,26 @@ export const releaseStock = async (req, res) => {
       success: true,
       message: "Stock liberado exitosamente",
       data: storage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Verificar si existe almacén para una sucursal
+export const checkStorageExists = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    const storage = await Storage.findOne({ branch: branchId }).select('_id branch');
+
+    res.status(200).json({
+      success: true,
+      exists: !!storage,
+      storageId: storage?._id || null,
     });
   } catch (error) {
     res.status(500).json({

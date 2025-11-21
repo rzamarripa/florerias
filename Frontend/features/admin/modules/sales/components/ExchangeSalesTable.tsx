@@ -1,12 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Table, Badge, Button } from "react-bootstrap";
-import { Eye, Edit, Trash2, DollarSign, Printer } from "lucide-react";
-import PaymentModal from "./PaymentModal";
-import SaleDetailModal from "./SaleDetailModal";
-import { reprintSaleTicket } from "../utils/reprintSaleTicket";
-import { useUserSessionStore } from "@/stores/userSessionStore";
+import { Table, Badge } from "react-bootstrap";
+import SaleActions from "./SaleActions";
 
 interface ExchangeSalesTableProps {
   filters: {
@@ -19,37 +15,9 @@ interface ExchangeSalesTableProps {
 
 const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
   const sales: any[] = [];
-  const [selectedSale, setSelectedSale] = useState<any>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const { user } = useUserSessionStore();
 
-  const handleOpenPaymentModal = (sale: any) => {
-    setSelectedSale(sale);
-    setShowPaymentModal(true);
-  };
-
-  const handleClosePaymentModal = () => {
-    setShowPaymentModal(false);
-    setSelectedSale(null);
-  };
-
-  const handlePaymentAdded = () => {
-    // Recargar datos si es necesario
-  };
-
-  const handleReprintTicket = async (sale: any) => {
-    await reprintSaleTicket(sale, user?.profile?.fullName);
-  };
-
-  const handleOpenDetailModal = (sale: any) => {
-    setSelectedSale(sale);
-    setShowDetailModal(true);
-  };
-
-  const handleCloseDetailModal = () => {
-    setShowDetailModal(false);
-    setSelectedSale(null);
+  const handleSaleUpdated = () => {
+    // Recargar datos si es necesario cuando se implemente la carga de datos
   };
 
   return (
@@ -109,57 +77,11 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
                   <td className="px-4 py-3">{sale.orderDate}</td>
                   <td className="px-4 py-3 fw-semibold text-success">${sale.paid.toFixed(2)}</td>
                   <td className="px-4 py-3 fw-semibold text-danger">${sale.balance.toFixed(2)}</td>
-                  <td className="px-4 py-3">
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleOpenPaymentModal(sale)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Gestionar pagos"
-                      >
-                        <DollarSign size={16} className="text-success" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleReprintTicket(sale)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Reimprimir ticket"
-                      >
-                        <Printer size={16} className="text-primary" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleOpenDetailModal(sale)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Ver detalles"
-                      >
-                        <Eye size={16} className="text-info" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Editar"
-                      >
-                        <Edit size={16} className="text-warning" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Eliminar"
-                      >
-                        <Trash2 size={16} className="text-danger" />
-                      </Button>
-                    </div>
+                  <td className="px-4 py-3 text-center">
+                    <SaleActions
+                      sale={sale}
+                      onSaleUpdated={handleSaleUpdated}
+                    />
                   </td>
                 </tr>
               ))
@@ -178,21 +100,6 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({ filters }) => {
         </div>
       </div>
 
-      {selectedSale && (
-        <PaymentModal
-          show={showPaymentModal}
-          onHide={handleClosePaymentModal}
-          sale={selectedSale}
-          onPaymentAdded={handlePaymentAdded}
-        />
-      )}
-
-      {/* Sale Detail Modal */}
-      <SaleDetailModal
-        show={showDetailModal}
-        onHide={handleCloseDetailModal}
-        sale={selectedSale}
-      />
     </>
   );
 };

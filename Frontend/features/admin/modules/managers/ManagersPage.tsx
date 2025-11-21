@@ -8,6 +8,7 @@ import { managersService } from "./services/managers";
 import { Manager, ManagerFilters, FilterType, FilterOption, CreateManagerData, UpdateManagerData } from "./types";
 import Actions from "./components/Actions";
 import ManagerModal from "./components/ManagerModal";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 const filterOptions: FilterOption[] = [
   { value: "nombre", label: "Nombre" },
@@ -18,6 +19,7 @@ const filterOptions: FilterOption[] = [
 ];
 
 const ManagersPage: React.FC = () => {
+  const { activeBranch } = useActiveBranchStore();
   const [managers, setManagers] = useState<Manager[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -124,12 +126,22 @@ const ManagersPage: React.FC = () => {
 
   const handleSaveManager = async (data: CreateManagerData | UpdateManagerData) => {
     try {
+      if (!activeBranch) {
+        toast.error("No hay una sucursal activa seleccionada");
+        return;
+      }
+
       setModalLoading(true);
       if (selectedManager) {
         await managersService.updateManager(selectedManager._id, data);
         toast.success("Gerente actualizado exitosamente");
       } else {
-        await managersService.createManager(data as CreateManagerData);
+        // Agregar el branchId a los datos antes de crear
+        const createData: CreateManagerData = {
+          ...(data as CreateManagerData),
+          branchId: activeBranch._id,
+        };
+        await managersService.createManager(createData);
         toast.success("Gerente creado exitosamente");
       }
       setShowModal(false);

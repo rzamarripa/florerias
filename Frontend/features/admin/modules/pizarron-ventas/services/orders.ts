@@ -47,4 +47,38 @@ export const ordersService = {
       message: response.message
     };
   },
+
+  updateOrder: async (
+    orderId: string,
+    updateData: Partial<Order>
+  ): Promise<{ success: boolean; data: Order; message: string }> => {
+    const response = await apiCall<Order>(
+      `/orders/${orderId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(updateData),
+      }
+    );
+    return {
+      success: response.success,
+      data: response.data,
+      message: response.message
+    };
+  },
+
+  sendToShipping: async (
+    orderId: string
+  ): Promise<{ success: boolean; data: Order; message: string }> => {
+    const response = await apiCall<Order>(
+      `/orders/${orderId}/send-to-shipping`,
+      {
+        method: "PUT",
+      }
+    );
+    return {
+      success: response.success,
+      data: response.data,
+      message: response.message
+    };
+  },
 };

@@ -13,6 +13,11 @@ export interface Product {
   nombre: string;
   unidad: 'pieza' | 'paquete';
   descripcion: string;
+  productCategory?: {
+    _id: string;
+    name: string;
+    description?: string;
+  } | null;
   orden: number;
   imagen: string;
   insumos: Insumo[];
@@ -28,22 +33,26 @@ export interface CreateProductData {
   nombre: string;
   unidad: 'pieza' | 'paquete';
   descripcion?: string;
+  productCategory?: string | null;
   orden?: number;
   imagen?: string;
   insumos?: Insumo[];
   labour?: number;
   estatus?: boolean;
+  precioVentaFinal?: number;
 }
 
 export interface UpdateProductData {
   nombre?: string;
   unidad?: 'pieza' | 'paquete';
   descripcion?: string;
+  productCategory?: string | null;
   orden?: number;
   imagen?: string;
   insumos?: Insumo[];
   labour?: number;
   estatus?: boolean;
+  precioVentaFinal?: number;
 }
 
 export interface CreateProductResponseData {

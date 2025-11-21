@@ -5,6 +5,9 @@ import { Branch } from '../models/Branch.js';
 import CashRegister from '../models/CashRegister.js';
 import { Storage } from '../models/Storage.js';
 import OrderPayment from '../models/OrderPayment.js';
+import OrderNotification from '../models/OrderNotification.js';
+import { Company } from '../models/Company.js';
+import { StageCatalog } from '../models/StageCatalog.js';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted } from '../sockets/orderSocket.js';
 import mongoose from 'mongoose';
 
@@ -20,23 +23,25 @@ const getAllOrders = async (req, res) => {
       orderNumber,
       branchId,
       startDate,
-      endDate
+      endDate,
+      paymentMethodId
     } = req.query;
 
     // Obtener el ID del usuario autenticado
     const userId = req.user?._id;
 
-    // Buscar todas las sucursales donde el usuario es administrador o gerente
+    // Buscar todas las sucursales donde el usuario es administrador, gerente o cajero
     const userBranches = await Branch.find({
       $or: [
         { administrator: userId },
-        { manager: userId }
+        { manager: userId },
+        { employees: userId }
       ]
     }).select('_id');
     const branchIds = userBranches.map(branch => branch._id);
 
     if (branchIds.length === 0) {
-      // Si el usuario no administra ni gestiona ninguna sucursal, retornar vacío
+      // Si el usuario no administra, gestiona o es cajero de ninguna sucursal, retornar vacío
       return res.status(200).json({
         success: true,
         data: [],
@@ -73,6 +78,11 @@ const getAllOrders = async (req, res) => {
       filters.orderNumber = { $regex: orderNumber, $options: 'i' };
     }
 
+    // Filtrar por método de pago si se proporciona
+    if (paymentMethodId) {
+      filters.paymentMethod = new mongoose.Types.ObjectId(paymentMethodId);
+    }
+
     // Si se proporciona branchId específico, aplicar ese filtro
     if (branchId) {
       const specificBranchId = new mongoose.Types.ObjectId(branchId);
@@ -104,20 +114,20 @@ const getAllOrders = async (req, res) => {
 
     // Filtros de fecha
     if (startDate || endDate) {
-      filters.createdAt = {};
+      filters.orderDate = {};
 
       if (startDate) {
         // Inicio del día (00:00:00)
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        filters.createdAt.$gte = start;
+        filters.orderDate.$gte = start;
       }
 
       if (endDate) {
         // Fin del día (23:59:59)
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        filters.createdAt.$lte = end;
+        filters.orderDate.$lte = end;
       }
     }
 
@@ -136,6 +146,7 @@ const getAllOrders = async (req, res) => {
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
       .populate({
         path: 'payments',
         populate: [
@@ -184,6 +195,7 @@ const getOrderById = async (req, res) => {
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
       .populate({
         path: 'payments',
         populate: [
@@ -236,7 +248,8 @@ const createOrder = async (req, res) => {
       paidWith,
       change,
       remainingBalance,
-      sendToProduction
+      sendToProduction,
+      orderDate
     } = req.body;
 
     // Validar campos requeridos
@@ -247,10 +260,14 @@ const createOrder = async (req, res) => {
       });
     }
 
-    if (!storageId) {
+    // Validar si hay productos del catálogo (isProduct: true)
+    const hasProductsFromCatalog = items && items.some(item => item.isProduct === true);
+
+    // Solo requerir storageId si hay productos del catálogo
+    if (hasProductsFromCatalog && !storageId) {
       return res.status(400).json({
         success: false,
-        message: 'El almacén es obligatorio'
+        message: 'El almacén es obligatorio cuando se incluyen productos del catálogo'
       });
     }
 
@@ -303,21 +320,24 @@ const createOrder = async (req, res) => {
       }
     }
 
-    // Validar que el almacén exista
-    const storage = await Storage.findById(storageId);
-    if (!storage) {
-      return res.status(404).json({
-        success: false,
-        message: 'Almacén no encontrado'
-      });
-    }
+    // Validar que el almacén exista solo si se proporcionó storageId
+    let storage = null;
+    if (storageId) {
+      storage = await Storage.findById(storageId);
+      if (!storage) {
+        return res.status(404).json({
+          success: false,
+          message: 'Almacén no encontrado'
+        });
+      }
 
-    // Validar que el almacén corresponda a la sucursal
-    if (storage.branch.toString() !== branchId) {
-      return res.status(400).json({
-        success: false,
-        message: 'El almacén no pertenece a la sucursal seleccionada'
-      });
+      // Validar que el almacén corresponda a la sucursal
+      if (storage.branch.toString() !== branchId) {
+        return res.status(400).json({
+          success: false,
+          message: 'El almacén no pertenece a la sucursal seleccionada'
+        });
+      }
     }
 
     // Validar que los productos del catálogo existan y haya stock disponible
@@ -332,23 +352,27 @@ const createOrder = async (req, res) => {
           });
         }
 
-        // Verificar stock en el almacén
-        const productInStorage = storage.products.find(
-          (p) => p.productId.toString() === item.productId
-        );
+        // Si no hay storage pero hay productos del catálogo, ya se validó arriba
+        // Solo verificar stock si hay storage
+        if (storage) {
+          // Verificar stock en el almacén
+          const productInStorage = storage.products.find(
+            (p) => p.productId.toString() === item.productId
+          );
 
-        if (!productInStorage) {
-          return res.status(400).json({
-            success: false,
-            message: `El producto "${item.productName}" no está disponible en el almacén`
-          });
-        }
+          if (!productInStorage) {
+            return res.status(400).json({
+              success: false,
+              message: `El producto "${item.productName}" no está disponible en el almacén`
+            });
+          }
 
-        if (productInStorage.quantity < item.quantity) {
-          return res.status(400).json({
-            success: false,
-            message: `Stock insuficiente para "${item.productName}". Disponible: ${productInStorage.quantity}, Solicitado: ${item.quantity}`
-          });
+          if (productInStorage.quantity < item.quantity) {
+            return res.status(400).json({
+              success: false,
+              message: `Stock insuficiente para "${item.productName}". Disponible: ${productInStorage.quantity}, Solicitado: ${item.quantity}`
+            });
+          }
         }
       } else {
         // Para productos manuales, asegurarse de que tengan nombre
@@ -367,6 +391,55 @@ const createOrder = async (req, res) => {
         success: false,
         message: 'Usuario no autenticado'
       });
+    }
+
+    // Extraer campos de redes sociales del body
+    const { isSocialMediaOrder, socialMedia } = req.body;
+
+    // Determinar si enviar a producción automáticamente
+    // Si hay anticipo (advance > 0), enviar automáticamente a producción
+    const shouldSendToProduction = (advance && advance > 0) ? true : (sendToProduction || false);
+
+    // Determinar si se debe asignar una etapa y el status de la orden
+    // Asignar etapa si: sendToProduction = true O advance > 0
+    let stageId = null;
+    let orderStatus = 'pendiente'; // status por defecto
+
+    if (shouldSendToProduction || (advance && advance > 0)) {
+      // Obtener la empresa a través de la sucursal
+      const branchWithCompany = await Branch.findById(branchId).populate('companyId');
+
+      if (!branchWithCompany || !branchWithCompany.companyId) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se pudo obtener la empresa asociada a la sucursal'
+        });
+      }
+
+      const companyId = branchWithCompany.companyId._id;
+
+      // Buscar la etapa con stageNumber = 1 y boardType = 'Produccion' para esta empresa
+      const firstStage = await StageCatalog.findOne({
+        company: companyId,
+        stageNumber: 1,
+        boardType: 'Produccion',
+        isActive: true
+      });
+
+      if (!firstStage) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se encontró una etapa inicial de Producción (stageNumber = 1, boardType = Produccion) activa para esta empresa. Por favor, crea una etapa en el catálogo de etapas antes de continuar.'
+        });
+      }
+
+      stageId = firstStage._id;
+      orderStatus = 'pendiente'; // Con stage asignado, status = 'pendiente'
+    } else {
+      // Si NO tiene anticipo Y NO se envía a producción
+      // Asignar status = 'sinAnticipo' y stage = null
+      orderStatus = 'sinAnticipo';
+      stageId = null;
     }
 
     // Crear nueva orden
@@ -399,7 +472,12 @@ const createOrder = async (req, res) => {
       change: change || 0,
       remainingBalance: remainingBalance || 0,
       payments: [],
-      sendToProduction: sendToProduction || false
+      sendToProduction: shouldSendToProduction,
+      status: orderStatus, // Asignar el status determinado ('pendiente' o 'sinAnticipo')
+      stage: stageId, // Asignar la etapa (puede ser null)
+      orderDate: orderDate || new Date(),
+      isSocialMediaOrder: isSocialMediaOrder || false,
+      socialMedia: socialMedia || null
     });
 
     const savedOrder = await newOrder.save();
@@ -416,7 +494,8 @@ const createOrder = async (req, res) => {
         cashRegisterId: cashRegisterId,
         date: new Date(),
         registeredBy: req.user?._id || null,
-        notes: 'Pago inicial al crear la orden'
+        notes: 'Pago inicial al crear la orden',
+        orderDate: orderDate || new Date()
       });
 
       const savedPayment = await orderPayment.save();
@@ -427,46 +506,74 @@ const createOrder = async (req, res) => {
       await savedOrder.save();
     }
 
-    // Descontar productos del almacén
-    for (const item of items) {
-      // Solo descontar si es un producto del catálogo
-      if (item.isProduct === true && item.productId) {
-        const productInStorageIndex = storage.products.findIndex(
-          (p) => p.productId.toString() === item.productId
-        );
+    // Descontar productos del almacén solo si hay storage
+    if (storage) {
+      for (const item of items) {
+        // Solo descontar si es un producto del catálogo
+        if (item.isProduct === true && item.productId) {
+          const productInStorageIndex = storage.products.findIndex(
+            (p) => p.productId.toString() === item.productId
+          );
 
-        if (productInStorageIndex !== -1) {
-          storage.products[productInStorageIndex].quantity -= item.quantity;
+          if (productInStorageIndex !== -1) {
+            storage.products[productInStorageIndex].quantity -= item.quantity;
 
-          // Si la cantidad llega a 0, remover el producto del array
-          if (storage.products[productInStorageIndex].quantity === 0) {
-            storage.products.splice(productInStorageIndex, 1);
+            // Si la cantidad llega a 0, remover el producto del array
+            if (storage.products[productInStorageIndex].quantity === 0) {
+              storage.products.splice(productInStorageIndex, 1);
+            }
           }
         }
       }
+
+      // Marcar products como modificado para que Mongoose lo detecte
+      storage.markModified('products');
+
+      // Actualizar fecha de último egreso y guardar el almacén
+      storage.lastOutcome = Date.now();
+
+      try {
+        await storage.save();
+      } catch (storageError) {
+        console.error('Error al actualizar almacén:', storageError);
+        // Continuar con la creación de la orden aunque falle la actualización del almacén
+        // El stock ya fue validado previamente
+      }
     }
 
-    // Actualizar fecha de último egreso y guardar el almacén
-    storage.lastOutcome = Date.now();
-    await storage.save();
-
-    // Si hay caja registradora asignada, actualizar su balance
-    if (cashRegisterId && advance > 0) {
+    // Si hay caja registradora asignada, actualizar su balance según el tipo de caja
+    if (cashRegisterId && advance > 0 && paymentMethod) {
       try {
-        // Agregar el monto del anticipo a la caja y registrar la orden con su pago
-        await CashRegister.findByIdAndUpdate(
-          cashRegisterId,
-          {
-            $inc: { currentBalance: advance },
-            $push: {
-              lastRegistry: {
-                orderId: savedOrder._id,
-                paymentIds: savedPaymentId ? [savedPaymentId] : [], // Agregar el ID del pago en el array
-                saleDate: new Date()
+        // Obtener la caja registradora para saber si es de redes sociales
+        const cashRegister = await CashRegister.findById(cashRegisterId);
+
+        // Obtener el método de pago para verificar si es efectivo
+        const paymentMethodDoc = await PaymentMethod.findById(paymentMethod);
+        const isEffectivo = paymentMethodDoc?.name?.toLowerCase().includes('efectivo') || false;
+
+        // Determinar si se debe actualizar el balance:
+        // - Cajas normales: solo si el pago es en efectivo
+        // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo
+        const shouldUpdateBalance = cashRegister?.isSocialMediaBox
+          ? !isEffectivo  // Cajas de redes: actualizar si NO es efectivo
+          : isEffectivo;  // Cajas normales: actualizar si ES efectivo
+
+        // Actualizar el balance de la caja si corresponde
+        if (shouldUpdateBalance && savedPaymentId) {
+          await CashRegister.findByIdAndUpdate(
+            cashRegisterId,
+            {
+              $inc: { currentBalance: advance },
+              $push: {
+                lastRegistry: {
+                  orderId: savedOrder._id,
+                  paymentIds: [savedPaymentId], // Agregar el ID del pago en el array
+                  saleDate: new Date()
+                }
               }
             }
-          }
-        );
+          );
+        }
       } catch (cashRegisterError) {
         console.error('Error al actualizar caja registradora:', cashRegisterError);
         // No fallar la orden si hay error al actualizar la caja
@@ -482,6 +589,7 @@ const createOrder = async (req, res) => {
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
       .populate({
         path: 'payments',
         populate: [
@@ -492,6 +600,29 @@ const createOrder = async (req, res) => {
 
     // Emitir evento de socket para notificar a otros usuarios
     emitOrderCreated(populatedOrder);
+
+    // Crear notificación para el gerente de la sucursal
+    try {
+      // Obtener información del usuario que creó la orden
+      const creatorUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+
+      if (creatorUser && creatorUser.role) {
+        const notification = new OrderNotification({
+          userId: req.user._id,
+          username: creatorUser.profile?.fullName || creatorUser.name || 'Usuario',
+          userRole: creatorUser.role.name,
+          branchId: savedOrder.branchId,
+          orderNumber: savedOrder.orderNumber,
+          orderId: savedOrder._id,
+          isRead: false
+        });
+
+        await notification.save();
+      }
+    } catch (notificationError) {
+      console.error('Error al crear notificación:', notificationError);
+      // No fallar la creación de la orden si falla la notificación
+    }
 
     res.status(201).json({
       success: true,
@@ -568,6 +699,7 @@ const updateOrder = async (req, res) => {
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
       .populate({
         path: 'payments',
         populate: [
@@ -624,6 +756,17 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
+    // Obtener la orden antes de actualizarla para saber su estado anterior
+    const existingOrder = await Order.findById(id);
+    if (!existingOrder) {
+      return res.status(404).json({
+        success: false,
+        message: 'Orden no encontrada'
+      });
+    }
+
+    const previousStatus = existingOrder.status;
+
     const order = await Order.findByIdAndUpdate(
       id,
       { status },
@@ -636,6 +779,7 @@ const updateOrderStatus = async (req, res) => {
       .populate('clientInfo.clientId', 'name lastName phoneNumber email')
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
       .populate({
         path: 'payments',
         populate: [
@@ -649,6 +793,33 @@ const updateOrderStatus = async (req, res) => {
         success: false,
         message: 'Orden no encontrada'
       });
+    }
+
+    // Si la orden fue cancelada (y no estaba cancelada antes), crear notificación
+    if (status === 'cancelado' && previousStatus !== 'cancelado') {
+      try {
+        // Obtener información del usuario que canceló la orden
+        const canceledByUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+
+        if (canceledByUser && canceledByUser.role) {
+          const notification = new OrderNotification({
+            userId: req.user._id,
+            username: canceledByUser.profile?.fullName || canceledByUser.name || 'Usuario',
+            userRole: canceledByUser.role.name,
+            branchId: order.branchId._id || order.branchId,
+            orderNumber: order.orderNumber,
+            orderId: order._id,
+            isRead: false,
+            isCanceled: true // Marcar como notificación de cancelación
+          });
+
+          await notification.save();
+          console.log('Notificación de cancelación creada:', notification);
+        }
+      } catch (notificationError) {
+        console.error('Error al crear notificación de cancelación:', notificationError);
+        // No fallar la actualización del estado si falla la notificación
+      }
     }
 
     // Emitir evento de socket para notificar a otros usuarios
@@ -713,17 +884,18 @@ const getOrdersSummary = async (req, res) => {
     // Obtener el ID del usuario autenticado
     const userId = req.user?._id;
 
-    // Buscar todas las sucursales donde el usuario es administrador o gerente
+    // Buscar todas las sucursales donde el usuario es administrador, gerente o cajero
     const userBranches = await Branch.find({
       $or: [
         { administrator: userId },
-        { manager: userId }
+        { manager: userId },
+        { employees: userId }
       ]
     }).select('_id');
     const branchIds = userBranches.map(branch => branch._id);
 
     if (branchIds.length === 0) {
-      // Si el usuario no administra ni gestiona ninguna sucursal, retornar estadísticas vacías
+      // Si el usuario no administra, gestiona o es cajero de ninguna sucursal, retornar estadísticas vacías
       return res.status(200).json({
         success: true,
         data: {
@@ -737,7 +909,7 @@ const getOrdersSummary = async (req, res) => {
 
     // Construir filtros base
     const filters = {
-      branchId: { $in: branchIds } // Filtrar solo órdenes de sucursales donde el usuario es administrador o gerente
+      branchId: { $in: branchIds } // Filtrar solo órdenes de sucursales donde el usuario es administrador, gerente o cajero
     };
 
     if (branchId) {
@@ -763,18 +935,18 @@ const getOrdersSummary = async (req, res) => {
 
     // Filtros de fecha
     if (startDate || endDate) {
-      filters.createdAt = {};
+      filters.orderDate = {};
 
       if (startDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        filters.createdAt.$gte = start;
+        filters.orderDate.$gte = start;
       }
 
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        filters.createdAt.$lte = end;
+        filters.orderDate.$lte = end;
       }
     }
 
@@ -833,6 +1005,91 @@ const getOrdersSummary = async (req, res) => {
   }
 };
 
+// Enviar orden a pizarrón de Envío
+const sendOrderToShipping = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Obtener la orden actual
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Orden no encontrada'
+      });
+    }
+
+    // Obtener la empresa a través de la sucursal
+    const branch = await Branch.findById(order.branchId).populate('companyId');
+
+    if (!branch || !branch.companyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se pudo obtener la empresa asociada a la sucursal'
+      });
+    }
+
+    const companyId = branch.companyId._id;
+
+    // Buscar el primer stage de Envío (stageNumber = 1, boardType = 'Envio')
+    const firstShippingStage = await StageCatalog.findOne({
+      company: companyId,
+      stageNumber: 1,
+      boardType: 'Envio',
+      isActive: true
+    });
+
+    if (!firstShippingStage) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se encontró una etapa inicial de Envío (stageNumber = 1, boardType = Envio) activa para esta empresa.'
+      });
+    }
+
+    // Actualizar la orden
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        sentToShipping: true,
+        stage: firstShippingStage._id
+      },
+      { new: true, runValidators: true }
+    )
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashRegisterId', 'name isOpen currentBalance')
+      .populate('cashier', 'name email')
+      .populate('items.productId', 'nombre imagen')
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      });
+
+    // Emitir evento de socket para notificar a otros usuarios
+    emitOrderUpdated(updatedOrder);
+
+    res.status(200).json({
+      success: true,
+      data: updatedOrder,
+      message: 'Orden enviada al pizarrón de Envío exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al enviar orden a Envío:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 export {
   getAllOrders,
   getOrderById,
@@ -840,5 +1097,6 @@ export {
   updateOrder,
   updateOrderStatus,
   deleteOrder,
-  getOrdersSummary
+  getOrdersSummary,
+  sendOrderToShipping
 };

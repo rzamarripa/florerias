@@ -11,6 +11,9 @@ import { providersService } from "../../providers/services/providers";
 import { Provider } from "../../providers/types";
 import { expenseConceptsService } from "../../expenseConcepts/services/expenseConcepts";
 import { ExpenseConcept } from "../../expenseConcepts/types";
+import { cashRegistersService } from "../../cash-registers/services/cashRegisters";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface BuyModalProps {
   show: boolean;
@@ -23,9 +26,11 @@ interface BuyModalProps {
 const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branchId }) => {
   const [loading, setLoading] = useState(false);
   const [loadingConcepts, setLoadingConcepts] = useState(false);
+  const [loadingCashRegisters, setLoadingCashRegisters] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [expenseConcepts, setExpenseConcepts] = useState<ExpenseConcept[]>([]);
+  const [cashRegisters, setCashRegisters] = useState<any[]>([]);
   const [formData, setFormData] = useState<CreateBuyData>({
     paymentDate: new Date().toISOString().split("T")[0],
     concept: "",
@@ -33,9 +38,15 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
     paymentMethod: "",
     provider: "",
     description: "",
+    cashRegister: "",
   });
 
+  const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
   const isEditing = !!buy;
+
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
+  const isManager = hasRole("Gerente") || hasRole("Manager");
 
   // Cargar métodos de pago, proveedores y conceptos
   useEffect(() => {
@@ -72,6 +83,60 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
     }
   }, [show]);
 
+  // Cargar cajas cuando el método de pago sea efectivo
+  useEffect(() => {
+    const loadCashRegisters = async () => {
+      if (!show || !formData.paymentMethod) return;
+
+      const selectedPaymentMethod = paymentMethods.find(pm => pm._id === formData.paymentMethod);
+      const isEffectivo = selectedPaymentMethod?.name?.toLowerCase().includes('efectivo') || false;
+
+      if (isEffectivo) {
+        try {
+          setLoadingCashRegisters(true);
+
+          // Si es gerente, buscar por managerId (sin filtro, el backend filtrará por usuario)
+          if (isManager) {
+            const response = await cashRegistersService.getAllCashRegisters({
+              isActive: true,
+              isOpen: true,
+              limit: 1000,
+            });
+            if (response.success) {
+              setCashRegisters(response.data);
+            }
+          }
+          // Si es admin, buscar por branchId
+          else if (isAdmin) {
+            const branchIdToUse = branchId || activeBranch?._id;
+
+            if (branchIdToUse) {
+              const response = await cashRegistersService.getAllCashRegisters({
+                branchId: branchIdToUse,
+                isActive: true,
+                isOpen: true,
+                limit: 1000,
+              });
+              if (response.success) {
+                setCashRegisters(response.data);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error loading cash registers:", error);
+          toast.error("Error al cargar las cajas");
+        } finally {
+          setLoadingCashRegisters(false);
+        }
+      } else {
+        setCashRegisters([]);
+        setFormData(prev => ({ ...prev, cashRegister: "" }));
+      }
+    };
+
+    loadCashRegisters();
+  }, [show, formData.paymentMethod, paymentMethods, branchId, activeBranch, isManager, isAdmin]);
+
   // Cargar datos del buy si está editando
   useEffect(() => {
     if (buy) {
@@ -84,6 +149,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
           : buy.paymentMethod._id,
         provider: buy.provider ? (typeof buy.provider === "string" ? buy.provider : buy.provider._id) : "",
         description: buy.description || "",
+        cashRegister: "",
       });
     } else {
       setFormData({
@@ -93,6 +159,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
         paymentMethod: "",
         provider: "",
         description: "",
+        cashRegister: "",
       });
     }
   }, [buy]);
@@ -145,7 +212,9 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
       paymentMethod: "",
       provider: "",
       description: "",
+      cashRegister: "",
     });
+    setCashRegisters([]);
     onHide();
   };
 
@@ -200,6 +269,48 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
                 </Form.Select>
               </Form.Group>
             </Col>
+
+            {/* Caja Registradora (solo para efectivo) */}
+            {(() => {
+              const selectedPaymentMethod = paymentMethods.find(pm => pm._id === formData.paymentMethod);
+              const isEffectivo = selectedPaymentMethod?.name?.toLowerCase().includes('efectivo') || false;
+
+              return isEffectivo && (
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">
+                      Caja Registradora (Opcional)
+                    </Form.Label>
+                    <Form.Select
+                      value={formData.cashRegister}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cashRegister: e.target.value })
+                      }
+                      disabled={loadingCashRegisters || cashRegisters.length === 0}
+                      className="border-0 bg-light"
+                      style={{ borderRadius: "10px", padding: "12px 16px" }}
+                    >
+                      <option value="">
+                        {loadingCashRegisters
+                          ? "Cargando cajas..."
+                          : cashRegisters.length === 0
+                          ? "No hay cajas disponibles"
+                          : "Seleccionar caja (opcional)..."}
+                      </option>
+                      {cashRegisters.map((cashRegister) => (
+                        <option key={cashRegister._id} value={cashRegister._id}>
+                          {cashRegister.name} - Saldo: $
+                          {cashRegister.currentBalance.toFixed(2)}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Text className="text-muted">
+                      Si seleccionas una caja, el monto se descontará automáticamente
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              );
+            })()}
 
             <Col md={12}>
               <Form.Group>

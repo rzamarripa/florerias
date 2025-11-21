@@ -117,7 +117,7 @@ const orderSchema = new mongoose.Schema({
   salesChannel: {
     type: String,
     required: true,
-    enum: ['tienda', 'whatsapp', 'facebook'],
+    enum: ['tienda', 'whatsapp', 'facebook', 'instagram'],
     default: 'tienda'
   },
   items: {
@@ -133,7 +133,7 @@ const orderSchema = new mongoose.Schema({
   shippingType: {
     type: String,
     required: true,
-    enum: ['envio', 'tienda'],
+    enum: ['envio', 'tienda', 'redes_sociales'],
     default: 'tienda'
   },
   anonymous: {
@@ -201,14 +201,37 @@ const orderSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  sentToShipping: {
+    type: Boolean,
+    default: false
+  },
   status: {
     type: String,
-    enum: ['pendiente', 'en-proceso', 'completado', 'cancelado'],
+    enum: ['pendiente', 'en-proceso', 'completado', 'cancelado', 'sinAnticipo'],
     default: 'pendiente'
+  },
+  stage: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_stage_catalog',
+    default: null
   },
   orderNumber: {
     type: String,
     unique: true
+  },
+  orderDate: {
+    type: Date,
+    required: true,
+    default: Date.now
+  },
+  isSocialMediaOrder: {
+    type: Boolean,
+    default: false
+  },
+  socialMedia: {
+    type: String,
+    enum: ['whatsapp', 'facebook', 'instagram', null],
+    default: null
   }
 }, {
   timestamps: true,
@@ -224,6 +247,9 @@ orderSchema.index({ 'clientInfo.phone': 1 });
 orderSchema.index({ salesChannel: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ orderDate: -1 });
+orderSchema.index({ isSocialMediaOrder: 1 });
+orderSchema.index({ socialMedia: 1 });
 
 // Middleware para generar número de orden antes de guardar
 orderSchema.pre('save', async function(next) {

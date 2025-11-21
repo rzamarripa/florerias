@@ -24,6 +24,7 @@ export interface CreateManagerData {
   contrasena: string;
   foto?: string;
   estatus: boolean;
+  branchId: string;
 }
 
 export interface UpdateManagerData {

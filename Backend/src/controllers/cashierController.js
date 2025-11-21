@@ -1,64 +1,91 @@
-import Cashier from '../models/Cashier.js';
+import { User } from '../models/User.js';
+import { Branch } from '../models/Branch.js';
+import { Role } from '../models/Roles.js';
 import bcrypt from 'bcryptjs';
 
-// Obtener todos los cajeros con filtros y paginación
+// Obtener todos los cajeros (usuarios con rol Cajero) con filtros y paginación
 const getAllCashiers = async (req, res) => {
   try {
     const {
       page = 1,
       limit = 10,
-      nombre,
-      apellidoPaterno,
-      usuario,
-      correo,
-      telefono,
-      estatus
+      search,
+      estatus,
+      branchId
     } = req.query;
 
+    // Buscar el rol de Cajero
+    const cajeroRole = await Role.findOne({ name: /^Cajero$/i });
+    if (!cajeroRole) {
+      return res.status(404).json({
+        success: false,
+        message: 'No se encontró el rol de Cajero'
+      });
+    }
+
     // Construir filtros
-    const filters = {};
-    
-    if (nombre) {
-      filters.nombre = { $regex: nombre, $options: 'i' };
+    const filters = { role: cajeroRole._id };
+
+    if (search) {
+      filters.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { 'profile.name': { $regex: search, $options: 'i' } },
+        { 'profile.lastName': { $regex: search, $options: 'i' } },
+        { 'profile.fullName': { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
+      ];
     }
-    
-    if (apellidoPaterno) {
-      filters.apellidoPaterno = { $regex: apellidoPaterno, $options: 'i' };
-    }
-    
-    if (usuario) {
-      filters.usuario = { $regex: usuario, $options: 'i' };
-    }
-    
-    if (correo) {
-      filters.correo = { $regex: correo, $options: 'i' };
-    }
-    
-    if (telefono) {
-      filters.telefono = { $regex: telefono, $options: 'i' };
-    }
-    
+
     if (estatus !== undefined) {
-      filters.estatus = estatus === 'true';
+      filters['profile.estatus'] = estatus === 'true';
     }
 
     // Calcular skip para paginación
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Obtener cajeros con paginación
-    const cashiers = await Cashier.find(filters)
-      .select('-contrasena')
+    let cashiers = await User.find(filters)
+      .select('-password')
+      .populate('role', 'name description')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Si se especifica branchId, filtrar solo cajeros de esa sucursal
+    if (branchId) {
+      const branch = await Branch.findById(branchId).select('employees');
+      if (branch) {
+        const employeeIds = branch.employees.map(id => id.toString());
+        cashiers = cashiers.filter(cashier =>
+          employeeIds.includes(cashier._id.toString())
+        );
+      } else {
+        cashiers = [];
+      }
+    }
+
+    // Obtener la sucursal de cada cajero
+    const cashiersWithBranch = await Promise.all(
+      cashiers.map(async (cashier) => {
+        const branch = await Branch.findOne({
+          employees: cashier._id
+        }).select('branchName branchCode companyId');
+
+        return {
+          ...cashier.toObject(),
+          branch: branch || null
+        };
+      })
+    );
+
     // Contar total de documentos
-    const total = await Cashier.countDocuments(filters);
+    const total = await User.countDocuments(filters);
     const pages = Math.ceil(total / parseInt(limit));
 
     res.status(200).json({
       success: true,
-      data: cashiers,
+      data: cashiersWithBranch,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -81,7 +108,9 @@ const getCashierById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const cashier = await Cashier.findById(id).select('-contrasena');
+    const cashier = await User.findById(id)
+      .select('-password')
+      .populate('role', 'name description');
 
     if (!cashier) {
       return res.status(404).json({
@@ -90,9 +119,17 @@ const getCashierById = async (req, res) => {
       });
     }
 
+    // Obtener la sucursal del cajero
+    const branch = await Branch.findOne({
+      employees: cashier._id
+    }).select('branchName branchCode companyId');
+
     res.status(200).json({
       success: true,
-      data: cashier
+      data: {
+        ...cashier.toObject(),
+        branch: branch || null
+      }
     });
   } catch (error) {
     console.error('Error al obtener cajero:', error);
@@ -108,71 +145,110 @@ const getCashierById = async (req, res) => {
 const createCashier = async (req, res) => {
   try {
     const {
-      nombre,
-      apellidoPaterno,
-      apellidoMaterno,
-      direccion,
-      telefono,
-      correo,
-      usuario,
-      contrasena,
-      foto,
-      cajero = true,
-      estatus = true
+      username,
+      email,
+      phone,
+      password,
+      profile,
+      branch
     } = req.body;
 
     // Validar campos requeridos
-    if (!nombre || !apellidoPaterno || !apellidoMaterno || !direccion || 
-        !telefono || !correo || !usuario || !contrasena) {
+    if (!username || !email || !phone || !password || !profile || !branch) {
       return res.status(400).json({
         success: false,
         message: 'Todos los campos obligatorios deben ser proporcionados'
       });
     }
 
-    // Verificar si el correo ya existe
-    const existingEmailCashier = await Cashier.findOne({ correo: correo.toLowerCase() });
-    if (existingEmailCashier) {
+    if (!profile.name || !profile.lastName) {
       return res.status(400).json({
         success: false,
-        message: 'El correo electrónico ya está registrado'
+        message: 'El nombre y apellido son requeridos'
       });
     }
 
-    // Verificar si el usuario ya existe
-    const existingUserCashier = await Cashier.findOne({ usuario });
-    if (existingUserCashier) {
+    // Buscar el rol de Cajero
+    const cajeroRole = await Role.findOne({ name: /^Cajero$/i });
+    if (!cajeroRole) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se encontró el rol de Cajero'
+      });
+    }
+
+    // Verificar que la sucursal existe
+    const branchExists = await Branch.findById(branch);
+    if (!branchExists) {
+      return res.status(404).json({
+        success: false,
+        message: 'La sucursal especificada no existe'
+      });
+    }
+
+    // Verificar si el username ya existe
+    const existingUsername = await User.findOne({
+      username: { $regex: new RegExp(`^${username}$`, 'i') }
+    });
+    if (existingUsername) {
       return res.status(400).json({
         success: false,
         message: 'El nombre de usuario ya está en uso'
       });
     }
 
-    // Crear nuevo cajero
-    const newCashier = new Cashier({
-      nombre: nombre.trim(),
-      apellidoPaterno: apellidoPaterno.trim(),
-      apellidoMaterno: apellidoMaterno.trim(),
-      direccion: direccion.trim(),
-      telefono: telefono.trim(),
-      correo: correo.toLowerCase().trim(),
-      usuario: usuario.trim(),
-      contrasena,
-      foto,
-      cajero,
-      estatus
+    // Verificar si el email ya existe
+    const existingEmail = await User.findOne({
+      email: { $regex: new RegExp(`^${email}$`, 'i') }
+    });
+    if (existingEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'El correo electrónico ya está registrado'
+      });
+    }
+
+    // Crear nuevo cajero en cs_user
+    const newCashier = await User.create({
+      username,
+      email,
+      phone,
+      password,
+      profile: {
+        name: profile.name,
+        lastName: profile.lastName,
+        fullName: `${profile.name} ${profile.lastName}`,
+        estatus: true
+      },
+      role: cajeroRole._id
     });
 
-    const savedCashier = await newCashier.save();
+    // Agregar el cajero al array employees de la sucursal
+    await Branch.findByIdAndUpdate(
+      branch,
+      { $addToSet: { employees: newCashier._id } },
+      { new: true }
+    );
+
+    // Obtener el cajero con datos completos
+    const populatedCashier = await User.findById(newCashier._id)
+      .select('-password')
+      .populate('role', 'name description');
+
+    const branchData = await Branch.findById(branch)
+      .select('branchName branchCode companyId');
 
     res.status(201).json({
       success: true,
-      data: savedCashier,
+      data: {
+        ...populatedCashier.toObject(),
+        branch: branchData
+      },
       message: 'Cajero creado exitosamente'
     });
   } catch (error) {
     console.error('Error al crear cajero:', error);
-    
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -202,21 +278,16 @@ const updateCashier = async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      nombre,
-      apellidoPaterno,
-      apellidoMaterno,
-      direccion,
-      telefono,
-      correo,
-      usuario,
-      contrasena,
-      foto,
-      cajero,
+      username,
+      email,
+      phone,
+      password,
+      profile,
       estatus
     } = req.body;
 
     // Verificar si el cajero existe
-    const existingCashier = await Cashier.findById(id);
+    const existingCashier = await User.findById(id);
     if (!existingCashier) {
       return res.status(404).json({
         success: false,
@@ -224,10 +295,24 @@ const updateCashier = async (req, res) => {
       });
     }
 
-    // Verificar si el correo ya existe en otro cajero
-    if (correo && correo !== existingCashier.correo) {
-      const emailExists = await Cashier.findOne({ 
-        correo: correo.toLowerCase(),
+    // Verificar si el username ya existe en otro usuario
+    if (username && username !== existingCashier.username) {
+      const usernameExists = await User.findOne({
+        username: { $regex: new RegExp(`^${username}$`, 'i') },
+        _id: { $ne: id }
+      });
+      if (usernameExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'El nombre de usuario ya está en uso'
+        });
+      }
+    }
+
+    // Verificar si el email ya existe en otro usuario
+    if (email && email !== existingCashier.email) {
+      const emailExists = await User.findOne({
+        email: { $regex: new RegExp(`^${email}$`, 'i') },
         _id: { $ne: id }
       });
       if (emailExists) {
@@ -238,53 +323,61 @@ const updateCashier = async (req, res) => {
       }
     }
 
-    // Verificar si el usuario ya existe en otro cajero
-    if (usuario && usuario !== existingCashier.usuario) {
-      const userExists = await Cashier.findOne({ 
-        usuario,
-        _id: { $ne: id }
-      });
-      if (userExists) {
-        return res.status(400).json({
-          success: false,
-          message: 'El nombre de usuario ya está en uso'
-        });
-      }
-    }
-
     // Preparar datos para actualizar
     const updateData = {};
-    if (nombre) updateData.nombre = nombre.trim();
-    if (apellidoPaterno) updateData.apellidoPaterno = apellidoPaterno.trim();
-    if (apellidoMaterno) updateData.apellidoMaterno = apellidoMaterno.trim();
-    if (direccion) updateData.direccion = direccion.trim();
-    if (telefono) updateData.telefono = telefono.trim();
-    if (correo) updateData.correo = correo.toLowerCase().trim();
-    if (usuario) updateData.usuario = usuario.trim();
-    if (foto !== undefined) updateData.foto = foto;
-    if (cajero !== undefined) updateData.cajero = cajero;
-    if (estatus !== undefined) updateData.estatus = estatus;
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (phone) updateData.phone = phone;
 
-    // Si se proporciona una nueva contraseña, hashearla
-    if (contrasena && contrasena.trim()) {
-      const salt = await bcrypt.genSalt(12);
-      updateData.contrasena = await bcrypt.hash(contrasena, salt);
+    if (profile) {
+      updateData.profile = {
+        ...existingCashier.profile,
+        ...(profile.name && { name: profile.name }),
+        ...(profile.lastName && { lastName: profile.lastName }),
+        ...(estatus !== undefined && { estatus })
+      };
+
+      // Actualizar fullName si name o lastName cambian
+      if (profile.name || profile.lastName) {
+        const newName = profile.name || existingCashier.profile.name;
+        const newLastName = profile.lastName || existingCashier.profile.lastName;
+        updateData.profile.fullName = `${newName} ${newLastName}`;
+      }
+    } else if (estatus !== undefined) {
+      updateData.profile = {
+        ...existingCashier.profile,
+        estatus
+      };
     }
 
-    const updatedCashier = await Cashier.findByIdAndUpdate(
+    // Si se proporciona una nueva contraseña, hashearla
+    if (password && password.trim()) {
+      const salt = await bcrypt.genSalt(12);
+      updateData.password = await bcrypt.hash(password, salt);
+    }
+
+    const updatedCashier = await User.findByIdAndUpdate(
       id,
       updateData,
       { new: true, runValidators: true }
-    ).select('-contrasena');
+    ).select('-password').populate('role', 'name description');
+
+    // Obtener la sucursal del cajero
+    const branch = await Branch.findOne({
+      employees: updatedCashier._id
+    }).select('branchName branchCode companyId');
 
     res.status(200).json({
       success: true,
-      data: updatedCashier,
+      data: {
+        ...updatedCashier.toObject(),
+        branch: branch || null
+      },
       message: 'Cajero actualizado exitosamente'
     });
   } catch (error) {
     console.error('Error al actualizar cajero:', error);
-    
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -314,7 +407,7 @@ const deleteCashier = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedCashier = await Cashier.findByIdAndDelete(id);
+    const deletedCashier = await User.findByIdAndDelete(id);
 
     if (!deletedCashier) {
       return res.status(404).json({
@@ -322,6 +415,12 @@ const deleteCashier = async (req, res) => {
         message: 'Cajero no encontrado'
       });
     }
+
+    // Remover el cajero del array employees de todas las sucursales
+    await Branch.updateMany(
+      { employees: id },
+      { $pull: { employees: id } }
+    );
 
     res.status(200).json({
       success: true,
@@ -342,11 +441,11 @@ const activateCashier = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const cashier = await Cashier.findByIdAndUpdate(
+    const cashier = await User.findByIdAndUpdate(
       id,
-      { estatus: true },
+      { 'profile.estatus': true },
       { new: true, runValidators: true }
-    ).select('-contrasena');
+    ).select('-password').populate('role', 'name description');
 
     if (!cashier) {
       return res.status(404).json({
@@ -355,9 +454,17 @@ const activateCashier = async (req, res) => {
       });
     }
 
+    // Obtener la sucursal del cajero
+    const branch = await Branch.findOne({
+      employees: cashier._id
+    }).select('branchName branchCode companyId');
+
     res.status(200).json({
       success: true,
-      data: cashier,
+      data: {
+        ...cashier.toObject(),
+        branch: branch || null
+      },
       message: 'Cajero activado exitosamente'
     });
   } catch (error) {
@@ -375,11 +482,11 @@ const deactivateCashier = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const cashier = await Cashier.findByIdAndUpdate(
+    const cashier = await User.findByIdAndUpdate(
       id,
-      { estatus: false },
+      { 'profile.estatus': false },
       { new: true, runValidators: true }
-    ).select('-contrasena');
+    ).select('-password').populate('role', 'name description');
 
     if (!cashier) {
       return res.status(404).json({
@@ -388,9 +495,17 @@ const deactivateCashier = async (req, res) => {
       });
     }
 
+    // Obtener la sucursal del cajero
+    const branch = await Branch.findOne({
+      employees: cashier._id
+    }).select('branchName branchCode companyId');
+
     res.status(200).json({
       success: true,
-      data: cashier,
+      data: {
+        ...cashier.toObject(),
+        branch: branch || null
+      },
       message: 'Cajero desactivado exitosamente'
     });
   } catch (error) {

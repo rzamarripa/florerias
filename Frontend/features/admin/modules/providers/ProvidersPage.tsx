@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner } from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight, PackageSearch } from "lucide-react";
+import { Button, Table, Badge, Form, InputGroup, Spinner, Alert } from "react-bootstrap";
+import { Plus, Search, ChevronLeft, ChevronRight, PackageSearch, Building2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { providersService } from "./services/providers";
 import { Provider } from "./types";
 import ProviderActions from "./components/ProviderActions";
 import ProviderForm from "./components/ProviderForm";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { companiesService } from "../companies/services/companies";
 
 const ProvidersPage: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -16,12 +18,17 @@ const ProvidersPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [userCompany, setUserCompany] = useState<{ _id: string; legalName: string; tradeName?: string; rfc: string } | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
     total: 0,
     pages: 0,
   });
+
+  const { getIsAdmin, getIsManager, getIsSuperAdmin } = useUserRoleStore();
+  const isAdminOrManager = getIsAdmin() || getIsManager();
+  const isSuperAdmin = getIsSuperAdmin();
 
   const loadProviders = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -59,9 +66,28 @@ const ProvidersPage: React.FC = () => {
     }
   };
 
+  // Cargar empresa del usuario al montar el componente
+  useEffect(() => {
+    if (isAdminOrManager) {
+      loadUserCompany();
+    }
+  }, [isAdminOrManager]);
+
   useEffect(() => {
     loadProviders(true, 1);
   }, [searchTerm, statusFilter]);
+
+  const loadUserCompany = async () => {
+    try {
+      const response = await companiesService.getUserCompany();
+      if (response.success && response.data) {
+        setUserCompany(response.data);
+      }
+    } catch (error: any) {
+      console.error("Error loading user company:", error);
+      // No mostrar error al usuario, es solo informativo
+    }
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
@@ -100,7 +126,11 @@ const ProvidersPage: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="mb-1 fw-bold">Proveedores</h2>
-          <p className="text-muted mb-0">Gestiona los proveedores del sistema</p>
+          <p className="text-muted mb-0">
+            {isSuperAdmin
+              ? "Gestiona todos los proveedores del sistema"
+              : "Gestiona los proveedores de tu empresa"}
+          </p>
         </div>
         <Button
           variant="primary"
@@ -119,6 +149,30 @@ const ProvidersPage: React.FC = () => {
           Nuevo Proveedor
         </Button>
       </div>
+
+      {/* Company Info Banner for Admin/Manager */}
+      {isAdminOrManager && userCompany && (
+        <Alert
+          variant="info"
+          className="mb-4 border-0 shadow-sm"
+          style={{
+            borderRadius: "15px",
+            background: "linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)",
+          }}
+        >
+          <div className="d-flex align-items-center gap-3">
+            <Building2 size={24} className="text-primary" />
+            <div>
+              <div className="fw-bold text-dark">
+                {userCompany.tradeName || userCompany.legalName}
+              </div>
+              <small className="text-muted">
+                {userCompany.rfc} • Estás viendo los proveedores de esta empresa
+              </small>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* Filters */}
       <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>

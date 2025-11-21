@@ -41,6 +41,11 @@ const buySchema = new Schema(
       trim: true,
       default: "",
     },
+    cashRegister: {
+      type: Schema.Types.ObjectId,
+      ref: "CashRegister",
+      required: false,
+    },
     branch: {
       type: Schema.Types.ObjectId,
       ref: "cv_branch",
@@ -89,6 +94,7 @@ buySchema.index({ branch: 1, folio: 1 }, { unique: true });
 buySchema.index({ user: 1 });
 buySchema.index({ paymentMethod: 1 });
 buySchema.index({ provider: 1 });
+buySchema.index({ cashRegister: 1 });
 buySchema.index({ paymentDate: 1 });
 buySchema.index({ createdAt: -1 });
 

@@ -103,6 +103,12 @@ const companySchema = new Schema(
       ref: "cs_user",
       required: [true, "El distribuidor es requerido"],
     },
+    redes: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "cs_user",
+      },
+    ],
     isActive: {
       type: Boolean,
       default: true,

@@ -2,6 +2,7 @@ import { Buy } from '../models/Buy.js';
 import { Branch } from '../models/Branch.js';
 import { User } from '../models/User.js';
 import PaymentMethod from '../models/PaymentMethod.js';
+import CashRegister from '../models/CashRegister.js';
 import mongoose from 'mongoose';
 
 // Obtener todas las compras con filtros y paginación
@@ -108,6 +109,7 @@ const getAllBuys = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('provider', 'contactName tradeName legalName rfc')
       .populate('concept', 'name description department')
+      .populate('cashRegister', 'name currentBalance')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -154,7 +156,8 @@ const getBuyById = async (req, res) => {
       .populate('branch', 'branchName branchCode')
       .populate('paymentMethod', 'name abbreviation')
       .populate('provider', 'contactName tradeName legalName rfc')
-      .populate('concept', 'name description department');
+      .populate('concept', 'name description department')
+      .populate('cashRegister', 'name currentBalance');
 
     if (!buy) {
       return res.status(404).json({
@@ -205,7 +208,8 @@ const createBuy = async (req, res) => {
       paymentMethod,
       provider,
       description,
-      branch
+      branch,
+      cashRegister
     } = req.body;
 
     const userId = req.user?._id;
@@ -277,6 +281,28 @@ const createBuy = async (req, res) => {
       branchId = userBranch._id;
     }
 
+    // Verificar si es compra en efectivo con caja registradora
+    const isEffectivo = paymentMethodExists?.name?.toLowerCase().includes('efectivo') || false;
+
+    // Si es efectivo y tiene caja registradora, validar que la caja tenga saldo suficiente
+    if (isEffectivo && cashRegister) {
+      const cashRegisterDoc = await CashRegister.findById(cashRegister);
+
+      if (!cashRegisterDoc) {
+        return res.status(400).json({
+          success: false,
+          message: 'La caja registradora seleccionada no existe'
+        });
+      }
+
+      if (cashRegisterDoc.currentBalance < amount) {
+        return res.status(400).json({
+          success: false,
+          message: `Saldo insuficiente en la caja. Saldo actual: $${cashRegisterDoc.currentBalance.toFixed(2)}`
+        });
+      }
+    }
+
     // Crear nueva compra
     const newBuy = new Buy({
       paymentDate,
@@ -286,10 +312,27 @@ const createBuy = async (req, res) => {
       paymentMethod,
       provider: provider || null,
       description: description || '',
+      cashRegister: (isEffectivo && cashRegister) ? cashRegister : null,
       branch: branchId
     });
 
     const savedBuy = await newBuy.save();
+
+    // Si es efectivo y tiene caja registradora, descontar el monto de la caja y agregar al array de compras
+    if (isEffectivo && cashRegister) {
+      try {
+        await CashRegister.findByIdAndUpdate(
+          cashRegister,
+          {
+            $inc: { currentBalance: -amount },
+            $push: { buys: savedBuy._id }
+          }
+        );
+      } catch (cashRegisterError) {
+        console.error('Error al actualizar caja registradora:', cashRegisterError);
+        // No fallar la compra si hay error al actualizar la caja, pero registrar el error
+      }
+    }
 
     // Popular la compra guardada antes de devolverla
     const populatedBuy = await Buy.findById(savedBuy._id)
@@ -297,7 +340,8 @@ const createBuy = async (req, res) => {
       .populate('branch', 'branchName branchCode')
       .populate('paymentMethod', 'name abbreviation')
       .populate('provider', 'contactName tradeName legalName rfc')
-      .populate('concept', 'name description department');
+      .populate('concept', 'name description department')
+      .populate('cashRegister', 'name currentBalance');
 
     res.status(201).json({
       success: true,
@@ -389,7 +433,8 @@ const updateBuy = async (req, res) => {
       .populate('branch', 'branchName branchCode')
       .populate('paymentMethod', 'name abbreviation')
       .populate('provider', 'contactName tradeName legalName rfc')
-      .populate('concept', 'name description department');
+      .populate('concept', 'name description department')
+      .populate('cashRegister', 'name currentBalance');
 
     res.status(200).json({
       success: true,

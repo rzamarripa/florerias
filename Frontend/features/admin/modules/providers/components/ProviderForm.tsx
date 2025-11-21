@@ -10,6 +10,7 @@ import { providerSchema, ProviderFormData } from "../schemas/providerSchema";
 import { providersService } from "../services/providers";
 import { companiesService } from "../../companies/services/companies";
 import { Provider } from "../types";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface ProviderFormProps {
   show: boolean;
@@ -27,11 +28,18 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [userCompany, setUserCompany] = useState<{ _id: string; legalName: string; tradeName?: string; rfc: string } | null>(null);
+  const [loadingUserCompany, setLoadingUserCompany] = useState(false);
+
+  const { getIsAdmin, getIsManager, getIsSuperAdmin } = useUserRoleStore();
+  const isAdminOrManager = getIsAdmin() || getIsManager();
+  const isSuperAdmin = getIsSuperAdmin();
 
   const {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ProviderFormData>({
     resolver: zodResolver(providerSchema),
@@ -54,7 +62,15 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
 
   useEffect(() => {
     if (show) {
-      loadCompanies();
+      // Si es Super Admin, cargar todas las empresas
+      if (isSuperAdmin) {
+        loadCompanies();
+      }
+      // Si es Administrador o Gerente, cargar su empresa específica
+      else if (isAdminOrManager) {
+        loadUserCompany();
+      }
+
       if (provider) {
         reset({
           contactName: provider.contactName,
@@ -84,7 +100,14 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         });
       }
     }
-  }, [show, provider, reset]);
+  }, [show, provider, reset, isSuperAdmin, isAdminOrManager]);
+
+  // Efecto para establecer automáticamente la empresa cuando se carga
+  useEffect(() => {
+    if (userCompany && !provider && isAdminOrManager) {
+      setValue("company", userCompany._id);
+    }
+  }, [userCompany, provider, setValue, isAdminOrManager]);
 
   const loadCompanies = async () => {
     try {
@@ -102,6 +125,21 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
       console.error("Error loading companies:", error);
     } finally {
       setLoadingCompanies(false);
+    }
+  };
+
+  const loadUserCompany = async () => {
+    try {
+      setLoadingUserCompany(true);
+      const response = await companiesService.getUserCompany();
+      if (response.success && response.data) {
+        setUserCompany(response.data);
+      }
+    } catch (error: any) {
+      toast.error("Error al cargar la empresa del usuario");
+      console.error("Error loading user company:", error);
+    } finally {
+      setLoadingUserCompany(false);
     }
   };
 
@@ -166,15 +204,30 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
                     <Form.Select
                       {...field}
                       isInvalid={!!errors.company}
-                      disabled={loadingCompanies || !!provider}
+                      disabled={
+                        loadingCompanies ||
+                        loadingUserCompany ||
+                        !!provider ||
+                        isAdminOrManager
+                      }
                       style={{ borderRadius: "8px" }}
                     >
-                      <option value="">Selecciona una empresa</option>
-                      {companies.map((company) => (
-                        <option key={company._id} value={company._id}>
-                          {company.legalName} - {company.rfc}
+                      {isSuperAdmin ? (
+                        <>
+                          <option value="">Selecciona una empresa</option>
+                          {companies.map((company) => (
+                            <option key={company._id} value={company._id}>
+                              {company.legalName} - {company.rfc}
+                            </option>
+                          ))}
+                        </>
+                      ) : isAdminOrManager && userCompany ? (
+                        <option value={userCompany._id}>
+                          {userCompany.legalName} - {userCompany.rfc}
                         </option>
-                      ))}
+                      ) : (
+                        <option value="">Cargando empresa...</option>
+                      )}
                     </Form.Select>
                   )}
                 />

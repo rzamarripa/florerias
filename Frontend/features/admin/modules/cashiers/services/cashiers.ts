@@ -10,67 +10,63 @@ import {
 
 export const cashiersService = {
   getAllCashiers: async (filters: CashierFilters = {}): Promise<GetCashiersResponse> => {
-    const { page = 1, limit = 10, nombre, apellidoPaterno, usuario, correo, telefono, cajero, estatus } = filters;
-    
+    const { page = 1, limit = 10, search, estatus, branchId } = filters;
+
     const searchParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
 
-    if (nombre) searchParams.append('nombre', nombre);
-    if (apellidoPaterno) searchParams.append('apellidoPaterno', apellidoPaterno);
-    if (usuario) searchParams.append('usuario', usuario);
-    if (correo) searchParams.append('correo', correo);
-    if (telefono) searchParams.append('telefono', telefono);
-    if (cajero !== undefined) searchParams.append('cajero', cajero.toString());
+    if (search) searchParams.append('search', search);
     if (estatus !== undefined) searchParams.append('estatus', estatus.toString());
+    if (branchId) searchParams.append('branchId', branchId);
 
-    const response = await apiCall<GetCashiersResponse>(`/cashiers?${searchParams}`);
-    return response;
+    const response = await apiCall<Cashier[]>(`/cashiers?${searchParams}`);
+    return response as any;
   },
 
   getCashierById: async (cashierId: string): Promise<{ success: boolean; data: Cashier }> => {
-    const response = await apiCall<{ success: boolean; data: Cashier }>(`/cashiers/${cashierId}`);
-    return response;
+    const response = await apiCall<Cashier>(`/cashiers/${cashierId}`);
+    return response as any;
   },
 
   createCashier: async (cashierData: CreateCashierData): Promise<CreateCashierResponseData> => {
-    const response = await apiCall<CreateCashierResponseData>("/cashiers", {
+    const response = await apiCall<Cashier>("/cashiers", {
       method: "POST",
       body: JSON.stringify(cashierData),
     });
-    return response;
+    return response as any;
   },
 
   updateCashier: async (
     cashierId: string,
     cashierData: UpdateCashierData
   ): Promise<CreateCashierResponseData> => {
-    const response = await apiCall<CreateCashierResponseData>(`/cashiers/${cashierId}`, {
+    const response = await apiCall<Cashier>(`/cashiers/${cashierId}`, {
       method: "PUT",
       body: JSON.stringify(cashierData),
     });
-    return response;
+    return response as any;
   },
 
   deleteCashier: async (cashierId: string): Promise<{ success: boolean; message: string }> => {
-    const response = await apiCall<{ success: boolean; message: string }>(`/cashiers/${cashierId}`, {
+    const response = await apiCall<null>(`/cashiers/${cashierId}`, {
       method: "DELETE",
     });
-    return response;
+    return response as any;
   },
 
   activateCashier: async (cashierId: string): Promise<CreateCashierResponseData> => {
-    const response = await apiCall<CreateCashierResponseData>(`/cashiers/${cashierId}/activate`, {
+    const response = await apiCall<Cashier>(`/cashiers/${cashierId}/activate`, {
       method: "PUT",
     });
-    return response;
+    return response as any;
   },
 
   deactivateCashier: async (cashierId: string): Promise<CreateCashierResponseData> => {
-    const response = await apiCall<CreateCashierResponseData>(`/cashiers/${cashierId}/deactivate`, {
+    const response = await apiCall<Cashier>(`/cashiers/${cashierId}/deactivate`, {
       method: "PUT",
     });
-    return response;
+    return response as any;
   },
 };

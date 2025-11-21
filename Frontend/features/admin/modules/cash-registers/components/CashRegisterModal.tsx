@@ -15,6 +15,7 @@ interface CashRegisterModalProps {
   onHide: () => void;
   cashRegister?: CashRegister | null;
   onCashRegisterSaved?: () => void;
+  isSocialMediaBox?: boolean;
 }
 
 const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
@@ -22,6 +23,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   onHide,
   cashRegister,
   onCashRegisterSaved,
+  isSocialMediaBox = false,
 }) => {
   const isEditing = !!cashRegister;
   const { getUserId } = useUserSessionStore();
@@ -29,10 +31,15 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   const { role } = useUserRoleStore();
   const userId = getUserId();
   const isAdministrator = role?.toLowerCase() === "administrador";
+  const isManager = role?.toLowerCase() === "gerente";
 
   // Para administradores: verificar si hay sucursal seleccionada
+  // Para gerentes: siempre pueden crear porque se obtiene su sucursal del backend
   const canCreate =
-    !isAdministrator || (isAdministrator && activeBranch) || isEditing;
+    isManager ||
+    !isAdministrator ||
+    (isAdministrator && activeBranch) ||
+    isEditing;
 
   const [formData, setFormData] = useState<CreateCashRegisterData>({
     name: "",
@@ -40,17 +47,20 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     cashierId: null,
     managerId: "",
     initialBalance: 0,
+    isSocialMediaBox: false,
   });
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [managers, setManagers] = useState<User[]>([]);
+  const [boxType, setBoxType] = useState<"normal" | "social">("normal");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
 
   useEffect(() => {
     if (show && userId) {
-      loadEmployeesByAdmin();
+      loadEmployeesByRole();
       if (cashRegister) {
         setFormData({
           name: cashRegister.name,
@@ -71,6 +81,14 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
         });
       } else {
         resetForm();
+        // Pre-seleccionar tipo de caja si viene del prop
+        if (isSocialMediaBox) {
+          setBoxType("social");
+          setFormData((prev) => ({
+            ...prev,
+            isSocialMediaBox: true,
+          }));
+        }
         // Para administradores: pre-seleccionar activeBranch si existe
         if (isAdministrator && activeBranch) {
           setFormData((prev) => ({
@@ -80,19 +98,38 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
         }
       }
     }
-  }, [show, cashRegister, userId, isAdministrator, activeBranch]);
+  }, [show, cashRegister, userId, isAdministrator, isManager, activeBranch, isSocialMediaBox]);
 
-  const loadEmployeesByAdmin = async () => {
+  const loadEmployeesByRole = async () => {
     try {
       if (!userId) return;
       setLoading(true);
-      const response = await cashRegistersService.getCashiersAndManagersByAdmin(
-        userId
-      );
+
+      let response;
+      if (isManager) {
+        // Para gerentes: obtener su sucursal desde el backend
+        response = await cashRegistersService.getManagerBranch(userId);
+      } else {
+        // Para administradores: obtener todas sus sucursales
+        response = await cashRegistersService.getCashiersAndManagersByAdmin(
+          userId
+        );
+      }
 
       if (response.data) {
         setBranches(response.data.branches || []);
         setManagers(response.data.managers || []);
+
+        // Si es gerente, pre-seleccionar su sucursal y su usuario como gerente
+        if (isManager && response.data.branches.length > 0 && !cashRegister) {
+          const branch = response.data.branches[0];
+          setManagerBranch(branch);
+          setFormData((prev) => ({
+            ...prev,
+            branchId: branch._id,
+            managerId: userId, // El gerente se asigna a sí mismo
+          }));
+        }
       }
     } catch (err: any) {
       setError(err.message || "Error al cargar los datos");
@@ -109,7 +146,9 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
       cashierId: null,
       managerId: "",
       initialBalance: 0,
+      isSocialMediaBox: false,
     });
+    setBoxType("normal");
     setError(null);
   };
 
@@ -132,6 +171,16 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
         [name]: value,
       }));
     }
+  };
+
+  // Cuando se selecciona el tipo de caja
+  const handleBoxTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const type = e.target.value as "normal" | "social";
+    setBoxType(type);
+    setFormData((prev) => ({
+      ...prev,
+      isSocialMediaBox: type === "social",
+    }));
   };
 
   // Cuando se selecciona una sucursal, autocompletar gerente
@@ -165,7 +214,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     e.preventDefault();
     setError(null);
 
-    // Validar sucursal para administradores
+    // Validar sucursal para administradores (los gerentes ya tienen su sucursal asignada)
     if (isAdministrator && !isEditing && !activeBranch) {
       toast.error(
         "Debes seleccionar una sucursal antes de crear una caja registradora"
@@ -182,14 +231,16 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
       setSaving(true);
 
       if (isEditing && cashRegister) {
-        // Al editar, no enviar cashierId para no modificarlo
-        const { cashierId, ...updateData } = formData;
+        // Al editar, no enviar cashierId ni isSocialMediaBox para no modificarlo (inmutable)
+        const { cashierId, isSocialMediaBox, ...updateData } = formData;
         await cashRegistersService.updateCashRegister(
           cashRegister._id,
           updateData
         );
         toast.success("Caja registradora actualizada exitosamente");
       } else {
+        // Al crear, enviar los datos con isSocialMediaBox según el tipo seleccionado
+        // El cashierId siempre será null, se asignará cuando se abra la caja
         await cashRegistersService.createCashRegister(formData);
         toast.success("Caja registradora creada exitosamente");
       }
@@ -273,8 +324,45 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                 </Form.Group>
               </Col>
 
-              {/* Sucursal - Solo mostrar select para NO administradores o cuando está editando */}
-              {(!isAdministrator || isEditing) && (
+              {/* Tipo de Caja - Solo en creación */}
+              {!isEditing && (
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">
+                      Tipo de Caja <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Select
+                      value={boxType}
+                      onChange={handleBoxTypeChange}
+                      required
+                      disabled={isSocialMediaBox}
+                      style={{ borderRadius: "8px" }}
+                    >
+                      <option value="normal">Caja Normal (Tienda)</option>
+                      <option value="social">Caja Redes Sociales</option>
+                    </Form.Select>
+                    <Form.Text className="text-muted">
+                      Este campo no puede modificarse después de crear la caja
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              )}
+
+              {/* Mostrar tipo de caja cuando está editando */}
+              {isEditing && (
+                <Col md={12}>
+                  <Alert
+                    variant={cashRegister?.isSocialMediaBox ? "warning" : "info"}
+                    className="d-flex align-items-center"
+                  >
+                    <strong className="me-2">Tipo de Caja:</strong>
+                    {cashRegister?.isSocialMediaBox ? "Caja Redes Sociales" : "Caja Normal (Tienda)"}
+                  </Alert>
+                </Col>
+              )}
+
+              {/* Sucursal - Solo mostrar select para NO administradores/gerentes o cuando está editando */}
+              {!isAdministrator && !isManager && !isEditing && (
                 <Col md={12}>
                   <Form.Group>
                     <Form.Label className="fw-semibold">
@@ -314,6 +402,16 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                 </Col>
               )}
 
+              {/* Mostrar nombre de sucursal para gerentes en modo creación */}
+              {isManager && !isEditing && managerBranch && (
+                <Col md={12}>
+                  <Alert variant="info" className="d-flex align-items-center">
+                    <strong className="me-2">Sucursal:</strong>
+                    {managerBranch.branchName}
+                  </Alert>
+                </Col>
+              )}
+
               {/* Gerente */}
               <Col md={12}>
                 <Form.Group>
@@ -325,6 +423,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                     value={formData.managerId}
                     onChange={handleInputChange}
                     required
+                    disabled={isManager && !isEditing}
                     style={{ borderRadius: "8px" }}
                   >
                     <option value="">Seleccione un gerente</option>
@@ -335,21 +434,38 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                     ))}
                   </Form.Select>
                   <Form.Text className="text-muted">
-                    Se autocompletará al seleccionar la sucursal
+                    {isManager
+                      ? "Automáticamente asignado a ti como gerente de la sucursal"
+                      : "Se autocompletará al seleccionar la sucursal"}
                   </Form.Text>
                 </Form.Group>
               </Col>
 
-              {/* Nota sobre el cajero */}
-              <Col md={12}>
-                <Alert variant="info" className="mb-0">
-                  <small>
-                    <strong>Nota:</strong> El cajero se asignará automáticamente
-                    cuando un usuario con rol "Cajero" abra la caja
-                    registradora.
-                  </small>
-                </Alert>
-              </Col>
+              {/* Nota sobre el cajero - Solo para cajas normales */}
+              {boxType === "normal" && !isEditing && (
+                <Col md={12}>
+                  <Alert variant="info" className="mb-0">
+                    <small>
+                      <strong>Nota:</strong> El cajero se asignará automáticamente
+                      cuando un usuario con rol "Cajero" abra la caja
+                      registradora.
+                    </small>
+                  </Alert>
+                </Col>
+              )}
+
+              {/* Nota para cajas de redes sociales */}
+              {boxType === "social" && !isEditing && (
+                <Col md={12}>
+                  <Alert variant="warning" className="mb-0">
+                    <small>
+                      <strong>Importante:</strong> Esta caja solo podrá ser abierta
+                      y cerrada por usuarios con rol "Redes". El usuario de redes
+                      se asignará automáticamente cuando abra la caja.
+                    </small>
+                  </Alert>
+                </Col>
+              )}
 
               {/* Saldo Inicial */}
               {!isEditing && (

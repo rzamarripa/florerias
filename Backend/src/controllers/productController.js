@@ -31,6 +31,7 @@ const getAllProducts = async (req, res) => {
 
     // Obtener productos con paginación
     const products = await Product.find(filters)
+      .populate('productCategory', 'name description')
       .sort({ orden: 1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -64,7 +65,7 @@ const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id);
+    const product = await Product.findById(id).populate('productCategory', 'name description');
 
     if (!product) {
       return res.status(404).json({
@@ -94,6 +95,7 @@ const createProduct = async (req, res) => {
       nombre,
       unidad,
       descripcion,
+      productCategory,
       orden,
       imagen,
       insumos,
@@ -114,6 +116,7 @@ const createProduct = async (req, res) => {
       nombre: nombre.trim(),
       unidad,
       descripcion: descripcion?.trim() || '',
+      productCategory: productCategory || null,
       orden: orden || 0,
       imagen: imagen || '',
       insumos: insumos || [],
@@ -155,6 +158,7 @@ const updateProduct = async (req, res) => {
       nombre,
       unidad,
       descripcion,
+      productCategory,
       orden,
       imagen,
       insumos,
@@ -176,6 +180,7 @@ const updateProduct = async (req, res) => {
     if (nombre) updateData.nombre = nombre.trim();
     if (unidad) updateData.unidad = unidad;
     if (descripcion !== undefined) updateData.descripcion = descripcion.trim();
+    if (productCategory !== undefined) updateData.productCategory = productCategory || null;
     if (orden !== undefined) updateData.orden = orden;
     if (imagen !== undefined) updateData.imagen = imagen;
     if (insumos !== undefined) updateData.insumos = insumos;

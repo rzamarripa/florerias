@@ -27,6 +27,7 @@ const SalesPage: React.FC = () => {
     string | undefined
   >(undefined);
   const [exporting, setExporting] = useState<boolean>(false);
+  const [statsRefreshKey, setStatsRefreshKey] = useState<number>(0);
 
   useEffect(() => {
     const loadPaymentMethods = async () => {
@@ -66,6 +67,11 @@ const SalesPage: React.FC = () => {
       branchId: filters.branchId || undefined,
     });
     setHasSearched(true);
+  };
+
+  const handleSaleUpdated = () => {
+    // Incrementar la key para forzar re-render de SalesStats
+    setStatsRefreshKey(prev => prev + 1);
   };
 
   const handleExportExcel = async () => {
@@ -584,7 +590,7 @@ const SalesPage: React.FC = () => {
       <DateFilters onSearch={handleSearch} />
 
       {/* Estadísticas de Ventas - Solo se muestran después de hacer una búsqueda */}
-      {hasSearched && <SalesStats filters={dateFilters} />}
+      {hasSearched && <SalesStats key={statsRefreshKey} filters={dateFilters} />}
 
       {/* Tabs - Solo se muestran después de hacer una búsqueda */}
       {hasSearched ? (
@@ -612,7 +618,10 @@ const SalesPage: React.FC = () => {
                   }
                 >
                   <div className="p-4">
-                    <NewSalesTable filters={dateFilters} />
+                    <NewSalesTable
+                      filters={dateFilters}
+                      onStatsUpdate={handleSaleUpdated}
+                    />
                   </div>
                 </Tab>
 
@@ -628,6 +637,7 @@ const SalesPage: React.FC = () => {
                     <CreditSalesTable
                       filters={dateFilters}
                       creditPaymentMethodId={creditPaymentMethodId}
+                      onStatsUpdate={handleSaleUpdated}
                     />
                   </div>
                 </Tab>
@@ -667,7 +677,10 @@ const SalesPage: React.FC = () => {
                   }
                 >
                   <div className="p-4">
-                    <PendingPaymentsTable filters={dateFilters} />
+                    <PendingPaymentsTable
+                      filters={dateFilters}
+                      onStatsUpdate={handleSaleUpdated}
+                    />
                   </div>
                 </Tab>
               </Tabs>

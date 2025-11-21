@@ -53,6 +53,11 @@ const productSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'La descripción no puede exceder 1000 caracteres']
   },
+  productCategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_product_category',
+    default: null
+  },
   orden: {
     type: Number,
     default: 0,
@@ -92,6 +97,7 @@ const productSchema = new mongoose.Schema({
 productSchema.index({ nombre: 1 });
 productSchema.index({ estatus: 1 });
 productSchema.index({ orden: 1 });
+productSchema.index({ productCategory: 1 });
 
 // Middleware para calcular totales antes de guardar
 productSchema.pre('save', function(next) {

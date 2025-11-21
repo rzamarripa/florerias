@@ -36,7 +36,7 @@ export const getFinanceStats = async (req, res) => {
 
     // 1. Total Florería - Suma de todas las ventas (Orders) filtradas por cliente
     const orderMatch = {
-      createdAt: dateFilter,
+      orderDate: dateFilter,
     };
 
     if (Object.keys(clientFilter).length > 0) {
@@ -165,7 +165,7 @@ export const getIncomeStats = async (req, res) => {
 
     // Construir match para órdenes
     const orderMatch = {
-      createdAt: dateFilter,
+      orderDate: dateFilter,
     };
 
     if (Object.keys(clientFilter).length > 0) {
@@ -267,7 +267,7 @@ export const getPayments = async (req, res) => {
 
     // Construir match para órdenes
     const orderMatch = {
-      createdAt: dateFilter,
+      orderDate: dateFilter,
       advance: { $gt: 0 }, // Solo órdenes con avance > 0
     };
 
@@ -425,7 +425,7 @@ export const getDiscountedSales = async (req, res) => {
     };
 
     if (Object.keys(dateFilter).length > 0) {
-      orderMatch.createdAt = dateFilter;
+      orderMatch.orderDate = dateFilter;
     }
 
     // Filtro de clientes (si se proporciona)

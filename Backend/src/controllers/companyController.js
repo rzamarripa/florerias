@@ -15,6 +15,7 @@ export const createCompany = async (req, res) => {
       primaryContact,
       administratorId,
       administratorData,
+      redesIds,
     } = req.body;
 
     // Verificar si ya existe una empresa con el mismo RFC
@@ -111,6 +112,34 @@ export const createCompany = async (req, res) => {
       });
     }
 
+    // Validar usuarios de redes si se proporcionan
+    let validatedRedesIds = [];
+    if (redesIds && Array.isArray(redesIds) && redesIds.length > 0) {
+      // Buscar el rol de Redes
+      const redesRole = await Role.findOne({ name: /^Redes$/i });
+      if (!redesRole) {
+        return res.status(400).json({
+          success: false,
+          message: "No se encontró el rol de Redes",
+        });
+      }
+
+      // Verificar que todos los usuarios existen y tienen rol de Redes
+      const redesUsers = await User.find({
+        _id: { $in: redesIds },
+        role: redesRole._id,
+      });
+
+      if (redesUsers.length !== redesIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: "Uno o más usuarios no existen o no tienen el rol de Redes",
+        });
+      }
+
+      validatedRedesIds = redesIds;
+    }
+
     const company = await Company.create({
       legalName,
       tradeName,
@@ -120,11 +149,13 @@ export const createCompany = async (req, res) => {
       primaryContact,
       administrator: finalAdministratorId,
       distributor: req.user._id,
+      redes: validatedRedesIds,
     });
 
-    // Popular el distribuidor y administrador para la respuesta
+    // Popular el distribuidor, administrador y redes para la respuesta
     await company.populate("administrator", "username email phone profile");
     await company.populate("distributor", "username email profile");
+    await company.populate("redes", "username email phone profile");
 
     res.status(201).json({
       success: true,
@@ -202,6 +233,7 @@ export const getAllCompanies = async (req, res) => {
       .populate("branches", "branchName branchCode isActive")
       .populate("administrator", "username email profile.name profile.lastName profile.fullName")
       .populate("distributor", "username email profile.name profile.lastName profile.fullName")
+      .populate("redes", "username email profile.name profile.lastName profile.fullName")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -267,7 +299,8 @@ export const getCompanyById = async (req, res) => {
     const company = await Company.findOne(filters)
       .populate("branches", "branchName branchCode address isActive")
       .populate("administrator", "username email phone profile")
-      .populate("distributor", "username email profile");
+      .populate("distributor", "username email profile")
+      .populate("redes", "username email phone profile");
 
     console.log('company', company)
 
@@ -344,6 +377,7 @@ export const updateCompany = async (req, res) => {
       primaryContact,
       administratorId,
       administratorData,
+      redesIds,
     } = req.body;
 
     // Si se está actualizando el RFC, verificar que no exista en otra empresa
@@ -452,6 +486,94 @@ export const updateCompany = async (req, res) => {
       updateData.distributor = newAdmin._id;
     }
 
+    // Manejar creación de nuevo usuario redes si se proporcionan datos
+    let newRedesUserId = null;
+    if (req.body.redesUserData) {
+      const { redesUserData } = req.body;
+
+      // Buscar el rol de Redes
+      const redesRole = await Role.findOne({ name: /^Redes$/i });
+      if (!redesRole) {
+        return res.status(400).json({
+          success: false,
+          message: "No se encontró el rol de Redes",
+        });
+      }
+
+      // Verificar que no exista un usuario con el mismo username o email (case-insensitive)
+      const existingUser = await User.findOne({
+        $or: [
+          { username: { $regex: new RegExp(`^${redesUserData.username}$`, 'i') } },
+          { email: { $regex: new RegExp(`^${redesUserData.email}$`, 'i') } },
+        ],
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message:
+            existingUser.username.toLowerCase() === redesUserData.username.toLowerCase()
+              ? "Ya existe un usuario con este nombre de usuario"
+              : "Ya existe un usuario con este email",
+        });
+      }
+
+      // Crear el nuevo usuario redes
+      const newRedesUser = await User.create({
+        username: redesUserData.username,
+        email: redesUserData.email,
+        phone: redesUserData.phone,
+        password: redesUserData.password,
+        profile: {
+          name: redesUserData.profile.name,
+          lastName: redesUserData.profile.lastName,
+          fullName: `${redesUserData.profile.name} ${redesUserData.profile.lastName}`,
+          estatus: true,
+        },
+        role: redesRole._id,
+      });
+
+      newRedesUserId = newRedesUser._id;
+    }
+
+    // Manejar actualización de usuarios redes
+    if (redesIds !== undefined || newRedesUserId) {
+      let finalRedesIds = [];
+
+      if (Array.isArray(redesIds) && redesIds.length > 0) {
+        // Buscar el rol de Redes
+        const redesRole = await Role.findOne({ name: /^Redes$/i });
+        if (!redesRole) {
+          return res.status(400).json({
+            success: false,
+            message: "No se encontró el rol de Redes",
+          });
+        }
+
+        // Verificar que todos los usuarios existen y tienen rol de Redes
+        const redesUsers = await User.find({
+          _id: { $in: redesIds },
+          role: redesRole._id,
+        });
+
+        if (redesUsers.length !== redesIds.length) {
+          return res.status(400).json({
+            success: false,
+            message: "Uno o más usuarios no existen o no tienen el rol de Redes",
+          });
+        }
+
+        finalRedesIds = redesIds;
+      }
+
+      // Agregar el nuevo usuario redes creado si existe
+      if (newRedesUserId) {
+        finalRedesIds.push(newRedesUserId);
+      }
+
+      updateData.redes = finalRedesIds;
+    }
+
     const company = await Company.findByIdAndUpdate(
       req.params.id,
       updateData,
@@ -461,7 +583,8 @@ export const updateCompany = async (req, res) => {
       }
     )
       .populate("branches", "branchName branchCode isActive")
-      .populate("administrator", "username email phone profile");
+      .populate("administrator", "username email phone profile")
+      .populate("redes", "username email phone profile");
 
     if (!company) {
       return res.status(404).json({
@@ -610,6 +733,96 @@ export const getAdministrators = async (req, res) => {
       success: true,
       count: administrators.length,
       data: administrators,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Obtener usuarios con rol Redes activos
+export const getRedesUsers = async (req, res) => {
+  try {
+    const redesRole = await Role.findOne({ name: /^Redes$/i });
+
+    if (!redesRole) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontró el rol de Redes",
+      });
+    }
+
+    const redesUsers = await User.find({
+      role: redesRole._id,
+      "profile.estatus": true,
+    }).select("username email phone profile");
+
+    res.status(200).json({
+      success: true,
+      count: redesUsers.length,
+      data: redesUsers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Obtener sucursales de la empresa del usuario Redes autenticado
+export const getRedesUserBranches = async (req, res) => {
+  try {
+    // Verificar que el usuario esté autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    // Obtener el rol del usuario
+    const currentUser = await User.findById(req.user._id).populate("role");
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario sin rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
+    // Solo usuarios con rol "Redes" pueden usar este endpoint
+    if (userRole !== "Redes") {
+      return res.status(403).json({
+        success: false,
+        message: "Solo usuarios con rol Redes pueden acceder a este recurso",
+      });
+    }
+
+    // Buscar la empresa donde el usuario autenticado está en el array de redes
+    const company = await Company.findOne({ redes: req.user._id })
+      .populate({
+        path: "branches",
+        match: { isActive: true }, // Solo sucursales activas
+        select: "branchName branchCode address isActive",
+      });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontró una empresa asignada a tu usuario",
+      });
+    }
+
+    // Retornar solo las sucursales
+    res.status(200).json({
+      success: true,
+      count: company.branches ? company.branches.length : 0,
+      data: company.branches || [],
     });
   } catch (error) {
     res.status(500).json({
@@ -816,6 +1029,105 @@ export const getCompanyByBranchId = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error al obtener datos de la empresa",
+    });
+  }
+};
+
+// Obtener la empresa del usuario autenticado (Administrador o Gerente)
+export const getUserCompany = async (req, res) => {
+  try {
+    // Verificar que el usuario esté autenticado
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado",
+      });
+    }
+
+    // Obtener el rol del usuario
+    const currentUser = await User.findById(req.user._id).populate("role");
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: "Usuario sin rol asignado",
+      });
+    }
+
+    const userRole = currentUser.role.name;
+    let company = null;
+
+    // Si es Administrador, buscar en cv_companies por el campo administrator
+    // o en cv_branches por el campo administrator
+    if (userRole === "Administrador") {
+      // Primero intentar buscar en Company.administrator
+      company = await Company.findOne({ administrator: req.user._id })
+        .select("_id legalName tradeName rfc")
+        .lean();
+
+      // Si no se encuentra, buscar en Branch.administrator
+      if (!company) {
+        const branch = await Branch.findOne({ administrator: req.user._id })
+          .select("companyId")
+          .lean();
+
+        if (branch) {
+          company = await Company.findById(branch.companyId)
+            .select("_id legalName tradeName rfc")
+            .lean();
+        }
+      }
+
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró una empresa asignada a tu usuario",
+        });
+      }
+    }
+    // Si es Gerente, buscar en cv_branches por el campo manager
+    else if (userRole === "Gerente") {
+      // Buscar la sucursal donde el usuario es manager
+      const branch = await Branch.findOne({ manager: req.user._id })
+        .select("companyId")
+        .lean();
+
+      if (!branch) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró una sucursal asignada a tu usuario",
+        });
+      }
+
+      // Buscar la empresa por el companyId de la sucursal
+      company = await Company.findById(branch.companyId)
+        .select("_id legalName tradeName rfc")
+        .lean();
+
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró la empresa asociada a tu sucursal",
+        });
+      }
+    }
+    // Si es Super Admin o Distribuidor, no tienen una empresa específica
+    else {
+      return res.status(403).json({
+        success: false,
+        message: "Tu rol no tiene una empresa asignada automáticamente",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: company,
+    });
+  } catch (error) {
+    console.error("Error al obtener empresa del usuario:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error al obtener la empresa del usuario",
     });
   }
 };

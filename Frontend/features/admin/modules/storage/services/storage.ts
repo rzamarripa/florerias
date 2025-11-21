@@ -177,4 +177,13 @@ export const storageService = {
     );
     return response as any;
   },
+
+  checkStorageExists: async (
+    branchId: string
+  ): Promise<{ success: boolean; exists: boolean; storageId: string | null }> => {
+    const response = await apiCall<{ success: boolean; exists: boolean; storageId: string | null }>(
+      `/storages/check-exists/${branchId}`
+    );
+    return response as any;
+  },
 };

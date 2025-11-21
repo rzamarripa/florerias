@@ -18,6 +18,8 @@ import { productsService } from "./services/products";
 import { CreateProductData, Insumo, InsumoType, UnidadType } from "./types";
 import { materialsService } from "../materials/services/materials";
 import { Material } from "../materials/types";
+import { productCategoriesService } from "../productCategories/services/productCategories";
+import { ProductCategory } from "../productCategories/types";
 
 const UNIDADES_OPTIONS: UnidadType[] = ["pieza", "paquete"];
 
@@ -31,6 +33,7 @@ const NewProductPage: React.FC = () => {
     nombre: "",
     unidad: "pieza",
     descripcion: "",
+    productCategory: null,
     orden: 0,
     imagen: "",
     insumos: [],
@@ -62,12 +65,14 @@ const NewProductPage: React.FC = () => {
     null
   );
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
   const [labourType, setLabourType] = useState<"fixed" | "percentage">("fixed");
   const [labourPercentage, setLabourPercentage] = useState<number>(0);
 
-  // Cargar materiales activos
+  // Cargar materiales activos y categorías
   useEffect(() => {
     loadMaterials();
+    loadProductCategories();
   }, []);
 
   // Cargar producto si estamos editando
@@ -104,6 +109,18 @@ const NewProductPage: React.FC = () => {
     }
   };
 
+  const loadProductCategories = async () => {
+    try {
+      const response = await productCategoriesService.getAllProductCategories({
+        isActive: true,
+        limit: 1000,
+      });
+      setProductCategories(response.data);
+    } catch (err: any) {
+      toast.error(err.message || "Error al cargar las categorías");
+    }
+  };
+
   const loadProduct = async () => {
     try {
       setLoading(true);
@@ -113,6 +130,7 @@ const NewProductPage: React.FC = () => {
         nombre: product.nombre,
         unidad: product.unidad,
         descripcion: product.descripcion,
+        productCategory: product.productCategory?._id || null,
         orden: product.orden,
         imagen: product.imagen,
         insumos: product.insumos,
@@ -402,7 +420,32 @@ const NewProductPage: React.FC = () => {
                 </Form.Group>
               </Col>
 
-              <Col md={3}>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    Categoría de Producto
+                  </Form.Label>
+                  <Form.Select
+                    value={formData.productCategory || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        productCategory: e.target.value || null,
+                      })
+                    }
+                    className="py-2"
+                  >
+                    <option value="">Selecciona una categoría (opcional)</option>
+                    {productCategories.map((category) => (
+                      <option key={category._id} value={category._id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+
+              <Col md={4}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">
                     Unidad <span className="text-danger">*</span>
@@ -427,7 +470,7 @@ const NewProductPage: React.FC = () => {
                 </Form.Group>
               </Col>
 
-              <Col md={3}>
+              <Col md={2}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">Orden</Form.Label>
                   <Form.Control

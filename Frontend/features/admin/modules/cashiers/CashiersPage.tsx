@@ -5,25 +5,15 @@ import React, { useEffect, useState } from "react";
 import { Button, Form, Table, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { cashiersService } from "./services/cashiers";
-import { Cashier, CashierFilters, FilterType, FilterOption, CreateCashierData, UpdateCashierData } from "./types";
+import { Cashier, CashierFilters, CreateCashierData, UpdateCashierData } from "./types";
 import Actions from "./components/Actions";
 import CashierModal from "./components/CashierModal";
-
-const filterOptions: FilterOption[] = [
-  { value: "nombre", label: "Nombre" },
-  { value: "apellidoPaterno", label: "Apellido Paterno" },
-  { value: "usuario", label: "Usuario" },
-  { value: "correo", label: "Correo" },
-  { value: "telefono", label: "Teléfono" },
-];
 
 const CashiersPage: React.FC = () => {
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [filterType, setFilterType] = useState<FilterType>("nombre");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [cashierFilter, setCashierFilter] = useState<string>("");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedCashier, setSelectedCashier] = useState<Cashier | null>(null);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
@@ -49,15 +39,11 @@ const CashiersPage: React.FC = () => {
       };
 
       if (searchTerm) {
-        filters[filterType] = searchTerm;
+        filters.search = searchTerm;
       }
 
       if (statusFilter) {
         filters.estatus = statusFilter === "true";
-      }
-
-      if (cashierFilter) {
-        filters.cajero = cashierFilter === "true";
       }
 
       const response = await cashiersService.getAllCashiers(filters);
@@ -79,29 +65,16 @@ const CashiersPage: React.FC = () => {
 
   useEffect(() => {
     loadCashiers(true, 1);
-  }, [searchTerm, filterType, statusFilter, cashierFilter]);
+  }, [searchTerm, statusFilter]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
-  };
-
-  const handleFilterTypeChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setFilterType(e.target.value as FilterType);
-    setSearchTerm("");
   };
 
   const handleStatusFilterChange = (
     e: React.ChangeEvent<HTMLSelectElement>
   ): void => {
     setStatusFilter(e.target.value);
-  };
-
-  const handleCashierFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setCashierFilter(e.target.value);
   };
 
   const handlePageChange = (page: number) => {
@@ -120,7 +93,7 @@ const CashiersPage: React.FC = () => {
 
   const handleToggleStatus = async (cashier: Cashier) => {
     try {
-      if (cashier.estatus) {
+      if (cashier.profile.estatus) {
         await cashiersService.deactivateCashier(cashier._id);
         toast.success("Cajero desactivado exitosamente");
       } else {
@@ -191,10 +164,6 @@ const CashiersPage: React.FC = () => {
     });
   };
 
-  const getFullName = (cashier: Cashier) => {
-    return `${cashier.nombre} ${cashier.apellidoPaterno} ${cashier.apellidoMaterno}`.trim();
-  };
-
   return (
     <div className="row">
       <div className="col-12">
@@ -204,24 +173,10 @@ const CashiersPage: React.FC = () => {
               <h5 className="mb-0 fw-bold" style={{ fontSize: 20 }}>
                 Cajeros
               </h5>
-              <Form.Select
-                value={filterType}
-                onChange={handleFilterTypeChange}
-                className="shadow-none"
-                style={{ maxWidth: 180 }}
-              >
-                {filterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Form.Select>
               <div className="position-relative" style={{ maxWidth: 300 }}>
                 <Form.Control
                   type="search"
-                  placeholder={`Buscar por ${filterOptions
-                    .find((opt) => opt.value === filterType)
-                    ?.label.toLowerCase()}...`}
+                  placeholder="Buscar cajeros..."
                   value={searchTerm}
                   onChange={handleSearchChange}
                   className="shadow-none px-4"
@@ -247,16 +202,6 @@ const CashiersPage: React.FC = () => {
                 <option value="true">Activos</option>
                 <option value="false">Inactivos</option>
               </Form.Select>
-              <Form.Select
-                value={cashierFilter}
-                onChange={handleCashierFilterChange}
-                className="shadow-none"
-                style={{ maxWidth: 150 }}
-              >
-                <option value="">Rol</option>
-                <option value="true">Cajeros</option>
-                <option value="false">No Cajeros</option>
-              </Form.Select>
             </div>
             <Button
               variant="primary"
@@ -275,13 +220,11 @@ const CashiersPage: React.FC = () => {
               >
                 <tr>
                   <th>#</th>
-                  <th>Foto</th>
-                  <th>Nombre</th>
+                  <th>Nombre Completo</th>
                   <th>Usuario</th>
-                  <th>Dirección</th>
+                  <th>Email</th>
                   <th>Teléfono</th>
-                  <th>Correo</th>
-                  <th>Cajero</th>
+                  <th>Sucursal</th>
                   <th>Estatus</th>
                   <th className="text-center">Acciones</th>
                 </tr>
@@ -289,7 +232,7 @@ const CashiersPage: React.FC = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={10} className="text-center py-4">
+                    <td colSpan={8} className="text-center py-4">
                       <div className="d-flex flex-column align-items-center">
                         <div
                           className="spinner-border text-primary mb-2"
@@ -305,7 +248,7 @@ const CashiersPage: React.FC = () => {
                   </tr>
                 ) : cashiers.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-center py-4">
+                    <td colSpan={8} className="text-center py-4">
                       <div className="text-muted">
                         <User size={48} className="mb-3 opacity-50" />
                         <div>No se encontraron cajeros</div>
@@ -320,37 +263,8 @@ const CashiersPage: React.FC = () => {
                         {(pagination.page - 1) * pagination.limit + index + 1}
                       </td>
                       <td>
-                        <div className="d-flex align-items-center justify-content-center">
-                          {cashier.foto ? (
-                            <img
-                              src={cashier.foto}
-                              alt={getFullName(cashier)}
-                              className="rounded-circle object-fit-cover"
-                              style={{ width: "40px", height: "40px" }}
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = "none";
-                                target.nextElementSibling!.classList.remove("d-none");
-                              }}
-                            />
-                          ) : null}
-                          <div
-                            className={`bg-primary text-white d-flex align-items-center justify-content-center fw-bold rounded-circle ${
-                              cashier.foto ? "d-none" : ""
-                            }`}
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              fontSize: "16px",
-                            }}
-                          >
-                            {cashier.nombre.charAt(0).toUpperCase()}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
                         <div>
-                          <div className="fw-medium">{getFullName(cashier)}</div>
+                          <div className="fw-medium">{cashier.profile.fullName}</div>
                           <div className="text-muted small">
                             {formatDate(cashier.createdAt)}
                           </div>
@@ -358,40 +272,34 @@ const CashiersPage: React.FC = () => {
                       </td>
                       <td>
                         <span className="badge bg-secondary bg-opacity-10 text-secondary">
-                          @{cashier.usuario}
+                          @{cashier.username}
                         </span>
                       </td>
                       <td>
                         <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                          {cashier.direccion}
+                          {cashier.email}
                         </div>
                       </td>
-                      <td>{cashier.telefono}</td>
+                      <td>{cashier.phone}</td>
                       <td>
-                        <div className="text-truncate" style={{ maxWidth: "180px" }}>
-                          {cashier.correo}
-                        </div>
+                        {cashier.branch ? (
+                          <div>
+                            <div className="fw-medium">{cashier.branch.branchName}</div>
+                            <div className="text-muted small">{cashier.branch.branchCode}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted">Sin sucursal</span>
+                        )}
                       </td>
                       <td>
                         <Badge
-                          bg={cashier.cajero ? "info" : "secondary"}
+                          bg={cashier.profile.estatus ? "success" : "danger"}
                           className="bg-opacity-10"
                           style={{
-                            color: cashier.cajero ? "#0dcaf0" : "#6c757d",
+                            color: cashier.profile.estatus ? "#198754" : "#dc3545",
                           }}
                         >
-                          {cashier.cajero ? "Sí" : "No"}
-                        </Badge>
-                      </td>
-                      <td>
-                        <Badge
-                          bg={cashier.estatus ? "success" : "danger"}
-                          className="bg-opacity-10"
-                          style={{
-                            color: cashier.estatus ? "#198754" : "#dc3545",
-                          }}
-                        >
-                          {cashier.estatus ? "Activo" : "Inactivo"}
+                          {cashier.profile.estatus ? "Activo" : "Inactivo"}
                         </Badge>
                       </td>
                       <td className="text-center">

@@ -1,5 +1,6 @@
 import { Provider } from "../models/Provider.js";
 import { Company } from "../models/Company.js";
+import { Branch } from "../models/Branch.js";
 import { User } from "../models/User.js";
 
 // Crear nuevo proveedor
@@ -56,32 +57,56 @@ export const createProvider = async (req, res) => {
 
     // Verificar permisos según el rol
     if (userRole !== "Super Admin") {
+      let hasPermission = false;
+
       // Si es Administrador, verificar que la empresa le pertenece
       if (userRole === "Administrador") {
-        const userCompany = await Company.findOne({
+        // Verificar si es administrador directo de la empresa
+        const companyAsAdmin = await Company.findOne({
           _id: company,
           administrator: req.user._id,
         });
 
-        if (!userCompany) {
-          return res.status(403).json({
-            success: false,
-            message: "No tienes permisos para crear proveedores en esta empresa",
+        if (companyAsAdmin) {
+          hasPermission = true;
+        } else {
+          // Verificar si es administrador de una sucursal de esta empresa
+          const branchAsAdmin = await Branch.findOne({
+            administrator: req.user._id,
           });
+
+          if (branchAsAdmin && branchAsAdmin.companyId.toString() === company) {
+            hasPermission = true;
+          }
         }
-      } else {
-        // Distribuidor u otros roles
+      }
+      // Si es Gerente, verificar que la empresa es la de su sucursal
+      else if (userRole === "Gerente") {
+        const branch = await Branch.findOne({
+          manager: req.user._id,
+        });
+
+        if (branch && branch.companyId.toString() === company) {
+          hasPermission = true;
+        }
+      }
+      // Distribuidor u otros roles
+      else {
         const userCompany = await Company.findOne({
           _id: company,
           distributor: req.user._id,
         });
 
-        if (!userCompany) {
-          return res.status(403).json({
-            success: false,
-            message: "No tienes permisos para crear proveedores en esta empresa",
-          });
+        if (userCompany) {
+          hasPermission = true;
         }
+      }
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: "No tienes permisos para crear proveedores en esta empresa",
+        });
       }
     }
 
@@ -151,13 +176,42 @@ export const getAllProviders = async (req, res) => {
     if (userRole === "Super Admin") {
       // Super Admin puede ver todos los proveedores (no se agrega filtro)
     } else if (userRole === "Administrador") {
-      // Administrador solo ve proveedores de empresas donde es administrator
-      const userCompanies = await Company.find({
+      // Administrador ve proveedores de empresas donde es administrator (Company o Branch)
+      const companyIds = [];
+
+      // Buscar en Company.administrator
+      const companiesAsAdmin = await Company.find({
         administrator: req.user._id,
       }).select("_id");
+      companyIds.push(...companiesAsAdmin.map((c) => c._id));
 
-      const companyIds = userCompanies.map((company) => company._id);
-      filters.company = { $in: companyIds };
+      // Buscar en Branch.administrator
+      const branchesAsAdmin = await Branch.find({
+        administrator: req.user._id,
+      }).select("companyId");
+      companyIds.push(...branchesAsAdmin.map((b) => b.companyId));
+
+      // Eliminar duplicados
+      const uniqueCompanyIds = [...new Set(companyIds.map((id) => id.toString()))];
+
+      if (uniqueCompanyIds.length > 0) {
+        filters.company = { $in: uniqueCompanyIds };
+      } else {
+        // Si no tiene empresas asignadas, no mostrar ningún proveedor
+        filters.company = { $in: [] };
+      }
+    } else if (userRole === "Gerente") {
+      // Gerente solo ve proveedores de la empresa de su sucursal
+      const branch = await Branch.findOne({
+        manager: req.user._id,
+      }).select("companyId");
+
+      if (branch) {
+        filters.company = branch.companyId;
+      } else {
+        // Si no tiene sucursal asignada, no mostrar ningún proveedor
+        filters.company = { $in: [] };
+      }
     } else {
       // Distribuidor u otros roles solo ven proveedores de empresas donde son distributor
       const userCompanies = await Company.find({
@@ -165,7 +219,13 @@ export const getAllProviders = async (req, res) => {
       }).select("_id");
 
       const companyIds = userCompanies.map((company) => company._id);
-      filters.company = { $in: companyIds };
+
+      if (companyIds.length > 0) {
+        filters.company = { $in: companyIds };
+      } else {
+        // Si no tiene empresas asignadas, no mostrar ningún proveedor
+        filters.company = { $in: [] };
+      }
     }
 
     // Filtros opcionales

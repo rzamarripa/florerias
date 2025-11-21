@@ -1,16 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Table, Badge, Button, Spinner } from "react-bootstrap";
-import { Eye, Edit, Trash2, DollarSign, Printer } from "lucide-react";
+import { Table, Badge, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../services/sales";
 import { Sale } from "../types";
-import PaymentModal from "./PaymentModal";
-import SaleDetailModal from "./SaleDetailModal";
-import { reprintSaleTicket } from "../utils/reprintSaleTicket";
-import { useUserSessionStore } from "@/stores/userSessionStore";
+import SaleActions from "./SaleActions";
 
 interface PendingPaymentsTableProps {
   filters: {
@@ -19,15 +15,12 @@ interface PendingPaymentsTableProps {
     viewMode: "dia" | "semana" | "mes";
     branchId?: string;
   };
+  onStatsUpdate?: () => void;
 }
 
-const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) => {
+const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters, onStatsUpdate }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const { user } = useUserSessionStore();
 
   const loadSales = async () => {
     try {
@@ -93,44 +86,9 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) 
     },
   });
 
-  const handleDelete = async (saleId: string) => {
-    if (!confirm("¿Estás seguro de eliminar esta venta?")) return;
-
-    try {
-      await salesService.deleteSale(saleId);
-      toast.success("Venta eliminada exitosamente");
-      // No llamar loadSales() - el socket actualizará automáticamente
-    } catch (error: any) {
-      toast.error(error.message || "Error al eliminar la venta");
-    }
-  };
-
-  const handleOpenPaymentModal = (sale: Sale) => {
-    setSelectedSale(sale);
-    setShowPaymentModal(true);
-  };
-
-  const handleClosePaymentModal = () => {
-    setShowPaymentModal(false);
-    setSelectedSale(null);
-  };
-
-  const handlePaymentAdded = () => {
+  const handleSaleUpdated = () => {
     loadSales();
-  };
-
-  const handleReprintTicket = async (sale: Sale) => {
-    await reprintSaleTicket(sale, user?.profile?.fullName);
-  };
-
-  const handleOpenDetailModal = (sale: Sale) => {
-    setSelectedSale(sale);
-    setShowDetailModal(true);
-  };
-
-  const handleCloseDetailModal = () => {
-    setShowDetailModal(false);
-    setSelectedSale(null);
+    onStatsUpdate?.();
   };
 
   const getStatusBadge = (status: string) => {
@@ -214,58 +172,11 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) 
                   <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
                   <td className="px-4 py-3 fw-semibold text-success">${(sale.advance || 0).toFixed(2)}</td>
                   <td className="px-4 py-3 fw-semibold text-danger">${(sale.remainingBalance || 0).toFixed(2)}</td>
-                  <td className="px-4 py-3">
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleOpenPaymentModal(sale)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Gestionar pagos"
-                      >
-                        <DollarSign size={16} className="text-success" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleReprintTicket(sale)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Reimprimir ticket"
-                      >
-                        <Printer size={16} className="text-primary" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleOpenDetailModal(sale)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Ver detalles"
-                      >
-                        <Eye size={16} className="text-info" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Editar"
-                      >
-                        <Edit size={16} className="text-warning" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleDelete(sale._id)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Eliminar"
-                      >
-                        <Trash2 size={16} className="text-danger" />
-                      </Button>
-                    </div>
+                  <td className="px-4 py-3 text-center">
+                    <SaleActions
+                      sale={sale}
+                      onSaleUpdated={handleSaleUpdated}
+                    />
                   </td>
                 </tr>
               ))
@@ -284,21 +195,6 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({ filters }) 
         </div>
       </div>
 
-      {selectedSale && (
-        <PaymentModal
-          show={showPaymentModal}
-          onHide={handleClosePaymentModal}
-          sale={selectedSale}
-          onPaymentAdded={handlePaymentAdded}
-        />
-      )}
-
-      {/* Sale Detail Modal */}
-      <SaleDetailModal
-        show={showDetailModal}
-        onHide={handleCloseDetailModal}
-        sale={selectedSale}
-      />
     </>
   );
 };

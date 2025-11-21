@@ -1,6 +1,7 @@
 import type { User } from "@/features/admin/modules/users/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useActiveBranchStore } from "./activeBranchStore";
 
 interface UserSessionState {
   user: User | null;
@@ -67,6 +68,9 @@ export const useUserSessionStore = create<UserSessionStore>()(
       },
 
       logout: () => {
+        // Limpiar la sucursal activa al cerrar sesión
+        useActiveBranchStore.getState().clearActiveBranch();
+
         set({
           user: null,
           token: null,
@@ -76,6 +80,9 @@ export const useUserSessionStore = create<UserSessionStore>()(
       },
 
       clearUser: () => {
+        // Limpiar la sucursal activa al limpiar usuario
+        useActiveBranchStore.getState().clearActiveBranch();
+
         set({
           user: null,
           token: null,

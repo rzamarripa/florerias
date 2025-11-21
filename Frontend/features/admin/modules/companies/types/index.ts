@@ -26,6 +26,17 @@ export interface Company {
       fullName: string;
     };
   };
+  redes?: {
+    _id: string;
+    username: string;
+    email: string;
+    phone: string;
+    profile: {
+      name: string;
+      lastName: string;
+      fullName: string;
+    };
+  }[];
   branches?: string[];
   isActive: boolean;
   createdAt: string;
@@ -59,9 +70,32 @@ export interface CreateCompanyData {
       lastName: string;
     };
   };
+  redesIds?: string[];
+  redesUserData?: {
+    username: string;
+    email: string;
+    phone: string;
+    password: string;
+    profile: {
+      name: string;
+      lastName: string;
+    };
+  };
 }
 
 export interface Distributor {
+  _id: string;
+  username: string;
+  email: string;
+  phone: string;
+  profile: {
+    name: string;
+    lastName: string;
+    fullName: string;
+  };
+}
+
+export interface RedesUser {
   _id: string;
   username: string;
   email: string;

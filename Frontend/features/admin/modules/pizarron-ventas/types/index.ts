@@ -1,5 +1,9 @@
 // Order Status Types
-export type OrderStatus = 'pendiente' | 'en-proceso' | 'completado' | 'cancelado';
+export type OrderStatus = 'pendiente' | 'en-proceso' | 'completado' | 'cancelado' | 'sinAnticipo';
+
+// Import and re-export StageCatalog from stageCatalogs module to avoid duplication
+import type { StageCatalog, RGBColor as StageColor } from '@/features/admin/modules/stageCatalogs/types';
+export type { StageCatalog, StageColor };
 
 // Client Info
 export interface ClientInfo {
@@ -42,9 +46,9 @@ export interface PaymentMethod {
 export interface Order {
   _id: string;
   clientInfo: ClientInfo;
-  salesChannel: 'tienda' | 'whatsapp' | 'facebook';
+  salesChannel: 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
   items: OrderItem[];
-  shippingType: 'envio' | 'tienda';
+  shippingType: 'envio' | 'tienda' | 'redes_sociales';
   anonymous: boolean;
   quickSale: boolean;
   deliveryData: DeliveryData;
@@ -58,18 +62,23 @@ export interface Order {
   change: number;
   remainingBalance: number;
   sendToProduction: boolean;
+  sentToShipping?: boolean;
   status: OrderStatus;
+  stage?: string | StageCatalog | null; // Referencia a StageCatalog
   orderNumber: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// Kanban Column Data
+// Kanban Column Data (basada en Stages)
 export interface KanbanColumn {
-  id: OrderStatus;
+  id: string; // ID del stage
+  stageNumber: number;
   title: string;
+  abreviation: string;
   orders: Order[];
-  color: string;
+  color: StageColor;
+  boardType: 'Produccion' | 'Envio';
 }
 
 // Filters

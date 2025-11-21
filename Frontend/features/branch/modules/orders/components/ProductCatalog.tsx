@@ -78,25 +78,21 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   // Función para obtener el stock disponible de un producto
   const getAvailableStock = (product: EmbeddedProductWithStock): number => {
-    // Si hay un storage disponible, usar el stock del storage
-    if (storage) {
-      const productInStorage = storage.products.find(
-        (p: any) => p.productId._id === product.productId
-      );
-
-      if (productInStorage) {
-        return productInStorage.quantity;
-      }
-
+    // Si no hay storage, todos los productos tienen stock 0
+    if (!storage) {
       return 0;
     }
 
-    // Fallback: usar availableQuantity de la lista de productos menos cantidad en la orden
-    const quantityInOrder = itemsInOrder
-      .filter((item) => item.productId === product.productId)
-      .reduce((sum, item) => sum + item.quantity, 0);
+    // Si hay un storage disponible, usar el stock del storage
+    const productInStorage = storage.products.find(
+      (p: any) => p.productId._id === product.productId
+    );
 
-    return product.availableQuantity - quantityInOrder;
+    if (productInStorage) {
+      return productInStorage.quantity;
+    }
+
+    return 0;
   };
 
   const handleQuantityChange = (productId: string, value: number) => {
@@ -176,6 +172,16 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
           className="flex-grow-1 overflow-auto p-3"
           style={{ maxHeight: "calc(100vh - 200px)" }}
         >
+          {!storage && branchId && (
+            <Alert variant="info" className="mb-3">
+              <AlertTriangle size={16} className="me-2" />
+              <strong>Sin almacén disponible</strong>
+              <p className="mb-0 small mt-1">
+                No hay almacén asignado a esta sucursal. Todos los productos se muestran con stock en 0.
+              </p>
+            </Alert>
+          )}
+
           {loading ? (
             <div className="text-center py-5">
               <Spinner animation="border" variant="primary" className="mb-3" />

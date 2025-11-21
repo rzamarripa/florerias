@@ -48,6 +48,20 @@ export interface ExpenseLog {
   expenseDate: string;
 }
 
+export interface BuyLog {
+  _id?: string;
+  buyId: string;
+  folio: number;
+  concept: string;
+  conceptDescription: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  provider: string;
+  user: string;
+  description: string;
+}
+
 export interface CashRegisterLog {
   _id: string;
   cashRegisterId: CashRegisterRef;
@@ -72,6 +86,7 @@ export interface CashRegisterLog {
   };
   orders: OrderLog[];
   expenses: ExpenseLog[];
+  buys: BuyLog[];
   createdAt: string;
   updatedAt: string;
 }

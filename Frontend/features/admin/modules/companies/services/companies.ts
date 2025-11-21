@@ -1,5 +1,5 @@
 import { apiCall } from "@/utils/api";
-import { Company, CreateCompanyData, Distributor } from "../types";
+import { Company, CreateCompanyData, Distributor, RedesUser } from "../types";
 
 export interface CompanyFilters {
   page?: number;
@@ -86,6 +86,11 @@ export const companiesService = {
     return response;
   },
 
+  getRedesUsers: async (): Promise<{ success: boolean; count: number; data: RedesUser[] }> => {
+    const response = await apiCall<{ success: boolean; count: number; data: RedesUser[] }>("/companies/redes/list");
+    return response;
+  },
+
   getAllBranches: async (filters: { isActive?: boolean } = {}): Promise<{ success: boolean; data: any[] }> => {
     const searchParams = new URLSearchParams();
     if (filters.isActive !== undefined) {
@@ -114,6 +119,11 @@ export const companiesService = {
     return response.data;
   },
 
+  getUserCompany: async (): Promise<{ success: boolean; data: { _id: string; legalName: string; tradeName?: string; rfc: string } }> => {
+    const response = await apiCall<{ success: boolean; data: { _id: string; legalName: string; tradeName?: string; rfc: string } }>("/companies/user-company");
+    return response;
+  },
+
   getCompanyByBranchId: async (branchId: string) => {
     const response = await apiCall<{
       success: boolean;
@@ -135,5 +145,10 @@ export const companiesService = {
       }
     }>(`/companies/branch/${branchId}`);
     return response as any;
+  },
+
+  getRedesUserBranches: async (): Promise<{ success: boolean; count: number; data: any[] }> => {
+    const response = await apiCall<{ success: boolean; count: number; data: any[] }>("/companies/redes/branches");
+    return response;
   },
 };

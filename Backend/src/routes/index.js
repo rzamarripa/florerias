@@ -33,6 +33,10 @@ import financeRoutes from "./financeRoutes.js";
 import neighborhoodRoutes from "./neighborhoodRoutes.js";
 import providerRoutes from "./providerRoutes.js";
 import expenseConceptRoutes from "./expenseConceptRoutes.js";
+import productCategoryRoutes from "./productCategoryRoutes.js";
+import analyticsRoutes from "./analyticsRoutes.js";
+import orderNotificationRoutes from "./orderNotificationRoutes.js";
+import stageCatalogRoutes from "./stageCatalogRoutes.js";
 
 const router = Router();
 
@@ -69,5 +73,9 @@ router.use("/finance", financeRoutes);
 router.use("/neighborhoods", neighborhoodRoutes);
 router.use("/providers", providerRoutes);
 router.use("/expense-concepts", expenseConceptRoutes);
+router.use("/product-categories", productCategoryRoutes);
+router.use("/analytics", analyticsRoutes);
+router.use("/order-notifications", orderNotificationRoutes);
+router.use("/stage-catalogs", stageCatalogRoutes);
 
 export default router;

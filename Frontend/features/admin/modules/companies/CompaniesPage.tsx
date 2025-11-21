@@ -161,6 +161,7 @@ const CompaniesPage: React.FC = () => {
                     <th className="px-4 py-3 fw-semibold text-muted">RFC</th>
                     <th className="px-4 py-3 fw-semibold text-muted">NOMBRE COMERCIAL</th>
                     <th className="px-4 py-3 fw-semibold text-muted">ADMINISTRADOR</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">USUARIOS REDES</th>
                     <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
                     <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
                   </tr>
@@ -168,7 +169,7 @@ const CompaniesPage: React.FC = () => {
                 <tbody>
                   {companies.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-5 text-muted">
+                      <td colSpan={8} className="text-center py-5 text-muted">
                         <Building2 size={48} className="mb-3 opacity-50" />
                         <p className="mb-0">No se encontraron empresas</p>
                       </td>
@@ -194,6 +195,22 @@ const CompaniesPage: React.FC = () => {
                             </div>
                           ) : (
                             <span className="text-muted">Sin administrador</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {company.redes && company.redes.length > 0 ? (
+                            <div>
+                              {company.redes.map((redesUser, idx) => (
+                                <div key={redesUser._id}>
+                                  <div className="fw-semibold" style={{ fontSize: "0.9rem" }}>
+                                    {redesUser.profile.fullName}
+                                  </div>
+                                  {idx < company.redes!.length - 1 && <hr className="my-1" />}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted">Sin usuarios redes</span>
                           )}
                         </td>
                         <td className="px-4 py-3">

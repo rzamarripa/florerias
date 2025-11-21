@@ -133,6 +133,42 @@ const cashRegisterLogSchema = new Schema(
         },
       },
     ],
+    buys: [
+      {
+        buyId: {
+          type: Schema.Types.ObjectId,
+          ref: "cv_buy",
+        },
+        folio: {
+          type: Number,
+        },
+        concept: {
+          type: String,
+        },
+        conceptDescription: {
+          type: String,
+        },
+        amount: {
+          type: Number,
+          default: 0,
+        },
+        paymentDate: {
+          type: Date,
+        },
+        paymentMethod: {
+          type: String,
+        },
+        provider: {
+          type: String,
+        },
+        user: {
+          type: String,
+        },
+        description: {
+          type: String,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

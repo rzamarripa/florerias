@@ -57,6 +57,11 @@ const cashierSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  branch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_branch',
+    required: [true, 'La sucursal es requerida']
+  },
   cajero: {
     type: Boolean,
     default: true
@@ -73,6 +78,7 @@ const cashierSchema = new mongoose.Schema({
 // Índices para mejorar rendimiento (correo y usuario ya tienen índice desde unique: true)
 cashierSchema.index({ estatus: 1 });
 cashierSchema.index({ nombre: 1, apellidoPaterno: 1 });
+cashierSchema.index({ branch: 1 });
 
 // Middleware para hashear la contraseña antes de guardar
 cashierSchema.pre('save', async function(next) {

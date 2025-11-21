@@ -8,6 +8,7 @@
     "dev": "nodemon src/app.js --watch src",
     "demo": "rm -rf node_modules/.cache && MONGODB_URI=mongodb://localhost:27017/florerias nodemon src/app.js --watch src",
     "seed": "node seed.js",
+    "seedpages": "node seedPages.js",
     "clear": "node clearCollections.js --force",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

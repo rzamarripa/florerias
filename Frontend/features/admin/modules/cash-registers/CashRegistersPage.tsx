@@ -22,10 +22,11 @@ const CashRegistersPage: React.FC = () => {
     pages: 0,
   });
 
-  const { getIsAdmin, getIsCashier } = useUserRoleStore();
+  const { getIsAdmin, getIsCashier, getIsManager } = useUserRoleStore();
   const { activeBranch } = useActiveBranchStore();
   const isAdmin = getIsAdmin();
   const isCashier = getIsCashier();
+  const isManager = getIsManager();
 
   const loadCashRegisters = async (
     isInitial: boolean,
@@ -125,17 +126,19 @@ const CashRegistersPage: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="mb-1 fw-bold">
-            {isAdmin ? "Cajas Registradoras" : "Mis Cajas Registradoras"}
+            {isAdmin || isManager ? "Cajas Registradoras" : "Mis Cajas Registradoras"}
           </h2>
           <p className="text-muted mb-0">
             {isAdmin
               ? "Gestiona las cajas registradoras del sistema"
+              : isManager
+              ? "Gestiona las cajas registradoras de tu sucursal"
               : isCashier
               ? "Visualiza todas las cajas de tus sucursales asignadas"
               : "Visualiza las cajas registradoras donde eres gerente"}
           </p>
         </div>
-        {isAdmin && (
+        {(isAdmin || isManager) && (
           <Button
             variant="primary"
             onClick={() => setShowCreateModal(true)}
@@ -258,6 +261,17 @@ const CashRegistersPage: React.FC = () => {
                             >
                               {cashRegister.isActive ? "Activa" : "Inactiva"}
                             </Badge>
+                            <Badge
+                              bg={cashRegister.isSocialMediaBox ? "warning" : "info"}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "15px",
+                                fontWeight: "500",
+                                fontSize: "0.75rem",
+                              }}
+                            >
+                              {cashRegister.isSocialMediaBox ? "Redes" : "Tienda"}
+                            </Badge>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -311,7 +325,7 @@ const CashRegistersPage: React.FC = () => {
       </div>
 
       {/* Create Modal */}
-      {isAdmin && (
+      {(isAdmin || isManager) && (
         <CashRegisterModal
           show={showCreateModal}
           onHide={() => setShowCreateModal(false)}

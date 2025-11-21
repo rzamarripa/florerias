@@ -175,6 +175,7 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
 
   const getManagerName = () => {
     if (!storage) return "";
+    if (!storage.warehouseManager) return "N/A";
     if (typeof storage.warehouseManager === "string") return storage.warehouseManager;
     return storage.warehouseManager.profile?.fullName || storage.warehouseManager.username;
   };
@@ -266,15 +267,17 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
                 </div>
 
                 {/* Dirección */}
-                <div className="mt-3">
-                  <small className="text-muted d-block mb-1">Dirección</small>
-                  <p className="mb-0">
-                    {storage.address.street} #{storage.address.externalNumber}
-                    {storage.address.internalNumber ? ` Int. ${storage.address.internalNumber}` : ""}
-                    , {storage.address.neighborhood}, {storage.address.city}, {storage.address.state}{" "}
-                    C.P. {storage.address.postalCode}
-                  </p>
-                </div>
+                {storage.address && (
+                  <div className="mt-3">
+                    <small className="text-muted d-block mb-1">Dirección</small>
+                    <p className="mb-0">
+                      {storage.address.street} #{storage.address.externalNumber}
+                      {storage.address.internalNumber ? ` Int. ${storage.address.internalNumber}` : ""}
+                      , {storage.address.neighborhood}, {storage.address.city}, {storage.address.state}{" "}
+                      C.P. {storage.address.postalCode}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

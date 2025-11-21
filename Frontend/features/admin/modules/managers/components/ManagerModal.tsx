@@ -29,6 +29,7 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
     contrasena: "",
     foto: "",
     estatus: true,
+    branchId: "", // Se establecerá en el componente padre
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +48,7 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
         contrasena: "",
         foto: manager.foto || "",
         estatus: manager.estatus,
+        branchId: "", // No se necesita en actualización
       });
     } else {
       setFormData({
@@ -60,6 +62,7 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
         contrasena: "",
         foto: "",
         estatus: true,
+        branchId: "", // Se establecerá en el componente padre
       });
     }
     setErrors({});

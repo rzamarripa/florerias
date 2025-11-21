@@ -251,158 +251,9 @@ const CashRegisterSummaryPage: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <hr className="my-1" style={{ opacity: 0.1 }} />
-
-          <h6 className="fw-bold mb-3">
-            Total Efectivo: {formatCurrency(summary.salesByPaymentType.efectivo)}
-          </h6>
         </div>
       </div>
 
-      {/* Income Cards Section - Ingresos */}
-      <h5 className="fw-bold mb-3">Ingresos</h5>
-      <div className="row g-3 mb-4">
-        {/* Card Efectivo */}
-        <div className="col-lg-3 col-md-6">
-          <div
-            className="card border-0 shadow-sm"
-            style={{ borderRadius: "12px" }}
-          >
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <div>
-                  <h6
-                    className="text-muted mb-0 fw-normal"
-                    style={{ fontSize: "13px" }}
-                  >
-                    Efectivo
-                  </h6>
-                </div>
-                <div
-                  className="d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "12px",
-                    background: "rgba(26, 188, 156, 0.1)",
-                  }}
-                >
-                  <DollarSign size={24} style={{ color: "#1ABC9C" }} />
-                </div>
-              </div>
-              <h2 className="mb-1 fw-bold" style={{ fontSize: "28px" }}>
-                {formatCurrency(summary.salesByPaymentType.efectivo)}
-              </h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Card Intercambio */}
-        <div className="col-lg-3 col-md-6">
-          <div
-            className="card border-0 shadow-sm"
-            style={{ borderRadius: "12px" }}
-          >
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <div>
-                  <h6
-                    className="text-muted mb-0 fw-normal"
-                    style={{ fontSize: "13px" }}
-                  >
-                    Intercambio
-                  </h6>
-                </div>
-                <div
-                  className="d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "12px",
-                    background: "rgba(243, 156, 18, 0.1)",
-                  }}
-                >
-                  <Repeat size={24} style={{ color: "#F39C12" }} />
-                </div>
-              </div>
-              <h2 className="mb-1 fw-bold" style={{ fontSize: "28px" }}>
-                {formatCurrency(summary.salesByPaymentType.intercambio)}
-              </h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Card Crédito */}
-        <div className="col-lg-3 col-md-6">
-          <div
-            className="card border-0 shadow-sm"
-            style={{ borderRadius: "12px" }}
-          >
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <div>
-                  <h6
-                    className="text-muted mb-0 fw-normal"
-                    style={{ fontSize: "13px" }}
-                  >
-                    Crédito
-                  </h6>
-                </div>
-                <div
-                  className="d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "12px",
-                    background: "rgba(52, 152, 219, 0.1)",
-                  }}
-                >
-                  <CreditCard size={24} style={{ color: "#3498DB" }} />
-                </div>
-              </div>
-              <h2 className="mb-1 fw-bold" style={{ fontSize: "28px" }}>
-                {formatCurrency(summary.salesByPaymentType.credito)}
-              </h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Card Transferencia */}
-        <div className="col-lg-3 col-md-6">
-          <div
-            className="card border-0 shadow-sm"
-            style={{ borderRadius: "12px" }}
-          >
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <div>
-                  <h6
-                    className="text-muted mb-0 fw-normal"
-                    style={{ fontSize: "13px" }}
-                  >
-                    Transferencia
-                  </h6>
-                </div>
-                <div
-                  className="d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "12px",
-                    background: "rgba(155, 89, 182, 0.1)",
-                  }}
-                >
-                  <ArrowLeftRight size={24} style={{ color: "#9B59B6" }} />
-                </div>
-              </div>
-              <h2 className="mb-1 fw-bold" style={{ fontSize: "28px" }}>
-                {formatCurrency(summary.salesByPaymentType.transferencia)}
-              </h2>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Expenses Table Section */}
       {summary.expenses && summary.expenses.length > 0 && (
@@ -510,41 +361,29 @@ const CashRegisterSummaryPage: React.FC = () => {
                         <small>{formatDate(order.createdAt)}</small>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge
-                          bg={
-                            order.paymentMethod
-                              .toLowerCase()
-                              .includes("efectivo")
-                              ? "success"
-                              : order.paymentMethod
-                                  .toLowerCase()
-                                  .includes("crédito") ||
-                                order.paymentMethod
-                                  .toLowerCase()
-                                  .includes("credito") ||
-                                order.paymentMethod
-                                  .toLowerCase()
-                                  .includes("tarjeta")
-                              ? "primary"
-                              : order.paymentMethod
-                                  .toLowerCase()
-                                  .includes("transferencia")
-                              ? "info"
-                              : order.paymentMethod
-                                  .toLowerCase()
-                                  .includes("intercambio")
-                              ? "warning"
-                              : "secondary"
-                          }
-                          style={{
-                            padding: "4px 8px",
-                            borderRadius: "15px",
-                            fontWeight: "500",
-                            fontSize: "0.75rem",
-                          }}
-                        >
-                          {order.paymentMethod}
-                        </Badge>
+                        {order.paymentMethod.split(', ').map((method, idx) => (
+                          <Badge
+                            key={idx}
+                            bg={
+                              method.toLowerCase().includes('efectivo')
+                                ? 'success'
+                                : method.toLowerCase().includes('tarjeta') || method.toLowerCase().includes('crédito') || method.toLowerCase().includes('credito')
+                                ? 'info'
+                                : method.toLowerCase().includes('transferencia')
+                                ? 'primary'
+                                : 'secondary'
+                            }
+                            className="me-1 mb-1"
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "15px",
+                              fontWeight: "500",
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            {method}
+                          </Badge>
+                        ))}
                       </td>
                       <td className="px-4 py-3">
                         <div className="fw-semibold">{order.clientName}</div>

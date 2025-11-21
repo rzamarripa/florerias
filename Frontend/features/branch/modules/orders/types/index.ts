@@ -45,6 +45,7 @@ export interface OrderPayment {
     email?: string;
   } | null;
   notes?: string;
+  orderDate?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -66,9 +67,9 @@ export interface Order {
     currentBalance?: number;
   } | null;
   clientInfo: ClientInfo;
-  salesChannel: 'tienda' | 'whatsapp' | 'facebook';
+  salesChannel: 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
   items: OrderItem[];
-  shippingType: 'envio' | 'tienda';
+  shippingType: 'envio' | 'tienda' | 'redes_sociales';
   anonymous: boolean;
   quickSale: boolean;
   deliveryData: DeliveryData;
@@ -83,8 +84,11 @@ export interface Order {
   remainingBalance: number;
   payments: (string | OrderPayment)[];
   sendToProduction: boolean;
-  status: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado';
+  status: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado' | 'sinAnticipo';
   orderNumber?: string;
+  orderDate?: string;
+  isSocialMediaOrder?: boolean;
+  socialMedia?: 'whatsapp' | 'facebook' | 'instagram' | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -92,11 +96,11 @@ export interface Order {
 export interface CreateOrderData {
   branchId: string;
   cashRegisterId?: string | null;
-  storageId?: string;
+  storageId?: string | null;
   clientInfo: ClientInfo;
-  salesChannel: 'tienda' | 'whatsapp' | 'facebook';
+  salesChannel: 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
   items: OrderItem[];
-  shippingType: 'envio' | 'tienda';
+  shippingType: 'envio' | 'tienda' | 'redes_sociales';
   anonymous?: boolean;
   quickSale?: boolean;
   deliveryData: DeliveryData;
@@ -110,10 +114,13 @@ export interface CreateOrderData {
   change?: number;
   remainingBalance?: number;
   sendToProduction?: boolean;
+  orderDate?: string; // Fecha de la orden
+  isSocialMediaOrder?: boolean;
+  socialMedia?: 'whatsapp' | 'facebook' | 'instagram' | null;
 }
 
 export interface UpdateOrderData extends Partial<CreateOrderData> {
-  status?: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado';
+  status?: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado' | 'sinAnticipo';
 }
 
 export interface CreateOrderResponseData {
@@ -142,8 +149,8 @@ export interface OrderFilters {
   orderNumber?: string;
 }
 
-export type SalesChannelType = 'tienda' | 'whatsapp' | 'facebook';
-export type ShippingType = 'envio' | 'tienda';
+export type SalesChannelType = 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
+export type ShippingType = 'envio' | 'tienda' | 'redes_sociales';
 
 // Tipos para la gestión de pagos
 export interface CreateOrderPaymentData {

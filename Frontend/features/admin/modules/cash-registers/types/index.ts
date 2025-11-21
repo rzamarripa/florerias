@@ -47,6 +47,19 @@ export interface ExpenseSummary {
   expenseType: string;
 }
 
+export interface BuySummary {
+  _id: string;
+  folio: number;
+  concept: string;
+  conceptDescription: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  provider: string;
+  user: string;
+  description: string;
+}
+
 export interface CashRegister {
   _id: string;
   name: string;
@@ -60,6 +73,7 @@ export interface CashRegister {
   expenses: Expense[];
   lastOpen: string | null;
   isActive: boolean;
+  isSocialMediaBox: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,6 +84,7 @@ export interface CreateCashRegisterData {
   cashierId?: string | null; // Opcional, se asigna temporalmente al abrir la caja
   managerId: string;
   initialBalance?: number;
+  isSocialMediaBox?: boolean;
 }
 
 export interface UpdateCashRegisterData {
@@ -117,4 +132,5 @@ export interface CashRegisterSummary {
   };
   orders: OrderSummary[];
   expenses: ExpenseSummary[];
+  buys: BuySummary[];
 }

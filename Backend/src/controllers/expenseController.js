@@ -204,6 +204,7 @@ const createExpense = async (req, res) => {
     } = req.body;
 
     const userId = req.user?._id;
+    console.log(userId)
 
     if (!userId) {
       return res.status(401).json({
@@ -214,7 +215,7 @@ const createExpense = async (req, res) => {
 
     // Validar campos requeridos
     if (!paymentDate || !concept || total === undefined || !expenseType) {
-      return res.status(400).json({
+      return res.status(500).json({
         success: false,
         message:
           "Los campos fecha de pago, concepto, total y tipo de gasto son obligatorios",
@@ -223,7 +224,7 @@ const createExpense = async (req, res) => {
 
     // Validar tipo de gasto
     if (!["check_transfer", "petty_cash"].includes(expenseType)) {
-      return res.status(400).json({
+      return res.status(500).json({
         success: false,
         message:
           'Tipo de gasto inválido. Debe ser "check_transfer" o "petty_cash"',
@@ -232,7 +233,7 @@ const createExpense = async (req, res) => {
 
     // Validar cashRegisterId si es tipo petty_cash
     if (expenseType === "petty_cash" && !cashRegisterId) {
-      return res.status(400).json({
+      return res.status(500).json({
         success: false,
         message:
           "El campo caja registradora es obligatorio para gastos de caja chica",
@@ -321,6 +322,7 @@ const createExpense = async (req, res) => {
 
       // Validar que haya saldo suficiente
       if (cashRegister.currentBalance < total) {
+        console.log('no hay saldo suficiente en la caja ')
         return res.status(400).json({
           success: false,
           message: `Saldo insuficiente en la caja. Saldo actual: $${cashRegister.currentBalance.toFixed(

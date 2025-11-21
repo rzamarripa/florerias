@@ -280,7 +280,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
 
         {/* Sales Table Section */}
         <div
-          className="card border-0 shadow-sm"
+          className="card border-0 shadow-sm mb-3"
           style={{ borderRadius: "12px" }}
         >
           <div className="card-body p-0">
@@ -375,6 +375,121 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Expenses Table Section */}
+        {log.expenses && log.expenses.length > 0 && (
+          <div
+            className="card border-0 shadow-sm mb-3"
+            style={{ borderRadius: "12px" }}
+          >
+            <div className="card-body p-0">
+              <div className="p-3 border-bottom">
+                <h6 className="fw-bold mb-0">Detalle de Gastos</h6>
+              </div>
+
+              <div className="table-responsive">
+                <Table hover className="mb-0" style={{ fontSize: "13px" }}>
+                  <thead style={{ background: "#f8f9fa" }}>
+                    <tr>
+                      <th className="px-3 py-2 fw-semibold text-muted">No.</th>
+                      <th className="px-3 py-2 fw-semibold text-muted">FECHA</th>
+                      <th className="px-3 py-2 fw-semibold text-muted">CONCEPTO</th>
+                      <th className="px-3 py-2 fw-semibold text-muted text-end">IMPORTE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {log.expenses.map((expense, index) => (
+                      <tr
+                        key={expense._id || index}
+                        style={{ borderBottom: "1px solid #f1f3f5" }}
+                      >
+                        <td className="px-3 py-2">{index + 1}</td>
+                        <td className="px-3 py-2">
+                          <small>{formatDate(expense.expenseDate)}</small>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="fw-semibold" style={{ fontSize: "12px" }}>
+                            {expense.expenseConcept}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-end">
+                          <span className="fw-bold text-danger" style={{ fontSize: "13px" }}>
+                            {formatCurrency(expense.amount)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Buys Table Section */}
+        {log.buys && log.buys.length > 0 && (
+          <div
+            className="card border-0 shadow-sm mb-3"
+            style={{ borderRadius: "12px" }}
+          >
+            <div className="card-body p-0">
+              <div className="p-3 border-bottom">
+                <h6 className="fw-bold mb-0">Detalle de Compras en Efectivo</h6>
+              </div>
+
+              <div className="table-responsive">
+                <Table hover className="mb-0" style={{ fontSize: "13px" }}>
+                  <thead style={{ background: "#f8f9fa" }}>
+                    <tr>
+                      <th className="px-3 py-2 fw-semibold text-muted">FOLIO</th>
+                      <th className="px-3 py-2 fw-semibold text-muted">FECHA</th>
+                      <th className="px-3 py-2 fw-semibold text-muted">CONCEPTO</th>
+                      <th className="px-3 py-2 fw-semibold text-muted">PROVEEDOR</th>
+                      <th className="px-3 py-2 fw-semibold text-muted">USUARIO</th>
+                      <th className="px-3 py-2 fw-semibold text-muted text-end">IMPORTE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {log.buys.map((buy, index) => (
+                      <tr
+                        key={buy._id || index}
+                        style={{ borderBottom: "1px solid #f1f3f5" }}
+                      >
+                        <td className="px-3 py-2">
+                          <span className="fw-semibold">{buy.folio}</span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <small>{formatDate(buy.paymentDate)}</small>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="fw-semibold" style={{ fontSize: "12px" }}>
+                            {buy.concept}
+                          </div>
+                          {buy.description && (
+                            <small className="text-muted" style={{ fontSize: "10px" }}>
+                              {buy.description}
+                            </small>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <small>{buy.provider}</small>
+                        </td>
+                        <td className="px-3 py-2">
+                          <small>{buy.user}</small>
+                        </td>
+                        <td className="px-3 py-2 text-end">
+                          <span className="fw-bold" style={{ fontSize: "13px", color: "#856404" }}>
+                            {formatCurrency(buy.amount)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal.Body>
 
       <Modal.Footer className="border-0">

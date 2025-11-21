@@ -48,27 +48,30 @@ export interface Branch {
 export interface Storage {
   _id: string;
   branch: Branch | string;
-  warehouseManager: WarehouseManager | string;
+  name: string;
+  warehouseManager?: WarehouseManager | string;
   products: ProductItem[];
   lastIncome: string | null;
   lastOutcome: string | null;
-  address: StorageAddress;
+  address?: StorageAddress;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateStorageData {
-  branch: string;
-  warehouseManager: string;
+  name: string;
+  branch?: string;
+  warehouseManager?: string;
   products?: {
     productId: string;
     quantity: number;
   }[];
-  address: StorageAddress;
+  address?: StorageAddress;
 }
 
 export interface UpdateStorageData {
+  name?: string;
   warehouseManager?: string;
   address?: StorageAddress;
 }

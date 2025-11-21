@@ -80,6 +80,14 @@ export const salesService = {
     return response;
   },
 
+  updateOrderStatus: async (saleId: string, status: string): Promise<{ success: boolean; message: string; data: Sale }> => {
+    const response = await apiCall<{ success: boolean; message: string; data: Sale }>(`/orders/${saleId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+    return response as any;
+  },
+
   // Obtener resumen de ventas
   getSalesSummary: async (filters: { startDate?: string; endDate?: string; branchId?: string } = {}): Promise<{
     success: boolean;

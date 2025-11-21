@@ -1,45 +1,50 @@
 export interface Cashier {
   _id: string;
-  nombre: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  direccion: string;
-  telefono: string;
-  correo: string;
-  usuario: string;
-  contrasena?: string;
-  foto: string;
-  cajero: boolean;
-  estatus: boolean;
+  username: string;
+  email: string;
+  phone: string;
+  profile: {
+    name: string;
+    lastName: string;
+    fullName: string;
+    estatus: boolean;
+  };
+  role: {
+    _id: string;
+    name: string;
+    description?: string;
+  };
+  branch: {
+    _id: string;
+    branchName: string;
+    branchCode: string;
+    companyId: string;
+  } | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateCashierData {
-  nombre: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  direccion: string;
-  telefono: string;
-  correo: string;
-  usuario: string;
-  contrasena: string;
-  foto?: string;
-  cajero?: boolean;
-  estatus?: boolean;
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  profile: {
+    name: string;
+    lastName: string;
+  };
+  branch: string;
 }
 
 export interface UpdateCashierData {
-  nombre?: string;
-  apellidoPaterno?: string;
-  apellidoMaterno?: string;
-  direccion?: string;
-  telefono?: string;
-  correo?: string;
-  usuario?: string;
-  contrasena?: string;
-  foto?: string;
-  cajero?: boolean;
+  username?: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  profile?: {
+    name?: string;
+    lastName?: string;
+  };
   estatus?: boolean;
 }
 
@@ -63,18 +68,7 @@ export interface GetCashiersResponse {
 export interface CashierFilters {
   page?: number;
   limit?: number;
-  nombre?: string;
-  apellidoPaterno?: string;
-  usuario?: string;
-  correo?: string;
-  telefono?: string;
-  cajero?: boolean;
+  search?: string;
   estatus?: boolean;
-}
-
-export type FilterType = 'nombre' | 'apellidoPaterno' | 'usuario' | 'correo' | 'telefono';
-
-export interface FilterOption {
-  value: FilterType;
-  label: string;
+  branchId?: string;
 }
