@@ -30,18 +30,59 @@ const getAllOrders = async (req, res) => {
     // Obtener el ID del usuario autenticado
     const userId = req.user?._id;
 
-    // Buscar todas las sucursales donde el usuario es administrador, gerente o cajero
-    const userBranches = await Branch.find({
-      $or: [
-        { administrator: userId },
-        { manager: userId },
-        { employees: userId }
-      ]
-    }).select('_id');
-    const branchIds = userBranches.map(branch => branch._id);
+    // Obtener información del usuario con su rol
+    const user = await mongoose.model('cs_user').findById(userId).populate('role');
+
+    if (!user || !user.role) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado o sin rol asignado'
+      });
+    }
+
+    const userRole = user.role.name;
+    let branchIds = [];
+
+    // Verificar si el usuario tiene rol "Redes"
+    if (userRole === 'Redes') {
+      // Buscar la empresa donde el usuario está en el array redes
+      const userCompany = await Company.findOne({
+        redes: userId
+      });
+
+      if (!userCompany) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+
+      // Obtener todas las sucursales de la empresa
+      const companyBranches = await Branch.find({
+        companyId: userCompany._id
+      }).select('_id');
+
+      branchIds = companyBranches.map(branch => branch._id);
+    } else {
+      // Lógica existente para Administrador, Gerente y Cajero
+      const userBranches = await Branch.find({
+        $or: [
+          { administrator: userId },
+          { manager: userId },
+          { employees: userId }
+        ]
+      }).select('_id');
+      branchIds = userBranches.map(branch => branch._id);
+    }
 
     if (branchIds.length === 0) {
-      // Si el usuario no administra, gestiona o es cajero de ninguna sucursal, retornar vacío
+      // Si el usuario no tiene sucursales asignadas, retornar vacío
       return res.status(200).json({
         success: true,
         data: [],
@@ -60,6 +101,11 @@ const getAllOrders = async (req, res) => {
     // Si el usuario tiene sucursales asignadas, filtrar por ellas por defecto
     if (branchIds.length > 0) {
       filters.branchId = { $in: branchIds };
+    }
+
+    // Para usuarios con rol "Redes", agregar filtro de redes sociales
+    if (userRole === 'Redes') {
+      filters.isSocialMediaOrder = true;
     }
 
     if (status) {
@@ -884,18 +930,58 @@ const getOrdersSummary = async (req, res) => {
     // Obtener el ID del usuario autenticado
     const userId = req.user?._id;
 
-    // Buscar todas las sucursales donde el usuario es administrador, gerente o cajero
-    const userBranches = await Branch.find({
-      $or: [
-        { administrator: userId },
-        { manager: userId },
-        { employees: userId }
-      ]
-    }).select('_id');
-    const branchIds = userBranches.map(branch => branch._id);
+    // Obtener información del usuario con su rol
+    const user = await mongoose.model('cs_user').findById(userId).populate('role');
+
+    if (!user || !user.role) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado o sin rol asignado'
+      });
+    }
+
+    const userRole = user.role.name;
+    let branchIds = [];
+
+    // Verificar si el usuario tiene rol "Redes"
+    if (userRole === 'Redes') {
+      // Buscar la empresa donde el usuario está en el array redes
+      const userCompany = await Company.findOne({
+        redes: userId
+      });
+
+      if (!userCompany) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            totalSales: { count: 0, amount: 0 },
+            pendingPayment: { count: 0, amount: 0 },
+            paidSales: { count: 0, amount: 0 },
+            cancelledSales: { count: 0, amount: 0 }
+          }
+        });
+      }
+
+      // Obtener todas las sucursales de la empresa
+      const companyBranches = await Branch.find({
+        companyId: userCompany._id
+      }).select('_id');
+
+      branchIds = companyBranches.map(branch => branch._id);
+    } else {
+      // Lógica existente para Administrador, Gerente y Cajero
+      const userBranches = await Branch.find({
+        $or: [
+          { administrator: userId },
+          { manager: userId },
+          { employees: userId }
+        ]
+      }).select('_id');
+      branchIds = userBranches.map(branch => branch._id);
+    }
 
     if (branchIds.length === 0) {
-      // Si el usuario no administra, gestiona o es cajero de ninguna sucursal, retornar estadísticas vacías
+      // Si el usuario no tiene sucursales asignadas, retornar estadísticas vacías
       return res.status(200).json({
         success: true,
         data: {
@@ -909,8 +995,13 @@ const getOrdersSummary = async (req, res) => {
 
     // Construir filtros base
     const filters = {
-      branchId: { $in: branchIds } // Filtrar solo órdenes de sucursales donde el usuario es administrador, gerente o cajero
+      branchId: { $in: branchIds } // Filtrar solo órdenes de sucursales
     };
+
+    // Para usuarios con rol "Redes", agregar filtro de redes sociales
+    if (userRole === 'Redes') {
+      filters.isSocialMediaOrder = true;
+    }
 
     if (branchId) {
       // Si se proporciona branchId específico, verificar que esté en las sucursales del usuario

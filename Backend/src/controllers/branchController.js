@@ -982,3 +982,53 @@ export const getCashiersByBranch = async (req, res) => {
     });
   }
 };
+
+// Obtener sucursales de la empresa del usuario con rol Redes
+export const getBranchesForRedesUser = async (req, res) => {
+  try {
+    // Obtener el ID del usuario autenticado
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    // Buscar la empresa donde el usuario está en el array redes
+    const userCompany = await Company.findOne({
+      redes: userId
+    });
+
+    if (!userCompany) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: [],
+        message: 'No se encontró una empresa asociada al usuario'
+      });
+    }
+
+    // Obtener todas las sucursales de la empresa
+    const branches = await Branch.find({
+      companyId: userCompany._id,
+      isActive: true
+    })
+      .select('_id branchName branchCode address')
+      .sort({ branchName: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: branches.length,
+      data: branches,
+      companyId: userCompany._id
+    });
+  } catch (error) {
+    console.error('Error en getBranchesForRedesUser:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

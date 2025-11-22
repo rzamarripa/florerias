@@ -30,20 +30,31 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
   const { activeBranch } = useActiveBranchStore();
   const { role } = useUserRoleStore();
   const isAdministrator = role?.toLowerCase() === "administrador";
+  const isRedes = role?.toLowerCase() === "redes";
 
   useEffect(() => {
-    // Solo cargar sucursales si NO es administrador
+    // Cargar sucursales si NO es administrador
     if (!isAdministrator) {
       loadUserBranches();
     }
-  }, [isAdministrator]);
+  }, [isAdministrator, isRedes]);
 
   const loadUserBranches = async () => {
     try {
       setLoadingBranches(true);
-      const response = await branchesService.getUserBranches();
-      if (response.success) {
-        setBranches(response.data);
+
+      // Si es usuario Redes, usar endpoint especial
+      if (isRedes) {
+        const response = await branchesService.getBranchesForRedesUser();
+        if (response.success) {
+          setBranches(response.data);
+        }
+      } else {
+        // Para otros roles (Gerente, Cajero), usar endpoint normal
+        const response = await branchesService.getUserBranches();
+        if (response.success) {
+          setBranches(response.data);
+        }
       }
     } catch (error) {
       console.error("Error al cargar sucursales:", error);

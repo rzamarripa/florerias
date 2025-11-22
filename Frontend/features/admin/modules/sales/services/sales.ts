@@ -50,10 +50,19 @@ export const salesService = {
   },
 
   // Método específico para ventas a crédito
-  getCreditSales: async (creditPaymentMethodId: string, filters: SaleFilters = {}): Promise<GetSalesResponse> => {
+  getCreditSales: async (filters: SaleFilters & { creditPaymentMethodId?: string } = {}): Promise<GetSalesResponse> => {
+    const { creditPaymentMethodId, ...otherFilters } = filters;
+    return salesService.getAllSales({
+      ...otherFilters,
+      paymentMethodId: creditPaymentMethodId,
+    });
+  },
+
+  // Método específico para ventas de intercambio
+  getExchangeSales: async (filters: SaleFilters = {}): Promise<GetSalesResponse> => {
     return salesService.getAllSales({
       ...filters,
-      paymentMethodId: creditPaymentMethodId,
+      // Agregar filtro específico para ventas de intercambio si es necesario
     });
   },
 
@@ -62,6 +71,14 @@ export const salesService = {
     return salesService.getAllSales({
       ...filters,
       status: 'pendiente',
+    });
+  },
+
+  // Método específico para pagos pendientes (remainingBalance > 0)
+  getPendingPayments: async (filters: SaleFilters = {}): Promise<GetSalesResponse> => {
+    return salesService.getAllSales({
+      ...filters,
+      // El backend ya filtra automáticamente por remainingBalance > 0
     });
   },
 

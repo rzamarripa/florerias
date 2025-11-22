@@ -12,6 +12,7 @@ import {
   getAvailableManagers,
   getUserBranches,
   getCashiersByBranch,
+  getBranchesForRedesUser,
 } from "../controllers/branchController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -23,6 +24,7 @@ router.use(protect);
 // Rutas GET
 router.get("/", getAllBranches);
 router.get("/user/branches", getUserBranches);
+router.get("/user/redes/branches", getBranchesForRedesUser);
 router.get("/available-managers", getAvailableManagers);
 router.get("/:id/cashiers", getCashiersByBranch);
 router.get("/:id", getBranchById);

@@ -143,4 +143,9 @@ export const branchesService = {
     const response = await apiCall<{ success: boolean; count: number; data: any[]; message?: string }>(`/branches/${branchId}/cashiers`);
     return response as any;
   },
+
+  getBranchesForRedesUser: async (): Promise<{ success: boolean; count: number; data: Branch[]; companyId?: string }> => {
+    const response = await apiCall<{ success: boolean; count: number; data: Branch[]; companyId?: string }>("/branches/user/redes/branches");
+    return response as any;
+  },
 };
