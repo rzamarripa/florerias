@@ -23,13 +23,15 @@ const orderNotificationSchema = new mongoose.Schema({
   },
   orderNumber: {
     type: String,
-    required: true,
-    trim: true
+    required: false,
+    trim: true,
+    default: null
   },
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order',
-    required: true
+    required: false,
+    default: null
   },
   isRead: {
     type: Boolean,
@@ -42,6 +44,15 @@ const orderNotificationSchema = new mongoose.Schema({
   isCanceled: {
     type: Boolean,
     default: false
+  },
+  isDiscountAuth: {
+    type: Boolean,
+    default: false
+  },
+  discountAuthId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DiscountAuth',
+    default: null
   },
   createdAt: {
     type: Date,

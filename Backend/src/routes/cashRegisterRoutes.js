@@ -15,6 +15,7 @@ import {
   closeCashRegister,
   getOpenCashRegistersByBranch,
   getSocialMediaCashRegisters,
+  getSocialMediaCashRegistersByBranch,
 } from "../controllers/cashRegisterController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -30,6 +31,7 @@ router.get("/user/cash-register", getUserCashRegister);
 router.get("/admin/:adminId/employees", getCashiersAndManagersByAdmin);
 router.get("/manager/:managerId/branch", getManagerBranch);
 router.get("/branch/:branchId/open", getOpenCashRegistersByBranch);
+router.get("/branch/:branchId/social-media", getSocialMediaCashRegistersByBranch);
 router.get("/:id/summary", getCashRegisterSummary);
 router.get("/:id", getCashRegisterById);
 

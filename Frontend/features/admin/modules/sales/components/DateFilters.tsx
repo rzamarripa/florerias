@@ -31,13 +31,15 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
   const { role } = useUserRoleStore();
   const isAdministrator = role?.toLowerCase() === "administrador";
   const isRedes = role?.toLowerCase() === "redes";
+  const isCajero = role?.toLowerCase() === "cajero";
+  const isGerente = role?.toLowerCase() === "gerente";
 
   useEffect(() => {
-    // Cargar sucursales si NO es administrador
-    if (!isAdministrator) {
+    // Cargar sucursales solo para el rol Redes (los demás no lo necesitan)
+    if (isRedes) {
       loadUserBranches();
     }
-  }, [isAdministrator, isRedes]);
+  }, [isRedes]);
 
   const loadUserBranches = async () => {
     try {
@@ -65,9 +67,12 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
 
   const handleSearch = () => {
     // Para administradores: usar sucursal activa del store, o undefined si no hay
-    // Para otros roles: usar el branchId seleccionado
+    // Para cajeros y gerentes: no enviar branchId (el backend lo filtrará automáticamente)
+    // Para rol Redes: usar el branchId seleccionado
     const finalBranchId = isAdministrator
       ? (activeBranch?._id || undefined)
+      : (isCajero || isGerente)
+      ? undefined // Cajeros y Gerentes no envían branchId, el backend lo filtra automáticamente
       : (branchId || undefined);
 
     onSearch({ startDate, endDate, viewMode, branchId: finalBranchId });
@@ -77,7 +82,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
     <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
       <div className="card-body p-3">
         <div className="row g-2 align-items-end">
-          <div className={isAdministrator ? "col-md-4" : "col-md-3"}>
+          <div className={isAdministrator || isCajero ? "col-md-4" : "col-md-3"}>
             <Form.Group className="mb-0">
               <Form.Label className="fw-semibold text-muted mb-1" style={{ fontSize: "13px" }}>
                 Fecha Inicial <span className="text-danger">*</span>
@@ -92,7 +97,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             </Form.Group>
           </div>
 
-          <div className={isAdministrator ? "col-md-4" : "col-md-3"}>
+          <div className={isAdministrator || isCajero ? "col-md-4" : "col-md-3"}>
             <Form.Group className="mb-0">
               <Form.Label className="fw-semibold text-muted mb-1" style={{ fontSize: "13px" }}>
                 Fecha Final <span className="text-danger">*</span>
@@ -107,8 +112,8 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             </Form.Group>
           </div>
 
-          {/* Mostrar select de sucursal solo para NO administradores */}
-          {!isAdministrator && (
+          {/* Mostrar select de sucursal solo para NO administradores Y NO cajeros */}
+          {!isAdministrator && !isCajero && (
             <div className="col-md-3">
               <Form.Group className="mb-0">
                 <Form.Label className="fw-semibold text-muted mb-1" style={{ fontSize: "13px" }}>
@@ -132,7 +137,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             </div>
           )}
 
-          <div className={isAdministrator ? "col-md-4" : "col-md-3"}>
+          <div className={isAdministrator || isCajero ? "col-md-4" : "col-md-3"}>
             <Button
               onClick={handleSearch}
               className="w-100"

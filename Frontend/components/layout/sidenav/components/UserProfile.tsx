@@ -45,7 +45,7 @@ const UserProfile = () => {
               >
                 <Image
                   src={user.profile.image}
-                  alt={user.username}
+                  alt={user?.username || "Usuario"}
                   fill
                   style={{
                     objectFit: "cover",
@@ -64,7 +64,7 @@ const UserProfile = () => {
                   border: "2px solid rgba(66, 133, 244, 0.3)",
                 }}
               >
-                {user?.username.charAt(0).toUpperCase() || "U"}
+                {user?.username?.charAt(0).toUpperCase() || "U"}
               </div>
             )}
             <span className="sidenav-user-name fw-bold">
@@ -80,11 +80,15 @@ const UserProfile = () => {
                 style={{
                   fontSize: "11px",
                   padding: "4px 8px",
-                  maxWidth: "100%"
+                  maxWidth: "100%",
                 }}
                 title={activeBranch.branchName}
               >
-                <TbBuildingStore size={12} className="me-1" style={{ display: "inline" }} />
+                <TbBuildingStore
+                  size={12}
+                  className="me-1"
+                  style={{ display: "inline" }}
+                />
                 {activeBranch.branchName}
               </Badge>
             )}
@@ -116,7 +120,10 @@ const UserProfile = () => {
                     className={item.class}
                   >
                     {item.icon && (
-                      <item.icon className="me-2 fs-17 align-middle" size={17} />
+                      <item.icon
+                        className="me-2 fs-17 align-middle"
+                        size={17}
+                      />
                     )}
                     <span className="align-middle">{item.label}</span>
                   </DropdownItem>
@@ -132,7 +139,10 @@ const UserProfile = () => {
                   onClick={() => setShowBranchModal(true)}
                   className="text-primary"
                 >
-                  <TbBuildingStore className="me-2 fs-17 align-middle" size={17} />
+                  <TbBuildingStore
+                    className="me-2 fs-17 align-middle"
+                    size={17}
+                  />
                   <span className="align-middle">Seleccionar Sucursales</span>
                 </DropdownItem>
               </>

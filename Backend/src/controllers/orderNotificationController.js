@@ -59,7 +59,7 @@ export const getOrderNotifications = async (req, res) => {
     const notificationFilters = {
       branchId: { $in: branchIds },
       isDeleted: false,
-      userId: { $ne: userId } // Excluir notificaciones creadas por el mismo usuario
+      userId: userId // Solo mostrar notificaciones dirigidas a este usuario
     };
 
     // Filtrar por tipo de notificación si se proporciona
@@ -77,12 +77,12 @@ export const getOrderNotifications = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(50); // Limitar a las últimas 50 notificaciones
 
-    // Contar notificaciones no leídas (excluir eliminadas y propias)
+    // Contar notificaciones no leídas dirigidas al usuario
     const unreadCount = await OrderNotification.countDocuments({
       branchId: { $in: branchIds },
       isRead: false,
       isDeleted: false,
-      userId: { $ne: userId }
+      userId: userId
     });
 
     res.status(200).json({
@@ -188,12 +188,12 @@ export const markAllNotificationsAsRead = async (req, res) => {
       });
     }
 
-    // Actualizar todas las notificaciones no leídas (excepto las propias)
+    // Actualizar todas las notificaciones dirigidas al usuario
     const result = await OrderNotification.updateMany(
       {
         branchId: { $in: branchIds },
         isRead: false,
-        userId: { $ne: userId }
+        userId: userId
       },
       {
         isRead: true

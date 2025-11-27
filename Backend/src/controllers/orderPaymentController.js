@@ -309,6 +309,22 @@ export const getOrderPaymentsByBranch = async (req, res) => {
 
         branchIdsToSearch = [branch._id];
       }
+      else if (userRole === 'Cajero') {
+        // Para cajeros, buscar su sucursal donde está como empleado
+        const branch = await Branch.findOne({
+          employees: userId,
+          isActive: true
+        }).select('_id');
+
+        if (!branch) {
+          return res.status(404).json({
+            success: false,
+            message: 'No se encontró sucursal asociada al cajero'
+          });
+        }
+
+        branchIdsToSearch = [branch._id];
+      }
       else {
         return res.status(403).json({
           success: false,
@@ -350,6 +366,12 @@ export const getOrderPaymentsByBranch = async (req, res) => {
     // Filtrar por cajero si se especifica
     if (cashierId) {
       orderQuery.cashier = new mongoose.Types.ObjectId(cashierId);
+    }
+
+    // Para usuarios con rol "Cajero", agregar filtros específicos
+    if (userRole === 'Cajero') {
+      orderQuery.cashier = userId; // Solo órdenes creadas por el cajero
+      orderQuery.isSocialMediaOrder = false; // Solo órdenes que NO son de redes sociales
     }
 
     console.log('OrderQuery:', JSON.stringify(orderQuery, null, 2));

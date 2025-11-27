@@ -36,14 +36,15 @@ const SalesPage: React.FC = () => {
           status: true,
         });
         if (response.data) {
-          // Buscar el método de pago "Tarjeta de Crédito" (o variantes)
-          const creditMethod = response.data.find(
-            (pm) =>
-              pm.name.toLowerCase().includes("crédito") ||
-              pm.name.toLowerCase().includes("credito") ||
-              pm.name.toLowerCase().includes("tarjeta de crédito") ||
-              pm.name.toLowerCase().includes("tarjeta de credito")
-          );
+          // Buscar el método de pago que sea exactamente la palabra "credito"
+          // (con o sin tilde, mayúsculas/minúsculas, pero que NO incluya otras palabras como "Tarjeta de Credito")
+          const creditMethod = response.data.find((pm) => {
+            const normalized = pm.name
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, ""); // Quitar tildes
+            return normalized === "credito";
+          });
           if (creditMethod) {
             setCreditPaymentMethodId(creditMethod._id);
           }
@@ -55,6 +56,19 @@ const SalesPage: React.FC = () => {
 
     loadPaymentMethods();
   }, []);
+
+  // Cargar automáticamente los datos del día actual al abrir la página
+  useEffect(() => {
+    // Simular que el usuario hizo búsqueda con la fecha actual
+    const today = new Date().toISOString().split("T")[0];
+    setDateFilters({
+      startDate: today,
+      endDate: today,
+      viewMode: "dia",
+      branchId: undefined,
+    });
+    setHasSearched(true);
+  }, []); // Solo ejecutar al montar el componente
 
   const handleSearch = (filters: {
     startDate: string;

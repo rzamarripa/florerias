@@ -37,6 +37,7 @@ import productCategoryRoutes from "./productCategoryRoutes.js";
 import analyticsRoutes from "./analyticsRoutes.js";
 import orderNotificationRoutes from "./orderNotificationRoutes.js";
 import stageCatalogRoutes from "./stageCatalogRoutes.js";
+import discountAuthRoutes from "./discountAuthRoutes.js";
 
 const router = Router();
 
@@ -77,5 +78,6 @@ router.use("/product-categories", productCategoryRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/order-notifications", orderNotificationRoutes);
 router.use("/stage-catalogs", stageCatalogRoutes);
+router.use("/discount-auth", discountAuthRoutes);
 
 export default router;

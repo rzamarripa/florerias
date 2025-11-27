@@ -69,8 +69,14 @@ const getAllOrders = async (req, res) => {
       }).select('_id');
 
       branchIds = companyBranches.map(branch => branch._id);
+    } else if (userRole === 'Cajero') {
+      // Para cajeros, solo su sucursal donde está como empleado
+      const userBranches = await Branch.find({
+        employees: userId
+      }).select('_id');
+      branchIds = userBranches.map(branch => branch._id);
     } else {
-      // Lógica existente para Administrador, Gerente y Cajero
+      // Lógica existente para Administrador y Gerente
       const userBranches = await Branch.find({
         $or: [
           { administrator: userId },
@@ -106,6 +112,12 @@ const getAllOrders = async (req, res) => {
     // Para usuarios con rol "Redes", agregar filtro de redes sociales
     if (userRole === 'Redes') {
       filters.isSocialMediaOrder = true;
+    }
+
+    // Para usuarios con rol "Cajero", agregar filtros específicos
+    if (userRole === 'Cajero') {
+      filters.cashier = userId; // Solo órdenes creadas por el cajero
+      filters.isSocialMediaOrder = false; // Solo órdenes que NO son de redes sociales
     }
 
     if (status) {
@@ -333,6 +345,45 @@ const createOrder = async (req, res) => {
       });
     }
 
+    // Validar que la caja registradora pertenezca a la sucursal seleccionada para usuarios de Redes
+    if (cashRegisterId) {
+      const cashRegister = await CashRegister.findById(cashRegisterId);
+
+      if (!cashRegister) {
+        return res.status(404).json({
+          success: false,
+          message: 'Caja registradora no encontrada'
+        });
+      }
+
+      // Validar que la caja pertenezca a la sucursal seleccionada
+      if (cashRegister.branchId.toString() !== branchId) {
+        return res.status(400).json({
+          success: false,
+          message: 'La caja registradora no pertenece a la sucursal seleccionada'
+        });
+      }
+
+      // Validar que la caja esté abierta
+      if (!cashRegister.isOpen) {
+        return res.status(400).json({
+          success: false,
+          message: 'La caja registradora debe estar abierta para crear una orden'
+        });
+      }
+
+      // Para usuarios de Redes, validar que solo usen cajas de redes sociales
+      const user = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+      if (user && user.role && user.role.name === 'Redes') {
+        if (!cashRegister.isSocialMediaBox) {
+          return res.status(400).json({
+            success: false,
+            message: 'Los usuarios de Redes solo pueden usar cajas de redes sociales'
+          });
+        }
+      }
+    }
+
     if (!clientInfo || !clientInfo.name) {
       return res.status(400).json({
         success: false,
@@ -552,38 +603,19 @@ const createOrder = async (req, res) => {
       await savedOrder.save();
     }
 
-    // Descontar productos del almacén solo si hay storage
-    if (storage) {
-      for (const item of items) {
-        // Solo descontar si es un producto del catálogo
-        if (item.isProduct === true && item.productId) {
-          const productInStorageIndex = storage.products.findIndex(
-            (p) => p.productId.toString() === item.productId
-          );
+    // NO descontar productos del almacén aquí porque ya fueron reservados
+    // cuando se agregaron al carrito en el frontend mediante reserveStock()
+    // El stock ya se redujo en handleAddProductFromCatalog del frontend
 
-          if (productInStorageIndex !== -1) {
-            storage.products[productInStorageIndex].quantity -= item.quantity;
-
-            // Si la cantidad llega a 0, remover el producto del array
-            if (storage.products[productInStorageIndex].quantity === 0) {
-              storage.products.splice(productInStorageIndex, 1);
-            }
-          }
-        }
-      }
-
-      // Marcar products como modificado para que Mongoose lo detecte
-      storage.markModified('products');
-
-      // Actualizar fecha de último egreso y guardar el almacén
+    // Solo actualizar la fecha de último egreso si hay storage y productos del catálogo
+    if (storage && items.some(item => item.isProduct === true)) {
       storage.lastOutcome = Date.now();
 
       try {
         await storage.save();
       } catch (storageError) {
-        console.error('Error al actualizar almacén:', storageError);
-        // Continuar con la creación de la orden aunque falle la actualización del almacén
-        // El stock ya fue validado previamente
+        console.error('Error al actualizar fecha de egreso del almacén:', storageError);
+        // Continuar con la creación de la orden aunque falle la actualización de la fecha
       }
     }
 
@@ -841,10 +873,47 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    // Si la orden fue cancelada (y no estaba cancelada antes), crear notificación
+    // Si la orden fue cancelada (y no estaba cancelada antes), restaurar stock y crear notificación
     if (status === 'cancelado' && previousStatus !== 'cancelado') {
+      // Restaurar el stock de los productos del catálogo al almacén
       try {
-        // Obtener información del usuario que canceló la orden
+        // Buscar el almacén de la sucursal de la orden
+        const storage = await Storage.findOne({ branch: existingOrder.branchId });
+
+        if (storage) {
+          // Restaurar stock de cada producto del catálogo en la orden
+          for (const item of existingOrder.items) {
+            if (item.isProduct === true && item.productId) {
+              const productInStorageIndex = storage.products.findIndex(
+                (p) => p.productId.toString() === item.productId.toString()
+              );
+
+              if (productInStorageIndex !== -1) {
+                // El producto ya existe en el almacén, incrementar su cantidad
+                storage.products[productInStorageIndex].quantity += item.quantity;
+              } else {
+                // El producto no existe en el almacén, agregarlo
+                storage.products.push({
+                  productId: item.productId,
+                  quantity: item.quantity
+                });
+              }
+            }
+          }
+
+          // Actualizar fecha de último ingreso (porque estamos devolviendo stock)
+          storage.lastIncome = Date.now();
+          await storage.save();
+          console.log('Stock restaurado al almacén por cancelación de orden:', order.orderNumber);
+        }
+      } catch (stockError) {
+        console.error('Error al restaurar stock por cancelación:', stockError);
+        // No fallar la cancelación si hay error al restaurar stock
+        // El administrador puede corregir el stock manualmente
+      }
+
+      // Crear notificación de cancelación
+      try {
         const canceledByUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
 
         if (canceledByUser && canceledByUser.role) {
@@ -891,14 +960,52 @@ const deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedOrder = await Order.findByIdAndDelete(id);
+    // Obtener la orden antes de eliminarla para restaurar el stock
+    const orderToDelete = await Order.findById(id);
 
-    if (!deletedOrder) {
+    if (!orderToDelete) {
       return res.status(404).json({
         success: false,
         message: 'Orden no encontrada'
       });
     }
+
+    // Restaurar el stock de los productos del catálogo al almacén (solo si no está cancelada)
+    // Si ya estaba cancelada, el stock ya fue restaurado
+    if (orderToDelete.status !== 'cancelado') {
+      try {
+        const storage = await Storage.findOne({ branch: orderToDelete.branchId });
+
+        if (storage) {
+          for (const item of orderToDelete.items) {
+            if (item.isProduct === true && item.productId) {
+              const productInStorageIndex = storage.products.findIndex(
+                (p) => p.productId.toString() === item.productId.toString()
+              );
+
+              if (productInStorageIndex !== -1) {
+                storage.products[productInStorageIndex].quantity += item.quantity;
+              } else {
+                storage.products.push({
+                  productId: item.productId,
+                  quantity: item.quantity
+                });
+              }
+            }
+          }
+
+          storage.lastIncome = Date.now();
+          await storage.save();
+          console.log('Stock restaurado al almacén por eliminación de orden:', orderToDelete.orderNumber);
+        }
+      } catch (stockError) {
+        console.error('Error al restaurar stock por eliminación:', stockError);
+        // Continuar con la eliminación aunque falle la restauración del stock
+      }
+    }
+
+    // Ahora sí eliminar la orden
+    const deletedOrder = await Order.findByIdAndDelete(id);
 
     // Emitir evento de socket para notificar a otros usuarios
     const branchId = deletedOrder.branchId?._id || deletedOrder.branchId;
@@ -968,8 +1075,14 @@ const getOrdersSummary = async (req, res) => {
       }).select('_id');
 
       branchIds = companyBranches.map(branch => branch._id);
+    } else if (userRole === 'Cajero') {
+      // Para cajeros, solo su sucursal donde está como empleado
+      const userBranches = await Branch.find({
+        employees: userId
+      }).select('_id');
+      branchIds = userBranches.map(branch => branch._id);
     } else {
-      // Lógica existente para Administrador, Gerente y Cajero
+      // Lógica existente para Administrador y Gerente
       const userBranches = await Branch.find({
         $or: [
           { administrator: userId },
@@ -1001,6 +1114,12 @@ const getOrdersSummary = async (req, res) => {
     // Para usuarios con rol "Redes", agregar filtro de redes sociales
     if (userRole === 'Redes') {
       filters.isSocialMediaOrder = true;
+    }
+
+    // Para usuarios con rol "Cajero", agregar filtros específicos
+    if (userRole === 'Cajero') {
+      filters.cashier = userId; // Solo órdenes creadas por el cajero
+      filters.isSocialMediaOrder = false; // Solo órdenes que NO son de redes sociales
     }
 
     if (branchId) {

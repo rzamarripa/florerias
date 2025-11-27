@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col, Badge, Alert } from "react-bootstrap";
+import { Card, Form, Button, Row, Col, Badge, Alert, Modal } from "react-bootstrap";
 import {
   User,
   Phone,
@@ -41,6 +41,8 @@ import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
+import { discountAuthService } from "@/features/admin/modules/discount-auth/services/discountAuth";
+import { Shield } from "lucide-react";
 
 const NewOrderPage = () => {
   const router = useRouter();
@@ -61,6 +63,9 @@ const NewOrderPage = () => {
   const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
   const [loadingCashRegister, setLoadingCashRegister] = useState(false);
   const [togglingCashRegister, setTogglingCashRegister] = useState(false);
+  const [availableCashRegisters, setAvailableCashRegisters] = useState<CashRegister[]>([]);
+  const [loadingAvailableCashRegisters, setLoadingAvailableCashRegisters] = useState(false);
+  const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>("");
   const [storage, setStorage] = useState<Storage | null>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
   const [selectedStorageId, setSelectedStorageId] = useState<string>("");
@@ -68,6 +73,14 @@ const NewOrderPage = () => {
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
   const [showClientInfo, setShowClientInfo] = useState(false);
+  const [showDiscountRequestDialog, setShowDiscountRequestDialog] = useState(false);
+  const [discountRequestMessage, setDiscountRequestMessage] = useState("");
+  const [requestingDiscount, setRequestingDiscount] = useState(false);
+  const [requestedDiscountValue, setRequestedDiscountValue] = useState(0);
+  const [requestedDiscountType, setRequestedDiscountType] = useState<"porcentaje" | "cantidad">("porcentaje");
+  const [authFolioInput, setAuthFolioInput] = useState("");
+  const [redeemingFolio, setRedeemingFolio] = useState(false);
+  const [discountEnabled, setDiscountEnabled] = useState(false);
 
   const [formData, setFormData] = useState<CreateOrderData>({
     branchId: "",
@@ -306,11 +319,89 @@ const NewOrderPage = () => {
   }, [formData.branchId]);
 
   // Función para manejar cambio de sucursal por usuario Redes
+  // Obtener cajas de redes sociales disponibles para una sucursal
+  const fetchAvailableCashRegisters = async (branchId: string) => {
+    if (!branchId) {
+      setAvailableCashRegisters([]);
+      return;
+    }
+
+    setLoadingAvailableCashRegisters(true);
+    try {
+      const response = await cashRegistersService.getSocialMediaCashRegistersByBranch(branchId);
+      if (response.success) {
+        setAvailableCashRegisters(response.data);
+
+        // Si el usuario tiene una caja abierta y esa caja pertenece a esta sucursal, seleccionarla automáticamente
+        if (cashRegister && cashRegister.isOpen && cashRegister.branchId?._id === branchId) {
+          const userCashInBranch = response.data.find((cr: CashRegister) => cr._id === cashRegister._id);
+          if (userCashInBranch) {
+            setSelectedCashRegisterId(cashRegister._id);
+            setFormData((prev) => ({
+              ...prev,
+              cashRegisterId: cashRegister._id,
+            }));
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("Error al obtener cajas de redes sociales:", err);
+      toast.error("Error al cargar las cajas disponibles");
+      setAvailableCashRegisters([]);
+    } finally {
+      setLoadingAvailableCashRegisters(false);
+    }
+  };
+
   const handleBranchChange = (branchId: string) => {
     setFormData((prev) => ({
       ...prev,
       branchId: branchId,
+      cashRegisterId: null, // Limpiar la caja seleccionada al cambiar de sucursal
     }));
+    setSelectedCashRegisterId(""); // Limpiar selector de caja
+
+    // Para usuarios Redes, cargar cajas disponibles de la sucursal
+    if (isSocialMedia && branchId) {
+      fetchAvailableCashRegisters(branchId);
+    }
+  };
+
+  // Manejar selección de caja registradora
+  const handleCashRegisterSelect = (cashRegisterId: string) => {
+    setSelectedCashRegisterId(cashRegisterId);
+    setFormData((prev) => ({
+      ...prev,
+      cashRegisterId: cashRegisterId || null,
+    }));
+  };
+
+  // Abrir caja registradora seleccionada
+  const handleOpenCashRegister = async () => {
+    if (!selectedCashRegisterId) {
+      toast.error("Debes seleccionar una caja primero");
+      return;
+    }
+
+    setTogglingCashRegister(true);
+    try {
+      const response = await cashRegistersService.toggleOpen(selectedCashRegisterId, true);
+
+      if (response.success) {
+        toast.success("Caja abierta exitosamente");
+        // Recargar cajas disponibles para actualizar estados
+        if (formData.branchId) {
+          await fetchAvailableCashRegisters(formData.branchId);
+        }
+        // Actualizar la caja del usuario
+        await fetchUserCashRegister();
+      }
+    } catch (err: any) {
+      console.error("Error al abrir caja:", err);
+      toast.error(err.message || "Error al abrir la caja");
+    } finally {
+      setTogglingCashRegister(false);
+    }
   };
 
   // Actualizar fecha y hora cuando se activa "Venta Rápida"
@@ -547,6 +638,88 @@ const NewOrderPage = () => {
       paidWith: paidWith,
       change: changeAmount > 0 ? changeAmount : 0,
     });
+  };
+
+  // Manejar canje de folio
+  const handleRedeemFolio = async () => {
+    if (!authFolioInput.trim()) {
+      toast.error("Por favor ingresa un folio de autorización");
+      return;
+    }
+
+    if (!formData.branchId) {
+      toast.error("Debes seleccionar una sucursal primero");
+      return;
+    }
+
+    setRedeemingFolio(true);
+    try {
+      const response = await discountAuthService.redeemFolio({
+        authFolio: authFolioInput.trim(),
+        branchId: formData.branchId,
+      });
+
+      if (response.success) {
+        toast.success(`Folio canjeado exitosamente: ${response.data.authFolio}`);
+
+        // Habilitar el campo de descuento y establecer el valor autorizado
+        setDiscountEnabled(true);
+        setFormData(prev => ({
+          ...prev,
+          discount: response.data.discountValue,
+          discountType: response.data.discountType as "porcentaje" | "cantidad"
+        }));
+
+        setShowDiscountRequestDialog(false);
+        setAuthFolioInput("");
+      }
+    } catch (err: any) {
+      console.error("Error al canjear folio:", err);
+      toast.error(err.message || "Error al canjear el folio");
+    } finally {
+      setRedeemingFolio(false);
+    }
+  };
+
+  // Manejar solicitud de permiso de descuento
+  const handleRequestDiscountAuth = async () => {
+    if (!discountRequestMessage.trim()) {
+      toast.error("Por favor ingresa un mensaje de solicitud");
+      return;
+    }
+
+    if (!formData.branchId) {
+      toast.error("Debes seleccionar una sucursal primero");
+      return;
+    }
+
+    if (requestedDiscountValue <= 0) {
+      toast.error("El valor del descuento debe ser mayor a 0");
+      return;
+    }
+
+    setRequestingDiscount(true);
+    try {
+      const response = await discountAuthService.requestDiscountAuth({
+        message: discountRequestMessage,
+        branchId: formData.branchId,
+        discountValue: requestedDiscountValue,
+        discountType: requestedDiscountType
+      });
+
+      if (response.success) {
+        toast.success("Solicitud enviada al gerente exitosamente");
+        setShowDiscountRequestDialog(false);
+        setDiscountRequestMessage("");
+        setRequestedDiscountValue(0);
+        setRequestedDiscountType("porcentaje");
+      }
+    } catch (err: any) {
+      console.error("Error al solicitar permiso de descuento:", err);
+      toast.error(err.message || "Error al enviar la solicitud");
+    } finally {
+      setRequestingDiscount(false);
+    }
   };
 
   // Manejar cambio de tipo de envío
@@ -800,6 +973,9 @@ const NewOrderPage = () => {
       const orderData = {
         ...formData,
         storageId: selectedStorageId || null, // Puede ser null si solo hay productos manuales
+        // Para usuarios Cajero, forzar salesChannel a 'tienda'
+        // Para usuarios Redes, mantener el salesChannel del formData (sincronizado con plataforma)
+        salesChannel: isCashier ? "tienda" : formData.salesChannel,
       };
 
       const response = await ordersService.createOrder(orderData);
@@ -967,6 +1143,83 @@ const NewOrderPage = () => {
               </Card>
             )}
 
+            {/* Selector de Caja - Solo para usuarios Redes después de seleccionar sucursal */}
+            {isSocialMedia && formData.branchId && (
+              <Card className="mb-4 border-0 shadow-sm">
+                <Card.Header className="bg-success text-white border-0 py-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <CreditCard size={20} />
+                    <h5 className="mb-0 fw-bold">Seleccionar Caja</h5>
+                  </div>
+                </Card.Header>
+                <Card.Body>
+                  <Alert variant="info" className="mb-3">
+                    <strong>💡 Información:</strong> Selecciona una caja de redes sociales de esta sucursal. Si no tienes una caja abierta, puedes abrir una directamente desde aquí.
+                  </Alert>
+
+                  <Row className="g-3">
+                    <Col md={8}>
+                      <Form.Group>
+                        <Form.Label className="fw-semibold">
+                          <CreditCard size={16} className="me-2" />
+                          Caja Registradora
+                        </Form.Label>
+                        <Form.Select
+                          value={selectedCashRegisterId}
+                          onChange={(e) => handleCashRegisterSelect(e.target.value)}
+                          className="py-2"
+                          disabled={loadingAvailableCashRegisters}
+                        >
+                          <option value="">
+                            {loadingAvailableCashRegisters
+                              ? "Cargando cajas..."
+                              : "-- Selecciona una caja --"}
+                          </option>
+                          {availableCashRegisters.map((cr) => (
+                            <option key={cr._id} value={cr._id}>
+                              {cr.name} - {cr.isOpen ? "🟢 Abierta" : "🔴 Cerrada"}
+                              {cr.cashierId ? ` (${cr.cashierId.username})` : ""}
+                            </option>
+                          ))}
+                        </Form.Select>
+                        {availableCashRegisters.length === 0 && !loadingAvailableCashRegisters && (
+                          <Alert variant="warning" className="mt-2 mb-0 py-2">
+                            <small>
+                              No hay cajas de redes sociales disponibles en esta sucursal. Contacta al administrador.
+                            </small>
+                          </Alert>
+                        )}
+                      </Form.Group>
+                    </Col>
+
+                    {selectedCashRegisterId && !availableCashRegisters.find(cr => cr._id === selectedCashRegisterId && cr.isOpen) && (
+                      <Col md={4} className="d-flex align-items-end">
+                        <Button
+                          variant="success"
+                          onClick={handleOpenCashRegister}
+                          disabled={togglingCashRegister}
+                          className="w-100 py-2"
+                        >
+                          {togglingCashRegister ? "Abriendo..." : "Abrir Caja"}
+                        </Button>
+                      </Col>
+                    )}
+                  </Row>
+
+                  {cashRegister?.isOpen && cashRegister.branchId?._id === formData.branchId && (
+                    <Alert variant="success" className="mt-3 mb-0">
+                      <strong>✅ Caja Abierta:</strong> {cashRegister.name} - Esta caja está lista para crear órdenes.
+                    </Alert>
+                  )}
+                  {cashRegister?.isOpen && cashRegister.branchId?._id !== formData.branchId && (
+                    <Alert variant="info" className="mt-3 mb-0">
+                      <strong>ℹ️ Tienes una caja abierta en otra sucursal:</strong> {cashRegister.name} ({cashRegister.branchId?.branchName || 'Sucursal desconocida'}). Selecciona una caja de esta sucursal para crear órdenes aquí.
+                    </Alert>
+                  )}
+                </Card.Body>
+              </Card>
+            )}
+
             {/* Información del Cliente */}
             <Card className="mb-4 border-0 shadow-sm">
               <Card.Header className="bg-white border-0 py-3">
@@ -1023,80 +1276,68 @@ const NewOrderPage = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <CreditCard size={16} className="me-2" />
-                        Caja Registradora
-                      </Form.Label>
-                      <div className="d-flex gap-2">
-                        <Form.Control
-                          type="text"
-                          value={
-                            loadingCashRegister
-                              ? "Cargando..."
-                              : cashRegister
-                              ? cashRegister.name
-                              : "No hay caja asignada"
-                          }
-                          readOnly
-                          disabled
-                          className="py-2 bg-light"
-                        />
-                        {cashRegister ? (
-                          <Button
-                            variant={
-                              cashRegister.isOpen ? "success" : "warning"
+                  {/* Información de caja registradora - Solo para usuarios Cajero */}
+                  {!isSocialMedia && (
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label className="fw-semibold">
+                          <CreditCard size={16} className="me-2" />
+                          Caja Registradora
+                        </Form.Label>
+                        <div className="d-flex gap-2">
+                          <Form.Control
+                            type="text"
+                            value={
+                              loadingCashRegister
+                                ? "Cargando..."
+                                : cashRegister
+                                ? cashRegister.name
+                                : "No hay caja asignada"
                             }
-                            onClick={handleToggleCashRegister}
-                            disabled={togglingCashRegister}
-                            className="d-flex align-items-center gap-2"
-                            style={{ minWidth: "120px" }}
-                          >
-                            {togglingCashRegister
-                              ? "Procesando..."
-                              : cashRegister.isOpen
-                              ? "Abierta"
-                              : "Cerrada"}
-                          </Button>
-                        ) : (
-                          !loadingCashRegister && (
-                            <Button
-                              variant="primary"
-                              onClick={() =>
-                                router.push(
-                                  isSocialMedia
-                                    ? "/ventas/cajas-redes-sociales"
-                                    : "/ventas/cajas"
-                                )
-                              }
-                              className="d-flex align-items-center gap-2"
-                              style={{ minWidth: "160px" }}
+                            readOnly
+                            disabled
+                            className="py-2 bg-light"
+                          />
+                          {cashRegister ? (
+                            <Badge
+                              bg={cashRegister.isOpen ? "success" : "secondary"}
+                              className="d-flex align-items-center justify-content-center py-2 px-3"
+                              style={{ minWidth: "120px", fontSize: "0.9rem" }}
                             >
-                              <ExternalLink size={16} />
-                              Ir a Cajas
-                            </Button>
-                          )
+                              {cashRegister.isOpen ? "🟢 Abierta" : "🔴 Cerrada"}
+                            </Badge>
+                          ) : (
+                            !loadingCashRegister && (
+                              <Button
+                                variant="primary"
+                                onClick={() => router.push("/ventas/cajas")}
+                                className="d-flex align-items-center gap-2"
+                                style={{ minWidth: "160px" }}
+                              >
+                                <ExternalLink size={16} />
+                                Ir a Cajas
+                              </Button>
+                            )
+                          )}
+                        </div>
+                        {cashRegister && !cashRegister.isOpen && (
+                          <Alert variant="warning" className="mt-2 mb-0 py-2">
+                            <small>
+                              ⚠️ La caja está cerrada. Dirígete a la página de Cajas para abrirla.
+                            </small>
+                          </Alert>
                         )}
-                      </div>
-                      {cashRegister && !cashRegister.isOpen && (
-                        <Alert variant="warning" className="mt-2 mb-0 py-2">
-                          <small>
-                            ⚠️ La caja está cerrada. Ábrela para registrar
-                            ventas.
-                          </small>
-                        </Alert>
-                      )}
-                      {!cashRegister && !loadingCashRegister && (
-                        <Alert variant="info" className="mt-2 mb-0 py-2">
-                          <small>
-                            ℹ️ No tienes una caja asignada. Dirígete a la página
-                            de Cajas Registradoras para abrir una.
-                          </small>
-                        </Alert>
-                      )}
-                    </Form.Group>
-                  </Col>
+                        {!cashRegister && !loadingCashRegister && (
+                          <Alert variant="info" className="mt-2 mb-0 py-2">
+                            <small>
+                              ℹ️ No tienes una caja asignada. Dirígete a la página
+                              de Cajas Registradoras para abrir una.
+                            </small>
+                          </Alert>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  )}
 
                   {/* Detalles del cliente - solo visibles cuando showClientInfo es true */}
                   {showClientInfo && (
@@ -1177,8 +1418,8 @@ const NewOrderPage = () => {
                         </Form.Group>
                       </Col>
 
-                      {/* Solo mostrar Canal de Venta si NO es usuario de Redes */}
-                      {!isSocialMedia && (
+                      {/* Solo mostrar Canal de Venta si NO es usuario de Redes ni Cajero */}
+                      {!isSocialMedia && !isCashier && (
                         <Col md={12}>
                           <Form.Group>
                             <Form.Label className="fw-semibold">
@@ -1731,28 +1972,40 @@ const NewOrderPage = () => {
                           min="0"
                           step="0.01"
                           value={formData.discount}
-                          onChange={(e) =>
-                            handleDiscountChange(
-                              parseFloat(e.target.value) || 0,
-                              formData.discountType || "porcentaje"
-                            )
-                          }
-                          className="py-2"
+                          disabled
+                          readOnly
+                          className="py-2 bg-light"
+                          placeholder={discountEnabled ? "Descuento autorizado" : "Requiere autorización"}
                         />
                         <Form.Select
                           value={formData.discountType}
-                          onChange={(e) =>
-                            handleDiscountChange(
-                              formData.discount || 0,
-                              e.target.value as "porcentaje" | "cantidad"
-                            )
-                          }
+                          disabled
+                          readOnly
                           style={{ maxWidth: "100px" }}
+                          className="bg-light"
                         >
                           <option value="porcentaje">%</option>
                           <option value="cantidad">$</option>
                         </Form.Select>
+                        {!discountEnabled && (
+                          <Button
+                            variant="warning"
+                            onClick={() => setShowDiscountRequestDialog(true)}
+                            className="d-flex align-items-center gap-2"
+                            style={{ whiteSpace: "nowrap" }}
+                          >
+                            <Shield size={16} />
+                            Solicitar Permiso
+                          </Button>
+                        )}
                       </div>
+                      <Alert variant={discountEnabled ? "success" : "info"} className="mt-2 mb-0 py-2">
+                        <small>
+                          {discountEnabled
+                            ? "✓ Descuento autorizado y aplicado a la orden"
+                            : "ℹ️ El descuento requiere autorización del gerente. Solicita permiso o canjea un folio."}
+                        </small>
+                      </Alert>
                     </Form.Group>
                   </Col>
 
@@ -1917,6 +2170,123 @@ const NewOrderPage = () => {
           </div>
         </Col>
       </Row>
+
+      {/* Modal de Solicitud de Permiso de Descuento */}
+      <Modal
+        show={showDiscountRequestDialog}
+        onHide={() => {
+          setShowDiscountRequestDialog(false);
+          setDiscountRequestMessage("");
+        }}
+        centered
+      >
+        <Modal.Header closeButton className="bg-warning text-white">
+          <Modal.Title className="d-flex align-items-center gap-2">
+            <Shield size={24} />
+            Solicitar Permiso de Descuento
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {/* Sección de canje de folio */}
+          <div className="mb-4 p-3 border rounded bg-light">
+            <h6 className="fw-bold mb-3">¿Ya tienes un folio de autorización?</h6>
+            <Form.Group className="mb-2">
+              <Form.Label>Folio de Autorización</Form.Label>
+              <div className="input-group">
+                <Form.Control
+                  type="text"
+                  value={authFolioInput}
+                  onChange={(e) => setAuthFolioInput(e.target.value.toUpperCase())}
+                  placeholder="AUTH-YYMMDD-0001"
+                  className="py-2"
+                />
+                <Button
+                  variant="success"
+                  onClick={handleRedeemFolio}
+                  disabled={redeemingFolio || !authFolioInput.trim()}
+                >
+                  {redeemingFolio ? "Validando..." : "Canjear"}
+                </Button>
+              </div>
+              <Form.Text className="text-muted">
+                Ingresa el folio que el gerente te proporcionó para habilitar el descuento.
+              </Form.Text>
+            </Form.Group>
+          </div>
+
+          <div className="text-center my-3">
+            <strong className="text-muted">- O -</strong>
+          </div>
+
+          {/* Sección de solicitud de nuevo descuento */}
+          <Alert variant="info" className="mb-3">
+            <strong>⚠️ Importante:</strong> Si no tienes un folio, solicita autorización al gerente.
+          </Alert>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold">
+              Descuento Solicitado <span className="text-danger">*</span>
+            </Form.Label>
+            <div className="input-group">
+              <Form.Control
+                type="number"
+                min="0"
+                step="0.01"
+                value={requestedDiscountValue}
+                onChange={(e) => setRequestedDiscountValue(parseFloat(e.target.value) || 0)}
+                className="py-2"
+                placeholder="Ingresa el descuento"
+              />
+              <Form.Select
+                value={requestedDiscountType}
+                onChange={(e) => setRequestedDiscountType(e.target.value as "porcentaje" | "cantidad")}
+                style={{ maxWidth: "100px" }}
+              >
+                <option value="porcentaje">%</option>
+                <option value="cantidad">$</option>
+              </Form.Select>
+            </div>
+          </Form.Group>
+
+          <Form.Group>
+            <Form.Label className="fw-semibold">
+              Mensaje de Solicitud <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              placeholder="Describe el motivo por el cual solicitas el descuento..."
+              value={discountRequestMessage}
+              onChange={(e) => setDiscountRequestMessage(e.target.value)}
+              required
+            />
+            <Form.Text className="text-muted">
+              El gerente recibirá esta solicitud y podrá aprobarla o rechazarla.
+            </Form.Text>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowDiscountRequestDialog(false);
+              setDiscountRequestMessage("");
+            }}
+            disabled={requestingDiscount}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="warning"
+            onClick={handleRequestDiscountAuth}
+            disabled={requestingDiscount || !discountRequestMessage.trim()}
+            className="d-flex align-items-center gap-2"
+          >
+            <Shield size={16} />
+            {requestingDiscount ? "Enviando..." : "Enviar Solicitud"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

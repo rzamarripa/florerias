@@ -1381,6 +1381,45 @@ const getSocialMediaCashRegisters = async (req, res) => {
   }
 };
 
+// Obtener cajas de redes sociales por sucursal
+const getSocialMediaCashRegistersByBranch = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    if (!branchId) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID de la sucursal es requerido'
+      });
+    }
+
+    // Buscar cajas de redes sociales activas en la sucursal especificada
+    const cashRegisters = await CashRegister.find({
+      branchId,
+      isSocialMediaBox: true,
+      isActive: true
+    })
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashierId', 'username email profile')
+      .populate('managerId', 'username email profile')
+      .populate('companyId', 'legalName tradeName')
+      .select('_id name branchId cashierId managerId currentBalance isOpen isSocialMediaBox companyId')
+      .sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: cashRegisters
+    });
+  } catch (error) {
+    console.error('Error al obtener cajas de redes sociales por sucursal:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 export {
   getAllCashRegisters,
   getCashRegisterById,
@@ -1396,5 +1435,6 @@ export {
   getCashRegisterSummary,
   closeCashRegister,
   getOpenCashRegistersByBranch,
-  getSocialMediaCashRegisters
+  getSocialMediaCashRegisters,
+  getSocialMediaCashRegistersByBranch
 };

@@ -384,6 +384,22 @@ export const getDiscountedSales = async (req, res) => {
 
         branchIdsToSearch = [branch._id];
       }
+      else if (userRole === 'Cajero') {
+        // Para cajeros, buscar su sucursal donde está como empleado
+        const branch = await Branch.findOne({
+          employees: userId,
+          isActive: true
+        }).select('_id');
+
+        if (!branch) {
+          return res.status(404).json({
+            success: false,
+            message: 'No se encontró sucursal asociada al cajero'
+          });
+        }
+
+        branchIdsToSearch = [branch._id];
+      }
       else {
         return res.status(403).json({
           success: false,
@@ -441,6 +457,12 @@ export const getDiscountedSales = async (req, res) => {
     // Filtro de cajero (si se proporciona)
     if (cashierId) {
       orderMatch.cashier = new mongoose.Types.ObjectId(cashierId);
+    }
+
+    // Para usuarios con rol "Cajero", agregar filtros específicos
+    if (userRole === 'Cajero') {
+      orderMatch.cashier = userId; // Solo órdenes creadas por el cajero
+      orderMatch.isSocialMediaOrder = false; // Solo órdenes que NO son de redes sociales
     }
 
     console.log('DiscountedSales OrderMatch:', JSON.stringify(orderMatch, null, 2));

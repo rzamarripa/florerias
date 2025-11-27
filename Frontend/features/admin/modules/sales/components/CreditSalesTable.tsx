@@ -31,10 +31,12 @@ const CreditSalesTable: React.FC<CreditSalesTableProps> = ({ filters, creditPaym
 
     try {
       setLoading(true);
-      const response = await salesService.getCreditSales(creditPaymentMethodId, {
+      const response = await salesService.getCreditSales({
         startDate: filters.startDate,
         endDate: filters.endDate,
         branchId: filters.branchId,
+        creditPaymentMethodId: creditPaymentMethodId,
+        limit: 1000, // Traer todas las ventas a crédito
       });
 
       if (response.data) {

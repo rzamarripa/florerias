@@ -162,4 +162,9 @@ export const cashRegistersService = {
     const response = await apiCall<GetCashRegistersResponse>(`/cash-registers/social-media?${searchParams}`);
     return response as any;
   },
+
+  getSocialMediaCashRegistersByBranch: async (branchId: string): Promise<{ success: boolean; data: CashRegister[] }> => {
+    const response = await apiCall<{ success: boolean; data: CashRegister[] }>(`/cash-registers/branch/${branchId}/social-media`);
+    return response as any;
+  },
 };

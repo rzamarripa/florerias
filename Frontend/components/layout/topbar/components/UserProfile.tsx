@@ -37,7 +37,7 @@ const UserProfile = () => {
             >
               <Image
                 src={user.profile.image}
-                alt={user.username}
+                alt={user?.username || "Usuario"}
                 fill
                 style={{
                   objectFit: "cover",
@@ -55,7 +55,7 @@ const UserProfile = () => {
                 fontSize: "16px",
               }}
             >
-              {user?.username.charAt(0).toUpperCase() || "U"}
+              {user?.username?.charAt(0).toUpperCase() || "U"}
             </div>
           )}
           <TbChevronDown className="align-middle" />

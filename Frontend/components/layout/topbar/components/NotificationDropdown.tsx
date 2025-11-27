@@ -9,7 +9,8 @@ import {
     LuServerCrash, LuSquareCheck, LuTriangleAlert,
     LuUserPlus,
     LuShoppingCart,
-    LuX
+    LuX,
+    LuShield
 } from "react-icons/lu";
 import {TbXboxXFilled} from "react-icons/tb";
 
@@ -17,9 +18,11 @@ import SimpleBar from "simplebar-react";
 import {IconType} from "react-icons";
 import { useState, useEffect } from "react";
 import { orderNotificationsService, OrderNotification } from "@/services/orderNotifications";
+import { discountAuthService } from "@/features/admin/modules/discount-auth/services/discountAuth";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { Modal } from "react-bootstrap";
 
 type NotificationType = {
     id: string;
@@ -138,6 +141,11 @@ const NotificationDropdown = () => {
     const [orderNotifications, setOrderNotifications] = useState<OrderNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [showAuthDialog, setShowAuthDialog] = useState(false);
+    const [selectedDiscountAuth, setSelectedDiscountAuth] = useState<OrderNotification | null>(null);
+    const [discountAuthDetails, setDiscountAuthDetails] = useState<any>(null);
+    const [loadingDetails, setLoadingDetails] = useState(false);
+    const [processingAuth, setProcessingAuth] = useState(false);
 
     // Mostrar notificaciones si es Manager o Cajero
     const canViewNotifications = isManager || isCashier;
@@ -149,8 +157,10 @@ const NotificationDropdown = () => {
         setLoading(true);
         try {
             const response = await orderNotificationsService.getNotifications();
-            setOrderNotifications(response.data);
-            setUnreadCount(response.unreadCount);
+            if (response.success) {
+                setOrderNotifications(response.data);
+                setUnreadCount(response.unreadCount);
+            }
         } catch (error: any) {
             console.error('Error al cargar notificaciones:', error);
             // No mostrar toast de error para evitar spam
@@ -212,6 +222,96 @@ const NotificationDropdown = () => {
         } catch (error: any) {
             console.error('Error al marcar todas las notificaciones:', error);
             toast.error(error.message || 'Error al marcar notificaciones');
+        }
+    };
+
+    const handleOpenAuthDialog = async (notification: OrderNotification, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedDiscountAuth(notification);
+        setShowAuthDialog(true);
+
+        // Cargar detalles completos de la solicitud
+        if (notification.discountAuthId) {
+            setLoadingDetails(true);
+            try {
+                const response = await discountAuthService.getDiscountAuthById(notification.discountAuthId);
+                if (response.success) {
+                    setDiscountAuthDetails(response.data);
+                }
+            } catch (error: any) {
+                console.error('Error al cargar detalles:', error);
+                toast.error('Error al cargar detalles de la solicitud');
+            } finally {
+                setLoadingDetails(false);
+            }
+        }
+    };
+
+    const handleApproveDiscount = async () => {
+        if (!selectedDiscountAuth || !selectedDiscountAuth.discountAuthId) return;
+
+        setProcessingAuth(true);
+        try {
+            const response = await discountAuthService.approveRejectDiscountAuth(
+                selectedDiscountAuth.discountAuthId,
+                { isApproved: true }
+            );
+
+            if (response.success) {
+                toast.success(`Descuento aprobado. Folio: ${response.data.authFolio}`);
+
+                // Eliminar la notificación
+                try {
+                    await orderNotificationsService.deleteNotification(selectedDiscountAuth._id);
+                } catch (err) {
+                    console.error('Error al eliminar notificación:', err);
+                }
+
+                setShowAuthDialog(false);
+                setSelectedDiscountAuth(null);
+                setDiscountAuthDetails(null);
+                // Actualizar notificaciones
+                await fetchNotifications();
+            }
+        } catch (error: any) {
+            console.error('Error al aprobar descuento:', error);
+            toast.error(error.message || 'Error al aprobar el descuento');
+        } finally {
+            setProcessingAuth(false);
+        }
+    };
+
+    const handleRejectDiscount = async () => {
+        if (!selectedDiscountAuth || !selectedDiscountAuth.discountAuthId) return;
+
+        setProcessingAuth(true);
+        try {
+            const response = await discountAuthService.approveRejectDiscountAuth(
+                selectedDiscountAuth.discountAuthId,
+                { isApproved: false }
+            );
+
+            if (response.success) {
+                toast.info('Descuento rechazado');
+
+                // Eliminar la notificación
+                try {
+                    await orderNotificationsService.deleteNotification(selectedDiscountAuth._id);
+                } catch (err) {
+                    console.error('Error al eliminar notificación:', err);
+                }
+
+                setShowAuthDialog(false);
+                setSelectedDiscountAuth(null);
+                setDiscountAuthDetails(null);
+                // Actualizar notificaciones
+                await fetchNotifications();
+            }
+        } catch (error: any) {
+            console.error('Error al rechazar descuento:', error);
+            toast.error(error.message || 'Error al rechazar el descuento');
+        } finally {
+            setProcessingAuth(false);
         }
     };
 
@@ -282,13 +382,28 @@ const NotificationDropdown = () => {
                             </div>
                         ) : (
                             orderNotifications.map((notification) => {
+                                // Determinar el tipo de notificación
+                                const isDiscountRequest = notification.isDiscountAuth;
                                 const isCanceled = notification.isCanceled;
-                                const iconBgColor = isCanceled ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success';
-                                const Icon = isCanceled ? LuX : LuShoppingCart;
-                                const iconFillClass = isCanceled ? 'fill-danger' : 'fill-success';
-                                const notificationTitle = isCanceled
-                                    ? `Orden cancelada: ${notification.orderNumber}`
-                                    : `Nueva orden creada: ${notification.orderNumber}`;
+
+                                let iconBgColor, Icon, iconFillClass, notificationTitle;
+
+                                if (isDiscountRequest) {
+                                    iconBgColor = 'bg-warning-subtle text-warning';
+                                    Icon = LuShield;
+                                    iconFillClass = 'fill-warning';
+                                    notificationTitle = notification.orderNumber;
+                                } else if (isCanceled) {
+                                    iconBgColor = 'bg-danger-subtle text-danger';
+                                    Icon = LuX;
+                                    iconFillClass = 'fill-danger';
+                                    notificationTitle = `Orden cancelada: ${notification.orderNumber}`;
+                                } else {
+                                    iconBgColor = 'bg-success-subtle text-success';
+                                    Icon = LuShoppingCart;
+                                    iconFillClass = 'fill-success';
+                                    notificationTitle = `Nueva orden creada: ${notification.orderNumber}`;
+                                }
 
                                 return (
                                     <DropdownItem
@@ -315,6 +430,19 @@ const NotificationDropdown = () => {
                                                 <span className="fs-xs text-muted">
                                                     {formatTimeAgo(notification.createdAt)}
                                                 </span>
+                                                {isDiscountRequest && (
+                                                    <div className="mt-2">
+                                                        <Button
+                                                            variant="warning"
+                                                            size="sm"
+                                                            className="me-2"
+                                                            onClick={(e) => handleOpenAuthDialog(notification, e)}
+                                                        >
+                                                            <LuShield size={14} className="me-1" />
+                                                            Autorizar
+                                                        </Button>
+                                                    </div>
+                                                )}
                                             </span>
                                             <Button
                                                 variant="link"
@@ -345,6 +473,121 @@ const NotificationDropdown = () => {
                     )}
                 </DropdownMenu>
             </Dropdown>
+
+            {/* Modal de Autorización de Descuento */}
+            <Modal
+                show={showAuthDialog}
+                onHide={() => {
+                    setShowAuthDialog(false);
+                    setSelectedDiscountAuth(null);
+                }}
+                centered
+            >
+                <Modal.Header closeButton className="bg-warning text-white">
+                    <Modal.Title className="d-flex align-items-center gap-2">
+                        <LuShield size={24} />
+                        Autorizar Descuento
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {loadingDetails ? (
+                        <div className="text-center py-4">
+                            <Spinner animation="border" size="sm" />
+                            <p className="text-muted mt-2">Cargando detalles...</p>
+                        </div>
+                    ) : selectedDiscountAuth && discountAuthDetails ? (
+                        <>
+                            <div className="mb-3 p-3 bg-light rounded">
+                                <div className="mb-2">
+                                    <strong>Solicitante:</strong> {selectedDiscountAuth.username} ({selectedDiscountAuth.userRole})
+                                </div>
+                                <div className="mb-2">
+                                    <strong>Sucursal:</strong> {selectedDiscountAuth.branchId.branchName}
+                                </div>
+                                <div className="mb-2">
+                                    <strong>Fecha:</strong> {formatTimeAgo(selectedDiscountAuth.createdAt)}
+                                </div>
+                            </div>
+
+                            <div className="mb-3 p-3 border rounded">
+                                <h6 className="fw-bold mb-3">Detalles del Descuento</h6>
+                                <div className="mb-2">
+                                    <strong>Total de la Orden:</strong> ${discountAuthDetails.orderTotal?.toFixed(2) || '0.00'}
+                                </div>
+                                <div className="mb-2">
+                                    <strong>Descuento Solicitado:</strong>{' '}
+                                    {discountAuthDetails.discountType === 'porcentaje'
+                                        ? `${discountAuthDetails.discountValue}%`
+                                        : `$${discountAuthDetails.discountValue?.toFixed(2)}`}
+                                </div>
+                                <div className="mb-2">
+                                    <strong>Monto del Descuento:</strong>{' '}
+                                    <span className="text-danger">
+                                        -${(discountAuthDetails.discountType === 'porcentaje'
+                                            ? (discountAuthDetails.orderTotal * discountAuthDetails.discountValue) / 100
+                                            : discountAuthDetails.discountValue
+                                        ).toFixed(2)}
+                                    </span>
+                                </div>
+                                <div className="mb-2">
+                                    <strong>Total Final:</strong>{' '}
+                                    <span className="text-success fw-bold">
+                                        ${(discountAuthDetails.orderTotal - (
+                                            discountAuthDetails.discountType === 'porcentaje'
+                                                ? (discountAuthDetails.orderTotal * discountAuthDetails.discountValue) / 100
+                                                : discountAuthDetails.discountValue
+                                        )).toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="mb-3">
+                                <strong>Mensaje:</strong>
+                                <div className="p-2 bg-light rounded mt-1">
+                                    {discountAuthDetails.message}
+                                </div>
+                            </div>
+
+                            <div className="alert alert-warning mb-0">
+                                <strong>⚠️ Atención:</strong> Estás a punto de autorizar o rechazar esta solicitud de descuento.
+                            </div>
+                        </>
+                    ) : (
+                        <p className="text-muted">No se pudieron cargar los detalles de la solicitud.</p>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setShowAuthDialog(false);
+                            setSelectedDiscountAuth(null);
+                            setDiscountAuthDetails(null);
+                        }}
+                        disabled={processingAuth || loadingDetails}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant="danger"
+                        onClick={handleRejectDiscount}
+                        disabled={processingAuth || loadingDetails || !discountAuthDetails}
+                        className="d-flex align-items-center gap-2"
+                    >
+                        <LuX size={16} />
+                        {processingAuth ? 'Rechazando...' : 'Rechazar'}
+                    </Button>
+                    <Button
+                        variant="success"
+                        onClick={handleApproveDiscount}
+                        disabled={processingAuth || loadingDetails || !discountAuthDetails}
+                        className="d-flex align-items-center gap-2"
+                    >
+                        <LuCircleCheck size={16} />
+                        {processingAuth ? 'Aprobando...' : 'Aprobar'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </div>
     )
 }

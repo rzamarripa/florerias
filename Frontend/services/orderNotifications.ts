@@ -16,9 +16,11 @@ export interface OrderNotification {
     orderNumber: string;
     status: string;
     total: number;
-  };
+  } | null;
   isRead: boolean;
   isCanceled: boolean;
+  isDiscountAuth: boolean;
+  discountAuthId: string | null;
   createdAt: string;
   updatedAt: string;
 }
