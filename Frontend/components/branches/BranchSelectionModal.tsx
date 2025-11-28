@@ -10,9 +10,10 @@ import { branchesService } from "@/features/admin/modules/branches/services/bran
 interface BranchSelectionModalProps {
   show: boolean;
   onHide: () => void;
+  isRequired?: boolean; // Si es true, el modal no se puede cerrar sin seleccionar una sucursal
 }
 
-const BranchSelectionModal = ({ show, onHide }: BranchSelectionModalProps) => {
+const BranchSelectionModal = ({ show, onHide, isRequired = false }: BranchSelectionModalProps) => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,18 +73,43 @@ const BranchSelectionModal = ({ show, onHide }: BranchSelectionModalProps) => {
   };
 
   const handleCancel = () => {
+    // Si el modal es obligatorio y no hay sucursal activa, no permitir cerrar
+    if (isRequired && !activeBranch) {
+      return;
+    }
     setSelectedBranch(activeBranch);
     setSearchTerm("");
     onHide();
   };
 
   return (
-    <Modal show={show} onHide={handleCancel} size="xl" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>Seleccionar Sucursal</Modal.Title>
+    <Modal
+      show={show}
+      onHide={handleCancel}
+      size="xl"
+      centered
+      backdrop={isRequired && !activeBranch ? "static" : true}
+      keyboard={!(isRequired && !activeBranch)}
+    >
+      <Modal.Header closeButton={!(isRequired && !activeBranch)}>
+        <Modal.Title>
+          {isRequired && !activeBranch ? "⚠️ Selección Obligatoria de Sucursal" : "Seleccionar Sucursal"}
+        </Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
+        {/* Mensaje de obligatoriedad */}
+        {isRequired && !activeBranch && (
+          <Alert variant="warning" className="mb-4">
+            <Alert.Heading className="h6 fw-bold">
+              ⚠️ Acción Requerida
+            </Alert.Heading>
+            <p className="mb-0">
+              Es <strong>obligatorio</strong> seleccionar una sucursal para poder acceder a las funcionalidades del sistema con el usuario Administrador.
+            </p>
+          </Alert>
+        )}
+
         {/* Buscador */}
         <div className="mb-4">
           <Form.Group>
@@ -146,9 +172,12 @@ const BranchSelectionModal = ({ show, onHide }: BranchSelectionModalProps) => {
       </Modal.Body>
 
       <Modal.Footer>
-        <Button variant="secondary" onClick={handleCancel}>
-          Cancelar
-        </Button>
+        {/* Solo mostrar botón cancelar si no es obligatorio o ya hay sucursal activa */}
+        {!(isRequired && !activeBranch) && (
+          <Button variant="secondary" onClick={handleCancel}>
+            Cancelar
+          </Button>
+        )}
         <Button
           variant="primary"
           onClick={handleConfirm}

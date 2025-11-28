@@ -50,11 +50,29 @@ const OrderAnalyticsPage: React.FC = () => {
     }
   }, [activeBranch]);
 
+  // Cargar datos solo cuando hay sucursal activa (para Administradores)
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    const isAdmin = userRole?.toLowerCase() === "administrador" || userRole?.toLowerCase() === "admin";
+
+    // Si es administrador, solo cargar si hay sucursal activa
+    if (isAdmin) {
+      if (activeBranch) {
+        loadDashboardData();
+      }
+    } else {
+      // Para otros roles (Gerente), cargar normalmente
+      loadDashboardData();
+    }
+  }, [activeBranch]);
 
   const loadDashboardData = async () => {
+    // Validación adicional: no cargar si es admin sin sucursal
+    const isAdmin = userRole?.toLowerCase() === "administrador" || userRole?.toLowerCase() === "admin";
+    if (isAdmin && !activeBranch) {
+      console.log("No se pueden cargar datos sin sucursal activa");
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await orderAnalyticsService.getDashboardData(filters);

@@ -305,7 +305,8 @@ const NewProductListPage: React.FC = () => {
 
     selectedProducts.forEach((product) => {
       const cantidad = product.cantidad || 1;
-      totalGastado += (product.totalCosto + product.labour) * cantidad;
+      // totalCosto ya incluye labour
+      totalGastado += product.totalCosto * cantidad;
       gananciasBrutas += product.totalVenta * cantidad;
     });
 

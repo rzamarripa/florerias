@@ -136,9 +136,15 @@ export const menuItems: MenuItemType[] = [
         icon: Package,
         children: [
           {
-            key: "pizarron-ventas",
-            label: "Pizarrón de Ventas",
+            key: "pizarron-produccion",
+            label: "Pizarrón de Produccion",
             url: "/produccion/pizarron-ventas",
+            icon: ClipboardList,
+          },
+          {
+            key: "pizarron-envio",
+            label: "Pizarrón de Envio",
+            url: "/produccion/pizarron-envio",
             icon: ClipboardList,
           },
         ],

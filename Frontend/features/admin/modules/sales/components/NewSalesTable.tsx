@@ -65,7 +65,7 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
     },
     onOrderUpdated: (updatedOrder) => {
       setSales((prev) => {
-        // Si la orden actualizada debe estar en esta tabla
+        // Si la orden actualizada debe estar en esta tabla (NO cancelada)
         const shouldInclude = [
           "pendiente",
           "en-proceso",
@@ -84,7 +84,12 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
           }
         } else {
           // Remover si cambió a un estado que no debe estar aquí (ej: cancelado)
-          return prev.filter((s) => s._id !== updatedOrder._id);
+          const removed = prev.filter((s) => s._id !== updatedOrder._id);
+          // Solo mostrar notificación si realmente se removió algo
+          if (removed.length < prev.length && updatedOrder.status === "cancelado") {
+            console.log(`Venta ${updatedOrder.orderNumber} removida de Nuevas Ventas (cancelada)`);
+          }
+          return removed;
         }
       });
     },
@@ -98,27 +103,67 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
     onStatsUpdate?.();
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { bg: string; text: string }> = {
-      pendiente: { bg: "warning", text: "Pendiente" },
-      "en-proceso": { bg: "info", text: "En Proceso" },
-      completado: { bg: "success", text: "Completado" },
-      cancelado: { bg: "danger", text: "Cancelado" },
-    };
+  const getPaymentStatusBadge = (remainingBalance: number) => {
+    if (remainingBalance === 0) {
+      return (
+        <Badge
+          bg="success"
+          style={{
+            padding: "6px 12px",
+            borderRadius: "20px",
+            fontWeight: "500",
+          }}
+        >
+          Completado
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge
+          bg="warning"
+          style={{
+            padding: "6px 12px",
+            borderRadius: "20px",
+            fontWeight: "500",
+          }}
+        >
+          Pendiente
+        </Badge>
+      );
+    }
+  };
 
-    const statusInfo = statusMap[status] || { bg: "secondary", text: status };
+  const getStageBadge = (stage: Sale["stage"]) => {
+    if (!stage) {
+      return (
+        <Badge
+          bg="secondary"
+          style={{
+            padding: "6px 12px",
+            borderRadius: "20px",
+            fontWeight: "500",
+          }}
+        >
+          Sin etapa
+        </Badge>
+      );
+    }
+
+    const backgroundColor = `rgba(${stage.color.r}, ${stage.color.g}, ${stage.color.b}, ${stage.color.a})`;
 
     return (
-      <Badge
-        bg={statusInfo.bg}
+      <span
         style={{
           padding: "6px 12px",
           borderRadius: "20px",
           fontWeight: "500",
+          backgroundColor: backgroundColor,
+          color: "#fff",
+          display: "inline-block",
         }}
       >
-        {statusInfo.text}
-      </Badge>
+        {stage.name}
+      </span>
     );
   };
 
@@ -192,8 +237,8 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
                       ? formatDate(sale.deliveryData.deliveryDateTime)
                       : "N/A"}
                   </td>
-                  <td className="px-4 py-3">{getStatusBadge(sale.status)}</td>
-                  <td className="px-4 py-3">{getStatusBadge(sale.status)}</td>
+                  <td className="px-4 py-3">{getStageBadge(sale.stage)}</td>
+                  <td className="px-4 py-3">{getPaymentStatusBadge(sale.remainingBalance || 0)}</td>
                   <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
                   <td className="px-4 py-3 fw-semibold text-success">
                     ${(sale.advance || 0).toFixed(2)}

@@ -82,7 +82,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
     <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
       <div className="card-body p-3">
         <div className="row g-2 align-items-end">
-          <div className={isAdministrator || isCajero ? "col-md-4" : "col-md-3"}>
+          <div className={isAdministrator || isCajero || isGerente ? "col-md-4" : "col-md-3"}>
             <Form.Group className="mb-0">
               <Form.Label className="fw-semibold text-muted mb-1" style={{ fontSize: "13px" }}>
                 Fecha Inicial <span className="text-danger">*</span>
@@ -97,7 +97,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             </Form.Group>
           </div>
 
-          <div className={isAdministrator || isCajero ? "col-md-4" : "col-md-3"}>
+          <div className={isAdministrator || isCajero || isGerente ? "col-md-4" : "col-md-3"}>
             <Form.Group className="mb-0">
               <Form.Label className="fw-semibold text-muted mb-1" style={{ fontSize: "13px" }}>
                 Fecha Final <span className="text-danger">*</span>
@@ -112,8 +112,8 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             </Form.Group>
           </div>
 
-          {/* Mostrar select de sucursal solo para NO administradores Y NO cajeros */}
-          {!isAdministrator && !isCajero && (
+          {/* Mostrar select de sucursal solo para el rol Redes */}
+          {isRedes && (
             <div className="col-md-3">
               <Form.Group className="mb-0">
                 <Form.Label className="fw-semibold text-muted mb-1" style={{ fontSize: "13px" }}>
@@ -137,7 +137,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             </div>
           )}
 
-          <div className={isAdministrator || isCajero ? "col-md-4" : "col-md-3"}>
+          <div className={isAdministrator || isCajero || isGerente ? "col-md-4" : "col-md-3"}>
             <Button
               onClick={handleSearch}
               className="w-100"

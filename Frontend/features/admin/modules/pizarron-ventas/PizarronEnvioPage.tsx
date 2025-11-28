@@ -24,7 +24,7 @@ import { stageCatalogsService } from "@/features/admin/modules/stageCatalogs/ser
 import { Order, KanbanColumn as KanbanColumnType, StageCatalog, StageColor } from "./types";
 import KanbanColumn from "./components/KanbanColumn";
 
-const PizarronVentasPage: React.FC = () => {
+const PizarronEnvioPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingStages, setLoadingStages] = useState<boolean>(false);
@@ -34,21 +34,20 @@ const PizarronVentasPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
 
   // Stages dinámicos
-  const [productionStages, setProductionStages] = useState<StageCatalog[]>([]);
+  const [shippingStages, setShippingStages] = useState<StageCatalog[]>([]);
 
   const { activeBranch } = useActiveBranchStore();
   const { role } = useUserRoleStore();
   const isAdministrator = role?.toLowerCase() === "administrador";
-  const isManager = role?.toLowerCase() === "gerente";
 
   // Cargar stages del usuario
   const loadUserStages = async () => {
     try {
       setLoadingStages(true);
 
-      // Cargar stages de Producción
-      const productionResponse = await stageCatalogsService.getUserStages('Produccion');
-      setProductionStages(productionResponse.data || []);
+      // Cargar stages de Envío
+      const shippingResponse = await stageCatalogsService.getUserStages('Envio');
+      setShippingStages(shippingResponse.data || []);
 
     } catch (error: any) {
       console.error("Error loading stages:", error);
@@ -95,7 +94,7 @@ const PizarronVentasPage: React.FC = () => {
   // Usar el hook especializado para escuchar cambios en órdenes
   useOrderSocket({
     onOrderCreated: (newOrder: Order) => {
-      console.log("📩 [PizarronVentas] Nueva orden recibida:", newOrder);
+      console.log("📩 [PizarronEnvio] Nueva orden recibida:", newOrder);
 
       if (newOrder.status !== "cancelado") {
         setOrders((prevOrders) => {
@@ -107,7 +106,7 @@ const PizarronVentasPage: React.FC = () => {
       }
     },
     onOrderUpdated: (updatedOrder: Order) => {
-      console.log("📝 [PizarronVentas] Orden actualizada:", updatedOrder);
+      console.log("📝 [PizarronEnvio] Orden actualizada:", updatedOrder);
       setOrders((prevOrders) =>
         prevOrders.map((o) =>
           o._id === updatedOrder._id ? updatedOrder : o
@@ -115,14 +114,14 @@ const PizarronVentasPage: React.FC = () => {
       );
     },
     onOrderDeleted: (data: { orderId: string }) => {
-      console.log("🗑️ [PizarronVentas] Orden eliminada:", data.orderId);
+      console.log("🗑️ [PizarronEnvio] Orden eliminada:", data.orderId);
       setOrders((prevOrders) =>
         prevOrders.filter((o) => o._id !== data.orderId)
       );
       toast.info("Una orden ha sido eliminada");
     },
     filters: {
-      status: ["pendiente", "en-proceso", "completado", "sinAnticipo"],
+      status: ["pendiente", "en-proceso", "completado"],
     },
   });
 
@@ -164,24 +163,6 @@ const PizarronVentasPage: React.FC = () => {
     }
   };
 
-  const handleSendToShipping = async (order: Order) => {
-    try {
-      const response = await ordersService.sendToShipping(order._id);
-
-      // Actualizar el estado local con la orden actualizada
-      setOrders(prevOrders =>
-        prevOrders.map(o =>
-          o._id === order._id ? response.data : o
-        )
-      );
-
-      toast.success("Orden enviada al pizarrón de Envío exitosamente");
-    } catch (error: any) {
-      toast.error(error.message || "Error al enviar la orden a Envío");
-      console.error("Error sending order to shipping:", error);
-    }
-  };
-
   // Convertir stages a columnas de kanban
   const createColumnsFromStages = (stages: StageCatalog[]): KanbanColumnType[] => {
     return stages.map(stage => ({
@@ -195,7 +176,7 @@ const PizarronVentasPage: React.FC = () => {
     }));
   };
 
-  // Obtener órdenes por stage (solo Producción)
+  // Obtener órdenes por stage (solo Envío)
   const getOrdersByStage = (stageId: string): Order[] => {
     return orders.filter((order) => {
       // No mostrar órdenes canceladas
@@ -209,8 +190,8 @@ const PizarronVentasPage: React.FC = () => {
       // Verificar que la orden tenga el stage correcto
       if (orderStageId !== stageId) return false;
 
-      // Producción: mostrar solo órdenes con sentToShipping = false o undefined
-      return !order.sentToShipping;
+      // Envío: mostrar solo órdenes con sentToShipping = true
+      return order.sentToShipping === true;
     });
   };
 
@@ -236,19 +217,14 @@ const PizarronVentasPage: React.FC = () => {
     return `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
   };
 
-  const productionColumns = createColumnsFromStages(productionStages);
-
-  // Obtener el máximo stageNumber de Producción para identificar el último stage
-  const maxProductionStageNumber = productionStages.length > 0
-    ? Math.max(...productionStages.map(s => s.stageNumber))
-    : 0;
+  const shippingColumns = createColumnsFromStages(shippingStages);
 
   return (
     <div className="container-fluid py-1">
       {/* Header */}
       <div className="mb-4">
-        <h2 className="fw-bold mb-1">Pizarrón de Producción</h2>
-        <p className="text-muted">Gestiona las órdenes en las diferentes etapas de producción</p>
+        <h2 className="fw-bold mb-1">Pizarrón de Envío</h2>
+        <p className="text-muted">Gestiona las órdenes en las diferentes etapas de envío</p>
       </div>
 
       {/* Filters */}
@@ -292,28 +268,28 @@ const PizarronVentasPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Pizarrón de Producción */}
+      {/* Pizarrón de Envío */}
       {loadingStages ? (
         <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
+          <Spinner animation="border" variant="success" />
           <p className="mt-3 text-muted">Cargando pizarrón...</p>
         </div>
       ) : loading ? (
         <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
+          <Spinner animation="border" variant="success" />
           <p className="mt-3 text-muted">Cargando órdenes...</p>
         </div>
-      ) : productionColumns.length === 0 ? (
+      ) : shippingColumns.length === 0 ? (
         <Alert variant="warning" className="mt-3">
           <Package size={20} className="me-2" />
-          No hay etapas configuradas para el pizarrón de Producción.
+          No hay etapas configuradas para el pizarrón de Envío.
           <br />
           <small>Crea etapas en el catálogo de etapas para poder visualizar las órdenes aquí.</small>
         </Alert>
       ) : (
         <DndProvider backend={HTML5Backend}>
           <Row className="g-4">
-            {productionColumns.map((column) => (
+            {shippingColumns.map((column) => (
               <Col key={column.id} lg={3} md={4} sm={6} xs={12}>
                 <KanbanColumn
                   title={column.title}
@@ -321,10 +297,8 @@ const PizarronVentasPage: React.FC = () => {
                   orders={getOrdersByStage(column.id)}
                   color={getRGBAColor(column.color)}
                   status={column.id}
-                  isLastProductionStage={column.stageNumber === maxProductionStageNumber}
                   onViewDetails={handleViewDetails}
                   onChangeStatus={handleChangeStage}
-                  onSendToShipping={handleSendToShipping}
                 />
               </Col>
             ))}
@@ -535,4 +509,4 @@ const PizarronVentasPage: React.FC = () => {
   );
 };
 
-export default PizarronVentasPage;
+export default PizarronEnvioPage;

@@ -98,6 +98,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
+  // Verificar si el método de pago seleccionado es efectivo
+  const isEffectivoSelected = () => {
+    if (!selectedPaymentMethod) return false;
+    const method = paymentMethods.find(pm => pm._id === selectedPaymentMethod);
+    return method?.name.toLowerCase() === 'efectivo';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -124,7 +131,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       return;
     }
 
-    if (!selectedCashRegister) {
+    // Solo validar caja si el método de pago es efectivo
+    if (isEffectivoSelected() && !selectedCashRegister) {
       toast.error("Selecciona una caja registradora");
       return;
     }
@@ -136,7 +144,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         orderId: sale._id,
         amount: amountNum,
         paymentMethod: selectedPaymentMethod,
-        cashRegisterId: selectedCashRegister,
+        cashRegisterId: isEffectivoSelected() ? selectedCashRegister : null,
         registeredBy: userId,
         notes: notes.trim(),
       });
@@ -302,12 +310,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               Registrar Nuevo Pago
             </h6>
 
-            {cashRegisters.length === 0 ? (
+            {cashRegisters.length === 0 && paymentMethods.some(pm => pm.name.toLowerCase() === 'efectivo') ? (
               <Alert variant="warning">
-                No hay cajas registradoras abiertas en esta sucursal. Por favor, abre una caja para registrar pagos.
+                No hay cajas registradoras abiertas en esta sucursal. Las cajas solo son necesarias para pagos en efectivo.
               </Alert>
-            ) : (
-              <Form onSubmit={handleSubmit}>
+            ) : null}
+
+            <Form onSubmit={handleSubmit}>
                 <div className="row">
                   <div className="col-md-6 mb-3">
                     <Form.Group>
@@ -348,11 +357,15 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
                   <div className="col-md-6 mb-3">
                     <Form.Group>
-                      <Form.Label>Caja Registradora *</Form.Label>
+                      <Form.Label>
+                        Caja Registradora {isEffectivoSelected() ? "*" : "(solo para efectivo)"}
+                      </Form.Label>
                       <Form.Select
                         value={selectedCashRegister}
                         onChange={(e) => setSelectedCashRegister(e.target.value)}
-                        required
+                        required={isEffectivoSelected()}
+                        disabled={!isEffectivoSelected()}
+                        className={!isEffectivoSelected() ? "bg-light" : ""}
                       >
                         <option value="">Selecciona una caja</option>
                         {cashRegisters.map((cashRegister) => (
@@ -361,6 +374,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                           </option>
                         ))}
                       </Form.Select>
+                      {!isEffectivoSelected() && (
+                        <Form.Text className="text-muted">
+                          La caja registradora solo se requiere para pagos en efectivo
+                        </Form.Text>
+                      )}
                     </Form.Group>
                   </div>
 
@@ -406,7 +424,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   </Button>
                 </div>
               </Form>
-            )}
           </div>
         )}
       </Modal.Body>

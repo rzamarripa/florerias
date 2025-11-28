@@ -33,6 +33,20 @@ export interface Sale {
   remainingBalance: number;
   sendToProduction: boolean;
   status: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado';
+  stage?: {
+    _id: string;
+    name: string;
+    abreviation: string;
+    stageNumber: number;
+    boardType: 'Produccion' | 'Envio';
+    color: {
+      r: number;
+      g: number;
+      b: number;
+      a: number;
+    };
+    isActive: boolean;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

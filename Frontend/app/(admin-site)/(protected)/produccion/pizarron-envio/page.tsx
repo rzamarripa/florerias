@@ -1,15 +1,15 @@
 import PageBreadcrumb from "@/components/layout/PageBreadcrumb";
-import PizarronVentasPage from "@/features/admin/modules/pizarron-ventas/PizarronVentasPage";
+import PizarronEnvioPage from "@/features/admin/modules/pizarron-ventas/PizarronEnvioPage";
 
 export default function page() {
   return (
     <div className="container-fluid">
       <PageBreadcrumb
-        title="Pizarrón de Producción"
+        title="Pizarrón de Envío"
         subtitle="Producción"
         section="Admin"
       />
-      <PizarronVentasPage />
+      <PizarronEnvioPage />
     </div>
   );
 }

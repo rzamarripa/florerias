@@ -1,6 +1,7 @@
 import OrderPayment from '../models/OrderPayment.js';
 import Order from '../models/Order.js';
 import CashRegister from '../models/CashRegister.js';
+import PaymentMethod from '../models/PaymentMethod.js';
 
 // Crear un nuevo pago para una orden
 export const createOrderPayment = async (req, res) => {
@@ -21,18 +22,32 @@ export const createOrderPayment = async (req, res) => {
       });
     }
 
-    // Validar que la caja registradora existe
-    const cashRegister = await CashRegister.findById(cashRegisterId);
-    if (!cashRegister) {
-      return res.status(404).json({ message: 'Caja registradora no encontrada' });
+    // Obtener el método de pago para verificar si es efectivo
+    const paymentMethodData = await PaymentMethod.findById(paymentMethod);
+    if (!paymentMethodData) {
+      return res.status(404).json({ message: 'Método de pago no encontrado' });
     }
 
-    // Crear el pago
+    const isEffectivo = paymentMethodData.name.toLowerCase() === 'efectivo';
+
+    // Validar que la caja registradora existe SOLO si el pago es en efectivo
+    let cashRegister = null;
+    if (isEffectivo) {
+      if (!cashRegisterId) {
+        return res.status(400).json({ message: 'La caja registradora es requerida para pagos en efectivo' });
+      }
+      cashRegister = await CashRegister.findById(cashRegisterId);
+      if (!cashRegister) {
+        return res.status(404).json({ message: 'Caja registradora no encontrada' });
+      }
+    }
+
+    // Crear el pago (cashRegisterId puede ser null si no es efectivo)
     const payment = new OrderPayment({
       orderId,
       amount,
       paymentMethod,
-      cashRegisterId,
+      cashRegisterId: cashRegisterId || null,
       registeredBy,
       notes,
       date: new Date()
@@ -45,34 +60,34 @@ export const createOrderPayment = async (req, res) => {
     order.remainingBalance -= amount;
     order.payments.push(payment._id);
 
-    // Si el saldo llega a 0, cambiar estatus a completado (Pagado)
-    if (order.remainingBalance === 0) {
-      order.status = 'completado';
-    }
+    // NO actualizar el status de la orden aunque el saldo llegue a 0
+    // El status se mantiene como está (pendiente, en-proceso, etc.)
 
     await order.save();
 
-    // Actualizar el balance de la caja registradora
-    cashRegister.currentBalance += amount;
+    // Actualizar el balance de la caja SOLO si el método de pago es efectivo Y hay caja
+    if (isEffectivo && cashRegister) {
+      cashRegister.currentBalance += amount;
 
-    // Buscar si ya existe un registro de esta orden en lastRegistry
-    const existingRegistryIndex = cashRegister.lastRegistry.findIndex(
-      reg => reg.orderId.toString() === orderId.toString()
-    );
+      // Buscar si ya existe un registro de esta orden en lastRegistry
+      const existingRegistryIndex = cashRegister.lastRegistry.findIndex(
+        reg => reg.orderId.toString() === orderId.toString()
+      );
 
-    if (existingRegistryIndex !== -1) {
-      // Si ya existe, agregar el nuevo paymentId al array
-      cashRegister.lastRegistry[existingRegistryIndex].paymentIds.push(payment._id);
-    } else {
-      // Si no existe, crear nuevo registro (aunque normalmente ya debería existir)
-      cashRegister.lastRegistry.push({
-        orderId: orderId,
-        paymentIds: [payment._id],
-        saleDate: new Date()
-      });
+      if (existingRegistryIndex !== -1) {
+        // Si ya existe, agregar el nuevo paymentId al array
+        cashRegister.lastRegistry[existingRegistryIndex].paymentIds.push(payment._id);
+      } else {
+        // Si no existe, crear nuevo registro (aunque normalmente ya debería existir)
+        cashRegister.lastRegistry.push({
+          orderId: orderId,
+          paymentIds: [payment._id],
+          saleDate: new Date()
+        });
+      }
+
+      await cashRegister.save();
     }
-
-    await cashRegister.save();
 
     // Obtener el pago con sus referencias pobladas
     const populatedPayment = await OrderPayment.findById(payment._id)
@@ -139,10 +154,13 @@ export const deleteOrderPayment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const payment = await OrderPayment.findById(id);
+    const payment = await OrderPayment.findById(id).populate('paymentMethod');
     if (!payment) {
       return res.status(404).json({ message: 'Pago no encontrado' });
     }
+
+    // Verificar si el pago fue en efectivo
+    const isEffectivo = payment.paymentMethod?.name?.toLowerCase() === 'efectivo';
 
     // Obtener la orden
     const order = await Order.findById(payment.orderId);
@@ -156,10 +174,13 @@ export const deleteOrderPayment = async (req, res) => {
     order.payments = order.payments.filter(p => p.toString() !== id);
     await order.save();
 
-    // Revertir el cambio en la caja registradora
+    // Revertir el cambio en la caja registradora SOLO si el pago fue en efectivo
     const cashRegister = await CashRegister.findById(payment.cashRegisterId);
     if (cashRegister) {
-      cashRegister.currentBalance -= payment.amount;
+      // Solo revertir el balance si el pago era en efectivo
+      if (isEffectivo) {
+        cashRegister.currentBalance -= payment.amount;
+      }
 
       // Remover el paymentId del lastRegistry
       const registryIndex = cashRegister.lastRegistry.findIndex(

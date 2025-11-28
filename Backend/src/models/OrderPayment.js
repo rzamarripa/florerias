@@ -19,7 +19,8 @@ const orderPaymentSchema = new mongoose.Schema({
   cashRegisterId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'CashRegister',
-    required: [true, 'La caja registradora es requerida']
+    required: false, // Solo requerida para pagos en efectivo
+    default: null
   },
   date: {
     type: Date,

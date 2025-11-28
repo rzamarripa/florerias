@@ -108,8 +108,8 @@ const ProductListsPage: React.FC = () => {
     let gananciasBrutas = 0;
 
     productList.products.forEach((product) => {
-      // Total gastado = totalCosto + labour de cada producto
-      totalGastado += product.totalCosto + product.labour;
+      // Total gastado = totalCosto (que ya incluye labour)
+      totalGastado += product.totalCosto;
 
       // Ganancias brutas = totalVenta de cada producto
       gananciasBrutas += product.totalVenta;

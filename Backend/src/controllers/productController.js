@@ -100,6 +100,7 @@ const createProduct = async (req, res) => {
       imagen,
       insumos,
       labour,
+      precioVentaFinal,
       estatus = true
     } = req.body;
 
@@ -111,6 +112,10 @@ const createProduct = async (req, res) => {
       });
     }
 
+    // Calcular totalCosto sumando los importeCosto de los insumos + mano de obra
+    const costoInsumos = insumos?.reduce((sum, insumo) => sum + (insumo.importeCosto || 0), 0) || 0;
+    const totalCosto = costoInsumos + (labour || 0);
+
     // Crear nuevo producto
     const newProduct = new Product({
       nombre: nombre.trim(),
@@ -121,6 +126,8 @@ const createProduct = async (req, res) => {
       imagen: imagen || '',
       insumos: insumos || [],
       labour: labour || 0,
+      totalCosto,
+      totalVenta: precioVentaFinal || 0,
       estatus
     });
 
@@ -163,6 +170,7 @@ const updateProduct = async (req, res) => {
       imagen,
       insumos,
       labour,
+      precioVentaFinal,
       estatus
     } = req.body;
 
@@ -183,8 +191,19 @@ const updateProduct = async (req, res) => {
     if (productCategory !== undefined) updateData.productCategory = productCategory || null;
     if (orden !== undefined) updateData.orden = orden;
     if (imagen !== undefined) updateData.imagen = imagen;
-    if (insumos !== undefined) updateData.insumos = insumos;
+    if (insumos !== undefined) {
+      updateData.insumos = insumos;
+    }
     if (labour !== undefined) updateData.labour = labour;
+
+    // Recalcular totalCosto cuando se actualizan los insumos o el labour
+    if (insumos !== undefined || labour !== undefined) {
+      const costoInsumos = (insumos || existingProduct.insumos).reduce((sum, insumo) => sum + (insumo.importeCosto || 0), 0);
+      const labourCost = labour !== undefined ? labour : existingProduct.labour;
+      updateData.totalCosto = costoInsumos + labourCost;
+    }
+
+    if (precioVentaFinal !== undefined) updateData.totalVenta = precioVentaFinal;
     if (estatus !== undefined) updateData.estatus = estatus;
 
     const updatedProduct = await Product.findByIdAndUpdate(

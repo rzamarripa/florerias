@@ -99,11 +99,14 @@ productSchema.index({ estatus: 1 });
 productSchema.index({ orden: 1 });
 productSchema.index({ productCategory: 1 });
 
-// Middleware para calcular totales antes de guardar
+// Middleware para calcular totalCosto antes de guardar
+// totalVenta se establece manualmente como el precio final de venta
 productSchema.pre('save', function(next) {
   if (this.insumos && this.insumos.length > 0) {
-    this.totalCosto = this.insumos.reduce((sum, insumo) => sum + (insumo.importeCosto || 0), 0);
-    this.totalVenta = this.insumos.reduce((sum, insumo) => sum + (insumo.importeVenta || 0), 0);
+    // Calcular totalCosto: suma de costos de insumos + mano de obra
+    const costoInsumos = this.insumos.reduce((sum, insumo) => sum + (insumo.importeCosto || 0), 0);
+    this.totalCosto = costoInsumos + (this.labour || 0);
+    // totalVenta NO se calcula automáticamente, se establece manualmente
   }
   next();
 });
