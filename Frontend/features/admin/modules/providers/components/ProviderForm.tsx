@@ -533,8 +533,6 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               type="submit"
               disabled={loading}
               style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                border: "none",
                 borderRadius: "8px",
               }}
             >

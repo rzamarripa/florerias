@@ -230,8 +230,6 @@ const AddEventPaymentModal: React.FC<AddEventPaymentModalProps> = ({
             variant="primary"
             disabled={loading}
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
               borderRadius: "10px",
               minWidth: "120px",
             }}

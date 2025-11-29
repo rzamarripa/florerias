@@ -237,10 +237,6 @@ const CashCountPage: React.FC = () => {
                 variant="primary"
                 onClick={handleSearch}
                 className="w-100"
-                style={{
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  border: "none",
-                }}
               >
                 Buscar
               </Button>

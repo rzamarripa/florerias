@@ -269,7 +269,7 @@ const StageCatalogModal: React.FC<StageCatalogModalProps> = ({
                         width: "40px",
                         height: "40px",
                         borderRadius: "8px",
-                        backgroundColor: currentColor ? rgbaToString(currentColor) : "#667eea",
+                        backgroundColor: currentColor ? rgbaToString(currentColor) : "var(--bs-primary)",
                         border: "2px solid #dee2e6",
                       }}
                     />
@@ -328,8 +328,6 @@ const StageCatalogModal: React.FC<StageCatalogModalProps> = ({
               type="submit"
               disabled={loading}
               style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                border: "none",
                 borderRadius: "8px",
               }}
             >

@@ -25,10 +25,17 @@ export default function AuthLayout({
       } else if (isSocialMedia) {
         router.push("/sucursal/ventas");
       } else {
-        router.push("/dashboard");
+        router.push("/sucursal/ventas");
       }
     }
-  }, [isAuthenticated, isLoading, router, getIsAdmin, getIsManager, getIsSocialMedia]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    router,
+    getIsAdmin,
+    getIsManager,
+    getIsSocialMedia,
+  ]);
 
   return children;
 }

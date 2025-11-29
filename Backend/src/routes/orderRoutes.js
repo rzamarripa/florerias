@@ -7,7 +7,8 @@ import {
   updateOrderStatus,
   deleteOrder,
   getOrdersSummary,
-  sendOrderToShipping
+  sendOrderToShipping,
+  getUnauthorizedOrders
 } from '../controllers/orderController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -18,6 +19,9 @@ router.use(protect);
 
 // Ruta para resumen de ventas (debe ir antes de /:id para evitar conflictos)
 router.get('/summary', getOrdersSummary); // GET /api/orders/summary - Obtener resumen de ventas
+
+// Ruta para órdenes sin autorizar (debe ir antes de /:id para evitar conflictos)
+router.get('/unauthorized', getUnauthorizedOrders); // GET /api/orders/unauthorized - Obtener órdenes sin autorizar
 
 // Rutas para órdenes
 router.route('/')

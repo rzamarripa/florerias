@@ -115,14 +115,6 @@ const MaterialsPage: React.FC = () => {
           variant="primary"
           onClick={handleNewMaterial}
           className="d-flex align-items-center gap-2 px-4"
-          style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            border: "none",
-            borderRadius: "10px",
-            padding: "12px 24px",
-            fontWeight: "600",
-            boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
-          }}
         >
           <Plus size={20} />
           Nuevo Material

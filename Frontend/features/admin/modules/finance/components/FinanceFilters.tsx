@@ -166,24 +166,24 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
       borderRadius: "10px",
       borderColor: "#dee2e6",
       "&:hover": {
-        borderColor: "#667eea",
+        borderColor: "var(--bs-primary)",
       },
     }),
     multiValue: (base: any) => ({
       ...base,
-      backgroundColor: "#e7eaf6",
+      backgroundColor: "var(--bs-primary-bg-subtle)",
       borderRadius: "6px",
     }),
     multiValueLabel: (base: any) => ({
       ...base,
-      color: "#667eea",
+      color: "var(--bs-primary)",
       fontWeight: "500",
     }),
     multiValueRemove: (base: any) => ({
       ...base,
-      color: "#667eea",
+      color: "var(--bs-primary)",
       "&:hover": {
-        backgroundColor: "#667eea",
+        backgroundColor: "var(--bs-primary)",
         color: "white",
       },
     }),
@@ -361,12 +361,9 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
               onClick={handleSearch}
               className="d-flex align-items-center gap-2 px-4"
               style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                border: "none",
                 borderRadius: "10px",
                 padding: "12px 32px",
                 fontWeight: "600",
-                boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
               }}
             >
               <Search size={18} />

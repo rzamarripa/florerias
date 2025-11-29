@@ -81,7 +81,13 @@ const SignInPage = () => {
           storedToken ? "Presente" : "Ausente"
         );
 
-        router.push("/dashboard");
+        // Redirigir según el rol del usuario
+        const userRole = response.data.role;
+        if (userRole === "Cajero" || userRole === "Redes") {
+          router.push("/sucursal/ventas");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         setError(response.message || "Error en el inicio de sesión");
       }
@@ -173,16 +179,13 @@ const SignInPage = () => {
                       <div className="d-grid">
                         <Button
                           type="submit"
+                          variant="primary"
                           style={{
-                            background:
-                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            border: "none",
                             borderRadius: "10px",
                             padding: "12px 24px",
                             fontWeight: "600",
-                            boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
                           }}
-                          className="btn btn-primary fw-semibold py-2"
+                          className="fw-semibold py-2"
                           disabled={
                             isSubmitting ||
                             !formData.username ||

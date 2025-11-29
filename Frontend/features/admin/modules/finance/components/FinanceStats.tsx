@@ -183,21 +183,20 @@ const FinanceStats: React.FC<FinanceStatsProps> = ({ filters }) => {
         </Col>
         <Col md={8}>
           <Card
-            className="border-0"
+            className="border-0 bg-primary text-white"
             style={{
               borderRadius: "4px",
               boxShadow: "0 1px 1px rgba(0,0,0,.05)",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             }}
           >
             <Card.Body style={{ padding: "12px" }}>
               <div className="d-flex align-items-start justify-content-between mb-3">
                 <div
+                  className="bg-white bg-opacity-25"
                   style={{
                     width: "45px",
                     height: "45px",
                     borderRadius: "8px",
-                    backgroundColor: "rgba(255, 255, 255, 0.2)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -210,7 +209,6 @@ const FinanceStats: React.FC<FinanceStatsProps> = ({ filters }) => {
                   style={{
                     fontSize: "32px",
                     fontWeight: "500",
-                    color: "#fff",
                     lineHeight: "1.2",
                   }}
                 >
@@ -221,20 +219,20 @@ const FinanceStats: React.FC<FinanceStatsProps> = ({ filters }) => {
               <div
                 style={{
                   fontSize: "14px",
-                  color: "rgba(255, 255, 255, 0.9)",
                   fontWeight: "400",
                   marginTop: "8px",
+                  opacity: "0.9",
                 }}
               >
                 Utilidad Total
               </div>
               <div
+                className="border-top border-white border-opacity-25"
                 style={{
                   fontSize: "12px",
-                  color: "rgba(255, 255, 255, 0.7)",
+                  opacity: "0.7",
                   marginTop: "15px",
                   paddingTop: "15px",
-                  borderTop: "1px solid rgba(255, 255, 255, 0.15)",
                 }}
               >
                 (Florería + Eventos) - (Gastos + Compras)

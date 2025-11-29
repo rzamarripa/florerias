@@ -21,6 +21,16 @@ const discountAuthSchema = new mongoose.Schema({
     ref: 'cv_branch',
     required: true
   },
+  orderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order',
+    default: null
+  },
+  orderTotal: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   discountValue: {
     type: Number,
     required: true,
@@ -30,6 +40,11 @@ const discountAuthSchema = new mongoose.Schema({
     type: String,
     enum: ['porcentaje', 'cantidad'],
     default: 'porcentaje'
+  },
+  discountAmount: {
+    type: Number,
+    default: 0,
+    min: 0
   },
   isAuth: {
     type: Boolean,
@@ -61,6 +76,7 @@ const discountAuthSchema = new mongoose.Schema({
 discountAuthSchema.index({ branchId: 1 });
 discountAuthSchema.index({ managerId: 1 });
 discountAuthSchema.index({ requestedBy: 1 });
+discountAuthSchema.index({ orderId: 1 });
 discountAuthSchema.index({ isAuth: 1 });
 discountAuthSchema.index({ createdAt: -1 });
 // Índice normal para authFolio - la unicidad se valida en el controlador

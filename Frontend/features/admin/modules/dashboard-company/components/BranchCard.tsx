@@ -39,14 +39,14 @@ const BranchCard: React.FC<BranchCardProps> = ({
   // Generar color de fondo para avatar basado en el nombre
   const getAvatarColor = (name: string) => {
     const colors = [
-      "#667eea",
-      "#764ba2",
-      "#f093fb",
-      "#4facfe",
-      "#43e97b",
-      "#fa709a",
-      "#fee140",
-      "#30cfd0",
+      "#0d6efd",
+      "#6610f2",
+      "#6f42c1",
+      "#d63384",
+      "#dc3545",
+      "#fd7e14",
+      "#ffc107",
+      "#198754",
     ];
     const index =
       name.charCodeAt(0) % colors.length;
@@ -104,16 +104,7 @@ const BranchCard: React.FC<BranchCardProps> = ({
             </p>
           </div>
           {branch.isActive && (
-            <span
-              className="badge"
-              style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                padding: "6px 12px",
-                borderRadius: "8px",
-                fontSize: "11px",
-                fontWeight: "600",
-              }}
-            >
+            <span className="badge bg-success bg-opacity-10 text-success" style={{ padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: "600" }}>
               Activa
             </span>
           )}
@@ -238,9 +229,8 @@ const BranchCard: React.FC<BranchCardProps> = ({
           {/* Empleados */}
           <div className="col-6">
             <div
-              className="p-3 rounded-3 h-100"
+              className="p-3 rounded-3 h-100 bg-primary bg-opacity-10"
               style={{
-                background: "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
                 cursor: "pointer",
                 transition: "transform 0.2s",
               }}
@@ -253,22 +243,12 @@ const BranchCard: React.FC<BranchCardProps> = ({
               }}
             >
               <div className="d-flex align-items-center justify-content-between mb-2">
-                <Users size={20} style={{ color: "#667eea" }} />
-                <span
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: "600",
-                    color: "#667eea",
-                    backgroundColor: "#ededf8",
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    letterSpacing: "0.5px"
-                  }}
-                >
+                <Users size={20} className="text-primary" />
+                <span className="badge bg-primary bg-opacity-25 text-primary" style={{ fontSize: "10px", fontWeight: "600", letterSpacing: "0.5px" }}>
                   EMPLEADOS
                 </span>
               </div>
-              <h4 className="mb-0 fw-bold" style={{ color: "#667eea" }}>
+              <h4 className="mb-0 fw-bold text-primary">
                 {branch.employees.length}
               </h4>
             </div>
@@ -428,7 +408,7 @@ const BranchCard: React.FC<BranchCardProps> = ({
             >
               Estado de órdenes
             </span>
-            <span className="fw-bold" style={{ fontSize: "14px", color: "#667eea" }}>
+            <span className="fw-bold text-primary" style={{ fontSize: "14px" }}>
               {branch.stats.completionPercentage}%
             </span>
           </div>
@@ -437,11 +417,10 @@ const BranchCard: React.FC<BranchCardProps> = ({
             style={{ height: "8px", borderRadius: "10px", background: "#e9ecef" }}
           >
             <div
-              className="progress-bar"
+              className="progress-bar bg-primary"
               role="progressbar"
               style={{
                 width: `${branch.stats.completionPercentage}%`,
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 borderRadius: "10px",
               }}
               aria-valuenow={branch.stats.completionPercentage}

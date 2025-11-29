@@ -100,10 +100,10 @@ const SalesModal: React.FC<SalesModalProps> = ({
     <Modal show={show} onHide={onHide} size="xl" centered>
       <Modal.Header
         closeButton
+        className="bg-success text-white"
         style={{
-          background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-          color: "white",
-          borderRadius: "15px 15px 0 0",
+          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
+          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
         }}
       >
         <Modal.Title className="d-flex align-items-center">
@@ -131,19 +131,10 @@ const SalesModal: React.FC<SalesModalProps> = ({
             {/* Summary cards */}
             <div className="row g-3 mb-4">
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #43e97b15 0%, #38f9d715 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-success bg-opacity-10">
                   <div className="card-body text-center">
-                    <DollarSign size={24} style={{ color: "#43e97b" }} />
-                    <h5
-                      className="mt-2 mb-0 fw-bold"
-                      style={{ color: "#43e97b" }}
-                    >
+                    <DollarSign size={24} className="text-success" />
+                    <h5 className="mt-2 mb-0 fw-bold text-success">
                       {formatCurrency(totalSales)}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -153,19 +144,10 @@ const SalesModal: React.FC<SalesModalProps> = ({
                 </div>
               </div>
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-primary bg-opacity-10">
                   <div className="card-body text-center">
-                    <ShoppingCart size={24} style={{ color: "#667eea" }} />
-                    <h5
-                      className="mt-2 mb-0 fw-bold"
-                      style={{ color: "#667eea" }}
-                    >
+                    <ShoppingCart size={24} className="text-primary" />
+                    <h5 className="mt-2 mb-0 fw-bold text-primary">
                       {sales.length}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -175,19 +157,10 @@ const SalesModal: React.FC<SalesModalProps> = ({
                 </div>
               </div>
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #4facfe15 0%, #00f2fe15 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-info bg-opacity-10">
                   <div className="card-body text-center">
-                    <DollarSign size={24} style={{ color: "#4facfe" }} />
-                    <h5
-                      className="mt-2 mb-0 fw-bold"
-                      style={{ color: "#4facfe" }}
-                    >
+                    <DollarSign size={24} className="text-info" />
+                    <h5 className="mt-2 mb-0 fw-bold text-info">
                       {formatCurrency(totalSales / sales.length)}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -255,10 +228,7 @@ const SalesModal: React.FC<SalesModalProps> = ({
                       {getChannelBadge(sale.salesChannel)}
                     </td>
                     <td className="align-middle">
-                      <span
-                        className="fw-bold"
-                        style={{ fontSize: "14px", color: "#43e97b" }}
-                      >
+                      <span className="fw-bold text-success" style={{ fontSize: "14px" }}>
                         {formatCurrency(sale.total)}
                       </span>
                     </td>

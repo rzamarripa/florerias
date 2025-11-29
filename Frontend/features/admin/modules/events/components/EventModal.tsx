@@ -318,7 +318,7 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
               >
                 <div className="d-flex justify-content-between align-items-center">
                   <span className="fw-semibold text-muted">Saldo Pendiente:</span>
-                  <span className="fw-bold fs-5" style={{ color: "#667eea" }}>
+                  <span className="fw-bold fs-5 text-primary">
                     ${calculateBalance().toLocaleString("es-MX", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
@@ -343,8 +343,6 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
             variant="primary"
             disabled={loading || (!canCreate && !isEditing)}
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
               borderRadius: "10px",
               minWidth: "120px",
             }}

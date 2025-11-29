@@ -3,7 +3,7 @@
 import React from "react";
 import { Modal, Table, Badge } from "react-bootstrap";
 import { Purchase } from "../types";
-import { ShoppingCart, Calendar, DollarSign, FileText, Package } from "lucide-react";
+import { ShoppingCart, Calendar, DollarSign, Package } from "lucide-react";
 
 interface PurchasesModalProps {
   show: boolean;
@@ -41,10 +41,10 @@ const PurchasesModal: React.FC<PurchasesModalProps> = ({
     <Modal show={show} onHide={onHide} size="xl" centered>
       <Modal.Header
         closeButton
+        className="bg-info text-white"
         style={{
-          background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-          color: "white",
-          borderRadius: "15px 15px 0 0",
+          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
+          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
         }}
       >
         <Modal.Title className="d-flex align-items-center">
@@ -72,15 +72,10 @@ const PurchasesModal: React.FC<PurchasesModalProps> = ({
             {/* Summary cards */}
             <div className="row g-3 mb-4">
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background: "linear-gradient(135deg, #4facfe15 0%, #00f2fe15 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-info bg-opacity-10">
                   <div className="card-body text-center">
-                    <DollarSign size={24} style={{ color: "#4facfe" }} />
-                    <h5 className="mt-2 mb-0 fw-bold" style={{ color: "#4facfe" }}>
+                    <DollarSign size={24} className="text-info" />
+                    <h5 className="mt-2 mb-0 fw-bold text-info">
                       {formatCurrency(totalPurchases)}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -90,15 +85,10 @@ const PurchasesModal: React.FC<PurchasesModalProps> = ({
                 </div>
               </div>
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background: "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-primary bg-opacity-10">
                   <div className="card-body text-center">
-                    <Package size={24} style={{ color: "#667eea" }} />
-                    <h5 className="mt-2 mb-0 fw-bold" style={{ color: "#667eea" }}>
+                    <Package size={24} className="text-primary" />
+                    <h5 className="mt-2 mb-0 fw-bold text-primary">
                       {purchases.length}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -108,15 +98,10 @@ const PurchasesModal: React.FC<PurchasesModalProps> = ({
                 </div>
               </div>
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background: "linear-gradient(135deg, #43e97b15 0%, #38f9d715 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-success bg-opacity-10">
                   <div className="card-body text-center">
-                    <DollarSign size={24} style={{ color: "#43e97b" }} />
-                    <h5 className="mt-2 mb-0 fw-bold" style={{ color: "#43e97b" }}>
+                    <DollarSign size={24} className="text-success" />
+                    <h5 className="mt-2 mb-0 fw-bold text-success">
                       {formatCurrency(totalPurchases / purchases.length)}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -199,10 +184,7 @@ const PurchasesModal: React.FC<PurchasesModalProps> = ({
                       </div>
                     </td>
                     <td className="align-middle">
-                      <span
-                        className="fw-bold"
-                        style={{ fontSize: "14px", color: "#4facfe" }}
-                      >
+                      <span className="fw-bold text-info" style={{ fontSize: "14px" }}>
                         {formatCurrency(purchase.amount)}
                       </span>
                     </td>

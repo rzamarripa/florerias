@@ -43,6 +43,7 @@ import { companiesService } from "@/features/admin/modules/companies/services/co
 import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 import { discountAuthService } from "@/features/admin/modules/discount-auth/services/discountAuth";
 import { Shield } from "lucide-react";
+import { uploadComprobante, uploadArreglo } from "@/services/firebaseStorage";
 
 const NewOrderPage = () => {
   const router = useRouter();
@@ -76,11 +77,10 @@ const NewOrderPage = () => {
   const [showDiscountRequestDialog, setShowDiscountRequestDialog] = useState(false);
   const [discountRequestMessage, setDiscountRequestMessage] = useState("");
   const [requestingDiscount, setRequestingDiscount] = useState(false);
-  const [requestedDiscountValue, setRequestedDiscountValue] = useState(0);
-  const [requestedDiscountType, setRequestedDiscountType] = useState<"porcentaje" | "cantidad">("porcentaje");
-  const [authFolioInput, setAuthFolioInput] = useState("");
-  const [redeemingFolio, setRedeemingFolio] = useState(false);
-  const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [hasPendingDiscountAuth, setHasPendingDiscountAuth] = useState(false);
+  const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
+  const [arregloFile, setArregloFile] = useState<File | null>(null);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const [formData, setFormData] = useState<CreateOrderData>({
     branchId: "",
@@ -640,86 +640,45 @@ const NewOrderPage = () => {
     });
   };
 
-  // Manejar canje de folio
-  const handleRedeemFolio = async () => {
-    if (!authFolioInput.trim()) {
-      toast.error("Por favor ingresa un folio de autorización");
-      return;
-    }
-
-    if (!formData.branchId) {
-      toast.error("Debes seleccionar una sucursal primero");
-      return;
-    }
-
-    setRedeemingFolio(true);
-    try {
-      const response = await discountAuthService.redeemFolio({
-        authFolio: authFolioInput.trim(),
-        branchId: formData.branchId,
-      });
-
-      if (response.success) {
-        toast.success(`Folio canjeado exitosamente: ${response.data.authFolio}`);
-
-        // Habilitar el campo de descuento y establecer el valor autorizado
-        setDiscountEnabled(true);
-        setFormData(prev => ({
-          ...prev,
-          discount: response.data.discountValue,
-          discountType: response.data.discountType as "porcentaje" | "cantidad"
-        }));
-
-        setShowDiscountRequestDialog(false);
-        setAuthFolioInput("");
-      }
-    } catch (err: any) {
-      console.error("Error al canjear folio:", err);
-      toast.error(err.message || "Error al canjear el folio");
-    } finally {
-      setRedeemingFolio(false);
-    }
-  };
-
-  // Manejar solicitud de permiso de descuento
+  // Manejar solicitud de permiso de descuento - Nueva lógica: aplicar descuento inmediatamente
   const handleRequestDiscountAuth = async () => {
     if (!discountRequestMessage.trim()) {
       toast.error("Por favor ingresa un mensaje de solicitud");
       return;
     }
 
-    if (!formData.branchId) {
-      toast.error("Debes seleccionar una sucursal primero");
-      return;
-    }
-
-    if (requestedDiscountValue <= 0) {
+    const discountValue = parseFloat(formData.discount?.toString() || "0");
+    if (discountValue <= 0) {
       toast.error("El valor del descuento debe ser mayor a 0");
       return;
     }
 
-    setRequestingDiscount(true);
-    try {
-      const response = await discountAuthService.requestDiscountAuth({
-        message: discountRequestMessage,
-        branchId: formData.branchId,
-        discountValue: requestedDiscountValue,
-        discountType: requestedDiscountType
-      });
+    // Aplicar el descuento inmediatamente al formulario
+    const discountType = formData.discountType || "porcentaje";
+    const discountAmount = discountType === "porcentaje"
+      ? (formData.subtotal * discountValue) / 100
+      : discountValue;
 
-      if (response.success) {
-        toast.success("Solicitud enviada al gerente exitosamente");
-        setShowDiscountRequestDialog(false);
-        setDiscountRequestMessage("");
-        setRequestedDiscountValue(0);
-        setRequestedDiscountType("porcentaje");
-      }
-    } catch (err: any) {
-      console.error("Error al solicitar permiso de descuento:", err);
-      toast.error(err.message || "Error al enviar la solicitud");
-    } finally {
-      setRequestingDiscount(false);
-    }
+    const totals = recalculateTotals(
+      formData.items,
+      discountValue,
+      discountType,
+      formData.deliveryData.deliveryPrice || 0,
+      formData.advance || 0
+    );
+
+    setFormData({
+      ...formData,
+      discount: discountValue,
+      discountType: discountType,
+      ...totals,
+    });
+
+    // Marcar que hay un descuento pendiente de autorización
+    setHasPendingDiscountAuth(true);
+    setShowDiscountRequestDialog(false);
+
+    toast.success("Descuento aplicado. Se creará la solicitud al guardar la orden.");
   };
 
   // Manejar cambio de tipo de envío
@@ -976,6 +935,7 @@ const NewOrderPage = () => {
         // Para usuarios Cajero, forzar salesChannel a 'tienda'
         // Para usuarios Redes, mantener el salesChannel del formData (sincronizado con plataforma)
         salesChannel: isCashier ? "tienda" : formData.salesChannel,
+        hasPendingDiscountAuth, // Enviar flag al backend
       };
 
       const response = await ordersService.createOrder(orderData);
@@ -988,6 +948,74 @@ const NewOrderPage = () => {
       // Validar que la respuesta tenga datos
       if (!response.data) {
         throw new Error("No se recibió respuesta del servidor");
+      }
+
+      // Subir archivos a Firebase Storage DESPUÉS de crear la orden
+      let comprobanteUrl: string | null = null;
+      let comprobantePath: string | null = null;
+      let arregloUrl: string | null = null;
+      let arregloPath: string | null = null;
+
+      if (comprobanteFile || arregloFile) {
+        setUploadingFiles(true);
+        toast.info("Subiendo archivos a Firebase Storage...");
+
+        try {
+          const orderId = response.data._id;
+
+          // Subir comprobante
+          if (comprobanteFile) {
+            const comprobanteResult = await uploadComprobante(comprobanteFile, orderId);
+            comprobanteUrl = comprobanteResult.url;
+            comprobantePath = comprobanteResult.path;
+          }
+
+          // Subir arreglo
+          if (arregloFile) {
+            const arregloResult = await uploadArreglo(arregloFile, orderId);
+            arregloUrl = arregloResult.url;
+            arregloPath = arregloResult.path;
+          }
+
+          // Actualizar la orden con las URLs de los archivos
+          await ordersService.updateOrder(orderId, {
+            comprobanteUrl,
+            comprobantePath,
+            arregloUrl,
+            arregloPath,
+          });
+
+          toast.success("Archivos subidos exitosamente");
+        } catch (uploadError: any) {
+          console.error("Error al subir archivos:", uploadError);
+          toast.warning("Orden creada pero hubo un error al subir los archivos. Puedes intentar subirlos después.");
+        } finally {
+          setUploadingFiles(false);
+        }
+      }
+
+      // Si hay descuento pendiente, crear la solicitud de autorización
+      if (hasPendingDiscountAuth && discountRequestMessage.trim()) {
+        try {
+          const discountAmount = formData.discountType === "porcentaje"
+            ? (formData.subtotal * (formData.discount || 0)) / 100
+            : (formData.discount || 0);
+
+          await discountAuthService.createDiscountAuthForOrder({
+            message: discountRequestMessage,
+            branchId: formData.branchId,
+            orderId: response.data._id,
+            orderTotal: response.data.total,
+            discountValue: formData.discount || 0,
+            discountType: formData.discountType || "porcentaje",
+            discountAmount: discountAmount,
+          });
+
+          toast.success("Solicitud de descuento creada y enviada al gerente");
+        } catch (discountErr: any) {
+          console.error("Error al crear solicitud de descuento:", discountErr);
+          toast.warning("Orden creada pero hubo un error al crear la solicitud de descuento");
+        }
       }
 
       // Mostrar toast de éxito
@@ -1041,6 +1069,10 @@ const NewOrderPage = () => {
           socialMedia: isSocialMedia ? "whatsapp" : null,
         });
         setSelectedClientId("");
+        setHasPendingDiscountAuth(false);
+        setDiscountRequestMessage("");
+        setComprobanteFile(null);
+        setArregloFile(null);
         setSuccess(false);
       }, 2000);
     } catch (err: any) {
@@ -1750,6 +1782,7 @@ const NewOrderPage = () => {
                             },
                           })
                         }
+                        min={new Date().toISOString().slice(0, 16)}
                         required
                         className="py-2"
                       />
@@ -1858,7 +1891,22 @@ const NewOrderPage = () => {
                         <Upload size={16} className="me-2" />
                         Adjunte el comprobante
                       </Form.Label>
-                      <Form.Control type="file" className="py-2" />
+                      <Form.Control
+                        type="file"
+                        className="py-2"
+                        accept="image/*,.pdf"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setComprobanteFile(file);
+                          }
+                        }}
+                      />
+                      {comprobanteFile && (
+                        <Form.Text className="text-success">
+                          ✓ Archivo seleccionado: {comprobanteFile.name}
+                        </Form.Text>
+                      )}
                     </Form.Group>
                   </Col>
 
@@ -1868,7 +1916,22 @@ const NewOrderPage = () => {
                         <Upload size={16} className="me-2" />
                         Adjunte arreglo
                       </Form.Label>
-                      <Form.Control type="file" className="py-2" />
+                      <Form.Control
+                        type="file"
+                        className="py-2"
+                        accept="image/*"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setArregloFile(file);
+                          }
+                        }}
+                      />
+                      {arregloFile && (
+                        <Form.Text className="text-success">
+                          ✓ Archivo seleccionado: {arregloFile.name}
+                        </Form.Text>
+                      )}
                     </Form.Group>
                   </Col>
                 </Row>
@@ -1972,22 +2035,21 @@ const NewOrderPage = () => {
                           min="0"
                           step="0.01"
                           value={formData.discount}
-                          disabled
-                          readOnly
-                          className="py-2 bg-light"
-                          placeholder={discountEnabled ? "Descuento autorizado" : "Requiere autorización"}
+                          onChange={(e) => handleDiscountChange(parseFloat(e.target.value) || 0, formData.discountType || "porcentaje")}
+                          disabled={hasPendingDiscountAuth}
+                          className="py-2"
+                          placeholder="Ingresa el descuento"
                         />
                         <Form.Select
                           value={formData.discountType}
-                          disabled
-                          readOnly
+                          onChange={(e) => handleDiscountChange(formData.discount || 0, e.target.value as "porcentaje" | "cantidad")}
+                          disabled={hasPendingDiscountAuth}
                           style={{ maxWidth: "100px" }}
-                          className="bg-light"
                         >
                           <option value="porcentaje">%</option>
                           <option value="cantidad">$</option>
                         </Form.Select>
-                        {!discountEnabled && (
+                        {!hasPendingDiscountAuth && formData.discount > 0 && (
                           <Button
                             variant="warning"
                             onClick={() => setShowDiscountRequestDialog(true)}
@@ -1995,15 +2057,15 @@ const NewOrderPage = () => {
                             style={{ whiteSpace: "nowrap" }}
                           >
                             <Shield size={16} />
-                            Solicitar Permiso
+                            Solicitar Autorización
                           </Button>
                         )}
                       </div>
-                      <Alert variant={discountEnabled ? "success" : "info"} className="mt-2 mb-0 py-2">
+                      <Alert variant={hasPendingDiscountAuth ? "warning" : "info"} className="mt-2 mb-0 py-2">
                         <small>
-                          {discountEnabled
-                            ? "✓ Descuento autorizado y aplicado a la orden"
-                            : "ℹ️ El descuento requiere autorización del gerente. Solicita permiso o canjea un folio."}
+                          {hasPendingDiscountAuth
+                            ? "⚠️ Descuento pendiente de autorización. Se enviará la solicitud al crear la orden."
+                            : "ℹ️ Ingresa el descuento y solicita autorización antes de crear la orden."}
                         </small>
                       </Alert>
                     </Form.Group>
@@ -2141,6 +2203,7 @@ const NewOrderPage = () => {
                 size="lg"
                 disabled={
                   loading ||
+                  uploadingFiles ||
                   formData.items.length === 0 ||
                   !formData.paymentMethod ||
                   !cashRegister || // Validar que haya caja asignada (para todos los usuarios)
@@ -2149,7 +2212,7 @@ const NewOrderPage = () => {
                 }
                 className="px-5"
               >
-                {loading ? "Procesando..." : "Aceptar"}
+                {uploadingFiles ? "Subiendo archivos..." : loading ? "Procesando..." : "Aceptar"}
               </Button>
             </div>
           </Form>
@@ -2171,7 +2234,7 @@ const NewOrderPage = () => {
         </Col>
       </Row>
 
-      {/* Modal de Solicitud de Permiso de Descuento */}
+      {/* Modal de Solicitud de Autorización de Descuento */}
       <Modal
         show={showDiscountRequestDialog}
         onHide={() => {
@@ -2183,85 +2246,35 @@ const NewOrderPage = () => {
         <Modal.Header closeButton className="bg-warning text-white">
           <Modal.Title className="d-flex align-items-center gap-2">
             <Shield size={24} />
-            Solicitar Permiso de Descuento
+            Confirmar Solicitud de Descuento
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {/* Sección de canje de folio */}
-          <div className="mb-4 p-3 border rounded bg-light">
-            <h6 className="fw-bold mb-3">¿Ya tienes un folio de autorización?</h6>
-            <Form.Group className="mb-2">
-              <Form.Label>Folio de Autorización</Form.Label>
-              <div className="input-group">
-                <Form.Control
-                  type="text"
-                  value={authFolioInput}
-                  onChange={(e) => setAuthFolioInput(e.target.value.toUpperCase())}
-                  placeholder="AUTH-YYMMDD-0001"
-                  className="py-2"
-                />
-                <Button
-                  variant="success"
-                  onClick={handleRedeemFolio}
-                  disabled={redeemingFolio || !authFolioInput.trim()}
-                >
-                  {redeemingFolio ? "Validando..." : "Canjear"}
-                </Button>
-              </div>
-              <Form.Text className="text-muted">
-                Ingresa el folio que el gerente te proporcionó para habilitar el descuento.
-              </Form.Text>
-            </Form.Group>
-          </div>
-
-          <div className="text-center my-3">
-            <strong className="text-muted">- O -</strong>
-          </div>
-
-          {/* Sección de solicitud de nuevo descuento */}
           <Alert variant="info" className="mb-3">
-            <strong>⚠️ Importante:</strong> Si no tienes un folio, solicita autorización al gerente.
+            <strong>ℹ️ Información:</strong> El descuento se aplicará inmediatamente a la orden, pero necesita autorización del gerente antes de enviarse a producción.
           </Alert>
 
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-semibold">
-              Descuento Solicitado <span className="text-danger">*</span>
-            </Form.Label>
-            <div className="input-group">
-              <Form.Control
-                type="number"
-                min="0"
-                step="0.01"
-                value={requestedDiscountValue}
-                onChange={(e) => setRequestedDiscountValue(parseFloat(e.target.value) || 0)}
-                className="py-2"
-                placeholder="Ingresa el descuento"
-              />
-              <Form.Select
-                value={requestedDiscountType}
-                onChange={(e) => setRequestedDiscountType(e.target.value as "porcentaje" | "cantidad")}
-                style={{ maxWidth: "100px" }}
-              >
-                <option value="porcentaje">%</option>
-                <option value="cantidad">$</option>
-              </Form.Select>
-            </div>
-          </Form.Group>
+          <div className="mb-3 p-3 border rounded bg-light">
+            <h6 className="fw-bold mb-2">Descuento solicitado:</h6>
+            <p className="mb-0 fs-5 text-primary">
+              {formData.discount} {formData.discountType === "porcentaje" ? "%" : "$"}
+            </p>
+          </div>
 
           <Form.Group>
             <Form.Label className="fw-semibold">
-              Mensaje de Solicitud <span className="text-danger">*</span>
+              Motivo de la solicitud <span className="text-danger">*</span>
             </Form.Label>
             <Form.Control
               as="textarea"
               rows={4}
-              placeholder="Describe el motivo por el cual solicitas el descuento..."
+              placeholder="Describe el motivo por el cual solicitas este descuento..."
               value={discountRequestMessage}
               onChange={(e) => setDiscountRequestMessage(e.target.value)}
               required
             />
             <Form.Text className="text-muted">
-              El gerente recibirá esta solicitud y podrá aprobarla o rechazarla.
+              El gerente recibirá esta solicitud junto con la orden creada. Si la rechaza, la orden será cancelada automáticamente.
             </Form.Text>
           </Form.Group>
         </Modal.Body>
@@ -2283,7 +2296,7 @@ const NewOrderPage = () => {
             className="d-flex align-items-center gap-2"
           >
             <Shield size={16} />
-            {requestingDiscount ? "Enviando..." : "Enviar Solicitud"}
+            {requestingDiscount ? "Aplicando..." : "Aplicar y Continuar"}
           </Button>
         </Modal.Footer>
       </Modal>

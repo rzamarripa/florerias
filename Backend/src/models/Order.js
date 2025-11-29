@@ -232,6 +232,26 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['whatsapp', 'facebook', 'instagram', null],
     default: null
+  },
+  comprobanteUrl: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  comprobantePath: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  arregloUrl: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  arregloPath: {
+    type: String,
+    trim: true,
+    default: null
   }
 }, {
   timestamps: true,

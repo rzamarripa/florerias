@@ -110,8 +110,8 @@ const IncomeStats: React.FC<IncomeStatsProps> = ({ filters }) => {
             title="Transferencia"
             value={stats.transferencia}
             icon={Building2}
-            color="#667eea"
-            bgColor="#e7eaf6"
+            color="#0d6efd"
+            bgColor="#cfe2ff"
           />
         </Col>
         <Col md={3}>

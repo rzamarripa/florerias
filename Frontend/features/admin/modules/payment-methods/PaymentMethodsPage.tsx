@@ -157,14 +157,6 @@ const PaymentMethodsPage: React.FC = () => {
           variant="primary"
           onClick={handleNewPaymentMethod}
           className="d-flex align-items-center gap-2 px-4"
-          style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            border: "none",
-            borderRadius: "10px",
-            padding: "12px 24px",
-            fontWeight: "600",
-            boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
-          }}
         >
           <Plus size={20} />
           Nuevo Método de Pago
@@ -377,11 +369,6 @@ const PaymentMethodsPage: React.FC = () => {
             <Button
               type="submit"
               variant="primary"
-              style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                border: "none",
-                borderRadius: "10px",
-              }}
             >
               {editingPaymentMethod ? "Actualizar" : "Crear"}
             </Button>

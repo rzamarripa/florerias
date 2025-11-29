@@ -326,8 +326,8 @@ const NewMaterialPage: React.FC = () => {
 
             {/* Información de Ganancia */}
             {formData.price > 0 && formData.cost > 0 && (
-              <Card className="border-0 shadow-sm mb-4" style={{ borderRadius: "15px", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-                <Card.Body className="p-4 text-white">
+              <Card className="border-0 shadow-sm mb-4 bg-primary text-white" style={{ borderRadius: "15px" }}>
+                <Card.Body className="p-4">
                   <h6 className="fw-bold mb-3">Ganancia Estimada</h6>
                   <div className="d-flex justify-content-between mb-2">
                     <span>Precio:</span>
@@ -356,13 +356,6 @@ const NewMaterialPage: React.FC = () => {
                 variant="primary"
                 disabled={loading || loadingUnits}
                 className="d-flex align-items-center justify-content-center gap-2 py-3"
-                style={{
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  border: "none",
-                  borderRadius: "10px",
-                  fontWeight: "600",
-                  boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
-                }}
               >
                 <Save size={20} />
                 {loading ? "Guardando..." : isEditing ? "Actualizar Material" : "Crear Material"}

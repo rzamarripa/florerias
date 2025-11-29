@@ -89,6 +89,10 @@ export interface Order {
   orderDate?: string;
   isSocialMediaOrder?: boolean;
   socialMedia?: 'whatsapp' | 'facebook' | 'instagram' | null;
+  comprobanteUrl?: string | null;
+  comprobantePath?: string | null;
+  arregloUrl?: string | null;
+  arregloPath?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -117,6 +121,10 @@ export interface CreateOrderData {
   orderDate?: string; // Fecha de la orden
   isSocialMediaOrder?: boolean;
   socialMedia?: 'whatsapp' | 'facebook' | 'instagram' | null;
+  comprobanteUrl?: string | null;
+  comprobantePath?: string | null;
+  arregloUrl?: string | null;
+  arregloPath?: string | null;
 }
 
 export interface UpdateOrderData extends Partial<CreateOrderData> {

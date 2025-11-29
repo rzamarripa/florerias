@@ -2,11 +2,12 @@
 
 import React, { useState } from "react";
 import { Dropdown } from "react-bootstrap";
-import { MoreVertical, Eye, Edit, X, DollarSign, Printer } from "lucide-react";
+import { MoreVertical, Eye, Edit, X, DollarSign, Printer, CheckCircle } from "lucide-react";
 import { Sale } from "../types";
 import PaymentModal from "./PaymentModal";
 import SaleDetailModal from "./SaleDetailModal";
 import CancelSaleConfirmDialog from "./CancelSaleConfirmDialog";
+import RedeemFolioConfirmDialog from "./RedeemFolioConfirmDialog";
 import { reprintSaleTicket } from "../utils/reprintSaleTicket";
 import { salesService } from "../services/sales";
 import { toast } from "react-toastify";
@@ -15,12 +16,20 @@ import { useUserSessionStore } from "@/stores/userSessionStore";
 interface SaleActionsProps {
   sale: Sale;
   onSaleUpdated: () => void;
+  showRedeemFolioAction?: boolean;
+  onRedeemFolio?: (orderId: string, folio: string) => void;
 }
 
-const SaleActions: React.FC<SaleActionsProps> = ({ sale, onSaleUpdated }) => {
+const SaleActions: React.FC<SaleActionsProps> = ({
+  sale,
+  onSaleUpdated,
+  showRedeemFolioAction = false,
+  onRedeemFolio
+}) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showRedeemDialog, setShowRedeemDialog] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const { user } = useUserSessionStore();
 
@@ -70,6 +79,20 @@ const SaleActions: React.FC<SaleActionsProps> = ({ sale, onSaleUpdated }) => {
     }
   };
 
+  const handleOpenRedeemDialog = () => {
+    setShowRedeemDialog(true);
+  };
+
+  const handleCloseRedeemDialog = () => {
+    setShowRedeemDialog(false);
+  };
+
+  const handleConfirmRedeem = async (folio: string) => {
+    if (onRedeemFolio) {
+      await onRedeemFolio(sale._id, folio);
+    }
+  };
+
   return (
     <>
       <Dropdown>
@@ -97,6 +120,16 @@ const SaleActions: React.FC<SaleActionsProps> = ({ sale, onSaleUpdated }) => {
             <Printer size={16} className="me-2" />
             Reimprimir Ticket
           </Dropdown.Item>
+
+          {showRedeemFolioAction && (
+            <>
+              <Dropdown.Divider />
+              <Dropdown.Item onClick={handleOpenRedeemDialog} className="text-success">
+                <CheckCircle size={16} className="me-2" />
+                Canjear Folio
+              </Dropdown.Item>
+            </>
+          )}
 
           <Dropdown.Divider />
 
@@ -135,6 +168,16 @@ const SaleActions: React.FC<SaleActionsProps> = ({ sale, onSaleUpdated }) => {
         saleOrderNumber={sale.orderNumber || ""}
         isProcessing={isCanceling}
       />
+
+      {/* Redeem Folio Confirm Dialog */}
+      {showRedeemFolioAction && (
+        <RedeemFolioConfirmDialog
+          show={showRedeemDialog}
+          onHide={handleCloseRedeemDialog}
+          onConfirm={handleConfirmRedeem}
+          saleOrderNumber={sale.orderNumber || ""}
+        />
+      )}
     </>
   );
 };

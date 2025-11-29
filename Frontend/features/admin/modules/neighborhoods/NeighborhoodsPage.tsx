@@ -43,14 +43,6 @@ const NeighborhoodsPage: React.FC = () => {
             variant="primary"
             onClick={() => handleOpenModal()}
             className="d-flex align-items-center gap-2"
-            style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
-              borderRadius: "8px",
-              padding: "10px 20px",
-              fontWeight: "600",
-              boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
-            }}
           >
             <Plus size={18} />
             Nueva Colonia

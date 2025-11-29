@@ -65,10 +65,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({
     <Modal show={show} onHide={onHide} size="xl" centered>
       <Modal.Header
         closeButton
+        className="bg-danger text-white"
         style={{
-          background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-          color: "white",
-          borderRadius: "15px 15px 0 0",
+          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
+          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
         }}
       >
         <Modal.Title className="d-flex align-items-center">
@@ -96,15 +96,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({
             {/* Summary cards */}
             <div className="row g-3 mb-4">
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background: "linear-gradient(135deg, #fa709a15 0%, #fee14015 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-danger bg-opacity-10">
                   <div className="card-body text-center">
-                    <DollarSign size={24} style={{ color: "#fa709a" }} />
-                    <h5 className="mt-2 mb-0 fw-bold" style={{ color: "#fa709a" }}>
+                    <DollarSign size={24} className="text-danger" />
+                    <h5 className="mt-2 mb-0 fw-bold text-danger">
                       {formatCurrency(totalExpenses)}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -114,15 +109,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({
                 </div>
               </div>
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background: "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-primary bg-opacity-10">
                   <div className="card-body text-center">
-                    <FileText size={24} style={{ color: "#667eea" }} />
-                    <h5 className="mt-2 mb-0 fw-bold" style={{ color: "#667eea" }}>
+                    <FileText size={24} className="text-primary" />
+                    <h5 className="mt-2 mb-0 fw-bold text-primary">
                       {expenses.length}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -132,15 +122,10 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({
                 </div>
               </div>
               <div className="col-md-4">
-                <div
-                  className="card border-0 h-100"
-                  style={{
-                    background: "linear-gradient(135deg, #4facfe15 0%, #00f2fe15 100%)",
-                  }}
-                >
+                <div className="card border-0 h-100 bg-info bg-opacity-10">
                   <div className="card-body text-center">
-                    <DollarSign size={24} style={{ color: "#4facfe" }} />
-                    <h5 className="mt-2 mb-0 fw-bold" style={{ color: "#4facfe" }}>
+                    <DollarSign size={24} className="text-info" />
+                    <h5 className="mt-2 mb-0 fw-bold text-info">
                       {formatCurrency(totalExpenses / expenses.length)}
                     </h5>
                     <p className="text-muted mb-0" style={{ fontSize: "12px" }}>
@@ -199,10 +184,7 @@ const ExpensesModal: React.FC<ExpensesModalProps> = ({
                       </div>
                     </td>
                     <td className="align-middle">
-                      <span
-                        className="fw-bold"
-                        style={{ fontSize: "14px", color: "#fa709a" }}
-                      >
+                      <span className="fw-bold text-danger" style={{ fontSize: "14px" }}>
                         {formatCurrency(expense.total)}
                       </span>
                     </td>

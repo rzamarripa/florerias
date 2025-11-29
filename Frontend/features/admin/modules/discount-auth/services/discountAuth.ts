@@ -24,8 +24,16 @@ export interface DiscountAuth {
     branchName: string;
     branchCode: string;
   };
+  orderId?: {
+    _id: string;
+    orderNumber: string;
+    total: number;
+    status: string;
+  } | null;
+  orderTotal: number;
   discountValue: number;
   discountType: 'porcentaje' | 'cantidad';
+  discountAmount: number;
   isAuth: boolean | null;
   authFolio: string | null;
   isRedeemed: boolean;
@@ -43,6 +51,16 @@ export interface RequestDiscountAuthData {
 export interface RedeemFolioData {
   authFolio: string;
   branchId: string;
+}
+
+export interface CreateDiscountAuthForOrderData {
+  message: string;
+  branchId: string;
+  orderId: string;
+  orderTotal: number;
+  discountValue: number;
+  discountType: 'porcentaje' | 'cantidad';
+  discountAmount: number;
 }
 
 export interface ApproveRejectDiscountAuthData {
@@ -120,6 +138,28 @@ export const discountAuthService = {
       {
         method: "POST",
         body: JSON.stringify(data),
+      }
+    );
+    return response as any;
+  },
+
+  createDiscountAuthForOrder: async (data: CreateDiscountAuthForOrderData): Promise<{ success: boolean; data: DiscountAuth; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: DiscountAuth; message: string }>(
+      "/discount-auth/create-for-order",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    return response as any;
+  },
+
+  redeemAuthorizationForOrder: async (orderId: string, authFolio: string): Promise<{ success: boolean; data: any; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: any; message: string }>(
+      "/discount-auth/redeem-for-order",
+      {
+        method: "POST",
+        body: JSON.stringify({ orderId, authFolio }),
       }
     );
     return response as any;

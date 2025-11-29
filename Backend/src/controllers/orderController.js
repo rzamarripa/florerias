@@ -8,6 +8,7 @@ import OrderPayment from '../models/OrderPayment.js';
 import OrderNotification from '../models/OrderNotification.js';
 import { Company } from '../models/Company.js';
 import { StageCatalog } from '../models/StageCatalog.js';
+import DiscountAuth from '../models/DiscountAuth.js';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted } from '../sockets/orderSocket.js';
 import mongoose from 'mongoose';
 
@@ -490,19 +491,22 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Extraer campos de redes sociales del body
-    const { isSocialMediaOrder, socialMedia } = req.body;
+    // Extraer campos de redes sociales y descuento del body
+    const { isSocialMediaOrder, socialMedia, hasPendingDiscountAuth } = req.body;
 
     // Determinar si enviar a producción automáticamente
-    // Si hay anticipo (advance > 0), enviar automáticamente a producción
-    const shouldSendToProduction = (advance && advance > 0) ? true : (sendToProduction || false);
+    // Si tiene descuento pendiente de autorización, NO enviar a producción aunque tenga anticipo
+    // Si hay anticipo (advance > 0) Y NO tiene descuento pendiente, enviar automáticamente a producción
+    const shouldSendToProduction = hasPendingDiscountAuth
+      ? false
+      : ((advance && advance > 0) ? true : (sendToProduction || false));
 
     // Determinar si se debe asignar una etapa y el status de la orden
-    // Asignar etapa si: sendToProduction = true O advance > 0
+    // Asignar etapa si: sendToProduction = true O (advance > 0 Y NO hay descuento pendiente)
     let stageId = null;
     let orderStatus = 'pendiente'; // status por defecto
 
-    if (shouldSendToProduction || (advance && advance > 0)) {
+    if (shouldSendToProduction || (advance && advance > 0 && !hasPendingDiscountAuth)) {
       // Obtener la empresa a través de la sucursal
       const branchWithCompany = await Branch.findById(branchId).populate('companyId');
 
@@ -534,8 +538,9 @@ const createOrder = async (req, res) => {
       orderStatus = 'pendiente'; // Con stage asignado, status = 'pendiente'
     } else {
       // Si NO tiene anticipo Y NO se envía a producción
-      // Asignar status = 'sinAnticipo' y stage = null
-      orderStatus = 'sinAnticipo';
+      // O si tiene descuento pendiente de autorización
+      // Asignar status = 'sinAnticipo' (o 'pendiente' si tiene descuento pendiente) y stage = null
+      orderStatus = hasPendingDiscountAuth ? 'pendiente' : 'sinAnticipo';
       stageId = null;
     }
 
@@ -1300,6 +1305,234 @@ const sendOrderToShipping = async (req, res) => {
   }
 };
 
+// Obtener órdenes sin autorizar (con descuento pendiente de autorización)
+const getUnauthorizedOrders = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 15,
+      startDate,
+      endDate,
+      branchId
+    } = req.query;
+
+    // Obtener el ID del usuario autenticado
+    const userId = req.user?._id;
+
+    // Obtener información del usuario con su rol
+    const user = await mongoose.model('cs_user').findById(userId).populate('role');
+
+    if (!user || !user.role) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado o sin rol asignado'
+      });
+    }
+
+    const userRole = user.role.name;
+    let branchIds = [];
+
+    // Verificar si el usuario tiene rol "Redes"
+    if (userRole === 'Redes') {
+      const userCompany = await Company.findOne({
+        redes: userId
+      });
+
+      if (!userCompany) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+
+      const companyBranches = await Branch.find({
+        companyId: userCompany._id
+      }).select('_id');
+
+      branchIds = companyBranches.map(branch => branch._id);
+    } else if (userRole === 'Cajero') {
+      const userBranches = await Branch.find({
+        employees: userId
+      }).select('_id');
+      branchIds = userBranches.map(branch => branch._id);
+    } else {
+      const userBranches = await Branch.find({
+        $or: [
+          { administrator: userId },
+          { manager: userId },
+          { employees: userId }
+        ]
+      }).select('_id');
+      branchIds = userBranches.map(branch => branch._id);
+    }
+
+    if (branchIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: 0,
+          pages: 0
+        }
+      });
+    }
+
+    // Construir filtros base para órdenes con descuento > 0
+    const filters = {
+      discount: { $gt: 0 }, // Órdenes con descuento mayor a 0
+      branchId: { $in: branchIds }
+    };
+
+    // Para usuarios con rol "Redes", agregar filtro de redes sociales
+    if (userRole === 'Redes') {
+      filters.isSocialMediaOrder = true;
+    }
+
+    // Para usuarios con rol "Cajero", agregar filtros específicos
+    if (userRole === 'Cajero') {
+      filters.cashier = userId;
+      filters.isSocialMediaOrder = false;
+    }
+
+    // Si se proporciona branchId específico, aplicar ese filtro
+    if (branchId) {
+      const specificBranchId = new mongoose.Types.ObjectId(branchId);
+      const isBranchAllowed = branchIds.some(id => id.equals(specificBranchId));
+
+      if (isBranchAllowed) {
+        filters.branchId = specificBranchId;
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    }
+
+    // Filtros de fecha
+    if (startDate || endDate) {
+      filters.orderDate = {};
+
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        filters.orderDate.$gte = start;
+      }
+
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filters.orderDate.$lte = end;
+      }
+    }
+
+    console.log('getUnauthorizedOrders - Filtros aplicados:', JSON.stringify(filters, null, 2));
+
+    // Calcular skip para paginación
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Primero obtener TODAS las órdenes con descuento (sin paginación aún)
+    const allOrdersWithDiscount = await Order.find(filters)
+      .select('_id')
+      .sort({ createdAt: -1 });
+
+    if (allOrdersWithDiscount.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: 0,
+          pages: 0
+        }
+      });
+    }
+
+    const allOrderIds = allOrdersWithDiscount.map(order => order._id);
+
+    // Buscar DiscountAuth para estas órdenes con isRedeemed=false y isAuth != false
+    const validDiscountAuths = await DiscountAuth.find({
+      orderId: { $in: allOrderIds },
+      isRedeemed: false,
+      isAuth: { $ne: false } // null (pendiente) o true (aprobado), pero NO false (rechazado)
+    }).select('orderId');
+
+    const validOrderIds = validDiscountAuths.map(auth => auth.orderId);
+
+    if (validOrderIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: 0,
+          pages: 0
+        }
+      });
+    }
+
+    // Ahora sí aplicar paginación sobre las órdenes válidas
+    const orders = await Order.find({
+      _id: { $in: validOrderIds }
+    })
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashRegisterId', 'name isOpen')
+      .populate('cashier', 'name email')
+      .populate('items.productId', 'nombre imagen')
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Contar total de órdenes válidas
+    const total = validOrderIds.length;
+    const pages = Math.ceil(total / parseInt(limit));
+    res.status(200).json({
+      success: true,
+      data: orders,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener órdenes sin autorizar:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 export {
   getAllOrders,
   getOrderById,
@@ -1308,5 +1541,6 @@ export {
   updateOrderStatus,
   deleteOrder,
   getOrdersSummary,
-  sendOrderToShipping
+  sendOrderToShipping,
+  getUnauthorizedOrders
 };

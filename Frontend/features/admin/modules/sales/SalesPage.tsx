@@ -5,11 +5,12 @@ import { Tabs, Tab, Button } from "react-bootstrap";
 import { Download } from "lucide-react";
 import DateFilters from "./components/DateFilters";
 import SalesStats from "./components/SalesStats";
-import NewSalesTable from "./components/NewSalesTable";
-import CreditSalesTable from "./components/CreditSalesTable";
-import ExchangeSalesTable from "./components/ExchangeSalesTable";
-import CancelledSalesTable from "./components/CancelledSalesTable";
-import PendingPaymentsTable from "./components/PendingPaymentsTable";
+import NewSalesTable from "./components/tables/NewSalesTable";
+import CreditSalesTable from "./components/tables/CreditSalesTable";
+import ExchangeSalesTable from "./components/tables/ExchangeSalesTable";
+import CancelledSalesTable from "./components/tables/CancelledSalesTable";
+import PendingPaymentsTable from "./components/tables/PendingPaymentsTable";
+import UnauthorizedSalesTable from "./components/tables/UnauthorizedSalesTable";
 import { paymentMethodsService } from "../payment-methods/services/paymentMethods";
 import { salesService } from "./services/sales";
 import { toast } from "react-toastify";
@@ -24,6 +25,9 @@ const SalesPage: React.FC = () => {
     branchId: undefined as string | undefined,
   });
   const [creditPaymentMethodId, setCreditPaymentMethodId] = useState<
+    string | undefined
+  >(undefined);
+  const [exchangePaymentMethodId, setExchangePaymentMethodId] = useState<
     string | undefined
   >(undefined);
   const [exporting, setExporting] = useState<boolean>(false);
@@ -47,6 +51,18 @@ const SalesPage: React.FC = () => {
           });
           if (creditMethod) {
             setCreditPaymentMethodId(creditMethod._id);
+          }
+
+          // Buscar el método de pago que sea exactamente la palabra "intercambio"
+          const exchangeMethod = response.data.find((pm) => {
+            const normalized = pm.name
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, ""); // Quitar tildes
+            return normalized === "intercambio";
+          });
+          if (exchangeMethod) {
+            setExchangePaymentMethodId(exchangeMethod._id);
           }
         }
       } catch (error) {
@@ -85,7 +101,7 @@ const SalesPage: React.FC = () => {
 
   const handleSaleUpdated = () => {
     // Incrementar la key para forzar re-render de SalesStats
-    setStatsRefreshKey(prev => prev + 1);
+    setStatsRefreshKey((prev) => prev + 1);
   };
 
   const handleExportExcel = async () => {
@@ -441,6 +457,9 @@ const SalesPage: React.FC = () => {
           });
           break;
         case "credito":
+          if (!creditPaymentMethodId) {
+            return { salesData: [], productsData: [] };
+          }
           response = await salesService.getCreditSales({
             startDate: dateFilters.startDate,
             endDate: dateFilters.endDate,
@@ -449,10 +468,14 @@ const SalesPage: React.FC = () => {
           });
           break;
         case "intercambio":
+          if (!exchangePaymentMethodId) {
+            return { salesData: [], productsData: [] };
+          }
           response = await salesService.getExchangeSales({
             startDate: dateFilters.startDate,
             endDate: dateFilters.endDate,
             branchId: dateFilters.branchId,
+            exchangePaymentMethodId,
           });
           break;
         case "canceladas":
@@ -464,6 +487,13 @@ const SalesPage: React.FC = () => {
           break;
         case "pendientes":
           response = await salesService.getPendingPayments({
+            startDate: dateFilters.startDate,
+            endDate: dateFilters.endDate,
+            branchId: dateFilters.branchId,
+          });
+          break;
+        case "sin-autorizar":
+          response = await salesService.getUnauthorizedSales({
             startDate: dateFilters.startDate,
             endDate: dateFilters.endDate,
             branchId: dateFilters.branchId,
@@ -604,7 +634,9 @@ const SalesPage: React.FC = () => {
       <DateFilters onSearch={handleSearch} />
 
       {/* Estadísticas de Ventas - Solo se muestran después de hacer una búsqueda */}
-      {hasSearched && <SalesStats key={statsRefreshKey} filters={dateFilters} />}
+      {hasSearched && (
+        <SalesStats key={statsRefreshKey} filters={dateFilters} />
+      )}
 
       {/* Tabs - Solo se muestran después de hacer una búsqueda */}
       {hasSearched ? (
@@ -639,35 +671,44 @@ const SalesPage: React.FC = () => {
                   </div>
                 </Tab>
 
-                <Tab
-                  eventKey="credito"
-                  title={
-                    <span className="px-3 py-2 fw-semibold">
-                      Ventas a Crédito
-                    </span>
-                  }
-                >
-                  <div className="p-4">
-                    <CreditSalesTable
-                      filters={dateFilters}
-                      creditPaymentMethodId={creditPaymentMethodId}
-                      onStatsUpdate={handleSaleUpdated}
-                    />
-                  </div>
-                </Tab>
+                {/* Tab de Ventas a Crédito - Solo mostrar si existe el método de pago */}
+                {creditPaymentMethodId && (
+                  <Tab
+                    eventKey="credito"
+                    title={
+                      <span className="px-3 py-2 fw-semibold">
+                        Ventas a Crédito
+                      </span>
+                    }
+                  >
+                    <div className="p-4">
+                      <CreditSalesTable
+                        filters={dateFilters}
+                        creditPaymentMethodId={creditPaymentMethodId}
+                        onStatsUpdate={handleSaleUpdated}
+                      />
+                    </div>
+                  </Tab>
+                )}
 
-                <Tab
-                  eventKey="intercambio"
-                  title={
-                    <span className="px-3 py-2 fw-semibold">
-                      Ventas de Intercambio
-                    </span>
-                  }
-                >
-                  <div className="p-4">
-                    <ExchangeSalesTable filters={dateFilters} />
-                  </div>
-                </Tab>
+                {/* Tab de Ventas de Intercambio - Solo mostrar si existe el método de pago */}
+                {exchangePaymentMethodId && (
+                  <Tab
+                    eventKey="intercambio"
+                    title={
+                      <span className="px-3 py-2 fw-semibold">
+                        Ventas de Intercambio
+                      </span>
+                    }
+                  >
+                    <div className="p-4">
+                      <ExchangeSalesTable
+                        filters={dateFilters}
+                        exchangePaymentMethodId={exchangePaymentMethodId}
+                      />
+                    </div>
+                  </Tab>
+                )}
 
                 <Tab
                   eventKey="canceladas"
@@ -692,6 +733,20 @@ const SalesPage: React.FC = () => {
                 >
                   <div className="p-4">
                     <PendingPaymentsTable
+                      filters={dateFilters}
+                      onStatsUpdate={handleSaleUpdated}
+                    />
+                  </div>
+                </Tab>
+
+                <Tab
+                  eventKey="sin-autorizar"
+                  title={
+                    <span className="px-3 py-2 fw-semibold">Por Autorizar</span>
+                  }
+                >
+                  <div className="p-4">
+                    <UnauthorizedSalesTable
                       filters={dateFilters}
                       onStatsUpdate={handleSaleUpdated}
                     />

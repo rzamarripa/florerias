@@ -168,15 +168,8 @@ const CompanyDashboardPage: React.FC = () => {
               Visualiza y gestiona todas tus sucursales
             </p>
           </div>
-          <div
-            className="d-flex align-items-center justify-content-center rounded-circle"
-            style={{
-              width: "50px",
-              height: "50px",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            }}
-          >
-            <Building2 size={28} color="white" />
+          <div className="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle" style={{ width: "50px", height: "50px" }}>
+            <Building2 size={28} />
           </div>
         </div>
       </div>

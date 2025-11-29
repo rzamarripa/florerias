@@ -1,31 +1,38 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Table, Badge, Spinner } from "react-bootstrap";
+import { Table, Badge, Button, Spinner } from "react-bootstrap";
+import { Eye, Edit, Trash2, Printer } from "lucide-react";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
-import { salesService } from "../services/sales";
-import { Sale } from "../types";
-import SaleActions from "./SaleActions";
+import { salesService } from "../../services/sales";
+import { Sale } from "../../types";
+import SaleDetailModal from "../SaleDetailModal";
+import { reprintSaleTicket } from "../../utils/reprintSaleTicket";
+import { useUserSessionStore } from "@/stores/userSessionStore";
 
-interface NewSalesTableProps {
+interface CancelledSalesTableProps {
   filters: {
     startDate: string;
     endDate: string;
     viewMode: "dia" | "semana" | "mes";
     branchId?: string;
   };
-  onStatsUpdate?: () => void;
 }
 
-const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate }) => {
+const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
+  filters,
+}) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const { user } = useUserSessionStore();
 
   const loadSales = async () => {
     try {
       setLoading(true);
-      const response = await salesService.getNewSales({
+      const response = await salesService.getCancelledSales({
         startDate: filters.startDate,
         endDate: filters.endDate,
         branchId: filters.branchId,
@@ -35,8 +42,8 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
         setSales(response.data);
       }
     } catch (error: any) {
-      toast.error(error.message || "Error al cargar las ventas nuevas");
-      console.error("Error loading new sales:", error);
+      toast.error(error.message || "Error al cargar las ventas canceladas");
+      console.error("Error loading cancelled sales:", error);
     } finally {
       setLoading(false);
     }
@@ -52,27 +59,24 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
       startDate: filters.startDate,
       endDate: filters.endDate,
       branchId: filters.branchId,
-      status: ["pendiente", "en-proceso", "completado"], // Excluir canceladas
+      // No filtrar por status en el socket para recibir TODAS las actualizaciones
     },
     onOrderCreated: (newOrder) => {
-      // Agregar la nueva orden al inicio de la lista
-      setSales((prev) => {
-        const exists = prev.some((s) => s._id === newOrder._id);
-        if (exists) return prev;
-        return [newOrder as Sale, ...prev];
-      });
-      toast.info(`Nueva venta: ${newOrder.orderNumber || newOrder._id}`);
+      // Agregar si es cancelada
+      if (newOrder.status === "cancelado") {
+        setSales((prev) => {
+          const exists = prev.some((s) => s._id === newOrder._id);
+          if (exists) return prev;
+          return [newOrder as Sale, ...prev];
+        });
+        toast.info(
+          `Nueva venta cancelada: ${newOrder.orderNumber || newOrder._id}`
+        );
+      }
     },
     onOrderUpdated: (updatedOrder) => {
       setSales((prev) => {
-        // Si la orden actualizada debe estar en esta tabla (NO cancelada)
-        const shouldInclude = [
-          "pendiente",
-          "en-proceso",
-          "completado",
-        ].includes(updatedOrder.status);
-
-        if (shouldInclude) {
+        if (updatedOrder.status === "cancelado") {
           // Actualizar o agregar
           const exists = prev.some((s) => s._id === updatedOrder._id);
           if (exists) {
@@ -80,16 +84,15 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
               s._id === updatedOrder._id ? (updatedOrder as Sale) : s
             );
           } else {
+            // Agregar venta recién cancelada
+            toast.info(
+              `Venta cancelada: ${updatedOrder.orderNumber || updatedOrder._id}`
+            );
             return [updatedOrder as Sale, ...prev];
           }
         } else {
-          // Remover si cambió a un estado que no debe estar aquí (ej: cancelado)
-          const removed = prev.filter((s) => s._id !== updatedOrder._id);
-          // Solo mostrar notificación si realmente se removió algo
-          if (removed.length < prev.length && updatedOrder.status === "cancelado") {
-            console.log(`Venta ${updatedOrder.orderNumber} removida de Nuevas Ventas (cancelada)`);
-          }
-          return removed;
+          // Remover si cambió a otro estado
+          return prev.filter((s) => s._id !== updatedOrder._id);
         }
       });
     },
@@ -98,9 +101,30 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
     },
   });
 
-  const handleSaleUpdated = () => {
-    loadSales();
-    onStatsUpdate?.();
+  const handleDelete = async (saleId: string) => {
+    if (!confirm("¿Estás seguro de eliminar esta venta?")) return;
+
+    try {
+      await salesService.deleteSale(saleId);
+      toast.success("Venta eliminada exitosamente");
+      // No llamar loadSales() - el socket actualizará automáticamente
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar la venta");
+    }
+  };
+
+  const handleReprintTicket = async (sale: Sale) => {
+    await reprintSaleTicket(sale, user?.profile?.fullName);
+  };
+
+  const handleOpenDetailModal = (sale: Sale) => {
+    setSelectedSale(sale);
+    setShowDetailModal(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedSale(null);
   };
 
   const getPaymentStatusBadge = (remainingBalance: number) => {
@@ -196,7 +220,7 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
         <Table hover className="mb-0">
           <thead style={{ background: "#f8f9fa" }}>
             <tr>
-              <th className="px-4 py-3 fw-semibold text-muted">Folio</th>
+              <th className="px-4 py-3 fw-semibold text-muted">No.</th>
               <th className="px-4 py-3 fw-semibold text-muted">Clientes</th>
               <th className="px-4 py-3 fw-semibold text-muted">
                 Fecha Entrega
@@ -219,16 +243,16 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
             {sales.length === 0 ? (
               <tr>
                 <td colSpan={9} className="text-center py-5 text-muted">
-                  No se encontraron ventas nuevas
+                  No se encontraron ventas canceladas
                 </td>
               </tr>
             ) : (
-              sales.map((sale) => (
+              sales.map((sale, index) => (
                 <tr
                   key={sale._id}
                   style={{ borderBottom: "1px solid #f1f3f5" }}
                 >
-                  <td className="px-4 py-3 fw-semibold">{sale.orderNumber}</td>
+                  <td className="px-4 py-3">{index + 1}</td>
                   <td className="px-4 py-3">
                     {sale.clientInfo?.name || "N/A"}
                   </td>
@@ -238,50 +262,88 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({ filters, onStatsUpdate })
                       : "N/A"}
                   </td>
                   <td className="px-4 py-3">{getStageBadge(sale.stage)}</td>
-                  <td className="px-4 py-3">{getPaymentStatusBadge(sale.remainingBalance || 0)}</td>
+                  <td className="px-4 py-3">
+                    {getPaymentStatusBadge(sale.remainingBalance || 0)}
+                  </td>
                   <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
                   <td className="px-4 py-3 fw-semibold text-success">
                     ${(sale.advance || 0).toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 fw-semibold text-danger">
+                  <td className="px-4 py-3 fw-semibold text-danger text-end">
                     ${(sale.remainingBalance || 0).toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <SaleActions
-                      sale={sale}
-                      onSaleUpdated={handleSaleUpdated}
-                    />
+                  <td className="px-4 py-3">
+                    <div className="d-flex justify-content-center gap-2">
+                      <Button
+                        variant="light"
+                        size="sm"
+                        onClick={() => handleReprintTicket(sale)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Reimprimir ticket"
+                      >
+                        <Printer size={16} className="text-primary" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
+                        onClick={() => handleOpenDetailModal(sale)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Ver detalles"
+                      >
+                        <Eye size={16} className="text-info" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Editar"
+                      >
+                        <Edit size={16} className="text-warning" />
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="sm"
+                        onClick={() => handleDelete(sale._id)}
+                        className="border-0"
+                        style={{ borderRadius: "8px" }}
+                        title="Eliminar"
+                      >
+                        <Trash2 size={16} className="text-danger" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
             )}
-            <tr
-              style={{ background: "#f8f9fa", borderTop: "2px solid #dee2e6" }}
-            >
-              <td colSpan={8} className="text-end px-4 py-3">
-                <span className="fw-bold me-5">Total</span>
-                <span className="fw-bold text-success me-5">
-                  $
-                  {totalPaid.toLocaleString("es-MX", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-                <span className="fw-bold text-danger">
-                  $
-                  {totalBalance.toLocaleString("es-MX", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </td>
-              <td></td>
-            </tr>
           </tbody>
         </Table>
       </div>
+
+      <div className="border-top px-4 py-3">
+        <div className="row">
+          <div className="col text-end">
+            <span className="fw-bold me-5">Total</span>
+            <span className="fw-bold text-success me-5">
+              ${totalPaid.toFixed(2)}
+            </span>
+            <span className="fw-bold text-danger">
+              ${totalBalance.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sale Detail Modal */}
+      <SaleDetailModal
+        show={showDetailModal}
+        onHide={handleCloseDetailModal}
+        sale={selectedSale}
+      />
     </>
   );
 };
 
-export default NewSalesTable;
+export default CancelledSalesTable;

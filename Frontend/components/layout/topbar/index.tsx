@@ -43,8 +43,6 @@ const Topbar = () => {
         </div>
 
         <div className="d-flex align-items-center gap-2">
-          <MessageDropdown />
-
           <NotificationDropdown />
 
           <ThemeToggler />

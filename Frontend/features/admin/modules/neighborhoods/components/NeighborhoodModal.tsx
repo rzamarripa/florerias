@@ -126,10 +126,11 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
     >
       <Modal.Header
         closeButton
+        className="bg-primary text-white"
         style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
           border: "none",
+          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
+          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
         }}
       >
         <Modal.Title className="fw-bold">
@@ -234,10 +235,9 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
           </Button>
           <Button
             type="submit"
+            variant="primary"
             disabled={loading}
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
               borderRadius: "8px",
               padding: "8px 20px",
               fontWeight: "600",

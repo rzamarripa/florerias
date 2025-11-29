@@ -59,13 +59,11 @@ const ViewEmployeesModal: React.FC<ViewEmployeesModalProps> = ({
                   <div className="col-md-4">
                     <div className="d-flex align-items-center gap-3">
                       <div
-                        className="d-flex align-items-center justify-content-center"
+                        className="bg-primary text-white d-flex align-items-center justify-content-center"
                         style={{
                           width: "48px",
                           height: "48px",
                           borderRadius: "50%",
-                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          color: "white",
                           fontSize: "20px",
                           fontWeight: "bold",
                         }}

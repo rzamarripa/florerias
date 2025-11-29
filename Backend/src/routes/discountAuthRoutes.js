@@ -4,7 +4,9 @@ import {
   approveRejectDiscountAuth,
   getAllDiscountAuths,
   getDiscountAuthById,
-  redeemDiscountFolio
+  redeemDiscountFolio,
+  createDiscountAuthForOrder,
+  redeemAuthorizationForOrder
 } from '../controllers/discountAuthController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -19,7 +21,9 @@ router.get('/:id', getDiscountAuthById);
 
 // Rutas POST
 router.post('/request', requestDiscountAuth);
+router.post('/create-for-order', createDiscountAuthForOrder);
 router.post('/:id/approve-reject', approveRejectDiscountAuth);
 router.post('/redeem', redeemDiscountFolio);
+router.post('/redeem-for-order', redeemAuthorizationForOrder);
 
 export default router;

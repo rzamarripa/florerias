@@ -140,15 +140,13 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
           <div className={isAdministrator || isCajero || isGerente ? "col-md-4" : "col-md-3"}>
             <Button
               onClick={handleSearch}
+              variant="primary"
               className="w-100"
               style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                border: "none",
                 borderRadius: "8px",
                 padding: "8px 16px",
                 fontWeight: "600",
                 fontSize: "14px",
-                boxShadow: "0 2px 8px rgba(102, 126, 234, 0.3)",
               }}
             >
               Buscar
@@ -168,12 +166,6 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                     fontWeight: "600",
                     fontSize: "13px",
                     padding: "6px 12px",
-                    ...(viewMode === "dia"
-                      ? {
-                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          border: "none",
-                        }
-                      : {}),
                   }}
                 >
                   Día
@@ -185,12 +177,6 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                     fontWeight: "600",
                     fontSize: "13px",
                     padding: "6px 12px",
-                    ...(viewMode === "semana"
-                      ? {
-                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          border: "none",
-                        }
-                      : {}),
                   }}
                 >
                   Semana
@@ -203,12 +189,6 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                     fontWeight: "600",
                     fontSize: "13px",
                     padding: "6px 12px",
-                    ...(viewMode === "mes"
-                      ? {
-                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          border: "none",
-                        }
-                      : {}),
                   }}
                 >
                   Mes

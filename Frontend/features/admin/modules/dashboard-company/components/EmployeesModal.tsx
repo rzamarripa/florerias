@@ -20,14 +20,14 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
 }) => {
   const getAvatarColor = (name: string) => {
     const colors = [
-      "#667eea",
-      "#764ba2",
-      "#f093fb",
-      "#4facfe",
-      "#43e97b",
-      "#fa709a",
-      "#fee140",
-      "#30cfd0",
+      "#0d6efd",
+      "#6610f2",
+      "#6f42c1",
+      "#d63384",
+      "#dc3545",
+      "#fd7e14",
+      "#ffc107",
+      "#198754",
     ];
     const index = name.charCodeAt(0) % colors.length;
     return colors[index];
@@ -45,10 +45,10 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
     <Modal show={show} onHide={onHide} size="lg" centered>
       <Modal.Header
         closeButton
+        className="bg-primary text-white"
         style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
-          borderRadius: "15px 15px 0 0",
+          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
+          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
         }}
       >
         <Modal.Title className="d-flex align-items-center">

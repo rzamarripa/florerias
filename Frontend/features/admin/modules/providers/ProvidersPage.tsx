@@ -136,14 +136,6 @@ const ProvidersPage: React.FC = () => {
           variant="primary"
           onClick={handleNewProvider}
           className="d-flex align-items-center gap-2 px-4"
-          style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            border: "none",
-            borderRadius: "10px",
-            padding: "12px 24px",
-            fontWeight: "600",
-            boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
-          }}
         >
           <Plus size={20} />
           Nuevo Proveedor
@@ -155,10 +147,7 @@ const ProvidersPage: React.FC = () => {
         <Alert
           variant="info"
           className="mb-4 border-0 shadow-sm"
-          style={{
-            borderRadius: "15px",
-            background: "linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)",
-          }}
+          style={{ borderRadius: "15px" }}
         >
           <div className="d-flex align-items-center gap-3">
             <Building2 size={24} className="text-primary" />

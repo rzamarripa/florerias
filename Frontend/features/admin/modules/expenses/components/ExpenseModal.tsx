@@ -259,10 +259,11 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     >
       <Modal.Header
         closeButton
+        className="bg-primary text-white"
         style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
           border: "none",
+          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
+          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
         }}
       >
         <Modal.Title className="fw-bold">
@@ -493,10 +494,9 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
           </Button>
           <Button
             type="submit"
+            variant="primary"
             disabled={loading || (isAdmin && !activeBranch && formData.expenseType === "petty_cash")}
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
               borderRadius: "8px",
               padding: "8px 20px",
               fontWeight: "600",

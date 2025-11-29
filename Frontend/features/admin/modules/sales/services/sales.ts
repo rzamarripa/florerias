@@ -59,10 +59,11 @@ export const salesService = {
   },
 
   // Método específico para ventas de intercambio
-  getExchangeSales: async (filters: SaleFilters = {}): Promise<GetSalesResponse> => {
+  getExchangeSales: async (filters: SaleFilters & { exchangePaymentMethodId?: string } = {}): Promise<GetSalesResponse> => {
+    const { exchangePaymentMethodId, ...otherFilters } = filters;
     return salesService.getAllSales({
-      ...filters,
-      // Agregar filtro específico para ventas de intercambio si es necesario
+      ...otherFilters,
+      paymentMethodId: exchangePaymentMethodId,
     });
   },
 
@@ -88,6 +89,23 @@ export const salesService = {
       ...filters,
       status: 'cancelado',
     });
+  },
+
+  // Método específico para ventas sin autorizar (con descuento pendiente)
+  getUnauthorizedSales: async (filters: SaleFilters = {}): Promise<GetSalesResponse> => {
+    const { startDate, endDate, branchId, page = 1, limit = 15 } = filters;
+
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (startDate) searchParams.append('startDate', startDate);
+    if (endDate) searchParams.append('endDate', endDate);
+    if (branchId) searchParams.append('branchId', branchId);
+
+    const response = await apiCall<GetSalesResponse>(`/orders/unauthorized?${searchParams}`);
+    return response as any;
   },
 
   deleteSale: async (saleId: string): Promise<{ success: boolean; message: string }> => {
