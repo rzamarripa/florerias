@@ -15,6 +15,13 @@ export interface DeliveryData {
   reference?: string;
 }
 
+export interface OrderItemInsumo {
+  nombre: string;
+  cantidad: number;
+  importeVenta: number;
+  isExtra?: boolean;
+}
+
 export interface OrderItem {
   _id?: string;
   isProduct: boolean;
@@ -23,6 +30,15 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   amount: number;
+  productCategory: string | null;
+  insumos?: OrderItemInsumo[];
+}
+
+export interface OrderMaterial {
+  nombre: string;
+  cantidad: number;
+  importeVenta: number;
+  isExtra: boolean;
 }
 
 export interface OrderPayment {
@@ -93,6 +109,7 @@ export interface Order {
   comprobantePath?: string | null;
   arregloUrl?: string | null;
   arregloPath?: string | null;
+  materials?: OrderMaterial[];
   createdAt: string;
   updatedAt: string;
 }

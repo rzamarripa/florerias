@@ -58,6 +58,28 @@ const deliveryDataSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+const insumoSchema = new mongoose.Schema({
+  nombre: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  cantidad: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  importeVenta: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  isExtra: {
+    type: Boolean,
+    default: false
+  }
+}, { _id: false });
+
 const orderItemSchema = new mongoose.Schema({
   isProduct: {
     type: Boolean,
@@ -90,6 +112,15 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 0
+  },
+  productCategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_product_category',
+    default: null
+  },
+  insumos: {
+    type: [insumoSchema],
+    default: []
   }
 }, { _id: true });
 
@@ -252,6 +283,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: null
+  },
+  materials: {
+    type: [insumoSchema],
+    default: []
   }
 }, {
   timestamps: true,

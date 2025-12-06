@@ -18,6 +18,23 @@ const productItemSchema = new Schema(
   { _id: true }
 );
 
+const materialItemSchema = new Schema(
+  {
+    materialId: {
+      type: Schema.Types.ObjectId,
+      ref: "Material",
+      required: [true, "El ID del material es requerido"],
+    },
+    quantity: {
+      type: Number,
+      required: [true, "La cantidad es requerida"],
+      min: [0, "La cantidad no puede ser negativa"],
+      default: 0,
+    },
+  },
+  { _id: true }
+);
+
 const storageSchema = new Schema(
   {
     branch: {
@@ -38,6 +55,10 @@ const storageSchema = new Schema(
     },
     products: {
       type: [productItemSchema],
+      default: [],
+    },
+    materials: {
+      type: [materialItemSchema],
       default: [],
     },
     lastIncome: {
@@ -115,6 +136,7 @@ storageSchema.index({ branch: 1 });
 storageSchema.index({ warehouseManager: 1 });
 storageSchema.index({ isActive: 1 });
 storageSchema.index({ "products.productId": 1 });
+storageSchema.index({ "materials.materialId": 1 });
 
 const Storage = mongoose.model("cv_storage", storageSchema);
 export { Storage };

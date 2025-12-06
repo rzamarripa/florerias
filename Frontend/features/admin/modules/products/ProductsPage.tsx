@@ -230,10 +230,10 @@ const ProductsPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="text-success fw-medium">
-                      ${(product.insumos?.reduce((sum, insumo) => sum + (insumo.importeCosto || 0), 0) || 0).toFixed(2)}
+                      ${(product.totalCosto || 0).toFixed(2)}
                     </td>
                     <td className="text-primary fw-medium">
-                      ${(product.insumos?.reduce((sum, insumo) => sum + (insumo.importeVenta || 0), 0) || 0).toFixed(2)}
+                      ${(product.totalVenta || 0).toFixed(2)}
                     </td>
                     <td>
                       <Badge

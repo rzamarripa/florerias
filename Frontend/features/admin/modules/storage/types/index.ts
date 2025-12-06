@@ -36,6 +36,27 @@ export interface ProductItem {
   quantity: number;
 }
 
+export interface Material {
+  _id: string;
+  name: string;
+  unit: {
+    _id: string;
+    name: string;
+    abbreviation: string;
+  } | string;
+  price: number;
+  cost: number;
+  piecesPerPackage: number;
+  description?: string;
+  status: boolean;
+}
+
+export interface MaterialItem {
+  _id: string;
+  materialId: Material | string;
+  quantity: number;
+}
+
 export interface Branch {
   _id: string;
   branchName: string;
@@ -51,6 +72,7 @@ export interface Storage {
   name: string;
   warehouseManager?: WarehouseManager | string;
   products: ProductItem[];
+  materials: MaterialItem[];
   lastIncome: string | null;
   lastOutcome: string | null;
   address?: StorageAddress;
@@ -92,5 +114,24 @@ export interface RemoveProductsData {
 
 export interface UpdateProductQuantityData {
   productId: string;
+  quantity: number;
+}
+
+export interface AddMaterialsData {
+  materials: {
+    materialId: string;
+    quantity: number;
+  }[];
+}
+
+export interface RemoveMaterialsData {
+  materials: {
+    materialId: string;
+    quantity: number;
+  }[];
+}
+
+export interface UpdateMaterialQuantityData {
+  materialId: string;
   quantity: number;
 }

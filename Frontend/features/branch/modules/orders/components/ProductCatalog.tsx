@@ -18,12 +18,19 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { Storage } from "@/features/admin/modules/storage/types";
 
+interface ProductInsumo {
+  nombre: string;
+  cantidad: number;
+  importeVenta: number;
+}
+
 interface Product {
   _id: string;
   nombre: string;
   precio: number;
   imagen?: string;
-  categoria?: string;
+  productCategory: string | null;
+  insumos?: ProductInsumo[];
 }
 
 interface ProductCatalogProps {
@@ -59,11 +66,17 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
     setLoading(true);
     try {
-      const response = await productListsService.getProductListByBranch(branchId);
+      const response = await productListsService.getProductListByBranch(
+        branchId
+      );
       setProducts(response.data.products);
+      console.log("🔍 Productos cargados:", response.data.products);
     } catch (error: any) {
       console.error("Error al cargar productos:", error);
-      if (error.message !== "No se encontró una lista de productos para esta sucursal") {
+      if (
+        error.message !==
+        "No se encontró una lista de productos para esta sucursal"
+      ) {
         toast.error("Error al cargar los productos de la sucursal");
       }
       setProducts([]);
@@ -120,14 +133,36 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
     const cantidad = quantities[product.productId] || 1;
     const precio = calculateFinalPrice(product);
 
+    // Debug: Verificar el producto original
+    console.log("🔍 Producto del catálogo original:", {
+      productId: product.productId,
+      nombre: product.nombre,
+      productCategory: product.productCategory,
+      insumos: product.insumos,
+      productoCompleto: product,
+    });
+
+    // Mapear los insumos del producto
+    const insumos: ProductInsumo[] = product.insumos?.map((insumo) => ({
+      nombre: insumo.nombre,
+      cantidad: insumo.cantidad,
+      importeVenta: insumo.importeVenta,
+    })) || [];
+
     const productToAdd: Product = {
       _id: product.productId,
       nombre: product.nombre,
       precio,
       imagen: product.imagen,
+      productCategory: product.productCategory ?? null,
+      insumos,
     };
 
+    // Debug: Verificar el producto que se enviará
+    console.log("📤 Producto a enviar al padre:", productToAdd);
+
     onAddProduct(productToAdd, cantidad);
+
     // Reset quantity after adding
     setQuantities({
       ...quantities,
@@ -138,10 +173,10 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const handleManageStock = (product: EmbeddedProductWithStock) => {
     // Redirigir a StoragePage con parámetros
     const params = new URLSearchParams({
-      fromOrder: 'true',
+      fromOrder: "true",
       productId: product.productId,
       branchId: branchId,
-      hasStock: product.availableQuantity > 0 ? 'false' : 'true', // false si cantidad=0, true si no existe
+      hasStock: product.availableQuantity > 0 ? "false" : "true", // false si cantidad=0, true si no existe
     });
     router.push(`/sucursal/almacenes?${params.toString()}`);
   };
@@ -177,7 +212,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
               <AlertTriangle size={16} className="me-2" />
               <strong>Sin almacén disponible</strong>
               <p className="mb-0 small mt-1">
-                No hay almacén asignado a esta sucursal. Todos los productos se muestran con stock en 0.
+                No hay almacén asignado a esta sucursal. Todos los productos se
+                muestran con stock en 0.
               </p>
             </Alert>
           )}
@@ -255,7 +291,10 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
                                 {product.nombre}
                               </h6>
                               {isOutOfStock && (
-                                <Alert variant="danger" className="py-1 px-2 mb-2 small">
+                                <Alert
+                                  variant="danger"
+                                  className="py-1 px-2 mb-2 small"
+                                >
                                   <AlertTriangle size={14} className="me-1" />
                                   Sin stock en almacén
                                 </Alert>

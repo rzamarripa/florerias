@@ -66,6 +66,8 @@ export interface Order {
   status: OrderStatus;
   stage?: string | StageCatalog | null; // Referencia a StageCatalog
   orderNumber: string;
+  arregloUrl?: string | null;
+  arregloPath?: string | null;
   createdAt: string;
   updatedAt: string;
 }

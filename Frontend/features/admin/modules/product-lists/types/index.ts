@@ -23,6 +23,7 @@ export interface EmbeddedProduct {
   totalVenta: number;
   labour: number;
   estatus: boolean;
+  productCategory: string | null;
 }
 
 // Embedded Product with available stock (from ProductList + Storage)

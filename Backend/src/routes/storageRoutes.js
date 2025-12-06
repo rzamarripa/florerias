@@ -14,6 +14,9 @@ import {
   reserveStock,
   releaseStock,
   checkStorageExists,
+  addMaterialsToStorage,
+  removeMaterialsFromStorage,
+  updateMaterialQuantity,
 } from "../controllers/storageController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -32,12 +35,15 @@ router.get("/check-exists/:branchId", checkStorageExists);
 router.post("/", createStorage);
 router.post("/:id/add-products", addProductsToStorage);
 router.post("/:id/remove-products", removeProductsFromStorage);
+router.post("/:id/add-materials", addMaterialsToStorage);
+router.post("/:id/remove-materials", removeMaterialsFromStorage);
 router.post("/:id/reserve-stock", reserveStock);
 router.post("/:id/release-stock", releaseStock);
 
 // Rutas PUT
 router.put("/:id", updateStorage);
 router.put("/:id/update-quantity", updateProductQuantity);
+router.put("/:id/update-material-quantity", updateMaterialQuantity);
 router.put("/:id/activate", activateStorage);
 router.put("/:id/deactivate", deactivateStorage);
 

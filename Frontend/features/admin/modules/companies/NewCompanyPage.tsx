@@ -11,12 +11,14 @@ import {
   FileText,
   UserPlus,
   X,
+  Upload,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { companiesService } from "./services/companies";
 import { CreateCompanyData, Distributor } from "./types";
 import { legalForms } from "./schemas/companySchema";
+import { uploadCompanyLogo } from "@/services/firebaseStorage";
 
 const NewCompanyPage: React.FC = () => {
   const router = useRouter();
@@ -56,6 +58,8 @@ const NewCompanyPage: React.FC = () => {
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Cargar distribuidores
   useEffect(() => {
@@ -300,7 +304,38 @@ const NewCompanyPage: React.FC = () => {
         throw new Error(response.message || "Error al guardar la empresa");
       }
 
-      // Solo mostrar success si realmente fue exitoso
+      // Subir logo a Firebase Storage DESPUÉS de crear/actualizar la empresa
+      let logoUrl: string | null = null;
+      let logoPath: string | null = null;
+
+      if (logoFile) {
+        setUploadingLogo(true);
+        toast.info("Subiendo logo a Firebase Storage...");
+
+        try {
+          const savedCompanyId = response.data._id;
+
+          // Subir logo
+          const logoResult = await uploadCompanyLogo(logoFile, savedCompanyId);
+          logoUrl = logoResult.url;
+          logoPath = logoResult.path;
+
+          // Actualizar la empresa con las URLs del logo
+          await companiesService.updateCompany(savedCompanyId, {
+            logoUrl,
+            logoPath,
+          });
+
+          toast.success("Logo subido exitosamente");
+        } catch (uploadError: any) {
+          console.error("Error al subir logo:", uploadError);
+          toast.warning("Empresa guardada pero hubo un error al subir el logo. Puedes intentar subirlo después.");
+        } finally {
+          setUploadingLogo(false);
+        }
+      }
+
+      // Mostrar toast de éxito
       toast.success(
         isEditing
           ? "Empresa actualizada exitosamente"
@@ -431,6 +466,35 @@ const NewCompanyPage: React.FC = () => {
                       </option>
                     ))}
                   </Form.Select>
+                </Form.Group>
+              </Col>
+
+              {/* Logo de la Empresa */}
+              <Col md={12}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    <Upload size={16} className="me-2" />
+                    Logo de la Empresa
+                  </Form.Label>
+                  <Form.Control
+                    type="file"
+                    className="py-2"
+                    accept="image/*"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setLogoFile(file);
+                      }
+                    }}
+                  />
+                  {logoFile && (
+                    <Form.Text className="text-success">
+                      ✓ Archivo seleccionado: {logoFile.name}
+                    </Form.Text>
+                  )}
+                  <Form.Text className="text-muted d-block">
+                    Formatos aceptados: JPG, PNG, SVG. Tamaño recomendado: 500x500px
+                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
@@ -934,11 +998,11 @@ const NewCompanyPage: React.FC = () => {
             type="submit"
             variant="primary"
             size="lg"
-            disabled={loading}
+            disabled={loading || uploadingLogo}
             className="d-flex align-items-center gap-2 px-5"
           >
             <Save size={18} />
-            {loading ? "Guardando..." : isEditing ? "Actualizar" : "Guardar"}
+            {uploadingLogo ? "Subiendo logo..." : loading ? "Guardando..." : isEditing ? "Actualizar" : "Guardar"}
           </Button>
         </div>
       </Form>

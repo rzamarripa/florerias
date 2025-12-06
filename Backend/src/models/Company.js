@@ -109,6 +109,16 @@ const companySchema = new Schema(
         ref: "cs_user",
       },
     ],
+    logoUrl: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    logoPath: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     isActive: {
       type: Boolean,
       default: true,

@@ -65,7 +65,9 @@ const NewProductPage: React.FC = () => {
     null
   );
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>(
+    []
+  );
   const [labourType, setLabourType] = useState<"fixed" | "percentage">("fixed");
   const [labourPercentage, setLabourPercentage] = useState<number>(0);
 
@@ -138,9 +140,9 @@ const NewProductPage: React.FC = () => {
         estatus: product.estatus,
       });
 
-      // Cargar precio de venta final si existe
-      if (product.precioVentaFinal) {
-        setPrecioVentaEditable(product.precioVentaFinal);
+      // Cargar precio de venta final (totalVenta del producto)
+      if (product.totalVenta) {
+        setPrecioVentaEditable(product.totalVenta);
       }
 
       // Establecer preview de imagen si existe
@@ -435,7 +437,9 @@ const NewProductPage: React.FC = () => {
                     }
                     className="py-2"
                   >
-                    <option value="">Selecciona una categoría (opcional)</option>
+                    <option value="">
+                      Selecciona una categoría (opcional)
+                    </option>
                     {productCategories.map((category) => (
                       <option key={category._id} value={category._id}>
                         {category.name}
@@ -501,95 +505,6 @@ const NewProductPage: React.FC = () => {
                     }
                   />
                 </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
-        </Card>
-
-        {/* Precio de Venta Final */}
-        <Card className="mb-4">
-          <Card.Header className="bg-success text-white">
-            <h5 className="mb-0">
-              <Package className="me-2" />
-              Precio de Venta Final
-            </h5>
-          </Card.Header>
-          <Card.Body>
-            <Row className="align-items-center">
-              <Col md={6}>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="fw-semibold">Total Insumos:</span>
-                  <span className="fs-5 text-primary">
-                    ${formatNumber(totalVenta)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="fw-semibold">Mano de Obra:</span>
-                  <span className="fs-5 text-warning">
-                    ${formatNumber(formData.labour)}
-                  </span>
-                </div>
-                <hr />
-                <div className="d-flex justify-content-between align-items-center">
-                  <span className="fw-bold fs-4">Precio de Venta Final:</span>
-                  <div className="d-flex align-items-center gap-2">
-                    <Form.Control
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={precioVentaEditable}
-                      onChange={(e) =>
-                        setPrecioVentaEditable(parseFloat(e.target.value) || 0)
-                      }
-                      className="fs-3 fw-bold text-success border-success"
-                      style={{ width: "150px", textAlign: "right" }}
-                    />
-                    <span className="fs-3 fw-bold text-success">$</span>
-                    {precioVentaEditable !== precioVentaCalculado && (
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() =>
-                          setPrecioVentaEditable(precioVentaCalculado)
-                        }
-                        title="Resetear al precio calculado"
-                      >
-                        <X size={16} />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </Col>
-              <Col md={6}>
-                <div className="text-center">
-                  <div className="p-4 bg-light rounded">
-                    <h6 className="text-muted mb-2">Desglose del Precio</h6>
-                    <div className="fs-6">
-                      <div className="mb-1">
-                        <span className="text-primary">Insumos:</span> $
-                        {formatNumber(totalVenta)}
-                      </div>
-                      <div className="mb-1">
-                        <span className="text-warning">Mano de Obra:</span> $
-                        {formatNumber(formData.labour)}
-                      </div>
-                      <hr className="my-2" />
-                      <div className="fw-bold text-success">
-                        <span>Total:</span> ${formatNumber(precioVentaFinal)}
-                      </div>
-                      {precioVentaEditable !== precioVentaCalculado && (
-                        <div className="mt-2 p-2 bg-warning bg-opacity-25 rounded">
-                          <small className="text-warning">
-                            <strong>Ajuste:</strong> +$
-                            {formatNumber(
-                              precioVentaEditable - precioVentaCalculado
-                            )}
-                          </small>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
               </Col>
             </Row>
           </Card.Body>
@@ -1014,6 +929,95 @@ const NewProductPage: React.FC = () => {
                   </Form.Group>
                 </Col>
               )}
+            </Row>
+          </Card.Body>
+        </Card>
+
+        {/* Precio de Venta Final */}
+        <Card className="mb-4">
+          <Card.Header className="bg-success text-white">
+            <h5 className="mb-0">
+              <Package className="me-2" />
+              Precio de Venta Final
+            </h5>
+          </Card.Header>
+          <Card.Body>
+            <Row className="align-items-center">
+              <Col md={6}>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <span className="fw-semibold">Total Insumos:</span>
+                  <span className="fs-5 text-success">
+                    ${formatNumber(totalCosto)}
+                  </span>
+                </div>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <span className="fw-semibold">Mano de Obra:</span>
+                  <span className="fs-5 text-warning">
+                    ${formatNumber(formData.labour)}
+                  </span>
+                </div>
+                <hr />
+                <div className="d-flex justify-content-between align-items-center">
+                  <span className="fw-bold fs-4">Precio de Venta Final:</span>
+                  <div className="d-flex align-items-center gap-2">
+                    <Form.Control
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={precioVentaEditable}
+                      onChange={(e) =>
+                        setPrecioVentaEditable(parseFloat(e.target.value) || 0)
+                      }
+                      className="fs-3 fw-bold text-success border-success"
+                      style={{ width: "150px", textAlign: "right" }}
+                    />
+                    <span className="fs-3 fw-bold text-success">$</span>
+                    {precioVentaEditable !== precioVentaCalculado && (
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() =>
+                          setPrecioVentaEditable(precioVentaCalculado)
+                        }
+                        title="Resetear al precio calculado"
+                      >
+                        <X size={16} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Col>
+              <Col md={6}>
+                <div className="text-center">
+                  <div className="p-4 bg-light rounded">
+                    <h6 className="text-muted mb-2">Desglose del Precio</h6>
+                    <div className="fs-6">
+                      <div className="mb-1">
+                        <span className="text-success">Insumos:</span> $
+                        {formatNumber(totalCosto)}
+                      </div>
+                      <div className="mb-1">
+                        <span className="text-warning">Mano de Obra:</span> $
+                        {formatNumber(formData.labour)}
+                      </div>
+                      <hr className="my-2" />
+                      <div className="fw-bold text-success">
+                        <span>Total:</span> ${formatNumber(precioVentaFinal)}
+                      </div>
+                      {precioVentaEditable !== precioVentaCalculado && (
+                        <div className="mt-2 p-2 bg-warning bg-opacity-25 rounded">
+                          <small className="text-warning">
+                            <strong>Ajuste:</strong> +$
+                            {formatNumber(
+                              precioVentaEditable - precioVentaCalculado
+                            )}
+                          </small>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Col>
             </Row>
           </Card.Body>
         </Card>

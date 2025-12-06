@@ -38,23 +38,25 @@ export interface Company {
     };
   }[];
   branches?: string[];
+  logoUrl?: string | null;
+  logoPath?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateCompanyData {
-  legalName: string;
+  legalName?: string;
   tradeName?: string;
-  rfc: string;
-  legalForm: string;
-  fiscalAddress: {
+  rfc?: string;
+  legalForm?: string;
+  fiscalAddress?: {
     street: string;
     city: string;
     state: string;
     postalCode: string;
   };
-  primaryContact: {
+  primaryContact?: {
     name: string;
     email: string;
     phone: string;
@@ -81,6 +83,8 @@ export interface CreateCompanyData {
       lastName: string;
     };
   };
+  logoUrl?: string | null;
+  logoPath?: string | null;
 }
 
 export interface Distributor {

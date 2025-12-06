@@ -11,9 +11,15 @@ interface BranchSelectionModalProps {
   show: boolean;
   onHide: () => void;
   isRequired?: boolean; // Si es true, el modal no se puede cerrar sin seleccionar una sucursal
+  onNoBranchesFound?: () => void; // Callback cuando no se encuentran sucursales
 }
 
-const BranchSelectionModal = ({ show, onHide, isRequired = false }: BranchSelectionModalProps) => {
+const BranchSelectionModal = ({
+  show,
+  onHide,
+  isRequired = false,
+  onNoBranchesFound,
+}: BranchSelectionModalProps) => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +38,21 @@ const BranchSelectionModal = ({ show, onHide, isRequired = false }: BranchSelect
 
       try {
         const result = await branchesService.getUserBranches();
-
         if (result.success) {
           setBranches(result.data);
+
+          // Si no hay sucursales, notificar al componente padre
+          if (result.data.length === 0) {
+            setLoading(false);
+            // Notificar al componente padre que no hay sucursales
+            if (onNoBranchesFound) {
+              onNoBranchesFound();
+            }
+            // Cerrar el modal
+            onHide();
+            return;
+          }
+
           // Preseleccionar la sucursal activa si existe
           if (activeBranch) {
             setSelectedBranch(activeBranch);
@@ -74,9 +92,11 @@ const BranchSelectionModal = ({ show, onHide, isRequired = false }: BranchSelect
 
   const handleCancel = () => {
     // Si el modal es obligatorio y no hay sucursal activa, no permitir cerrar
-    if (isRequired && !activeBranch) {
+    if (isRequired && !activeBranch && branches.length > 0) {
+      console.log("branches", branches);
       return;
     }
+    console.log("branches");
     setSelectedBranch(activeBranch);
     setSearchTerm("");
     onHide();
@@ -85,7 +105,6 @@ const BranchSelectionModal = ({ show, onHide, isRequired = false }: BranchSelect
   return (
     <Modal
       show={show}
-      onHide={handleCancel}
       size="xl"
       centered
       backdrop={isRequired && !activeBranch ? "static" : true}
@@ -93,7 +112,9 @@ const BranchSelectionModal = ({ show, onHide, isRequired = false }: BranchSelect
     >
       <Modal.Header closeButton={!(isRequired && !activeBranch)}>
         <Modal.Title>
-          {isRequired && !activeBranch ? "⚠️ Selección Obligatoria de Sucursal" : "Seleccionar Sucursal"}
+          {isRequired && !activeBranch
+            ? "⚠️ Selección Obligatoria de Sucursal"
+            : "Seleccionar Sucursal"}
         </Modal.Title>
       </Modal.Header>
 
@@ -105,7 +126,9 @@ const BranchSelectionModal = ({ show, onHide, isRequired = false }: BranchSelect
               ⚠️ Acción Requerida
             </Alert.Heading>
             <p className="mb-0">
-              Es <strong>obligatorio</strong> seleccionar una sucursal para poder acceder a las funcionalidades del sistema con el usuario Administrador.
+              Es <strong>obligatorio</strong> seleccionar una sucursal para
+              poder acceder a las funcionalidades del sistema con el usuario
+              Administrador.
             </p>
           </Alert>
         )}

@@ -22,14 +22,14 @@ import { companiesService } from "../companies/services/companies";
 import { materialsService } from "../materials/services/materials";
 import { Material } from "../materials/types";
 import DesgloseModal from "./components/DesgloseModal";
-import { branchesService } from "../branches/services/branches";
-import { Branch } from "../branches/types";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 const NewProductListPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
   const productListId = params?.id as string;
   const isEditing = !!productListId;
+  const { activeBranch } = useActiveBranchStore();
 
   const [formData, setFormData] = useState<CreateProductListData>({
     name: "",
@@ -46,7 +46,6 @@ const NewProductListPage: React.FC = () => {
     (Product & { cantidad: number })[]
   >([]);
   const [userCompany, setUserCompany] = useState<any>(null);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [currentProductId, setCurrentProductId] = useState<string>("");
   const [currentQuantity, setCurrentQuantity] = useState<number>(1);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -63,19 +62,17 @@ const NewProductListPage: React.FC = () => {
     });
   };
 
-  // Cargar productos disponibles
+  // Cargar productos disponibles y establecer sucursal activa
   useEffect(() => {
     loadProducts();
     loadUserCompany();
     loadMaterials();
-  }, []);
 
-  // Cargar sucursales cuando se selecciona una empresa
-  useEffect(() => {
-    if (formData.company) {
-      loadBranches();
+    // Establecer la sucursal activa del store
+    if (activeBranch) {
+      setFormData((prev) => ({ ...prev, branch: activeBranch._id }));
     }
-  }, [formData.company]);
+  }, [activeBranch]);
 
   // Cargar lista de productos si estamos editando
   useEffect(() => {
@@ -123,23 +120,6 @@ const NewProductListPage: React.FC = () => {
       if (!err.message?.includes("no tiene una empresa asignada")) {
         toast.error(err.message || "Error al cargar la empresa del usuario");
       }
-    }
-  };
-
-  const loadBranches = async () => {
-    try {
-      if (!formData.company) return;
-
-      const response = await branchesService.getAllBranches({
-        companyId: formData.company,
-        limit: 1000,
-        isActive: true,
-      });
-
-      setBranches(response.data);
-    } catch (err: any) {
-      console.error("Error al cargar sucursales:", err);
-      toast.error(err.message || "Error al cargar sucursales");
     }
   };
 
@@ -266,6 +246,12 @@ const NewProductListPage: React.FC = () => {
     setError(null);
 
     try {
+      if (!activeBranch) {
+        throw new Error(
+          "No hay sucursal activa seleccionada. Por favor, selecciona una sucursal desde el selector de sucursales."
+        );
+      }
+
       if (!formData.name || !formData.company || !formData.branch || !formData.expirationDate) {
         throw new Error(
           "El nombre, empresa, sucursal y fecha de expiración son obligatorios"
@@ -337,6 +323,13 @@ const NewProductListPage: React.FC = () => {
 
   return (
     <div className="new-product-list-page">
+      {!activeBranch && (
+        <Alert variant="warning" className="mb-3">
+          <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
+          Por favor, selecciona una sucursal desde el selector de sucursales en la parte superior para poder crear una lista de productos.
+        </Alert>
+      )}
+
       {error && (
         <Alert variant="danger" onClose={() => setError(null)} dismissible>
           {error}
@@ -419,24 +412,15 @@ const NewProductListPage: React.FC = () => {
                   <Form.Label className="fw-semibold">
                     Sucursal <span className="text-danger">*</span>
                   </Form.Label>
-                  <Form.Select
-                    value={formData.branch}
-                    onChange={(e) =>
-                      setFormData({ ...formData, branch: e.target.value })
-                    }
-                    required
+                  <Form.Control
+                    type="text"
+                    value={activeBranch?.branchName || "No hay sucursal seleccionada"}
+                    disabled
+                    readOnly
                     className="py-2"
-                    disabled={!formData.company || branches.length === 0}
-                  >
-                    <option value="">-- Seleccionar sucursal --</option>
-                    {branches.map((branch) => (
-                      <option key={branch._id} value={branch._id}>
-                        {branch.branchName}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  />
                   <Form.Text className="text-muted">
-                    Puede haber múltiples listas por sucursal, pero solo una estará activa
+                    Sucursal activa actual. Puede haber múltiples listas por sucursal, pero solo una estará activa
                   </Form.Text>
                 </Form.Group>
               </Col>

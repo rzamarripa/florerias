@@ -149,8 +149,12 @@ const createProductList = async (req, res) => {
           });
         }
 
-        // Debug: log para ver qué contiene el producto
-        console.log('Product insumos:', JSON.stringify(product.insumos, null, 2));
+        // Debug: verificar productCategory del producto original
+        console.log('🔍 Producto original de BD:', {
+          nombre: product.nombre,
+          productCategory: product.productCategory,
+          tipoProductCategory: typeof product.productCategory
+        });
 
         // Embeber el producto completo con insumos convertidos a objetos planos
         const mappedInsumos = product.insumos.map(insumo => {
@@ -167,9 +171,7 @@ const createProductList = async (req, res) => {
           };
         });
 
-        console.log('Mapped insumos:', JSON.stringify(mappedInsumos, null, 2));
-
-        embeddedProducts.push({
+        const embeddedProduct = {
           productId: product._id,
           nombre: product.nombre,
           unidad: product.unidad,
@@ -181,8 +183,17 @@ const createProductList = async (req, res) => {
           totalCosto: product.totalCosto,
           totalVenta: product.totalVenta,
           labour: product.labour,
-          estatus: product.estatus
+          estatus: product.estatus,
+          productCategory: product.productCategory || null
+        };
+
+        console.log('✅ Producto embebido creado:', {
+          nombre: embeddedProduct.nombre,
+          productCategory: embeddedProduct.productCategory,
+          tipoProductCategory: typeof embeddedProduct.productCategory
         });
+
+        embeddedProducts.push(embeddedProduct);
       }
     }
 
@@ -301,8 +312,15 @@ const updateProductList = async (req, res) => {
             });
           }
 
+          // Debug: verificar productCategory del producto original
+          console.log('🔍 [UPDATE] Producto original de BD:', {
+            nombre: product.nombre,
+            productCategory: product.productCategory,
+            tipoProductCategory: typeof product.productCategory
+          });
+
           // Embeber el producto completo con insumos convertidos a objetos planos
-          embeddedProducts.push({
+          const embeddedProduct = {
             productId: product._id,
             nombre: product.nombre,
             unidad: product.unidad,
@@ -321,8 +339,17 @@ const updateProductList = async (req, res) => {
             totalCosto: product.totalCosto,
             totalVenta: product.totalVenta,
             labour: product.labour,
-            estatus: product.estatus
+            estatus: product.estatus,
+            productCategory: product.productCategory || null
+          };
+
+          console.log('✅ [UPDATE] Producto embebido creado:', {
+            nombre: embeddedProduct.nombre,
+            productCategory: embeddedProduct.productCategory,
+            tipoProductCategory: typeof embeddedProduct.productCategory
           });
+
+          embeddedProducts.push(embeddedProduct);
         }
       }
       updateData.products = embeddedProducts;
@@ -453,7 +480,7 @@ const getProductListByBranch = async (req, res) => {
     const productList = await ProductList.findOne({ branch: branchId, status: true })
       .populate('company', 'legalName tradeName rfc')
       .populate('branch', 'branchName');
-
+    console.log('productList', productList);
     if (!productList) {
       return res.status(404).json({
         success: false,
@@ -478,9 +505,19 @@ const getProductListByBranch = async (req, res) => {
         }
       }
 
+      // Convertir producto a objeto plano
+      const productObj = product.toObject();
+
+      // Debug: verificar productCategory
+      console.log('🔍 Product from ProductList:', {
+        nombre: productObj.nombre,
+        productCategory: productObj.productCategory,
+        tipoProductCategory: typeof productObj.productCategory
+      });
+
       // Obtener el producto original para el precio
       return {
-        ...product.toObject(),
+        ...productObj,
         availableQuantity,
         hasStock: availableQuantity > 0
       };

@@ -29,6 +29,7 @@ import {
   LockKeyhole,
   HelpCircle,
   ChartPie,
+  Box,
 } from "lucide-react";
 
 export interface UserDropdownItem {
@@ -237,6 +238,11 @@ export const menuItems: MenuItemType[] = [
         icon: Package,
       },
       {
+        key: "inventario",
+        label: "Inventario",
+        icon: Box,
+        children: [
+          {
         key: "categorias-productos",
         label: "Categorias de productos",
         url: "/catalogos/categorias-productos",
@@ -254,6 +260,15 @@ export const menuItems: MenuItemType[] = [
         url: "/catalogos/materiales",
         icon: Package2,
       },
+      {
+        key: "gestion-materiales",
+        label: "Gestion de Materiales",
+        url: "/catalogos/gestion-materiales",
+        icon: Package2,
+      },
+        ],
+      },
+      
       {
         key: "unidades",
         label: "Unidades de Medida",

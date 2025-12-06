@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { storageService } from "../services/storage";
 import { Storage } from "../types";
 import AddProductsModal from "./AddProductsModal";
+import AddMaterialsModal from "./AddMaterialsModal";
 import ViewStorageModal from "./ViewStorageModal";
 
 interface StorageActionsProps {
@@ -16,6 +17,7 @@ interface StorageActionsProps {
 
 const StorageActions: React.FC<StorageActionsProps> = ({ storage, onStorageUpdated }) => {
   const [showAddProductsModal, setShowAddProductsModal] = useState<boolean>(false);
+  const [showAddMaterialsModal, setShowAddMaterialsModal] = useState<boolean>(false);
   const [showViewModal, setShowViewModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -82,6 +84,11 @@ const StorageActions: React.FC<StorageActionsProps> = ({ storage, onStorageUpdat
             Agregar Productos
           </Dropdown.Item>
 
+          <Dropdown.Item onClick={() => setShowAddMaterialsModal(true)}>
+            <Plus size={16} className="me-2" />
+            Agregar Materiales
+          </Dropdown.Item>
+
           <Dropdown.Divider />
 
           <Dropdown.Item onClick={handleToggleStatus}>
@@ -110,6 +117,13 @@ const StorageActions: React.FC<StorageActionsProps> = ({ storage, onStorageUpdat
         show={showAddProductsModal}
         onHide={() => setShowAddProductsModal(false)}
         onProductsAdded={onStorageUpdated}
+        storage={storage}
+      />
+
+      <AddMaterialsModal
+        show={showAddMaterialsModal}
+        onHide={() => setShowAddMaterialsModal(false)}
+        onMaterialsAdded={onStorageUpdated}
         storage={storage}
       />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, Row, Col, Button, Form, Badge, Spinner } from "react-bootstrap";
 import {
   ShoppingCart,
@@ -24,20 +24,33 @@ import SalesByDayChart from "./components/SalesByDayChart";
 import MonthComparisonChart from "./components/MonthComparisonChart";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useBranchModalStore } from "@/stores/branchModalStore";
+import BranchSelectionModal from "@/components/branches/BranchSelectionModal";
+import BranchModal from "@/features/admin/modules/branches/components/BranchModal";
+import { companiesService } from "@/features/admin/modules/companies/services/companies";
 
 const OrderAnalyticsPage: React.FC = () => {
   const activeBranch = useActiveBranchStore((state) => state.activeBranch);
   const userRole = useUserRoleStore((state) => state.role);
 
+  const {
+    showBranchSelectionModal,
+    showCreateBranchModal,
+    isRequiredSelection,
+    openBranchSelectionModal,
+    closeBranchSelectionModal,
+    openCreateBranchModal,
+    closeCreateBranchModal,
+  } = useBranchModalStore();
+
   const [loading, setLoading] = useState<boolean>(false);
   const [dashboardData, setDashboardData] =
     useState<AnalyticsDashboardData | null>(null);
+  const [userCompany, setUserCompany] = useState<any>(null);
   const [filters, setFilters] = useState<AnalyticsFilters>({
-    startDate: new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1
-    ).toISOString().split("T")[0],
+    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      .toISOString()
+      .split("T")[0],
     endDate: new Date().toISOString().split("T")[0],
     period: "day",
     branchId: activeBranch?._id || undefined,
@@ -50,15 +63,80 @@ const OrderAnalyticsPage: React.FC = () => {
     }
   }, [activeBranch]);
 
+  // Cargar empresa del usuario administrador
+  useEffect(() => {
+    const loadUserCompany = async () => {
+      const isAdmin = userRole?.toLowerCase() === "administrador";
+      if (!isAdmin) return;
+
+      try {
+        const company = await companiesService.getMyCompany();
+        console.log("empresa de admin: ", company);
+        setUserCompany(company || null);
+      } catch (error) {
+        console.error("Error al cargar empresa del usuario:", error);
+        setUserCompany(null);
+      }
+    };
+
+    loadUserCompany();
+  }, [userRole]);
+
+  // Efecto para mostrar modal de selección si es Administrador sin sucursal
+  useEffect(() => {
+    const isAdmin = userRole?.toLowerCase() === "administrador";
+
+    // Verificar directamente desde el store persistente
+    const currentActiveBranch = useActiveBranchStore.getState().activeBranch;
+
+    // Si es Administrador y no tiene sucursal activa, abrir modal de selección
+    if (isAdmin && !currentActiveBranch) {
+      // El modal de selección se encargará de verificar si hay sucursales
+      // y llamará a handleNoBranchesFound si no las hay
+      openBranchSelectionModal(true);
+    } else if (currentActiveBranch) {
+      // Si hay sucursal activa, cerrar los modales
+      console.log("ya hay sucursal activa");
+      console.log("cerrando");
+      closeBranchSelectionModal();
+      closeCreateBranchModal();
+    }
+  }, [
+    userRole,
+    activeBranch,
+    openBranchSelectionModal,
+    closeBranchSelectionModal,
+    closeCreateBranchModal,
+  ]);
+
+  // Callback cuando no se encuentran sucursales en el modal de selección
+  const handleNoBranchesFound = useCallback(() => {
+    toast.warning(
+      "Crea una sucursal para que puedas acceder a las funciones del sistema",
+      {
+        autoClose: 5000,
+        position: "top-center",
+      }
+    );
+    // Abrir el modal de creación
+    openCreateBranchModal();
+  }, [openCreateBranchModal]);
+
   // Cargar datos solo cuando hay sucursal activa (para Administradores)
   useEffect(() => {
-    const isAdmin = userRole?.toLowerCase() === "administrador" || userRole?.toLowerCase() === "admin";
+    console.log("cargando datos: ", activeBranch);
+    const isAdmin =
+      userRole?.toLowerCase() === "administrador" ||
+      userRole?.toLowerCase() === "admin";
 
     // Si es administrador, solo cargar si hay sucursal activa
     if (isAdmin) {
+      console.log("es admin");
       if (activeBranch) {
+        console.log("hay sucursal activa");
         loadDashboardData();
       }
+      console.log("no hay sucursal activa");
     } else {
       // Para otros roles (Gerente), cargar normalmente
       loadDashboardData();
@@ -67,7 +145,9 @@ const OrderAnalyticsPage: React.FC = () => {
 
   const loadDashboardData = async () => {
     // Validación adicional: no cargar si es admin sin sucursal
-    const isAdmin = userRole?.toLowerCase() === "administrador" || userRole?.toLowerCase() === "admin";
+    const isAdmin =
+      userRole?.toLowerCase() === "administrador" ||
+      userRole?.toLowerCase() === "admin";
     if (isAdmin && !activeBranch) {
       console.log("No se pueden cargar datos sin sucursal activa");
       return;
@@ -148,7 +228,10 @@ const OrderAnalyticsPage: React.FC = () => {
   if (loading && !dashboardData) {
     return (
       <div className="container-fluid py-4">
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{ minHeight: "400px" }}
+        >
           <Spinner animation="border" variant="primary" />
         </div>
       </div>
@@ -164,7 +247,8 @@ const OrderAnalyticsPage: React.FC = () => {
   };
 
   // Usar el cambio porcentual de la comparación mensual para mayor precisión
-  const monthlyRevenueChange = dashboardData?.monthlyComparison?.percentageChange?.revenue || 0;
+  const monthlyRevenueChange =
+    dashboardData?.monthlyComparison?.percentageChange?.revenue || 0;
 
   return (
     <div className="container-fluid py-4">
@@ -256,7 +340,9 @@ const OrderAnalyticsPage: React.FC = () => {
                       new Date().getFullYear(),
                       new Date().getMonth(),
                       1
-                    ).toISOString().split("T")[0],
+                    )
+                      .toISOString()
+                      .split("T")[0],
                     endDate: new Date().toISOString().split("T")[0],
                     period: "day",
                   });
@@ -271,7 +357,12 @@ const OrderAnalyticsPage: React.FC = () => {
 
       {/* Stats Cards */}
       <Row className="g-3 mb-4">
-        <Col lg={20} md={6} sm={12} style={{ flex: '0 0 20%', maxWidth: '20%' }}>
+        <Col
+          lg={20}
+          md={6}
+          sm={12}
+          style={{ flex: "0 0 20%", maxWidth: "20%" }}
+        >
           <StatCard
             title="Total Ventas"
             value={summary.totalSales}
@@ -281,7 +372,12 @@ const OrderAnalyticsPage: React.FC = () => {
             trend={dashboardData?.monthlyComparison?.percentageChange?.sales}
           />
         </Col>
-        <Col lg={20} md={6} sm={12} style={{ flex: '0 0 20%', maxWidth: '20%' }}>
+        <Col
+          lg={20}
+          md={6}
+          sm={12}
+          style={{ flex: "0 0 20%", maxWidth: "20%" }}
+        >
           <StatCard
             title="Ingresos"
             value={formatCurrency(summary.totalRevenue)}
@@ -291,7 +387,12 @@ const OrderAnalyticsPage: React.FC = () => {
             trend={monthlyRevenueChange}
           />
         </Col>
-        <Col lg={20} md={6} sm={12} style={{ flex: '0 0 20%', maxWidth: '20%' }}>
+        <Col
+          lg={20}
+          md={6}
+          sm={12}
+          style={{ flex: "0 0 20%", maxWidth: "20%" }}
+        >
           <StatCard
             title="Ticket Promedio"
             value={formatCurrency(summary.averageTicket)}
@@ -300,7 +401,12 @@ const OrderAnalyticsPage: React.FC = () => {
             bgColor="#ede9fe"
           />
         </Col>
-        <Col lg={20} md={6} sm={12} style={{ flex: '0 0 20%', maxWidth: '20%' }}>
+        <Col
+          lg={20}
+          md={6}
+          sm={12}
+          style={{ flex: "0 0 20%", maxWidth: "20%" }}
+        >
           <StatCard
             title="Productos Vendidos"
             value={summary.totalProducts}
@@ -309,12 +415,22 @@ const OrderAnalyticsPage: React.FC = () => {
             bgColor="#fef3c7"
           />
         </Col>
-        <Col lg={20} md={6} sm={12} style={{ flex: '0 0 20%', maxWidth: '20%' }}>
-          <Card className="border-0 shadow-sm h-100" style={{ overflow: "hidden" }}>
+        <Col
+          lg={20}
+          md={6}
+          sm={12}
+          style={{ flex: "0 0 20%", maxWidth: "20%" }}
+        >
+          <Card
+            className="border-0 shadow-sm h-100"
+            style={{ overflow: "hidden" }}
+          >
             <Card.Body>
               <div className="d-flex justify-content-between align-items-start">
                 <div className="flex-grow-1">
-                  <p className="text-muted mb-2 fw-medium small">vs Mes Anterior</p>
+                  <p className="text-muted mb-2 fw-medium small">
+                    vs Mes Anterior
+                  </p>
                   <h3 className="mb-0 fw-bold">
                     {monthlyRevenueChange >= 0 ? "+" : ""}
                     {monthlyRevenueChange.toFixed(1)}%
@@ -324,11 +440,14 @@ const OrderAnalyticsPage: React.FC = () => {
                       bg={monthlyRevenueChange >= 0 ? "success" : "danger"}
                       className="bg-opacity-10"
                       style={{
-                        color: monthlyRevenueChange >= 0 ? "#10b981" : "#ef4444",
+                        color:
+                          monthlyRevenueChange >= 0 ? "#10b981" : "#ef4444",
                       }}
                     >
                       <TrendingUp size={12} className="me-1" />
-                      {monthlyRevenueChange >= 0 ? "Crecimiento" : "Disminución"}
+                      {monthlyRevenueChange >= 0
+                        ? "Crecimiento"
+                        : "Disminución"}
                     </Badge>
                   </div>
                 </div>
@@ -337,7 +456,8 @@ const OrderAnalyticsPage: React.FC = () => {
                   style={{
                     width: "56px",
                     height: "56px",
-                    backgroundColor: monthlyRevenueChange >= 0 ? "#d1fae5" : "#fee2e2",
+                    backgroundColor:
+                      monthlyRevenueChange >= 0 ? "#d1fae5" : "#fee2e2",
                   }}
                 >
                   <TrendingUp
@@ -345,8 +465,11 @@ const OrderAnalyticsPage: React.FC = () => {
                     color={monthlyRevenueChange >= 0 ? "#10b981" : "#ef4444"}
                     strokeWidth={2}
                     style={{
-                      transform: monthlyRevenueChange >= 0 ? "rotate(0deg)" : "rotate(180deg)",
-                      transition: "transform 0.3s ease"
+                      transform:
+                        monthlyRevenueChange >= 0
+                          ? "rotate(0deg)"
+                          : "rotate(180deg)",
+                      transition: "transform 0.3s ease",
                     }}
                   />
                 </div>
@@ -404,7 +527,8 @@ const OrderAnalyticsPage: React.FC = () => {
                 </div>
               </div>
               <div className="position-relative" style={{ height: "300px" }}>
-                {dashboardData?.salesTrend && dashboardData.salesTrend.length > 0 ? (
+                {dashboardData?.salesTrend &&
+                dashboardData.salesTrend.length > 0 ? (
                   <SalesTrendChart data={dashboardData.salesTrend} />
                 ) : (
                   <div className="d-flex align-items-center justify-content-center h-100 text-muted">
@@ -425,7 +549,9 @@ const OrderAnalyticsPage: React.FC = () => {
               <h5 className="fw-bold mb-3">Mes Actual vs Anterior</h5>
               <div className="position-relative" style={{ height: "300px" }}>
                 {dashboardData?.monthlyComparison ? (
-                  <MonthComparisonChart data={dashboardData.monthlyComparison} />
+                  <MonthComparisonChart
+                    data={dashboardData.monthlyComparison}
+                  />
                 ) : (
                   <div className="d-flex align-items-center justify-content-center h-100 text-muted">
                     <div className="text-center">
@@ -447,7 +573,8 @@ const OrderAnalyticsPage: React.FC = () => {
             <Card.Body>
               <h5 className="fw-bold mb-3">Ventas por Categoría</h5>
               <div className="position-relative" style={{ height: "300px" }}>
-                {dashboardData?.salesByCategory && dashboardData.salesByCategory.length > 0 ? (
+                {dashboardData?.salesByCategory &&
+                dashboardData.salesByCategory.length > 0 ? (
                   <CategoryPieChart data={dashboardData.salesByCategory} />
                 ) : (
                   <div className="d-flex align-items-center justify-content-center h-100 text-muted">
@@ -467,8 +594,11 @@ const OrderAnalyticsPage: React.FC = () => {
             <Card.Body>
               <h5 className="fw-bold mb-3">Métodos de Pago</h5>
               <div className="position-relative" style={{ height: "300px" }}>
-                {dashboardData?.salesByPaymentMethod && dashboardData.salesByPaymentMethod.length > 0 ? (
-                  <PaymentMethodChart data={dashboardData.salesByPaymentMethod} />
+                {dashboardData?.salesByPaymentMethod &&
+                dashboardData.salesByPaymentMethod.length > 0 ? (
+                  <PaymentMethodChart
+                    data={dashboardData.salesByPaymentMethod}
+                  />
                 ) : (
                   <div className="d-flex align-items-center justify-content-center h-100 text-muted">
                     <div className="text-center">
@@ -526,7 +656,8 @@ const OrderAnalyticsPage: React.FC = () => {
             <Card.Body>
               <h5 className="fw-bold mb-3">Ventas por Hora del Día</h5>
               <div className="position-relative" style={{ height: "280px" }}>
-                {dashboardData?.salesByHour && dashboardData.salesByHour.length > 0 ? (
+                {dashboardData?.salesByHour &&
+                dashboardData.salesByHour.length > 0 ? (
                   <SalesByHourChart data={dashboardData.salesByHour} />
                 ) : (
                   <div className="d-flex align-items-center justify-content-center h-100 text-muted">
@@ -546,7 +677,8 @@ const OrderAnalyticsPage: React.FC = () => {
             <Card.Body>
               <h5 className="fw-bold mb-3">Ventas por Día de la Semana</h5>
               <div className="position-relative" style={{ height: "280px" }}>
-                {dashboardData?.salesByDayOfWeek && dashboardData.salesByDayOfWeek.length > 0 ? (
+                {dashboardData?.salesByDayOfWeek &&
+                dashboardData.salesByDayOfWeek.length > 0 ? (
                   <SalesByDayChart data={dashboardData.salesByDayOfWeek} />
                 ) : (
                   <div className="d-flex align-items-center justify-content-center h-100 text-muted">
@@ -570,32 +702,34 @@ const OrderAnalyticsPage: React.FC = () => {
               <h5 className="fw-bold mb-3">Top Productos Más Vendidos</h5>
               <div style={{ maxHeight: "300px", overflowY: "auto" }}>
                 {dashboardData?.topProducts?.length ? (
-                  dashboardData.topProducts.slice(0, 5).map((product, index) => (
-                    <div
-                      key={`top-product-${index}-${product._id}`}
-                      className="d-flex justify-content-between align-items-center py-3 border-bottom"
-                    >
-                      <div className="d-flex align-items-center gap-3">
-                        <div
-                          className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center fw-bold text-primary"
-                          style={{ width: "40px", height: "40px" }}
-                        >
-                          {index + 1}
+                  dashboardData.topProducts
+                    .slice(0, 5)
+                    .map((product, index) => (
+                      <div
+                        key={`top-product-${index}-${product._id}`}
+                        className="d-flex justify-content-between align-items-center py-3 border-bottom"
+                      >
+                        <div className="d-flex align-items-center gap-3">
+                          <div
+                            className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center fw-bold text-primary"
+                            style={{ width: "40px", height: "40px" }}
+                          >
+                            {index + 1}
+                          </div>
+                          <div>
+                            <div className="fw-medium">{product.name}</div>
+                            <small className="text-muted">
+                              Cantidad: {product.quantity}
+                            </small>
+                          </div>
                         </div>
-                        <div>
-                          <div className="fw-medium">{product.name}</div>
-                          <small className="text-muted">
-                            Cantidad: {product.quantity}
-                          </small>
+                        <div className="text-end">
+                          <div className="fw-bold">
+                            {formatCurrency(product.revenue)}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-end">
-                        <div className="fw-bold">
-                          {formatCurrency(product.revenue)}
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                    ))
                 ) : (
                   <div className="text-center text-muted py-5">
                     <Package size={48} className="mb-2 opacity-50" />
@@ -616,43 +750,45 @@ const OrderAnalyticsPage: React.FC = () => {
               </div>
               <div style={{ maxHeight: "300px", overflowY: "auto" }}>
                 {dashboardData?.cashierRanking?.length ? (
-                  dashboardData.cashierRanking.slice(0, 5).map((cashier, index) => (
-                    <div
-                      key={`cashier-ranking-${index}-${cashier._id}`}
-                      className="d-flex justify-content-between align-items-center py-3 border-bottom"
-                    >
-                      <div className="d-flex align-items-center gap-3">
-                        <div
-                          className={`rounded-circle d-flex align-items-center justify-content-center fw-bold text-white`}
-                          style={{
-                            width: "40px",
-                            height: "40px",
-                            backgroundColor:
-                              index === 0
-                                ? "#f59e0b"
-                                : index === 1
-                                ? "#9ca3af"
-                                : index === 2
-                                ? "#cd7f32"
-                                : "#6b7280",
-                          }}
-                        >
-                          {index + 1}
+                  dashboardData.cashierRanking
+                    .slice(0, 5)
+                    .map((cashier, index) => (
+                      <div
+                        key={`cashier-ranking-${index}-${cashier._id}`}
+                        className="d-flex justify-content-between align-items-center py-3 border-bottom"
+                      >
+                        <div className="d-flex align-items-center gap-3">
+                          <div
+                            className={`rounded-circle d-flex align-items-center justify-content-center fw-bold text-white`}
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              backgroundColor:
+                                index === 0
+                                  ? "#f59e0b"
+                                  : index === 1
+                                  ? "#9ca3af"
+                                  : index === 2
+                                  ? "#cd7f32"
+                                  : "#6b7280",
+                            }}
+                          >
+                            {index + 1}
+                          </div>
+                          <div>
+                            <div className="fw-medium">{cashier.name}</div>
+                            <small className="text-muted">
+                              {cashier.salesCount} ventas
+                            </small>
+                          </div>
                         </div>
-                        <div>
-                          <div className="fw-medium">{cashier.name}</div>
-                          <small className="text-muted">
-                            {cashier.salesCount} ventas
-                          </small>
+                        <div className="text-end">
+                          <div className="fw-bold text-success">
+                            {formatCurrency(cashier.totalRevenue)}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-end">
-                        <div className="fw-bold text-success">
-                          {formatCurrency(cashier.totalRevenue)}
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                    ))
                 ) : (
                   <div className="text-center text-muted py-5">
                     <Award size={48} className="mb-2 opacity-50" />
@@ -664,6 +800,25 @@ const OrderAnalyticsPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Modal de Selección de Sucursal */}
+      <BranchSelectionModal
+        show={showBranchSelectionModal}
+        onHide={closeBranchSelectionModal}
+        isRequired={isRequiredSelection}
+        onNoBranchesFound={handleNoBranchesFound}
+      />
+
+      {/* Modal de Creación de Sucursal */}
+      <BranchModal
+        show={showCreateBranchModal}
+        onHide={closeCreateBranchModal}
+        userCompany={userCompany}
+        onBranchSaved={() => {
+          // El modal se cerrará automáticamente y reabrirá el de selección
+          // gracias a la lógica en BranchModal (reopenBranchSelectionAfterCreate)
+        }}
+      />
     </div>
   );
 };

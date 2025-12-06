@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col, Badge, Alert, Modal } from "react-bootstrap";
+import {
+  Card,
+  Form,
+  Button,
+  Row,
+  Col,
+  Badge,
+  Alert,
+  Modal,
+} from "react-bootstrap";
 import {
   User,
   Phone,
@@ -24,6 +33,7 @@ import { useRouter } from "next/navigation";
 import { ordersService } from "./services/orders";
 import { CreateOrderData, OrderItem, ShippingType } from "./types";
 import ProductCatalog from "./components/ProductCatalog";
+import AddExtrasModal from "./components/AddExtrasModal";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
 import { Client } from "@/features/admin/modules/clients/types";
 import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
@@ -44,6 +54,12 @@ import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 import { discountAuthService } from "@/features/admin/modules/discount-auth/services/discountAuth";
 import { Shield } from "lucide-react";
 import { uploadComprobante, uploadArreglo } from "@/services/firebaseStorage";
+import { productCategoriesService } from "@/features/admin/modules/productCategories/services/productCategories";
+import { ProductCategory } from "@/features/admin/modules/productCategories/types";
+import {
+  setCustomValidationMessage,
+  resetCustomValidationMessage,
+} from "@/utils/formValidation";
 
 const NewOrderPage = () => {
   const router = useRouter();
@@ -64,9 +80,13 @@ const NewOrderPage = () => {
   const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
   const [loadingCashRegister, setLoadingCashRegister] = useState(false);
   const [togglingCashRegister, setTogglingCashRegister] = useState(false);
-  const [availableCashRegisters, setAvailableCashRegisters] = useState<CashRegister[]>([]);
-  const [loadingAvailableCashRegisters, setLoadingAvailableCashRegisters] = useState(false);
-  const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>("");
+  const [availableCashRegisters, setAvailableCashRegisters] = useState<
+    CashRegister[]
+  >([]);
+  const [loadingAvailableCashRegisters, setLoadingAvailableCashRegisters] =
+    useState(false);
+  const [selectedCashRegisterId, setSelectedCashRegisterId] =
+    useState<string>("");
   const [storage, setStorage] = useState<Storage | null>(null);
   const [loadingStorage, setLoadingStorage] = useState(false);
   const [selectedStorageId, setSelectedStorageId] = useState<string>("");
@@ -74,13 +94,24 @@ const NewOrderPage = () => {
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
   const [showClientInfo, setShowClientInfo] = useState(false);
-  const [showDiscountRequestDialog, setShowDiscountRequestDialog] = useState(false);
+  const [showDiscountRequestDialog, setShowDiscountRequestDialog] =
+    useState(false);
   const [discountRequestMessage, setDiscountRequestMessage] = useState("");
   const [requestingDiscount, setRequestingDiscount] = useState(false);
   const [hasPendingDiscountAuth, setHasPendingDiscountAuth] = useState(false);
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
   const [arregloFile, setArregloFile] = useState<File | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>(
+    []
+  );
+  const [loadingProductCategories, setLoadingProductCategories] =
+    useState(false);
+  const [selectedProductCategory, setSelectedProductCategory] =
+    useState<string>("");
+  const [showAddExtrasModal, setShowAddExtrasModal] = useState(false);
+  const [selectedItemIndexForExtras, setSelectedItemIndexForExtras] =
+    useState<number>(-1);
 
   const [formData, setFormData] = useState<CreateOrderData>({
     branchId: "",
@@ -125,6 +156,7 @@ const NewOrderPage = () => {
     quantity: 1,
     unitPrice: 0,
     amount: 0,
+    productCategory: null,
   });
 
   const [currentProductName, setCurrentProductName] = useState<string>("");
@@ -277,7 +309,24 @@ const NewOrderPage = () => {
     }
   };
 
-  // Cargar clientes, métodos de pago, sucursales, caja registradora y colonias al montar el componente
+  // Obtener categorías de productos activas
+  const fetchProductCategories = async () => {
+    setLoadingProductCategories(true);
+    try {
+      const response = await productCategoriesService.getAllProductCategories({
+        limit: 1000,
+        isActive: true,
+      });
+      setProductCategories(response.data);
+    } catch (err) {
+      console.error("Error al cargar categorías de productos:", err);
+      toast.error("Error al cargar las categorías de productos");
+    } finally {
+      setLoadingProductCategories(false);
+    }
+  };
+
+  // Cargar clientes, métodos de pago, sucursales, caja registradora, colonias y categorías al montar el componente
   useEffect(() => {
     fetchClients();
     fetchPaymentMethods();
@@ -292,6 +341,7 @@ const NewOrderPage = () => {
 
     fetchUserCashRegister();
     fetchActiveNeighborhoods();
+    fetchProductCategories();
   }, [isSocialMedia]);
 
   // Configurar valores iniciales para usuarios de Redes
@@ -328,13 +378,22 @@ const NewOrderPage = () => {
 
     setLoadingAvailableCashRegisters(true);
     try {
-      const response = await cashRegistersService.getSocialMediaCashRegistersByBranch(branchId);
+      const response =
+        await cashRegistersService.getSocialMediaCashRegistersByBranch(
+          branchId
+        );
       if (response.success) {
         setAvailableCashRegisters(response.data);
 
         // Si el usuario tiene una caja abierta y esa caja pertenece a esta sucursal, seleccionarla automáticamente
-        if (cashRegister && cashRegister.isOpen && cashRegister.branchId?._id === branchId) {
-          const userCashInBranch = response.data.find((cr: CashRegister) => cr._id === cashRegister._id);
+        if (
+          cashRegister &&
+          cashRegister.isOpen &&
+          cashRegister.branchId?._id === branchId
+        ) {
+          const userCashInBranch = response.data.find(
+            (cr: CashRegister) => cr._id === cashRegister._id
+          );
           if (userCashInBranch) {
             setSelectedCashRegisterId(cashRegister._id);
             setFormData((prev) => ({
@@ -385,7 +444,10 @@ const NewOrderPage = () => {
 
     setTogglingCashRegister(true);
     try {
-      const response = await cashRegistersService.toggleOpen(selectedCashRegisterId, true);
+      const response = await cashRegistersService.toggleOpen(
+        selectedCashRegisterId,
+        true
+      );
 
       if (response.success) {
         toast.success("Caja abierta exitosamente");
@@ -495,9 +557,7 @@ const NewOrderPage = () => {
   ) => {
     const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
     const discountAmount =
-      discountType === "porcentaje"
-        ? (subtotal * discount) / 100
-        : discount;
+      discountType === "porcentaje" ? (subtotal * discount) / 100 : discount;
     const total = subtotal - discountAmount + deliveryPrice;
 
     return {
@@ -514,13 +574,20 @@ const NewOrderPage = () => {
       return;
     }
 
+    if (!selectedProductCategory) {
+      setError("Por favor selecciona una categoría para el producto");
+      toast.error("Debes seleccionar una categoría para el producto");
+      return;
+    }
+
     const newItem: OrderItem = {
       ...currentItem,
       isProduct: false, // Producto manual
       productName: currentProductName,
       amount: calculateItemAmount(),
+      productCategory: selectedProductCategory,
     };
-
+    console.log("producto manual:", newItem);
     const updatedItems = [...formData.items, newItem];
     const totals = recalculateTotals(
       updatedItems,
@@ -543,8 +610,10 @@ const NewOrderPage = () => {
       quantity: 1,
       unitPrice: 0,
       amount: 0,
+      productCategory: null,
     });
     setCurrentProductName("");
+    setSelectedProductCategory("");
     setError(null);
   };
 
@@ -587,6 +656,89 @@ const NewOrderPage = () => {
 
     if (itemToRemove.isProduct) {
       toast.success("Producto eliminado y stock restaurado");
+    }
+  };
+
+  // Abrir modal de extras para un item específico
+  const handleOpenExtrasModal = (index: number) => {
+    if (!storage) {
+      toast.error("No hay almacén configurado");
+      return;
+    }
+
+    setSelectedItemIndexForExtras(index);
+    setShowAddExtrasModal(true);
+  };
+
+  // Agregar extras (materiales) a un item específico
+  const handleAddExtras = async (
+    extras: { materialId: string; name: string; price: number; quantity: number }[]
+  ) => {
+    if (selectedItemIndexForExtras < 0 || selectedItemIndexForExtras >= formData.items.length) {
+      toast.error("Item no válido");
+      return;
+    }
+
+    if (!storage) {
+      toast.error("No hay almacén configurado");
+      return;
+    }
+
+    try {
+      // Reducir el stock de los materiales en el almacén
+      for (const extra of extras) {
+        await storageService.removeMaterialsFromStorage(storage._id, {
+          materials: [{ materialId: extra.materialId, quantity: extra.quantity }],
+        });
+      }
+
+      // Actualizar el storage local
+      const updatedStorage = await storageService.getStorageById(storage._id);
+      setStorage(updatedStorage.data);
+
+      // Agregar los materiales como insumos al item seleccionado
+      const updatedItems = [...formData.items];
+      const currentItem = updatedItems[selectedItemIndexForExtras];
+
+      const newInsumos = extras.map((extra) => ({
+        nombre: extra.name,
+        cantidad: extra.quantity,
+        importeVenta: extra.price * extra.quantity,
+        isExtra: true,
+      }));
+
+      // Agregar los nuevos insumos a los existentes
+      currentItem.insumos = [...(currentItem.insumos || []), ...newInsumos];
+
+      // Recalcular el amount del item incluyendo solo los insumos extras
+      const insumosTotal = currentItem.insumos.reduce(
+        (sum, insumo) => sum + (insumo.isExtra ? insumo.importeVenta : 0),
+        0
+      );
+      currentItem.amount = currentItem.unitPrice * currentItem.quantity + insumosTotal;
+
+      // Actualizar el formData con los items actualizados
+      updatedItems[selectedItemIndexForExtras] = currentItem;
+
+      // Recalcular totales
+      const totals = recalculateTotals(
+        updatedItems,
+        formData.discount || 0,
+        formData.discountType || "porcentaje",
+        formData.deliveryData.deliveryPrice || 0,
+        formData.advance || 0
+      );
+
+      setFormData({
+        ...formData,
+        items: updatedItems,
+        ...totals,
+      });
+
+      toast.success("Extras agregados exitosamente");
+    } catch (error: any) {
+      console.error("Error al agregar extras:", error);
+      toast.error(error.message || "Error al agregar extras");
     }
   };
 
@@ -655,9 +807,10 @@ const NewOrderPage = () => {
 
     // Aplicar el descuento inmediatamente al formulario
     const discountType = formData.discountType || "porcentaje";
-    const discountAmount = discountType === "porcentaje"
-      ? (formData.subtotal * discountValue) / 100
-      : discountValue;
+    const discountAmount =
+      discountType === "porcentaje"
+        ? (formData.subtotal * discountValue) / 100
+        : discountValue;
 
     const totals = recalculateTotals(
       formData.items,
@@ -678,12 +831,15 @@ const NewOrderPage = () => {
     setHasPendingDiscountAuth(true);
     setShowDiscountRequestDialog(false);
 
-    toast.success("Descuento aplicado. Se creará la solicitud al guardar la orden.");
+    toast.success(
+      "Descuento aplicado. Se creará la solicitud al guardar la orden."
+    );
   };
 
   // Manejar cambio de tipo de envío
   const handleShippingTypeChange = (shippingType: ShippingType) => {
-    const deliveryPrice = shippingType === "tienda" ? 0 : formData.deliveryData.deliveryPrice || 0;
+    const deliveryPrice =
+      shippingType === "tienda" ? 0 : formData.deliveryData.deliveryPrice || 0;
     const totals = recalculateTotals(
       formData.items,
       formData.discount || 0,
@@ -697,8 +853,12 @@ const NewOrderPage = () => {
       shippingType,
       deliveryData: {
         ...formData.deliveryData,
-        deliveryPrice: shippingType === "tienda" ? 0 : formData.deliveryData.deliveryPrice || 0,
-        neighborhoodId: shippingType === "tienda" ? "" : formData.deliveryData.neighborhoodId,
+        deliveryPrice:
+          shippingType === "tienda"
+            ? 0
+            : formData.deliveryData.deliveryPrice || 0,
+        neighborhoodId:
+          shippingType === "tienda" ? "" : formData.deliveryData.neighborhoodId,
       },
       ...totals,
     });
@@ -706,8 +866,12 @@ const NewOrderPage = () => {
 
   // Manejar cambio de colonia
   const handleNeighborhoodChange = (neighborhoodId: string) => {
-    const selectedNeighborhood = neighborhoods.find((n) => n._id === neighborhoodId);
-    const deliveryPrice = selectedNeighborhood ? selectedNeighborhood.priceDelivery : 0;
+    const selectedNeighborhood = neighborhoods.find(
+      (n) => n._id === neighborhoodId
+    );
+    const deliveryPrice = selectedNeighborhood
+      ? selectedNeighborhood.priceDelivery
+      : 0;
 
     const totals = recalculateTotals(
       formData.items,
@@ -735,7 +899,9 @@ const NewOrderPage = () => {
   ) => {
     // Validar que haya un storage seleccionado
     if (!storage) {
-      toast.error("No hay almacén asignado a esta sucursal. No puedes agregar productos del catálogo sin stock disponible.");
+      toast.error(
+        "No hay almacén asignado a esta sucursal. No puedes agregar productos del catálogo sin stock disponible."
+      );
       return;
     }
 
@@ -782,6 +948,12 @@ const NewOrderPage = () => {
         quantity,
         unitPrice: product.precio,
         amount: quantity * product.precio,
+        productCategory: product.productCategory ?? null,
+        insumos: (product.insumos || []).map((insumo: any) => ({
+          ...insumo,
+          importeVenta: 0, // Los insumos originales no tienen costo adicional
+          isExtra: false, // Marcar como no extra
+        })),
       };
 
       const updatedItems = [...formData.items, newItem];
@@ -815,7 +987,9 @@ const NewOrderPage = () => {
 
     try {
       // Obtener datos de la empresa/sucursal
-      const companyResponse = await companiesService.getCompanyByBranchId(orderData.branchId._id);
+      const companyResponse = await companiesService.getCompanyByBranchId(
+        orderData.branchId._id
+      );
 
       if (!companyResponse.success || !companyResponse.data) {
         throw new Error("No se pudieron obtener los datos de la empresa");
@@ -823,7 +997,11 @@ const NewOrderPage = () => {
 
       // Buscar el método de pago seleccionado para obtener su nombre
       const selectedPaymentMethod = paymentMethods.find(
-        (pm) => pm._id === (typeof orderData.paymentMethod === 'string' ? orderData.paymentMethod : orderData.paymentMethod._id)
+        (pm) =>
+          pm._id ===
+          (typeof orderData.paymentMethod === "string"
+            ? orderData.paymentMethod
+            : orderData.paymentMethod._id)
       );
 
       // Construir datos para el ticket
@@ -879,7 +1057,9 @@ const NewOrderPage = () => {
           printWindow.focus();
         };
       } else {
-        toast.error("No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador.");
+        toast.error(
+          "No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador."
+        );
       }
     } catch (error) {
       console.error("Error generando ticket de venta:", error);
@@ -897,22 +1077,30 @@ const NewOrderPage = () => {
       if (formData.items.length === 0) {
         throw new Error("Debes agregar al menos un producto");
       }
-
+      console.log(formData.items);
       // Validar que haya una caja registradora asignada
       if (!cashRegister) {
-        throw new Error("Debes tener una caja registradora asignada para crear órdenes");
+        throw new Error(
+          "Debes tener una caja registradora asignada para crear órdenes"
+        );
       }
 
       // Validar que la caja esté abierta
       if (!cashRegister.isOpen) {
-        throw new Error("La caja registradora debe estar abierta para crear órdenes");
+        throw new Error(
+          "La caja registradora debe estar abierta para crear órdenes"
+        );
       }
 
       // Validar si hay productos del catálogo que requieren almacén
-      const hasProductsFromCatalog = formData.items.some(item => item.isProduct === true);
+      const hasProductsFromCatalog = formData.items.some(
+        (item) => item.isProduct === true
+      );
 
       if (hasProductsFromCatalog && !selectedStorageId) {
-        throw new Error("Hay productos del catálogo en la orden pero no hay almacén asignado a la sucursal");
+        throw new Error(
+          "Hay productos del catálogo en la orden pero no hay almacén asignado a la sucursal"
+        );
       }
 
       if (!formData.paymentMethod) {
@@ -921,12 +1109,16 @@ const NewOrderPage = () => {
 
       // Validar que usuarios de Redes hayan seleccionado una sucursal
       if (isSocialMedia && !formData.branchId) {
-        throw new Error("Debes seleccionar una sucursal antes de crear la orden");
+        throw new Error(
+          "Debes seleccionar una sucursal antes de crear la orden"
+        );
       }
 
       // Validar que usuarios de Redes usen cajas de redes sociales
       if (isSocialMedia && cashRegister && !cashRegister.isSocialMediaBox) {
-        throw new Error("Los usuarios de Redes Sociales deben usar cajas de redes sociales");
+        throw new Error(
+          "Los usuarios de Redes Sociales deben usar cajas de redes sociales"
+        );
       }
 
       const orderData = {
@@ -962,17 +1154,46 @@ const NewOrderPage = () => {
 
         try {
           const orderId = response.data._id;
+          const branchId =
+            typeof response.data.branchId === "string"
+              ? response.data.branchId
+              : response.data.branchId._id;
+
+          // Obtener companyId a través de la sucursal
+          const companyResponse = await companiesService.getCompanyByBranchId(
+            branchId
+          );
+
+          if (
+            !companyResponse.success ||
+            !companyResponse.data ||
+            !companyResponse.data.companyId
+          ) {
+            throw new Error("No se pudo obtener la empresa de la sucursal");
+          }
+
+          const companyId = companyResponse.data.companyId;
 
           // Subir comprobante
           if (comprobanteFile) {
-            const comprobanteResult = await uploadComprobante(comprobanteFile, orderId);
+            const comprobanteResult = await uploadComprobante(
+              comprobanteFile,
+              companyId,
+              branchId,
+              orderId
+            );
             comprobanteUrl = comprobanteResult.url;
             comprobantePath = comprobanteResult.path;
           }
 
           // Subir arreglo
           if (arregloFile) {
-            const arregloResult = await uploadArreglo(arregloFile, orderId);
+            const arregloResult = await uploadArreglo(
+              arregloFile,
+              companyId,
+              branchId,
+              orderId
+            );
             arregloUrl = arregloResult.url;
             arregloPath = arregloResult.path;
           }
@@ -988,7 +1209,9 @@ const NewOrderPage = () => {
           toast.success("Archivos subidos exitosamente");
         } catch (uploadError: any) {
           console.error("Error al subir archivos:", uploadError);
-          toast.warning("Orden creada pero hubo un error al subir los archivos. Puedes intentar subirlos después.");
+          toast.warning(
+            "Orden creada pero hubo un error al subir los archivos. Puedes intentar subirlos después."
+          );
         } finally {
           setUploadingFiles(false);
         }
@@ -997,9 +1220,10 @@ const NewOrderPage = () => {
       // Si hay descuento pendiente, crear la solicitud de autorización
       if (hasPendingDiscountAuth && discountRequestMessage.trim()) {
         try {
-          const discountAmount = formData.discountType === "porcentaje"
-            ? (formData.subtotal * (formData.discount || 0)) / 100
-            : (formData.discount || 0);
+          const discountAmount =
+            formData.discountType === "porcentaje"
+              ? (formData.subtotal * (formData.discount || 0)) / 100
+              : formData.discount || 0;
 
           await discountAuthService.createDiscountAuthForOrder({
             message: discountRequestMessage,
@@ -1014,7 +1238,9 @@ const NewOrderPage = () => {
           toast.success("Solicitud de descuento creada y enviada al gerente");
         } catch (discountErr: any) {
           console.error("Error al crear solicitud de descuento:", discountErr);
-          toast.warning("Orden creada pero hubo un error al crear la solicitud de descuento");
+          toast.warning(
+            "Orden creada pero hubo un error al crear la solicitud de descuento"
+          );
         }
       }
 
@@ -1033,7 +1259,11 @@ const NewOrderPage = () => {
         setFormData({
           // Para Redes usuarios, resetear branchId a vacío para que seleccionen de nuevo
           // Para Cajeros, mantener la sucursal actual
-          branchId: isSocialMedia ? "" : (branches.length > 0 ? branches[0]._id : ""),
+          branchId: isSocialMedia
+            ? ""
+            : branches.length > 0
+            ? branches[0]._id
+            : "",
           cashRegisterId: cashRegister ? cashRegister._id : null,
           clientInfo: {
             name: "",
@@ -1120,7 +1350,9 @@ const NewOrderPage = () => {
               <div>
                 <strong>No hay almacén asignado a esta sucursal</strong>
                 <p className="mb-0 small">
-                  Los productos del catálogo se mostrarán con stock en 0. Para poder crear órdenes con productos del catálogo, necesitas crear un almacén para esta sucursal.
+                  Los productos del catálogo se mostrarán con stock en 0. Para
+                  poder crear órdenes con productos del catálogo, necesitas
+                  crear un almacén para esta sucursal.
                 </p>
               </div>
             </Alert>
@@ -1138,7 +1370,9 @@ const NewOrderPage = () => {
                 </Card.Header>
                 <Card.Body>
                   <Alert variant="info" className="mb-3">
-                    <strong>⚠️ Importante:</strong> Debes seleccionar una sucursal antes de agregar productos. Los productos y almacenes disponibles dependen de la sucursal seleccionada.
+                    <strong>⚠️ Importante:</strong> Debes seleccionar una
+                    sucursal antes de agregar productos. Los productos y
+                    almacenes disponibles dependen de la sucursal seleccionada.
                   </Alert>
                   <Form.Group>
                     <Form.Label className="fw-semibold">
@@ -1163,13 +1397,15 @@ const NewOrderPage = () => {
                         </option>
                       ))}
                     </Form.Select>
-                    {companyBranches.length === 0 && !loadingCompanyBranches && (
-                      <Alert variant="warning" className="mt-2 mb-0 py-2">
-                        <small>
-                          No hay sucursales asignadas a tu empresa. Contacta al administrador.
-                        </small>
-                      </Alert>
-                    )}
+                    {companyBranches.length === 0 &&
+                      !loadingCompanyBranches && (
+                        <Alert variant="warning" className="mt-2 mb-0 py-2">
+                          <small>
+                            No hay sucursales asignadas a tu empresa. Contacta
+                            al administrador.
+                          </small>
+                        </Alert>
+                      )}
                   </Form.Group>
                 </Card.Body>
               </Card>
@@ -1186,7 +1422,9 @@ const NewOrderPage = () => {
                 </Card.Header>
                 <Card.Body>
                   <Alert variant="info" className="mb-3">
-                    <strong>💡 Información:</strong> Selecciona una caja de redes sociales de esta sucursal. Si no tienes una caja abierta, puedes abrir una directamente desde aquí.
+                    <strong>💡 Información:</strong> Selecciona una caja de
+                    redes sociales de esta sucursal. Si no tienes una caja
+                    abierta, puedes abrir una directamente desde aquí.
                   </Alert>
 
                   <Row className="g-3">
@@ -1198,7 +1436,9 @@ const NewOrderPage = () => {
                         </Form.Label>
                         <Form.Select
                           value={selectedCashRegisterId}
-                          onChange={(e) => handleCashRegisterSelect(e.target.value)}
+                          onChange={(e) =>
+                            handleCashRegisterSelect(e.target.value)
+                          }
                           className="py-2"
                           disabled={loadingAvailableCashRegisters}
                         >
@@ -1209,45 +1449,65 @@ const NewOrderPage = () => {
                           </option>
                           {availableCashRegisters.map((cr) => (
                             <option key={cr._id} value={cr._id}>
-                              {cr.name} - {cr.isOpen ? "🟢 Abierta" : "🔴 Cerrada"}
-                              {cr.cashierId ? ` (${cr.cashierId.username})` : ""}
+                              {cr.name} -{" "}
+                              {cr.isOpen ? "🟢 Abierta" : "🔴 Cerrada"}
+                              {cr.cashierId
+                                ? ` (${cr.cashierId.username})`
+                                : ""}
                             </option>
                           ))}
                         </Form.Select>
-                        {availableCashRegisters.length === 0 && !loadingAvailableCashRegisters && (
-                          <Alert variant="warning" className="mt-2 mb-0 py-2">
-                            <small>
-                              No hay cajas de redes sociales disponibles en esta sucursal. Contacta al administrador.
-                            </small>
-                          </Alert>
-                        )}
+                        {availableCashRegisters.length === 0 &&
+                          !loadingAvailableCashRegisters && (
+                            <Alert variant="warning" className="mt-2 mb-0 py-2">
+                              <small>
+                                No hay cajas de redes sociales disponibles en
+                                esta sucursal. Contacta al administrador.
+                              </small>
+                            </Alert>
+                          )}
                       </Form.Group>
                     </Col>
 
-                    {selectedCashRegisterId && !availableCashRegisters.find(cr => cr._id === selectedCashRegisterId && cr.isOpen) && (
-                      <Col md={4} className="d-flex align-items-end">
-                        <Button
-                          variant="success"
-                          onClick={handleOpenCashRegister}
-                          disabled={togglingCashRegister}
-                          className="w-100 py-2"
-                        >
-                          {togglingCashRegister ? "Abriendo..." : "Abrir Caja"}
-                        </Button>
-                      </Col>
-                    )}
+                    {selectedCashRegisterId &&
+                      !availableCashRegisters.find(
+                        (cr) => cr._id === selectedCashRegisterId && cr.isOpen
+                      ) && (
+                        <Col md={4} className="d-flex align-items-end">
+                          <Button
+                            variant="success"
+                            onClick={handleOpenCashRegister}
+                            disabled={togglingCashRegister}
+                            className="w-100 py-2"
+                          >
+                            {togglingCashRegister
+                              ? "Abriendo..."
+                              : "Abrir Caja"}
+                          </Button>
+                        </Col>
+                      )}
                   </Row>
 
-                  {cashRegister?.isOpen && cashRegister.branchId?._id === formData.branchId && (
-                    <Alert variant="success" className="mt-3 mb-0">
-                      <strong>✅ Caja Abierta:</strong> {cashRegister.name} - Esta caja está lista para crear órdenes.
-                    </Alert>
-                  )}
-                  {cashRegister?.isOpen && cashRegister.branchId?._id !== formData.branchId && (
-                    <Alert variant="info" className="mt-3 mb-0">
-                      <strong>ℹ️ Tienes una caja abierta en otra sucursal:</strong> {cashRegister.name} ({cashRegister.branchId?.branchName || 'Sucursal desconocida'}). Selecciona una caja de esta sucursal para crear órdenes aquí.
-                    </Alert>
-                  )}
+                  {cashRegister?.isOpen &&
+                    cashRegister.branchId?._id === formData.branchId && (
+                      <Alert variant="success" className="mt-3 mb-0">
+                        <strong>✅ Caja Abierta:</strong> {cashRegister.name} -
+                        Esta caja está lista para crear órdenes.
+                      </Alert>
+                    )}
+                  {cashRegister?.isOpen &&
+                    cashRegister.branchId?._id !== formData.branchId && (
+                      <Alert variant="info" className="mt-3 mb-0">
+                        <strong>
+                          ℹ️ Tienes una caja abierta en otra sucursal:
+                        </strong>{" "}
+                        {cashRegister.name} (
+                        {cashRegister.branchId?.branchName ||
+                          "Sucursal desconocida"}
+                        ). Selecciona una caja de esta sucursal para crear
+                        órdenes aquí.
+                      </Alert>
+                    )}
                 </Card.Body>
               </Card>
             )}
@@ -1336,7 +1596,9 @@ const NewOrderPage = () => {
                               className="d-flex align-items-center justify-content-center py-2 px-3"
                               style={{ minWidth: "120px", fontSize: "0.9rem" }}
                             >
-                              {cashRegister.isOpen ? "🟢 Abierta" : "🔴 Cerrada"}
+                              {cashRegister.isOpen
+                                ? "🟢 Abierta"
+                                : "🔴 Cerrada"}
                             </Badge>
                           ) : (
                             !loadingCashRegister && (
@@ -1355,15 +1617,16 @@ const NewOrderPage = () => {
                         {cashRegister && !cashRegister.isOpen && (
                           <Alert variant="warning" className="mt-2 mb-0 py-2">
                             <small>
-                              ⚠️ La caja está cerrada. Dirígete a la página de Cajas para abrirla.
+                              ⚠️ La caja está cerrada. Dirígete a la página de
+                              Cajas para abrirla.
                             </small>
                           </Alert>
                         )}
                         {!cashRegister && !loadingCashRegister && (
                           <Alert variant="info" className="mt-2 mb-0 py-2">
                             <small>
-                              ℹ️ No tienes una caja asignada. Dirígete a la página
-                              de Cajas Registradoras para abrir una.
+                              ℹ️ No tienes una caja asignada. Dirígete a la
+                              página de Cajas Registradoras para abrir una.
                             </small>
                           </Alert>
                         )}
@@ -1385,6 +1648,7 @@ const NewOrderPage = () => {
                             placeholder="Nombre del cliente"
                             value={formData.clientInfo.name}
                             onChange={(e) => {
+                              resetCustomValidationMessage(e);
                               setFormData({
                                 ...formData,
                                 clientInfo: {
@@ -1394,6 +1658,7 @@ const NewOrderPage = () => {
                               });
                               setSelectedClientId("");
                             }}
+                            onInvalid={setCustomValidationMessage}
                             required
                             className="py-2"
                           />
@@ -1496,27 +1761,9 @@ const NewOrderPage = () => {
                 </div>
               </Card.Header>
               <Card.Body>
-                <Row className="g-3 mb-3 align-items-end">
-                  <Col xs={6} sm={3} md={2} lg={1}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">Cant.</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="1"
-                        value={currentItem.quantity}
-                        onChange={(e) =>
-                          setCurrentItem({
-                            ...currentItem,
-                            quantity: parseInt(e.target.value) || 1,
-                          })
-                        }
-                        className="py-2 mx-2 text-center"
-                        style={{ minWidth: "70px" }}
-                      />
-                    </Form.Group>
-                  </Col>
-
-                  <Col xs={12} sm={9} md={5} lg={5}>
+                {/* Primera fila: Nombre del Producto y Categoría */}
+                <Row className="g-3 mb-3">
+                  <Col xs={12} md={6}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">
                         Nombre del Producto
@@ -1531,7 +1778,65 @@ const NewOrderPage = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col xs={6} sm={4} md={2} lg={2}>
+                  <Col xs={12} md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        Categoría <span className="text-danger">*</span>
+                      </Form.Label>
+                      <Form.Select
+                        value={selectedProductCategory}
+                        onChange={(e) => {
+                          resetCustomValidationMessage(e);
+                          setSelectedProductCategory(e.target.value);
+                          console.log(e.target.value);
+                        }}
+                        onInvalid={setCustomValidationMessage}
+                        className="py-2"
+                        disabled={loadingProductCategories}
+                      >
+                        <option value="">
+                          {loadingProductCategories
+                            ? "Cargando..."
+                            : "-- Selecciona categoría --"}
+                        </option>
+                        {productCategories.map((category) => (
+                          <option key={category._id} value={category._id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      {productCategories.length === 0 &&
+                        !loadingProductCategories && (
+                          <Form.Text className="text-warning">
+                            ⚠️ No hay categorías disponibles. Por favor, crea
+                            una categoría primero.
+                          </Form.Text>
+                        )}
+                    </Form.Group>
+                  </Col>
+                </Row>
+
+                {/* Segunda fila: Cantidad, Precio, Importe y Botón Agregar */}
+                <Row className="g-3 mb-3 align-items-end">
+                  <Col xs={6} sm={3}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Cantidad</Form.Label>
+                      <Form.Control
+                        type="number"
+                        min="1"
+                        value={currentItem.quantity}
+                        onChange={(e) =>
+                          setCurrentItem({
+                            ...currentItem,
+                            quantity: parseInt(e.target.value) || 1,
+                          })
+                        }
+                        className="py-2 text-center"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col xs={6} sm={3}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">Precio</Form.Label>
                       <Form.Control
@@ -1551,7 +1856,7 @@ const NewOrderPage = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col xs={6} sm={4} md={2} lg={2}>
+                  <Col xs={6} sm={3}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">Importe</Form.Label>
                       <Form.Control
@@ -1563,19 +1868,14 @@ const NewOrderPage = () => {
                     </Form.Group>
                   </Col>
 
-                  <Col
-                    xs={12}
-                    sm={4}
-                    md={1}
-                    lg={2}
-                    className="d-flex align-items-end"
-                  >
+                  <Col xs={6} sm={3} className="d-flex align-items-end">
                     <Button
                       variant="primary"
                       onClick={handleAddItem}
-                      className="w-100 py-2"
+                      className="w-100 py-2 d-flex align-items-center justify-content-center gap-2"
                     >
                       <Plus size={20} />
+                      <span>Agregar</span>
                     </Button>
                   </Col>
                 </Row>
@@ -1591,38 +1891,89 @@ const NewOrderPage = () => {
                           <th style={{ width: "10%" }}>Tipo</th>
                           <th style={{ width: "15%" }}>Precio Unit.</th>
                           <th style={{ width: "15%" }}>Importe</th>
-                          <th style={{ width: "10%" }} className="text-center">
-                            Quitar
+                          <th style={{ width: "12%" }} className="text-center">
+                            Acciones
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {formData.items.map((item, index) => (
-                          <tr key={index}>
-                            <td>{item.quantity}</td>
-                            <td>{item.productName}</td>
-                            <td>
-                              <Badge
-                                bg={item.isProduct ? "success" : "secondary"}
-                                className="text-white"
-                              >
-                                {item.isProduct ? "Existente" : "Manual"}
-                              </Badge>
-                            </td>
-                            <td>${item.unitPrice.toFixed(2)}</td>
-                            <td className="fw-bold">
-                              ${item.amount.toFixed(2)}
-                            </td>
-                            <td className="text-center">
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => handleRemoveItem(index)}
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                            </td>
-                          </tr>
+                          <React.Fragment key={index}>
+                            {/* Fila principal del producto */}
+                            <tr>
+                              <td className="align-top py-3">
+                                {item.quantity}
+                              </td>
+                              <td className="py-3">
+                                <div className="fw-semibold">
+                                  {item.productName}
+                                </div>
+                              </td>
+                              <td className="align-top py-3">
+                                <Badge
+                                  bg={item.isProduct ? "success" : "secondary"}
+                                  className="text-white"
+                                >
+                                  {item.isProduct ? "Existente" : "Manual"}
+                                </Badge>
+                              </td>
+                              <td className="align-top py-3 text-end">
+                                ${item.unitPrice.toFixed(2)}
+                              </td>
+                              <td className="align-top py-3 fw-bold text-end">
+                                ${item.amount.toFixed(2)}
+                              </td>
+                              <td className="align-top py-3 text-center">
+                                <div className="d-flex gap-1 justify-content-center">
+                                  <Button
+                                    variant="outline-primary"
+                                    size="sm"
+                                    onClick={() => handleOpenExtrasModal(index)}
+                                    title="Agregar extras"
+                                    disabled={!storage || !storage.materials || storage.materials.length === 0}
+                                  >
+                                    <Plus size={16} />
+                                  </Button>
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => handleRemoveItem(index)}
+                                    title="Eliminar producto"
+                                  >
+                                    <Trash2 size={16} />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                            {/* Filas de insumos */}
+                            {item.insumos &&
+                              item.insumos.length > 0 &&
+                              item.insumos.map((insumo, idx) => (
+                                <tr
+                                  key={`${index}-insumo-${idx}`}
+                                  className="border-0"
+                                >
+                                  <td className="py-1 ps-5 border-0  ">
+                                    {insumo.cantidad}
+                                  </td>
+                                  <td className="py-1 ps-5 border-0 text-bold ">
+                                    {insumo.nombre}
+                                  </td>
+                                  <td className="py-1 border-0">
+                                    {insumo.isExtra && (
+                                      <Badge bg="info" className="text-white">
+                                        Extra
+                                      </Badge>
+                                    )}
+                                  </td>
+                                  <td className="py-1 border-0 text-end">
+                                    ${insumo.importeVenta.toFixed(2)}
+                                  </td>
+                                  <td className="py-1 border-0"></td>
+                                  <td className="py-1 border-0"></td>
+                                </tr>
+                              ))}
+                          </React.Fragment>
                         ))}
                       </tbody>
                     </table>
@@ -1646,7 +1997,8 @@ const NewOrderPage = () => {
                     <>
                       <Col md={12}>
                         <Alert variant="info" className="mb-3">
-                          Como usuario de Redes Sociales, solo puedes crear órdenes de tipo "Redes Sociales"
+                          Como usuario de Redes Sociales, solo puedes crear
+                          órdenes de tipo "Redes Sociales"
                         </Alert>
                       </Col>
                       <Col md={6}>
@@ -1672,7 +2024,10 @@ const NewOrderPage = () => {
                           <Form.Select
                             value={formData.socialMedia || "whatsapp"}
                             onChange={(e) => {
-                              const platform = e.target.value as "whatsapp" | "facebook" | "instagram";
+                              const platform = e.target.value as
+                                | "whatsapp"
+                                | "facebook"
+                                | "instagram";
                               setFormData({
                                 ...formData,
                                 socialMedia: platform,
@@ -1703,7 +2058,9 @@ const NewOrderPage = () => {
                             value={tipo}
                             checked={formData.shippingType === tipo}
                             onChange={(e) =>
-                              handleShippingTypeChange(e.target.value as ShippingType)
+                              handleShippingTypeChange(
+                                e.target.value as ShippingType
+                              )
                             }
                             className="custom-radio"
                           />
@@ -1749,15 +2106,17 @@ const NewOrderPage = () => {
                         type="text"
                         placeholder="Nombre del receptor"
                         value={formData.deliveryData.recipientName}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          resetCustomValidationMessage(e);
                           setFormData({
                             ...formData,
                             deliveryData: {
                               ...formData.deliveryData,
                               recipientName: e.target.value,
                             },
-                          })
-                        }
+                          });
+                        }}
+                        onInvalid={setCustomValidationMessage}
                         required
                         className="py-2"
                       />
@@ -1773,15 +2132,17 @@ const NewOrderPage = () => {
                       <Form.Control
                         type="datetime-local"
                         value={formData.deliveryData.deliveryDateTime}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          resetCustomValidationMessage(e);
                           setFormData({
                             ...formData,
                             deliveryData: {
                               ...formData.deliveryData,
                               deliveryDateTime: e.target.value,
                             },
-                          })
-                        }
+                          });
+                        }}
+                        onInvalid={setCustomValidationMessage}
                         min={new Date().toISOString().slice(0, 16)}
                         required
                         className="py-2"
@@ -1846,14 +2207,20 @@ const NewOrderPage = () => {
                           </Form.Label>
                           <Form.Select
                             value={formData.deliveryData.neighborhoodId}
-                            onChange={(e) => handleNeighborhoodChange(e.target.value)}
+                            onChange={(e) =>
+                              handleNeighborhoodChange(e.target.value)
+                            }
                             className="py-2"
                             disabled={loadingNeighborhoods}
                           >
                             <option value="">Seleccionar colonia...</option>
                             {neighborhoods.map((neighborhood) => (
-                              <option key={neighborhood._id} value={neighborhood._id}>
-                                {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
+                              <option
+                                key={neighborhood._id}
+                                value={neighborhood._id}
+                              >
+                                {neighborhood.name} - $
+                                {neighborhood.priceDelivery.toFixed(2)}
                               </option>
                             ))}
                           </Form.Select>
@@ -1986,7 +2353,9 @@ const NewOrderPage = () => {
                       ) : (
                         paymentMethods.map((method) => {
                           // Deshabilitar método "Efectivo" para usuarios de Redes
-                          const isDisabled = isSocialMedia && method.name.toLowerCase() === "efectivo";
+                          const isDisabled =
+                            isSocialMedia &&
+                            method.name.toLowerCase() === "efectivo";
 
                           return (
                             <Button
@@ -2005,7 +2374,11 @@ const NewOrderPage = () => {
                               }
                               disabled={isDisabled}
                               className="px-3"
-                              title={isDisabled ? "Los usuarios de Redes Sociales no pueden usar efectivo" : ""}
+                              title={
+                                isDisabled
+                                  ? "Los usuarios de Redes Sociales no pueden usar efectivo"
+                                  : ""
+                              }
                             >
                               {method.name}
                             </Button>
@@ -2016,7 +2389,8 @@ const NewOrderPage = () => {
                     {isSocialMedia && (
                       <Alert variant="warning" className="mt-2 mb-0 py-2">
                         <small>
-                          ℹ️ Los usuarios de Redes Sociales no pueden usar el método de pago "Efectivo"
+                          ℹ️ Los usuarios de Redes Sociales no pueden usar el
+                          método de pago "Efectivo"
                         </small>
                       </Alert>
                     )}
@@ -2035,36 +2409,65 @@ const NewOrderPage = () => {
                           min="0"
                           step="0.01"
                           value={formData.discount}
-                          onChange={(e) => handleDiscountChange(parseFloat(e.target.value) || 0, formData.discountType || "porcentaje")}
-                          disabled={hasPendingDiscountAuth}
+                          onChange={(e) =>
+                            handleDiscountChange(
+                              parseFloat(e.target.value) || 0,
+                              formData.discountType || "porcentaje"
+                            )
+                          }
                           className="py-2"
                           placeholder="Ingresa el descuento"
                         />
                         <Form.Select
                           value={formData.discountType}
-                          onChange={(e) => handleDiscountChange(formData.discount || 0, e.target.value as "porcentaje" | "cantidad")}
-                          disabled={hasPendingDiscountAuth}
+                          onChange={(e) =>
+                            handleDiscountChange(
+                              formData.discount || 0,
+                              e.target.value as "porcentaje" | "cantidad"
+                            )
+                          }
                           style={{ maxWidth: "100px" }}
                         >
                           <option value="porcentaje">%</option>
                           <option value="cantidad">$</option>
                         </Form.Select>
-                        {!hasPendingDiscountAuth && formData.discount > 0 && (
-                          <Button
-                            variant="warning"
-                            onClick={() => setShowDiscountRequestDialog(true)}
-                            className="d-flex align-items-center gap-2"
-                            style={{ whiteSpace: "nowrap" }}
-                          >
-                            <Shield size={16} />
-                            Solicitar Autorización
-                          </Button>
+                        {formData.discount > 0 && (
+                          <>
+                            <Button
+                              variant="warning"
+                              onClick={() => setShowDiscountRequestDialog(true)}
+                              className="d-flex align-items-center gap-2"
+                              style={{ whiteSpace: "nowrap" }}
+                            >
+                              <Shield size={16} />
+                              {hasPendingDiscountAuth
+                                ? "Modificar Solicitud"
+                                : "Solicitar Autorización"}
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              onClick={() => {
+                                handleDiscountChange(0, "porcentaje");
+                                setHasPendingDiscountAuth(false);
+                                setDiscountRequestMessage("");
+                              }}
+                              className="d-flex align-items-center gap-2"
+                              style={{ whiteSpace: "nowrap" }}
+                              title="Cancelar descuento"
+                            >
+                              <Trash2 size={16} />
+                              Cancelar Descuento
+                            </Button>
+                          </>
                         )}
                       </div>
-                      <Alert variant={hasPendingDiscountAuth ? "warning" : "info"} className="mt-2 mb-0 py-2">
+                      <Alert
+                        variant={hasPendingDiscountAuth ? "warning" : "info"}
+                        className="mt-2 mb-0 py-2"
+                      >
                         <small>
                           {hasPendingDiscountAuth
-                            ? "⚠️ Descuento pendiente de autorización. Se enviará la solicitud al crear la orden."
+                            ? "⚠️ Descuento pendiente de autorización. Puedes modificarlo antes de crear la orden."
                             : "ℹ️ Ingresa el descuento y solicita autorización antes de crear la orden."}
                         </small>
                       </Alert>
@@ -2088,14 +2491,18 @@ const NewOrderPage = () => {
                         ).toFixed(2)}
                       </span>
                     </div>
-                    {formData.shippingType === "envio" && (formData.deliveryData.deliveryPrice || 0) > 0 && (
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <span className="text-muted">Costo de Envío:</span>
-                        <span className="text-success fw-bold">
-                          +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
+                    {formData.shippingType === "envio" &&
+                      (formData.deliveryData.deliveryPrice || 0) > 0 && (
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <span className="text-muted">Costo de Envío:</span>
+                          <span className="text-success fw-bold">
+                            +$
+                            {(formData.deliveryData.deliveryPrice || 0).toFixed(
+                              2
+                            )}
+                          </span>
+                        </div>
+                      )}
                     <div className="d-flex justify-content-between align-items-center py-2 border-top">
                       <span className="fs-5 fw-bold">Total:</span>
                       <span className="fs-4 fw-bold text-primary">
@@ -2207,12 +2614,17 @@ const NewOrderPage = () => {
                   formData.items.length === 0 ||
                   !formData.paymentMethod ||
                   !cashRegister || // Validar que haya caja asignada (para todos los usuarios)
-                  (formData.items.some(item => item.isProduct === true) && !selectedStorageId) ||
+                  (formData.items.some((item) => item.isProduct === true) &&
+                    !selectedStorageId) ||
                   (isSocialMedia && !formData.branchId) // Validar que Redes usuarios hayan seleccionado sucursal
                 }
                 className="px-5"
               >
-                {uploadingFiles ? "Subiendo archivos..." : loading ? "Procesando..." : "Aceptar"}
+                {uploadingFiles
+                  ? "Subiendo archivos..."
+                  : loading
+                  ? "Procesando..."
+                  : "Aceptar"}
               </Button>
             </div>
           </Form>
@@ -2251,13 +2663,16 @@ const NewOrderPage = () => {
         </Modal.Header>
         <Modal.Body>
           <Alert variant="info" className="mb-3">
-            <strong>ℹ️ Información:</strong> El descuento se aplicará inmediatamente a la orden, pero necesita autorización del gerente antes de enviarse a producción.
+            <strong>ℹ️ Información:</strong> El descuento se aplicará
+            inmediatamente a la orden, pero necesita autorización del gerente
+            antes de enviarse a producción.
           </Alert>
 
           <div className="mb-3 p-3 border rounded bg-light">
             <h6 className="fw-bold mb-2">Descuento solicitado:</h6>
             <p className="mb-0 fs-5 text-primary">
-              {formData.discount} {formData.discountType === "porcentaje" ? "%" : "$"}
+              {formData.discount}{" "}
+              {formData.discountType === "porcentaje" ? "%" : "$"}
             </p>
           </div>
 
@@ -2274,7 +2689,8 @@ const NewOrderPage = () => {
               required
             />
             <Form.Text className="text-muted">
-              El gerente recibirá esta solicitud junto con la orden creada. Si la rechaza, la orden será cancelada automáticamente.
+              El gerente recibirá esta solicitud junto con la orden creada. Si
+              la rechaza, la orden será cancelada automáticamente.
             </Form.Text>
           </Form.Group>
         </Modal.Body>
@@ -2300,6 +2716,17 @@ const NewOrderPage = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Modal para agregar extras (materiales) */}
+      <AddExtrasModal
+        show={showAddExtrasModal}
+        onHide={() => {
+          setShowAddExtrasModal(false);
+          setSelectedItemIndexForExtras(-1);
+        }}
+        storage={storage}
+        onAddExtras={handleAddExtras}
+      />
     </div>
   );
 };

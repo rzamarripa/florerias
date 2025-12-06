@@ -440,6 +440,14 @@ const createOrder = async (req, res) => {
 
     // Validar que los productos del catálogo existan y haya stock disponible
     for (const item of items) {
+      // Validar que todos los productos tengan categoría
+      if (!item.productCategory) {
+        return res.status(400).json({
+          success: false,
+          message: `El producto "${item.productName}" debe tener una categoría asignada`
+        });
+      }
+
       // Solo validar si es un producto del catálogo
       if (item.isProduct === true) {
         const product = await Product.findById(item.productId);
@@ -493,6 +501,23 @@ const createOrder = async (req, res) => {
 
     // Extraer campos de redes sociales y descuento del body
     const { isSocialMediaOrder, socialMedia, hasPendingDiscountAuth } = req.body;
+
+    // Extraer todos los materiales extras de los items
+    const materials = [];
+    items.forEach(item => {
+      if (item.insumos && Array.isArray(item.insumos)) {
+        item.insumos.forEach(insumo => {
+          if (insumo.isExtra === true) {
+            materials.push({
+              nombre: insumo.nombre,
+              cantidad: insumo.cantidad,
+              importeVenta: insumo.importeVenta,
+              isExtra: true
+            });
+          }
+        });
+      }
+    });
 
     // Determinar si enviar a producción automáticamente
     // Si tiene descuento pendiente de autorización, NO enviar a producción aunque tenga anticipo
@@ -579,7 +604,8 @@ const createOrder = async (req, res) => {
       stage: stageId, // Asignar la etapa (puede ser null)
       orderDate: orderDate || new Date(),
       isSocialMediaOrder: isSocialMediaOrder || false,
-      socialMedia: socialMedia || null
+      socialMedia: socialMedia || null,
+      materials: materials // Agregar los materiales extras
     });
 
     const savedOrder = await newOrder.save();

@@ -3,6 +3,7 @@ import { Branch } from "../models/Branch.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Roles.js";
 import Product from "../models/Product.js";
+import Material from "../models/Material.js";
 
 // Crear nuevo almacén
 export const createStorage = async (req, res) => {
@@ -242,6 +243,7 @@ export const getAllStorages = async (req, res) => {
         "username email profile.name profile.lastName profile.fullName"
       )
       .populate("products.productId", "nombre unidad imagen")
+      .populate("materials.materialId", "name unit price cost piecesPerPackage")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -276,7 +278,8 @@ export const getStorageById = async (req, res) => {
         "warehouseManager",
         "username email phone profile.name profile.lastName profile.fullName"
       )
-      .populate("products.productId", "nombre unidad descripcion imagen totalCosto totalVenta");
+      .populate("products.productId", "nombre unidad descripcion imagen totalCosto totalVenta")
+      .populate("materials.materialId", "name unit price cost piecesPerPackage description status");
 
     if (!storage) {
       return res.status(404).json({
@@ -308,7 +311,8 @@ export const getStorageByBranch = async (req, res) => {
         "warehouseManager",
         "username email phone profile.name profile.lastName profile.fullName"
       )
-      .populate("products.productId", "nombre unidad descripcion imagen totalCosto totalVenta");
+      .populate("products.productId", "nombre unidad descripcion imagen totalCosto totalVenta")
+      .populate("materials.materialId", "name unit price cost piecesPerPackage description status");
 
     if (!storage) {
       return res.status(404).json({
@@ -362,7 +366,8 @@ export const updateStorage = async (req, res) => {
     })
       .populate("branch", "branchName branchCode")
       .populate("warehouseManager", "username email profile")
-      .populate("products.productId", "nombre unidad");
+      .populate("products.productId", "nombre unidad")
+      .populate("materials.materialId", "name unit price cost piecesPerPackage");
 
     if (!storage) {
       return res.status(404).json({
@@ -445,6 +450,7 @@ export const addProductsToStorage = async (req, res) => {
     await storage.populate("branch", "branchName branchCode");
     await storage.populate("warehouseManager", "username email profile");
     await storage.populate("products.productId", "nombre unidad imagen");
+    await storage.populate("materials.materialId", "name unit price cost piecesPerPackage");
 
     res.status(200).json({
       success: true,
@@ -520,6 +526,7 @@ export const removeProductsFromStorage = async (req, res) => {
     await storage.populate("branch", "branchName branchCode");
     await storage.populate("warehouseManager", "username email profile");
     await storage.populate("products.productId", "nombre unidad imagen");
+    await storage.populate("materials.materialId", "name unit price cost piecesPerPackage");
 
     res.status(200).json({
       success: true,
@@ -594,6 +601,7 @@ export const updateProductQuantity = async (req, res) => {
     await storage.populate("branch", "branchName branchCode");
     await storage.populate("warehouseManager", "username email profile");
     await storage.populate("products.productId", "nombre unidad imagen");
+    await storage.populate("materials.materialId", "name unit price cost piecesPerPackage description status");
 
     res.status(200).json({
       success: true,
@@ -617,7 +625,9 @@ export const deactivateStorage = async (req, res) => {
       { new: true }
     )
       .populate("branch", "branchName branchCode")
-      .populate("warehouseManager", "username email");
+      .populate("warehouseManager", "username email")
+      .populate("products.productId", "nombre unidad imagen")
+      .populate("materials.materialId", "name unit price cost piecesPerPackage description status");
 
     if (!storage) {
       return res.status(404).json({
@@ -648,7 +658,9 @@ export const activateStorage = async (req, res) => {
       { new: true }
     )
       .populate("branch", "branchName branchCode")
-      .populate("warehouseManager", "username email");
+      .populate("warehouseManager", "username email")
+      .populate("products.productId", "nombre unidad imagen")
+      .populate("materials.materialId", "name unit price cost piecesPerPackage description status");
 
     if (!storage) {
       return res.status(404).json({
@@ -746,6 +758,7 @@ export const reserveStock = async (req, res) => {
     await storage.populate("branch", "branchName branchCode");
     await storage.populate("warehouseManager", "username email profile");
     await storage.populate("products.productId", "nombre unidad imagen totalCosto totalVenta");
+    await storage.populate("materials.materialId", "name unit price cost piecesPerPackage description status");
 
     res.status(200).json({
       success: true,
@@ -801,6 +814,7 @@ export const releaseStock = async (req, res) => {
     await storage.populate("branch", "branchName branchCode");
     await storage.populate("warehouseManager", "username email profile");
     await storage.populate("products.productId", "nombre unidad imagen totalCosto totalVenta");
+    await storage.populate("materials.materialId", "name unit price cost piecesPerPackage description status");
 
     res.status(200).json({
       success: true,
@@ -826,6 +840,235 @@ export const checkStorageExists = async (req, res) => {
       success: true,
       exists: !!storage,
       storageId: storage?._id || null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ===================== FUNCIONES PARA MATERIALES =====================
+
+// Agregar materiales al almacén (ingreso)
+export const addMaterialsToStorage = async (req, res) => {
+  try {
+    const { materials } = req.body; // Array de { materialId, quantity }
+
+    if (!materials || !Array.isArray(materials) || materials.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere un array de materiales",
+      });
+    }
+
+    const storage = await Storage.findById(req.params.id);
+
+    if (!storage) {
+      return res.status(404).json({
+        success: false,
+        message: "Almacén no encontrado",
+      });
+    }
+
+    // Validar que todos los materiales existen
+    const materialIds = materials.map((m) => m.materialId);
+    const materialCount = await Material.countDocuments({
+      _id: { $in: materialIds },
+    });
+
+    if (materialCount !== materialIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Uno o más materiales no existen",
+      });
+    }
+
+    // Agregar o actualizar materiales
+    for (const item of materials) {
+      const existingMaterialIndex = storage.materials.findIndex(
+        (m) => m.materialId.toString() === item.materialId
+      );
+
+      if (existingMaterialIndex !== -1) {
+        // Material existe, incrementar cantidad
+        storage.materials[existingMaterialIndex].quantity += item.quantity;
+      } else {
+        // Material nuevo, agregarlo
+        storage.materials.push({
+          materialId: item.materialId,
+          quantity: item.quantity,
+        });
+      }
+    }
+
+    // Actualizar fecha de último ingreso
+    storage.lastIncome = Date.now();
+
+    await storage.save();
+
+    // Popular los datos para la respuesta
+    await storage.populate("branch", "branchName branchCode");
+    await storage.populate("warehouseManager", "username email profile");
+    await storage.populate("products.productId", "nombre unidad imagen");
+    await storage.populate("materials.materialId", "name unit price cost piecesPerPackage description status");
+
+    res.status(200).json({
+      success: true,
+      message: "Materiales agregados exitosamente",
+      data: storage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Remover materiales del almacén (egreso)
+export const removeMaterialsFromStorage = async (req, res) => {
+  try {
+    const { materials } = req.body; // Array de { materialId, quantity }
+
+    if (!materials || !Array.isArray(materials) || materials.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere un array de materiales",
+      });
+    }
+
+    const storage = await Storage.findById(req.params.id);
+
+    if (!storage) {
+      return res.status(404).json({
+        success: false,
+        message: "Almacén no encontrado",
+      });
+    }
+
+    // Remover o actualizar materiales
+    for (const item of materials) {
+      const existingMaterialIndex = storage.materials.findIndex(
+        (m) => m.materialId.toString() === item.materialId
+      );
+
+      if (existingMaterialIndex === -1) {
+        return res.status(400).json({
+          success: false,
+          message: `Material ${item.materialId} no existe en el almacén`,
+        });
+      }
+
+      const currentQuantity = storage.materials[existingMaterialIndex].quantity;
+
+      if (currentQuantity < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Cantidad insuficiente del material ${item.materialId}. Disponible: ${currentQuantity}, Solicitado: ${item.quantity}`,
+        });
+      }
+
+      // Reducir cantidad
+      storage.materials[existingMaterialIndex].quantity -= item.quantity;
+
+      // Si la cantidad llega a 0, remover el material del array
+      if (storage.materials[existingMaterialIndex].quantity === 0) {
+        storage.materials.splice(existingMaterialIndex, 1);
+      }
+    }
+
+    // Actualizar fecha de último egreso
+    storage.lastOutcome = Date.now();
+
+    await storage.save();
+
+    // Popular los datos para la respuesta
+    await storage.populate("branch", "branchName branchCode");
+    await storage.populate("warehouseManager", "username email profile");
+    await storage.populate("products.productId", "nombre unidad imagen");
+    await storage.populate("materials.materialId", "name unit price cost piecesPerPackage description status");
+
+    res.status(200).json({
+      success: true,
+      message: "Materiales removidos exitosamente",
+      data: storage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Actualizar cantidad de un material específico
+export const updateMaterialQuantity = async (req, res) => {
+  try {
+    const { materialId, quantity } = req.body;
+
+    if (!materialId || quantity === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere materialId y quantity",
+      });
+    }
+
+    if (quantity < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "La cantidad no puede ser negativa",
+      });
+    }
+
+    const storage = await Storage.findById(req.params.id);
+
+    if (!storage) {
+      return res.status(404).json({
+        success: false,
+        message: "Almacén no encontrado",
+      });
+    }
+
+    const existingMaterialIndex = storage.materials.findIndex(
+      (m) => m.materialId.toString() === materialId
+    );
+
+    if (existingMaterialIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Material no encontrado en el almacén",
+      });
+    }
+
+    const oldQuantity = storage.materials[existingMaterialIndex].quantity;
+    storage.materials[existingMaterialIndex].quantity = quantity;
+
+    // Actualizar fecha según si fue ingreso o egreso
+    if (quantity > oldQuantity) {
+      storage.lastIncome = Date.now();
+    } else if (quantity < oldQuantity) {
+      storage.lastOutcome = Date.now();
+    }
+
+    // Si la cantidad es 0, remover el material
+    if (quantity === 0) {
+      storage.materials.splice(existingMaterialIndex, 1);
+    }
+
+    await storage.save();
+
+    // Popular los datos para la respuesta
+    await storage.populate("branch", "branchName branchCode");
+    await storage.populate("warehouseManager", "username email profile");
+    await storage.populate("products.productId", "nombre unidad imagen");
+    await storage.populate("materials.materialId", "name unit price cost piecesPerPackage description status");
+
+    res.status(200).json({
+      success: true,
+      message: "Cantidad de material actualizada exitosamente",
+      data: storage,
     });
   } catch (error) {
     res.status(500).json({

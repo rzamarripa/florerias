@@ -95,8 +95,25 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
     }
   };
 
-  const getPaymentStatusBadge = (remainingBalance: number) => {
-    if (remainingBalance === 0) {
+  const getPaymentStatusBadge = (sale: Sale) => {
+    // Si la venta está cancelada, mostrar badge rojo
+    if (sale.status === "cancelado") {
+      return (
+        <Badge
+          bg="danger"
+          style={{
+            padding: "6px 12px",
+            borderRadius: "20px",
+            fontWeight: "500",
+          }}
+        >
+          Pago Cancelado
+        </Badge>
+      );
+    }
+
+    // Si no está cancelada, verificar el saldo
+    if (sale.remainingBalance === 0) {
       return (
         <Badge
           bg="success"
@@ -125,7 +142,17 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
     }
   };
 
-  const getDiscountBadge = (discount: number, discountType: string) => {
+  const getDiscountBadge = (sale: Sale) => {
+    const { discount, discountType, subtotal } = sale;
+
+    // Calcular el monto del descuento
+    let discountAmount = 0;
+    if (discountType === "porcentaje") {
+      discountAmount = (subtotal * discount) / 100;
+    } else {
+      discountAmount = discount;
+    }
+
     return (
       <Badge
         bg="danger"
@@ -136,7 +163,7 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
         }}
       >
         {discountType === "porcentaje"
-          ? `${discount}%`
+          ? `${discount}% / $${discountAmount.toFixed(2)}`
           : `$${discount.toFixed(2)}`}
       </Badge>
     );
@@ -211,13 +238,10 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
                       : "N/A"}
                   </td>
                   <td className="px-4 py-3">
-                    {getDiscountBadge(
-                      sale.discount || 0,
-                      sale.discountType || "porcentaje"
-                    )}
+                    {getDiscountBadge(sale)}
                   </td>
                   <td className="px-4 py-3">
-                    {getPaymentStatusBadge(sale.remainingBalance || 0)}
+                    {getPaymentStatusBadge(sale)}
                   </td>
                   <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
                   <td className="px-4 py-3 fw-semibold">

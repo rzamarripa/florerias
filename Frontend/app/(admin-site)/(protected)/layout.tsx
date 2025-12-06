@@ -6,8 +6,11 @@ import { useUserSessionStore } from "@/stores";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import BranchSelectionModal from "@/components/branches/BranchSelectionModal";
+import BranchModal from "@/features/admin/modules/branches/components/BranchModal";
+import { companiesService } from "@/features/admin/modules/companies/services/companies";
+import { toast } from "react-toastify";
 
 export default function RootLayout({
   children,
@@ -16,10 +19,11 @@ export default function RootLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useUserSessionStore();
-  const { getIsAdmin } = useUserRoleStore();
   const { activeBranch } = useActiveBranchStore();
   const [isInitialized, setIsInitialized] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showCreateBranchModal, setShowCreateBranchModal] = useState(false);
+  const [userCompany, setUserCompany] = useState<any>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -35,18 +39,61 @@ export default function RootLayout({
     }
   }, [isInitialized, isAuthenticated, isLoading, router]);
 
-  // Mostrar modal de selección de sucursal si es Administrador (no Super Admin) y no tiene sucursal activa
+  // Cargar empresa del usuario si es Administrador
+  useEffect(() => {
+    const loadUserCompany = async () => {
+      if (isInitialized && !isLoading && isAuthenticated) {
+        const { role } = useUserRoleStore.getState();
+        const isAdministrador = role?.toLowerCase() === "administrador";
+
+        if (isAdministrador) {
+          try {
+            const company = await companiesService.getMyCompany();
+            setUserCompany(company || null);
+          } catch (error) {
+            console.error("Error al cargar empresa del usuario:", error);
+            setUserCompany(null);
+          }
+        }
+      }
+    };
+
+    loadUserCompany();
+  }, [isInitialized, isLoading, isAuthenticated]);
+
+  // Mostrar modal de selección de sucursal si es Administrador y no tiene sucursal activa
   useEffect(() => {
     if (isInitialized && !isLoading && isAuthenticated) {
       const { role } = useUserRoleStore.getState();
       const isAdministrador = role?.toLowerCase() === "administrador";
 
-      // Si es administrador (no Super Admin ni Admin) y no tiene sucursal activa, mostrar el modal
-      if (isAdministrador && !activeBranch) {
+      // Verificar directamente desde el store persistente
+      const currentActiveBranch = useActiveBranchStore.getState().activeBranch;
+
+      // Si es administrador y no tiene sucursal activa, mostrar el modal
+      if (isAdministrador && !currentActiveBranch) {
         setShowBranchModal(true);
+      } else if (currentActiveBranch) {
+        // Si hay sucursal activa, asegurarse de cerrar ambos modales
+        setShowBranchModal(false);
+        setShowCreateBranchModal(false);
       }
     }
   }, [isInitialized, isLoading, isAuthenticated, activeBranch]);
+
+  // Callback cuando no se encuentran sucursales
+  const handleNoBranchesFound = useCallback(() => {
+    toast.warning(
+      "Crea una sucursal para que puedas acceder a las funciones del sistema",
+      {
+        autoClose: 5000,
+        position: "top-center",
+      }
+    );
+    // Cerrar modal de selección y abrir modal de creación
+    setShowBranchModal(false);
+    setShowCreateBranchModal(true);
+  }, []);
 
   if (!isInitialized || isLoading) {
     return null;
@@ -98,6 +145,30 @@ export default function RootLayout({
             }
           }}
           isRequired={true}
+          onNoBranchesFound={handleNoBranchesFound}
+        />
+
+        {/* Modal de Creación de Sucursal */}
+        <BranchModal
+          show={showCreateBranchModal}
+          onHide={() => {
+            // Solo permitir cerrar si hay sucursal activa
+            if (activeBranch) {
+              setShowCreateBranchModal(false);
+            }
+          }}
+          userCompany={userCompany}
+          onBranchSaved={() => {
+            // Cerrar el modal de creación
+            setShowCreateBranchModal(false);
+            // Reabrir el de selección solo si NO hay sucursal activa aún
+            setTimeout(() => {
+              const currentActiveBranch = useActiveBranchStore.getState().activeBranch;
+              if (!currentActiveBranch) {
+                setShowBranchModal(true);
+              }
+            }, 300);
+          }}
         />
       </LayoutProvider>
     );

@@ -403,6 +403,10 @@ export const updateCompany = async (req, res) => {
     if (fiscalAddress) updateData.fiscalAddress = fiscalAddress;
     if (primaryContact) updateData.primaryContact = primaryContact;
 
+    // Manejar actualización de logo
+    if (req.body.logoUrl !== undefined) updateData.logoUrl = req.body.logoUrl;
+    if (req.body.logoPath !== undefined) updateData.logoPath = req.body.logoPath;
+
     // Manejar actualización del distribuidor
     if (administratorId !== undefined) {
       if (administratorId === null || administratorId === "") {
@@ -1004,6 +1008,7 @@ export const getCompanyByBranchId = async (req, res) => {
 
     // Construir la respuesta con los datos necesarios para el ticket
     const ticketData = {
+      companyId: company._id, // Agregado para Firebase Storage
       companyName: company.tradeName || company.legalName,
       rfc: company.rfc,
       address: {

@@ -9,37 +9,24 @@ export interface UploadFileResult {
 
 /**
  * Sube un archivo a Firebase Storage
- * @param file - El archivo a subir
- * @param folder - La carpeta donde se guardará el archivo (ej: 'comprobantes', 'arreglos')
- * @returns Objeto con la URL de descarga y la ruta del archivo
+ * Usa uploadBytes directamente del SDK de Firebase
  */
 export const uploadFile = async (
   file: File,
   folder: string
 ): Promise<UploadFileResult> => {
-  try {
-    // Generar un nombre único para el archivo
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExtension}`;
-    const filePath = `${folder}/${fileName}`;
+  const fileExtension = file.name.split('.').pop();
+  const fileName = `${uuidv4()}.${fileExtension}`;
+  const filePath = `${folder}/${fileName}`;
+  const storageRef = ref(storage, filePath);
 
-    // Crear referencia al archivo en Storage
-    const storageRef = ref(storage, filePath);
+  const snapshot = await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(snapshot.ref);
 
-    // Subir el archivo
-    const snapshot = await uploadBytes(storageRef, file);
-
-    // Obtener la URL de descarga
-    const downloadURL = await getDownloadURL(snapshot.ref);
-
-    return {
-      url: downloadURL,
-      path: filePath,
-    };
-  } catch (error) {
-    console.error("Error al subir archivo a Firebase Storage:", error);
-    throw new Error("Error al subir el archivo. Inténtalo de nuevo.");
-  }
+  return {
+    url: downloadURL,
+    path: filePath,
+  };
 };
 
 /**
@@ -59,27 +46,49 @@ export const deleteFile = async (filePath: string): Promise<void> => {
 /**
  * Sube el comprobante de una orden
  * @param file - El archivo de comprobante
- * @param orderId - El ID de la orden (para organizar los archivos)
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @param orderId - El ID de la orden
  * @returns URL de descarga del comprobante
  */
 export const uploadComprobante = async (
   file: File,
+  companyId: string,
+  branchId: string,
   orderId: string
 ): Promise<UploadFileResult> => {
-  const folder = `orders/${orderId}/comprobantes`;
+  const folder = `Empresas/${companyId}/branches/${branchId}/orders/${orderId}/comprobantes`;
   return uploadFile(file, folder);
 };
 
 /**
  * Sube la imagen del arreglo de una orden
  * @param file - El archivo de la imagen del arreglo
- * @param orderId - El ID de la orden (para organizar los archivos)
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @param orderId - El ID de la orden
  * @returns URL de descarga de la imagen del arreglo
  */
 export const uploadArreglo = async (
   file: File,
+  companyId: string,
+  branchId: string,
   orderId: string
 ): Promise<UploadFileResult> => {
-  const folder = `orders/${orderId}/arreglos`;
+  const folder = `Empresas/${companyId}/branches/${branchId}/orders/${orderId}/arreglos`;
+  return uploadFile(file, folder);
+};
+
+/**
+ * Sube el logo de una empresa
+ * @param file - El archivo del logo
+ * @param companyId - El ID de la empresa (para organizar los archivos)
+ * @returns URL de descarga del logo
+ */
+export const uploadCompanyLogo = async (
+  file: File,
+  companyId: string
+): Promise<UploadFileResult> => {
+  const folder = `Empresas/${companyId}/logo`;
   return uploadFile(file, folder);
 };

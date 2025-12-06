@@ -90,6 +90,11 @@ const embeddedProductSchema = new mongoose.Schema({
   estatus: {
     type: Boolean,
     default: true
+  },
+  productCategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_product_category',
+    default: null
   }
 }, { _id: false });
 

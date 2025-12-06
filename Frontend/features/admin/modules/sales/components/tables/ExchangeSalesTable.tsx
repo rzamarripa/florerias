@@ -127,8 +127,25 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({
     loadSales();
   };
 
-  const getPaymentStatusBadge = (remainingBalance: number) => {
-    if (remainingBalance === 0) {
+  const getPaymentStatusBadge = (sale: Sale) => {
+    // Si la venta está cancelada, mostrar badge rojo
+    if (sale.status === "cancelado") {
+      return (
+        <Badge
+          bg="danger"
+          style={{
+            padding: "6px 12px",
+            borderRadius: "20px",
+            fontWeight: "500",
+          }}
+        >
+          Pago Cancelado
+        </Badge>
+      );
+    }
+
+    // Si no está cancelada, verificar el saldo
+    if (sale.remainingBalance === 0) {
       return (
         <Badge
           bg="success"
@@ -263,7 +280,7 @@ const ExchangeSalesTable: React.FC<ExchangeSalesTableProps> = ({
                   </td>
                   <td className="px-4 py-3">{getStageBadge(sale.stage)}</td>
                   <td className="px-4 py-3">
-                    {getPaymentStatusBadge(sale.remainingBalance || 0)}
+                    {getPaymentStatusBadge(sale)}
                   </td>
                   <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
                   <td className="px-4 py-3 fw-semibold text-success">

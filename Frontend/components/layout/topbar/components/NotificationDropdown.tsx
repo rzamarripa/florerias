@@ -146,6 +146,8 @@ const NotificationDropdown = () => {
     const [discountAuthDetails, setDiscountAuthDetails] = useState<any>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [processingAuth, setProcessingAuth] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [approvedFolio, setApprovedFolio] = useState<string>('');
 
     // Mostrar notificaciones si es Manager o Cajero
     const canViewNotifications = isManager || isCashier;
@@ -258,7 +260,8 @@ const NotificationDropdown = () => {
             );
 
             if (response.success) {
-                toast.success(`Descuento aprobado. Folio: ${response.data.authFolio}`);
+                // Guardar el folio para mostrarlo en el modal
+                setApprovedFolio(response.data.authFolio || '');
 
                 // Eliminar la notificación
                 try {
@@ -267,9 +270,12 @@ const NotificationDropdown = () => {
                     console.error('Error al eliminar notificación:', err);
                 }
 
+                // Cerrar el modal de autorización y mostrar el modal de éxito
                 setShowAuthDialog(false);
                 setSelectedDiscountAuth(null);
                 setDiscountAuthDetails(null);
+                setShowSuccessModal(true);
+
                 // Actualizar notificaciones
                 await fetchNotifications();
             }
@@ -512,7 +518,7 @@ const NotificationDropdown = () => {
                             <div className="mb-3 p-3 border rounded">
                                 <h6 className="fw-bold mb-3">Detalles del Descuento</h6>
                                 <div className="mb-2">
-                                    <strong>Total de la Orden:</strong> ${discountAuthDetails.orderTotal?.toFixed(2) || '0.00'}
+                                    <strong>Subtotal de la Orden:</strong> ${((discountAuthDetails.orderTotal || 0) + (discountAuthDetails.discountAmount || 0)).toFixed(2)}
                                 </div>
                                 <div className="mb-2">
                                     <strong>Descuento Solicitado:</strong>{' '}
@@ -523,20 +529,13 @@ const NotificationDropdown = () => {
                                 <div className="mb-2">
                                     <strong>Monto del Descuento:</strong>{' '}
                                     <span className="text-danger">
-                                        -${(discountAuthDetails.discountType === 'porcentaje'
-                                            ? (discountAuthDetails.orderTotal * discountAuthDetails.discountValue) / 100
-                                            : discountAuthDetails.discountValue
-                                        ).toFixed(2)}
+                                        -${discountAuthDetails.discountAmount?.toFixed(2) || '0.00'}
                                     </span>
                                 </div>
                                 <div className="mb-2">
                                     <strong>Total Final:</strong>{' '}
                                     <span className="text-success fw-bold">
-                                        ${(discountAuthDetails.orderTotal - (
-                                            discountAuthDetails.discountType === 'porcentaje'
-                                                ? (discountAuthDetails.orderTotal * discountAuthDetails.discountValue) / 100
-                                                : discountAuthDetails.discountValue
-                                        )).toFixed(2)}
+                                        ${discountAuthDetails.orderTotal?.toFixed(2) || '0.00'}
                                     </span>
                                 </div>
                             </div>
@@ -585,6 +584,40 @@ const NotificationDropdown = () => {
                     >
                         <LuCircleCheck size={16} />
                         {processingAuth ? 'Aprobando...' : 'Aprobar'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Modal de Éxito - Solicitud Autorizada */}
+            <Modal
+                show={showSuccessModal}
+                onHide={() => setShowSuccessModal(false)}
+                centered
+                size="sm"
+            >
+                <Modal.Header closeButton className="bg-success text-white border-0">
+                    <Modal.Title className="d-flex align-items-center gap-2">
+                        <LuCircleCheck size={24} />
+                        Solicitud Autorizada
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="text-center py-4">
+                    <div className="mb-3">
+                        <LuCircleCheck size={64} className="text-success" />
+                    </div>
+                    <h5 className="mb-3">¡Descuento Aprobado!</h5>
+                    <div className="p-3 bg-light rounded">
+                        <p className="mb-2 text-muted">El folio de autorización es:</p>
+                        <h3 className="text-success fw-bold mb-0">{approvedFolio}</h3>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer className="border-0 justify-content-center">
+                    <Button
+                        variant="success"
+                        onClick={() => setShowSuccessModal(false)}
+                        className="px-4"
+                    >
+                        Cerrar
                     </Button>
                 </Modal.Footer>
             </Modal>

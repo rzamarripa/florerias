@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import { Branch, CreateBranchData, Manager } from "../types";
 import { branchesService } from "../services/branches";
 import { companiesService } from "../../companies/services/companies";
+import { useBranchModalStore } from "@/stores/branchModalStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 interface Company {
   _id: string;
@@ -30,6 +32,8 @@ const BranchModal: React.FC<BranchModalProps> = ({
   userCompany,
 }) => {
   const isEditing = !!branch;
+  const { reopenBranchSelectionAfterCreate } = useBranchModalStore();
+  const activeBranch = useActiveBranchStore((state) => state.activeBranch);
 
   const [formData, setFormData] = useState<CreateBranchData>({
     branchName: "",
@@ -370,6 +374,14 @@ const BranchModal: React.FC<BranchModalProps> = ({
       );
       onBranchSaved?.();
       onHide();
+
+      // Si no es edición y no hay sucursal activa, reabrir el modal de selección
+      if (!isEditing && !activeBranch) {
+        // Esperar un momento para que el modal se cierre antes de abrir el siguiente
+        setTimeout(() => {
+          reopenBranchSelectionAfterCreate();
+        }, 300);
+      }
     } catch (err: any) {
       console.error("Error completo:", err);
       const errorMessage = err.message || "Error al guardar la sucursal";

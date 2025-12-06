@@ -20,6 +20,7 @@ const EXCLUDED_URLS = [
   "/__nextjs_original-stack-frames", // Next.js internal debugging
   "/_next/", // Next.js assets
   "/__next", // Next.js internal routes
+  "firebasestorage.googleapis.com", // Firebase Storage uploads
 ];
 
 /**

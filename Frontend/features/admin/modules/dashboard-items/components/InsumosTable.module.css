@@ -1,0 +1,124 @@
+.tableWrapper {
+  background: white;
+  border-radius: 8px;
+}
+
+.tableWrapper table {
+  margin-bottom: 0;
+}
+
+.tableWrapper thead {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.tableWrapper thead th {
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #495057;
+  padding: 14px 16px;
+  border-bottom: none;
+}
+
+.tableWrapper tbody tr {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.tableWrapper tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tableWrapper tbody td {
+  padding: 16px;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.insumoIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  transition: all 0.2s ease;
+}
+
+.insumoIconExtra {
+  background-color: #e3f2fd;
+}
+
+.insumoIconProduction {
+  background-color: #fff3e0;
+}
+
+.tableWrapper tbody tr:hover .insumoIcon {
+  transform: scale(1.1);
+}
+
+.badgeCustom {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 3px;
+  text-transform: capitalize;
+  letter-spacing: 0.3px;
+}
+
+/* Estilos específicos para badges de tipo */
+.badgeType {
+  padding: 5px 15px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Estilos para badges de stock */
+.badgeStock {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 3px;
+}
+
+.searchBar {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.searchBar:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.filterSelect {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.filterSelect:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.emptyState {
+  padding: 60px 20px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.emptyState i {
+  font-size: 48px;
+  color: #dee2e6;
+  margin-bottom: 16px;
+}

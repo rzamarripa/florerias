@@ -93,23 +93,23 @@ const PizarronEnvioPage: React.FC = () => {
 
   // Usar el hook especializado para escuchar cambios en órdenes
   useOrderSocket({
-    onOrderCreated: (newOrder: Order) => {
+    onOrderCreated: (newOrder) => {
       console.log("📩 [PizarronEnvio] Nueva orden recibida:", newOrder);
 
       if (newOrder.status !== "cancelado") {
         setOrders((prevOrders) => {
           const exists = prevOrders.some((o) => o._id === newOrder._id);
           if (exists) return prevOrders;
-          return [newOrder, ...prevOrders];
+          return [newOrder as Order, ...prevOrders];
         });
         toast.info(`Nueva orden: ${newOrder.orderNumber}`);
       }
     },
-    onOrderUpdated: (updatedOrder: Order) => {
+    onOrderUpdated: (updatedOrder) => {
       console.log("📝 [PizarronEnvio] Orden actualizada:", updatedOrder);
       setOrders((prevOrders) =>
         prevOrders.map((o) =>
-          o._id === updatedOrder._id ? updatedOrder : o
+          o._id === updatedOrder._id ? updatedOrder as Order : o
         )
       );
     },
@@ -349,24 +349,40 @@ const PizarronEnvioPage: React.FC = () => {
               <div className="mb-4">
                 <h6 className="fw-bold mb-3">Información del Cliente</h6>
                 <Row className="g-3">
-                  <Col md={6}>
-                    <div className="mb-2">
+                  <Col md={selectedOrder.arregloUrl ? 6 : 12}>
+                    <div className="mb-3">
                       <label className="text-muted small mb-1">Nombre</label>
                       <div>{selectedOrder.clientInfo.name}</div>
                     </div>
-                  </Col>
-                  <Col md={6}>
-                    <div className="mb-2">
+                    <div className="mb-3">
                       <label className="text-muted small mb-1">Teléfono</label>
                       <div>{selectedOrder.clientInfo.phone || "N/A"}</div>
                     </div>
-                  </Col>
-                  <Col md={12}>
                     <div className="mb-2">
                       <label className="text-muted small mb-1">Email</label>
                       <div>{selectedOrder.clientInfo.email || "N/A"}</div>
                     </div>
                   </Col>
+                  {selectedOrder.arregloUrl && (
+                    <Col md={6}>
+                      <div className="mb-2">
+                        <label className="text-muted small mb-1">Imagen del Arreglo</label>
+                        <div className="mt-2 d-flex justify-content-center">
+                          <img
+                            src={selectedOrder.arregloUrl}
+                            alt="Arreglo"
+                            className="img-fluid rounded shadow-sm"
+                            style={{
+                              maxHeight: "300px",
+                              objectFit: "contain",
+                              cursor: "pointer",
+                            }}
+                            onClick={() => window.open(selectedOrder.arregloUrl!, '_blank')}
+                          />
+                        </div>
+                      </div>
+                    </Col>
+                  )}
                 </Row>
               </div>
 

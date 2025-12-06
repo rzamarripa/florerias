@@ -6,6 +6,9 @@ import {
   AddProductsData,
   RemoveProductsData,
   UpdateProductQuantityData,
+  AddMaterialsData,
+  RemoveMaterialsData,
+  UpdateMaterialQuantityData,
 } from "../types";
 
 export interface StorageFilters {
@@ -183,6 +186,50 @@ export const storageService = {
   ): Promise<{ success: boolean; exists: boolean; storageId: string | null }> => {
     const response = await apiCall<{ success: boolean; exists: boolean; storageId: string | null }>(
       `/storages/check-exists/${branchId}`
+    );
+    return response as any;
+  },
+
+  // ===================== OPERACIONES CON MATERIALES =====================
+
+  addMaterialsToStorage: async (
+    storageId: string,
+    data: AddMaterialsData
+  ): Promise<{ success: boolean; data: Storage; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: Storage; message: string }>(
+      `/storages/${storageId}/add-materials`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    return response as any;
+  },
+
+  removeMaterialsFromStorage: async (
+    storageId: string,
+    data: RemoveMaterialsData
+  ): Promise<{ success: boolean; data: Storage; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: Storage; message: string }>(
+      `/storages/${storageId}/remove-materials`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    return response as any;
+  },
+
+  updateMaterialQuantity: async (
+    storageId: string,
+    data: UpdateMaterialQuantityData
+  ): Promise<{ success: boolean; data: Storage; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: Storage; message: string }>(
+      `/storages/${storageId}/update-material-quantity`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
     );
     return response as any;
   },

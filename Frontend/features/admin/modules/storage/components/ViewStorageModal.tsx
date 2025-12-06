@@ -191,6 +191,32 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
     return storage?.products.reduce((sum, item) => sum + item.quantity, 0) || 0;
   };
 
+  const getTotalMaterials = () => {
+    return storage?.materials?.length || 0;
+  };
+
+  const getTotalMaterialsQuantity = () => {
+    return storage?.materials?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  };
+
+  const getMaterialName = (materialItem: any) => {
+    if (typeof materialItem.materialId === "string") {
+      return materialItem.materialId;
+    }
+    return materialItem.materialId?.name || "N/A";
+  };
+
+  const getMaterialUnit = (materialItem: any) => {
+    if (typeof materialItem.materialId === "string") {
+      return "";
+    }
+    const unit = materialItem.materialId?.unit;
+    if (typeof unit === "string") {
+      return unit;
+    }
+    return unit?.abbreviation || unit?.name || "";
+  };
+
   const getProductId = (productItem: any): string => {
     return typeof productItem.productId === "string" ? productItem.productId : productItem.productId._id;
   };
@@ -283,27 +309,37 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
 
             {/* Estadísticas */}
             <div className="row mb-4">
-              <div className="col-md-4">
+              <div className="col-md-3">
                 <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
                   <div className="card-body text-center p-4">
                     <Package size={32} className="text-primary mb-2" />
                     <h4 className="mb-0 fw-bold">{getTotalProducts()}</h4>
-                    <small className="text-muted">Productos Diferentes</small>
+                    <small className="text-muted">Productos</small>
                   </div>
                 </div>
               </div>
 
-              <div className="col-md-4">
+              <div className="col-md-3">
                 <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
                   <div className="card-body text-center p-4">
                     <Package size={32} className="text-success mb-2" />
                     <h4 className="mb-0 fw-bold">{getTotalQuantity()}</h4>
-                    <small className="text-muted">Cantidad Total</small>
+                    <small className="text-muted">Cant. Productos</small>
                   </div>
                 </div>
               </div>
 
-              <div className="col-md-4">
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
+                  <div className="card-body text-center p-4">
+                    <Package size={32} className="text-warning mb-2" />
+                    <h4 className="mb-0 fw-bold">{getTotalMaterials()}</h4>
+                    <small className="text-muted">Materiales</small>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-md-3">
                 <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
                   <div className="card-body text-center p-4">
                     <Badge
@@ -386,6 +422,51 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
                             </tr>
                           );
                         })}
+                      </tbody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Materiales */}
+            <div className="card border-0 shadow-sm mt-4" style={{ borderRadius: "12px" }}>
+              <div className="card-body p-4">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h6 className="mb-0 fw-bold">Materiales en Almacén</h6>
+                </div>
+
+                {!storage.materials || storage.materials.length === 0 ? (
+                  <div className="text-center py-4 text-muted">
+                    <Package size={48} className="mb-3 opacity-50" />
+                    <p className="mb-0">No hay materiales en este almacén</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <Table hover className="mb-0">
+                      <thead style={{ background: "#f8f9fa" }}>
+                        <tr>
+                          <th className="px-3 py-3 fw-semibold text-muted">#</th>
+                          <th className="px-3 py-3 fw-semibold text-muted">MATERIAL</th>
+                          <th className="px-3 py-3 fw-semibold text-muted">UNIDAD</th>
+                          <th className="px-3 py-3 fw-semibold text-muted text-end">CANTIDAD</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {storage.materials.map((item, index) => (
+                          <tr key={item._id}>
+                            <td className="px-3 py-3">{index + 1}</td>
+                            <td className="px-3 py-3 fw-semibold">{getMaterialName(item)}</td>
+                            <td className="px-3 py-3">
+                              <Badge bg="secondary">{getMaterialUnit(item)}</Badge>
+                            </td>
+                            <td className="px-3 py-3 text-end">
+                              <Badge bg="warning" pill className="px-3">
+                                {item.quantity}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </Table>
                   </div>
