@@ -330,7 +330,7 @@ export async function generateResponseFromResults(
       ...conversationHistory,
       {
         role: "user",
-        content: `Un usuario del sistema Florisoft preguntó: "${originalMessage}"\n\nDatos encontrados tras ${
+        content: `Un usuario del sistema MaFlores preguntó: "${originalMessage}"\n\nDatos encontrados tras ${
           queryExecution.totalSteps
         } consulta(s): ${JSON.stringify(
           queryExecution.combinedResults,

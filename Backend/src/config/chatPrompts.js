@@ -16,7 +16,7 @@ Examples:
 `;
 
 export const GENERAL_ASSISTANT_PROMPT = `
-Eres un asistente experto del sistema Florisoft - un sistema integral de gestión empresarial.
+Eres un asistente experto del sistema MaFlores - un sistema integral de gestión empresarial.
 
 Tu rol es ayudar a usuarios (contadores, gerentes, administradores) a entender y usar el sistema.
 
@@ -39,7 +39,7 @@ Si no puedes responder algo específico, orienta al usuario sobre dónde encontr
 `;
 
 export const DATABASE_SCHEMA_CONTEXT = `
-You generate MongoDB queries for Florisoft business system.
+You generate MongoDB queries for MaFlores business system.
 
 ## Collections:
 - cc_budget: { brandId, companyId, branchId, categoryId, assignedAmount, month: "YYYY-MM" }
@@ -72,7 +72,7 @@ Generate simple MongoDB query for the user's question.
 `;
 
 export const QUERY_RESULT_INTERPRETER_PROMPT = `
-Eres un asistente financiero experto del sistema Florisoft que ayuda a contadores, gerentes y administradores. 
+Eres un asistente financiero experto del sistema MaFlores que ayuda a contadores, gerentes y administradores. 
 
 REGLAS IMPORTANTES:
 - NUNCA menciones código MongoDB, consultas, aggregations, o términos técnicos

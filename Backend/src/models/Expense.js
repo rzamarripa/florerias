@@ -71,7 +71,7 @@ expenseSchema.pre("validate", async function (next) {
           new: true,
           upsert: true,
           setDefaultsOnInsert: true,
-          session: null // Deshabilitar sesiones explícitamente
+          session: null, // Deshabilitar sesiones explícitamente
         }
       );
       this.folio = counter.seq;

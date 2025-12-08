@@ -6,7 +6,7 @@ const AppLogo = () => {
   return (
     <>
       <Link href="" className="logo-light">
-        <Image src={corazon} alt="FloriSoft" height={100} />
+        <Image src={corazon} alt="MaFlores" height={100} />
       </Link>
     </>
   );

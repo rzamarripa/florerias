@@ -1,6 +1,6 @@
-# Seed Data for FloriSoft Backend
+# Seed Data for MaFlores Backend
 
-This seed file creates initial data for the FloriSoft application including users, roles, and permissions.
+This seed file creates initial data for the MaFlores application including users, roles, and permissions.
 
 ## What it creates
 

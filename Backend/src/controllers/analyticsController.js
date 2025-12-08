@@ -1,10 +1,10 @@
-import Order from '../models/Order.js';
-import OrderPayment from '../models/OrderPayment.js';
-import { Branch } from '../models/Branch.js';
-import { User } from '../models/User.js';
-import { Storage } from '../models/Storage.js';
-import { ProductCategory } from '../models/ProductCategory.js';
-import mongoose from 'mongoose';
+import Order from "../models/Order.js";
+import OrderPayment from "../models/OrderPayment.js";
+import { Branch } from "../models/Branch.js";
+import { User } from "../models/User.js";
+import { Storage } from "../models/Storage.js";
+import { ProductCategory } from "../models/ProductCategory.js";
+import mongoose from "mongoose";
 
 // Obtener datos completos del dashboard analítico
 export const getDashboardData = async (req, res) => {
@@ -15,7 +15,7 @@ export const getDashboardData = async (req, res) => {
       branchId,
       cashierId,
       categoryId,
-      period = 'day'
+      period = "day",
     } = req.query;
 
     // Obtener el ID del usuario autenticado
@@ -24,16 +24,16 @@ export const getDashboardData = async (req, res) => {
     if (!userId) {
       return res.status(401).json({
         success: false,
-        message: 'Usuario no autenticado'
+        message: "Usuario no autenticado",
       });
     }
 
     // Obtener el usuario con su rol
-    const currentUser = await User.findById(userId).populate('role');
+    const currentUser = await User.findById(userId).populate("role");
     if (!currentUser || !currentUser.role) {
       return res.status(403).json({
         success: false,
-        message: 'Usuario no tiene rol asignado'
+        message: "Usuario no tiene rol asignado",
       });
     }
 
@@ -42,26 +42,26 @@ export const getDashboardData = async (req, res) => {
     // Determinar las sucursales a las que el usuario tiene acceso
     let branchIds = [];
 
-    if (userRole === 'Administrador') {
+    if (userRole === "Administrador") {
       // Buscar sucursales donde el usuario es administrador
       const userBranches = await Branch.find({
         administrator: userId,
-        isActive: true
-      }).select('_id');
-      branchIds = userBranches.map(branch => branch._id);
-    } else if (userRole === 'Gerente') {
+        isActive: true,
+      }).select("_id");
+      branchIds = userBranches.map((branch) => branch._id);
+    } else if (userRole === "Gerente") {
       // Buscar la sucursal donde el usuario es gerente
       const userBranch = await Branch.findOne({
         manager: userId,
-        isActive: true
-      }).select('_id');
+        isActive: true,
+      }).select("_id");
       if (userBranch) {
         branchIds = [userBranch._id];
       }
     } else {
       return res.status(403).json({
         success: false,
-        message: 'No tienes permisos para acceder a las estadísticas'
+        message: "No tienes permisos para acceder a las estadísticas",
       });
     }
 
@@ -69,28 +69,28 @@ export const getDashboardData = async (req, res) => {
     if (branchIds.length === 0) {
       return res.status(200).json({
         success: true,
-        data: getEmptyDashboardData()
+        data: getEmptyDashboardData(),
       });
     }
 
     // Si se proporciona un branchId específico, verificar que el usuario tenga acceso
     if (branchId) {
       const specificBranchId = new mongoose.Types.ObjectId(branchId);
-      const hasAccess = branchIds.some(id => id.equals(specificBranchId));
+      const hasAccess = branchIds.some((id) => id.equals(specificBranchId));
 
       if (hasAccess) {
         branchIds = [specificBranchId];
       } else {
         return res.status(403).json({
           success: false,
-          message: 'No tienes acceso a esta sucursal'
+          message: "No tienes acceso a esta sucursal",
         });
       }
     }
 
     // Construir filtros para las órdenes
     const orderFilters = {
-      branchId: { $in: branchIds }
+      branchId: { $in: branchIds },
     };
 
     // Filtros de fecha
@@ -115,40 +115,54 @@ export const getDashboardData = async (req, res) => {
       orderFilters.cashier = new mongoose.Types.ObjectId(cashierId);
     }
 
-    console.log('Analytics - Filtros aplicados:', JSON.stringify(orderFilters, null, 2));
+    console.log(
+      "Analytics - Filtros aplicados:",
+      JSON.stringify(orderFilters, null, 2)
+    );
 
     // Obtener todas las órdenes que cumplen con los filtros
     const orders = await Order.find(orderFilters)
-      .populate('cashier', 'profile.name profile.lastName profile.fullName')
+      .populate("cashier", "profile.name profile.lastName profile.fullName")
       .populate({
-        path: 'items.productId',
-        select: 'nombre productCategory',
+        path: "items.productId",
+        select: "nombre productCategory",
         populate: {
-          path: 'productCategory',
-          select: 'name'
-        }
+          path: "productCategory",
+          select: "name",
+        },
       })
-      .populate('paymentMethod', 'name');
+      .populate("paymentMethod", "name");
 
-    console.log('Analytics - Órdenes encontradas:', orders.length);
+    console.log("Analytics - Órdenes encontradas:", orders.length);
 
     // CALCULAR RESUMEN PRINCIPAL
     const totalSales = orders.length;
 
     // Obtener todos los pagos de estas órdenes
-    const orderIds = orders.map(order => order._id);
+    const orderIds = orders.map((order) => order._id);
     const payments = await OrderPayment.find({
-      orderId: { $in: orderIds }
+      orderId: { $in: orderIds },
     });
 
-    const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0);
-    const averageTicket = totalSales > 0 ? orders.reduce((sum, order) => sum + order.total, 0) / totalSales : 0;
+    const totalRevenue = payments.reduce(
+      (sum, payment) => sum + payment.amount,
+      0
+    );
+    const averageTicket =
+      totalSales > 0
+        ? orders.reduce((sum, order) => sum + order.total, 0) / totalSales
+        : 0;
     const totalProducts = orders.reduce((sum, order) => {
-      return sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+      return (
+        sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0)
+      );
     }, 0);
 
     // Calcular cambio porcentual (comparar con período anterior)
-    const percentageChange = await calculatePercentageChange(orderFilters, totalRevenue);
+    const percentageChange = await calculatePercentageChange(
+      orderFilters,
+      totalRevenue
+    );
 
     // TENDENCIA DE VENTAS (últimos días según el período)
     const salesTrend = await calculateSalesTrend(orders, period);
@@ -160,7 +174,10 @@ export const getDashboardData = async (req, res) => {
     const salesByCategory = await calculateSalesByCategory(orders);
 
     // VENTAS POR MÉTODO DE PAGO
-    const salesByPaymentMethod = calculateSalesByPaymentMethod(orders, payments);
+    const salesByPaymentMethod = calculateSalesByPaymentMethod(
+      orders,
+      payments
+    );
 
     // VENTAS POR HORA DEL DÍA
     const salesByHour = calculateSalesByHour(orders);
@@ -186,7 +203,7 @@ export const getDashboardData = async (req, res) => {
           totalRevenue,
           averageTicket,
           totalProducts,
-          percentageChange
+          percentageChange,
         },
         salesTrend,
         monthlyComparison,
@@ -196,16 +213,15 @@ export const getDashboardData = async (req, res) => {
         salesByDayOfWeek,
         topProducts,
         cashierRanking,
-        lowStockProducts
-      }
+        lowStockProducts,
+      },
     });
-
   } catch (error) {
-    console.error('Error al obtener datos del dashboard:', error);
+    console.error("Error al obtener datos del dashboard:", error);
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
-      error: error.message
+      message: "Error interno del servidor",
+      error: error.message,
     });
   }
 };
@@ -220,13 +236,13 @@ function getEmptyDashboardData() {
       totalRevenue: 0,
       averageTicket: 0,
       totalProducts: 0,
-      percentageChange: 0
+      percentageChange: 0,
     },
     salesTrend: [],
     monthlyComparison: {
       currentMonth: { sales: 0, revenue: 0 },
       previousMonth: { sales: 0, revenue: 0 },
-      percentageChange: { sales: 0, revenue: 0 }
+      percentageChange: { sales: 0, revenue: 0 },
     },
     salesByCategory: [],
     salesByPaymentMethod: [],
@@ -234,7 +250,7 @@ function getEmptyDashboardData() {
     salesByDayOfWeek: [],
     topProducts: [],
     cashierRanking: [],
-    lowStockProducts: []
+    lowStockProducts: [],
   };
 }
 
@@ -246,7 +262,9 @@ async function calculatePercentageChange(currentFilters, currentRevenue) {
     }
 
     const startDate = new Date(currentFilters.orderDate.$gte);
-    const endDate = currentFilters.orderDate.$lte ? new Date(currentFilters.orderDate.$lte) : new Date();
+    const endDate = currentFilters.orderDate.$lte
+      ? new Date(currentFilters.orderDate.$lte)
+      : new Date();
 
     // Calcular duración del período
     const periodDuration = endDate - startDate;
@@ -259,44 +277,50 @@ async function calculatePercentageChange(currentFilters, currentRevenue) {
       ...currentFilters,
       orderDate: {
         $gte: previousStart,
-        $lte: previousEnd
-      }
+        $lte: previousEnd,
+      },
     };
 
     // Obtener órdenes del período anterior
     const previousOrders = await Order.find(previousFilters);
-    const previousOrderIds = previousOrders.map(o => o._id);
+    const previousOrderIds = previousOrders.map((o) => o._id);
     const previousPayments = await OrderPayment.find({
-      orderId: { $in: previousOrderIds }
+      orderId: { $in: previousOrderIds },
     });
 
-    const previousRevenue = previousPayments.reduce((sum, p) => sum + p.amount, 0);
+    const previousRevenue = previousPayments.reduce(
+      (sum, p) => sum + p.amount,
+      0
+    );
 
     if (previousRevenue === 0) return currentRevenue > 0 ? 100 : 0;
 
     return ((currentRevenue - previousRevenue) / previousRevenue) * 100;
   } catch (error) {
-    console.error('Error calculando cambio porcentual:', error);
+    console.error("Error calculando cambio porcentual:", error);
     return 0;
   }
 }
 
 // Calcular tendencia de ventas
-function calculateSalesTrend(orders, period = 'day') {
+function calculateSalesTrend(orders, period = "day") {
   const trendMap = new Map();
 
-  orders.forEach(order => {
+  orders.forEach((order) => {
     const date = new Date(order.orderDate || order.createdAt);
     let key;
 
-    if (period === 'day') {
-      key = date.toISOString().split('T')[0];
-    } else if (period === 'week') {
+    if (period === "day") {
+      key = date.toISOString().split("T")[0];
+    } else if (period === "week") {
       const weekStart = new Date(date);
       weekStart.setDate(date.getDate() - date.getDay());
-      key = weekStart.toISOString().split('T')[0];
-    } else if (period === 'month') {
-      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      key = weekStart.toISOString().split("T")[0];
+    } else if (period === "month") {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}`;
     }
 
     if (!trendMap.has(key)) {
@@ -308,64 +332,99 @@ function calculateSalesTrend(orders, period = 'day') {
     trend.amount += order.total;
   });
 
-  return Array.from(trendMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+  return Array.from(trendMap.values()).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
 }
 
 // Comparación mensual
 async function calculateMonthlyComparison(branchIds) {
   const now = new Date();
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const currentMonthEnd = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999
+  );
 
   const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  const previousMonthEnd = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    0,
+    23,
+    59,
+    59,
+    999
+  );
 
   // Mes actual
   const currentMonthOrders = await Order.find({
     branchId: { $in: branchIds },
-    orderDate: { $gte: currentMonthStart, $lte: currentMonthEnd }
+    orderDate: { $gte: currentMonthStart, $lte: currentMonthEnd },
   });
 
-  const currentOrderIds = currentMonthOrders.map(o => o._id);
-  const currentPayments = await OrderPayment.find({ orderId: { $in: currentOrderIds } });
+  const currentOrderIds = currentMonthOrders.map((o) => o._id);
+  const currentPayments = await OrderPayment.find({
+    orderId: { $in: currentOrderIds },
+  });
 
   const currentMonthSales = currentMonthOrders.length;
-  const currentMonthRevenue = currentPayments.reduce((sum, p) => sum + p.amount, 0);
+  const currentMonthRevenue = currentPayments.reduce(
+    (sum, p) => sum + p.amount,
+    0
+  );
 
   // Mes anterior
   const previousMonthOrders = await Order.find({
     branchId: { $in: branchIds },
-    orderDate: { $gte: previousMonthStart, $lte: previousMonthEnd }
+    orderDate: { $gte: previousMonthStart, $lte: previousMonthEnd },
   });
 
-  const previousOrderIds = previousMonthOrders.map(o => o._id);
-  const previousPayments = await OrderPayment.find({ orderId: { $in: previousOrderIds } });
+  const previousOrderIds = previousMonthOrders.map((o) => o._id);
+  const previousPayments = await OrderPayment.find({
+    orderId: { $in: previousOrderIds },
+  });
 
   const previousMonthSales = previousMonthOrders.length;
-  const previousMonthRevenue = previousPayments.reduce((sum, p) => sum + p.amount, 0);
+  const previousMonthRevenue = previousPayments.reduce(
+    (sum, p) => sum + p.amount,
+    0
+  );
 
   // Calcular cambios porcentuales
-  const salesChange = previousMonthSales === 0 ?
-    (currentMonthSales > 0 ? 100 : 0) :
-    ((currentMonthSales - previousMonthSales) / previousMonthSales) * 100;
+  const salesChange =
+    previousMonthSales === 0
+      ? currentMonthSales > 0
+        ? 100
+        : 0
+      : ((currentMonthSales - previousMonthSales) / previousMonthSales) * 100;
 
-  const revenueChange = previousMonthRevenue === 0 ?
-    (currentMonthRevenue > 0 ? 100 : 0) :
-    ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100;
+  const revenueChange =
+    previousMonthRevenue === 0
+      ? currentMonthRevenue > 0
+        ? 100
+        : 0
+      : ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) *
+        100;
 
   return {
     currentMonth: {
       sales: currentMonthSales,
-      revenue: currentMonthRevenue
+      revenue: currentMonthRevenue,
     },
     previousMonth: {
       sales: previousMonthSales,
-      revenue: previousMonthRevenue
+      revenue: previousMonthRevenue,
     },
     percentageChange: {
       sales: salesChange,
-      revenue: revenueChange
-    }
+      revenue: revenueChange,
+    },
   };
 }
 
@@ -378,34 +437,35 @@ async function calculateSalesByCategory(orders) {
   let totalAmount = 0;
 
   // Inicializar el mapa con todas las categorías
-  categories.forEach(category => {
+  categories.forEach((category) => {
     categoryMap.set(category._id.toString(), {
       name: category.name,
-      total: 0
+      total: 0,
     });
   });
 
   // Agregar categoría "Sin categoría" para productos sin categoría asignada
-  categoryMap.set('sin-categoria', {
-    name: 'Sin categoría',
-    total: 0
+  categoryMap.set("sin-categoria", {
+    name: "Sin categoría",
+    total: 0,
   });
 
   // Sumar las ventas por categoría
-  orders.forEach(order => {
-    order.items.forEach(item => {
+  orders.forEach((order) => {
+    order.items.forEach((item) => {
       const amount = item.amount;
       totalAmount += amount;
 
       // Obtener la categoría del producto
-      const productCategoryId = item.productId?.productCategory?._id?.toString() ||
-                                item.productId?.productCategory?.toString();
+      const productCategoryId =
+        item.productId?.productCategory?._id?.toString() ||
+        item.productId?.productCategory?.toString();
 
       if (productCategoryId && categoryMap.has(productCategoryId)) {
         categoryMap.get(productCategoryId).total += amount;
       } else {
         // Si no tiene categoría, agregar a "Sin categoría"
-        categoryMap.get('sin-categoria').total += amount;
+        categoryMap.get("sin-categoria").total += amount;
       }
     });
   });
@@ -415,9 +475,9 @@ async function calculateSalesByCategory(orders) {
     .map(([id, data]) => ({
       category: data.name,
       total: data.total,
-      percentage: totalAmount > 0 ? (data.total / totalAmount) * 100 : 0
+      percentage: totalAmount > 0 ? (data.total / totalAmount) * 100 : 0,
     }))
-    .filter(item => item.total > 0) // Filtrar categorías sin ventas
+    .filter((item) => item.total > 0) // Filtrar categorías sin ventas
     .sort((a, b) => b.total - a.total);
 
   return result;
@@ -427,14 +487,15 @@ async function calculateSalesByCategory(orders) {
 function calculateSalesByPaymentMethod(orders, payments) {
   const methodMap = new Map();
 
-  payments.forEach(payment => {
+  payments.forEach((payment) => {
     // Encontrar la orden correspondiente
-    const order = orders.find(o => o._id.equals(payment.orderId));
+    const order = orders.find((o) => o._id.equals(payment.orderId));
     if (!order || !order.paymentMethod) return;
 
-    const method = typeof order.paymentMethod === 'string' ?
-      order.paymentMethod :
-      order.paymentMethod.name;
+    const method =
+      typeof order.paymentMethod === "string"
+        ? order.paymentMethod
+        : order.paymentMethod.name;
 
     if (!methodMap.has(method)) {
       methodMap.set(method, { method, amount: 0, count: 0 });
@@ -454,13 +515,13 @@ function calculateSalesByHour(orders) {
 
   // Inicializar todas las horas
   for (let i = 0; i < 24; i++) {
-    const hourKey = `${String(i).padStart(2, '0')}:00`;
+    const hourKey = `${String(i).padStart(2, "0")}:00`;
     hourMap.set(hourKey, { hour: hourKey, count: 0, amount: 0 });
   }
 
-  orders.forEach(order => {
+  orders.forEach((order) => {
     const date = new Date(order.orderDate || order.createdAt);
-    const hour = `${String(date.getHours()).padStart(2, '0')}:00`;
+    const hour = `${String(date.getHours()).padStart(2, "0")}:00`;
 
     const data = hourMap.get(hour);
     if (data) {
@@ -469,20 +530,28 @@ function calculateSalesByHour(orders) {
     }
   });
 
-  return Array.from(hourMap.values()).filter(h => h.count > 0);
+  return Array.from(hourMap.values()).filter((h) => h.count > 0);
 }
 
 // Ventas por día de la semana
 function calculateSalesByDayOfWeek(orders) {
-  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayNames = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
   const dayMap = new Map();
 
   // Inicializar todos los días
-  dayNames.forEach(day => {
+  dayNames.forEach((day) => {
     dayMap.set(day, { day, count: 0, amount: 0 });
   });
 
-  orders.forEach(order => {
+  orders.forEach((order) => {
     const date = new Date(order.orderDate || order.createdAt);
     const dayIndex = date.getDay();
     const dayName = dayNames[dayIndex];
@@ -499,8 +568,8 @@ function calculateSalesByDayOfWeek(orders) {
 function calculateTopProducts(orders) {
   const productMap = new Map();
 
-  orders.forEach(order => {
-    order.items.forEach(item => {
+  orders.forEach((order) => {
+    order.items.forEach((item) => {
       const productId = item.productId?._id?.toString() || item.productName;
       const productName = item.productName;
 
@@ -509,7 +578,7 @@ function calculateTopProducts(orders) {
           _id: productId,
           name: productName,
           quantity: 0,
-          revenue: 0
+          revenue: 0,
         });
       }
 
@@ -528,20 +597,23 @@ function calculateTopProducts(orders) {
 async function calculateCashierRanking(orders, payments) {
   const cashierMap = new Map();
 
-  orders.forEach(order => {
+  orders.forEach((order) => {
     if (!order.cashier) return;
 
     const cashierId = order.cashier._id.toString();
-    const cashierName = order.cashier.profile?.fullName ||
-                       `${order.cashier.profile?.name || ''} ${order.cashier.profile?.lastName || ''}`.trim() ||
-                       'Sin nombre';
+    const cashierName =
+      order.cashier.profile?.fullName ||
+      `${order.cashier.profile?.name || ""} ${
+        order.cashier.profile?.lastName || ""
+      }`.trim() ||
+      "Sin nombre";
 
     if (!cashierMap.has(cashierId)) {
       cashierMap.set(cashierId, {
         _id: cashierId,
         name: cashierName,
         salesCount: 0,
-        totalRevenue: 0
+        totalRevenue: 0,
       });
     }
 
@@ -550,8 +622,8 @@ async function calculateCashierRanking(orders, payments) {
   });
 
   // Agregar ingresos de pagos
-  payments.forEach(payment => {
-    const order = orders.find(o => o._id.equals(payment.orderId));
+  payments.forEach((payment) => {
+    const order = orders.find((o) => o._id.equals(payment.orderId));
     if (!order || !order.cashier) return;
 
     const cashierId = order.cashier._id.toString();
@@ -562,9 +634,10 @@ async function calculateCashierRanking(orders, payments) {
   });
 
   // Calcular ticket promedio
-  const result = Array.from(cashierMap.values()).map(cashier => ({
+  const result = Array.from(cashierMap.values()).map((cashier) => ({
     ...cashier,
-    averageTicket: cashier.salesCount > 0 ? cashier.totalRevenue / cashier.salesCount : 0
+    averageTicket:
+      cashier.salesCount > 0 ? cashier.totalRevenue / cashier.salesCount : 0,
   }));
 
   return result.sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 10);
@@ -574,13 +647,13 @@ async function calculateCashierRanking(orders, payments) {
 async function getLowStockProducts(branchIds) {
   try {
     const storages = await Storage.find({
-      branch: { $in: branchIds }
-    }).populate('products.productId', 'nombre minStock');
+      branch: { $in: branchIds },
+    }).populate("products.productId", "nombre minStock");
 
     const lowStockProducts = [];
 
-    storages.forEach(storage => {
-      storage.products.forEach(product => {
+    storages.forEach((storage) => {
+      storage.products.forEach((product) => {
         if (!product.productId) return;
 
         const minStock = product.productId.minStock || 10;
@@ -590,15 +663,17 @@ async function getLowStockProducts(branchIds) {
             name: product.productId.nombre,
             currentStock: product.quantity,
             minStock: minStock,
-            category: product.productId.categoria || 'Sin categoría'
+            category: product.productId.categoria || "Sin categoría",
           });
         }
       });
     });
 
-    return lowStockProducts.sort((a, b) => a.currentStock - b.currentStock).slice(0, 10);
+    return lowStockProducts
+      .sort((a, b) => a.currentStock - b.currentStock)
+      .slice(0, 10);
   } catch (error) {
-    console.error('Error obteniendo productos con stock bajo:', error);
+    console.error("Error obteniendo productos con stock bajo:", error);
     return [];
   }
 }

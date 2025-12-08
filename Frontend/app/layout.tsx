@@ -9,7 +9,7 @@ import "simplebar-react/dist/simplebar.min.css";
 import "@/assets/scss/custom-sidebar.scss";
 
 export const metadata: Metadata = {
-  title: "FloriSoft",
+  title: "MaFlores",
   description: "Sistema para Florerías",
   icons: {
     icon: "/favicon-simple.svg",
