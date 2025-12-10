@@ -15,6 +15,16 @@ const branchSchema = new Schema(
       unique: true,
       sparse: true, // Permite que sea opcional pero único si se proporciona
     },
+    rfc: {
+      type: String,
+      required: [true, "El RFC es requerido"],
+      trim: true,
+      uppercase: true,
+      match: [
+        /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/,
+        "El formato del RFC no es válido",
+      ],
+    },
     companyId: {
       type: Schema.Types.ObjectId,
       ref: "cv_company",

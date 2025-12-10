@@ -1,7 +1,20 @@
+export interface Manager {
+  _id: string;
+  username: string;
+  email: string;
+  phone: string;
+  profile: {
+    name: string;
+    lastName: string;
+    fullName: string;
+  };
+}
+
 export interface Branch {
   _id: string;
   branchName: string;
   branchCode?: string;
+  manager?: Manager | string;
 }
 
 export interface User {

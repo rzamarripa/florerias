@@ -536,7 +536,8 @@ const getCashiersAndManagersByAdmin = async (req, res) => {
         branches: branches.map(b => ({
           _id: b._id,
           branchName: b.branchName,
-          branchCode: b.branchCode
+          branchCode: b.branchCode,
+          manager: b.manager
         }))
       }
     });
@@ -614,7 +615,8 @@ const getManagerBranch = async (req, res) => {
         branches: [{
           _id: branch._id,
           branchName: branch.branchName,
-          branchCode: branch.branchCode
+          branchCode: branch.branchCode,
+          manager: branch.manager
         }]
       }
     });

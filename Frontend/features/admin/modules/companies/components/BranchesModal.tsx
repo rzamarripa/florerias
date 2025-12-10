@@ -12,6 +12,7 @@ interface Branch {
   _id: string;
   branchName: string;
   branchCode?: string;
+  rfc: string;
   address: {
     city: string;
     state: string;
@@ -206,6 +207,7 @@ const BranchesModal: React.FC<BranchesModalProps> = ({
                       <tr>
                         <th>Nombre</th>
                         <th>Código</th>
+                        <th>RFC</th>
                         <th>Ciudad</th>
                         <th>Gerente</th>
                         <th style={{ width: "60px" }}>Acciones</th>
@@ -216,6 +218,9 @@ const BranchesModal: React.FC<BranchesModalProps> = ({
                         <tr key={branch._id}>
                           <td>{branch.branchName}</td>
                           <td>{branch.branchCode || "N/A"}</td>
+                          <td>
+                            <span className="badge bg-info">{branch.rfc}</span>
+                          </td>
                           <td>
                             {branch.address.city}, {branch.address.state}
                           </td>

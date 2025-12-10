@@ -47,6 +47,7 @@ export interface Branch {
   _id: string;
   branchName: string;
   branchCode?: string;
+  rfc: string;
   companyId: Company | string;
   address: BranchAddress;
   manager: Manager | string;
@@ -83,6 +84,7 @@ export interface EmployeeData {
 export interface CreateBranchData {
   branchName: string;
   branchCode?: string;
+  rfc: string;
   companyId: string;
   address: BranchAddress;
   managerId?: string;

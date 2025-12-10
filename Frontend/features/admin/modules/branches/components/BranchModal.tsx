@@ -38,6 +38,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
   const [formData, setFormData] = useState<CreateBranchData>({
     branchName: "",
     branchCode: "",
+    rfc: "",
     companyId: "",
     address: {
       street: "",
@@ -88,6 +89,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
         setFormData({
           branchName: branch.branchName,
           branchCode: branch.branchCode || "",
+          rfc: branch.rfc,
           companyId:
             typeof branch.companyId === "string"
               ? branch.companyId
@@ -175,6 +177,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
     setFormData({
       branchName: "",
       branchCode: "",
+      rfc: "",
       companyId: "",
       address: {
         street: "",
@@ -275,6 +278,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
     // Validar datos básicos
     if (
       !formData.branchName ||
+      !formData.rfc ||
       !formData.contactPhone ||
       !formData.contactEmail
     ) {
@@ -329,6 +333,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
       const dataToSend: CreateBranchData = {
         branchName: formData.branchName,
         branchCode: formData.branchCode || undefined,
+        rfc: formData.rfc,
         companyId: formData.companyId,
         address: formData.address,
         contactPhone: formData.contactPhone,
@@ -421,7 +426,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
             {/* Información Básica */}
             <h6 className="fw-semibold mb-3">Información Básica</h6>
             <Row className="g-3 mb-4">
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group>
                   <Form.Label>
                     Nombre de la Sucursal <span className="text-danger">*</span>
@@ -437,7 +442,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
                   />
                 </Form.Group>
               </Col>
-              <Col md={3}>
+              <Col md={2}>
                 <Form.Group>
                   <Form.Label>Código</Form.Label>
                   <Form.Control
@@ -451,6 +456,29 @@ const BranchModal: React.FC<BranchModalProps> = ({
                       })
                     }
                   />
+                </Form.Group>
+              </Col>
+              <Col md={3}>
+                <Form.Group>
+                  <Form.Label>
+                    RFC <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="RFC de la sucursal"
+                    value={formData.rfc}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        rfc: e.target.value.toUpperCase(),
+                      })
+                    }
+                    maxLength={13}
+                    required
+                  />
+                  <Form.Text className="text-muted">
+                    Formato: ABC123456XYZ
+                  </Form.Text>
                 </Form.Group>
               </Col>
               <Col md={3}>

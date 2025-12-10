@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Spinner, Alert } from "react-bootstrap";
 import { Save, X } from "lucide-react";
 import { toast } from "react-toastify";
-import { CashRegister, CreateCashRegisterData, Branch, User } from "../types";
+import { CashRegister, CreateCashRegisterData, Branch } from "../types";
 import { cashRegistersService } from "../services/cashRegisters";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
@@ -51,17 +51,24 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   });
 
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [managers, setManagers] = useState<User[]>([]);
   const [boxType, setBoxType] = useState<"normal" | "social">("normal");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
+  const [managerName, setManagerName] = useState<string>("");
 
   useEffect(() => {
     if (show && userId) {
       loadEmployeesByRole();
       if (cashRegister) {
+        // Cuando está editando, extraer el nombre del gerente
+        const managerInfo = typeof cashRegister.managerId === "object"
+          ? cashRegister.managerId?.profile?.fullName || "No disponible"
+          : "Cargando...";
+
+        setManagerName(managerInfo);
+
         setFormData({
           name: cashRegister.name,
           branchId:
@@ -118,16 +125,43 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
 
       if (response.data) {
         setBranches(response.data.branches || []);
-        setManagers(response.data.managers || []);
 
-        // Si es gerente, pre-seleccionar su sucursal y su usuario como gerente
+        // Si es gerente, pre-seleccionar su sucursal y obtener el gerente de la sucursal
         if (isManager && response.data.branches.length > 0 && !cashRegister) {
           const branch = response.data.branches[0];
           setManagerBranch(branch);
+
+          // Obtener el managerId de la sucursal
+          const managerId = typeof branch.manager === "string"
+            ? branch.manager
+            : branch.manager?._id || userId;
+
+          const managerInfo = typeof branch.manager === "object"
+            ? branch.manager?.profile?.fullName || "No disponible"
+            : "Cargando...";
+
+          setManagerName(managerInfo);
           setFormData((prev) => ({
             ...prev,
             branchId: branch._id,
-            managerId: userId, // El gerente se asigna a sí mismo
+            managerId: managerId,
+          }));
+        }
+
+        // Si es administrador y hay sucursal activa, obtener el gerente de esa sucursal
+        if (isAdministrator && activeBranch && !cashRegister) {
+          const managerId = typeof activeBranch.manager === "string"
+            ? activeBranch.manager
+            : activeBranch.manager?._id || "";
+
+          const managerInfo = typeof activeBranch.manager === "object"
+            ? activeBranch.manager?.profile?.fullName || "No disponible"
+            : "Cargando...";
+
+          setManagerName(managerInfo);
+          setFormData((prev) => ({
+            ...prev,
+            managerId: managerId,
           }));
         }
       }
@@ -150,6 +184,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     });
     setBoxType("normal");
     setError(null);
+    setManagerName("");
   };
 
   const handleInputChange = (
@@ -181,33 +216,6 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
       ...prev,
       isSocialMediaBox: type === "social",
     }));
-  };
-
-  // Cuando se selecciona una sucursal, autocompletar gerente
-  const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const branchId = e.target.value;
-    setFormData((prev) => ({
-      ...prev,
-      branchId,
-    }));
-
-    // Buscar el gerente de esta sucursal
-    const selectedBranch = branches.find((b) => b._id === branchId);
-    if (selectedBranch && managers.length > 0) {
-      // Asumiendo que cada sucursal tiene un gerente específico
-      // El backend ya filtra los gerentes correctamente
-      const branchManager = managers.find(() => {
-        // Esta lógica puede necesitar ajuste dependiendo de cómo se relacionan
-        return true; // Por ahora aceptamos cualquier gerente disponible
-      });
-
-      if (branchManager) {
-        setFormData((prev) => ({
-          ...prev,
-          managerId: branchManager._id,
-        }));
-      }
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -371,7 +379,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                     <Form.Select
                       name="branchId"
                       value={formData.branchId}
-                      onChange={handleBranchChange}
+                      onChange={handleInputChange}
                       required
                       disabled={isEditing}
                       style={{ borderRadius: "8px" }}
@@ -412,31 +420,18 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                 </Col>
               )}
 
-              {/* Gerente */}
+              {/* Gerente - Campo de solo lectura */}
               <Col md={12}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">
                     Gerente <span className="text-danger">*</span>
                   </Form.Label>
-                  <Form.Select
-                    name="managerId"
-                    value={formData.managerId}
-                    onChange={handleInputChange}
-                    required
-                    disabled={isManager && !isEditing}
-                    style={{ borderRadius: "8px" }}
-                  >
-                    <option value="">Seleccione un gerente</option>
-                    {managers.map((manager) => (
-                      <option key={manager._id} value={manager._id}>
-                        {manager.profile.fullName} - {manager.email}
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    {isManager
-                      ? "Automáticamente asignado a ti como gerente de la sucursal"
-                      : "Se autocompletará al seleccionar la sucursal"}
+                  <Alert variant="success" className="d-flex align-items-center mb-0">
+                    <strong className="me-2">Gerente asignado:</strong>
+                    {managerName || "Cargando..."}
+                  </Alert>
+                  <Form.Text className="text-muted d-block mt-2">
+                    El gerente se obtiene automáticamente de la sucursal seleccionada
                   </Form.Text>
                 </Form.Group>
               </Col>

@@ -407,11 +407,11 @@ export const updateCompany = async (req, res) => {
     if (req.body.logoUrl !== undefined) updateData.logoUrl = req.body.logoUrl;
     if (req.body.logoPath !== undefined) updateData.logoPath = req.body.logoPath;
 
-    // Manejar actualización del distribuidor
+    // Manejar actualización del administrador
     if (administratorId !== undefined) {
       if (administratorId === null || administratorId === "") {
-        // Si se pasa null o string vacío, remover el distribuidor
-        updateData.distributor = null;
+        // Si se pasa null o string vacío, remover el administrador
+        updateData.administrator = null;
       } else {
         // Verificar que el usuario existe y tiene rol de administrador
         const adminUser = await User.findById(administratorId).populate("role");
@@ -487,7 +487,7 @@ export const updateCompany = async (req, res) => {
         role: adminRole._id,
       });
 
-      updateData.distributor = newAdmin._id;
+      updateData.administrator = newAdmin._id;
     }
 
     // Manejar creación de nuevo usuario redes si se proporcionan datos
@@ -716,7 +716,7 @@ export const deleteCompany = async (req, res) => {
   }
 };
 
-// Obtener usuarios con rol Administrador activos
+// Obtener usuarios con rol Administrador activos sin empresa asignada
 export const getAdministrators = async (req, res) => {
   try {
     const adminRole = await Role.findOne({ name: /^Administrador$/i });
@@ -728,15 +728,43 @@ export const getAdministrators = async (req, res) => {
       });
     }
 
-    const administrators = await User.find({
+    // Obtener todos los usuarios con rol Administrador activos
+    const allAdministrators = await User.find({
       role: adminRole._id,
       "profile.estatus": true,
     }).select("username email phone profile");
 
+    // Obtener IDs de administradores que ya tienen empresa asignada
+    const companiesWithAdmin = await Company.find({
+      administrator: { $ne: null }
+    }).select("administrator");
+
+    const assignedAdminIds = companiesWithAdmin.map(c => c.administrator.toString());
+
+    // Si se está editando una empresa (companyId en query), incluir también su administrador actual
+    const companyId = req.query.companyId;
+    let currentCompanyAdminId = null;
+
+    if (companyId) {
+      const company = await Company.findById(companyId).select("administrator");
+      if (company && company.administrator) {
+        currentCompanyAdminId = company.administrator.toString();
+      }
+    }
+
+    // Filtrar administradores sin empresa asignada
+    // O el administrador actual de la empresa que se está editando
+    const availableAdministrators = allAdministrators.filter(
+      admin => {
+        const adminId = admin._id.toString();
+        return !assignedAdminIds.includes(adminId) || adminId === currentCompanyAdminId;
+      }
+    );
+
     res.status(200).json({
       success: true,
-      count: administrators.length,
-      data: administrators,
+      count: availableAdministrators.length,
+      data: availableAdministrators,
     });
   } catch (error) {
     res.status(500).json({
@@ -1133,6 +1161,361 @@ export const getUserCompany = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Error al obtener la empresa del usuario",
+    });
+  }
+};
+
+// Obtener estadísticas del dashboard para Distribuidor
+export const getDistributorDashboardStats = async (req, res) => {
+  try {
+    const distributorId = req.user._id;
+
+    // Importar modelos necesarios
+    const Order = (await import("../models/Order.js")).default;
+    const { Client } = await import("../models/Client.js");
+    const mongoose = await import("mongoose");
+
+    // 1. Contar empresas del distribuidor
+    const companiesCount = await Company.countDocuments({
+      distributor: distributorId,
+      isActive: true
+    });
+
+    // Obtener IDs de todas las empresas del distribuidor
+    const companies = await Company.find({
+      distributor: distributorId,
+      isActive: true
+    }).select("_id").lean();
+
+    const companyIds = companies.map(c => c._id);
+
+    // 2. Contar sucursales de todas las empresas
+    const branchesCount = await Branch.countDocuments({
+      companyId: { $in: companyIds },
+      isActive: true
+    });
+
+    // Obtener IDs de todas las sucursales
+    const branches = await Branch.find({
+      companyId: { $in: companyIds },
+      isActive: true
+    }).select("_id").lean();
+
+    const branchIds = branches.map(b => b._id);
+
+    // 3. Contar clientes de todas las sucursales
+    const clientsCount = await Client.countDocuments({
+      branch: { $in: branchIds },
+      status: true
+    });
+
+    // 4. Contar órdenes de todas las sucursales
+    const ordersCount = await Order.countDocuments({
+      branchId: { $in: branchIds }
+    });
+
+    // 5. Calcular total vendido (suma de total de todas las órdenes)
+    const totalSalesResult = await Order.aggregate([
+      {
+        $match: {
+          branchId: { $in: branchIds }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: "$total" }
+        }
+      }
+    ]);
+
+    const totalSales = totalSalesResult.length > 0 ? totalSalesResult[0].totalSales : 0;
+
+    // 6. Obtener estadísticas adicionales para los gráficos
+    // Revenue por día (últimos 30 días)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const dailyRevenue = await Order.aggregate([
+      {
+        $match: {
+          branchId: { $in: branchIds },
+          orderDate: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$orderDate" },
+            month: { $month: "$orderDate" },
+            day: { $dayOfMonth: "$orderDate" }
+          },
+          revenue: { $sum: "$total" },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 }
+      }
+    ]);
+
+    // Revenue por mes (últimos 6 meses)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const monthlyRevenue = await Order.aggregate([
+      {
+        $match: {
+          branchId: { $in: branchIds },
+          orderDate: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$orderDate" },
+            month: { $month: "$orderDate" }
+          },
+          revenue: { $sum: "$total" },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 }
+      }
+    ]);
+
+    // Ventas por semana del mes actual
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const weeklySales = await Order.aggregate([
+      {
+        $match: {
+          branchId: { $in: branchIds },
+          orderDate: { $gte: startOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            week: { $week: "$orderDate" }
+          },
+          revenue: { $sum: "$total" },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.week": 1 }
+      }
+    ]);
+
+    // Órdenes por estado
+    const ordersByStatus = await Order.aggregate([
+      {
+        $match: {
+          branchId: { $in: branchIds }
+        }
+      },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Calcular rendimiento de ventas
+    const allOrders = await Order.find({
+      branchId: { $in: branchIds }
+    }).select('status advance sendToProduction').lean();
+
+    // Debug: Mostrar todas las órdenes con sus estados
+    console.log('All Orders Status:', allOrders.map(order => ({
+      status: order.status,
+      advance: order.advance,
+      sendToProduction: order.sendToProduction
+    })));
+
+    // Ventas pendientes: status = 'sinAnticipo' y sendToProduction = false
+    const pendingOrders = allOrders.filter(order =>
+      order.status === 'sinAnticipo' &&
+      (order.sendToProduction === false || !order.sendToProduction)
+    );
+
+    // Ventas en proceso: con anticipo (advance > 0) o sendToProduction = true
+    const inProcessOrders = allOrders.filter(order =>
+      (order.advance > 0 || order.sendToProduction === true) &&
+      order.status !== 'completado' &&
+      order.status !== 'cancelado'
+    );
+
+    // Ventas completadas: status = 'completado'
+    const completedOrders = allOrders.filter(order =>
+      order.status === 'completado'
+    );
+
+    const totalOrdersForPercentage = allOrders.filter(order =>
+      order.status !== 'cancelado'
+    ).length;
+
+    const salesPerformance = {
+      pending: {
+        count: pendingOrders.length,
+        percentage: totalOrdersForPercentage > 0
+          ? ((pendingOrders.length / totalOrdersForPercentage) * 100).toFixed(2)
+          : "0"
+      },
+      inProcess: {
+        count: inProcessOrders.length,
+        percentage: totalOrdersForPercentage > 0
+          ? ((inProcessOrders.length / totalOrdersForPercentage) * 100).toFixed(2)
+          : "0"
+      },
+      completed: {
+        count: completedOrders.length,
+        percentage: totalOrdersForPercentage > 0
+          ? ((completedOrders.length / totalOrdersForPercentage) * 100).toFixed(2)
+          : "0"
+      }
+    };
+
+    // Debug: Log para verificar el cálculo de rendimiento de ventas
+    console.log('Sales Performance Calculation:', {
+      totalOrders: allOrders.length,
+      totalForPercentage: totalOrdersForPercentage,
+      pending: { count: pendingOrders.length, percentage: salesPerformance.pending.percentage },
+      inProcess: { count: inProcessOrders.length, percentage: salesPerformance.inProcess.percentage },
+      completed: { count: completedOrders.length, percentage: salesPerformance.completed.percentage }
+    });
+
+    // 7. Obtener las 5 órdenes más recientes
+    const recentOrders = await Order.find({
+      branchId: { $in: branchIds }
+    })
+      .populate('branchId', 'branchName')
+      .populate('cashier', 'username profile.name profile.lastName profile.fullName')
+      .populate('clientInfo.clientId', 'name lastName')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    // 8. Obtener top 10 clientes que más han gastado
+    const topClients = await Order.aggregate([
+      {
+        $match: {
+          branchId: { $in: branchIds },
+          status: { $ne: 'cancelado' } // Excluir órdenes canceladas
+        }
+      },
+      {
+        $group: {
+          _id: {
+            clientId: '$clientInfo.clientId',
+            clientName: '$clientInfo.name',
+            clientLastName: '$clientInfo.lastName'
+          },
+          totalSpent: { $sum: '$total' },
+          orderCount: { $sum: 1 },
+          lastOrderDate: { $max: '$createdAt' }
+        }
+      },
+      {
+        $sort: { totalSpent: -1 }
+      },
+      {
+        $limit: 10
+      },
+      {
+        $project: {
+          _id: 0,
+          clientId: '$_id.clientId',
+          clientName: '$_id.clientName',
+          clientLastName: '$_id.clientLastName',
+          totalSpent: 1,
+          orderCount: 1,
+          lastOrderDate: 1
+        }
+      }
+    ]);
+
+    // Popular información adicional del cliente si existe clientId
+    for (let client of topClients) {
+      if (client.clientId) {
+        const clientDetails = await Client.findById(client.clientId)
+          .select('name lastName phoneNumber email')
+          .lean();
+
+        if (clientDetails) {
+          client.clientInfo = clientDetails;
+        }
+      }
+    }
+
+    // 9. Obtener top 5 sucursales que más han vendido en el mes actual
+    const startOfCurrentMonth = new Date();
+    startOfCurrentMonth.setDate(1);
+    startOfCurrentMonth.setHours(0, 0, 0, 0);
+
+    const topBranches = await Order.aggregate([
+      {
+        $match: {
+          branchId: { $in: branchIds },
+          status: { $ne: 'cancelado' }, // Excluir órdenes canceladas
+          orderDate: { $gte: startOfCurrentMonth } // Solo órdenes del mes actual
+        }
+      },
+      {
+        $group: {
+          _id: '$branchId',
+          totalSales: { $sum: '$total' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { totalSales: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]);
+
+    // Popular información de las sucursales
+    for (let branch of topBranches) {
+      const branchDetails = await Branch.findById(branch._id)
+        .select('branchName branchCode companyId')
+        .populate('companyId', 'tradeName legalName')
+        .lean();
+
+      if (branchDetails) {
+        branch.branchInfo = branchDetails;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        companies: companiesCount,
+        branches: branchesCount,
+        clients: clientsCount,
+        orders: ordersCount,
+        totalSales: totalSales,
+        dailyRevenue: dailyRevenue,
+        monthlyRevenue: monthlyRevenue,
+        weeklySales: weeklySales,
+        ordersByStatus: ordersByStatus,
+        salesPerformance: salesPerformance,
+        recentOrders: recentOrders,
+        topClients: topClients,
+        topBranches: topBranches
+      },
+    });
+  } catch (error) {
+    console.error("Error al obtener estadísticas del dashboard:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error al obtener estadísticas del dashboard",
     });
   }
 };

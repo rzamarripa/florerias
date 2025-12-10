@@ -12,16 +12,20 @@ export default function AuthLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useUserSessionStore();
-  const { getIsAdmin, getIsManager, getIsSocialMedia } = useUserRoleStore();
+  const { getIsAdmin, getIsManager, getIsSocialMedia, getIsDistributor } =
+    useUserRoleStore();
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       const isAdmin = getIsAdmin();
       const isManager = getIsManager();
       const isSocialMedia = getIsSocialMedia();
+      const isDistributor = getIsDistributor();
 
       if (isAdmin || isManager) {
         router.push("/finanzas/dashboard-analitico");
+      } else if (isDistributor) {
+        router.push("/gestion/empresas/dashboard");
       } else if (isSocialMedia) {
         router.push("/sucursal/ventas");
       } else {
@@ -35,6 +39,7 @@ export default function AuthLayout({
     getIsAdmin,
     getIsManager,
     getIsSocialMedia,
+    getIsDistributor,
   ]);
 
   return children;

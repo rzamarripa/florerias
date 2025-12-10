@@ -19,6 +19,7 @@ import { companiesService } from "./services/companies";
 import { CreateCompanyData, Distributor } from "./types";
 import { legalForms } from "./schemas/companySchema";
 import { uploadCompanyLogo } from "@/services/firebaseStorage";
+import { usersService } from "@/features/admin/modules/users/services/users";
 
 const NewCompanyPage: React.FC = () => {
   const router = useRouter();
@@ -64,7 +65,7 @@ const NewCompanyPage: React.FC = () => {
   // Cargar distribuidores
   useEffect(() => {
     loadDistributors();
-  }, []);
+  }, [companyId]);
 
   // Cargar empresa si estamos editando
   useEffect(() => {
@@ -75,7 +76,8 @@ const NewCompanyPage: React.FC = () => {
 
   const loadDistributors = async () => {
     try {
-      const response = await companiesService.getAdministrators();
+      // Pasar el companyId si estamos editando para incluir el administrador actual
+      const response = await companiesService.getAdministrators(isEditing ? companyId : undefined);
       setDistributors(response.data || []);
     } catch (err: any) {
       console.error("Error al cargar administradores:", err);
@@ -242,14 +244,16 @@ const NewCompanyPage: React.FC = () => {
       return false;
     }
 
-    // Validar contraseña solo si se está creando un nuevo usuario (sin administratorId)
-    if (
-      !isEditing &&
-      !formData.administratorId &&
-      !formData.administratorData?.password
-    ) {
-      setError("La contraseña es requerida para crear un nuevo usuario");
-      return false;
+    // Validar contraseña:
+    // - Requerida al crear una empresa nueva sin administrador existente
+    // - Requerida al editar si NO hay administrador seleccionado (crear nuevo usuario)
+    // - Opcional al editar si HAY administrador seleccionado (solo si se quiere cambiar)
+    if (!formData.administratorId) {
+      // No hay administrador seleccionado, se va a crear uno nuevo
+      if (!formData.administratorData?.password) {
+        setError("La contraseña es requerida para crear un nuevo usuario");
+        return false;
+      }
     }
 
     return true;
@@ -267,6 +271,63 @@ const NewCompanyPage: React.FC = () => {
     setLoading(true);
 
     try {
+      let finalAdministratorId = formData.administratorId;
+
+      // CASO 1: Editando empresa CON administrador existente -> Actualizar usuario
+      if (isEditing && formData.administratorId && formData.administratorData) {
+        const userDataToUpdate = {
+          username: formData.administratorData.username,
+          email: formData.administratorData.email,
+          phone: formData.administratorData.phone,
+          profile: {
+            name: formData.administratorData.profile.name,
+            lastName: formData.administratorData.profile.lastName,
+            fullName: `${formData.administratorData.profile.name} ${formData.administratorData.profile.lastName}`,
+          },
+        };
+
+        // Solo incluir password si se proporcionó una nueva
+        if (formData.administratorData.password && formData.administratorData.password.trim() !== "") {
+          (userDataToUpdate as any).password = formData.administratorData.password;
+        }
+
+        // Actualizar el usuario en cs_users
+        await usersService.updateUser(formData.administratorId, userDataToUpdate);
+      }
+
+      // CASO 2: Editando empresa SIN administrador seleccionado -> Crear nuevo usuario
+      if (isEditing && !formData.administratorId && formData.administratorData) {
+        // Obtener el rol de Administrador
+        const rolesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/roles?name=Administrador`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        const rolesData = await rolesResponse.json();
+        const adminRole = rolesData.data?.find((r: any) => r.name === "Administrador");
+
+        if (!adminRole) {
+          throw new Error("No se encontró el rol de Administrador");
+        }
+
+        // Crear nuevo usuario administrador
+        const newUserData = {
+          username: formData.administratorData.username,
+          email: formData.administratorData.email,
+          phone: formData.administratorData.phone,
+          password: formData.administratorData.password,
+          profile: {
+            name: formData.administratorData.profile.name,
+            lastName: formData.administratorData.profile.lastName,
+            fullName: `${formData.administratorData.profile.name} ${formData.administratorData.profile.lastName}`,
+          },
+          role: adminRole._id,
+        };
+
+        const createUserResponse = await usersService.createUser(newUserData);
+        finalAdministratorId = createUserResponse.data.user._id;
+      }
+
       const dataToSend: CreateCompanyData = {
         legalName: formData.legalName,
         tradeName: formData.tradeName || undefined,
@@ -276,13 +337,13 @@ const NewCompanyPage: React.FC = () => {
         primaryContact: formData.primaryContact,
       };
 
-      // Si hay administratorId, enviarlo
-      if (formData.administratorId) {
-        dataToSend.administratorId = formData.administratorId;
+      // Usar el administratorId final (puede ser el existente o el recién creado)
+      if (finalAdministratorId) {
+        dataToSend.administratorId = finalAdministratorId;
       }
 
-      // Si no hay administratorId, enviar administratorData para crear nuevo usuario
-      if (!formData.administratorId && formData.administratorData) {
+      // Si estamos creando empresa (no editando), enviar administratorData para que el backend cree el usuario
+      if (!isEditing && !finalAdministratorId && formData.administratorData) {
         dataToSend.administratorData = formData.administratorData;
       }
 

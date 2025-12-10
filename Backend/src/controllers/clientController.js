@@ -1,5 +1,6 @@
 import { Client } from "../models/Client.js";
 import { Purchase } from "../models/Purchase.js";
+import { Branch } from "../models/Branch.js";
 
 export const getAllClients = async (req, res) => {
   try {
@@ -8,19 +9,24 @@ export const getAllClients = async (req, res) => {
     const skip = (page - 1) * limit;
     const filters = {};
 
+    // Filtro por sucursal basado en branchId del query
+    if (req.query.branchId) {
+      filters.branch = req.query.branchId;
+    }
+
     // Filtros opcionales
     if (req.query.name) {
       filters.name = { $regex: req.query.name, $options: "i" };
     }
-    
+
     if (req.query.lastName) {
       filters.lastName = { $regex: req.query.lastName, $options: "i" };
     }
-    
+
     if (req.query.clientNumber) {
       filters.clientNumber = { $regex: req.query.clientNumber, $options: "i" };
     }
-    
+
     if (req.query.phoneNumber) {
       filters.phoneNumber = { $regex: req.query.phoneNumber, $options: "i" };
     }
@@ -31,6 +37,7 @@ export const getAllClients = async (req, res) => {
 
     const clients = await Client.find(filters)
       .populate("purchases")
+      .populate("branch")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -64,7 +71,7 @@ export const getAllClients = async (req, res) => {
 
 export const createClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, points, status } = req.body;
+    const { name, lastName, phoneNumber, email, points, status, branch } = req.body;
 
     // Validaciones básicas
     if (!name || !lastName || !phoneNumber) {
@@ -74,12 +81,19 @@ export const createClient = async (req, res) => {
       });
     }
 
-    // Verificar si ya existe un cliente con el mismo número de teléfono
-    const existingClient = await Client.findOne({ phoneNumber });
+    if (!branch) {
+      return res.status(400).json({
+        success: false,
+        message: "Branch is required",
+      });
+    }
+
+    // Verificar si ya existe un cliente con el mismo número de teléfono en la misma sucursal
+    const existingClient = await Client.findOne({ phoneNumber, branch });
     if (existingClient) {
       return res.status(400).json({
         success: false,
-        message: "A client with this phone number already exists",
+        message: "A client with this phone number already exists in this branch",
       });
     }
 
@@ -90,6 +104,7 @@ export const createClient = async (req, res) => {
       email: email || "",
       points: points || 0,
       status: status !== undefined ? status : true,
+      branch,
     };
 
     const client = await Client.create(clientData);
@@ -124,7 +139,9 @@ export const createClient = async (req, res) => {
 
 export const getClientById = async (req, res) => {
   try {
-    const client = await Client.findById(req.params.id).populate("purchases");
+    const client = await Client.findById(req.params.id)
+      .populate("purchases")
+      .populate("branch");
 
     if (!client) {
       return res.status(404).json({

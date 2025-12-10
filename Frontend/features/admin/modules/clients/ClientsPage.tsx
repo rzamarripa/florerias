@@ -8,6 +8,9 @@ import { clientsService } from "./services/clients";
 import { Client, ClientFilters, FilterType, FilterOption, CreateClientData, UpdateClientData } from "./types";
 import { useRouter } from "next/navigation";
 import ClientModal from "./components/ClientModal";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { branchesService } from "../branches/services/branches";
 
 const filterOptions: FilterOption[] = [
   { value: "name", label: "Nombre" },
@@ -25,6 +28,7 @@ const ClientsPage: React.FC = () => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
@@ -32,6 +36,40 @@ const ClientsPage: React.FC = () => {
     pages: 0,
   });
   const router = useRouter();
+  const { user } = useUserSessionStore();
+  const { activeBranch } = useActiveBranchStore();
+
+  // Determinar el branchId según el rol del usuario
+  useEffect(() => {
+    const determineBranchId = async () => {
+      if (!user) return;
+
+      const userRole = user.role?.name;
+
+      if (userRole === "Administrador") {
+        // Para Administrador, usar el activeBranch del store
+        if (activeBranch) {
+          setBranchId(activeBranch._id);
+        }
+      } else if (userRole === "Gerente") {
+        // Para Gerente, buscar su sucursal por el campo manager
+        try {
+          const response = await branchesService.getAllBranches({ limit: 1000 });
+          const managerBranch = response.data.find(
+            (branch) => branch.manager === user._id
+          );
+          if (managerBranch) {
+            setBranchId(managerBranch._id);
+          }
+        } catch (error: any) {
+          console.error("Error fetching manager branch:", error);
+          toast.error("Error al obtener la sucursal del gerente");
+        }
+      }
+    };
+
+    determineBranchId();
+  }, [user, activeBranch]);
 
   const loadClients = async (
     isInitial: boolean,
@@ -55,6 +93,11 @@ const ClientsPage: React.FC = () => {
         filters.status = statusFilter === "true";
       }
 
+      // Agregar el branchId a los filtros si está disponible
+      if (branchId) {
+        filters.branchId = branchId;
+      }
+
       const response = await clientsService.getAllClients(filters);
 
       if (response.data) {
@@ -73,8 +116,10 @@ const ClientsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadClients(true, 1);
-  }, [searchTerm, filterType, statusFilter]);
+    if (branchId) {
+      loadClients(true, 1);
+    }
+  }, [searchTerm, filterType, statusFilter, branchId]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
@@ -118,7 +163,13 @@ const ClientsPage: React.FC = () => {
         await clientsService.updateClient(selectedClient._id, data);
         toast.success("Cliente actualizado exitosamente");
       } else {
-        await clientsService.createClient(data as CreateClientData);
+        // Agregar el branchId al crear un nuevo cliente
+        if (!branchId) {
+          toast.error("No se ha seleccionado una sucursal");
+          return;
+        }
+        const clientData = { ...data, branch: branchId } as CreateClientData;
+        await clientsService.createClient(clientData);
         toast.success("Cliente creado exitosamente");
       }
       setShowModal(false);

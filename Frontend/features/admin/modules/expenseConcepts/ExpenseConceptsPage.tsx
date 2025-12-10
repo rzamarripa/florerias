@@ -9,6 +9,8 @@ import { branchesService } from "../branches/services/branches";
 import { ExpenseConcept } from "./types";
 import ExpenseConceptActions from "./components/ExpenseConceptActions";
 import ExpenseConceptModal from "./components/ExpenseConceptModal";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 const DEPARTMENT_LABELS: Record<string, string> = {
   sales: "Ventas",
@@ -24,8 +26,7 @@ const ExpenseConceptsPage: React.FC = () => {
   const [concepts, setConcepts] = useState<ExpenseConcept[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [branchFilter, setBranchFilter] = useState<string>("");
-  const [branches, setBranches] = useState<any[]>([]);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedConcept, setSelectedConcept] = useState<ExpenseConcept | null>(null);
   const [pagination, setPagination] = useState({
@@ -34,6 +35,40 @@ const ExpenseConceptsPage: React.FC = () => {
     total: 0,
     pages: 0,
   });
+  const { user } = useUserSessionStore();
+  const { activeBranch } = useActiveBranchStore();
+
+  // Determinar el branchId según el rol del usuario
+  useEffect(() => {
+    const determineBranchId = async () => {
+      if (!user) return;
+
+      const userRole = user.role?.name;
+
+      if (userRole === "Administrador") {
+        // Para Administrador, usar el activeBranch del store
+        if (activeBranch) {
+          setBranchId(activeBranch._id);
+        }
+      } else if (userRole === "Gerente") {
+        // Para Gerente, buscar su sucursal por el campo manager
+        try {
+          const response = await branchesService.getAllBranches({ limit: 1000 });
+          const managerBranch = response.data.find(
+            (branch) => branch.manager === user._id
+          );
+          if (managerBranch) {
+            setBranchId(managerBranch._id);
+          }
+        } catch (error: any) {
+          console.error("Error fetching manager branch:", error);
+          toast.error("Error al obtener la sucursal del gerente");
+        }
+      }
+    };
+
+    determineBranchId();
+  }, [user, activeBranch]);
 
   const loadConcepts = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -50,8 +85,9 @@ const ExpenseConceptsPage: React.FC = () => {
         filters.search = searchTerm;
       }
 
-      if (branchFilter) {
-        filters.branch = branchFilter;
+      // Agregar el branchId a los filtros si está disponible
+      if (branchId) {
+        filters.branch = branchId;
       }
 
       const response = await expenseConceptsService.getAllExpenseConcepts(filters);
@@ -71,31 +107,14 @@ const ExpenseConceptsPage: React.FC = () => {
     }
   };
 
-  const loadBranches = async () => {
-    try {
-      const response = await branchesService.getUserBranches();
-      if (response.data) {
-        setBranches(response.data);
-      }
-    } catch (error: any) {
-      console.error("Error loading branches:", error);
+  useEffect(() => {
+    if (branchId) {
+      loadConcepts(true, 1);
     }
-  };
-
-  useEffect(() => {
-    loadBranches();
-  }, []);
-
-  useEffect(() => {
-    loadConcepts(true, 1);
-  }, [searchTerm, branchFilter]);
+  }, [searchTerm, branchId]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
-  };
-
-  const handleBranchFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-    setBranchFilter(e.target.value);
   };
 
   const handlePageChange = (page: number) => {
@@ -143,7 +162,7 @@ const ExpenseConceptsPage: React.FC = () => {
       <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
         <div className="card-body p-4">
           <div className="row g-3">
-            <div className="col-md-6">
+            <div className="col-md-12">
               <InputGroup>
                 <InputGroup.Text className="bg-light border-0">
                   <Search size={18} className="text-muted" />
@@ -157,21 +176,6 @@ const ExpenseConceptsPage: React.FC = () => {
                   style={{ borderRadius: "0 10px 10px 0" }}
                 />
               </InputGroup>
-            </div>
-            <div className="col-md-6">
-              <Form.Select
-                value={branchFilter}
-                onChange={handleBranchFilterChange}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
-              >
-                <option value="">Todas las sucursales</option>
-                {branches.map((branch) => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.branchName} {branch.branchCode ? `- ${branch.branchCode}` : ""}
-                  </option>
-                ))}
-              </Form.Select>
             </div>
           </div>
         </div>

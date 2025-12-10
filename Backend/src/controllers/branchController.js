@@ -9,6 +9,7 @@ export const createBranch = async (req, res) => {
     const {
       branchName,
       branchCode,
+      rfc,
       companyId,
       address,
       managerId,
@@ -76,24 +77,6 @@ export const createBranch = async (req, res) => {
         });
       }
 
-      // Verificar que no exista un usuario con el mismo username o email (case-insensitive)
-      const existingUser = await User.findOne({
-        $or: [
-          { username: { $regex: new RegExp(`^${managerData.username}$`, 'i') } },
-          { email: { $regex: new RegExp(`^${managerData.email}$`, 'i') } },
-        ],
-      });
-
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message:
-            existingUser.username.toLowerCase() === managerData.username.toLowerCase()
-              ? "Ya existe un usuario con este nombre de usuario"
-              : "Ya existe un usuario con este email",
-        });
-      }
-
       // Crear el nuevo usuario gerente
       const newManager = await User.create({
         username: managerData.username,
@@ -156,6 +139,7 @@ export const createBranch = async (req, res) => {
     const branch = await Branch.create({
       branchName,
       branchCode,
+      rfc,
       companyId,
       administrator: req.user._id, // El usuario en sesión que crea la sucursal
       address,
@@ -339,6 +323,7 @@ export const updateBranch = async (req, res) => {
     const {
       branchName,
       branchCode,
+      rfc,
       address,
       managerId,
       managerData,
@@ -365,6 +350,7 @@ export const updateBranch = async (req, res) => {
     const updateData = {};
     if (branchName) updateData.branchName = branchName;
     if (branchCode !== undefined) updateData.branchCode = branchCode;
+    if (rfc) updateData.rfc = rfc;
     if (address) updateData.address = address;
     if (contactPhone) updateData.contactPhone = contactPhone;
     if (contactEmail) updateData.contactEmail = contactEmail;
@@ -414,24 +400,6 @@ export const updateBranch = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: "No se encontró el rol de Gerente",
-        });
-      }
-
-      // Verificar que no exista un usuario con el mismo username o email (case-insensitive)
-      const existingUser = await User.findOne({
-        $or: [
-          { username: { $regex: new RegExp(`^${managerData.username}$`, 'i') } },
-          { email: { $regex: new RegExp(`^${managerData.email}$`, 'i') } },
-        ],
-      });
-
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message:
-            existingUser.username.toLowerCase() === managerData.username.toLowerCase()
-              ? "Ya existe un usuario con este nombre de usuario"
-              : "Ya existe un usuario con este email",
         });
       }
 
@@ -622,24 +590,6 @@ export const addEmployeesToBranch = async (req, res) => {
           });
         }
 
-        // Verificar que no exista un usuario con el mismo username o email
-        const existingUser = await User.findOne({
-          $or: [
-            { username: { $regex: new RegExp(`^${empData.username}$`, 'i') } },
-            { email: { $regex: new RegExp(`^${empData.email}$`, 'i') } },
-          ],
-        });
-
-        if (existingUser) {
-          return res.status(400).json({
-            success: false,
-            message:
-              existingUser.username.toLowerCase() === empData.username.toLowerCase()
-                ? `Ya existe un usuario con el nombre de usuario "${empData.username}"`
-                : `Ya existe un usuario con el email "${empData.email}"`,
-          });
-        }
-
         // Crear el empleado con el rol seleccionado desde el frontend
         const newEmployee = await User.create({
           username: empData.username,
@@ -823,7 +773,7 @@ export const getUserBranches = async (req, res) => {
         isActive: true,
       })
         .populate("companyId", "legalName tradeName")
-        .populate("manager", "username profile.nombre profile.nombreCompleto")
+        .populate("manager", "username email phone profile")
         .select("branchName branchCode address companyId manager");
       console.log('getUserBranches - Sucursales encontradas (Admin):', branches.length);
     }
@@ -849,6 +799,19 @@ export const getUserBranches = async (req, res) => {
         .select("branchName branchCode address companyId");
       console.log('getUserBranches - Sucursales encontradas (Employee):', branches.length);
     }
+
+    // Verificar que todas las sucursales tienen los datos necesarios
+    console.log('getUserBranches - Verificando datos de sucursales:');
+    branches.forEach((branch, index) => {
+      console.log(`  [${index + 1}] ${branch.branchName}:`);
+      console.log(`      - _id: ${branch._id}`);
+      console.log(`      - manager:`, branch.manager ? 'OK' : '❌ NULL/UNDEFINED');
+      console.log(`      - companyId:`, branch.companyId ? 'OK' : '❌ NULL/UNDEFINED');
+      console.log(`      - address:`, branch.address ? 'OK' : '❌ NULL/UNDEFINED');
+      if (branch.manager && typeof branch.manager === 'object') {
+        console.log(`      - manager.profile:`, branch.manager.profile ? 'OK' : '❌ NULL/UNDEFINED');
+      }
+    });
 
     console.log('getUserBranches - Respuesta final:', { count: branches.length, data: branches.map(b => b.branchName) });
 

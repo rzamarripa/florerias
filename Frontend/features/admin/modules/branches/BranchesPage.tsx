@@ -192,6 +192,7 @@ const BranchesPage: React.FC = () => {
                     <th className="px-4 py-3 fw-semibold text-muted">#</th>
                     <th className="px-4 py-3 fw-semibold text-muted">NOMBRE</th>
                     <th className="px-4 py-3 fw-semibold text-muted">CÓDIGO</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">RFC</th>
                     <th className="px-4 py-3 fw-semibold text-muted">EMPRESA</th>
                     <th className="px-4 py-3 fw-semibold text-muted">CIUDAD</th>
                     <th className="px-4 py-3 fw-semibold text-muted">GERENTE</th>
@@ -203,7 +204,7 @@ const BranchesPage: React.FC = () => {
                 <tbody>
                   {branches.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="text-center py-5 text-muted">
+                      <td colSpan={10} className="text-center py-5 text-muted">
                         <Building2 size={48} className="mb-3 opacity-50" />
                         <p className="mb-0">No se encontraron sucursales</p>
                       </td>
@@ -221,6 +222,9 @@ const BranchesPage: React.FC = () => {
                           ) : (
                             "-"
                           )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="badge bg-info">{branch.rfc}</span>
                         </td>
                         <td className="px-4 py-3">{getCompanyName(branch)}</td>
                         <td className="px-4 py-3">

@@ -10,6 +10,8 @@ import { expenseConceptSchema, ExpenseConceptFormData } from "../schemas/expense
 import { expenseConceptsService } from "../services/expenseConcepts";
 import { branchesService } from "../../branches/services/branches";
 import { ExpenseConcept } from "../types";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 interface ExpenseConceptModalProps {
   show: boolean;
@@ -35,8 +37,9 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
   concept,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [branches, setBranches] = useState<any[]>([]);
-  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const { user } = useUserSessionStore();
+  const { activeBranch } = useActiveBranchStore();
 
   const {
     control,
@@ -53,9 +56,39 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
     },
   });
 
+  // Determinar el branchId según el rol del usuario
   useEffect(() => {
+    const determineBranchId = async () => {
+      if (!user) return;
+
+      const userRole = user.role?.name;
+
+      if (userRole === "Administrador") {
+        if (activeBranch) {
+          setBranchId(activeBranch._id);
+        }
+      } else if (userRole === "Gerente") {
+        try {
+          const response = await branchesService.getAllBranches({ limit: 1000 });
+          const managerBranch = response.data.find(
+            (branch) => branch.manager === user._id
+          );
+          if (managerBranch) {
+            setBranchId(managerBranch._id);
+          }
+        } catch (error: any) {
+          console.error("Error fetching manager branch:", error);
+        }
+      }
+    };
+
     if (show) {
-      loadBranches();
+      determineBranchId();
+    }
+  }, [show, user, activeBranch]);
+
+  useEffect(() => {
+    if (show && branchId) {
       if (concept) {
         reset({
           name: concept.name,
@@ -68,27 +101,11 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
           name: "",
           description: "",
           department: "sales",
-          branch: "",
+          branch: branchId,
         });
       }
     }
-  }, [show, concept, reset]);
-
-  const loadBranches = async () => {
-    try {
-      setLoadingBranches(true);
-      // El servicio getUserBranches ya filtra por rol (Administrador o Gerente)
-      const response = await branchesService.getUserBranches();
-      if (response.data) {
-        setBranches(response.data);
-      }
-    } catch (error: any) {
-      toast.error("Error al cargar las sucursales");
-      console.error("Error loading branches:", error);
-    } finally {
-      setLoadingBranches(false);
-    }
-  };
+  }, [show, concept, branchId, reset]);
 
   const onSubmit = async (data: ExpenseConceptFormData) => {
     try {
@@ -138,39 +155,6 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
       <Modal.Body className="pt-3">
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Row className="g-3">
-            {/* Sucursal */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Sucursal <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="branch"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Select
-                      {...field}
-                      isInvalid={!!errors.branch}
-                      disabled={loadingBranches || !!concept}
-                      style={{ borderRadius: "8px" }}
-                    >
-                      <option value="">Selecciona una sucursal</option>
-                      {branches.map((branch) => (
-                        <option key={branch._id} value={branch._id}>
-                          {branch.branchName} {branch.branchCode ? `- ${branch.branchCode}` : ""}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  )}
-                />
-                {errors.branch && (
-                  <Form.Control.Feedback type="invalid" className="d-block">
-                    {errors.branch.message}
-                  </Form.Control.Feedback>
-                )}
-              </Form.Group>
-            </Col>
-
             {/* Nombre */}
             <Col md={12}>
               <Form.Group>

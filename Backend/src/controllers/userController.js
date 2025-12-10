@@ -36,11 +36,11 @@ export const registerUser = async (req, res) => {
     // Validación case-insensitive para username y email
     const userExists = await User.findOne({
       $or: [
-        { username: { $regex: new RegExp(`^${username}$`, 'i') } },
-        { email: { $regex: new RegExp(`^${email}$`, 'i') } }
+        { username: { $regex: new RegExp(`^${username}$`, 'i') } }
       ],
     });
     if (userExists) {
+      console.log('user already exist ', userExists.name)
       return res.status(400).json({
         success: false,
         message:
@@ -341,13 +341,14 @@ export const updateUser = async (req, res) => {
       userData = req.body;
     }
 
-    const { username, email, phone, profile, role } = userData;
+    const { username, email, phone, profile, role, password } = userData;
 
     const updateData = {};
 
     if (username) updateData.username = username;
     if (email) updateData.email = email;
     if (phone) updateData.phone = phone;
+    if (password) updateData.password = password;
 
     if (profile) {
       updateData.profile = {

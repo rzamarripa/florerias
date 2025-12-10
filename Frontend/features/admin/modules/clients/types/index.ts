@@ -16,6 +16,7 @@ export interface Client {
   email: string;
   points: number;
   status: boolean;
+  branch: string;
   purchases: string[];
   comentarios: ClientComment[];
   createdAt: string;
@@ -29,6 +30,7 @@ export interface CreateClientData {
   email?: string;
   points?: number;
   status?: boolean;
+  branch: string;
 }
 
 export interface UpdateClientData {
@@ -64,6 +66,7 @@ export interface ClientFilters {
   clientNumber?: string;
   phoneNumber?: string;
   status?: boolean;
+  branchId?: string;
 }
 
 export type FilterType = 'name' | 'lastName' | 'clientNumber' | 'phoneNumber';

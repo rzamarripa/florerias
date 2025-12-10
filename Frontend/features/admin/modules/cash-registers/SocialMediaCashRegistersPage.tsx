@@ -48,7 +48,9 @@ const SocialMediaCashRegistersPage: React.FC = () => {
         filters.branchId = activeBranch._id;
       }
 
-      const response = await cashRegistersService.getSocialMediaCashRegisters(filters);
+      const response = await cashRegistersService.getSocialMediaCashRegisters(
+        filters
+      );
 
       if (response.data) {
         setCashRegisters(response.data);
@@ -58,7 +60,9 @@ const SocialMediaCashRegistersPage: React.FC = () => {
         setPagination(response.pagination);
       }
     } catch (error: any) {
-      toast.error(error.message || "Error al cargar las cajas de redes sociales");
+      toast.error(
+        error.message || "Error al cargar las cajas de redes sociales"
+      );
       console.error("Error loading social media cash registers:", error);
     } finally {
       setLoading(false);
@@ -126,7 +130,9 @@ const SocialMediaCashRegistersPage: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="mb-1 fw-bold">
-            {isAdmin || isManager ? "Cajas de Redes Sociales" : "Mis Cajas de Redes Sociales"}
+            {isAdmin || isManager
+              ? "Cajas de Redes Sociales"
+              : "Mis Cajas de Redes Sociales"}
           </h2>
           <p className="text-muted mb-0">
             {isAdmin
@@ -143,14 +149,6 @@ const SocialMediaCashRegistersPage: React.FC = () => {
             variant="primary"
             onClick={() => setShowCreateModal(true)}
             className="d-flex align-items-center gap-2 px-4"
-            style={{
-              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-              border: "none",
-              borderRadius: "10px",
-              padding: "12px 24px",
-              fontWeight: "600",
-              boxShadow: "0 4px 15px rgba(245, 87, 108, 0.4)",
-            }}
           >
             <Plus size={20} />
             Nueva Caja Redes
@@ -164,7 +162,9 @@ const SocialMediaCashRegistersPage: React.FC = () => {
           {loading ? (
             <div className="text-center py-5">
               <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando cajas de redes sociales...</p>
+              <p className="text-muted mt-3">
+                Cargando cajas de redes sociales...
+              </p>
             </div>
           ) : (
             <div className="table-responsive">
@@ -176,7 +176,9 @@ const SocialMediaCashRegistersPage: React.FC = () => {
                     <th className="px-4 py-3 fw-semibold text-muted">
                       SUCURSAL
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">USUARIO REDES</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      USUARIO REDES
+                    </th>
                     <th className="px-4 py-3 fw-semibold text-muted">
                       GERENTE
                     </th>

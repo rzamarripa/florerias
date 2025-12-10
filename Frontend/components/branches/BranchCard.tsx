@@ -85,6 +85,12 @@ const BranchCard = ({
           </div>
 
           <div className="detail-item mb-2">
+            <TbHash className="text-muted me-2" size={18} />
+            <span className="text-muted small">RFC:</span>
+            <Badge bg="info" className="ms-2">{branch.rfc}</Badge>
+          </div>
+
+          <div className="detail-item mb-2">
             <TbBuilding className="text-muted me-2" size={18} />
             <span className="text-muted small">Empresa:</span>
             <span className="ms-2 fw-medium">{companyName}</span>

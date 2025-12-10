@@ -12,8 +12,8 @@ import {
 
 export const clientsService = {
   getAllClients: async (filters: ClientFilters = {}): Promise<GetClientsResponse> => {
-    const { page = 1, limit = 10, name, lastName, clientNumber, phoneNumber, status } = filters;
-    
+    const { page = 1, limit = 10, name, lastName, clientNumber, phoneNumber, status, branchId } = filters;
+
     const searchParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -24,6 +24,7 @@ export const clientsService = {
     if (clientNumber) searchParams.append('clientNumber', clientNumber);
     if (phoneNumber) searchParams.append('phoneNumber', phoneNumber);
     if (status !== undefined) searchParams.append('status', status.toString());
+    if (branchId) searchParams.append('branchId', branchId);
 
     const response = await apiCall<GetClientsResponse>(`/clients?${searchParams}`);
     return response;

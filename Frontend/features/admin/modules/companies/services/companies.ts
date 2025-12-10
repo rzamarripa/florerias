@@ -81,8 +81,11 @@ export const companiesService = {
     return response;
   },
 
-  getAdministrators: async (): Promise<{ success: boolean; count: number; data: Distributor[] }> => {
-    const response = await apiCall<{ success: boolean; count: number; data: Distributor[] }>("/companies/administrators/list");
+  getAdministrators: async (companyId?: string): Promise<{ success: boolean; count: number; data: Distributor[] }> => {
+    const url = companyId
+      ? `/companies/administrators/list?companyId=${companyId}`
+      : "/companies/administrators/list";
+    const response = await apiCall<{ success: boolean; count: number; data: Distributor[] }>(url);
     return response;
   },
 
@@ -149,6 +152,108 @@ export const companiesService = {
 
   getRedesUserBranches: async (): Promise<{ success: boolean; count: number; data: any[] }> => {
     const response = await apiCall<{ success: boolean; count: number; data: any[] }>("/companies/redes/branches");
+    return response;
+  },
+
+  getDistributorDashboardStats: async () => {
+    const response = await apiCall<{
+      success: boolean;
+      data: {
+        companies: number;
+        branches: number;
+        clients: number;
+        orders: number;
+        totalSales: number;
+        dailyRevenue: Array<{
+          _id: { year: number; month: number; day: number };
+          revenue: number;
+          orderCount: number;
+        }>;
+        monthlyRevenue: Array<{
+          _id: { year: number; month: number };
+          revenue: number;
+          orderCount: number;
+        }>;
+        weeklySales: Array<{
+          _id: { week: number };
+          revenue: number;
+          orderCount: number;
+        }>;
+        ordersByStatus: Array<{
+          _id: string;
+          count: number;
+        }>;
+        salesPerformance: {
+          pending: {
+            count: number;
+            percentage: string;
+          };
+          inProcess: {
+            count: number;
+            percentage: string;
+          };
+          completed: {
+            count: number;
+            percentage: string;
+          };
+        };
+        recentOrders: Array<{
+          _id: string;
+          orderNumber: string;
+          clientInfo: {
+            name: string;
+            lastName?: string;
+            clientId?: {
+              name: string;
+              lastName: string;
+            };
+          };
+          branchId: {
+            _id: string;
+            branchName: string;
+          };
+          cashier: {
+            username: string;
+            profile?: {
+              name?: string;
+              lastName?: string;
+              fullName?: string;
+            };
+          };
+          total: number;
+          status: string;
+          createdAt: string;
+        }>;
+        topClients: Array<{
+          clientId?: string;
+          clientName: string;
+          clientLastName?: string;
+          totalSpent: number;
+          orderCount: number;
+          lastOrderDate: string;
+          clientInfo?: {
+            name: string;
+            lastName: string;
+            phoneNumber?: string;
+            email?: string;
+          };
+        }>;
+        topBranches: Array<{
+          _id: string;
+          totalSales: number;
+          orderCount: number;
+          branchInfo?: {
+            branchName: string;
+            branchCode: string;
+            companyId: {
+              _id: string;
+              tradeName?: string;
+              legalName: string;
+            };
+          };
+        }>;
+      };
+    }>("/companies/dashboard/stats");
     return response;
   },
 };

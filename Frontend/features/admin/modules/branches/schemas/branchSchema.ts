@@ -17,6 +17,13 @@ export const branchAddressSchema = z.object({
 export const createBranchSchema = z.object({
   branchName: z.string().min(1, "El nombre de la sucursal es requerido"),
   branchCode: z.string().optional(),
+  rfc: z
+    .string()
+    .min(1, "El RFC es requerido")
+    .regex(
+      /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/,
+      "El formato del RFC no es válido"
+    ),
   companyId: z.string().min(1, "Debe seleccionar una empresa"),
   address: branchAddressSchema,
   manager: z.string().min(1, "Debe seleccionar un gerente"),

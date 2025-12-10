@@ -14,6 +14,7 @@ import {
   getMyCompany,
   getCompanyByBranchId,
   getUserCompany,
+  getDistributorDashboardStats,
 } from "../controllers/companyController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -21,6 +22,7 @@ const router = express.Router();
 
 // Rutas protegidas con autenticación
 router.get("/", protect, getAllCompanies);
+router.get("/dashboard/stats", protect, getDistributorDashboardStats);
 router.get("/administrators/list", protect, getAdministrators);
 router.get("/redes/list", protect, getRedesUsers);
 router.get("/redes/branches", protect, getRedesUserBranches);
