@@ -49,6 +49,7 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
       },
     },
   });
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
 
   // Cargar usuarios redes cuando se abre el modal
   useEffect(() => {
@@ -85,6 +86,8 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
           },
         });
       }
+      // Limpiar confirmación de contraseña
+      setConfirmPassword("");
     }
   }, [show, company]);
 
@@ -120,6 +123,7 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
           },
         },
       });
+      setConfirmPassword("");
     } else {
       // Usuario redes existente seleccionado - rellenar campos
       const redesUser = redesUsers.find((r) => r._id === selectedId);
@@ -137,6 +141,7 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
             },
           },
         });
+        setConfirmPassword("");
       }
     }
   };
@@ -156,6 +161,7 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
         },
       },
     });
+    setConfirmPassword("");
   };
 
   // Validar formulario
@@ -172,9 +178,28 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
       return false;
     }
 
-    // Validar contraseña solo si se está creando un nuevo usuario (sin redesId)
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.redesData.email)) {
+      toast.error("Por favor ingresa un email válido");
+      return false;
+    }
+
+    // Validar contraseña solo si se está creando un nuevo usuario (sin redesId) o si se está actualizando
     if (!formData.redesId && !formData.redesData?.password) {
       toast.error("La contraseña es requerida para crear un nuevo usuario");
+      return false;
+    }
+
+    // Validar que las contraseñas coincidan si se ingresó una contraseña
+    if (formData.redesData?.password && formData.redesData.password !== confirmPassword) {
+      toast.error("Las contraseñas no coinciden");
+      return false;
+    }
+
+    // Validar longitud mínima de contraseña
+    if (formData.redesData?.password && formData.redesData.password.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
       return false;
     }
 
@@ -189,18 +214,31 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
     try {
       setSaving(true);
 
-      const dataToSend: any = {
-        ...company,
-      };
+      const dataToSend: any = {};
 
-      // Si hay redesId, enviarlo
+      // Si hay redesId, enviarlo (asignar usuario existente)
       if (formData.redesId) {
         dataToSend.redesIds = [formData.redesId];
-      }
 
+        // Si se proporcionó una nueva contraseña, también enviar redesData para actualizar
+        if (formData.redesData?.password) {
+          dataToSend.redesUserData = {
+            ...formData.redesData,
+          };
+        }
+      }
       // Si no hay redesId, enviar redesData para crear nuevo usuario
-      if (!formData.redesId && formData.redesData) {
-        dataToSend.redesUserData = formData.redesData;
+      else if (formData.redesData) {
+        dataToSend.redesUserData = {
+          username: formData.redesData.username,
+          email: formData.redesData.email,
+          phone: formData.redesData.phone,
+          password: formData.redesData.password,
+          profile: {
+            name: formData.redesData.profile.name,
+            lastName: formData.redesData.profile.lastName,
+          },
+        };
       }
 
       await companiesService.updateCompany(company._id, dataToSend);
@@ -473,6 +511,8 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
                       ? "●●●●●●●● (Sin cambios)"
                       : "Confirma la contraseña"
                   }
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="py-2"
                 />
                 <Form.Text className="text-muted">

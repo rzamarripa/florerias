@@ -8,6 +8,7 @@ import { Storage } from '../models/Storage.js';
 import { StageCatalog } from '../models/StageCatalog.js';
 import mongoose from 'mongoose';
 import { emitOrderUpdated } from '../sockets/orderSocket.js';
+import orderLogService from '../services/orderLogService.js';
 
 // Generar folio de autorización único (número random de 5 dígitos)
 const generateAuthFolio = async () => {
@@ -311,6 +312,46 @@ const approveRejectDiscountAuth = async (req, res) => {
       .populate('branchId', 'branchName branchCode')
       .populate('orderId', 'orderNumber status');
 
+    // Crear log de aprobación o rechazo
+    if (discountAuth.orderId) {
+      try {
+        const managerUser = await mongoose.model('cs_user').findById(userId).populate('role');
+
+        if (isApproved) {
+          await orderLogService.createLog(
+            discountAuth.orderId,
+            'discount_approved',
+            `Descuento aprobado por gerente - Folio: ${discountAuth.authFolio}`,
+            userId,
+            managerUser?.profile?.fullName || managerUser?.username || 'Gerente',
+            managerUser?.role?.name || 'Gerente',
+            {
+              discountValue: discountAuth.discountValue,
+              discountType: discountAuth.discountType,
+              authFolio: discountAuth.authFolio,
+              discountAuthId: discountAuth._id
+            }
+          );
+        } else {
+          await orderLogService.createLog(
+            discountAuth.orderId,
+            'discount_rejected',
+            `Descuento rechazado por gerente`,
+            userId,
+            managerUser?.profile?.fullName || managerUser?.username || 'Gerente',
+            managerUser?.role?.name || 'Gerente',
+            {
+              discountValue: discountAuth.discountValue,
+              discountType: discountAuth.discountType,
+              discountAuthId: discountAuth._id
+            }
+          );
+        }
+      } catch (logError) {
+        console.error('Error al crear log de descuento:', logError);
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: populatedAuth,
@@ -594,6 +635,28 @@ const createDiscountAuthForOrder = async (req, res) => {
       .populate('branchId', 'branchName branchCode')
       .populate('orderId', 'orderNumber total');
 
+    // Crear log de solicitud de descuento
+    try {
+      const requestingUser = await mongoose.model('cs_user').findById(userId).populate('role');
+      await orderLogService.createLog(
+        orderId,
+        'discount_requested',
+        `Solicitud de descuento enviada al gerente: ${discountValue}${discountType === 'porcentaje' ? '%' : ' MXN'}`,
+        userId,
+        requestingUser?.profile?.fullName || requestingUser?.username || 'Usuario',
+        requestingUser?.role?.name || 'Usuario',
+        {
+          discountValue,
+          discountType,
+          discountAmount,
+          message,
+          discountAuthId: savedAuth._id
+        }
+      );
+    } catch (logError) {
+      console.error('Error al crear log de solicitud de descuento:', logError);
+    }
+
     res.status(201).json({
       success: true,
       data: populatedAuth,
@@ -733,6 +796,28 @@ const redeemAuthorizationForOrder = async (req, res) => {
 
     // Emitir evento de socket para notificar a otros usuarios
     emitOrderUpdated(updatedOrder);
+
+    // Crear log de canje de folio
+    try {
+      const user = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+      await orderLogService.createLog(
+        orderId,
+        'discount_redeemed',
+        `Folio de descuento canjeado: ${authFolio} - Orden enviada a producción`,
+        req.user._id,
+        user?.profile?.fullName || user?.username || 'Usuario',
+        user?.role?.name || 'Usuario',
+        {
+          authFolio,
+          discountValue: discountAuth.discountValue,
+          discountType: discountAuth.discountType,
+          stageId: firstProductionStage._id,
+          stageName: firstProductionStage.name
+        }
+      );
+    } catch (logError) {
+      console.error('Error al crear log de canje de folio:', logError);
+    }
 
     res.status(200).json({
       success: true,

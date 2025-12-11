@@ -18,6 +18,7 @@ import "./Event.js";
 import "./Neighborhood.js";
 import "./Order.js";
 import "./OrderPayment.js";
+import "./OrderLog.js";
 import "./PaymentMethod.js";
 import "./Product.js";
 import "./CashRegister.js";

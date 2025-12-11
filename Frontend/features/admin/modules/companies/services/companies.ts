@@ -155,7 +155,25 @@ export const companiesService = {
     return response;
   },
 
-  getDistributorDashboardStats: async () => {
+  getDistributorDashboardStats: async (filters?: {
+    startDate?: string;
+    endDate?: string;
+    companyId?: string;
+  }) => {
+    const searchParams = new URLSearchParams();
+
+    if (filters?.startDate) {
+      searchParams.append('startDate', filters.startDate);
+    }
+    if (filters?.endDate) {
+      searchParams.append('endDate', filters.endDate);
+    }
+    if (filters?.companyId) {
+      searchParams.append('companyId', filters.companyId);
+    }
+
+    const url = `/companies/dashboard/stats${searchParams.toString() ? `?${searchParams}` : ''}`;
+
     const response = await apiCall<{
       success: boolean;
       data: {
@@ -253,7 +271,7 @@ export const companiesService = {
           };
         }>;
       };
-    }>("/companies/dashboard/stats");
+    }>(url);
     return response;
   },
 };

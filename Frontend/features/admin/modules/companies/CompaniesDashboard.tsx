@@ -12,6 +12,7 @@ import {
   Button,
   Spinner,
   Alert,
+  Form,
 } from "react-bootstrap";
 import {
   FileText,
@@ -28,12 +29,15 @@ import {
   UserCheck,
   ShoppingCart,
   DollarSign,
+  Search,
+  Filter,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { companiesService } from "./services/companies";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { Company } from "./types";
 
 // Dynamically import ApexCharts to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -147,11 +151,45 @@ const CompaniesDashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Filter states
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+
+  // Get current date in YYYY-MM-DD format
+  const getCurrentDate = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
+  const [filters, setFilters] = useState({
+    startDate: getCurrentDate(),
+    endDate: getCurrentDate(),
+    companyId: "",
+  });
+
   useEffect(() => {
+    loadCompanies();
     loadDashboardData();
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadCompanies = async () => {
+    try {
+      setLoadingCompanies(true);
+      const response = await companiesService.getAllCompanies({
+        limit: 1000,
+        isActive: true,
+      });
+      if (response.success && response.data) {
+        setCompanies(response.data);
+      }
+    } catch (err: any) {
+      console.error("Error loading companies:", err);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
+
+  const loadDashboardData = async (customFilters?: typeof filters) => {
     try {
       setLoading(true);
       setError(null);
@@ -165,7 +203,13 @@ const CompaniesDashboard: React.FC = () => {
         return;
       }
 
-      const response = await companiesService.getDistributorDashboardStats();
+      const filtersToUse = customFilters || filters;
+
+      const response = await companiesService.getDistributorDashboardStats({
+        startDate: filtersToUse.startDate,
+        endDate: filtersToUse.endDate,
+        companyId: filtersToUse.companyId || undefined,
+      });
 
       if (response.success && response.data) {
         setStats(response.data);
@@ -181,6 +225,27 @@ const CompaniesDashboard: React.FC = () => {
     }
   };
 
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSearch = () => {
+    loadDashboardData(filters);
+  };
+
+  const handleClearFilters = () => {
+    const defaultFilters = {
+      startDate: getCurrentDate(),
+      endDate: getCurrentDate(),
+      companyId: "",
+    };
+    setFilters(defaultFilters);
+    loadDashboardData(defaultFilters);
+  };
+
   // Calcular tendencia de ingresos
   const calculateRevenueTrend = () => {
     if (!stats || !stats.dailyRevenue || stats.dailyRevenue.length < 2) {
@@ -191,7 +256,10 @@ const CompaniesDashboard: React.FC = () => {
     const previous7Days = stats.dailyRevenue.slice(-14, -7);
 
     const last7Total = last7Days.reduce((sum, day) => sum + day.revenue, 0);
-    const previous7Total = previous7Days.reduce((sum, day) => sum + day.revenue, 0);
+    const previous7Total = previous7Days.reduce(
+      (sum, day) => sum + day.revenue,
+      0
+    );
 
     if (previous7Total === 0) {
       return { percentage: 0, isPositive: true };
@@ -218,7 +286,10 @@ const CompaniesDashboard: React.FC = () => {
 
     const categories = stats.dailyRevenue.map((day) => {
       const date = new Date(day._id.year, day._id.month - 1, day._id.day);
-      return date.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+      return date.toLocaleDateString("es-MX", {
+        day: "numeric",
+        month: "short",
+      });
     });
 
     const revenueData = stats.dailyRevenue.map((day) => day.revenue);
@@ -331,11 +402,11 @@ const CompaniesDashboard: React.FC = () => {
 
   // Debug: Log para verificar datos
   if (stats?.salesPerformance) {
-    console.log('Sales Performance Data:', {
+    console.log("Sales Performance Data:", {
       completed: stats.salesPerformance.completed,
       inProcess: stats.salesPerformance.inProcess,
       pending: stats.salesPerformance.pending,
-      series: salesPerformanceSeries
+      series: salesPerformanceSeries,
     });
   }
 
@@ -394,7 +465,7 @@ const CompaniesDashboard: React.FC = () => {
     return date.toLocaleDateString("es-MX", {
       day: "numeric",
       month: "short",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined
+      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
     });
   };
 
@@ -435,13 +506,94 @@ const CompaniesDashboard: React.FC = () => {
 
   return (
     <div className="container-fluid py-4">
-      {/* Welcome Section */}
-      <div className="mb-4">
-        <h2 className="fw-bold mb-1">Dashboard de Empresas</h2>
-        <p className="text-muted mb-0">
-          Resumen general de todas tus empresas y sucursales
-        </p>
-      </div>
+      {/* Filters Section */}
+      <Card
+        className="border-0 shadow-sm mb-4"
+        style={{ borderRadius: "12px" }}
+      >
+        <Card.Body className="p-4">
+          <Row className="g-3">
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold text-muted">
+                  Fecha Inicial
+                </Form.Label>
+                <Form.Control
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) =>
+                    handleFilterChange("startDate", e.target.value)
+                  }
+                  style={{ borderRadius: "8px" }}
+                />
+              </Form.Group>
+            </Col>
+            <Col md={3}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold text-muted">
+                  Fecha Final
+                </Form.Label>
+                <Form.Control
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) =>
+                    handleFilterChange("endDate", e.target.value)
+                  }
+                  style={{ borderRadius: "8px" }}
+                />
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group>
+                <Form.Label className="small fw-semibold text-muted">
+                  Empresa
+                </Form.Label>
+                <Form.Select
+                  value={filters.companyId}
+                  onChange={(e) =>
+                    handleFilterChange("companyId", e.target.value)
+                  }
+                  disabled={loadingCompanies}
+                  style={{ borderRadius: "8px" }}
+                >
+                  <option value="">Todas las empresas</option>
+                  {companies.map((company) => (
+                    <option key={company._id} value={company._id}>
+                      {company.tradeName || company.legalName}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={2} className="d-flex align-items-end gap-2">
+              <Button
+                variant="primary"
+                onClick={handleSearch}
+                disabled={loading}
+                className="w-100"
+                style={{ borderRadius: "8px" }}
+              >
+                <Search size={16} className="me-1" />
+                Buscar
+              </Button>
+            </Col>
+          </Row>
+          <Row className="mt-2">
+            <Col md={12}>
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={handleClearFilters}
+                disabled={loading}
+                style={{ borderRadius: "8px" }}
+              >
+                <RefreshCw size={14} className="me-1" />
+                Limpiar Filtros
+              </Button>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
       {/* Top 5 Metrics Cards - Con datos reales */}
       <Row className="g-3 mb-4">
@@ -614,7 +766,8 @@ const CompaniesDashboard: React.FC = () => {
                     </Badge>
                   </div>
                   <p className="text-muted small mb-0 mt-1">
-                    {revenueTrend.isPositive ? "AUMENTO" : "DISMINUCIÓN"} VS SEMANA ANTERIOR
+                    {revenueTrend.isPositive ? "AUMENTO" : "DISMINUCIÓN"} VS
+                    SEMANA ANTERIOR
                   </p>
                 </div>
               </div>
@@ -642,7 +795,11 @@ const CompaniesDashboard: React.FC = () => {
                   <Badge bg="primary" className="px-2 py-1">
                     MES ACTUAL
                   </Badge>
-                  <Button variant="link" className="p-0 text-muted" onClick={loadDashboardData}>
+                  <Button
+                    variant="link"
+                    className="p-0 text-muted"
+                    onClick={loadDashboardData}
+                  >
                     <RefreshCw size={14} />
                   </Button>
                   <Button variant="link" className="p-0 text-muted">
@@ -699,7 +856,8 @@ const CompaniesDashboard: React.FC = () => {
                                 className="text-muted"
                                 style={{ fontSize: "10px" }}
                               >
-                                {week.orderCount} {week.orderCount === 1 ? "orden" : "órdenes"}
+                                {week.orderCount}{" "}
+                                {week.orderCount === 1 ? "orden" : "órdenes"}
                               </div>
                             </div>
                           </div>
@@ -710,7 +868,10 @@ const CompaniesDashboard: React.FC = () => {
                         >
                           {week.orderCount}
                         </td>
-                        <td className="text-end pe-0" style={{ fontSize: "13px" }}>
+                        <td
+                          className="text-end pe-0"
+                          style={{ fontSize: "13px" }}
+                        >
                           <Badge bg="success" style={{ borderRadius: "6px" }}>
                             {formatCurrency(week.revenue)}
                           </Badge>
@@ -781,7 +942,9 @@ const CompaniesDashboard: React.FC = () => {
                   <ProgressBar
                     now={
                       stats?.salesPerformance?.completed.percentage
-                        ? parseFloat(stats.salesPerformance.completed.percentage)
+                        ? parseFloat(
+                            stats.salesPerformance.completed.percentage
+                          )
                         : 0
                     }
                     style={{ height: "6px", borderRadius: "8px" }}
@@ -814,7 +977,9 @@ const CompaniesDashboard: React.FC = () => {
                   <ProgressBar
                     now={
                       stats?.salesPerformance?.inProcess.percentage
-                        ? parseFloat(stats.salesPerformance.inProcess.percentage)
+                        ? parseFloat(
+                            stats.salesPerformance.inProcess.percentage
+                          )
                         : 0
                     }
                     style={{ height: "6px", borderRadius: "8px" }}
@@ -937,21 +1102,31 @@ const CompaniesDashboard: React.FC = () => {
 
                       // Obtener nombre del cliente
                       const clientName = order.clientInfo.clientId
-                        ? `${order.clientInfo.clientId.name} ${order.clientInfo.clientId.lastName || ""}`
-                        : `${order.clientInfo.name} ${order.clientInfo.lastName || ""}`;
+                        ? `${order.clientInfo.clientId.name} ${
+                            order.clientInfo.clientId.lastName || ""
+                          }`
+                        : `${order.clientInfo.name} ${
+                            order.clientInfo.lastName || ""
+                          }`;
 
                       // Obtener nombre del cajero
-                      const cashierName = order.cashier?.profile?.fullName
-                        || `${order.cashier?.profile?.name || ""} ${order.cashier?.profile?.lastName || ""}`.trim()
-                        || order.cashier?.username
-                        || "Usuario";
+                      const cashierName =
+                        order.cashier?.profile?.fullName ||
+                        `${order.cashier?.profile?.name || ""} ${
+                          order.cashier?.profile?.lastName || ""
+                        }`.trim() ||
+                        order.cashier?.username ||
+                        "Usuario";
 
                       // Formatear fecha
                       const orderDate = new Date(order.createdAt);
                       const timeAgo = getTimeAgo(orderDate);
 
                       return (
-                        <ListGroup.Item key={order._id} className="border-0 px-0 py-3">
+                        <ListGroup.Item
+                          key={order._id}
+                          className="border-0 px-0 py-3"
+                        >
                           <div className="d-flex gap-3">
                             <div
                               className="rounded d-flex align-items-center justify-content-center"
@@ -962,7 +1137,10 @@ const CompaniesDashboard: React.FC = () => {
                                 flexShrink: 0,
                               }}
                             >
-                              <ShoppingCart size={18} style={{ color: getStatusColor(order.status) }} />
+                              <ShoppingCart
+                                size={18}
+                                style={{ color: getStatusColor(order.status) }}
+                              />
                             </div>
                             <div className="flex-grow-1">
                               <div className="d-flex justify-content-between align-items-start">
@@ -977,12 +1155,24 @@ const CompaniesDashboard: React.FC = () => {
                                     className="mb-2 small text-muted"
                                     style={{ fontSize: "12px" }}
                                   >
-                                    Cliente: {clientName} • {order.branchId.branchName}
+                                    Cliente: {clientName} •{" "}
+                                    {order.branchId.branchName}
                                   </p>
                                   <div className="d-flex align-items-center gap-2">
                                     <Badge
-                                      bg={order.status === "completado" ? "success" : order.status === "pendiente" ? "primary" : order.status === "cancelado" ? "danger" : "warning"}
-                                      style={{ borderRadius: "6px", fontSize: "10px" }}
+                                      bg={
+                                        order.status === "completado"
+                                          ? "success"
+                                          : order.status === "pendiente"
+                                          ? "primary"
+                                          : order.status === "cancelado"
+                                          ? "danger"
+                                          : "warning"
+                                      }
+                                      style={{
+                                        borderRadius: "6px",
+                                        fontSize: "10px",
+                                      }}
                                     >
                                       {getStatusText(order.status)}
                                     </Badge>
@@ -1055,15 +1245,29 @@ const CompaniesDashboard: React.FC = () => {
                   {stats.topClients.map((client, idx) => {
                     // Colores para los avatares
                     const colors = [
-                      "#1ab394", "#4A90E2", "#f8ac59", "#e91e63", "#9c27b0",
-                      "#00bcd4", "#ff9800", "#795548", "#607d8b", "#8bc34a"
+                      "#1ab394",
+                      "#4A90E2",
+                      "#f8ac59",
+                      "#e91e63",
+                      "#9c27b0",
+                      "#00bcd4",
+                      "#ff9800",
+                      "#795548",
+                      "#607d8b",
+                      "#8bc34a",
                     ];
                     const color = colors[idx % colors.length];
 
                     // Obtener iniciales del cliente
-                    const firstName = client.clientInfo?.name || client.clientName;
-                    const lastName = client.clientInfo?.lastName || client.clientLastName || "";
-                    const initials = `${firstName.charAt(0)}${lastName.charAt(0) || firstName.charAt(1) || ""}`.toUpperCase();
+                    const firstName =
+                      client.clientInfo?.name || client.clientName;
+                    const lastName =
+                      client.clientInfo?.lastName ||
+                      client.clientLastName ||
+                      "";
+                    const initials = `${firstName.charAt(0)}${
+                      lastName.charAt(0) || firstName.charAt(1) || ""
+                    }`.toUpperCase();
 
                     // Nombre completo del cliente
                     const fullName = `${firstName} ${lastName}`.trim();
@@ -1075,13 +1279,32 @@ const CompaniesDashboard: React.FC = () => {
                     return (
                       <ListGroup.Item key={idx} className="border-0 px-0 py-3">
                         <div className="d-flex gap-3 align-items-center">
-                          <div className="d-flex align-items-center gap-2" style={{ minWidth: "50px" }}>
+                          <div
+                            className="d-flex align-items-center gap-2"
+                            style={{ minWidth: "50px" }}
+                          >
                             {/* Ranking badge */}
                             <Badge
-                              bg={idx === 0 ? "warning" : idx === 1 ? "secondary" : idx === 2 ? "danger" : "light"}
+                              bg={
+                                idx === 0
+                                  ? "warning"
+                                  : idx === 1
+                                  ? "secondary"
+                                  : idx === 2
+                                  ? "danger"
+                                  : "light"
+                              }
                               text={idx >= 3 ? "dark" : "white"}
                               className="fw-bold"
-                              style={{ fontSize: "12px", width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}
+                              style={{
+                                fontSize: "12px",
+                                width: "28px",
+                                height: "28px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderRadius: "50%",
+                              }}
                             >
                               {idx + 1}
                             </Badge>
@@ -1112,7 +1335,10 @@ const CompaniesDashboard: React.FC = () => {
                                   className="mb-0 text-muted"
                                   style={{ fontSize: "11px" }}
                                 >
-                                  {client.orderCount} {client.orderCount === 1 ? "orden" : "órdenes"}
+                                  {client.orderCount}{" "}
+                                  {client.orderCount === 1
+                                    ? "orden"
+                                    : "órdenes"}
                                 </p>
                               </div>
                               <div className="text-end">
@@ -1138,9 +1364,7 @@ const CompaniesDashboard: React.FC = () => {
                 </ListGroup>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-muted mb-0">
-                    No hay clientes disponibles
-                  </p>
+                  <p className="text-muted mb-0">No hay clientes disponibles</p>
                 </div>
               )}
             </Card.Body>
@@ -1156,7 +1380,9 @@ const CompaniesDashboard: React.FC = () => {
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <h5 className="fw-bold mb-1">Top 5 Sucursales del Mes</h5>
-                  <p className="text-muted small mb-0">Sucursales con más ventas</p>
+                  <p className="text-muted small mb-0">
+                    Sucursales con más ventas
+                  </p>
                 </div>
                 <Badge bg="primary" className="px-2 py-1">
                   MES ACTUAL
@@ -1171,30 +1397,47 @@ const CompaniesDashboard: React.FC = () => {
                 <Table hover responsive className="mb-0">
                   <thead>
                     <tr>
-                      <th className="border-0 text-muted small" style={{ fontSize: "11px", fontWeight: "normal" }}>
+                      <th
+                        className="border-0 text-muted small"
+                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                      >
                         #
                       </th>
-                      <th className="border-0 text-muted small" style={{ fontSize: "11px", fontWeight: "normal" }}>
+                      <th
+                        className="border-0 text-muted small"
+                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                      >
                         SUCURSAL
                       </th>
-                      <th className="border-0 text-muted small text-center" style={{ fontSize: "11px", fontWeight: "normal" }}>
+                      <th
+                        className="border-0 text-muted small text-center"
+                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                      >
                         EMPRESA
                       </th>
-                      <th className="border-0 text-muted small text-center" style={{ fontSize: "11px", fontWeight: "normal" }}>
+                      <th
+                        className="border-0 text-muted small text-center"
+                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                      >
                         ÓRDENES
                       </th>
-                      <th className="border-0 text-muted small text-end" style={{ fontSize: "11px", fontWeight: "normal" }}>
+                      <th
+                        className="border-0 text-muted small text-end"
+                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                      >
                         TOTAL VENTAS
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {stats.topBranches.map((branch, idx) => {
-                      const branchName = branch.branchInfo?.branchName || "Sucursal";
+                      const branchName =
+                        branch.branchInfo?.branchName || "Sucursal";
                       const branchCode = branch.branchInfo?.branchCode || "";
-                      const companyName = branch.branchInfo?.companyId?.tradeName ||
-                                         branch.branchInfo?.companyId?.legalName ||
-                                         "Empresa";
+                      const companyName =
+                        branch.branchInfo?.companyId?.tradeName ||
+                        branch.branchInfo?.companyId?.legalName ||
+                        "Empresa";
 
                       // Colores para los rankings
                       const getRankingColor = (index: number) => {
@@ -1210,12 +1453,18 @@ const CompaniesDashboard: React.FC = () => {
 
                       return (
                         <tr key={branch._id}>
-                          <td className="align-middle" style={{ width: "50px" }}>
+                          <td
+                            className="align-middle"
+                            style={{ width: "50px" }}
+                          >
                             <Badge
                               bg=""
                               style={{
                                 backgroundColor: getRankingColor(idx),
-                                color: getRankingTextColor(idx) === "white" ? "#fff" : "#000",
+                                color:
+                                  getRankingTextColor(idx) === "white"
+                                    ? "#fff"
+                                    : "#000",
                                 fontSize: "13px",
                                 fontWeight: "bold",
                                 width: "32px",
@@ -1223,7 +1472,7 @@ const CompaniesDashboard: React.FC = () => {
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                borderRadius: "50%"
+                                borderRadius: "50%",
                               }}
                             >
                               {idx + 1}
@@ -1231,11 +1480,17 @@ const CompaniesDashboard: React.FC = () => {
                           </td>
                           <td className="align-middle">
                             <div>
-                              <div className="fw-semibold" style={{ fontSize: "14px" }}>
+                              <div
+                                className="fw-semibold"
+                                style={{ fontSize: "14px" }}
+                              >
                                 {branchName}
                               </div>
                               {branchCode && (
-                                <div className="text-muted" style={{ fontSize: "11px" }}>
+                                <div
+                                  className="text-muted"
+                                  style={{ fontSize: "11px" }}
+                                >
                                   {branchCode}
                                 </div>
                               )}
@@ -1251,12 +1506,18 @@ const CompaniesDashboard: React.FC = () => {
                             </Badge>
                           </td>
                           <td className="align-middle text-center">
-                            <span className="fw-semibold" style={{ fontSize: "14px" }}>
+                            <span
+                              className="fw-semibold"
+                              style={{ fontSize: "14px" }}
+                            >
                               {branch.orderCount}
                             </span>
                           </td>
                           <td className="align-middle text-end">
-                            <div className="fw-bold" style={{ fontSize: "15px", color: "#1ab394" }}>
+                            <div
+                              className="fw-bold"
+                              style={{ fontSize: "15px", color: "#1ab394" }}
+                            >
                               {formatCurrency(branch.totalSales)}
                             </div>
                           </td>

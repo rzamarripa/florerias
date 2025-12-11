@@ -40,6 +40,7 @@ export interface SaleTicketData {
       state: string;
     };
     phone: string;
+    logoUrl?: string;
   };
   cashier: {
     fullName: string;
@@ -262,6 +263,13 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
     <div class="ticket-container">
         <!-- Header -->
         <div class="header">
+            ${
+              company.logoUrl
+                ? `<div style="text-align: center; margin-bottom: 15px;">
+                <img src="${company.logoUrl}" alt="Logo ${company.companyName}" style="max-width: 150px; max-height: 80px; object-fit: contain;" />
+            </div>`
+                : ""
+            }
             <div class="company-name">${company.companyName}</div>
             <div class="company-info">
                 RFC: ${company.rfc}<br>

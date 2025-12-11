@@ -1024,7 +1024,7 @@ export const getCompanyByBranchId = async (req, res) => {
 
     // Buscar la empresa asociada a la sucursal
     const company = await Company.findById(branch.companyId).select(
-      "legalName tradeName rfc fiscalAddress primaryContact"
+      "legalName tradeName rfc fiscalAddress primaryContact logoUrl logoPath"
     );
 
     if (!company) {
@@ -1051,6 +1051,8 @@ export const getCompanyByBranchId = async (req, res) => {
       phone: branch.contactPhone,
       email: branch.contactEmail,
       branchName: branch.branchName,
+      logoUrl: company.logoUrl || null,
+      logoPath: company.logoPath || null,
     };
 
     res.status(200).json({
@@ -1170,24 +1172,58 @@ export const getDistributorDashboardStats = async (req, res) => {
   try {
     const distributorId = req.user._id;
 
+    // Obtener filtros de query params
+    const { startDate, endDate, companyId } = req.query;
+
     // Importar modelos necesarios
     const Order = (await import("../models/Order.js")).default;
     const { Client } = await import("../models/Client.js");
     const mongoose = await import("mongoose");
 
-    // 1. Contar empresas del distribuidor
-    const companiesCount = await Company.countDocuments({
+    // Construir filtro base de empresas
+    let companyFilter = {
       distributor: distributorId,
       isActive: true
-    });
+    };
 
-    // Obtener IDs de todas las empresas del distribuidor
-    const companies = await Company.find({
-      distributor: distributorId,
-      isActive: true
-    }).select("_id").lean();
+    // Si se especifica un companyId, filtrar solo por esa empresa
+    if (companyId) {
+      companyFilter._id = new mongoose.Types.ObjectId(companyId);
+    }
+
+    // 1. Contar empresas del distribuidor (con filtro aplicado)
+    const companiesCount = await Company.countDocuments(companyFilter);
+
+    // Obtener IDs de todas las empresas del distribuidor (con filtro aplicado)
+    const companies = await Company.find(companyFilter).select("_id").lean();
 
     const companyIds = companies.map(c => c._id);
+
+    // Si no hay empresas que coincidan con el filtro, retornar datos vacíos
+    if (companyIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          companies: 0,
+          branches: 0,
+          clients: 0,
+          orders: 0,
+          totalSales: 0,
+          dailyRevenue: [],
+          monthlyRevenue: [],
+          weeklySales: [],
+          ordersByStatus: [],
+          salesPerformance: {
+            pending: { count: 0, percentage: "0" },
+            inProcess: { count: 0, percentage: "0" },
+            completed: { count: 0, percentage: "0" }
+          },
+          recentOrders: [],
+          topClients: [],
+          topBranches: []
+        }
+      });
+    }
 
     // 2. Contar sucursales de todas las empresas
     const branchesCount = await Branch.countDocuments({
@@ -1203,23 +1239,49 @@ export const getDistributorDashboardStats = async (req, res) => {
 
     const branchIds = branches.map(b => b._id);
 
+    // Construir filtro de fechas para órdenes
+    let dateFilter = {};
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      dateFilter = {
+        orderDate: {
+          $gte: start,
+          $lte: end
+        }
+      };
+    } else if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      dateFilter = { orderDate: { $gte: start } };
+    } else if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter = { orderDate: { $lte: end } };
+    }
+
+    // Filtro base de órdenes (incluyendo branchIds y fechas si aplican)
+    const orderBaseFilter = {
+      branchId: { $in: branchIds },
+      ...dateFilter
+    };
+
     // 3. Contar clientes de todas las sucursales
     const clientsCount = await Client.countDocuments({
       branch: { $in: branchIds },
       status: true
     });
 
-    // 4. Contar órdenes de todas las sucursales
-    const ordersCount = await Order.countDocuments({
-      branchId: { $in: branchIds }
-    });
+    // 4. Contar órdenes de todas las sucursales (con filtro de fechas)
+    const ordersCount = await Order.countDocuments(orderBaseFilter);
 
-    // 5. Calcular total vendido (suma de total de todas las órdenes)
+    // 5. Calcular total vendido (suma de total de todas las órdenes con filtro de fechas)
     const totalSalesResult = await Order.aggregate([
       {
-        $match: {
-          branchId: { $in: branchIds }
-        }
+        $match: orderBaseFilter
       },
       {
         $group: {
@@ -1232,15 +1294,33 @@ export const getDistributorDashboardStats = async (req, res) => {
     const totalSales = totalSalesResult.length > 0 ? totalSalesResult[0].totalSales : 0;
 
     // 6. Obtener estadísticas adicionales para los gráficos
-    // Revenue por día (últimos 30 días)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Revenue por día - usar el rango de fechas del filtro o últimos 30 días por defecto
+    let dailyRevenueStartDate;
+    if (startDate) {
+      dailyRevenueStartDate = new Date(startDate);
+      dailyRevenueStartDate.setHours(0, 0, 0, 0);
+    } else {
+      dailyRevenueStartDate = new Date();
+      dailyRevenueStartDate.setDate(dailyRevenueStartDate.getDate() - 30);
+    }
+
+    let dailyRevenueEndDate;
+    if (endDate) {
+      dailyRevenueEndDate = new Date(endDate);
+      dailyRevenueEndDate.setHours(23, 59, 59, 999);
+    } else {
+      dailyRevenueEndDate = new Date();
+      dailyRevenueEndDate.setHours(23, 59, 59, 999);
+    }
 
     const dailyRevenue = await Order.aggregate([
       {
         $match: {
           branchId: { $in: branchIds },
-          orderDate: { $gte: thirtyDaysAgo }
+          orderDate: {
+            $gte: dailyRevenueStartDate,
+            $lte: dailyRevenueEndDate
+          }
         }
       },
       {
@@ -1259,15 +1339,33 @@ export const getDistributorDashboardStats = async (req, res) => {
       }
     ]);
 
-    // Revenue por mes (últimos 6 meses)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Revenue por mes - usar el rango de fechas del filtro o últimos 6 meses por defecto
+    let monthlyRevenueStartDate;
+    if (startDate) {
+      monthlyRevenueStartDate = new Date(startDate);
+      monthlyRevenueStartDate.setHours(0, 0, 0, 0);
+    } else {
+      monthlyRevenueStartDate = new Date();
+      monthlyRevenueStartDate.setMonth(monthlyRevenueStartDate.getMonth() - 6);
+    }
+
+    let monthlyRevenueEndDate;
+    if (endDate) {
+      monthlyRevenueEndDate = new Date(endDate);
+      monthlyRevenueEndDate.setHours(23, 59, 59, 999);
+    } else {
+      monthlyRevenueEndDate = new Date();
+      monthlyRevenueEndDate.setHours(23, 59, 59, 999);
+    }
 
     const monthlyRevenue = await Order.aggregate([
       {
         $match: {
           branchId: { $in: branchIds },
-          orderDate: { $gte: sixMonthsAgo }
+          orderDate: {
+            $gte: monthlyRevenueStartDate,
+            $lte: monthlyRevenueEndDate
+          }
         }
       },
       {
@@ -1285,16 +1383,34 @@ export const getDistributorDashboardStats = async (req, res) => {
       }
     ]);
 
-    // Ventas por semana del mes actual
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    // Ventas por semana - usar el rango de fechas del filtro o mes actual por defecto
+    let weeklyStartDate;
+    if (startDate) {
+      weeklyStartDate = new Date(startDate);
+      weeklyStartDate.setHours(0, 0, 0, 0);
+    } else {
+      weeklyStartDate = new Date();
+      weeklyStartDate.setDate(1);
+      weeklyStartDate.setHours(0, 0, 0, 0);
+    }
+
+    let weeklyEndDate;
+    if (endDate) {
+      weeklyEndDate = new Date(endDate);
+      weeklyEndDate.setHours(23, 59, 59, 999);
+    } else {
+      weeklyEndDate = new Date();
+      weeklyEndDate.setHours(23, 59, 59, 999);
+    }
 
     const weeklySales = await Order.aggregate([
       {
         $match: {
           branchId: { $in: branchIds },
-          orderDate: { $gte: startOfMonth }
+          orderDate: {
+            $gte: weeklyStartDate,
+            $lte: weeklyEndDate
+          }
         }
       },
       {
@@ -1311,12 +1427,10 @@ export const getDistributorDashboardStats = async (req, res) => {
       }
     ]);
 
-    // Órdenes por estado
+    // Órdenes por estado (con filtro de fechas)
     const ordersByStatus = await Order.aggregate([
       {
-        $match: {
-          branchId: { $in: branchIds }
-        }
+        $match: orderBaseFilter
       },
       {
         $group: {
@@ -1326,10 +1440,8 @@ export const getDistributorDashboardStats = async (req, res) => {
       }
     ]);
 
-    // Calcular rendimiento de ventas
-    const allOrders = await Order.find({
-      branchId: { $in: branchIds }
-    }).select('status advance sendToProduction').lean();
+    // Calcular rendimiento de ventas (con filtro de fechas)
+    const allOrders = await Order.find(orderBaseFilter).select('status advance sendToProduction').lean();
 
     // Debug: Mostrar todas las órdenes con sus estados
     console.log('All Orders Status:', allOrders.map(order => ({
@@ -1390,10 +1502,8 @@ export const getDistributorDashboardStats = async (req, res) => {
       completed: { count: completedOrders.length, percentage: salesPerformance.completed.percentage }
     });
 
-    // 7. Obtener las 5 órdenes más recientes
-    const recentOrders = await Order.find({
-      branchId: { $in: branchIds }
-    })
+    // 7. Obtener las 5 órdenes más recientes (con filtro de fechas)
+    const recentOrders = await Order.find(orderBaseFilter)
       .populate('branchId', 'branchName')
       .populate('cashier', 'username profile.name profile.lastName profile.fullName')
       .populate('clientInfo.clientId', 'name lastName')
@@ -1401,11 +1511,11 @@ export const getDistributorDashboardStats = async (req, res) => {
       .limit(5)
       .lean();
 
-    // 8. Obtener top 10 clientes que más han gastado
+    // 8. Obtener top 10 clientes que más han gastado (con filtro de fechas)
     const topClients = await Order.aggregate([
       {
         $match: {
-          branchId: { $in: branchIds },
+          ...orderBaseFilter,
           status: { $ne: 'cancelado' } // Excluir órdenes canceladas
         }
       },
@@ -1453,17 +1563,12 @@ export const getDistributorDashboardStats = async (req, res) => {
       }
     }
 
-    // 9. Obtener top 5 sucursales que más han vendido en el mes actual
-    const startOfCurrentMonth = new Date();
-    startOfCurrentMonth.setDate(1);
-    startOfCurrentMonth.setHours(0, 0, 0, 0);
-
+    // 9. Obtener top 5 sucursales que más han vendido (con filtro de fechas)
     const topBranches = await Order.aggregate([
       {
         $match: {
-          branchId: { $in: branchIds },
-          status: { $ne: 'cancelado' }, // Excluir órdenes canceladas
-          orderDate: { $gte: startOfCurrentMonth } // Solo órdenes del mes actual
+          ...orderBaseFilter,
+          status: { $ne: 'cancelado' } // Excluir órdenes canceladas
         }
       },
       {

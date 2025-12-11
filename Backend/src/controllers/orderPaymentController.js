@@ -2,6 +2,8 @@ import OrderPayment from '../models/OrderPayment.js';
 import Order from '../models/Order.js';
 import CashRegister from '../models/CashRegister.js';
 import PaymentMethod from '../models/PaymentMethod.js';
+import orderLogService from '../services/orderLogService.js';
+import mongoose from 'mongoose';
 
 // Crear un nuevo pago para una orden
 export const createOrderPayment = async (req, res) => {
@@ -94,6 +96,35 @@ export const createOrderPayment = async (req, res) => {
       .populate('paymentMethod')
       .populate('registeredBy')
       .populate('cashRegisterId');
+
+    // Crear log de pago recibido
+    try {
+      const user = await mongoose.model('cs_user').findById(registeredBy).populate('role');
+      const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: 'MXN'
+        }).format(amount);
+      };
+
+      await orderLogService.createLog(
+        orderId,
+        'payment_received',
+        `Pago recibido: ${formatCurrency(amount)} - ${paymentMethodData.name}`,
+        registeredBy,
+        user?.profile?.fullName || user?.name || 'Usuario',
+        user?.role?.name || 'Usuario',
+        {
+          amount,
+          paymentMethod: paymentMethodData.name,
+          paymentId: payment._id,
+          remainingBalance: order.remainingBalance,
+          notes: notes || ''
+        }
+      );
+    } catch (logError) {
+      console.error('Error al crear log de pago:', logError);
+    }
 
     res.status(201).json({
       message: 'Pago registrado exitosamente',
@@ -200,6 +231,34 @@ export const deleteOrderPayment = async (req, res) => {
 
     // Eliminar el pago
     await OrderPayment.findByIdAndDelete(id);
+
+    // Crear log de pago eliminado
+    try {
+      const user = req.user || {};
+      const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: 'MXN'
+        }).format(amount);
+      };
+
+      await orderLogService.createLog(
+        payment.orderId,
+        'payment_deleted',
+        `Pago eliminado: ${formatCurrency(payment.amount)} - ${payment.paymentMethod?.name || 'N/A'}`,
+        user._id,
+        user.profile?.fullName || user.name || 'Usuario',
+        user.role?.name || 'Usuario',
+        {
+          amount: payment.amount,
+          paymentMethod: payment.paymentMethod?.name,
+          paymentId: id,
+          remainingBalance: order.remainingBalance
+        }
+      );
+    } catch (logError) {
+      console.error('Error al crear log de pago eliminado:', logError);
+    }
 
     res.status(200).json({
       message: 'Pago eliminado exitosamente',

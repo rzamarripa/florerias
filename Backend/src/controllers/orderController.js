@@ -10,6 +10,7 @@ import { Company } from '../models/Company.js';
 import { StageCatalog } from '../models/StageCatalog.js';
 import DiscountAuth from '../models/DiscountAuth.js';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted } from '../sockets/orderSocket.js';
+import orderLogService from '../services/orderLogService.js';
 import mongoose from 'mongoose';
 
 // Obtener todas las órdenes con filtros y paginación
@@ -733,6 +734,30 @@ const createOrder = async (req, res) => {
       // No fallar la creación de la orden si falla la notificación
     }
 
+    // Crear log de creación de orden
+    try {
+      const creatorUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+      await orderLogService.createLog(
+        savedOrder._id,
+        'order_created',
+        `Orden ${savedOrder.orderNumber} creada`,
+        req.user._id,
+        creatorUser?.profile?.fullName || creatorUser?.name || 'Usuario',
+        creatorUser?.role?.name || 'Usuario',
+        {
+          total: savedOrder.total,
+          advance: savedOrder.advance,
+          remainingBalance: savedOrder.remainingBalance,
+          shippingType: savedOrder.shippingType,
+          salesChannel: savedOrder.salesChannel,
+          itemsCount: savedOrder.items?.length || 0
+        }
+      );
+    } catch (logError) {
+      console.error('Error al crear log de orden:', logError);
+      // No fallar la creación de la orden si falla el log
+    }
+
     res.status(201).json({
       success: true,
       data: populatedOrder,
@@ -764,13 +789,18 @@ const updateOrder = async (req, res) => {
     const updateData = req.body;
 
     // Verificar si la orden existe
-    const existingOrder = await Order.findById(id);
+    const existingOrder = await Order.findById(id)
+      .populate('stage', 'name abreviation stageNumber color boardType');
     if (!existingOrder) {
       return res.status(404).json({
         success: false,
         message: 'Orden no encontrada'
       });
     }
+
+    // Guardar stage anterior para comparación
+    const previousStage = existingOrder.stage;
+    const previousStatus = existingOrder.status;
 
     // Si se actualizan items, validar según tipo de producto
     if (updateData.items && updateData.items.length > 0) {
@@ -816,6 +846,60 @@ const updateOrder = async (req, res) => {
           { path: 'registeredBy', select: 'name email' }
         ]
       });
+
+    // Registrar logs según los cambios realizados
+    try {
+      const user = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+      const userName = user?.profile?.fullName || user?.name || 'Usuario';
+      const userRole = user?.role?.name || 'Usuario';
+
+      // Log para cambio de stage
+      if (updateData.stage && previousStage?._id?.toString() !== updateData.stage) {
+        const newStage = updatedOrder.stage;
+        await orderLogService.createLog(
+          id,
+          'stage_changed',
+          `Etapa cambiada de "${previousStage?.name || 'Sin etapa'}" a "${newStage?.name}"`,
+          req.user._id,
+          userName,
+          userRole,
+          {
+            oldStageId: previousStage?._id,
+            oldStageName: previousStage?.name,
+            oldStageNumber: previousStage?.stageNumber,
+            oldBoardType: previousStage?.boardType,
+            newStageId: newStage?._id,
+            newStageName: newStage?.name,
+            newStageNumber: newStage?.stageNumber,
+            newBoardType: newStage?.boardType
+          }
+        );
+      }
+
+      // Log para cambio de status (que no sea a través de updateOrderStatus)
+      if (updateData.status && previousStatus !== updateData.status) {
+        const eventType = updateData.status === 'completado' ? 'order_completed' : 'status_changed';
+        const description = updateData.status === 'completado'
+          ? `Orden completada`
+          : `Estado cambiado de "${previousStatus}" a "${updateData.status}"`;
+
+        await orderLogService.createLog(
+          id,
+          eventType,
+          description,
+          req.user._id,
+          userName,
+          userRole,
+          {
+            oldStatus: previousStatus,
+            newStatus: updateData.status
+          }
+        );
+      }
+    } catch (logError) {
+      console.error('Error al crear log de actualización:', logError);
+      // No fallar la actualización si falla el log
+    }
 
     // Emitir evento de socket para notificar a otros usuarios
     emitOrderUpdated(updatedOrder);
@@ -965,6 +1049,69 @@ const updateOrderStatus = async (req, res) => {
       } catch (notificationError) {
         console.error('Error al crear notificación de cancelación:', notificationError);
         // No fallar la actualización del estado si falla la notificación
+      }
+
+      // Crear log de cancelación
+      try {
+        const canceledByUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+        await orderLogService.createLog(
+          id,
+          'order_cancelled',
+          `Orden cancelada`,
+          req.user._id,
+          canceledByUser?.profile?.fullName || canceledByUser?.name || 'Usuario',
+          canceledByUser?.role?.name || 'Usuario',
+          {
+            previousStatus,
+            newStatus: 'cancelado',
+            orderNumber: order.orderNumber
+          }
+        );
+      } catch (logError) {
+        console.error('Error al crear log de cancelación:', logError);
+      }
+    }
+
+    // Si la orden fue completada, crear log
+    if (status === 'completado' && previousStatus !== 'completado') {
+      try {
+        const completedByUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+        await orderLogService.createLog(
+          id,
+          'order_completed',
+          `Orden completada`,
+          req.user._id,
+          completedByUser?.profile?.fullName || completedByUser?.name || 'Usuario',
+          completedByUser?.role?.name || 'Usuario',
+          {
+            previousStatus,
+            newStatus: 'completado',
+            orderNumber: order.orderNumber
+          }
+        );
+      } catch (logError) {
+        console.error('Error al crear log de completado:', logError);
+      }
+    }
+
+    // Para otros cambios de status
+    if (status !== 'cancelado' && status !== 'completado' && previousStatus !== status) {
+      try {
+        const user = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+        await orderLogService.createLog(
+          id,
+          'status_changed',
+          `Estado cambiado de "${previousStatus}" a "${status}"`,
+          req.user._id,
+          user?.profile?.fullName || user?.name || 'Usuario',
+          user?.role?.name || 'Usuario',
+          {
+            previousStatus,
+            newStatus: status
+          }
+        );
+      } catch (logError) {
+        console.error('Error al crear log de cambio de status:', logError);
       }
     }
 
@@ -1312,6 +1459,27 @@ const sendOrderToShipping = async (req, res) => {
           { path: 'registeredBy', select: 'name email' }
         ]
       });
+
+    // Crear log de envío a shipping
+    try {
+      const user = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+      await orderLogService.createLog(
+        id,
+        'sent_to_shipping',
+        `Orden enviada a envío - Etapa: ${firstShippingStage.name}`,
+        req.user._id,
+        user?.profile?.fullName || user?.name || 'Usuario',
+        user?.role?.name || 'Usuario',
+        {
+          stageId: firstShippingStage._id,
+          stageName: firstShippingStage.name,
+          stageNumber: firstShippingStage.stageNumber,
+          orderNumber: updatedOrder.orderNumber
+        }
+      );
+    } catch (logError) {
+      console.error('Error al crear log de envío a shipping:', logError);
+    }
 
     // Emitir evento de socket para notificar a otros usuarios
     emitOrderUpdated(updatedOrder);

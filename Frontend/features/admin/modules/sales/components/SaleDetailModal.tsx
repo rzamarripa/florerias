@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Modal, Badge, Table } from "react-bootstrap";
+import React, { useState } from "react";
+import { Modal, Badge, Table, Button } from "react-bootstrap";
 import {
   User,
   Phone,
@@ -16,8 +16,11 @@ import {
   Truck,
   Receipt,
   Building,
+  Clock,
+  FileText,
 } from "lucide-react";
 import { Sale } from "../types";
+import ActivityStream from "./ActivityStream";
 
 interface SaleDetailModalProps {
   show: boolean;
@@ -30,6 +33,8 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   onHide,
   sale,
 }) => {
+  const [showActivity, setShowActivity] = useState(false);
+
   if (!sale) return null;
 
   const formatCurrency = (amount: number): string => {
@@ -110,12 +115,32 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                 {formatDate(sale.createdAt)}
               </p>
             </div>
-            <div>{getStatusBadge(sale.status)}</div>
+            <div className="d-flex align-items-center gap-2">
+              <Button
+                variant={showActivity ? "primary" : "outline-primary"}
+                size="sm"
+                onClick={() => setShowActivity(!showActivity)}
+                className="d-flex align-items-center gap-2"
+                style={{
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                }}
+              >
+                {showActivity ? <FileText size={16} /> : <Clock size={16} />}
+                {showActivity ? "Ver Detalle" : "Ver Historial"}
+              </Button>
+              {getStatusBadge(sale.status)}
+            </div>
           </div>
         </Modal.Title>
       </Modal.Header>
 
       <Modal.Body className="p-4" style={{ background: "#f8f9fa" }}>
+        {showActivity ? (
+          /* Mostrar Activity Stream */
+          <ActivityStream orderId={sale._id} />
+        ) : (
+          <>
         {/* Resumen Financiero - Cards */}
         <div className="row g-3 mb-4">
           {/* Card Subtotal */}
@@ -608,6 +633,8 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
             </div>
           </div>
         </div>
+          </>
+        )}
       </Modal.Body>
     </Modal>
   );
