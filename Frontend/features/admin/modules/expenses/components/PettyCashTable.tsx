@@ -108,7 +108,9 @@ const PettyCashTable: React.FC<PettyCashTableProps> = ({
               <th className="py-3 px-4 fw-semibold text-muted">Fecha Pago</th>
               <th className="py-3 px-4 fw-semibold text-muted">Concepto</th>
               <th className="py-3 px-4 fw-semibold text-muted">Usuario</th>
-              <th className="py-3 px-4 fw-semibold text-muted text-end">Total</th>
+              <th className="py-3 px-4 fw-semibold text-muted text-center">
+                Total
+              </th>
               <th className="py-3 px-4 fw-semibold text-muted text-center">
                 Acciones
               </th>
@@ -130,11 +132,16 @@ const PettyCashTable: React.FC<PettyCashTableProps> = ({
                     </td>
                     <td className="py-3 px-4 fw-semibold">{expense.folio}</td>
                     <td className="py-3 px-4">
-                      {new Date(expense.paymentDate).toLocaleDateString("es-MX")}
+                      {new Date(expense.paymentDate).toLocaleDateString(
+                        "es-MX"
+                      )}
                     </td>
-                    <td className="py-3 px-4">{expense.concept?.name || "N/A"}</td>
                     <td className="py-3 px-4">
-                      {expense.user?.profile?.fullName || expense.user?.username}
+                      {expense.concept?.name || "N/A"}
+                    </td>
+                    <td className="py-3 px-4">
+                      {expense.user?.profile?.fullName ||
+                        expense.user?.username}
                     </td>
                     <td className="py-3 px-4 text-end fw-semibold">
                       ${expense.total.toFixed(2)}
@@ -142,7 +149,7 @@ const PettyCashTable: React.FC<PettyCashTableProps> = ({
                     <td className="py-3 px-4">
                       <div className="d-flex gap-2 justify-content-center">
                         <Button
-                          variant="outline-primary"
+                          variant="primary"
                           size="sm"
                           onClick={() => onEdit(expense)}
                           className="d-flex align-items-center gap-1"
@@ -154,7 +161,7 @@ const PettyCashTable: React.FC<PettyCashTableProps> = ({
                           <Pencil size={14} />
                         </Button>
                         <Button
-                          variant="outline-danger"
+                          variant="danger"
                           size="sm"
                           onClick={() => handleDelete(expense._id)}
                           className="d-flex align-items-center gap-1"

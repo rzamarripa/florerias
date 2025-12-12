@@ -5,7 +5,12 @@ import React, { useEffect, useState } from "react";
 import { Button, Form, Table, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { cashiersService } from "./services/cashiers";
-import { Cashier, CashierFilters, CreateCashierData, UpdateCashierData } from "./types";
+import {
+  Cashier,
+  CashierFilters,
+  CreateCashierData,
+  UpdateCashierData,
+} from "./types";
 import Actions from "./components/Actions";
 import CashierModal from "./components/CashierModal";
 
@@ -106,7 +111,9 @@ const CashiersPage: React.FC = () => {
     }
   };
 
-  const handleSaveCashier = async (data: CreateCashierData | UpdateCashierData) => {
+  const handleSaveCashier = async (
+    data: CreateCashierData | UpdateCashierData
+  ) => {
     try {
       setModalLoading(true);
       if (selectedCashier) {
@@ -169,11 +176,8 @@ const CashiersPage: React.FC = () => {
       <div className="col-12">
         <div className="card">
           <div className="card-header border-light d-flex justify-content-between align-items-center py-3">
-            <div className="d-flex align-items-center gap-3 flex-wrap">
-              <h5 className="mb-0 fw-bold" style={{ fontSize: 20 }}>
-                Cajeros
-              </h5>
-              <div className="position-relative" style={{ maxWidth: 300 }}>
+            <div className="d-flex gap-2">
+              <div className="position-relative" style={{ maxWidth: 400 }}>
                 <Form.Control
                   type="search"
                   placeholder="Buscar cajeros..."
@@ -212,12 +216,9 @@ const CashiersPage: React.FC = () => {
               Nuevo Cajero
             </Button>
           </div>
-          <div className="table-responsive shadow-sm border border-2 rounded-3">
-            <Table className="table table-custom table-centered table-hover table-bordered border border-2 w-100 mb-0">
-              <thead
-                className="bg-light align-middle bg-opacity-25"
-                style={{ fontSize: 16 }}
-              >
+          <div className="table-responsive shadow-sm">
+            <Table className="table table-custom table-centered table-hover w-100 mb-0">
+              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
                   <th>#</th>
                   <th>Nombre Completo</th>
@@ -264,7 +265,9 @@ const CashiersPage: React.FC = () => {
                       </td>
                       <td>
                         <div>
-                          <div className="fw-medium">{cashier.profile.fullName}</div>
+                          <div className="fw-medium">
+                            {cashier.profile.fullName}
+                          </div>
                           <div className="text-muted small">
                             {formatDate(cashier.createdAt)}
                           </div>
@@ -276,7 +279,10 @@ const CashiersPage: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <div className="text-truncate" style={{ maxWidth: "200px" }}>
+                        <div
+                          className="text-truncate"
+                          style={{ maxWidth: "200px" }}
+                        >
                           {cashier.email}
                         </div>
                       </td>
@@ -284,8 +290,12 @@ const CashiersPage: React.FC = () => {
                       <td>
                         {cashier.branch ? (
                           <div>
-                            <div className="fw-medium">{cashier.branch.branchName}</div>
-                            <div className="text-muted small">{cashier.branch.branchCode}</div>
+                            <div className="fw-medium">
+                              {cashier.branch.branchName}
+                            </div>
+                            <div className="text-muted small">
+                              {cashier.branch.branchCode}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-muted">Sin sucursal</span>
@@ -296,7 +306,9 @@ const CashiersPage: React.FC = () => {
                           bg={cashier.profile.estatus ? "success" : "danger"}
                           className="bg-opacity-10"
                           style={{
-                            color: cashier.profile.estatus ? "#198754" : "#dc3545",
+                            color: cashier.profile.estatus
+                              ? "#198754"
+                              : "#dc3545",
                           }}
                         >
                           {cashier.profile.estatus ? "Activo" : "Inactivo"}

@@ -1240,8 +1240,8 @@ const getOpenCashRegistersByBranch = async (req, res) => {
       });
     }
 
-    // Buscar cajas que estén abiertas y activas en la sucursal especificada
-    const cashRegisters = await CashRegister.find({
+    // Buscar cajas que estén abiertas, activas y con saldo mayor a 0 en la sucursal especificada
+    const allCashRegisters = await CashRegister.find({
       branchId,
       isOpen: true,
       isActive: true
@@ -1251,6 +1251,12 @@ const getOpenCashRegistersByBranch = async (req, res) => {
       .populate('managerId', 'username email profile')
       .select('_id name branchId cashierId managerId currentBalance isOpen')
       .sort({ name: 1 });
+
+    // Filtrar manualmente las cajas con saldo > 0 (para evitar problemas de tipos)
+    const cashRegisters = allCashRegisters.filter(cashRegister => {
+      const balance = Number(cashRegister.currentBalance) || 0;
+      return balance > 0;
+    });
 
     res.status(200).json({
       success: true,

@@ -35,6 +35,7 @@ const PizarronVentasPage: React.FC = () => {
 
   // Stages dinámicos
   const [productionStages, setProductionStages] = useState<StageCatalog[]>([]);
+  const [shippingStages, setShippingStages] = useState<StageCatalog[]>([]);
 
   const { activeBranch } = useActiveBranchStore();
   const { role } = useUserRoleStore();
@@ -49,6 +50,10 @@ const PizarronVentasPage: React.FC = () => {
       // Cargar stages de Producción
       const productionResponse = await stageCatalogsService.getUserStages('Produccion');
       setProductionStages(productionResponse.data || []);
+
+      // Cargar stages de Envío para verificar si existen
+      const shippingResponse = await stageCatalogsService.getUserStages('Envio');
+      setShippingStages(shippingResponse.data || []);
 
     } catch (error: any) {
       console.error("Error loading stages:", error);
@@ -70,9 +75,9 @@ const PizarronVentasPage: React.FC = () => {
       });
 
       if (response.data) {
-        // Filtrar solo las órdenes no canceladas
+        // Filtrar solo las órdenes no canceladas y válidas
         const validOrders = response.data.filter(
-          (order) => order.status !== "cancelado"
+          (order) => order && order.status !== "cancelado"
         );
         setOrders(validOrders);
       }
@@ -97,9 +102,9 @@ const PizarronVentasPage: React.FC = () => {
     onOrderCreated: (newOrder) => {
       console.log("📩 [PizarronVentas] Nueva orden recibida:", newOrder);
 
-      if (newOrder.status !== "cancelado") {
+      if (newOrder && newOrder.status !== "cancelado") {
         setOrders((prevOrders) => {
-          const exists = prevOrders.some((o) => o._id === newOrder._id);
+          const exists = prevOrders.some((o) => o && o._id === newOrder._id);
           if (exists) return prevOrders;
           return [newOrder as Order, ...prevOrders];
         });
@@ -108,16 +113,18 @@ const PizarronVentasPage: React.FC = () => {
     },
     onOrderUpdated: (updatedOrder) => {
       console.log("📝 [PizarronVentas] Orden actualizada:", updatedOrder);
+      if (!updatedOrder) return;
+
       setOrders((prevOrders) =>
         prevOrders.map((o) =>
-          o._id === updatedOrder._id ? updatedOrder as Order : o
+          o && o._id === updatedOrder._id ? updatedOrder as Order : o
         )
       );
     },
     onOrderDeleted: (data: { orderId: string }) => {
       console.log("🗑️ [PizarronVentas] Orden eliminada:", data.orderId);
       setOrders((prevOrders) =>
-        prevOrders.filter((o) => o._id !== data.orderId)
+        prevOrders.filter((o) => o && o._id !== data.orderId)
       );
       toast.info("Una orden ha sido eliminada");
     },
@@ -165,19 +172,28 @@ const PizarronVentasPage: React.FC = () => {
   };
 
   const handleSendToShipping = async (order: Order) => {
-    try {
-      const response = await ordersService.sendToShipping(order._id);
+    // Verificar que haya etapas de Envío configuradas ANTES de enviar
+    if (!shippingStages || shippingStages.length === 0) {
+      toast.warning("Todavía no hay etapas en el pizarrón de envío");
+      return;
+    }
 
-      // Actualizar el estado local con la orden actualizada
-      setOrders(prevOrders =>
-        prevOrders.map(o =>
-          o._id === order._id ? response.data : o
-        )
-      );
+    try {
+      await ordersService.sendToShipping(order._id);
 
       toast.success("Orden enviada al pizarrón de Envío exitosamente");
+
+      // Recargar las órdenes para reflejar el cambio
+      await loadOrders();
     } catch (error: any) {
-      toast.error(error.message || "Error al enviar la orden a Envío");
+      const errorMessage = error.message || "";
+      if (errorMessage.includes("No se encontró una etapa inicial de Envío") ||
+          errorMessage.includes("stageNumber = 1") ||
+          errorMessage.includes("boardType = Envio")) {
+        toast.warning("Todavía no hay etapas en el pizarrón de envío");
+      } else {
+        toast.error(errorMessage || "Error al enviar la orden a Envío");
+      }
       console.error("Error sending order to shipping:", error);
     }
   };
@@ -198,6 +214,9 @@ const PizarronVentasPage: React.FC = () => {
   // Obtener órdenes por stage (solo Producción)
   const getOrdersByStage = (stageId: string): Order[] => {
     return orders.filter((order) => {
+      // Validar que la orden existe
+      if (!order) return false;
+
       // No mostrar órdenes canceladas
       if (order.status === 'cancelado') return false;
 
@@ -242,6 +261,9 @@ const PizarronVentasPage: React.FC = () => {
   const maxProductionStageNumber = productionStages.length > 0
     ? Math.max(...productionStages.map(s => s.stageNumber))
     : 0;
+
+  // Verificar si hay etapas de Envío configuradas
+  const hasShippingStages = shippingStages && shippingStages.length > 0;
 
   return (
     <div className="container-fluid py-1">
@@ -322,6 +344,7 @@ const PizarronVentasPage: React.FC = () => {
                   color={getRGBAColor(column.color)}
                   status={column.id}
                   isLastProductionStage={column.stageNumber === maxProductionStageNumber}
+                  hasShippingStages={hasShippingStages}
                   onViewDetails={handleViewDetails}
                   onChangeStatus={handleChangeStage}
                   onSendToShipping={handleSendToShipping}

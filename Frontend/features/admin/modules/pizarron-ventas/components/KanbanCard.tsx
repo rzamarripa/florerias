@@ -7,6 +7,7 @@ import { Order } from "../types";
 interface KanbanCardProps {
   order: Order;
   isLastProductionStage?: boolean;
+  hasShippingStages?: boolean;
   stageName?: string;
   stageColor?: string;
   onViewDetails?: (order: Order) => void;
@@ -16,6 +17,7 @@ interface KanbanCardProps {
 const KanbanCard: React.FC<KanbanCardProps> = ({
   order,
   isLastProductionStage = false,
+  hasShippingStages = false,
   stageName,
   stageColor,
   onViewDetails,
@@ -177,18 +179,24 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
         {isLastProductionStage && onSendToShipping && (
           <div className="mt-3">
             <Button
-              variant="success"
+              variant={hasShippingStages ? "success" : "secondary"}
               size="sm"
               className="w-100 d-flex align-items-center justify-content-center gap-2"
+              disabled={!hasShippingStages}
               onClick={(e) => {
                 e.stopPropagation(); // Evitar que se abra el modal de detalles
-                onSendToShipping(order);
+                if (hasShippingStages) {
+                  onSendToShipping(order);
+                }
               }}
               style={{
                 fontSize: "0.8rem",
                 fontWeight: "600",
                 borderRadius: "8px",
+                opacity: hasShippingStages ? 1 : 0.6,
+                cursor: hasShippingStages ? "pointer" : "not-allowed",
               }}
+              title={!hasShippingStages ? "No hay etapas de envío configuradas" : "Enviar a Envío"}
             >
               <Send size={16} />
               Enviar a Envío

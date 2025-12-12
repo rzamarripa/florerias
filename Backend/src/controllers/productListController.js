@@ -149,12 +149,6 @@ const createProductList = async (req, res) => {
           });
         }
 
-        // Debug: verificar productCategory del producto original
-        console.log('🔍 Producto original de BD:', {
-          nombre: product.nombre,
-          productCategory: product.productCategory,
-          tipoProductCategory: typeof product.productCategory
-        });
 
         // Embeber el producto completo con insumos convertidos a objetos planos
         const mappedInsumos = product.insumos.map(insumo => {
@@ -508,12 +502,7 @@ const getProductListByBranch = async (req, res) => {
       // Convertir producto a objeto plano
       const productObj = product.toObject();
 
-      // Debug: verificar productCategory
-      console.log('🔍 Product from ProductList:', {
-        nombre: productObj.nombre,
-        productCategory: productObj.productCategory,
-        tipoProductCategory: typeof productObj.productCategory
-      });
+     
 
       // Obtener el producto original para el precio
       return {

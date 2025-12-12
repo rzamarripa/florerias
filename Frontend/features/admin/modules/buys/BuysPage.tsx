@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Form, InputGroup, Spinner, Row, Col } from "react-bootstrap";
+import {
+  Button,
+  Table,
+  Form,
+  InputGroup,
+  Spinner,
+  Row,
+  Col,
+} from "react-bootstrap";
 import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "react-toastify";
 import { buysService } from "./services/buys";
@@ -24,6 +32,7 @@ const BuysPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
+  const [viewMode, setViewMode] = useState<"dia" | "semana" | "mes">("dia");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [userBranches, setUserBranches] = useState<any[]>([]);
   const [pagination, setPagination] = useState({
@@ -67,7 +76,10 @@ const BuysPage: React.FC = () => {
     }
   }, [isAdmin, activeBranch]);
 
-  const loadBuys = async (isInitial: boolean, page: number = pagination.page) => {
+  const loadBuys = async (
+    isInitial: boolean,
+    page: number = pagination.page
+  ) => {
     try {
       if (isInitial) {
         setLoading(true);
@@ -88,9 +100,15 @@ const BuysPage: React.FC = () => {
 
       if (selectedBranch) {
         filters.branchId = selectedBranch;
-        console.log("🔍 [Buys] Filtrando por sucursal selectedBranch:", selectedBranch);
+        console.log(
+          "🔍 [Buys] Filtrando por sucursal selectedBranch:",
+          selectedBranch
+        );
       } else {
-        console.log("🔍 [Buys] Sin filtro de sucursal - selectedBranch:", selectedBranch);
+        console.log(
+          "🔍 [Buys] Sin filtro de sucursal - selectedBranch:",
+          selectedBranch
+        );
       }
 
       console.log("🔍 [Buys] isAdmin:", isAdmin, "activeBranch:", activeBranch);
@@ -104,7 +122,9 @@ const BuysPage: React.FC = () => {
           filteredBuys = response.data.filter(
             (buy) =>
               buy.folio.toString().includes(searchTerm.toLowerCase()) ||
-              buy.concept?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+              buy.concept?.name
+                ?.toLowerCase()
+                .includes(searchTerm.toLowerCase())
           );
         }
         setBuys(filteredBuys);
@@ -146,7 +166,8 @@ const BuysPage: React.FC = () => {
   };
 
   // Opciones para los botones de período
-  const setViewMode = (mode: "dia" | "semana" | "mes") => {
+  const handleViewModeChange = (mode: "dia" | "semana" | "mes") => {
+    setViewMode(mode);
     const today = new Date();
     let start = new Date();
 
@@ -185,21 +206,28 @@ const BuysPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
+      <div
+        className="card border-0 shadow-sm mb-4"
+        style={{ borderRadius: "15px" }}
+      >
         <div className="card-body p-4">
           <Row className="g-3 align-items-end">
             <Col md={3}>
-              <Form.Label className="fw-semibold mb-2">Fecha Inicial *</Form.Label>
+              <Form.Label className="fw-semibold mb-2">
+                Fecha Inicial *
+              </Form.Label>
               <Form.Control
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
+                style={{ borderRadius: "10px," }}
               />
             </Col>
             <Col md={3}>
-              <Form.Label className="fw-semibold mb-2">Fecha Final *</Form.Label>
+              <Form.Label className="fw-semibold mb-2">
+                Fecha Final *
+              </Form.Label>
               <Form.Control
                 type="date"
                 value={endDate}
@@ -207,6 +235,36 @@ const BuysPage: React.FC = () => {
                 className="border-0 bg-light"
                 style={{ borderRadius: "10px" }}
               />
+            </Col>
+            <Col md={4}>
+              <div className="d-flex ">
+                <Button
+                  variant={viewMode === "dia" ? "primary" : "outline-primary"}
+                  size="sm"
+                  onClick={() => handleViewModeChange("dia")}
+                  style={{ borderRadius: "8px", flex: 1 }}
+                >
+                  Día
+                </Button>
+                <Button
+                  variant={
+                    viewMode === "semana" ? "primary" : "outline-primary"
+                  }
+                  size="sm"
+                  onClick={() => handleViewModeChange("semana")}
+                  style={{ borderRadius: "8px", flex: 1 }}
+                >
+                  Semana
+                </Button>
+                <Button
+                  variant={viewMode === "mes" ? "primary" : "outline-primary"}
+                  size="sm"
+                  onClick={() => handleViewModeChange("mes")}
+                  style={{ borderRadius: "8px", flex: 1 }}
+                >
+                  Mes
+                </Button>
+              </div>
             </Col>
             <Col md={2}>
               <Button
@@ -216,34 +274,6 @@ const BuysPage: React.FC = () => {
               >
                 Buscar
               </Button>
-            </Col>
-            <Col md={4}>
-              <div className="d-flex gap-2">
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => setViewMode("dia")}
-                  style={{ borderRadius: "8px", flex: 1 }}
-                >
-                  Día
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => setViewMode("semana")}
-                  style={{ borderRadius: "8px", flex: 1 }}
-                >
-                  Semana
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => setViewMode("mes")}
-                  style={{ borderRadius: "8px", flex: 1 }}
-                >
-                  Mes
-                </Button>
-              </div>
             </Col>
           </Row>
 
@@ -283,11 +313,21 @@ const BuysPage: React.FC = () => {
                     <th className="px-4 py-3 fw-semibold text-muted">No.</th>
                     <th className="px-4 py-3 fw-semibold text-muted">ACCIÓN</th>
                     <th className="px-4 py-3 fw-semibold text-muted">FECHA</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">SUCURSAL</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">FORMA PAGO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">CONCEPTO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">DESCRIPCIÓN</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-end">IMPORTE</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      SUCURSAL
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      FORMA PAGO
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      CONCEPTO
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      DESCRIPCIÓN
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted text-end">
+                      IMPORTE
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -299,7 +339,10 @@ const BuysPage: React.FC = () => {
                     </tr>
                   ) : (
                     buys.map((buy, index) => (
-                      <tr key={buy._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
+                      <tr
+                        key={buy._id}
+                        style={{ borderBottom: "1px solid #f1f3f5" }}
+                      >
                         <td className="px-4 py-3">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </td>
@@ -307,7 +350,9 @@ const BuysPage: React.FC = () => {
                           <BuyActions buy={buy} onBuySaved={handleBuySaved} />
                         </td>
                         <td className="px-4 py-3">
-                          {new Date(buy.paymentDate).toLocaleDateString("es-MX")}
+                          {new Date(buy.paymentDate).toLocaleDateString(
+                            "es-MX"
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {buy.branch?.branchName || "N/A"}
@@ -315,10 +360,13 @@ const BuysPage: React.FC = () => {
                         <td className="px-4 py-3">
                           {buy.paymentMethod?.name || "N/A"}
                         </td>
-                        <td className="px-4 py-3 fw-semibold">{buy.concept?.name || "N/A"}</td>
+                        <td className="px-4 py-3 fw-semibold">
+                          {buy.concept?.name || "N/A"}
+                        </td>
                         <td className="px-4 py-3">{buy.description || "-"}</td>
                         <td className="px-4 py-3 text-end fw-semibold">
-                          ${buy.amount.toLocaleString("es-MX", {
+                          $
+                          {buy.amount.toLocaleString("es-MX", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
@@ -336,8 +384,8 @@ const BuysPage: React.FC = () => {
             <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
-                {pagination.total} compras
+                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                de {pagination.total} compras
               </p>
               <div className="d-flex gap-2">
                 <Button

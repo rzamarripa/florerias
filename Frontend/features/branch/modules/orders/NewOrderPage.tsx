@@ -145,7 +145,6 @@ const NewOrderPage = () => {
     change: 0,
     remainingBalance: 0,
     sendToProduction: false,
-    orderDate: new Date().toISOString().slice(0, 16), // Fecha y hora actual por defecto
     isSocialMediaOrder: false,
     socialMedia: null,
   });
@@ -691,9 +690,17 @@ const NewOrderPage = () => {
 
   // Agregar extras (materiales) a un item específico
   const handleAddExtras = async (
-    extras: { materialId: string; name: string; price: number; quantity: number }[]
+    extras: {
+      materialId: string;
+      name: string;
+      price: number;
+      quantity: number;
+    }[]
   ) => {
-    if (selectedItemIndexForExtras < 0 || selectedItemIndexForExtras >= formData.items.length) {
+    if (
+      selectedItemIndexForExtras < 0 ||
+      selectedItemIndexForExtras >= formData.items.length
+    ) {
       toast.error("Item no válido");
       return;
     }
@@ -707,7 +714,9 @@ const NewOrderPage = () => {
       // Reducir el stock de los materiales en el almacén
       for (const extra of extras) {
         await storageService.removeMaterialsFromStorage(storage._id, {
-          materials: [{ materialId: extra.materialId, quantity: extra.quantity }],
+          materials: [
+            { materialId: extra.materialId, quantity: extra.quantity },
+          ],
         });
       }
 
@@ -734,7 +743,8 @@ const NewOrderPage = () => {
         (sum, insumo) => sum + (insumo.isExtra ? insumo.importeVenta : 0),
         0
       );
-      currentItem.amount = currentItem.unitPrice * currentItem.quantity + insumosTotal;
+      currentItem.amount =
+        currentItem.unitPrice * currentItem.quantity + insumosTotal;
 
       // Actualizar el formData con los items actualizados
       updatedItems[selectedItemIndexForExtras] = currentItem;
@@ -1313,7 +1323,6 @@ const NewOrderPage = () => {
           change: 0,
           remainingBalance: 0,
           sendToProduction: false,
-          orderDate: new Date().toISOString().slice(0, 16), // Resetear a fecha y hora actual
           isSocialMediaOrder: isSocialMedia,
           socialMedia: isSocialMedia ? "whatsapp" : null,
         });
@@ -1949,7 +1958,11 @@ const NewOrderPage = () => {
                                     size="sm"
                                     onClick={() => handleOpenExtrasModal(index)}
                                     title="Agregar extras"
-                                    disabled={!storage || !storage.materials || storage.materials.length === 0}
+                                    disabled={
+                                      !storage ||
+                                      !storage.materials ||
+                                      storage.materials.length === 0
+                                    }
                                   >
                                     <Plus size={16} />
                                   </Button>
@@ -2334,27 +2347,6 @@ const NewOrderPage = () => {
               </Card.Header>
               <Card.Body>
                 <Row className="g-3">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <Calendar size={16} className="me-2" />
-                        Fecha y Hora de Orden
-                      </Form.Label>
-                      <Form.Control
-                        type="datetime-local"
-                        value={formData.orderDate}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            orderDate: e.target.value,
-                          })
-                        }
-                        required
-                        className="py-2"
-                      />
-                    </Form.Group>
-                  </Col>
-
                   <Col md={12}>
                     <Form.Label className="fw-semibold">
                       Método de Pago
@@ -2464,13 +2456,13 @@ const NewOrderPage = () => {
                                 : "Solicitar Autorización"}
                             </Button>
                             <Button
-                              variant="outline-danger"
+                              variant="danger"
                               onClick={() => {
                                 handleDiscountChange(0, "porcentaje");
                                 setHasPendingDiscountAuth(false);
                                 setDiscountRequestMessage("");
                               }}
-                              className="d-flex align-items-center gap-2"
+                              className="d-flex align-items-center gap-2 mt-1"
                               style={{ whiteSpace: "nowrap" }}
                               title="Cancelar descuento"
                             >

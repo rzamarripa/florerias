@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Table, Row, Col, Spinner, Alert } from "react-bootstrap";
+import {
+  Modal,
+  Button,
+  Form,
+  Table,
+  Row,
+  Col,
+  Spinner,
+  Alert,
+} from "react-bootstrap";
 import { X, Save, UserPlus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { Branch } from "../types";
@@ -62,7 +71,8 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Verificar si el usuario tiene permisos (Gerente o Administrador)
-  const hasPermission = user?.role?.name === "Gerente" || user?.role?.name === "Administrador";
+  const hasPermission =
+    user?.role?.name === "Gerente" || user?.role?.name === "Administrador";
 
   useEffect(() => {
     if (show) {
@@ -76,7 +86,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const response = await apiCall<{ success: boolean; data: Role[] }>("/roles?estatus=true");
+      const response = await apiCall<{ success: boolean; data: Role[] }>(
+        "/roles?estatus=true"
+      );
 
       // Filtrar solo roles de empleados (excluir Super Admin, Administrador, Distribuidor)
       const employeeRoles = (response.data || []).filter(
@@ -241,7 +253,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
         return;
       }
 
-      toast.success(`${employeesList.length} empleado(s) agregado(s) exitosamente`);
+      toast.success(
+        `${employeesList.length} empleado(s) agregado(s) exitosamente`
+      );
       onEmployeesUpdated?.();
       onHide();
     } catch (err: any) {
@@ -280,7 +294,8 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
             <div>
               <strong>Permisos insuficientes</strong>
               <p className="mb-0">
-                Solo los usuarios con rol <strong>Gerente</strong> o <strong>Administrador</strong> pueden agregar empleados.
+                Solo los usuarios con rol <strong>Gerente</strong> o{" "}
+                <strong>Administrador</strong> pueden agregar empleados.
               </p>
             </div>
           </Alert>
@@ -293,7 +308,10 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
         ) : (
           <>
             {/* Formulario para agregar un empleado */}
-            <div className="border rounded p-3 mb-4" style={{ backgroundColor: "#f8f9fa" }}>
+            <div
+              className="border rounded p-3 mb-4"
+              style={{ backgroundColor: "#f8f9fa" }}
+            >
               <h6 className="fw-semibold mb-3">Agregar Nuevo Empleado</h6>
               <Row className="g-3">
                 <Col md={4}>
@@ -305,7 +323,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
                       type="text"
                       placeholder="Nombre de usuario"
                       value={formData.username}
-                      onChange={(e) => handleInputChange("username", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("username", e.target.value)
+                      }
                       disabled={!hasPermission}
                     />
                   </Form.Group>
@@ -319,7 +339,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
                       type="email"
                       placeholder="Email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
                       disabled={!hasPermission}
                     />
                   </Form.Group>
@@ -333,7 +355,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
                       type="tel"
                       placeholder="Teléfono"
                       value={formData.phone}
-                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
                       disabled={!hasPermission}
                     />
                   </Form.Group>
@@ -347,7 +371,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
                       type="text"
                       placeholder="Nombre"
                       value={formData.profile.name}
-                      onChange={(e) => handleInputChange("profile.name", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("profile.name", e.target.value)
+                      }
                       disabled={!hasPermission}
                     />
                   </Form.Group>
@@ -361,7 +387,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
                       type="text"
                       placeholder="Apellido"
                       value={formData.profile.lastName}
-                      onChange={(e) => handleInputChange("profile.lastName", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("profile.lastName", e.target.value)
+                      }
                       disabled={!hasPermission}
                     />
                   </Form.Group>
@@ -375,7 +403,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
                       type="password"
                       placeholder="Contraseña"
                       value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("password", e.target.value)
+                      }
                       disabled={!hasPermission}
                     />
                   </Form.Group>
@@ -387,7 +417,9 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
                     </Form.Label>
                     <Form.Select
                       value={formData.role}
-                      onChange={(e) => handleInputChange("role", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("role", e.target.value)
+                      }
                       disabled={!hasPermission}
                     >
                       <option value="">-- Seleccione un rol --</option>
@@ -420,7 +452,8 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
               </h6>
               {employeesList.length === 0 ? (
                 <Alert variant="info">
-                  No hay empleados en la lista. Completa el formulario superior y haz clic en "Agregar a la Lista".
+                  No hay empleados en la lista. Completa el formulario superior
+                  y haz clic en "Agregar a la Lista".
                 </Alert>
               ) : (
                 <div className="table-responsive">
@@ -478,7 +511,7 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
           Cancelar
         </Button>
         <Button
-          variant="success"
+          variant="primary"
           onClick={handleSave}
           disabled={saving || !hasPermission || employeesList.length === 0}
           className="d-flex align-items-center gap-2"

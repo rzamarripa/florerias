@@ -615,12 +615,9 @@ const SalesPage: React.FC = () => {
               disabled={exporting}
               className="d-flex align-items-center gap-2"
               style={{
-                background: "linear-gradient(135deg, #28a745 0%, #20c997 100%)",
                 border: "none",
-                borderRadius: "8px",
                 padding: "8px 16px",
                 fontWeight: "600",
-                boxShadow: "0 2px 8px rgba(40, 167, 69, 0.3)",
               }}
             >
               <Download size={16} />

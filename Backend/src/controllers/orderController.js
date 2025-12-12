@@ -174,20 +174,20 @@ const getAllOrders = async (req, res) => {
 
     // Filtros de fecha
     if (startDate || endDate) {
-      filters.orderDate = {};
+      filters.createdAt = {};
 
       if (startDate) {
         // Inicio del día (00:00:00)
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        filters.orderDate.$gte = start;
+        filters.createdAt.$gte = start;
       }
 
       if (endDate) {
         // Fin del día (23:59:59)
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        filters.orderDate.$lte = end;
+        filters.createdAt.$lte = end;
       }
     }
 
@@ -308,8 +308,7 @@ const createOrder = async (req, res) => {
       paidWith,
       change,
       remainingBalance,
-      sendToProduction,
-      orderDate
+      sendToProduction
     } = req.body;
 
     // Validar campos requeridos
@@ -603,7 +602,6 @@ const createOrder = async (req, res) => {
       sendToProduction: shouldSendToProduction,
       status: orderStatus, // Asignar el status determinado ('pendiente' o 'sinAnticipo')
       stage: stageId, // Asignar la etapa (puede ser null)
-      orderDate: orderDate || new Date(),
       isSocialMediaOrder: isSocialMediaOrder || false,
       socialMedia: socialMedia || null,
       materials: materials // Agregar los materiales extras
@@ -623,8 +621,7 @@ const createOrder = async (req, res) => {
         cashRegisterId: cashRegisterId,
         date: new Date(),
         registeredBy: req.user?._id || null,
-        notes: 'Pago inicial al crear la orden',
-        orderDate: orderDate || new Date()
+        notes: 'Pago inicial al crear la orden'
       });
 
       const savedPayment = await orderPayment.save();
@@ -1323,18 +1320,18 @@ const getOrdersSummary = async (req, res) => {
 
     // Filtros de fecha
     if (startDate || endDate) {
-      filters.orderDate = {};
+      filters.createdAt = {};
 
       if (startDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        filters.orderDate.$gte = start;
+        filters.createdAt.$gte = start;
       }
 
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        filters.orderDate.$lte = end;
+        filters.createdAt.$lte = end;
       }
     }
 
@@ -1734,18 +1731,18 @@ const getUnauthorizedOrders = async (req, res) => {
 
     // Filtros de fecha
     if (startDate || endDate) {
-      filters.orderDate = {};
+      filters.createdAt = {};
 
       if (startDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        filters.orderDate.$gte = start;
+        filters.createdAt.$gte = start;
       }
 
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        filters.orderDate.$lte = end;
+        filters.createdAt.$lte = end;
       }
     }
 
