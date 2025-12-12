@@ -21,6 +21,11 @@ const neighborhoodSchema = new Schema(
       default: "active",
       required: [true, "El estatus es requerido"],
     },
+    company: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_company",
+      required: false,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -44,6 +49,7 @@ neighborhoodSchema.pre("save", function (next) {
 // Índices para búsquedas rápidas
 neighborhoodSchema.index({ name: 1 });
 neighborhoodSchema.index({ status: 1 });
+neighborhoodSchema.index({ company: 1 });
 neighborhoodSchema.index({ createdAt: -1 });
 
 const Neighborhood = mongoose.model("cv_neighborhood", neighborhoodSchema);

@@ -177,18 +177,17 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
     const backgroundColor = `rgba(${stage.color.r}, ${stage.color.g}, ${stage.color.b}, ${stage.color.a})`;
 
     return (
-      <span
+      <Badge
         style={{
           padding: "6px 12px",
           borderRadius: "20px",
           fontWeight: "500",
           backgroundColor: backgroundColor,
           color: "#fff",
-          display: "inline-block",
         }}
       >
         {stage.name}
-      </span>
+      </Badge>
     );
   };
 
@@ -197,6 +196,15 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
     });
   };
 
@@ -258,15 +266,29 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
                     {sale.clientInfo?.name || "N/A"}
                   </td>
                   <td className="px-4 py-3">
-                    {sale.deliveryData?.deliveryDateTime
-                      ? formatDate(sale.deliveryData.deliveryDateTime)
-                      : "N/A"}
+                    {sale.deliveryData?.deliveryDateTime ? (
+                      <div>
+                        <div>{formatDate(sale.deliveryData.deliveryDateTime)}</div>
+                        <div className="text-muted" style={{ fontSize: "0.85em" }}>
+                          {formatTime(sale.deliveryData.deliveryDateTime)}
+                        </div>
+                      </div>
+                    ) : (
+                      "N/A"
+                    )}
                   </td>
                   <td className="px-4 py-3">{getStageBadge(sale.stage)}</td>
                   <td className="px-4 py-3">
                     {getPaymentStatusBadge(sale)}
                   </td>
-                  <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <div>{formatDate(sale.createdAt)}</div>
+                      <div className="text-muted" style={{ fontSize: "0.85em" }}>
+                        {formatTime(sale.createdAt)}
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 fw-semibold text-success">
                     ${(sale.advance || 0).toFixed(2)}
                   </td>

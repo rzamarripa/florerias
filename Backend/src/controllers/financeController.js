@@ -138,92 +138,220 @@ export const getFinanceStats = async (req, res) => {
  */
 export const getIncomeStats = async (req, res) => {
   try {
-    const { startDate, endDate, clientIds, paymentMethods } = req.query;
+    const { branchId, startDate, endDate, clientIds, paymentMethods, cashierId } = req.query;
+    const userId = req.user?._id;
 
-    // Construir filtro de fechas
-    const dateFilter = {};
-    if (startDate) {
-      dateFilter.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      const endDateObj = new Date(endDate);
-      endDateObj.setHours(23, 59, 59, 999);
-      dateFilter.$lte = endDateObj;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
     }
 
-    // Filtro de clientes (si se proporciona)
-    let clientFilter = {};
+    // Obtener el usuario con su rol y empresa
+    const User = (await import('../models/User.js')).User;
+    const Branch = (await import('../models/Branch.js')).Branch;
+    const Company = (await import('../models/Company.js')).Company;
+    const PaymentMethod = (await import('../models/PaymentMethod.js')).default;
+    const OrderPayment = (await import('../models/OrderPayment.js')).default;
+
+    const user = await User.findById(userId).populate('role');
+    if (!user || !user.role) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuario no tiene rol asignado'
+      });
+    }
+
+    const userRole = user.role.name;
+    let companyId = null;
+    let branchIdsToSearch = [];
+
+    // Determinar la empresa y sucursales según el rol
+    if (branchId) {
+      branchIdsToSearch = [branchId];
+      // Obtener la empresa de la sucursal
+      const branch = await Branch.findById(branchId);
+      if (branch) {
+        const company = await Company.findOne({ branches: branch._id });
+        if (company) {
+          companyId = company._id;
+        }
+      }
+    } else {
+      if (userRole === 'Administrador') {
+        const company = await Company.findOne({ administrator: userId });
+        if (!company) {
+          return res.status(404).json({
+            success: false,
+            message: 'No se encontró empresa asociada al administrador'
+          });
+        }
+        companyId = company._id;
+
+        const branches = await Branch.find({
+          companyId: company._id,
+          isActive: true
+        }).select('_id');
+        branchIdsToSearch = branches.map(b => b._id);
+      } else if (userRole === 'Gerente') {
+        const branch = await Branch.findOne({
+          manager: userId,
+          isActive: true
+        });
+        if (!branch) {
+          return res.status(404).json({
+            success: false,
+            message: 'No se encontró sucursal asociada al gerente'
+          });
+        }
+        branchIdsToSearch = [branch._id];
+
+        const company = await Company.findOne({ branches: branch._id });
+        if (company) {
+          companyId = company._id;
+        }
+      } else if (userRole === 'Cajero') {
+        const branch = await Branch.findOne({
+          employees: userId,
+          isActive: true
+        });
+        if (!branch) {
+          return res.status(404).json({
+            success: false,
+            message: 'No se encontró sucursal asociada al cajero'
+          });
+        }
+        branchIdsToSearch = [branch._id];
+
+        const company = await Company.findOne({ branches: branch._id });
+        if (company) {
+          companyId = company._id;
+        }
+      }
+    }
+
+    if (branchIdsToSearch.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Obtener los métodos de pago de la empresa
+    const companyPaymentMethods = await PaymentMethod.find({
+      company: companyId,
+      status: true
+    }).select('_id name abbreviation');
+
+    if (companyPaymentMethods.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Convertir branchIds a ObjectId
+    const branchObjectIds = branchIdsToSearch.map(id =>
+      typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id
+    );
+
+    // Construir query para órdenes
+    const orderQuery = {};
+    if (branchObjectIds.length === 1) {
+      orderQuery.branchId = branchObjectIds[0];
+    } else {
+      orderQuery.branchId = { $in: branchObjectIds };
+    }
+
+    // Filtrar por clientes si se especifica
     if (clientIds && Array.isArray(clientIds) && clientIds.length > 0) {
-      clientFilter = { $in: clientIds.map(id => new mongoose.Types.ObjectId(id)) };
+      orderQuery['clientInfo.clientId'] = { $in: clientIds.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
-    // Filtro de métodos de pago (si se proporciona)
-    let paymentMethodFilter = {};
-    if (paymentMethods && Array.isArray(paymentMethods) && paymentMethods.length > 0) {
-      paymentMethodFilter = { $in: paymentMethods.map(id => new mongoose.Types.ObjectId(id)) };
+    // Filtrar por cajero si se especifica
+    if (cashierId) {
+      orderQuery.cashier = new mongoose.Types.ObjectId(cashierId);
     }
 
-    // Construir match para órdenes
-    const orderMatch = {
-      orderDate: dateFilter,
+    // Para usuarios con rol "Cajero", agregar filtros específicos
+    if (userRole === 'Cajero') {
+      orderQuery.cashier = userId;
+      orderQuery.isSocialMediaOrder = false;
+    }
+
+    // Obtener las órdenes que coincidan
+    const orders = await Order.find(orderQuery).select('_id');
+    const orderIds = orders.map(order => order._id);
+
+    if (orderIds.length === 0) {
+      // Si no hay órdenes, retornar métodos de pago con total 0
+      const stats = companyPaymentMethods.map(method => ({
+        paymentMethodId: method._id,
+        paymentMethodName: method.name,
+        abbreviation: method.abbreviation,
+        total: 0
+      }));
+
+      return res.status(200).json({
+        success: true,
+        data: stats
+      });
+    }
+
+    // Construir query para pagos
+    const paymentQuery = {
+      orderId: { $in: orderIds }
     };
 
-    if (Object.keys(clientFilter).length > 0) {
-      orderMatch['clientInfo.clientId'] = clientFilter;
+    // Filtrar por fechas
+    if (startDate || endDate) {
+      paymentQuery.date = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        paymentQuery.date.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        paymentQuery.date.$lte = end;
+      }
     }
 
-    if (Object.keys(paymentMethodFilter).length > 0) {
-      orderMatch.paymentMethod = paymentMethodFilter;
+    // Filtrar por métodos de pago si se especifica
+    if (paymentMethods && Array.isArray(paymentMethods) && paymentMethods.length > 0) {
+      paymentQuery.paymentMethod = { $in: paymentMethods.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
-    // Obtener órdenes agrupadas por método de pago
-    const incomeByPaymentMethod = await Order.aggregate([
-      { $match: orderMatch },
-      {
-        $lookup: {
-          from: "paymentmethods",
-          localField: "paymentMethod",
-          foreignField: "_id",
-          as: "paymentMethodInfo",
-        },
-      },
-      { $unwind: "$paymentMethodInfo" },
+    // Obtener pagos agrupados por método de pago
+    const paymentsByMethod = await OrderPayment.aggregate([
+      { $match: paymentQuery },
       {
         $group: {
-          _id: "$paymentMethodInfo.name",
-          total: { $sum: "$total" },
-        },
-      },
+          _id: '$paymentMethod',
+          total: { $sum: '$amount' }
+        }
+      }
     ]);
 
-    // Crear objeto con los totales por método de pago
-    const stats = {
-      transferencia: 0,
-      efectivo: 0,
-      tarjeta: 0,
-      deposito: 0,
-    };
-
-    // Mapear los resultados a las categorías
-    incomeByPaymentMethod.forEach((item) => {
-      const methodName = item._id.toLowerCase();
-
-      if (methodName.includes("transferencia")) {
-        stats.transferencia += item.total;
-      } else if (methodName.includes("efectivo")) {
-        stats.efectivo += item.total;
-      } else if (methodName.includes("tarjeta")) {
-        stats.tarjeta += item.total;
-      } else if (methodName.includes("deposito") || methodName.includes("depósito")) {
-        stats.deposito += item.total;
-      } else if (methodName.includes("cheque")) {
-        stats.deposito += item.total;
-      }
+    // Crear un mapa de totales por método de pago
+    const totalsMap = {};
+    paymentsByMethod.forEach(item => {
+      totalsMap[item._id.toString()] = item.total;
     });
+
+    // Crear array de estadísticas con todos los métodos de pago de la empresa
+    const stats = companyPaymentMethods.map(method => ({
+      paymentMethodId: method._id,
+      paymentMethodName: method.name,
+      abbreviation: method.abbreviation,
+      total: totalsMap[method._id.toString()] || 0
+    }));
 
     res.status(200).json({
       success: true,
-      data: stats,
+      data: stats
     });
   } catch (error) {
     console.error("Error al obtener estadísticas de ingresos:", error);

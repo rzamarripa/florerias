@@ -250,11 +250,6 @@ const orderSchema = new mongoose.Schema({
     type: String,
     unique: true
   },
-  orderDate: {
-    type: Date,
-    required: true,
-    default: Date.now
-  },
   isSocialMediaOrder: {
     type: Boolean,
     default: false
@@ -302,7 +297,6 @@ orderSchema.index({ 'clientInfo.phone': 1 });
 orderSchema.index({ salesChannel: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
-orderSchema.index({ orderDate: -1 });
 orderSchema.index({ isSocialMediaOrder: 1 });
 orderSchema.index({ socialMedia: 1 });
 

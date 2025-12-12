@@ -11,6 +11,7 @@ interface KanbanColumnProps {
   color: string;
   status: string;
   isLastProductionStage?: boolean;
+  hasShippingStages?: boolean;
   onViewDetails?: (order: Order) => void;
   onChangeStatus?: (order: Order, newStatus: string) => void;
   onSendToShipping?: (order: Order) => void;
@@ -23,6 +24,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   color,
   status,
   isLastProductionStage = false,
+  hasShippingStages = false,
   onViewDetails,
   onChangeStatus,
   onSendToShipping,
@@ -31,12 +33,18 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: "ORDER_CARD",
     drop: (item: { order: Order }) => {
+      // Validar que la orden existe
+      if (!item?.order) return;
+
       // Solo actualizar si el estado es diferente
       if (item.order.status !== status) {
         onChangeStatus?.(item.order, status);
       }
     },
     canDrop: (item: { order: Order }) => {
+      // Validar que la orden existe
+      if (!item?.order) return false;
+
       // No permitir drop si el orden viene de "completado"
       return item.order.status !== "completado" && item.order.status !== status;
     },
@@ -122,6 +130,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               order={order}
               onViewDetails={onViewDetails}
               isLastProductionStage={isLastProductionStage}
+              hasShippingStages={hasShippingStages}
               onSendToShipping={onSendToShipping}
               stageName={title}
               stageColor={color}

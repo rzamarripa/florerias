@@ -37,7 +37,9 @@ export const createExpenseConcept = async (req, res) => {
       });
     }
 
-    // Verificar permisos según el rol
+    // Obtener el company ID según el rol del usuario
+    let companyId = null;
+
     if (userRole === "Administrador") {
       // Verificar que la sucursal le pertenece
       if (branchExists.administrator.toString() !== req.user._id.toString()) {
@@ -46,6 +48,20 @@ export const createExpenseConcept = async (req, res) => {
           message: "No tienes permisos para crear conceptos en esta sucursal",
         });
       }
+
+      // Buscar la empresa por el campo administrator
+      const company = await Company.findOne({
+        administrator: req.user._id,
+      });
+
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró la empresa asociada al administrador",
+        });
+      }
+
+      companyId = company._id;
     } else if (userRole === "Gerente") {
       // Verificar que es el gerente de la sucursal
       if (branchExists.manager.toString() !== req.user._id.toString()) {
@@ -54,7 +70,35 @@ export const createExpenseConcept = async (req, res) => {
           message: "No tienes permisos para crear conceptos en esta sucursal",
         });
       }
-    } else if (userRole !== "Super Admin") {
+
+      // Buscar la empresa por el ID de la sucursal
+      const company = await Company.findOne({
+        branches: branchExists._id,
+      });
+
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró la empresa asociada a la sucursal",
+        });
+      }
+
+      companyId = company._id;
+    } else if (userRole === "Super Admin") {
+      // Super Admin: buscar la empresa por el ID de la sucursal
+      const company = await Company.findOne({
+        branches: branchExists._id,
+      });
+
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró la empresa asociada a la sucursal",
+        });
+      }
+
+      companyId = company._id;
+    } else {
       // Otros roles no tienen permiso
       return res.status(403).json({
         success: false,
@@ -67,10 +111,12 @@ export const createExpenseConcept = async (req, res) => {
       description,
       department,
       branch,
+      company: companyId,
     });
 
-    // Popular la sucursal para la respuesta
+    // Popular la sucursal y la empresa para la respuesta
     await expenseConcept.populate("branch", "branchName branchCode");
+    await expenseConcept.populate("company", "companyName");
 
     res.status(201).json({
       success: true,
@@ -182,6 +228,7 @@ export const getAllExpenseConcepts = async (req, res) => {
 
     const expenseConcepts = await ExpenseConcept.find(filters)
       .populate("branch", "branchName branchCode")
+      .populate("company", "companyName")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -232,7 +279,9 @@ export const getExpenseConceptById = async (req, res) => {
 
     const expenseConcept = await ExpenseConcept.findById(
       req.params.id
-    ).populate("branch", "branchName branchCode");
+    )
+      .populate("branch", "branchName branchCode")
+      .populate("company", "companyName");
 
     if (!expenseConcept) {
       return res.status(404).json({
@@ -366,7 +415,9 @@ export const updateExpenseConcept = async (req, res) => {
         new: true,
         runValidators: true,
       }
-    ).populate("branch", "branchName branchCode");
+    )
+      .populate("branch", "branchName branchCode")
+      .populate("company", "companyName");
 
     res.status(200).json({
       success: true,
@@ -446,7 +497,9 @@ export const deactivateExpenseConcept = async (req, res) => {
       req.params.id,
       { isActive: false },
       { new: true }
-    ).populate("branch", "branchName branchCode");
+    )
+      .populate("branch", "branchName branchCode")
+      .populate("company", "companyName");
 
     res.status(200).json({
       success: true,
@@ -526,7 +579,9 @@ export const activateExpenseConcept = async (req, res) => {
       req.params.id,
       { isActive: true },
       { new: true }
-    ).populate("branch", "branchName branchCode");
+    )
+      .populate("branch", "branchName branchCode")
+      .populate("company", "companyName");
 
     res.status(200).json({
       success: true,

@@ -8,6 +8,10 @@ export interface ExpenseConcept {
     branchName: string;
     branchCode?: string;
   };
+  company?: {
+    _id: string;
+    companyName: string;
+  };
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

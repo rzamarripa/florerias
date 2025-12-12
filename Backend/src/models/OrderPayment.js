@@ -36,11 +36,6 @@ const orderPaymentSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
-  },
-  orderDate: {
-    type: Date,
-    required: false,
-    default: null
   }
 }, {
   timestamps: true,

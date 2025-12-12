@@ -8,6 +8,7 @@ import PaymentModal from "./PaymentModal";
 import SaleDetailModal from "./SaleDetailModal";
 import CancelSaleConfirmDialog from "./CancelSaleConfirmDialog";
 import RedeemFolioConfirmDialog from "./RedeemFolioConfirmDialog";
+import EditSaleModal from "./EditSaleModal";
 import { reprintSaleTicket } from "../utils/reprintSaleTicket";
 import { salesService } from "../services/sales";
 import { toast } from "react-toastify";
@@ -28,6 +29,7 @@ const SaleActions: React.FC<SaleActionsProps> = ({
 }) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showRedeemDialog, setShowRedeemDialog] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
@@ -51,6 +53,14 @@ const SaleActions: React.FC<SaleActionsProps> = ({
 
   const handleCloseDetailModal = () => {
     setShowDetailModal(false);
+  };
+
+  const handleOpenEditModal = () => {
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
   };
 
   const handleReprintTicket = async () => {
@@ -133,7 +143,7 @@ const SaleActions: React.FC<SaleActionsProps> = ({
 
           <Dropdown.Divider />
 
-          <Dropdown.Item>
+          <Dropdown.Item onClick={handleOpenEditModal}>
             <Edit size={16} className="me-2" />
             Editar
           </Dropdown.Item>
@@ -158,6 +168,14 @@ const SaleActions: React.FC<SaleActionsProps> = ({
         show={showDetailModal}
         onHide={handleCloseDetailModal}
         sale={sale}
+      />
+
+      {/* Edit Sale Modal */}
+      <EditSaleModal
+        show={showEditModal}
+        onHide={handleCloseEditModal}
+        sale={sale}
+        onSaleUpdated={onSaleUpdated}
       />
 
       {/* Cancel Sale Confirm Dialog */}

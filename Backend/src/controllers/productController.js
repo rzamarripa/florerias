@@ -1,4 +1,7 @@
 import Product from '../models/Product.js';
+import { User } from '../models/User.js';
+import { Branch } from '../models/Branch.js';
+import { Company } from '../models/Company.js';
 
 // Obtener todos los productos con filtros y paginación
 const getAllProducts = async (req, res) => {
@@ -11,8 +14,94 @@ const getAllProducts = async (req, res) => {
       estatus
     } = req.query;
 
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(userId).populate('role');
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuario sin rol asignado'
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
     // Construir filtros
     const filters = {};
+
+    // Filtrar por empresa según el rol del usuario
+    if (userRole === 'Administrador') {
+      // Buscar la empresa del administrador
+      const company = await Company.findOne({
+        administrator: userId,
+      });
+
+      if (company) {
+        filters.company = company._id;
+      } else {
+        // Si no tiene empresa, no retornar ningún producto
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    } else if (userRole === 'Gerente') {
+      // Buscar la sucursal del gerente
+      const managerBranch = await Branch.findOne({
+        manager: userId,
+      });
+
+      if (managerBranch) {
+        // Buscar la empresa por el ID de la sucursal
+        const company = await Company.findOne({
+          branches: managerBranch._id,
+        });
+
+        if (company) {
+          filters.company = company._id;
+        } else {
+          // Si no tiene empresa, no retornar ningún producto
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
+      } else {
+        // Si no tiene sucursal, no retornar ningún producto
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    }
+    // Super Admin puede ver todos los productos (no se agrega filtro de company)
 
     if (nombre) {
       filters.nombre = { $regex: nombre, $options: 'i' };
@@ -32,6 +121,7 @@ const getAllProducts = async (req, res) => {
     // Obtener productos con paginación
     const products = await Product.find(filters)
       .populate('productCategory', 'name description')
+      .populate('company', 'legalName tradeName')
       .sort({ orden: 1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -65,7 +155,9 @@ const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await Product.findById(id).populate('productCategory', 'name description');
+    const product = await Product.findById(id)
+      .populate('productCategory', 'name description')
+      .populate('company', 'legalName tradeName');
 
     if (!product) {
       return res.status(404).json({
@@ -104,12 +196,59 @@ const createProduct = async (req, res) => {
       estatus = true
     } = req.body;
 
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
     // Validar campos requeridos
     if (!nombre || !unidad) {
       return res.status(400).json({
         success: false,
         message: 'El nombre y la unidad son obligatorios'
       });
+    }
+
+    // Obtener el company ID según el rol del usuario
+    let companyId = null;
+
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(userId).populate('role');
+
+    if (currentUser && currentUser.role) {
+      const userRole = currentUser.role.name;
+
+      if (userRole === 'Administrador') {
+        // Buscar la empresa por el campo administrator
+        const company = await Company.findOne({
+          administrator: userId,
+        });
+
+        if (company) {
+          companyId = company._id;
+        }
+      } else if (userRole === 'Gerente') {
+        // Buscar la sucursal del gerente
+        const managerBranch = await Branch.findOne({
+          manager: userId,
+        });
+
+        if (managerBranch) {
+          // Buscar la empresa por el ID de la sucursal
+          const company = await Company.findOne({
+            branches: managerBranch._id,
+          });
+
+          if (company) {
+            companyId = company._id;
+          }
+        }
+      }
+      // Super Admin: companyId queda como null
     }
 
     // Calcular totalCosto sumando los importeCosto de los insumos + mano de obra
@@ -128,10 +267,14 @@ const createProduct = async (req, res) => {
       labour: labour || 0,
       totalCosto,
       totalVenta: precioVentaFinal || 0,
-      estatus
+      estatus,
+      company: companyId,
     });
 
     const savedProduct = await newProduct.save();
+
+    // Popular la empresa para la respuesta
+    await savedProduct.populate('company', 'legalName tradeName');
 
     res.status(201).json({
       success: true,
@@ -210,7 +353,7 @@ const updateProduct = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    );
+    ).populate('company', 'legalName tradeName');
 
     res.status(200).json({
       success: true,
@@ -273,7 +416,7 @@ const activateProduct = async (req, res) => {
       id,
       { estatus: true },
       { new: true, runValidators: true }
-    );
+    ).populate('company', 'legalName tradeName');
 
     if (!product) {
       return res.status(404).json({
@@ -306,7 +449,7 @@ const deactivateProduct = async (req, res) => {
       id,
       { estatus: false },
       { new: true, runValidators: true }
-    );
+    ).populate('company', 'legalName tradeName');
 
     if (!product) {
       return res.status(404).json({

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Row, Col, Card, Spinner } from "react-bootstrap";
-import { CreditCard, DollarSign, Wallet, Building2 } from "lucide-react";
+import { CreditCard, DollarSign, Wallet, Building2, Banknote } from "lucide-react";
 import { financeService } from "../services/finance";
 import { FinanceFilters, IncomeStats as IncomeStatsType } from "../types";
 import { toast } from "react-toastify";
@@ -12,7 +12,7 @@ interface IncomeStatsProps {
 }
 
 const IncomeStats: React.FC<IncomeStatsProps> = ({ filters }) => {
-  const [stats, setStats] = useState<IncomeStatsType | null>(null);
+  const [stats, setStats] = useState<IncomeStatsType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -43,9 +43,59 @@ const IncomeStats: React.FC<IncomeStatsProps> = ({ filters }) => {
     );
   }
 
-  if (!stats) {
+  if (!stats || stats.length === 0) {
     return null;
   }
+
+  // Función para obtener el ícono y colores según el nombre del método de pago
+  const getPaymentMethodStyle = (methodName: string, index: number) => {
+    const name = methodName.toLowerCase();
+
+    if (name.includes("transferencia")) {
+      return {
+        icon: Building2,
+        color: "#0d6efd",
+        bgColor: "#cfe2ff"
+      };
+    } else if (name.includes("efectivo")) {
+      return {
+        icon: DollarSign,
+        color: "#28a745",
+        bgColor: "#d4edda"
+      };
+    } else if (name.includes("tarjeta")) {
+      return {
+        icon: CreditCard,
+        color: "#17a2b8",
+        bgColor: "#d1ecf1"
+      };
+    } else if (name.includes("deposito") || name.includes("depósito")) {
+      return {
+        icon: Wallet,
+        color: "#fd7e14",
+        bgColor: "#ffe5d0"
+      };
+    } else if (name.includes("cheque")) {
+      return {
+        icon: Banknote,
+        color: "#6f42c1",
+        bgColor: "#e2d9f3"
+      };
+    } else {
+      // Colores por defecto basados en el índice
+      const colors = [
+        { color: "#0dcaf0", bgColor: "#cff4fc" },
+        { color: "#d63384", bgColor: "#f7d6e6" },
+        { color: "#20c997", bgColor: "#d2f4ea" },
+        { color: "#ffc107", bgColor: "#fff3cd" },
+      ];
+      const colorSet = colors[index % colors.length];
+      return {
+        icon: Wallet,
+        ...colorSet
+      };
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-MX", {
@@ -103,44 +153,22 @@ const IncomeStats: React.FC<IncomeStatsProps> = ({ filters }) => {
 
   return (
     <div className="my-5">
-      <h5 className="fw-bold mb-3">Ingresos</h5>
+      <h5 className="fw-bold mb-3">Ingresos por Método de Pago</h5>
       <Row className="g-3">
-        <Col md={3}>
-          <IncomeCard
-            title="Transferencia"
-            value={stats.transferencia}
-            icon={Building2}
-            color="#0d6efd"
-            bgColor="#cfe2ff"
-          />
-        </Col>
-        <Col md={3}>
-          <IncomeCard
-            title="Efectivo"
-            value={stats.efectivo}
-            icon={DollarSign}
-            color="#28a745"
-            bgColor="#d4edda"
-          />
-        </Col>
-        <Col md={3}>
-          <IncomeCard
-            title="Tarjeta"
-            value={stats.tarjeta}
-            icon={CreditCard}
-            color="#17a2b8"
-            bgColor="#d1ecf1"
-          />
-        </Col>
-        <Col md={3}>
-          <IncomeCard
-            title="Depósito"
-            value={stats.deposito}
-            icon={Wallet}
-            color="#fd7e14"
-            bgColor="#ffe5d0"
-          />
-        </Col>
+        {stats.map((stat, index) => {
+          const style = getPaymentMethodStyle(stat.paymentMethodName, index);
+          return (
+            <Col key={stat.paymentMethodId} md={3} sm={6}>
+              <IncomeCard
+                title={stat.paymentMethodName}
+                value={stat.total}
+                icon={style.icon}
+                color={style.color}
+                bgColor={style.bgColor}
+              />
+            </Col>
+          );
+        })}
       </Row>
     </div>
   );

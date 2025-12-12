@@ -9,8 +9,12 @@ import {
   deactivateProduct,
   getProductStats
 } from '../controllers/productController.js';
+import { protect } from '../middleware/auth.js';
 
 const router = Router();
+
+// Aplicar middleware de autenticación a todas las rutas
+router.use(protect);
 
 // Rutas para productos
 router.route('/')

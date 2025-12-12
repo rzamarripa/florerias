@@ -1,8 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner } from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight, Building2 } from "lucide-react";
+import {
+  Button,
+  Table,
+  Badge,
+  Form,
+  InputGroup,
+  Spinner,
+} from "react-bootstrap";
+import {
+  Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Building2,
+} from "lucide-react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { companiesService } from "./services/companies";
@@ -22,7 +35,10 @@ const CompaniesPage: React.FC = () => {
     pages: 0,
   });
 
-  const loadCompanies = async (isInitial: boolean, page: number = pagination.page) => {
+  const loadCompanies = async (
+    isInitial: boolean,
+    page: number = pagination.page
+  ) => {
     try {
       if (isInitial) {
         setLoading(true);
@@ -66,7 +82,9 @@ const CompaniesPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+  const handleStatusFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ): void => {
     setStatusFilter(e.target.value);
   };
 
@@ -101,7 +119,10 @@ const CompaniesPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
+      <div
+        className="card border-0 shadow-sm mb-4"
+        style={{ borderRadius: "15px" }}
+      >
         <div className="card-body p-4">
           <div className="row g-3">
             <div className="col-md-6">
@@ -149,13 +170,23 @@ const CompaniesPage: React.FC = () => {
                 <thead style={{ background: "#f8f9fa" }}>
                   <tr>
                     <th className="px-4 py-3 fw-semibold text-muted">#</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">RAZÓN SOCIAL</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      RAZÓN SOCIAL
+                    </th>
                     <th className="px-4 py-3 fw-semibold text-muted">RFC</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">NOMBRE COMERCIAL</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ADMINISTRADOR</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">USUARIOS REDES</th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      NOMBRE COMERCIAL
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      ADMINISTRADOR
+                    </th>
+                    <th className="px-4 py-3 fw-semibold text-muted">
+                      USUARIOS REDES
+                    </th>
                     <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
+                    <th className="px-4 py-3 fw-semibold text-muted text-center">
+                      ACCIONES
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -168,13 +199,20 @@ const CompaniesPage: React.FC = () => {
                     </tr>
                   ) : (
                     companies.map((company, index) => (
-                      <tr key={company._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
+                      <tr
+                        key={company._id}
+                        style={{ borderBottom: "1px solid #f1f3f5" }}
+                      >
                         <td className="px-4 py-3">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </td>
-                        <td className="px-4 py-3 fw-semibold">{company.legalName}</td>
+                        <td className="px-4 py-3 fw-semibold">
+                          {company.legalName}
+                        </td>
                         <td className="px-4 py-3">{company.rfc}</td>
-                        <td className="px-4 py-3">{company.tradeName || "-"}</td>
+                        <td className="px-4 py-3">
+                          {company.tradeName || "-"}
+                        </td>
                         <td className="px-4 py-3">
                           {company.administrator ? (
                             <div>
@@ -186,7 +224,9 @@ const CompaniesPage: React.FC = () => {
                               </small>
                             </div>
                           ) : (
-                            <span className="text-muted">Sin administrador</span>
+                            <span className="text-muted">
+                              Sin administrador
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -194,15 +234,22 @@ const CompaniesPage: React.FC = () => {
                             <div>
                               {company.redes.map((redesUser, idx) => (
                                 <div key={redesUser._id}>
-                                  <div className="fw-semibold" style={{ fontSize: "0.9rem" }}>
+                                  <div
+                                    className="fw-semibold"
+                                    style={{ fontSize: "0.9rem" }}
+                                  >
                                     {redesUser.profile.fullName}
                                   </div>
-                                  {idx < company.redes!.length - 1 && <hr className="my-1" />}
+                                  {idx < company.redes!.length - 1 && (
+                                    <hr className="my-1" />
+                                  )}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <span className="text-muted">Sin usuarios redes</span>
+                            <span className="text-muted">
+                              Sin usuarios redes
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -236,7 +283,8 @@ const CompaniesPage: React.FC = () => {
             <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} empresas
+                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                de {pagination.total} empresas
               </p>
               <div className="d-flex gap-2">
                 <Button

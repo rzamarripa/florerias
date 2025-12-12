@@ -17,6 +17,11 @@ const paymentMethodSchema = new mongoose.Schema({
   status: {
     type: Boolean,
     default: true
+  },
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_company',
+    required: false
   }
 }, {
   timestamps: true,
@@ -25,5 +30,6 @@ const paymentMethodSchema = new mongoose.Schema({
 
 // Índices para mejorar rendimiento
 paymentMethodSchema.index({ status: 1 });
+paymentMethodSchema.index({ company: 1 });
 
 export default mongoose.model('PaymentMethod', paymentMethodSchema);

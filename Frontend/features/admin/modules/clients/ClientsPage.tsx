@@ -225,10 +225,7 @@ const ClientsPage: React.FC = () => {
       <div className="col-12">
         <div className="card">
           <div className="card-header border-light d-flex justify-content-between align-items-center py-3">
-            <div className="d-flex align-items-center gap-3 flex-wrap">
-              <h5 className="mb-0 fw-bold" style={{ fontSize: 20 }}>
-                Clientes
-              </h5>
+            <div className="d-flex gap-2">
               <Form.Select
                 value={filterType}
                 onChange={handleFilterTypeChange}
@@ -282,12 +279,9 @@ const ClientsPage: React.FC = () => {
               Nuevo Cliente
             </Button>
           </div>
-          <div className="table-responsive shadow-sm border border-2 rounded-3">
-            <Table className="table table-custom table-centered table-hover table-bordered border border-2 w-100 mb-0">
-              <thead
-                className="bg-light align-middle bg-opacity-25"
-                style={{ fontSize: 16 }}
-              >
+          <div className="table-responsive shadow-sm">
+            <Table className="table table-custom table-centered table-hover w-100 mb-0">
+              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
                 <tr>
                   <th>#</th>
                   <th>Cliente</th>

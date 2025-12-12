@@ -29,6 +29,11 @@ export const financeService = {
   getIncomeStats: async (filters: FinanceFilters) => {
     const queryParams = new URLSearchParams();
 
+    // Si hay branchId (sucursal específica seleccionada), enviarlo
+    if (filters.branchId) {
+      queryParams.append("branchId", filters.branchId);
+    }
+
     queryParams.append("startDate", filters.startDate);
     queryParams.append("endDate", filters.endDate);
 
@@ -44,7 +49,11 @@ export const financeService = {
       });
     }
 
-    const response = await apiCall<IncomeStats>(
+    if (filters.cashierId) {
+      queryParams.append("cashierId", filters.cashierId);
+    }
+
+    const response = await apiCall<IncomeStats[]>(
       `/finance/income-stats?${queryParams.toString()}`
     );
     return response;
@@ -96,6 +105,10 @@ export const financeService = {
       filters.paymentMethods.forEach((method) => {
         queryParams.append("paymentMethods[]", method);
       });
+    }
+
+    if (filters.cashierId) {
+      queryParams.append("cashierId", filters.cashierId);
     }
 
     const response = await apiCall<OrderPayment[]>(

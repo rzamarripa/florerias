@@ -497,7 +497,7 @@ export const getOrderPaymentsByBranch = async (req, res) => {
     // Filtrar por métodos de pago
     if (paymentMethods) {
       const paymentMethodsArray = Array.isArray(paymentMethods) ? paymentMethods : [paymentMethods];
-      paymentQuery.paymentMethod = { $in: paymentMethodsArray };
+      paymentQuery.paymentMethod = { $in: paymentMethodsArray.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
     const payments = await OrderPayment.find(paymentQuery)
@@ -510,7 +510,7 @@ export const getOrderPaymentsByBranch = async (req, res) => {
         }
       })
       .populate('paymentMethod', 'name')
-      .populate('registeredBy', 'name lastName')
+      .populate('registeredBy', 'profile.name profile.lastName profile.fullName')
       .populate('cashRegisterId', 'name')
       .sort({ date: -1 });
 

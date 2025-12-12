@@ -87,6 +87,11 @@ const productSchema = new mongoose.Schema({
   estatus: {
     type: Boolean,
     default: true
+  },
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_company',
+    required: false
   }
 }, {
   timestamps: true,
@@ -98,6 +103,7 @@ productSchema.index({ nombre: 1 });
 productSchema.index({ estatus: 1 });
 productSchema.index({ orden: 1 });
 productSchema.index({ productCategory: 1 });
+productSchema.index({ company: 1 });
 
 // Middleware para calcular totalCosto antes de guardar
 // totalVenta se establece manualmente como el precio final de venta

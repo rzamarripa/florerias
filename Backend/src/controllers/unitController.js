@@ -1,4 +1,7 @@
 import Unit from '../models/Unit.js';
+import { User } from '../models/User.js';
+import { Branch } from '../models/Branch.js';
+import { Company } from '../models/Company.js';
 
 // Obtener todas las unidades con filtros y paginación
 const getAllUnits = async (req, res) => {
@@ -10,8 +13,94 @@ const getAllUnits = async (req, res) => {
       name
     } = req.query;
 
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(userId).populate('role');
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuario sin rol asignado'
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
     // Construir filtros
     const filters = {};
+
+    // Filtrar por empresa según el rol del usuario
+    if (userRole === 'Administrador') {
+      // Buscar la empresa del administrador
+      const company = await Company.findOne({
+        administrator: userId,
+      });
+
+      if (company) {
+        filters.company = company._id;
+      } else {
+        // Si no tiene empresa, no retornar ninguna unidad
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    } else if (userRole === 'Gerente') {
+      // Buscar la sucursal del gerente
+      const managerBranch = await Branch.findOne({
+        manager: userId,
+      });
+
+      if (managerBranch) {
+        // Buscar la empresa por el ID de la sucursal
+        const company = await Company.findOne({
+          branches: managerBranch._id,
+        });
+
+        if (company) {
+          filters.company = company._id;
+        } else {
+          // Si no tiene empresa, no retornar ninguna unidad
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
+      } else {
+        // Si no tiene sucursal, no retornar ninguna unidad
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    }
+    // Super Admin puede ver todas las unidades (no se agrega filtro de company)
 
     if (status !== undefined) {
       filters.status = status === 'true';
@@ -26,6 +115,7 @@ const getAllUnits = async (req, res) => {
 
     // Obtener unidades con paginación
     const units = await Unit.find(filters)
+      .populate('company', 'legalName tradeName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -59,7 +149,8 @@ const getUnitById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const unit = await Unit.findById(id);
+    const unit = await Unit.findById(id)
+      .populate('company', 'legalName tradeName');
 
     if (!unit) {
       return res.status(404).json({
@@ -86,6 +177,14 @@ const getUnitById = async (req, res) => {
 const createUnit = async (req, res) => {
   try {
     const { name, abbreviation } = req.body;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
 
     // Validar campos requeridos
     if (!name || !abbreviation) {
@@ -95,13 +194,55 @@ const createUnit = async (req, res) => {
       });
     }
 
+    // Obtener el company ID según el rol del usuario
+    let companyId = null;
+
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(userId).populate('role');
+
+    if (currentUser && currentUser.role) {
+      const userRole = currentUser.role.name;
+
+      if (userRole === 'Administrador') {
+        // Buscar la empresa por el campo administrator
+        const company = await Company.findOne({
+          administrator: userId,
+        });
+
+        if (company) {
+          companyId = company._id;
+        }
+      } else if (userRole === 'Gerente') {
+        // Buscar la sucursal del gerente
+        const managerBranch = await Branch.findOne({
+          manager: userId,
+        });
+
+        if (managerBranch) {
+          // Buscar la empresa por el ID de la sucursal
+          const company = await Company.findOne({
+            branches: managerBranch._id,
+          });
+
+          if (company) {
+            companyId = company._id;
+          }
+        }
+      }
+      // Super Admin: companyId queda como null
+    }
+
     // Crear nueva unidad
     const newUnit = new Unit({
       name,
-      abbreviation
+      abbreviation,
+      company: companyId,
     });
 
     const savedUnit = await newUnit.save();
+
+    // Popular la empresa para la respuesta
+    await savedUnit.populate('company', 'legalName tradeName');
 
     res.status(201).json({
       success: true,
@@ -153,7 +294,7 @@ const updateUnit = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    );
+    ).populate('company', 'legalName tradeName');
 
     res.status(200).json({
       success: true,
@@ -203,7 +344,7 @@ const updateUnitStatus = async (req, res) => {
       id,
       { status },
       { new: true, runValidators: true }
-    );
+    ).populate('company', 'legalName tradeName');
 
     if (!unit) {
       return res.status(404).json({

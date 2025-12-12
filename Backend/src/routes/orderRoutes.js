@@ -8,6 +8,7 @@ import {
   deleteOrder,
   getOrdersSummary,
   sendOrderToShipping,
+  updateOrderDeliveryInfo,
   getUnauthorizedOrders
 } from '../controllers/orderController.js';
 import { protect } from '../middleware/auth.js';
@@ -35,6 +36,9 @@ router.route('/:id')
 
 // Ruta para actualizar estado de orden
 router.put('/:id/status', updateOrderStatus); // PUT /api/orders/:id/status - Actualizar estado
+
+// Ruta para actualizar información de entrega
+router.put('/:id/delivery', updateOrderDeliveryInfo); // PUT /api/orders/:id/delivery - Actualizar info de entrega
 
 // Ruta para enviar orden a pizarrón de Envío
 router.put('/:id/send-to-shipping', sendOrderToShipping); // PUT /api/orders/:id/send-to-shipping - Enviar a Envío

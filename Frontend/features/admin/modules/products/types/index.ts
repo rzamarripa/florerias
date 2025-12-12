@@ -25,6 +25,11 @@ export interface Product {
   totalVenta: number;
   labour: number;
   estatus: boolean;
+  company?: {
+    _id: string;
+    legalName: string;
+    tradeName?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

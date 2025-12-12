@@ -61,7 +61,6 @@ export interface OrderPayment {
     email?: string;
   } | null;
   notes?: string;
-  orderDate?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -102,7 +101,6 @@ export interface Order {
   sendToProduction: boolean;
   status: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado' | 'sinAnticipo';
   orderNumber?: string;
-  orderDate?: string;
   isSocialMediaOrder?: boolean;
   socialMedia?: 'whatsapp' | 'facebook' | 'instagram' | null;
   comprobanteUrl?: string | null;
@@ -135,7 +133,6 @@ export interface CreateOrderData {
   change?: number;
   remainingBalance?: number;
   sendToProduction?: boolean;
-  orderDate?: string; // Fecha de la orden
   isSocialMediaOrder?: boolean;
   socialMedia?: 'whatsapp' | 'facebook' | 'instagram' | null;
   comprobanteUrl?: string | null;

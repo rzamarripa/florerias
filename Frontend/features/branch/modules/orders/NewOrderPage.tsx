@@ -147,7 +147,6 @@ const NewOrderPage = () => {
     change: 0,
     remainingBalance: 0,
     sendToProduction: false,
-    orderDate: new Date().toISOString().slice(0, 16), // Fecha y hora actual por defecto
     isSocialMediaOrder: false,
     socialMedia: null,
   });
@@ -167,14 +166,21 @@ const NewOrderPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Obtener todos los clientes
-  const fetchClients = async () => {
+  // Obtener todos los clientes filtrados por sucursal
+  const fetchClients = async (branchId?: string) => {
     setLoadingClients(true);
     try {
-      const response = await clientsService.getAllClients({
+      const filters: any = {
         limit: 1000,
         status: true,
-      });
+      };
+
+      // Si se proporciona branchId, agregarlo al filtro
+      if (branchId) {
+        filters.branchId = branchId;
+      }
+
+      const response = await clientsService.getAllClients(filters);
       setClients(response.data);
     } catch (err) {
       console.error("Error al cargar clientes:", err);
@@ -191,6 +197,9 @@ const NewOrderPage = () => {
         limit: 1000,
         status: true,
       });
+      console.log("Respuesta completa métodos de pago:", response);
+      console.log("Data de métodos de pago:", response.data);
+      console.log("Cantidad de métodos:", response.data?.length);
       setPaymentMethods(response.data);
       // Establecer el primer método de pago como predeterminado
       if (response.data.length > 0) {
@@ -319,6 +328,9 @@ const NewOrderPage = () => {
         limit: 1000,
         isActive: true,
       });
+      console.log("Respuesta completa categorías de productos:", response);
+      console.log("Data de categorías:", response.data);
+      console.log("Cantidad de categorías:", response.data?.length);
       setProductCategories(response.data);
     } catch (err) {
       console.error("Error al cargar categorías de productos:", err);
@@ -328,9 +340,8 @@ const NewOrderPage = () => {
     }
   };
 
-  // Cargar clientes, métodos de pago, sucursales, caja registradora, colonias y categorías al montar el componente
+  // Cargar métodos de pago, sucursales, caja registradora, colonias y categorías al montar el componente
   useEffect(() => {
-    fetchClients();
     fetchPaymentMethods();
 
     // Para usuarios Redes, cargar sucursales de su empresa
@@ -367,6 +378,13 @@ const NewOrderPage = () => {
       setStorage(null);
       setSelectedStorageId("");
       setHasNoStorage(false);
+    }
+  }, [formData.branchId]);
+
+  // Cargar clientes filtrados por sucursal cuando cambia la sucursal
+  useEffect(() => {
+    if (formData.branchId) {
+      fetchClients(formData.branchId);
     }
   }, [formData.branchId]);
 
@@ -1307,7 +1325,6 @@ const NewOrderPage = () => {
           change: 0,
           remainingBalance: 0,
           sendToProduction: false,
-          orderDate: new Date().toISOString().slice(0, 16), // Resetear a fecha y hora actual
           isSocialMediaOrder: isSocialMedia,
           socialMedia: isSocialMedia ? "whatsapp" : null,
         });
@@ -1978,112 +1995,121 @@ const NewOrderPage = () => {
                   </Card.Body>
                 </Card>
               </Col>
+            </Row>
 
-              {/* Envío */}
-              <Col lg={6}>
-                <Card className="border-0 shadow-sm h-100">
-                  <Card.Header className="bg-white border-0 py-3">
-                    <div className="d-flex align-items-center gap-2">
-                      <Send size={18} className="text-primary" />
-                      <h6 className="mb-0 fw-bold">Entrega / Envío</h6>
-                    </div>
-                  </Card.Header>
-                  <Card.Body>
-                    <Row className="g-3">
-                      {isSocialMedia ? (
-                        <>
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                Tipo de envío
-                              </Form.Label>
-                              <Form.Control
-                                type="text"
-                                value="Redes Sociales"
-                                disabled
-                                className="py-2 bg-light"
-                              />
-                            </Form.Group>
-                          </Col>
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                Plataforma
-                              </Form.Label>
-                              <Form.Select
-                                value={formData.socialMedia || "whatsapp"}
-                                onChange={(e) => {
-                                  const platform = e.target.value as
-                                    | "whatsapp"
-                                    | "facebook"
-                                    | "instagram";
-                                  setFormData({
-                                    ...formData,
-                                    socialMedia: platform,
-                                    salesChannel: platform,
-                                  });
-                                }}
-                                required
-                                className="py-2"
-                              >
-                                <option value="whatsapp">WhatsApp</option>
-                                <option value="facebook">Facebook</option>
-                                <option value="instagram">Instagram</option>
-                              </Form.Select>
-                            </Form.Group>
-                          </Col>
-                        </>
-                      ) : (
-                        <Col md={12}>
-                          <div className="d-flex gap-4 flex-wrap align-items-center">
-                            {["envio", "tienda"].map((tipo) => (
-                              <Form.Check
-                                key={tipo}
-                                type="radio"
-                                id={`envio-${tipo}`}
-                                name="envio"
-                                label={
-                                  tipo.charAt(0).toUpperCase() + tipo.slice(1)
-                                }
-                                value={tipo}
-                                checked={formData.shippingType === tipo}
-                                onChange={(e) =>
-                                  handleShippingTypeChange(
-                                    e.target.value as ShippingType
-                                  )
-                                }
-                                className="custom-radio"
-                              />
-                            ))}
-                            <div className="border-start ps-3 d-flex gap-3">
-                              <Form.Check
-                                type="checkbox"
-                                id="anonimo-check"
-                                label="Anónimo"
-                                checked={formData.anonymous}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    anonymous: e.target.checked,
-                                  })
-                                }
-                              />
-                              <Form.Check
-                                type="checkbox"
-                                id="venta-rapida-check"
-                                label="Venta Rápida"
-                                checked={formData.quickSale}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    quickSale: e.target.checked,
-                                  })
-                                }
-                              />
-                            </div>
-                          </div>
-                        </Col>
-                      )}
+            {/* Tipo de Envío */}
+            <Card className="mb-4 border-0 shadow-sm">
+              <Card.Header className="bg-white border-0 py-3">
+                <div className="d-flex align-items-center gap-2">
+                  <Send size={20} className="text-primary" />
+                  <h5 className="mb-0 fw-bold">Tipo de Envío</h5>
+                </div>
+              </Card.Header>
+              <Card.Body>
+                <Row className="g-3">
+                  {/* Para usuarios de Redes, mostrar solo "Redes Sociales" y el select de plataforma */}
+                  {isSocialMedia ? (
+                    <>
+                      <Col md={12}>
+                        <Alert variant="info" className="mb-3">
+                          Como usuario de Redes Sociales, solo puedes crear
+                          órdenes de tipo "Redes Sociales"
+                        </Alert>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Store size={16} className="me-2" />
+                            Tipo de Envío
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            value="Redes Sociales"
+                            disabled
+                            className="py-2 bg-light"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Store size={16} className="me-2" />
+                            Plataforma de Redes Sociales
+                          </Form.Label>
+                          <Form.Select
+                            value={formData.socialMedia || "whatsapp"}
+                            onChange={(e) => {
+                              const platform = e.target.value as
+                                | "whatsapp"
+                                | "facebook"
+                                | "instagram";
+                              setFormData({
+                                ...formData,
+                                socialMedia: platform,
+                                salesChannel: platform, // Sincronizar salesChannel con socialMedia
+                              });
+                            }}
+                            required
+                            className="py-2"
+                          >
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="instagram">Instagram</option>
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
+                    </>
+                  ) : (
+                    /* Para usuarios normales, mostrar opciones de envío tradicionales */
+                    <Col md={12}>
+                      <div className="d-flex gap-4 flex-wrap align-items-center">
+                        {["envio", "tienda"].map((tipo) => (
+                          <Form.Check
+                            key={tipo}
+                            type="radio"
+                            id={`envio-${tipo}`}
+                            name="envio"
+                            label={tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                            value={tipo}
+                            checked={formData.shippingType === tipo}
+                            onChange={(e) =>
+                              handleShippingTypeChange(
+                                e.target.value as ShippingType
+                              )
+                            }
+                            className="custom-radio"
+                          />
+                        ))}
+
+                        <div className="border-start ps-3 d-flex gap-3">
+                          <Form.Check
+                            type="checkbox"
+                            id="anonimo-check"
+                            label="Anónimo"
+                            checked={formData.anonymous}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                anonymous: e.target.checked,
+                              })
+                            }
+                          />
+                          <Form.Check
+                            type="checkbox"
+                            id="venta-rapida-check"
+                            label="Venta Rápida"
+                            checked={formData.quickSale}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                quickSale: e.target.checked,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </Col>
+                  )}
 
                       <Col md={6}>
                         <Form.Group>
@@ -2286,158 +2312,154 @@ const NewOrderPage = () => {
                     </Row>
                   </Card.Body>
                 </Card>
-              </Col>
 
-              {/* Pago */}
-              <Col lg={12}>
-                <Card className="border-0 shadow-sm">
-                  <Card.Header className="bg-white border-0 py-3">
-                    <div className="d-flex align-items-center gap-2">
-                      <CreditCard size={18} className="text-primary" />
-                      <h6 className="mb-0 fw-bold">Pago</h6>
-                    </div>
-                  </Card.Header>
-                  <Card.Body>
-                    <Row className="g-3">
-                      <Col md={4}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Fecha y hora de orden
-                          </Form.Label>
-                          <Form.Control
-                            type="datetime-local"
-                            value={formData.orderDate}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                orderDate: e.target.value,
-                              })
-                            }
-                            required
-                            className="py-2"
-                          />
-                        </Form.Group>
-                      </Col>
-
-                      <Col md={8}>
-                        <Form.Label className="fw-semibold">
-                          Método de pago
-                        </Form.Label>
-                        <div className="d-flex gap-2 flex-wrap">
-                          {loadingPaymentMethods ? (
-                            <div className="text-muted">
-                              Cargando métodos...
-                            </div>
-                          ) : paymentMethods.length === 0 ? (
-                            <Alert variant="danger" className="mb-0 w-100">
-                              No hay métodos de pago disponibles.
-                            </Alert>
-                          ) : (
-                            paymentMethods.map((method) => {
-                              const isDisabled =
-                                isSocialMedia &&
-                                method.name.toLowerCase() === "efectivo";
-                              return (
-                                <Button
-                                  key={method._id}
-                                  variant={
-                                    formData.paymentMethod === method._id
-                                      ? "primary"
-                                      : "outline-secondary"
-                                  }
-                                  size="sm"
-                                  onClick={() =>
-                                    setFormData({
-                                      ...formData,
-                                      paymentMethod: method._id,
-                                    })
-                                  }
-                                  disabled={isDisabled}
-                                  title={
-                                    isDisabled
-                                      ? "Los usuarios de Redes Sociales no pueden usar efectivo"
-                                      : ""
-                                  }
-                                >
-                                  {method.name}
-                                </Button>
-                              );
-                            })
-                          )}
+            {/* Forma de Pago y Resumen */}
+            <Card className="mb-4 border-0 shadow-sm">
+              <Card.Header className="bg-white border-0 py-3">
+                <div className="d-flex align-items-center gap-2">
+                  <CreditCard size={20} className="text-primary" />
+                  <h5 className="mb-0 fw-bold">Forma de Pago</h5>
+                </div>
+              </Card.Header>
+              <Card.Body>
+                <Row className="g-3">
+                  <Col md={12}>
+                    <Form.Label className="fw-semibold">
+                      Método de Pago
+                    </Form.Label>
+                    <div className="d-flex gap-2 flex-wrap">
+                      {loadingPaymentMethods ? (
+                        <div className="text-muted">
+                          Cargando métodos de pago...
                         </div>
-                        {isSocialMedia && (
-                          <Alert variant="warning" className="mt-2 mb-0 py-2">
-                            <small>
-                              ℹ️ Los usuarios de Redes Sociales no pueden usar
-                              "Efectivo"
-                            </small>
-                          </Alert>
-                        )}
-                      </Col>
+                      ) : paymentMethods.length === 0 ? (
+                        <Alert variant="danger" className="mb-0 w-100">
+                          No hay métodos de pago disponibles. Debes crear al
+                          menos un método de pago para poder crear órdenes.
+                        </Alert>
+                      ) : (
+                        paymentMethods.map((method) => {
+                          // Deshabilitar método "Efectivo" para usuarios de Redes
+                          const isDisabled =
+                            isSocialMedia &&
+                            method.name.toLowerCase() === "efectivo";
 
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Descuento
-                          </Form.Label>
-                          <div className="input-group">
-                            <Form.Control
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={formData.discount}
-                              onChange={(e) =>
-                                handleDiscountChange(
-                                  parseFloat(e.target.value) || 0,
-                                  formData.discountType || "porcentaje"
-                                )
+                          return (
+                            <Button
+                              key={method._id}
+                              variant={
+                                formData.paymentMethod === method._id
+                                  ? "primary"
+                                  : "outline-secondary"
                               }
-                              className="py-2"
-                              placeholder="Descuento"
-                            />
-                            <Form.Select
-                              value={formData.discountType}
-                              onChange={(e) =>
-                                handleDiscountChange(
-                                  formData.discount || 0,
-                                  e.target.value as "porcentaje" | "cantidad"
-                                )
+                              size="sm"
+                              onClick={() =>
+                                setFormData({
+                                  ...formData,
+                                  paymentMethod: method._id,
+                                })
                               }
-                              style={{ maxWidth: 100 }}
+                              disabled={isDisabled}
+                              className="px-3"
+                              title={
+                                isDisabled
+                                  ? "Los usuarios de Redes Sociales no pueden usar efectivo"
+                                  : ""
+                              }
                             >
-                              <option value="porcentaje">%</option>
-                              <option value="cantidad">$</option>
-                            </Form.Select>
-                            {formData.discount > 0 && (
-                              <Button
-                                variant="warning"
-                                onClick={() =>
-                                  setShowDiscountRequestDialog(true)
-                                }
-                                className="d-flex align-items-center gap-2"
-                                style={{ whiteSpace: "nowrap" }}
-                              >
-                                <Shield size={16} />
-                                {hasPendingDiscountAuth
-                                  ? "Modificar"
-                                  : "Solicitar"}
-                              </Button>
-                            )}
-                          </div>
-                          <Alert
-                            variant={
-                              hasPendingDiscountAuth ? "warning" : "info"
-                            }
-                            className="mt-2 mb-0 py-2"
-                          >
-                            <small>
+                              {method.name}
+                            </Button>
+                          );
+                        })
+                      )}
+                    </div>
+                    {isSocialMedia && (
+                      <Alert variant="warning" className="mt-2 mb-0 py-2">
+                        <small>
+                          ℹ️ Los usuarios de Redes Sociales no pueden usar el
+                          método de pago "Efectivo"
+                        </small>
+                      </Alert>
+                    )}
+                  </Col>
+
+                  <Col md={12}>
+                    <hr />
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Descuento</Form.Label>
+                      <div className="input-group">
+                        <Form.Control
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.discount}
+                          onChange={(e) =>
+                            handleDiscountChange(
+                              parseFloat(e.target.value) || 0,
+                              formData.discountType || "porcentaje"
+                            )
+                          }
+                          className="py-2"
+                          placeholder="Ingresa el descuento"
+                        />
+                        <Form.Select
+                          value={formData.discountType}
+                          onChange={(e) =>
+                            handleDiscountChange(
+                              formData.discount || 0,
+                              e.target.value as "porcentaje" | "cantidad"
+                            )
+                          }
+                          style={{ maxWidth: "100px" }}
+                        >
+                          <option value="porcentaje">%</option>
+                          <option value="cantidad">$</option>
+                        </Form.Select>
+                        {formData.discount > 0 && (
+                          <>
+                            <Button
+                              variant="warning"
+                              onClick={() => setShowDiscountRequestDialog(true)}
+                              className="d-flex align-items-center gap-2"
+                              style={{ whiteSpace: "nowrap" }}
+                            >
+                              <Shield size={16} />
                               {hasPendingDiscountAuth
-                                ? "⚠️ Descuento pendiente de autorización."
-                                : "ℹ️ Si aplica descuento, solicita autorización."}
-                            </small>
-                          </Alert>
-                        </Form.Group>
-                      </Col>
+                                ? "Modificar Solicitud"
+                                : "Solicitar Autorización"}
+                            </Button>
+                            <Button
+                              variant="danger"
+                              onClick={() => {
+                                handleDiscountChange(0, "porcentaje");
+                                setHasPendingDiscountAuth(false);
+                                setDiscountRequestMessage("");
+                              }}
+                              className="d-flex align-items-center gap-2 mt-1"
+                              style={{ whiteSpace: "nowrap" }}
+                              title="Cancelar descuento"
+                            >
+                              <Trash2 size={16} />
+                              Cancelar Descuento
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      <Alert
+                        variant={hasPendingDiscountAuth ? "warning" : "info"}
+                        className="mt-2 mb-0 py-2"
+                      >
+                        <small>
+                          {hasPendingDiscountAuth
+                            ? "⚠️ Descuento pendiente de autorización. Puedes modificarlo antes de crear la orden."
+                            : "ℹ️ Ingresa el descuento y solicita autorización antes de crear la orden."}
+                        </small>
+                      </Alert>
+                    </Form.Group>
+                  </Col>
 
                       <Col md={6}>
                         <div className="d-flex justify-content-between mb-1">
@@ -2557,8 +2579,6 @@ const NewOrderPage = () => {
                     </Row>
                   </Card.Body>
                 </Card>
-              </Col>
-            </Row>
           </Modal.Body>
           <Modal.Footer>
             <Button

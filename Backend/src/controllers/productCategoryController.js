@@ -1,5 +1,7 @@
 import { ProductCategory } from "../models/ProductCategory.js";
 import { User } from "../models/User.js";
+import { Branch } from "../models/Branch.js";
+import { Company } from "../models/Company.js";
 
 // Crear nueva categoría de producto
 export const createProductCategory = async (req, res) => {
@@ -14,8 +16,10 @@ export const createProductCategory = async (req, res) => {
       });
     }
 
+    const userId = req.user._id;
+
     // Obtener el rol del usuario
-    const currentUser = await User.findById(req.user._id).populate("role");
+    const currentUser = await User.findById(userId).populate("role");
 
     if (!currentUser || !currentUser.role) {
       return res.status(403).json({
@@ -34,10 +38,45 @@ export const createProductCategory = async (req, res) => {
       });
     }
 
+    // Obtener el company ID según el rol del usuario
+    let companyId = null;
+
+    if (userRole === 'Administrador') {
+      // Buscar la empresa por el campo administrator
+      const company = await Company.findOne({
+        administrator: userId,
+      });
+
+      if (company) {
+        companyId = company._id;
+      }
+    } else if (userRole === 'Gerente') {
+      // Buscar la sucursal del gerente
+      const managerBranch = await Branch.findOne({
+        manager: userId,
+      });
+
+      if (managerBranch) {
+        // Buscar la empresa por el ID de la sucursal
+        const company = await Company.findOne({
+          branches: managerBranch._id,
+        });
+
+        if (company) {
+          companyId = company._id;
+        }
+      }
+    }
+    // Super Admin: companyId queda como null
+
     const productCategory = await ProductCategory.create({
       name,
       description,
+      company: companyId,
     });
+
+    // Popular la empresa para la respuesta
+    await productCategory.populate('company', 'legalName tradeName');
 
     res.status(201).json({
       success: true,
@@ -63,10 +102,164 @@ export const getAllProductCategories = async (req, res) => {
       });
     }
 
+    const userId = req.user._id;
+
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(userId).populate('role');
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuario sin rol asignado'
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
+    console.log('[ProductCategories] Usuario:', userId, 'Rol:', userRole);
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const filters = {};
+
+    // Filtrar por empresa según el rol del usuario
+    if (userRole === 'Administrador') {
+      // Buscar la empresa del administrador
+      const company = await Company.findOne({
+        administrator: userId,
+      });
+
+      if (company) {
+        filters.company = company._id;
+      } else {
+        // Si no tiene empresa, no retornar ninguna categoría
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0
+          },
+          data: []
+        });
+      }
+    } else if (userRole === 'Gerente') {
+      // Buscar la sucursal del gerente
+      const managerBranch = await Branch.findOne({
+        manager: userId,
+      });
+
+      if (managerBranch) {
+        // Buscar la empresa por el ID de la sucursal
+        const company = await Company.findOne({
+          branches: managerBranch._id,
+        });
+
+        if (company) {
+          filters.company = company._id;
+        } else {
+          // Si no tiene empresa, no retornar ninguna categoría
+          return res.status(200).json({
+            success: true,
+            count: 0,
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              pages: 0
+            },
+            data: []
+          });
+        }
+      } else {
+        // Si no tiene sucursal, no retornar ninguna categoría
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0
+          },
+          data: []
+        });
+      }
+    } else if (userRole === 'Cajero') {
+      // Para Cajero, buscar la sucursal donde está asignado
+      const userBranch = await Branch.findOne({
+        employees: userId
+      });
+
+      console.log('[ProductCategories] Cajero - Sucursal encontrada:', userBranch?._id);
+
+      if (userBranch) {
+        // Buscar la empresa que contiene esta sucursal
+        const company = await Company.findOne({
+          branches: userBranch._id
+        });
+
+        console.log('[ProductCategories] Cajero - Empresa encontrada:', company?._id);
+
+        if (company) {
+          filters.company = company._id;
+        } else {
+          // Si no tiene empresa, no retornar ninguna categoría
+          return res.status(200).json({
+            success: true,
+            count: 0,
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              pages: 0
+            },
+            data: []
+          });
+        }
+      } else {
+        // Si no tiene sucursal, no retornar ninguna categoría
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0
+          },
+          data: []
+        });
+      }
+    } else if (userRole === 'Redes') {
+      // Para Redes, buscar la empresa donde está en el array redes
+      const company = await Company.findOne({
+        redes: userId
+      });
+
+      console.log('[ProductCategories] Redes - Empresa encontrada:', company?._id);
+
+      if (company) {
+        filters.company = company._id;
+      } else {
+        // Si no está en ninguna empresa, no retornar ninguna categoría
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            pages: 0
+          },
+          data: []
+        });
+      }
+    }
+    // Super Admin puede ver todas las categorías (no se agrega filtro de company)
 
     // Filtros opcionales
     if (req.query.isActive !== undefined) {
@@ -80,12 +273,17 @@ export const getAllProductCategories = async (req, res) => {
       ];
     }
 
+    console.log('[ProductCategories] Filtros aplicados:', filters);
+
     const productCategories = await ProductCategory.find(filters)
+      .populate('company', 'legalName tradeName')
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
 
     const total = await ProductCategory.countDocuments(filters);
+
+    console.log('[ProductCategories] Total encontrados:', total, 'Retornando:', productCategories.length);
 
     res.status(200).json({
       success: true,
@@ -117,7 +315,8 @@ export const getProductCategoryById = async (req, res) => {
       });
     }
 
-    const productCategory = await ProductCategory.findById(req.params.id);
+    const productCategory = await ProductCategory.findById(req.params.id)
+      .populate('company', 'legalName tradeName');
 
     if (!productCategory) {
       return res.status(404).json({
@@ -192,7 +391,7 @@ export const updateProductCategory = async (req, res) => {
         new: true,
         runValidators: true,
       }
-    );
+    ).populate('company', 'legalName tradeName');
 
     res.status(200).json({
       success: true,
@@ -252,7 +451,7 @@ export const deactivateProductCategory = async (req, res) => {
       req.params.id,
       { isActive: false },
       { new: true }
-    );
+    ).populate('company', 'legalName tradeName');
 
     res.status(200).json({
       success: true,
@@ -312,7 +511,7 @@ export const activateProductCategory = async (req, res) => {
       req.params.id,
       { isActive: true },
       { new: true }
-    );
+    ).populate('company', 'legalName tradeName');
 
     res.status(200).json({
       success: true,

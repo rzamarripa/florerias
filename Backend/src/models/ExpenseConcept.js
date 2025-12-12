@@ -22,6 +22,11 @@ const expenseConceptSchema = new Schema(
       ref: "cv_branch",
       required: [true, "La sucursal es requerida"],
     },
+    company: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_company",
+      required: false,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -50,6 +55,7 @@ expenseConceptSchema.pre("save", function (next) {
 expenseConceptSchema.index({ name: 1 });
 expenseConceptSchema.index({ department: 1 });
 expenseConceptSchema.index({ branch: 1 });
+expenseConceptSchema.index({ company: 1 });
 expenseConceptSchema.index({ isActive: 1 });
 expenseConceptSchema.index({ createdAt: -1 });
 

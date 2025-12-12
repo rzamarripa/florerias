@@ -7,8 +7,12 @@ import {
   updatePaymentMethodStatus,
   deletePaymentMethod
 } from '../controllers/paymentMethodController.js';
+import { protect } from '../middleware/auth.js';
 
 const router = Router();
+
+// Aplicar middleware de autenticación a todas las rutas
+router.use(protect);
 
 // Rutas para métodos de pago
 router.route('/')

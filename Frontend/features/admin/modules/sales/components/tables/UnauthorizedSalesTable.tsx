@@ -177,6 +177,15 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
     });
   };
 
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  };
+
   const totalPaid = sales.reduce((sum, sale) => sum + (sale.advance || 0), 0);
   const totalBalance = sales.reduce(
     (sum, sale) => sum + (sale.remainingBalance || 0),
@@ -233,9 +242,16 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
                     {sale.clientInfo?.name || "N/A"}
                   </td>
                   <td className="px-4 py-3">
-                    {sale.deliveryData?.deliveryDateTime
-                      ? formatDate(sale.deliveryData.deliveryDateTime)
-                      : "N/A"}
+                    {sale.deliveryData?.deliveryDateTime ? (
+                      <div>
+                        <div>{formatDate(sale.deliveryData.deliveryDateTime)}</div>
+                        <div className="text-muted" style={{ fontSize: "0.85em" }}>
+                          {formatTime(sale.deliveryData.deliveryDateTime)}
+                        </div>
+                      </div>
+                    ) : (
+                      "N/A"
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {getDiscountBadge(sale)}
@@ -243,7 +259,14 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
                   <td className="px-4 py-3">
                     {getPaymentStatusBadge(sale)}
                   </td>
-                  <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <div>{formatDate(sale.createdAt)}</div>
+                      <div className="text-muted" style={{ fontSize: "0.85em" }}>
+                        {formatTime(sale.createdAt)}
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 fw-semibold">
                     ${(sale.total || 0).toFixed(2)}
                   </td>

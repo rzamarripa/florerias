@@ -7,8 +7,10 @@ import { eventsService } from "../services/events";
 import { Event, CreateEventData, PaymentMethod } from "../types";
 import { clientsService } from "../../clients/services/clients";
 import { paymentMethodsService } from "../../payment-methods/services/paymentMethods";
+import { branchesService } from "../../branches/services/branches";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useUserSessionStore } from "@/stores/userSessionStore";
 
 interface Client {
   _id: string;
@@ -41,7 +43,9 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
 
   const { activeBranch } = useActiveBranchStore();
   const { role } = useUserRoleStore();
+  const { user } = useUserSessionStore();
   const isAdministrator = role?.toLowerCase() === "administrador";
+  const isManager = role?.toLowerCase() === "gerente";
   const isEditing = !!event;
 
   // Para administradores: verificar si hay sucursal seleccionada
@@ -51,10 +55,31 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Determinar el ID de la sucursal según el rol del usuario
+        let branchId: string | undefined;
+
+        if (isAdministrator) {
+          // Administrador: usar sucursal del store active-branch
+          branchId = activeBranch?._id;
+        } else if (isManager && user?._id) {
+          // Gerente: obtener sucursales donde es gerente
+          try {
+            const userBranchesResponse = await branchesService.getUserBranches();
+            if (userBranchesResponse.data && userBranchesResponse.data.length > 0) {
+              // Usar la primera sucursal donde es gerente
+              branchId = userBranchesResponse.data[0]._id;
+            }
+          } catch (error) {
+            console.error("Error getting manager branches:", error);
+          }
+        }
+
+        // Cargar clientes filtrados por sucursal y métodos de pago
         const [clientsResponse, paymentMethodsResponse] = await Promise.all([
           clientsService.getAllClients({
             status: true,
             limit: 1000,
+            branchId, // Filtrar por sucursal
           }),
           paymentMethodsService.getAllPaymentMethods({
             status: true,
@@ -76,7 +101,7 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
     if (show) {
       loadData();
     }
-  }, [show]);
+  }, [show, isAdministrator, isManager, activeBranch, user]);
 
   // Cargar datos del evento si está editando
   useEffect(() => {

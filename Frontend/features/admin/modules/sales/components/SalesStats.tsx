@@ -45,7 +45,7 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   return (
-    <div className="col-xl-2 col-lg-4 col-md-6 col-sm-6 mb-3">
+    <div className="col-xl col-lg-4 col-md-6 col-sm-6 mb-3">
       <div
         className="card border-0 shadow-sm h-100"
         style={{
@@ -206,7 +206,6 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
 
   return (
     <div className="row g-3 mb-4">
-      <Col md={1}></Col>
       <StatCard
         title="Ventas Totales"
         count={stats.totalSales.count}

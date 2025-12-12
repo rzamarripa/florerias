@@ -39,9 +39,18 @@ const CheckTransferTable: React.FC<CheckTransferTableProps> = ({
       // Si es admin y tiene sucursal activa, filtrar por esa sucursal
       if (isAdmin && activeBranch) {
         filters.branchId = activeBranch._id;
-        console.log("🔍 [CheckTransfer] Filtrando por sucursal:", activeBranch.branchName, activeBranch._id);
+        console.log(
+          "🔍 [CheckTransfer] Filtrando por sucursal:",
+          activeBranch.branchName,
+          activeBranch._id
+        );
       } else {
-        console.log("🔍 [CheckTransfer] Sin filtro - isAdmin:", isAdmin, "activeBranch:", activeBranch);
+        console.log(
+          "🔍 [CheckTransfer] Sin filtro - isAdmin:",
+          isAdmin,
+          "activeBranch:",
+          activeBranch
+        );
       }
 
       console.log("🔍 [CheckTransfer] Filtros enviados:", filters);
@@ -112,7 +121,9 @@ const CheckTransferTable: React.FC<CheckTransferTableProps> = ({
               <th className="py-3 px-4 fw-semibold text-muted">Fecha Pago</th>
               <th className="py-3 px-4 fw-semibold text-muted">Concepto</th>
               <th className="py-3 px-4 fw-semibold text-muted">Usuario</th>
-              <th className="py-3 px-4 fw-semibold text-muted text-end">Total</th>
+              <th className="py-3 px-4 fw-semibold text-muted text-center">
+                Total
+              </th>
               <th className="py-3 px-4 fw-semibold text-muted text-center">
                 Acciones
               </th>
@@ -134,11 +145,16 @@ const CheckTransferTable: React.FC<CheckTransferTableProps> = ({
                     </td>
                     <td className="py-3 px-4 fw-semibold">{expense.folio}</td>
                     <td className="py-3 px-4">
-                      {new Date(expense.paymentDate).toLocaleDateString("es-MX")}
+                      {new Date(expense.paymentDate).toLocaleDateString(
+                        "es-MX"
+                      )}
                     </td>
-                    <td className="py-3 px-4">{expense.concept?.name || "N/A"}</td>
                     <td className="py-3 px-4">
-                      {expense.user?.profile?.fullName || expense.user?.username}
+                      {expense.concept?.name || "N/A"}
+                    </td>
+                    <td className="py-3 px-4">
+                      {expense.user?.profile?.fullName ||
+                        expense.user?.username}
                     </td>
                     <td className="py-3 px-4 text-end fw-semibold">
                       ${expense.total.toFixed(2)}
@@ -146,19 +162,20 @@ const CheckTransferTable: React.FC<CheckTransferTableProps> = ({
                     <td className="py-3 px-4">
                       <div className="d-flex gap-2 justify-content-center">
                         <Button
-                          variant="outline-primary"
+                          variant="primary"
                           size="sm"
                           onClick={() => onEdit(expense)}
                           className="d-flex align-items-center gap-1"
                           style={{
                             borderRadius: "6px",
                             padding: "4px 8px",
+                            fontWeight: "bold",
                           }}
                         >
                           <Pencil size={14} />
                         </Button>
                         <Button
-                          variant="outline-danger"
+                          variant="danger"
                           size="sm"
                           onClick={() => handleDelete(expense._id)}
                           className="d-flex align-items-center gap-1"

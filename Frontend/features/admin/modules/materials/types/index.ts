@@ -9,6 +9,11 @@ export interface Material {
   piecesPerPackage: number;
   description: string;
   status: boolean;
+  company?: {
+    _id: string;
+    legalName: string;
+    tradeName?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
