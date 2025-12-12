@@ -1440,7 +1440,10 @@ const NewOrderPage = () => {
 
           <Card className="border-0 shadow-sm h-100 d-flex flex-column">
             <Card.Header className="bg-white border-0 py-2 flex-shrink-0">
-              <div className="d-flex align-items-center w-100" style={{ justifyContent: "space-between" }}>
+              <div
+                className="d-flex align-items-center w-100"
+                style={{ justifyContent: "space-between" }}
+              >
                 <div className="d-flex align-items-center gap-2">
                   <Package size={18} className="text-primary" />
                   <span className="fw-bold">Catálogo</span>
@@ -1462,10 +1465,7 @@ const NewOrderPage = () => {
                 </div>
               </div>
             </Card.Header>
-            <Card.Body
-              className="p-2 flex-grow-1"
-              style={{ overflow: "auto" }}
-            >
+            <Card.Body className="p-2 flex-grow-1" style={{ overflow: "auto" }}>
               <ProductCatalog
                 onAddProduct={handleAddProductFromCatalog}
                 branchId={formData.branchId}
@@ -1481,237 +1481,235 @@ const NewOrderPage = () => {
         {/* Carrito (derecha) */}
         <Col xs={12} lg={4} style={{ height: "100%" }}>
           <Card className="border-0 shadow-sm h-100 d-flex flex-column">
-              <Card.Header className="bg-white border-0 py-2 flex-shrink-0">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="fw-bold">Carrito</span>
-                  <Badge bg="primary">{formData.items.length}</Badge>
-                </div>
-              </Card.Header>
-              <Card.Body className="flex-grow-1" style={{ overflow: "auto" }}>
-                {/* Producto manual rápido */}
-                <div className="mb-3">
-                  <div className="fw-semibold mb-2">Producto manual</div>
-                  <Row className="g-2">
-                    <Col xs={12}>
-                      <Form.Control
-                        type="text"
-                        placeholder="Nombre del producto"
-                        value={currentProductName}
-                        onChange={(e) => setCurrentProductName(e.target.value)}
-                        className="py-2"
-                      />
-                    </Col>
-                    <Col xs={6}>
-                      <Form.Control
-                        type="number"
-                        min="1"
-                        value={currentItem.quantity}
-                        onChange={(e) =>
-                          setCurrentItem({
-                            ...currentItem,
-                            quantity: parseInt(e.target.value) || 1,
-                          })
-                        }
-                        className="py-2 text-center"
-                      />
-                    </Col>
-                    <Col xs={6}>
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Precio"
-                        value={currentItem.unitPrice || ""}
-                        onChange={(e) =>
-                          setCurrentItem({
-                            ...currentItem,
-                            unitPrice: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="py-2"
-                      />
-                    </Col>
-                    <Col xs={12}>
-                      <Form.Select
-                        value={selectedProductCategory}
-                        onChange={(e) =>
-                          setSelectedProductCategory(e.target.value)
-                        }
-                        className="py-2"
-                        disabled={loadingProductCategories}
-                      >
-                        <option value="">
-                          {loadingProductCategories
-                            ? "Cargando categorías..."
-                            : "-- Categoría --"}
-                        </option>
-                        {productCategories.map((category) => (
-                          <option key={category._id} value={category._id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    </Col>
-                    <Col xs={12} className="d-grid">
-                      <Button variant="outline-primary" onClick={handleAddItem}>
-                        <Plus size={16} className="me-2" />
-                        Agregar (${calculateItemAmount().toFixed(2)})
-                      </Button>
-                    </Col>
-                  </Row>
-                </div>
-
-                {/* Lista de items */}
-                {formData.items.length === 0 ? (
-                  <Alert variant="light" className="mb-0">
-                    Aún no hay productos. Agrega desde el catálogo.
-                  </Alert>
-                ) : (
-                  <div
-                    className="table-responsive"
-                    style={{ maxHeight: 340, overflow: "auto" }}
-                  >
-                    <table className="table table-sm align-middle">
-                      <tbody>
-                        {formData.items.map((item, index) => (
-                          <React.Fragment key={index}>
-                            <tr>
-                              <td>
-                                <div className="fw-semibold">
-                                  {item.productName}
-                                </div>
-                                <div className="text-muted small">
-                                  {item.quantity} × ${item.unitPrice.toFixed(2)}{" "}
-                                  <Badge
-                                    bg={
-                                      item.isProduct ? "success" : "secondary"
-                                    }
-                                    className="ms-2"
-                                  >
-                                    {item.isProduct ? "Catálogo" : "Manual"}
-                                  </Badge>
-                                </div>
-                              </td>
-                              <td className="text-end fw-bold">
-                                ${item.amount.toFixed(2)}
-                              </td>
-                              <td className="text-end" style={{ width: 96 }}>
-                                <div className="d-flex justify-content-end gap-1">
-                                  <Button
-                                    variant="outline-primary"
-                                    size="sm"
-                                    onClick={() => handleOpenExtrasModal(index)}
-                                    title="Agregar extras"
-                                    disabled={
-                                      !storage ||
-                                      !storage.materials ||
-                                      storage.materials.length === 0
-                                    }
-                                  >
-                                    <Plus size={16} />
-                                  </Button>
-                                  <Button
-                                    variant="outline-danger"
-                                    size="sm"
-                                    onClick={() => handleRemoveItem(index)}
-                                    title="Eliminar"
-                                  >
-                                    <Trash2 size={16} />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                            {item.insumos &&
-                              item.insumos.length > 0 &&
-                              item.insumos.map((insumo, idx) => (
-                                <tr
-                                  key={`${index}-insumo-${idx}`}
-                                  className="border-0"
-                                >
-                                  <td className="py-1 ps-4 border-0 text-muted small">
-                                    {insumo.cantidad} {insumo.nombre}
-                                    {insumo.isExtra && (
-                                      <Badge
-                                        bg="info"
-                                        className="ms-2 text-white"
-                                        style={{ fontSize: "0.65rem" }}
-                                      >
-                                        Extra
-                                      </Badge>
-                                    )}
-                                  </td>
-                                  <td className="py-1 border-0 text-end text-muted small">
-                                    {insumo.isExtra
-                                      ? `+$${insumo.importeVenta.toFixed(2)}`
-                                      : ""}
-                                  </td>
-                                  <td className="py-1 border-0"></td>
-                                </tr>
-                              ))}
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                <hr />
-
-                {/* Totales */}
-                <div className="d-flex justify-content-between mb-1">
-                  <span className="text-muted">Subtotal</span>
-                  <span className="fw-semibold">
-                    ${formData.subtotal.toFixed(2)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <span className="text-muted">Descuento</span>
-                  <span className="text-danger fw-semibold">
-                    -$
-                    {(formData.discountType === "porcentaje"
-                      ? (formData.subtotal * (formData.discount || 0)) / 100
-                      : formData.discount || 0
-                    ).toFixed(2)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mb-2">
-                  <span className="text-muted">Envío</span>
-                  <span className="text-success fw-semibold">
-                    +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between align-items-center border-top pt-2">
-                  <span className="fs-5 fw-bold">Total</span>
-                  <span className="fs-4 fw-bold text-primary">
-                    ${formData.total.toFixed(2)}
-                  </span>
-                </div>
-              </Card.Body>
-              <Card.Footer className="bg-white border-0 p-3 flex-shrink-0">
-                <div className="d-grid gap-2">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    disabled={formData.items.length === 0}
-                    onClick={() => {
-                      if (formData.items.length === 0) {
-                        toast.error("Agrega al menos un producto para continuar");
-                        return;
+            <Card.Header className="bg-white border-0 py-2 flex-shrink-0">
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-bold">Carrito</span>
+                <Badge bg="primary">{formData.items.length}</Badge>
+              </div>
+            </Card.Header>
+            <Card.Body className="flex-grow-1" style={{ overflow: "auto" }}>
+              {/* Producto manual rápido */}
+              <div className="mb-3">
+                <div className="fw-semibold mb-2">Producto manual</div>
+                <Row className="g-2">
+                  <Col xs={12}>
+                    <Form.Control
+                      type="text"
+                      placeholder="Nombre del producto"
+                      value={currentProductName}
+                      onChange={(e) => setCurrentProductName(e.target.value)}
+                      className="py-2"
+                    />
+                  </Col>
+                  <Col xs={6}>
+                    <Form.Control
+                      type="number"
+                      min="1"
+                      value={currentItem.quantity}
+                      onChange={(e) =>
+                        setCurrentItem({
+                          ...currentItem,
+                          quantity: parseInt(e.target.value) || 1,
+                        })
                       }
-                      setShowClientInfo(true);
-                      setShowOrderDetailsModal(true);
-                    }}
-                  >
-                    Datos del pedido / Cobrar
-                  </Button>
-                  <Button
-                    variant="outline-secondary"
-                    onClick={() => window.history.back()}
-                  >
-                    Salir
-                  </Button>
+                      className="py-2 text-center"
+                    />
+                  </Col>
+                  <Col xs={6}>
+                    <Form.Control
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Precio"
+                      value={currentItem.unitPrice || ""}
+                      onChange={(e) =>
+                        setCurrentItem({
+                          ...currentItem,
+                          unitPrice: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="py-2"
+                    />
+                  </Col>
+                  <Col xs={12}>
+                    <Form.Select
+                      value={selectedProductCategory}
+                      onChange={(e) =>
+                        setSelectedProductCategory(e.target.value)
+                      }
+                      className="py-2"
+                      disabled={loadingProductCategories}
+                    >
+                      <option value="">
+                        {loadingProductCategories
+                          ? "Cargando categorías..."
+                          : "-- Categoría --"}
+                      </option>
+                      {productCategories.map((category) => (
+                        <option key={category._id} value={category._id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                  <Col xs={12} className="d-grid">
+                    <Button variant="outline-primary" onClick={handleAddItem}>
+                      <Plus size={16} className="me-2" />
+                      Agregar (${calculateItemAmount().toFixed(2)})
+                    </Button>
+                  </Col>
+                </Row>
+              </div>
+
+              {/* Lista de items */}
+              {formData.items.length === 0 ? (
+                <Alert variant="light" className="mb-0">
+                  Aún no hay productos. Agrega desde el catálogo.
+                </Alert>
+              ) : (
+                <div
+                  className="table-responsive"
+                  style={{ maxHeight: 340, overflow: "auto" }}
+                >
+                  <table className="table table-sm align-middle">
+                    <tbody>
+                      {formData.items.map((item, index) => (
+                        <React.Fragment key={index}>
+                          <tr>
+                            <td>
+                              <div className="fw-semibold">
+                                {item.productName}
+                              </div>
+                              <div className="text-muted small">
+                                {item.quantity} × ${item.unitPrice.toFixed(2)}{" "}
+                                <Badge
+                                  bg={item.isProduct ? "success" : "secondary"}
+                                  className="ms-2"
+                                >
+                                  {item.isProduct ? "Catálogo" : "Manual"}
+                                </Badge>
+                              </div>
+                            </td>
+                            <td className="text-end fw-bold">
+                              ${item.amount.toFixed(2)}
+                            </td>
+                            <td className="text-end" style={{ width: 96 }}>
+                              <div className="d-flex justify-content-end gap-1">
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => handleOpenExtrasModal(index)}
+                                  title="Agregar extras"
+                                  disabled={
+                                    !storage ||
+                                    !storage.materials ||
+                                    storage.materials.length === 0
+                                  }
+                                >
+                                  <Plus size={16} />
+                                </Button>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleRemoveItem(index)}
+                                  title="Eliminar"
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                          {item.insumos &&
+                            item.insumos.length > 0 &&
+                            item.insumos.map((insumo, idx) => (
+                              <tr
+                                key={`${index}-insumo-${idx}`}
+                                className="border-0"
+                              >
+                                <td className="py-1 ps-4 border-0 text-muted small">
+                                  {insumo.cantidad} {insumo.nombre}
+                                  {insumo.isExtra && (
+                                    <Badge
+                                      bg="info"
+                                      className="ms-2 text-white"
+                                      style={{ fontSize: "0.65rem" }}
+                                    >
+                                      Extra
+                                    </Badge>
+                                  )}
+                                </td>
+                                <td className="py-1 border-0 text-end text-muted small">
+                                  {insumo.isExtra
+                                    ? `+$${insumo.importeVenta.toFixed(2)}`
+                                    : ""}
+                                </td>
+                                <td className="py-1 border-0"></td>
+                              </tr>
+                            ))}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </Card.Footer>
+              )}
+
+              <hr />
+
+              {/* Totales */}
+              <div className="d-flex justify-content-between mb-1">
+                <span className="text-muted">Subtotal</span>
+                <span className="fw-semibold">
+                  ${formData.subtotal.toFixed(2)}
+                </span>
+              </div>
+              <div className="d-flex justify-content-between mb-1">
+                <span className="text-muted">Descuento</span>
+                <span className="text-danger fw-semibold">
+                  -$
+                  {(formData.discountType === "porcentaje"
+                    ? (formData.subtotal * (formData.discount || 0)) / 100
+                    : formData.discount || 0
+                  ).toFixed(2)}
+                </span>
+              </div>
+              <div className="d-flex justify-content-between mb-2">
+                <span className="text-muted">Envío</span>
+                <span className="text-success fw-semibold">
+                  +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center border-top pt-2">
+                <span className="fs-5 fw-bold">Total</span>
+                <span className="fs-4 fw-bold text-primary">
+                  ${formData.total.toFixed(2)}
+                </span>
+              </div>
+            </Card.Body>
+            <Card.Footer className="bg-white border-0 p-3 flex-shrink-0">
+              <div className="d-grid gap-2">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  disabled={formData.items.length === 0}
+                  onClick={() => {
+                    if (formData.items.length === 0) {
+                      toast.error("Agrega al menos un producto para continuar");
+                      return;
+                    }
+                    setShowClientInfo(true);
+                    setShowOrderDetailsModal(true);
+                  }}
+                >
+                  Datos del pedido / Cobrar
+                </Button>
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => window.history.back()}
+                >
+                  Salir
+                </Button>
+              </div>
+            </Card.Footer>
           </Card>
         </Col>
       </Row>
