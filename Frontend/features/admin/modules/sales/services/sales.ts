@@ -152,4 +152,19 @@ export const salesService = {
     }>(`/orders/summary?${searchParams}`);
     return response as any;
   },
+
+  // Actualizar información de entrega de una venta
+  updateSaleDeliveryInfo: async (
+    saleId: string,
+    data: { message: string; deliveryDateTime: string }
+  ): Promise<{ success: boolean; message: string; data: Sale }> => {
+    const response = await apiCall<{ success: boolean; message: string; data: Sale }>(
+      `/orders/${saleId}/delivery`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    );
+    return response as any;
+  },
 };

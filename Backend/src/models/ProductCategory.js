@@ -16,6 +16,11 @@ const productCategorySchema = new Schema(
       type: Boolean,
       default: true,
     },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'cv_company',
+      required: false
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -40,6 +45,7 @@ productCategorySchema.pre("save", function (next) {
 productCategorySchema.index({ name: 1 });
 productCategorySchema.index({ isActive: 1 });
 productCategorySchema.index({ createdAt: -1 });
+productCategorySchema.index({ company: 1 });
 
 const ProductCategory = mongoose.model("cv_product_category", productCategorySchema);
 export { ProductCategory };

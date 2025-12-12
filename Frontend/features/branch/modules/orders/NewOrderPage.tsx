@@ -165,14 +165,21 @@ const NewOrderPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Obtener todos los clientes
-  const fetchClients = async () => {
+  // Obtener todos los clientes filtrados por sucursal
+  const fetchClients = async (branchId?: string) => {
     setLoadingClients(true);
     try {
-      const response = await clientsService.getAllClients({
+      const filters: any = {
         limit: 1000,
         status: true,
-      });
+      };
+
+      // Si se proporciona branchId, agregarlo al filtro
+      if (branchId) {
+        filters.branchId = branchId;
+      }
+
+      const response = await clientsService.getAllClients(filters);
       setClients(response.data);
     } catch (err) {
       console.error("Error al cargar clientes:", err);
@@ -189,6 +196,9 @@ const NewOrderPage = () => {
         limit: 1000,
         status: true,
       });
+      console.log("Respuesta completa métodos de pago:", response);
+      console.log("Data de métodos de pago:", response.data);
+      console.log("Cantidad de métodos:", response.data?.length);
       setPaymentMethods(response.data);
       // Establecer el primer método de pago como predeterminado
       if (response.data.length > 0) {
@@ -317,6 +327,9 @@ const NewOrderPage = () => {
         limit: 1000,
         isActive: true,
       });
+      console.log("Respuesta completa categorías de productos:", response);
+      console.log("Data de categorías:", response.data);
+      console.log("Cantidad de categorías:", response.data?.length);
       setProductCategories(response.data);
     } catch (err) {
       console.error("Error al cargar categorías de productos:", err);
@@ -326,9 +339,8 @@ const NewOrderPage = () => {
     }
   };
 
-  // Cargar clientes, métodos de pago, sucursales, caja registradora, colonias y categorías al montar el componente
+  // Cargar métodos de pago, sucursales, caja registradora, colonias y categorías al montar el componente
   useEffect(() => {
-    fetchClients();
     fetchPaymentMethods();
 
     // Para usuarios Redes, cargar sucursales de su empresa
@@ -365,6 +377,13 @@ const NewOrderPage = () => {
       setStorage(null);
       setSelectedStorageId("");
       setHasNoStorage(false);
+    }
+  }, [formData.branchId]);
+
+  // Cargar clientes filtrados por sucursal cuando cambia la sucursal
+  useEffect(() => {
+    if (formData.branchId) {
+      fetchClients(formData.branchId);
     }
   }, [formData.branchId]);
 

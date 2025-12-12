@@ -129,9 +129,10 @@ const OrderPaymentsTable: React.FC<OrderPaymentsTableProps> = ({ filters }) => {
                         {payment.paymentMethod?.name || "N/A"}
                       </td>
                       <td className="px-4 py-3">
-                        {payment.registeredBy
-                          ? `${payment.registeredBy.name} ${payment.registeredBy.lastName}`
-                          : "N/A"}
+                        {payment.registeredBy?.profile?.fullName ||
+                         (payment.registeredBy?.profile?.name && payment.registeredBy?.profile?.lastName
+                           ? `${payment.registeredBy.profile.name} ${payment.registeredBy.profile.lastName}`
+                           : "N/A")}
                       </td>
                       <td className="px-4 py-3 text-end fw-semibold">
                         {formatCurrency(payment.amount)}

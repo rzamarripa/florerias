@@ -17,6 +17,11 @@ const unitSchema = new mongoose.Schema({
   status: {
     type: Boolean,
     default: true
+  },
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_company',
+    required: false
   }
 }, {
   timestamps: true,
@@ -25,5 +30,6 @@ const unitSchema = new mongoose.Schema({
 
 // Índices para mejorar rendimiento
 unitSchema.index({ status: 1 });
+unitSchema.index({ company: 1 });
 
 export default mongoose.model('Unit', unitSchema);

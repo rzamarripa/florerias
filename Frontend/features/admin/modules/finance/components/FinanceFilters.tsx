@@ -75,6 +75,16 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
     }
   }, [branchId]);
 
+  // Ejecutar búsqueda automática al cargar la página
+  useEffect(() => {
+    // Esperar a que se carguen los datos necesarios
+    const timer = setTimeout(() => {
+      handleSearch();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const loadClients = async () => {
     try {
       const response = await clientsService.getAllClients({

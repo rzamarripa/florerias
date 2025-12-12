@@ -7,8 +7,12 @@ import {
   updateMaterialStatus,
   deleteMaterial
 } from '../controllers/materialController.js';
+import { protect } from '../middleware/auth.js';
 
 const router = Router();
+
+// Aplicar middleware de autenticación a todas las rutas
+router.use(protect);
 
 // Rutas para materiales
 router.route('/')

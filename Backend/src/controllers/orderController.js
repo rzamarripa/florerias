@@ -1499,6 +1499,121 @@ const sendOrderToShipping = async (req, res) => {
   }
 };
 
+// Actualizar información de entrega de una orden
+const updateOrderDeliveryInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message, deliveryDateTime } = req.body;
+
+    // Validar que se proporcione al menos un campo
+    if (!message && !deliveryDateTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe proporcionar al menos el mensaje o la fecha de entrega'
+      });
+    }
+
+    // Verificar si la orden existe
+    const existingOrder = await Order.findById(id);
+    if (!existingOrder) {
+      return res.status(404).json({
+        success: false,
+        message: 'Orden no encontrada'
+      });
+    }
+
+    // Preparar los datos de actualización
+    const updateData = {};
+
+    if (message !== undefined) {
+      updateData['deliveryData.message'] = message;
+    }
+
+    if (deliveryDateTime) {
+      // Validar que sea una fecha válida
+      const dateToValidate = new Date(deliveryDateTime);
+      if (isNaN(dateToValidate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Fecha de entrega inválida'
+        });
+      }
+      updateData['deliveryData.deliveryDateTime'] = deliveryDateTime;
+    }
+
+    // Actualizar la orden
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    )
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashRegisterId', 'name isOpen currentBalance')
+      .populate('cashier', 'name email')
+      .populate('items.productId', 'nombre imagen')
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      });
+
+    // Crear log de actualización
+    try {
+      const user = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+      const userName = user?.profile?.fullName || user?.name || 'Usuario';
+      const userRole = user?.role?.name || 'Usuario';
+
+      const changes = [];
+      if (message !== undefined) {
+        changes.push(`mensaje actualizado`);
+      }
+      if (deliveryDateTime) {
+        changes.push(`fecha de entrega actualizada a ${new Date(deliveryDateTime).toLocaleDateString('es-MX')}`);
+      }
+
+      await orderLogService.createLog(
+        id,
+        'delivery_info_updated',
+        `Información de entrega actualizada: ${changes.join(', ')}`,
+        req.user._id,
+        userName,
+        userRole,
+        {
+          oldMessage: existingOrder.deliveryData?.message,
+          newMessage: message,
+          oldDeliveryDateTime: existingOrder.deliveryData?.deliveryDateTime,
+          newDeliveryDateTime: deliveryDateTime
+        }
+      );
+    } catch (logError) {
+      console.error('Error al crear log de actualización de entrega:', logError);
+      // No fallar la actualización si falla el log
+    }
+
+    // Emitir evento de socket para notificar a otros usuarios
+    emitOrderUpdated(updatedOrder);
+
+    res.status(200).json({
+      success: true,
+      data: updatedOrder,
+      message: 'Información de entrega actualizada exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al actualizar información de entrega:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 // Obtener órdenes sin autorizar (con descuento pendiente de autorización)
 const getUnauthorizedOrders = async (req, res) => {
   try {
@@ -1736,5 +1851,6 @@ export {
   deleteOrder,
   getOrdersSummary,
   sendOrderToShipping,
+  updateOrderDeliveryInfo,
   getUnauthorizedOrders
 };

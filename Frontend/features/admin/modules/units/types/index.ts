@@ -3,6 +3,11 @@ export interface Unit {
   name: string;
   abbreviation: string;
   status: boolean;
+  company?: {
+    _id: string;
+    legalName: string;
+    tradeName?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

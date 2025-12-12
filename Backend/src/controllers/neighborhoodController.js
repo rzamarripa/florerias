@@ -1,4 +1,7 @@
 import { Neighborhood } from '../models/Neighborhood.js';
+import { User } from '../models/User.js';
+import { Branch } from '../models/Branch.js';
+import { Company } from '../models/Company.js';
 
 // Obtener todas las colonias con filtros y paginación
 const getAllNeighborhoods = async (req, res) => {
@@ -19,8 +22,85 @@ const getAllNeighborhoods = async (req, res) => {
       });
     }
 
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(userId).populate('role');
+
+    if (!currentUser || !currentUser.role) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuario sin rol asignado'
+      });
+    }
+
+    const userRole = currentUser.role.name;
+
     // Construir filtros
     const filters = {};
+
+    // Filtrar por empresa según el rol del usuario
+    if (userRole === 'Administrador') {
+      // Buscar la empresa del administrador
+      const company = await Company.findOne({
+        administrator: userId,
+      });
+
+      if (company) {
+        filters.company = company._id;
+      } else {
+        // Si no tiene empresa, no retornar ninguna colonia
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    } else if (userRole === 'Gerente') {
+      // Buscar la sucursal del gerente
+      const managerBranch = await Branch.findOne({
+        manager: userId,
+      });
+
+      if (managerBranch) {
+        // Buscar la empresa por el ID de la sucursal
+        const company = await Company.findOne({
+          branches: managerBranch._id,
+        });
+
+        if (company) {
+          filters.company = company._id;
+        } else {
+          // Si no tiene empresa, no retornar ninguna colonia
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
+      } else {
+        // Si no tiene sucursal, no retornar ninguna colonia
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    }
+    // Super Admin puede ver todas las colonias (no se agrega filtro de company)
 
     if (status) {
       filters.status = status;
@@ -36,6 +116,7 @@ const getAllNeighborhoods = async (req, res) => {
 
     // Obtener colonias con paginación
     const neighborhoods = await Neighborhood.find(filters)
+      .populate('company', 'legalName tradeName')
       .sort({ name: 1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -77,7 +158,8 @@ const getNeighborhoodById = async (req, res) => {
       });
     }
 
-    const neighborhood = await Neighborhood.findById(id);
+    const neighborhood = await Neighborhood.findById(id)
+      .populate('company', 'legalName tradeName');
 
     if (!neighborhood) {
       return res.status(404).json({
@@ -143,14 +225,59 @@ const createNeighborhood = async (req, res) => {
       });
     }
 
+    // Obtener el company ID según el rol del usuario
+    let companyId = null;
+
+    // Obtener el usuario con su rol
+    const currentUser = await User.findById(userId).populate('role');
+
+    if (currentUser && currentUser.role) {
+      const userRole = currentUser.role.name;
+
+      if (userRole === 'Administrador') {
+        // Buscar la empresa por el campo administrator
+        const company = await Company.findOne({
+          administrator: userId,
+        });
+
+        if (company) {
+          companyId = company._id;
+        }
+      } else if (userRole === 'Gerente') {
+        // Buscar la sucursal del gerente
+        const managerBranch = await Branch.findOne({
+          manager: userId,
+        });
+
+        if (managerBranch) {
+          // Buscar la empresa por el ID de la sucursal
+          const company = await Company.findOne({
+            branches: managerBranch._id,
+          });
+
+          if (company) {
+            companyId = company._id;
+          }
+        }
+      } else if (userRole === 'Super Admin') {
+        // Super Admin: podría obtener la empresa de alguna manera específica
+        // Por ahora, dejamos companyId como null para Super Admin
+        // o podrías implementar lógica adicional según tus necesidades
+      }
+    }
+
     // Crear nueva colonia
     const newNeighborhood = new Neighborhood({
       name,
       priceDelivery,
-      status
+      status,
+      company: companyId,
     });
 
     const savedNeighborhood = await newNeighborhood.save();
+
+    // Popular la empresa para la respuesta
+    await savedNeighborhood.populate('company', 'legalName tradeName');
 
     res.status(201).json({
       success: true,
@@ -233,7 +360,7 @@ const updateNeighborhood = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    );
+    ).populate('company', 'legalName tradeName');
 
     res.status(200).json({
       success: true,

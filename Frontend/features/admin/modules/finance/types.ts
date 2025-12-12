@@ -36,8 +36,11 @@ export interface OrderPayment {
   date: string;
   registeredBy: {
     _id: string;
-    name: string;
-    lastName: string;
+    profile: {
+      name: string;
+      lastName: string;
+      fullName: string;
+    };
   };
   notes?: string;
 }
@@ -100,10 +103,10 @@ export interface FinanceStats {
 }
 
 export interface IncomeStats {
-  transferencia: number;
-  efectivo: number;
-  tarjeta: number;
-  deposito: number;
+  paymentMethodId: string;
+  paymentMethodName: string;
+  abbreviation: string;
+  total: number;
 }
 
 // Importar PaymentMethod de payment-methods module

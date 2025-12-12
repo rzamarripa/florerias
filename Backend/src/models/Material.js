@@ -37,6 +37,11 @@ const materialSchema = new mongoose.Schema({
   status: {
     type: Boolean,
     default: true
+  },
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_company',
+    required: false
   }
 }, {
   timestamps: true,
@@ -47,5 +52,6 @@ const materialSchema = new mongoose.Schema({
 materialSchema.index({ name: 1 });
 materialSchema.index({ status: 1 });
 materialSchema.index({ unit: 1 });
+materialSchema.index({ company: 1 });
 
 export default mongoose.model('Material', materialSchema);

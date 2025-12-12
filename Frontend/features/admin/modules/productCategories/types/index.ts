@@ -3,6 +3,11 @@ export interface ProductCategory {
   name: string;
   description?: string;
   isActive: boolean;
+  company?: {
+    _id: string;
+    legalName: string;
+    tradeName?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

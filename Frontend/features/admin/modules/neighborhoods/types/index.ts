@@ -3,6 +3,11 @@ export interface Neighborhood {
   name: string;
   priceDelivery: number;
   status: "active" | "inactive";
+  company?: {
+    _id: string;
+    legalName: string;
+    tradeName?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
