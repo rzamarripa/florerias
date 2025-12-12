@@ -252,7 +252,12 @@ const NewProductListPage: React.FC = () => {
         );
       }
 
-      if (!formData.name || !formData.company || !formData.branch || !formData.expirationDate) {
+      if (
+        !formData.name ||
+        !formData.company ||
+        !formData.branch ||
+        !formData.expirationDate
+      ) {
         throw new Error(
           "El nombre, empresa, sucursal y fecha de expiración son obligatorios"
         );
@@ -268,7 +273,9 @@ const NewProductListPage: React.FC = () => {
       } else {
         const response = await productListsService.createProductList(formData);
         if (response.data?.status === false) {
-          toast.success("Lista de productos creada exitosamente. Se creó como inactiva porque ya existe una lista activa para esta sucursal");
+          toast.success(
+            "Lista de productos creada exitosamente. Se creó como inactiva porque ya existe una lista activa para esta sucursal"
+          );
         } else {
           toast.success("Lista de productos creada exitosamente y activada");
         }
@@ -326,7 +333,8 @@ const NewProductListPage: React.FC = () => {
       {!activeBranch && (
         <Alert variant="warning" className="mb-3">
           <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
-          Por favor, selecciona una sucursal desde el selector de sucursales en la parte superior para poder crear una lista de productos.
+          Por favor, selecciona una sucursal desde el selector de sucursales en
+          la parte superior para poder crear una lista de productos.
         </Alert>
       )}
 
@@ -414,13 +422,16 @@ const NewProductListPage: React.FC = () => {
                   </Form.Label>
                   <Form.Control
                     type="text"
-                    value={activeBranch?.branchName || "No hay sucursal seleccionada"}
+                    value={
+                      activeBranch?.branchName || "No hay sucursal seleccionada"
+                    }
                     disabled
                     readOnly
                     className="py-2"
                   />
                   <Form.Text className="text-muted">
-                    Sucursal activa actual. Puede haber múltiples listas por sucursal, pero solo una estará activa
+                    Sucursal activa actual. Puede haber múltiples listas por
+                    sucursal, pero solo una estará activa
                   </Form.Text>
                 </Form.Group>
               </Col>

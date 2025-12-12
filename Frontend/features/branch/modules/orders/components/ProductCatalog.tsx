@@ -3,14 +3,11 @@
 import React, { useState, useEffect } from "react";
 import {
   Card,
-  Form,
   Button,
-  InputGroup,
   Spinner,
-  Badge,
   Alert,
 } from "react-bootstrap";
-import { Search, Plus, Package, AlertTriangle, Warehouse } from "lucide-react";
+import { Package, AlertTriangle, Warehouse } from "lucide-react";
 import { productListsService } from "@/features/admin/modules/product-lists/services/productLists";
 import { EmbeddedProductWithStock } from "@/features/admin/modules/product-lists/types";
 import { OrderItem } from "../types";
@@ -38,6 +35,8 @@ interface ProductCatalogProps {
   branchId: string;
   itemsInOrder: OrderItem[];
   storage: Storage | null;
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
 }
 
 const ProductCatalog: React.FC<ProductCatalogProps> = ({
@@ -45,10 +44,10 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
   branchId,
   itemsInOrder,
   storage,
+  searchTerm,
+  onSearchChange,
 }) => {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
   const [products, setProducts] = useState<EmbeddedProductWithStock[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -108,12 +107,6 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
     return 0;
   };
 
-  const handleQuantityChange = (productId: string, value: number) => {
-    setQuantities({
-      ...quantities,
-      [productId]: value > 0 ? value : 1,
-    });
-  };
 
   // Función para calcular el precio de venta final
   const calculateFinalPrice = (product: EmbeddedProductWithStock) => {
@@ -130,17 +123,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
   };
 
   const handleAddToOrder = (product: EmbeddedProductWithStock) => {
-    const cantidad = quantities[product.productId] || 1;
     const precio = calculateFinalPrice(product);
-
-    // Debug: Verificar el producto original
-    console.log("🔍 Producto del catálogo original:", {
-      productId: product.productId,
-      nombre: product.nombre,
-      productCategory: product.productCategory,
-      insumos: product.insumos,
-      productoCompleto: product,
-    });
 
     // Mapear los insumos del producto
     const insumos: ProductInsumo[] = product.insumos?.map((insumo) => ({
@@ -158,16 +141,8 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
       insumos,
     };
 
-    // Debug: Verificar el producto que se enviará
-    console.log("📤 Producto a enviar al padre:", productToAdd);
-
-    onAddProduct(productToAdd, cantidad);
-
-    // Reset quantity after adding
-    setQuantities({
-      ...quantities,
-      [product.productId]: 1,
-    });
+    // Siempre agregar 1 unidad por click
+    onAddProduct(productToAdd, 1);
   };
 
   const handleManageStock = (product: EmbeddedProductWithStock) => {
@@ -182,31 +157,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
   };
 
   return (
-    <div className="product-catalog h-100 d-flex flex-column">
-      <Card className="border-0 shadow-sm h-100 d-flex flex-column">
-        <Card.Header className="bg-white border-0 py-3 sticky-top">
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <Package size={20} className="text-primary" />
-            <h5 className="mb-0 fw-bold">Catálogo de Arreglos</h5>
-          </div>
-          <InputGroup>
-            <InputGroup.Text className="bg-white border-end-0">
-              <Search size={18} className="text-muted" />
-            </InputGroup.Text>
-            <Form.Control
-              type="text"
-              placeholder="Buscar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-start-0 ps-0"
-            />
-          </InputGroup>
-        </Card.Header>
-
-        <Card.Body
-          className="flex-grow-1 overflow-auto p-3"
-          style={{ maxHeight: "calc(100vh - 200px)" }}
-        >
+    <div className="product-catalog">
           {!storage && branchId && (
             <Alert variant="info" className="mb-3">
               <AlertTriangle size={16} className="me-2" />
@@ -245,132 +196,104 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
               )}
             </div>
           ) : (
-            <div className="d-flex flex-column gap-3">
+            <div className="row g-2">
               {filteredProducts.map((product) => {
                 const precio = calculateFinalPrice(product);
-
                 const availableStock = getAvailableStock(product);
                 const isOutOfStock = availableStock <= 0;
-                const currentQuantity = quantities[product.productId] || 1;
 
                 return (
-                  <Card
-                    key={product.productId}
-                    className="border shadow-sm product-card"
-                  >
-                    <div className="row g-0">
-                      <div className="col-4">
+                  <div key={product.productId} className="col-6 col-xl-4">
+                    <Card
+                      className="shadow-sm product-card h-100 overflow-hidden"
+                      style={{
+                        border: "1px solid #a8c5e8",
+                        cursor: isOutOfStock ? "not-allowed" : "pointer"
+                      }}
+                      onClick={() => {
+                        if (!isOutOfStock) {
+                          handleAddToOrder(product);
+                        }
+                      }}
+                    >
+                      <div className="position-relative">
                         {product.imagen ? (
                           <img
                             src={product.imagen}
                             alt={product.nombre}
-                            className="rounded-start"
+                            className="card-img-top"
                             style={{
                               width: "100%",
-                              height: "120px",
+                              height: "100px",
                               objectFit: "cover",
                             }}
                           />
                         ) : (
                           <div
-                            className="bg-light d-flex align-items-center justify-content-center rounded-start"
-                            style={{ width: "100%", height: "120px" }}
+                            className="bg-light d-flex align-items-center justify-content-center"
+                            style={{ width: "100%", height: "100px" }}
                           >
-                            <Package size={32} className="text-muted" />
+                            <Package size={28} className="text-muted" />
                           </div>
                         )}
+                        {/* Badge de stock tipo banderín */}
+                        <div
+                          className={`stock-ribbon ${
+                            isOutOfStock
+                              ? "bg-danger"
+                              : availableStock < 5
+                              ? "bg-warning"
+                              : "bg-success"
+                          }`}
+                        >
+                          {availableStock}
+                        </div>
                       </div>
-                      <div className="col-8">
-                        <Card.Body className="p-3">
-                          <div className="d-flex flex-column h-100">
-                            <div className="flex-grow-1">
-                              <h6
-                                className="fw-bold mb-1 text-primary"
-                                style={{ fontSize: "0.95rem" }}
-                              >
-                                {product.nombre}
-                              </h6>
-                              {isOutOfStock && (
-                                <Alert
-                                  variant="danger"
-                                  className="py-1 px-2 mb-2 small"
-                                >
-                                  <AlertTriangle size={14} className="me-1" />
-                                  Sin stock en almacén
-                                </Alert>
-                              )}
-                              <div className="d-flex justify-content-between align-items-center mb-2">
-                                <p
-                                  className="text-success fw-bold mb-0"
-                                  style={{ fontSize: "1.1rem" }}
-                                >
-                                  ${formatNumber(precio)}
-                                </p>
-                                <Badge
-                                  bg={
-                                    isOutOfStock
-                                      ? "danger"
-                                      : availableStock < 5
-                                      ? "warning"
-                                      : "success"
-                                  }
-                                  className="text-white"
-                                >
-                                  Stock: {availableStock}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="d-flex gap-2 align-items-center">
-                              {!isOutOfStock ? (
-                                <>
-                                  <Form.Control
-                                    type="number"
-                                    min="1"
-                                    max={availableStock}
-                                    value={currentQuantity}
-                                    onChange={(e) =>
-                                      handleQuantityChange(
-                                        product.productId,
-                                        parseInt(e.target.value) || 1
-                                      )
-                                    }
-                                    className="form-control-sm"
-                                    style={{ width: "70px" }}
-                                  />
-                                  <Button
-                                    variant="primary"
-                                    size="sm"
-                                    className="flex-grow-1"
-                                    onClick={() => handleAddToOrder(product)}
-                                    disabled={currentQuantity > availableStock}
-                                  >
-                                    <Plus size={16} className="me-1" />
-                                    Agregar
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  variant="warning"
-                                  size="sm"
-                                  className="w-100"
-                                  onClick={() => handleManageStock(product)}
-                                >
-                                  <Warehouse size={16} className="me-1" />
-                                  Gestionar Stock
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </Card.Body>
-                      </div>
-                    </div>
-                  </Card>
+                      <Card.Body className="p-2 d-flex flex-column">
+                        <h6
+                          className="fw-bold mb-1 text-dark"
+                          style={{
+                            fontSize: "0.8rem",
+                            lineHeight: "1.15",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            minHeight: "1.8rem"
+                          }}
+                        >
+                          {product.nombre}
+                        </h6>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span
+                            className="text-success fw-bold"
+                            style={{ fontSize: "0.95rem" }}
+                          >
+                            ${formatNumber(precio)}
+                          </span>
+                        </div>
+                      </Card.Body>
+                      {isOutOfStock && (
+                        <Button
+                          variant="warning"
+                          className="rounded-0 border-0 w-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleManageStock(product);
+                          }}
+                          style={{ padding: "6px 8px", fontSize: "0.8rem" }}
+                        >
+                          <Warehouse size={14} className="me-1" />
+                          Sin stock
+                        </Button>
+                      )}
+                    </Card>
+                  </div>
                 );
               })}
             </div>
           )}
-        </Card.Body>
-      </Card>
 
       <style jsx>{`
         .product-catalog {
@@ -385,6 +308,20 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
         .product-card:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .stock-ribbon {
+          position: absolute;
+          top: 0;
+          right: 0;
+          color: white;
+          font-weight: bold;
+          font-size: 0.75rem;
+          padding: 4px 12px 4px 8px;
+          border-radius: 0 0 0 8px;
+          box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.2);
+          min-width: 28px;
+          text-align: center;
         }
 
         .overflow-auto::-webkit-scrollbar {

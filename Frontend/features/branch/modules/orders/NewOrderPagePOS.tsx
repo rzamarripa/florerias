@@ -112,7 +112,6 @@ const NewOrderPage = () => {
   const [showAddExtrasModal, setShowAddExtrasModal] = useState(false);
   const [selectedItemIndexForExtras, setSelectedItemIndexForExtras] =
     useState<number>(-1);
-  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
   const [catalogSearchTerm, setCatalogSearchTerm] = useState("");
 
   const [formData, setFormData] = useState<CreateOrderData>({
@@ -674,17 +673,9 @@ const NewOrderPage = () => {
 
   // Agregar extras (materiales) a un item específico
   const handleAddExtras = async (
-    extras: {
-      materialId: string;
-      name: string;
-      price: number;
-      quantity: number;
-    }[]
+    extras: { materialId: string; name: string; price: number; quantity: number }[]
   ) => {
-    if (
-      selectedItemIndexForExtras < 0 ||
-      selectedItemIndexForExtras >= formData.items.length
-    ) {
+    if (selectedItemIndexForExtras < 0 || selectedItemIndexForExtras >= formData.items.length) {
       toast.error("Item no válido");
       return;
     }
@@ -698,9 +689,7 @@ const NewOrderPage = () => {
       // Reducir el stock de los materiales en el almacén
       for (const extra of extras) {
         await storageService.removeMaterialsFromStorage(storage._id, {
-          materials: [
-            { materialId: extra.materialId, quantity: extra.quantity },
-          ],
+          materials: [{ materialId: extra.materialId, quantity: extra.quantity }],
         });
       }
 
@@ -727,8 +716,7 @@ const NewOrderPage = () => {
         (sum, insumo) => sum + (insumo.isExtra ? insumo.importeVenta : 0),
         0
       );
-      currentItem.amount =
-        currentItem.unitPrice * currentItem.quantity + insumosTotal;
+      currentItem.amount = currentItem.unitPrice * currentItem.quantity + insumosTotal;
 
       // Actualizar el formData con los items actualizados
       updatedItems[selectedItemIndexForExtras] = currentItem;
@@ -1328,81 +1316,135 @@ const NewOrderPage = () => {
   };
 
   return (
-    <div
-      className="new-order-page"
-      style={{ height: "calc(100vh - 100px)", overflow: "hidden" }}
-    >
-      {hasNoStorage && (
-        <Alert
-          variant="warning"
-          className="mb-3 d-flex align-items-center gap-2"
-        >
-          <Package size={20} />
-          <div>
-            <strong>No hay almacén asignado a esta sucursal</strong>
-            <p className="mb-0 small">
-              Los productos del catálogo se mostrarán con stock en 0. Para poder
-              crear órdenes con productos del catálogo, necesitas crear un
-              almacén para esta sucursal.
-            </p>
-          </div>
-        </Alert>
-      )}
+    <div className="new-order-page">
+      <Row className="g-3">
+        {/* Formulario - 65% izquierda */}
+        <Col xs={12} lg={8} className="order-2 order-lg-1">
+          {error && (
+            <Alert
+              variant="danger"
+              onClose={() => setError(null)}
+              dismissible
+              className="mb-3"
+            >
+              {error}
+            </Alert>
+          )}
 
-      <Row className="g-3" style={{ height: "100%" }}>
-        {/* Catálogo (izquierda) */}
-        <Col xs={12} lg={8} style={{ height: "100%" }}>
-          {/* Config POS para usuarios Redes (sucursal/caja) */}
-          {isSocialMedia && (
-            <Card className="border-0 shadow-sm mb-3">
-              <Card.Body>
-                <Row className="g-3 align-items-end">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <Store size={16} className="me-2" />
-                        Sucursal
-                      </Form.Label>
-                      <Form.Select
-                        value={formData.branchId}
-                        onChange={(e) => handleBranchChange(e.target.value)}
-                        className="py-2"
-                        disabled={loadingCompanyBranches}
-                      >
-                        <option value="">
-                          {loadingCompanyBranches
-                            ? "Cargando sucursales..."
-                            : "-- Selecciona una sucursal --"}
+          {success && (
+            <Alert
+              variant="success"
+              onClose={() => setSuccess(false)}
+              dismissible
+              className="mb-3"
+            >
+              ¡Pedido creado exitosamente!
+            </Alert>
+          )}
+
+          {hasNoStorage && (
+            <Alert
+              variant="warning"
+              className="mb-3 d-flex align-items-center gap-2"
+            >
+              <Package size={20} />
+              <div>
+                <strong>No hay almacén asignado a esta sucursal</strong>
+                <p className="mb-0 small">
+                  Los productos del catálogo se mostrarán con stock en 0. Para
+                  poder crear órdenes con productos del catálogo, necesitas
+                  crear un almacén para esta sucursal.
+                </p>
+              </div>
+            </Alert>
+          )}
+
+          <Form onSubmit={handleSubmit}>
+            {/* Selector de Sucursal - Solo para usuarios Redes */}
+            {isSocialMedia && (
+              <Card className="mb-4 border-0 shadow-sm">
+                <Card.Header className="bg-primary text-white border-0 py-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <Store size={20} />
+                    <h5 className="mb-0 fw-bold">Seleccionar Sucursal</h5>
+                  </div>
+                </Card.Header>
+                <Card.Body>
+                  <Alert variant="info" className="mb-3">
+                    <strong>⚠️ Importante:</strong> Debes seleccionar una
+                    sucursal antes de agregar productos. Los productos y
+                    almacenes disponibles dependen de la sucursal seleccionada.
+                  </Alert>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">
+                      <Store size={16} className="me-2" />
+                      Sucursal
+                    </Form.Label>
+                    <Form.Select
+                      value={formData.branchId}
+                      onChange={(e) => handleBranchChange(e.target.value)}
+                      required
+                      className="py-2"
+                      disabled={loadingCompanyBranches}
+                    >
+                      <option value="">
+                        {loadingCompanyBranches
+                          ? "Cargando sucursales..."
+                          : "-- Selecciona una sucursal --"}
+                      </option>
+                      {companyBranches.map((branch) => (
+                        <option key={branch._id} value={branch._id}>
+                          {branch.branchName} - {branch.branchCode}
                         </option>
-                        {companyBranches.map((branch) => (
-                          <option key={branch._id} value={branch._id}>
-                            {branch.branchName} - {branch.branchCode}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <CreditCard size={16} className="me-2" />
-                        Caja (Redes)
-                      </Form.Label>
-                      <div className="d-flex gap-2">
+                      ))}
+                    </Form.Select>
+                    {companyBranches.length === 0 &&
+                      !loadingCompanyBranches && (
+                        <Alert variant="warning" className="mt-2 mb-0 py-2">
+                          <small>
+                            No hay sucursales asignadas a tu empresa. Contacta
+                            al administrador.
+                          </small>
+                        </Alert>
+                      )}
+                  </Form.Group>
+                </Card.Body>
+              </Card>
+            )}
+
+            {/* Selector de Caja - Solo para usuarios Redes después de seleccionar sucursal */}
+            {isSocialMedia && formData.branchId && (
+              <Card className="mb-4 border-0 shadow-sm">
+                <Card.Header className="bg-success text-white border-0 py-3">
+                  <div className="d-flex align-items-center gap-2">
+                    <CreditCard size={20} />
+                    <h5 className="mb-0 fw-bold">Seleccionar Caja</h5>
+                  </div>
+                </Card.Header>
+                <Card.Body>
+                  <Alert variant="info" className="mb-3">
+                    <strong>💡 Información:</strong> Selecciona una caja de
+                    redes sociales de esta sucursal. Si no tienes una caja
+                    abierta, puedes abrir una directamente desde aquí.
+                  </Alert>
+
+                  <Row className="g-3">
+                    <Col md={8}>
+                      <Form.Group>
+                        <Form.Label className="fw-semibold">
+                          <CreditCard size={16} className="me-2" />
+                          Caja Registradora
+                        </Form.Label>
                         <Form.Select
                           value={selectedCashRegisterId}
                           onChange={(e) =>
                             handleCashRegisterSelect(e.target.value)
                           }
                           className="py-2"
-                          disabled={
-                            !formData.branchId || loadingAvailableCashRegisters
-                          }
+                          disabled={loadingAvailableCashRegisters}
                         >
                           <option value="">
-                            {!formData.branchId
-                              ? "Selecciona una sucursal primero"
-                              : loadingAvailableCashRegisters
+                            {loadingAvailableCashRegisters
                               ? "Cargando cajas..."
                               : "-- Selecciona una caja --"}
                           </option>
@@ -1416,83 +1458,317 @@ const NewOrderPage = () => {
                             </option>
                           ))}
                         </Form.Select>
-                        {selectedCashRegisterId &&
-                          !availableCashRegisters.find(
-                            (cr) =>
-                              cr._id === selectedCashRegisterId && cr.isOpen
-                          ) && (
-                            <Button
-                              variant="success"
-                              onClick={handleOpenCashRegister}
-                              disabled={togglingCashRegister}
-                              style={{ whiteSpace: "nowrap" }}
-                            >
-                              {togglingCashRegister ? "Abriendo..." : "Abrir"}
-                            </Button>
+                        {availableCashRegisters.length === 0 &&
+                          !loadingAvailableCashRegisters && (
+                            <Alert variant="warning" className="mt-2 mb-0 py-2">
+                              <small>
+                                No hay cajas de redes sociales disponibles en
+                                esta sucursal. Contacta al administrador.
+                              </small>
+                            </Alert>
                           )}
-                      </div>
+                      </Form.Group>
+                    </Col>
+
+                    {selectedCashRegisterId &&
+                      !availableCashRegisters.find(
+                        (cr) => cr._id === selectedCashRegisterId && cr.isOpen
+                      ) && (
+                        <Col md={4} className="d-flex align-items-end">
+                          <Button
+                            variant="success"
+                            onClick={handleOpenCashRegister}
+                            disabled={togglingCashRegister}
+                            className="w-100 py-2"
+                          >
+                            {togglingCashRegister
+                              ? "Abriendo..."
+                              : "Abrir Caja"}
+                          </Button>
+                        </Col>
+                      )}
+                  </Row>
+
+                  {cashRegister?.isOpen &&
+                    cashRegister.branchId?._id === formData.branchId && (
+                      <Alert variant="success" className="mt-3 mb-0">
+                        <strong>✅ Caja Abierta:</strong> {cashRegister.name} -
+                        Esta caja está lista para crear órdenes.
+                      </Alert>
+                    )}
+                  {cashRegister?.isOpen &&
+                    cashRegister.branchId?._id !== formData.branchId && (
+                      <Alert variant="info" className="mt-3 mb-0">
+                        <strong>
+                          ℹ️ Tienes una caja abierta en otra sucursal:
+                        </strong>{" "}
+                        {cashRegister.name} (
+                        {cashRegister.branchId?.branchName ||
+                          "Sucursal desconocida"}
+                        ). Selecciona una caja de esta sucursal para crear
+                        órdenes aquí.
+                      </Alert>
+                    )}
+                </Card.Body>
+              </Card>
+            )}
+
+            {/* Información del Cliente */}
+            <Card className="mb-4 border-0 shadow-sm">
+              <Card.Header className="bg-white border-0 py-3">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2">
+                    <User size={20} className="text-primary" />
+                    <h5 className="mb-0 fw-bold">Información del Cliente</h5>
+                  </div>
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={() => setShowClientInfo(!showClientInfo)}
+                    className="d-flex align-items-center gap-2 mx-2"
+                  >
+                    {showClientInfo ? (
+                      <>
+                        <EyeOff size={16} />
+                        Ocultar Detalles
+                      </>
+                    ) : (
+                      <>
+                        <Eye size={16} />
+                        Ver Detalles
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </Card.Header>
+              <Card.Body>
+                <Row className="g-3">
+                  {/* Campos siempre visibles */}
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <Search size={16} className="me-2" />
+                        Buscar Cliente Existente
+                      </Form.Label>
+                      <Form.Select
+                        value={selectedClientId}
+                        onChange={(e) => handleClientSelect(e.target.value)}
+                        className="py-2"
+                        disabled={loadingClients}
+                      >
+                        <option value="">
+                          Seleccionar cliente o ingresar nuevo...
+                        </option>
+                        {clients.map((client) => (
+                          <option key={client._id} value={client._id}>
+                            {client.name} {client.lastName} -{" "}
+                            {client.phoneNumber}
+                          </option>
+                        ))}
+                      </Form.Select>
                     </Form.Group>
                   </Col>
+
+                  {/* Información de caja registradora - Solo para usuarios Cajero */}
+                  {!isSocialMedia && (
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label className="fw-semibold">
+                          <CreditCard size={16} className="me-2" />
+                          Caja Registradora
+                        </Form.Label>
+                        <div className="d-flex gap-2">
+                          <Form.Control
+                            type="text"
+                            value={
+                              loadingCashRegister
+                                ? "Cargando..."
+                                : cashRegister
+                                ? cashRegister.name
+                                : "No hay caja asignada"
+                            }
+                            readOnly
+                            disabled
+                            className="py-2 bg-light"
+                          />
+                          {cashRegister ? (
+                            <Badge
+                              bg={cashRegister.isOpen ? "success" : "secondary"}
+                              className="d-flex align-items-center justify-content-center py-2 px-3"
+                              style={{ minWidth: "120px", fontSize: "0.9rem" }}
+                            >
+                              {cashRegister.isOpen
+                                ? "🟢 Abierta"
+                                : "🔴 Cerrada"}
+                            </Badge>
+                          ) : (
+                            !loadingCashRegister && (
+                              <Button
+                                variant="primary"
+                                onClick={() => router.push("/ventas/cajas")}
+                                className="d-flex align-items-center gap-2"
+                                style={{ minWidth: "160px" }}
+                              >
+                                <ExternalLink size={16} />
+                                Ir a Cajas
+                              </Button>
+                            )
+                          )}
+                        </div>
+                        {cashRegister && !cashRegister.isOpen && (
+                          <Alert variant="warning" className="mt-2 mb-0 py-2">
+                            <small>
+                              ⚠️ La caja está cerrada. Dirígete a la página de
+                              Cajas para abrirla.
+                            </small>
+                          </Alert>
+                        )}
+                        {!cashRegister && !loadingCashRegister && (
+                          <Alert variant="info" className="mt-2 mb-0 py-2">
+                            <small>
+                              ℹ️ No tienes una caja asignada. Dirígete a la
+                              página de Cajas Registradoras para abrir una.
+                            </small>
+                          </Alert>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  )}
+
+                  {/* Detalles del cliente - solo visibles cuando showClientInfo es true */}
+                  {showClientInfo && (
+                    <>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <User size={16} className="me-2" />
+                            Cliente
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            placeholder="Nombre del cliente"
+                            value={formData.clientInfo.name}
+                            onChange={(e) => {
+                              resetCustomValidationMessage(e);
+                              setFormData({
+                                ...formData,
+                                clientInfo: {
+                                  ...formData.clientInfo,
+                                  name: e.target.value,
+                                },
+                              });
+                              setSelectedClientId("");
+                            }}
+                            onInvalid={setCustomValidationMessage}
+                            required
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={3}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Phone size={16} className="me-2" />
+                            Teléfono
+                          </Form.Label>
+                          <Form.Control
+                            type="tel"
+                            placeholder="Teléfono"
+                            value={formData.clientInfo.phone}
+                            onChange={(e) => {
+                              setFormData({
+                                ...formData,
+                                clientInfo: {
+                                  ...formData.clientInfo,
+                                  phone: e.target.value,
+                                },
+                              });
+                              setSelectedClientId("");
+                            }}
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={3}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Mail size={16} className="me-2" />
+                            Correo
+                          </Form.Label>
+                          <Form.Control
+                            type="email"
+                            placeholder="Correo electrónico"
+                            value={formData.clientInfo.email}
+                            onChange={(e) => {
+                              setFormData({
+                                ...formData,
+                                clientInfo: {
+                                  ...formData.clientInfo,
+                                  email: e.target.value,
+                                },
+                              });
+                              setSelectedClientId("");
+                            }}
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      {/* Solo mostrar Canal de Venta si NO es usuario de Redes ni Cajero */}
+                      {!isSocialMedia && !isCashier && (
+                        <Col md={12}>
+                          <Form.Group>
+                            <Form.Label className="fw-semibold">
+                              <Store size={16} className="me-2" />
+                              Canal de Venta
+                            </Form.Label>
+                            <Form.Select
+                              value={formData.salesChannel}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  salesChannel: e.target.value as
+                                    | "tienda"
+                                    | "whatsapp"
+                                    | "facebook"
+                                    | "instagram",
+                                })
+                              }
+                              required
+                              className="py-2"
+                            >
+                              <option value="tienda">Tienda</option>
+                              <option value="whatsapp">WhatsApp</option>
+                              <option value="facebook">Facebook</option>
+                              <option value="instagram">Instagram</option>
+                            </Form.Select>
+                          </Form.Group>
+                        </Col>
+                      )}
+                    </>
+                  )}
                 </Row>
               </Card.Body>
             </Card>
-          )}
 
-          <Card className="border-0 shadow-sm h-100 d-flex flex-column">
-            <Card.Header className="bg-white border-0 py-2 flex-shrink-0">
-              <div className="d-flex align-items-center w-100" style={{ justifyContent: "space-between" }}>
+            {/* Productos */}
+            <Card className="mb-4 border-0 shadow-sm">
+              <Card.Header className="bg-white border-0 py-3">
                 <div className="d-flex align-items-center gap-2">
-                  <Package size={18} className="text-primary" />
-                  <span className="fw-bold">Catálogo</span>
-                </div>
-                <div style={{ width: "360px", flexShrink: 0 }}>
-                  <div className="input-group input-group-sm">
-                    <span className="input-group-text bg-white border-end-0">
-                      <Search size={14} className="text-muted" />
-                    </span>
-                    <Form.Control
-                      type="text"
-                      placeholder="Buscar productos en el catálogo"
-                      value={catalogSearchTerm}
-                      onChange={(e) => setCatalogSearchTerm(e.target.value)}
-                      className="border-start-0 ps-0"
-                      size="sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            </Card.Header>
-            <Card.Body
-              className="p-2 flex-grow-1"
-              style={{ overflow: "auto" }}
-            >
-              <ProductCatalog
-                onAddProduct={handleAddProductFromCatalog}
-                branchId={formData.branchId}
-                itemsInOrder={formData.items}
-                storage={storage}
-                searchTerm={catalogSearchTerm}
-                onSearchChange={setCatalogSearchTerm}
-              />
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* Carrito (derecha) */}
-        <Col xs={12} lg={4} style={{ height: "100%" }}>
-          <Card className="border-0 shadow-sm h-100 d-flex flex-column">
-              <Card.Header className="bg-white border-0 py-2 flex-shrink-0">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="fw-bold">Carrito</span>
-                  <Badge bg="primary">{formData.items.length}</Badge>
+                  <Package size={20} className="text-primary" />
+                  <h5 className="mb-0 fw-bold">Productos</h5>
                 </div>
               </Card.Header>
-              <Card.Body className="flex-grow-1" style={{ overflow: "auto" }}>
-                {/* Producto manual rápido */}
-                <div className="mb-3">
-                  <div className="fw-semibold mb-2">Producto manual</div>
-                  <Row className="g-2">
-                    <Col xs={12}>
+              <Card.Body>
+                {/* Primera fila: Nombre del Producto y Categoría */}
+                <Row className="g-3 mb-3">
+                  <Col xs={12} md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        Nombre del Producto
+                      </Form.Label>
                       <Form.Control
                         type="text"
                         placeholder="Nombre del producto"
@@ -1500,8 +1776,52 @@ const NewOrderPage = () => {
                         onChange={(e) => setCurrentProductName(e.target.value)}
                         className="py-2"
                       />
-                    </Col>
-                    <Col xs={6}>
+                    </Form.Group>
+                  </Col>
+
+                  <Col xs={12} md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        Categoría <span className="text-danger">*</span>
+                      </Form.Label>
+                      <Form.Select
+                        value={selectedProductCategory}
+                        onChange={(e) => {
+                          resetCustomValidationMessage(e);
+                          setSelectedProductCategory(e.target.value);
+                          console.log(e.target.value);
+                        }}
+                        onInvalid={setCustomValidationMessage}
+                        className="py-2"
+                        disabled={loadingProductCategories}
+                      >
+                        <option value="">
+                          {loadingProductCategories
+                            ? "Cargando..."
+                            : "-- Selecciona categoría --"}
+                        </option>
+                        {productCategories.map((category) => (
+                          <option key={category._id} value={category._id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      {productCategories.length === 0 &&
+                        !loadingProductCategories && (
+                          <Form.Text className="text-warning">
+                            ⚠️ No hay categorías disponibles. Por favor, crea
+                            una categoría primero.
+                          </Form.Text>
+                        )}
+                    </Form.Group>
+                  </Col>
+                </Row>
+
+                {/* Segunda fila: Cantidad, Precio, Importe y Botón Agregar */}
+                <Row className="g-3 mb-3 align-items-end">
+                  <Col xs={6} sm={3}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Cantidad</Form.Label>
                       <Form.Control
                         type="number"
                         min="1"
@@ -1514,13 +1834,17 @@ const NewOrderPage = () => {
                         }
                         className="py-2 text-center"
                       />
-                    </Col>
-                    <Col xs={6}>
+                    </Form.Group>
+                  </Col>
+
+                  <Col xs={6} sm={3}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Precio</Form.Label>
                       <Form.Control
                         type="number"
                         min="0"
                         step="0.01"
-                        placeholder="Precio"
+                        placeholder="0.00"
                         value={currentItem.unitPrice || ""}
                         onChange={(e) =>
                           setCurrentItem({
@@ -1530,97 +1854,99 @@ const NewOrderPage = () => {
                         }
                         className="py-2"
                       />
-                    </Col>
-                    <Col xs={12}>
-                      <Form.Select
-                        value={selectedProductCategory}
-                        onChange={(e) =>
-                          setSelectedProductCategory(e.target.value)
-                        }
-                        className="py-2"
-                        disabled={loadingProductCategories}
-                      >
-                        <option value="">
-                          {loadingProductCategories
-                            ? "Cargando categorías..."
-                            : "-- Categoría --"}
-                        </option>
-                        {productCategories.map((category) => (
-                          <option key={category._id} value={category._id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    </Col>
-                    <Col xs={12} className="d-grid">
-                      <Button variant="outline-primary" onClick={handleAddItem}>
-                        <Plus size={16} className="me-2" />
-                        Agregar (${calculateItemAmount().toFixed(2)})
-                      </Button>
-                    </Col>
-                  </Row>
-                </div>
+                    </Form.Group>
+                  </Col>
+
+                  <Col xs={6} sm={3}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Importe</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={`$${calculateItemAmount().toFixed(2)}`}
+                        disabled
+                        className="py-2 bg-light"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col xs={6} sm={3} className="d-flex align-items-end">
+                    <Button
+                      variant="primary"
+                      onClick={handleAddItem}
+                      className="w-100 py-2 d-flex align-items-center justify-content-center gap-2"
+                    >
+                      <Plus size={20} />
+                      <span>Agregar</span>
+                    </Button>
+                  </Col>
+                </Row>
 
                 {/* Lista de items */}
-                {formData.items.length === 0 ? (
-                  <Alert variant="light" className="mb-0">
-                    Aún no hay productos. Agrega desde el catálogo.
-                  </Alert>
-                ) : (
-                  <div
-                    className="table-responsive"
-                    style={{ maxHeight: 340, overflow: "auto" }}
-                  >
-                    <table className="table table-sm align-middle">
+                {formData.items.length > 0 && (
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead className="table-light">
+                        <tr>
+                          <th style={{ width: "10%" }}>Cantidad</th>
+                          <th style={{ width: "40%" }}>Nombre del Producto</th>
+                          <th style={{ width: "10%" }}>Tipo</th>
+                          <th style={{ width: "15%" }}>Precio Unit.</th>
+                          <th style={{ width: "15%" }}>Importe</th>
+                          <th style={{ width: "12%" }} className="text-center">
+                            Acciones
+                          </th>
+                        </tr>
+                      </thead>
                       <tbody>
                         {formData.items.map((item, index) => (
                           <React.Fragment key={index}>
+                            {/* Fila principal del producto */}
                             <tr>
-                              <td>
+                              <td className="align-top py-3">
+                                {item.quantity}
+                              </td>
+                              <td className="py-3">
                                 <div className="fw-semibold">
                                   {item.productName}
                                 </div>
-                                <div className="text-muted small">
-                                  {item.quantity} × ${item.unitPrice.toFixed(2)}{" "}
-                                  <Badge
-                                    bg={
-                                      item.isProduct ? "success" : "secondary"
-                                    }
-                                    className="ms-2"
-                                  >
-                                    {item.isProduct ? "Catálogo" : "Manual"}
-                                  </Badge>
-                                </div>
                               </td>
-                              <td className="text-end fw-bold">
+                              <td className="align-top py-3">
+                                <Badge
+                                  bg={item.isProduct ? "success" : "secondary"}
+                                  className="text-white"
+                                >
+                                  {item.isProduct ? "Existente" : "Manual"}
+                                </Badge>
+                              </td>
+                              <td className="align-top py-3 text-end">
+                                ${item.unitPrice.toFixed(2)}
+                              </td>
+                              <td className="align-top py-3 fw-bold text-end">
                                 ${item.amount.toFixed(2)}
                               </td>
-                              <td className="text-end" style={{ width: 96 }}>
-                                <div className="d-flex justify-content-end gap-1">
+                              <td className="align-top py-3 text-center">
+                                <div className="d-flex gap-1 justify-content-center">
                                   <Button
                                     variant="outline-primary"
                                     size="sm"
                                     onClick={() => handleOpenExtrasModal(index)}
                                     title="Agregar extras"
-                                    disabled={
-                                      !storage ||
-                                      !storage.materials ||
-                                      storage.materials.length === 0
-                                    }
+                                    disabled={!storage || !storage.materials || storage.materials.length === 0}
                                   >
                                     <Plus size={16} />
                                   </Button>
                                   <Button
-                                    variant="outline-danger"
+                                    variant="danger"
                                     size="sm"
                                     onClick={() => handleRemoveItem(index)}
-                                    title="Eliminar"
+                                    title="Eliminar producto"
                                   >
                                     <Trash2 size={16} />
                                   </Button>
                                 </div>
                               </td>
                             </tr>
+                            {/* Filas de insumos */}
                             {item.insumos &&
                               item.insumos.length > 0 &&
                               item.insumos.map((insumo, idx) => (
@@ -1628,23 +1954,23 @@ const NewOrderPage = () => {
                                   key={`${index}-insumo-${idx}`}
                                   className="border-0"
                                 >
-                                  <td className="py-1 ps-4 border-0 text-muted small">
-                                    {insumo.cantidad} {insumo.nombre}
+                                  <td className="py-1 ps-5 border-0  ">
+                                    {insumo.cantidad}
+                                  </td>
+                                  <td className="py-1 ps-5 border-0 text-bold ">
+                                    {insumo.nombre}
+                                  </td>
+                                  <td className="py-1 border-0">
                                     {insumo.isExtra && (
-                                      <Badge
-                                        bg="info"
-                                        className="ms-2 text-white"
-                                        style={{ fontSize: "0.65rem" }}
-                                      >
+                                      <Badge bg="info" className="text-white">
                                         Extra
                                       </Badge>
                                     )}
                                   </td>
-                                  <td className="py-1 border-0 text-end text-muted small">
-                                    {insumo.isExtra
-                                      ? `+$${insumo.importeVenta.toFixed(2)}`
-                                      : ""}
+                                  <td className="py-1 border-0 text-end">
+                                    ${insumo.importeVenta.toFixed(2)}
                                   </td>
+                                  <td className="py-1 border-0"></td>
                                   <td className="py-1 border-0"></td>
                                 </tr>
                               ))}
@@ -1654,946 +1980,674 @@ const NewOrderPage = () => {
                     </table>
                   </div>
                 )}
-
-                <hr />
-
-                {/* Totales */}
-                <div className="d-flex justify-content-between mb-1">
-                  <span className="text-muted">Subtotal</span>
-                  <span className="fw-semibold">
-                    ${formData.subtotal.toFixed(2)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mb-1">
-                  <span className="text-muted">Descuento</span>
-                  <span className="text-danger fw-semibold">
-                    -$
-                    {(formData.discountType === "porcentaje"
-                      ? (formData.subtotal * (formData.discount || 0)) / 100
-                      : formData.discount || 0
-                    ).toFixed(2)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mb-2">
-                  <span className="text-muted">Envío</span>
-                  <span className="text-success fw-semibold">
-                    +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between align-items-center border-top pt-2">
-                  <span className="fs-5 fw-bold">Total</span>
-                  <span className="fs-4 fw-bold text-primary">
-                    ${formData.total.toFixed(2)}
-                  </span>
-                </div>
               </Card.Body>
-              <Card.Footer className="bg-white border-0 p-3 flex-shrink-0">
-                <div className="d-grid gap-2">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    disabled={formData.items.length === 0}
-                    onClick={() => {
-                      if (formData.items.length === 0) {
-                        toast.error("Agrega al menos un producto para continuar");
-                        return;
-                      }
-                      setShowClientInfo(true);
-                      setShowOrderDetailsModal(true);
-                    }}
-                  >
-                    Datos del pedido / Cobrar
-                  </Button>
-                  <Button
-                    variant="outline-secondary"
-                    onClick={() => window.history.back()}
-                  >
-                    Salir
-                  </Button>
+            </Card>
+
+            {/* Tipo de Envío */}
+            <Card className="mb-4 border-0 shadow-sm">
+              <Card.Header className="bg-white border-0 py-3">
+                <div className="d-flex align-items-center gap-2">
+                  <Send size={20} className="text-primary" />
+                  <h5 className="mb-0 fw-bold">Tipo de Envío</h5>
                 </div>
-              </Card.Footer>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Modal POS: datos del pedido */}
-      <Modal
-        show={showOrderDetailsModal}
-        onHide={() => setShowOrderDetailsModal(false)}
-        size="xl"
-        centered
-        backdrop="static"
-      >
-        <Form onSubmit={handleSubmit}>
-          <Modal.Header closeButton>
-            <Modal.Title className="d-flex align-items-center gap-2">
-              <CreditCard size={20} />
-              Datos del pedido
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {error && (
-              <Alert
-                variant="danger"
-                onClose={() => setError(null)}
-                dismissible
-                className="mb-3"
-              >
-                {error}
-              </Alert>
-            )}
-            {success && (
-              <Alert
-                variant="success"
-                onClose={() => setSuccess(false)}
-                dismissible
-                className="mb-3"
-              >
-                ¡Pedido creado exitosamente!
-              </Alert>
-            )}
-
-            <Row className="g-3">
-              {/* Cliente */}
-              <Col lg={6}>
-                <Card className="border-0 shadow-sm h-100">
-                  <Card.Header className="bg-white border-0 py-3">
-                    <div className="d-flex align-items-center justify-content-between">
-                      <div className="d-flex align-items-center gap-2">
-                        <User size={18} className="text-primary" />
-                        <h6 className="mb-0 fw-bold">Cliente</h6>
-                      </div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => setShowClientInfo(!showClientInfo)}
-                        className="d-flex align-items-center gap-2"
-                      >
-                        {showClientInfo ? (
-                          <>
-                            <EyeOff size={16} />
-                            Ocultar
-                          </>
-                        ) : (
-                          <>
-                            <Eye size={16} />
-                            Ver
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </Card.Header>
-                  <Card.Body>
-                    <Row className="g-3">
+              </Card.Header>
+              <Card.Body>
+                <Row className="g-3">
+                  {/* Para usuarios de Redes, mostrar solo "Redes Sociales" y el select de plataforma */}
+                  {isSocialMedia ? (
+                    <>
                       <Col md={12}>
+                        <Alert variant="info" className="mb-3">
+                          Como usuario de Redes Sociales, solo puedes crear
+                          órdenes de tipo "Redes Sociales"
+                        </Alert>
+                      </Col>
+                      <Col md={6}>
                         <Form.Group>
                           <Form.Label className="fw-semibold">
-                            <Search size={16} className="me-2" />
-                            Buscar cliente existente
+                            <Store size={16} className="me-2" />
+                            Tipo de Envío
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            value="Redes Sociales"
+                            disabled
+                            className="py-2 bg-light"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Store size={16} className="me-2" />
+                            Plataforma de Redes Sociales
                           </Form.Label>
                           <Form.Select
-                            value={selectedClientId}
-                            onChange={(e) => handleClientSelect(e.target.value)}
+                            value={formData.socialMedia || "whatsapp"}
+                            onChange={(e) => {
+                              const platform = e.target.value as
+                                | "whatsapp"
+                                | "facebook"
+                                | "instagram";
+                              setFormData({
+                                ...formData,
+                                socialMedia: platform,
+                                salesChannel: platform, // Sincronizar salesChannel con socialMedia
+                              });
+                            }}
+                            required
                             className="py-2"
-                            disabled={loadingClients}
                           >
-                            <option value="">
-                              Seleccionar cliente o ingresar nuevo...
-                            </option>
-                            {clients.map((client) => (
-                              <option key={client._id} value={client._id}>
-                                {client.name} {client.lastName} -{" "}
-                                {client.phoneNumber}
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="instagram">Instagram</option>
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
+                    </>
+                  ) : (
+                    /* Para usuarios normales, mostrar opciones de envío tradicionales */
+                    <Col md={12}>
+                      <div className="d-flex gap-4 flex-wrap align-items-center">
+                        {["envio", "tienda"].map((tipo) => (
+                          <Form.Check
+                            key={tipo}
+                            type="radio"
+                            id={`envio-${tipo}`}
+                            name="envio"
+                            label={tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                            value={tipo}
+                            checked={formData.shippingType === tipo}
+                            onChange={(e) =>
+                              handleShippingTypeChange(
+                                e.target.value as ShippingType
+                              )
+                            }
+                            className="custom-radio"
+                          />
+                        ))}
+
+                        <div className="border-start ps-3 d-flex gap-3">
+                          <Form.Check
+                            type="checkbox"
+                            id="anonimo-check"
+                            label="Anónimo"
+                            checked={formData.anonymous}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                anonymous: e.target.checked,
+                              })
+                            }
+                          />
+                          <Form.Check
+                            type="checkbox"
+                            id="venta-rapida-check"
+                            label="Venta Rápida"
+                            checked={formData.quickSale}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                quickSale: e.target.checked,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </Col>
+                  )}
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <User size={16} className="me-2" />
+                        Nombre de quien recibe
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Nombre del receptor"
+                        value={formData.deliveryData.recipientName}
+                        onChange={(e) => {
+                          resetCustomValidationMessage(e);
+                          setFormData({
+                            ...formData,
+                            deliveryData: {
+                              ...formData.deliveryData,
+                              recipientName: e.target.value,
+                            },
+                          });
+                        }}
+                        onInvalid={setCustomValidationMessage}
+                        required
+                        className="py-2"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <Calendar size={16} className="me-2" />
+                        Fecha y Hora de Entrega
+                      </Form.Label>
+                      <Form.Control
+                        type="datetime-local"
+                        value={formData.deliveryData.deliveryDateTime}
+                        onChange={(e) => {
+                          resetCustomValidationMessage(e);
+                          setFormData({
+                            ...formData,
+                            deliveryData: {
+                              ...formData.deliveryData,
+                              deliveryDateTime: e.target.value,
+                            },
+                          });
+                        }}
+                        onInvalid={setCustomValidationMessage}
+                        min={new Date().toISOString().slice(0, 16)}
+                        required
+                        className="py-2"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={12}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <MessageSquare size={16} className="me-2" />
+                        Mensaje / Comentario
+                      </Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={3}
+                        placeholder="Escribe el mensaje en la tarjeta o algún comentario"
+                        value={formData.deliveryData.message}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            deliveryData: {
+                              ...formData.deliveryData,
+                              message: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  {/* Campos de dirección solo para tipo de envío "envio" */}
+                  {formData.shippingType === "envio" && (
+                    <>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            Calle y Número
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            placeholder="Ej: Av. Principal #123"
+                            value={formData.deliveryData.street}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                deliveryData: {
+                                  ...formData.deliveryData,
+                                  street: e.target.value,
+                                },
+                              })
+                            }
+                            className="py-2"
+                          />
+                        </Form.Group>
+                      </Col>
+
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            Colonia
+                          </Form.Label>
+                          <Form.Select
+                            value={formData.deliveryData.neighborhoodId}
+                            onChange={(e) =>
+                              handleNeighborhoodChange(e.target.value)
+                            }
+                            className="py-2"
+                            disabled={loadingNeighborhoods}
+                          >
+                            <option value="">Seleccionar colonia...</option>
+                            {neighborhoods.map((neighborhood) => (
+                              <option
+                                key={neighborhood._id}
+                                value={neighborhood._id}
+                              >
+                                {neighborhood.name} - $
+                                {neighborhood.priceDelivery.toFixed(2)}
                               </option>
                             ))}
                           </Form.Select>
                         </Form.Group>
                       </Col>
 
-                      {!isSocialMedia && (
-                        <Col md={12}>
-                          <Form.Group>
-                            <Form.Label className="fw-semibold">
-                              <CreditCard size={16} className="me-2" />
-                              Caja registradora
-                            </Form.Label>
-                            <div className="d-flex gap-2">
-                              <Form.Control
-                                type="text"
-                                value={
-                                  loadingCashRegister
-                                    ? "Cargando..."
-                                    : cashRegister
-                                    ? cashRegister.name
-                                    : "No hay caja asignada"
-                                }
-                                readOnly
-                                disabled
-                                className="py-2 bg-light"
-                              />
-                              {cashRegister ? (
-                                <Badge
-                                  bg={
-                                    cashRegister.isOpen
-                                      ? "success"
-                                      : "secondary"
-                                  }
-                                  className="d-flex align-items-center justify-content-center py-2 px-3"
-                                  style={{
-                                    minWidth: "120px",
-                                    fontSize: "0.9rem",
-                                  }}
-                                >
-                                  {cashRegister.isOpen
-                                    ? "🟢 Abierta"
-                                    : "🔴 Cerrada"}
-                                </Badge>
-                              ) : (
-                                !loadingCashRegister && (
-                                  <Button
-                                    variant="primary"
-                                    onClick={() => router.push("/ventas/cajas")}
-                                    className="d-flex align-items-center gap-2"
-                                    style={{ minWidth: "160px" }}
-                                  >
-                                    <ExternalLink size={16} />
-                                    Ir a Cajas
-                                  </Button>
-                                )
-                              )}
-                            </div>
-                          </Form.Group>
-                        </Col>
-                      )}
-
-                      {showClientInfo && (
-                        <>
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                <User size={16} className="me-2" />
-                                Cliente
-                              </Form.Label>
-                              <Form.Control
-                                type="text"
-                                placeholder="Nombre del cliente"
-                                value={formData.clientInfo.name}
-                                onChange={(e) => {
-                                  resetCustomValidationMessage(e);
-                                  setFormData({
-                                    ...formData,
-                                    clientInfo: {
-                                      ...formData.clientInfo,
-                                      name: e.target.value,
-                                    },
-                                  });
-                                  setSelectedClientId("");
-                                }}
-                                onInvalid={setCustomValidationMessage}
-                                required
-                                className="py-2"
-                              />
-                            </Form.Group>
-                          </Col>
-                          <Col md={3}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                <Phone size={16} className="me-2" />
-                                Teléfono
-                              </Form.Label>
-                              <Form.Control
-                                type="tel"
-                                placeholder="Teléfono"
-                                value={formData.clientInfo.phone}
-                                onChange={(e) => {
-                                  setFormData({
-                                    ...formData,
-                                    clientInfo: {
-                                      ...formData.clientInfo,
-                                      phone: e.target.value,
-                                    },
-                                  });
-                                  setSelectedClientId("");
-                                }}
-                                className="py-2"
-                              />
-                            </Form.Group>
-                          </Col>
-                          <Col md={3}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                <Mail size={16} className="me-2" />
-                                Correo
-                              </Form.Label>
-                              <Form.Control
-                                type="email"
-                                placeholder="Correo electrónico"
-                                value={formData.clientInfo.email}
-                                onChange={(e) => {
-                                  setFormData({
-                                    ...formData,
-                                    clientInfo: {
-                                      ...formData.clientInfo,
-                                      email: e.target.value,
-                                    },
-                                  });
-                                  setSelectedClientId("");
-                                }}
-                                className="py-2"
-                              />
-                            </Form.Group>
-                          </Col>
-
-                          {!isSocialMedia && !isCashier && (
-                            <Col md={12}>
-                              <Form.Group>
-                                <Form.Label className="fw-semibold">
-                                  <Store size={16} className="me-2" />
-                                  Canal de venta
-                                </Form.Label>
-                                <Form.Select
-                                  value={formData.salesChannel}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-                                      salesChannel: e.target.value as
-                                        | "tienda"
-                                        | "whatsapp"
-                                        | "facebook"
-                                        | "instagram",
-                                    })
-                                  }
-                                  required
-                                  className="py-2"
-                                >
-                                  <option value="tienda">Tienda</option>
-                                  <option value="whatsapp">WhatsApp</option>
-                                  <option value="facebook">Facebook</option>
-                                  <option value="instagram">Instagram</option>
-                                </Form.Select>
-                              </Form.Group>
-                            </Col>
-                          )}
-                        </>
-                      )}
-                    </Row>
-                  </Card.Body>
-                </Card>
-              </Col>
-
-              {/* Envío */}
-              <Col lg={6}>
-                <Card className="border-0 shadow-sm h-100">
-                  <Card.Header className="bg-white border-0 py-3">
-                    <div className="d-flex align-items-center gap-2">
-                      <Send size={18} className="text-primary" />
-                      <h6 className="mb-0 fw-bold">Entrega / Envío</h6>
-                    </div>
-                  </Card.Header>
-                  <Card.Body>
-                    <Row className="g-3">
-                      {isSocialMedia ? (
-                        <>
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                Tipo de envío
-                              </Form.Label>
-                              <Form.Control
-                                type="text"
-                                value="Redes Sociales"
-                                disabled
-                                className="py-2 bg-light"
-                              />
-                            </Form.Group>
-                          </Col>
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                Plataforma
-                              </Form.Label>
-                              <Form.Select
-                                value={formData.socialMedia || "whatsapp"}
-                                onChange={(e) => {
-                                  const platform = e.target.value as
-                                    | "whatsapp"
-                                    | "facebook"
-                                    | "instagram";
-                                  setFormData({
-                                    ...formData,
-                                    socialMedia: platform,
-                                    salesChannel: platform,
-                                  });
-                                }}
-                                required
-                                className="py-2"
-                              >
-                                <option value="whatsapp">WhatsApp</option>
-                                <option value="facebook">Facebook</option>
-                                <option value="instagram">Instagram</option>
-                              </Form.Select>
-                            </Form.Group>
-                          </Col>
-                        </>
-                      ) : (
-                        <Col md={12}>
-                          <div className="d-flex gap-4 flex-wrap align-items-center">
-                            {["envio", "tienda"].map((tipo) => (
-                              <Form.Check
-                                key={tipo}
-                                type="radio"
-                                id={`envio-${tipo}`}
-                                name="envio"
-                                label={
-                                  tipo.charAt(0).toUpperCase() + tipo.slice(1)
-                                }
-                                value={tipo}
-                                checked={formData.shippingType === tipo}
-                                onChange={(e) =>
-                                  handleShippingTypeChange(
-                                    e.target.value as ShippingType
-                                  )
-                                }
-                                className="custom-radio"
-                              />
-                            ))}
-                            <div className="border-start ps-3 d-flex gap-3">
-                              <Form.Check
-                                type="checkbox"
-                                id="anonimo-check"
-                                label="Anónimo"
-                                checked={formData.anonymous}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    anonymous: e.target.checked,
-                                  })
-                                }
-                              />
-                              <Form.Check
-                                type="checkbox"
-                                id="venta-rapida-check"
-                                label="Venta Rápida"
-                                checked={formData.quickSale}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    quickSale: e.target.checked,
-                                  })
-                                }
-                              />
-                            </div>
-                          </div>
-                        </Col>
-                      )}
-
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Nombre de quien recibe
-                          </Form.Label>
-                          <Form.Control
-                            type="text"
-                            placeholder="Nombre del receptor"
-                            value={formData.deliveryData.recipientName}
-                            onChange={(e) => {
-                              resetCustomValidationMessage(e);
-                              setFormData({
-                                ...formData,
-                                deliveryData: {
-                                  ...formData.deliveryData,
-                                  recipientName: e.target.value,
-                                },
-                              });
-                            }}
-                            onInvalid={setCustomValidationMessage}
-                            required
-                            className="py-2"
-                          />
-                        </Form.Group>
-                      </Col>
-
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Fecha y hora de entrega
-                          </Form.Label>
-                          <Form.Control
-                            type="datetime-local"
-                            value={formData.deliveryData.deliveryDateTime}
-                            onChange={(e) => {
-                              resetCustomValidationMessage(e);
-                              setFormData({
-                                ...formData,
-                                deliveryData: {
-                                  ...formData.deliveryData,
-                                  deliveryDateTime: e.target.value,
-                                },
-                              });
-                            }}
-                            onInvalid={setCustomValidationMessage}
-                            min={new Date().toISOString().slice(0, 16)}
-                            required
-                            className="py-2"
-                          />
-                        </Form.Group>
-                      </Col>
-
                       <Col md={12}>
                         <Form.Group>
                           <Form.Label className="fw-semibold">
-                            Mensaje / Comentario
+                            Señas o Referencias
                           </Form.Label>
                           <Form.Control
                             as="textarea"
-                            rows={3}
-                            placeholder="Mensaje para la tarjeta o comentario"
-                            value={formData.deliveryData.message}
+                            rows={2}
+                            placeholder="Ej: Casa blanca con portón negro, entre calle X y Y"
+                            value={formData.deliveryData.reference}
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
                                 deliveryData: {
                                   ...formData.deliveryData,
-                                  message: e.target.value,
+                                  reference: e.target.value,
                                 },
                               })
                             }
                           />
                         </Form.Group>
                       </Col>
+                    </>
+                  )}
 
-                      {formData.shippingType === "envio" && (
-                        <>
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                Calle y número
-                              </Form.Label>
-                              <Form.Control
-                                type="text"
-                                placeholder="Ej: Av. Principal #123"
-                                value={formData.deliveryData.street}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    deliveryData: {
-                                      ...formData.deliveryData,
-                                      street: e.target.value,
-                                    },
-                                  })
-                                }
-                                className="py-2"
-                              />
-                            </Form.Group>
-                          </Col>
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                Colonia
-                              </Form.Label>
-                              <Form.Select
-                                value={formData.deliveryData.neighborhoodId}
-                                onChange={(e) =>
-                                  handleNeighborhoodChange(e.target.value)
-                                }
-                                className="py-2"
-                                disabled={loadingNeighborhoods}
-                              >
-                                <option value="">Seleccionar colonia...</option>
-                                {neighborhoods.map((neighborhood) => (
-                                  <option
-                                    key={neighborhood._id}
-                                    value={neighborhood._id}
-                                  >
-                                    {neighborhood.name} - $
-                                    {neighborhood.priceDelivery.toFixed(2)}
-                                  </option>
-                                ))}
-                              </Form.Select>
-                            </Form.Group>
-                          </Col>
-                          <Col md={12}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                Señas o referencias
-                              </Form.Label>
-                              <Form.Control
-                                as="textarea"
-                                rows={2}
-                                placeholder="Ej: Casa blanca con portón negro..."
-                                value={formData.deliveryData.reference}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    deliveryData: {
-                                      ...formData.deliveryData,
-                                      reference: e.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </Form.Group>
-                          </Col>
-                        </>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <Upload size={16} className="me-2" />
+                        Adjunte el comprobante
+                      </Form.Label>
+                      <Form.Control
+                        type="file"
+                        className="py-2"
+                        accept="image/*,.pdf"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setComprobanteFile(file);
+                          }
+                        }}
+                      />
+                      {comprobanteFile && (
+                        <Form.Text className="text-success">
+                          ✓ Archivo seleccionado: {comprobanteFile.name}
+                        </Form.Text>
                       )}
+                    </Form.Group>
+                  </Col>
 
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            <Upload size={16} className="me-2" />
-                            Comprobante
-                          </Form.Label>
-                          <Form.Control
-                            type="file"
-                            className="py-2"
-                            accept="image/*,.pdf"
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>
-                            ) => {
-                              const file = e.target.files?.[0];
-                              if (file) setComprobanteFile(file);
-                            }}
-                          />
-                          {comprobanteFile && (
-                            <Form.Text className="text-success">
-                              ✓ {comprobanteFile.name}
-                            </Form.Text>
-                          )}
-                        </Form.Group>
-                      </Col>
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            <Upload size={16} className="me-2" />
-                            Arreglo
-                          </Form.Label>
-                          <Form.Control
-                            type="file"
-                            className="py-2"
-                            accept="image/*"
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>
-                            ) => {
-                              const file = e.target.files?.[0];
-                              if (file) setArregloFile(file);
-                            }}
-                          />
-                          {arregloFile && (
-                            <Form.Text className="text-success">
-                              ✓ {arregloFile.name}
-                            </Form.Text>
-                          )}
-                        </Form.Group>
-                      </Col>
-                    </Row>
-                  </Card.Body>
-                </Card>
-              </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <Upload size={16} className="me-2" />
+                        Adjunte arreglo
+                      </Form.Label>
+                      <Form.Control
+                        type="file"
+                        className="py-2"
+                        accept="image/*"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setArregloFile(file);
+                          }
+                        }}
+                      />
+                      {arregloFile && (
+                        <Form.Text className="text-success">
+                          ✓ Archivo seleccionado: {arregloFile.name}
+                        </Form.Text>
+                      )}
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
 
-              {/* Pago */}
-              <Col lg={12}>
-                <Card className="border-0 shadow-sm">
-                  <Card.Header className="bg-white border-0 py-3">
-                    <div className="d-flex align-items-center gap-2">
-                      <CreditCard size={18} className="text-primary" />
-                      <h6 className="mb-0 fw-bold">Pago</h6>
-                    </div>
-                  </Card.Header>
-                  <Card.Body>
-                    <Row className="g-3">
-                      <Col md={4}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Fecha y hora de orden
-                          </Form.Label>
-                          <Form.Control
-                            type="datetime-local"
-                            value={formData.orderDate}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                orderDate: e.target.value,
-                              })
-                            }
-                            required
-                            className="py-2"
-                          />
-                        </Form.Group>
-                      </Col>
+            {/* Forma de Pago y Resumen */}
+            <Card className="mb-4 border-0 shadow-sm">
+              <Card.Header className="bg-white border-0 py-3">
+                <div className="d-flex align-items-center gap-2">
+                  <CreditCard size={20} className="text-primary" />
+                  <h5 className="mb-0 fw-bold">Forma de Pago</h5>
+                </div>
+              </Card.Header>
+              <Card.Body>
+                <Row className="g-3">
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">
+                        <Calendar size={16} className="me-2" />
+                        Fecha y Hora de Orden
+                      </Form.Label>
+                      <Form.Control
+                        type="datetime-local"
+                        value={formData.orderDate}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            orderDate: e.target.value,
+                          })
+                        }
+                        required
+                        className="py-2"
+                      />
+                    </Form.Group>
+                  </Col>
 
-                      <Col md={8}>
-                        <Form.Label className="fw-semibold">
-                          Método de pago
-                        </Form.Label>
-                        <div className="d-flex gap-2 flex-wrap">
-                          {loadingPaymentMethods ? (
-                            <div className="text-muted">
-                              Cargando métodos...
-                            </div>
-                          ) : paymentMethods.length === 0 ? (
-                            <Alert variant="danger" className="mb-0 w-100">
-                              No hay métodos de pago disponibles.
-                            </Alert>
-                          ) : (
-                            paymentMethods.map((method) => {
-                              const isDisabled =
-                                isSocialMedia &&
-                                method.name.toLowerCase() === "efectivo";
-                              return (
-                                <Button
-                                  key={method._id}
-                                  variant={
-                                    formData.paymentMethod === method._id
-                                      ? "primary"
-                                      : "outline-secondary"
-                                  }
-                                  size="sm"
-                                  onClick={() =>
-                                    setFormData({
-                                      ...formData,
-                                      paymentMethod: method._id,
-                                    })
-                                  }
-                                  disabled={isDisabled}
-                                  title={
-                                    isDisabled
-                                      ? "Los usuarios de Redes Sociales no pueden usar efectivo"
-                                      : ""
-                                  }
-                                >
-                                  {method.name}
-                                </Button>
-                              );
-                            })
-                          )}
+                  <Col md={12}>
+                    <Form.Label className="fw-semibold">
+                      Método de Pago
+                    </Form.Label>
+                    <div className="d-flex gap-2 flex-wrap">
+                      {loadingPaymentMethods ? (
+                        <div className="text-muted">
+                          Cargando métodos de pago...
                         </div>
-                        {isSocialMedia && (
-                          <Alert variant="warning" className="mt-2 mb-0 py-2">
-                            <small>
-                              ℹ️ Los usuarios de Redes Sociales no pueden usar
-                              "Efectivo"
-                            </small>
-                          </Alert>
-                        )}
-                      </Col>
+                      ) : paymentMethods.length === 0 ? (
+                        <Alert variant="danger" className="mb-0 w-100">
+                          No hay métodos de pago disponibles. Debes crear al
+                          menos un método de pago para poder crear órdenes.
+                        </Alert>
+                      ) : (
+                        paymentMethods.map((method) => {
+                          // Deshabilitar método "Efectivo" para usuarios de Redes
+                          const isDisabled =
+                            isSocialMedia &&
+                            method.name.toLowerCase() === "efectivo";
 
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Descuento
-                          </Form.Label>
-                          <div className="input-group">
-                            <Form.Control
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={formData.discount}
-                              onChange={(e) =>
-                                handleDiscountChange(
-                                  parseFloat(e.target.value) || 0,
-                                  formData.discountType || "porcentaje"
-                                )
+                          return (
+                            <Button
+                              key={method._id}
+                              variant={
+                                formData.paymentMethod === method._id
+                                  ? "primary"
+                                  : "outline-secondary"
                               }
-                              className="py-2"
-                              placeholder="Descuento"
-                            />
-                            <Form.Select
-                              value={formData.discountType}
-                              onChange={(e) =>
-                                handleDiscountChange(
-                                  formData.discount || 0,
-                                  e.target.value as "porcentaje" | "cantidad"
-                                )
+                              size="sm"
+                              onClick={() =>
+                                setFormData({
+                                  ...formData,
+                                  paymentMethod: method._id,
+                                })
                               }
-                              style={{ maxWidth: 100 }}
+                              disabled={isDisabled}
+                              className="px-3"
+                              title={
+                                isDisabled
+                                  ? "Los usuarios de Redes Sociales no pueden usar efectivo"
+                                  : ""
+                              }
                             >
-                              <option value="porcentaje">%</option>
-                              <option value="cantidad">$</option>
-                            </Form.Select>
-                            {formData.discount > 0 && (
-                              <Button
-                                variant="warning"
-                                onClick={() =>
-                                  setShowDiscountRequestDialog(true)
-                                }
-                                className="d-flex align-items-center gap-2"
-                                style={{ whiteSpace: "nowrap" }}
-                              >
-                                <Shield size={16} />
-                                {hasPendingDiscountAuth
-                                  ? "Modificar"
-                                  : "Solicitar"}
-                              </Button>
-                            )}
-                          </div>
-                          <Alert
-                            variant={
-                              hasPendingDiscountAuth ? "warning" : "info"
-                            }
-                            className="mt-2 mb-0 py-2"
-                          >
-                            <small>
-                              {hasPendingDiscountAuth
-                                ? "⚠️ Descuento pendiente de autorización."
-                                : "ℹ️ Si aplica descuento, solicita autorización."}
-                            </small>
-                          </Alert>
-                        </Form.Group>
-                      </Col>
+                              {method.name}
+                            </Button>
+                          );
+                        })
+                      )}
+                    </div>
+                    {isSocialMedia && (
+                      <Alert variant="warning" className="mt-2 mb-0 py-2">
+                        <small>
+                          ℹ️ Los usuarios de Redes Sociales no pueden usar el
+                          método de pago "Efectivo"
+                        </small>
+                      </Alert>
+                    )}
+                  </Col>
 
-                      <Col md={6}>
-                        <div className="d-flex justify-content-between mb-1">
-                          <span className="text-muted">Subtotal</span>
-                          <span className="fw-semibold">
-                            ${formData.subtotal.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="d-flex justify-content-between mb-1">
-                          <span className="text-muted">Descuento</span>
-                          <span className="text-danger fw-semibold">
-                            -$
-                            {(formData.discountType === "porcentaje"
-                              ? (formData.subtotal * (formData.discount || 0)) /
-                                100
-                              : formData.discount || 0
-                            ).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="d-flex justify-content-between mb-1">
-                          <span className="text-muted">Envío</span>
-                          <span className="text-success fw-semibold">
+                  <Col md={12}>
+                    <hr />
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Descuento</Form.Label>
+                      <div className="input-group">
+                        <Form.Control
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.discount}
+                          onChange={(e) =>
+                            handleDiscountChange(
+                              parseFloat(e.target.value) || 0,
+                              formData.discountType || "porcentaje"
+                            )
+                          }
+                          className="py-2"
+                          placeholder="Ingresa el descuento"
+                        />
+                        <Form.Select
+                          value={formData.discountType}
+                          onChange={(e) =>
+                            handleDiscountChange(
+                              formData.discount || 0,
+                              e.target.value as "porcentaje" | "cantidad"
+                            )
+                          }
+                          style={{ maxWidth: "100px" }}
+                        >
+                          <option value="porcentaje">%</option>
+                          <option value="cantidad">$</option>
+                        </Form.Select>
+                        {formData.discount > 0 && (
+                          <>
+                            <Button
+                              variant="warning"
+                              onClick={() => setShowDiscountRequestDialog(true)}
+                              className="d-flex align-items-center gap-2"
+                              style={{ whiteSpace: "nowrap" }}
+                            >
+                              <Shield size={16} />
+                              {hasPendingDiscountAuth
+                                ? "Modificar Solicitud"
+                                : "Solicitar Autorización"}
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              onClick={() => {
+                                handleDiscountChange(0, "porcentaje");
+                                setHasPendingDiscountAuth(false);
+                                setDiscountRequestMessage("");
+                              }}
+                              className="d-flex align-items-center gap-2"
+                              style={{ whiteSpace: "nowrap" }}
+                              title="Cancelar descuento"
+                            >
+                              <Trash2 size={16} />
+                              Cancelar Descuento
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      <Alert
+                        variant={hasPendingDiscountAuth ? "warning" : "info"}
+                        className="mt-2 mb-0 py-2"
+                      >
+                        <small>
+                          {hasPendingDiscountAuth
+                            ? "⚠️ Descuento pendiente de autorización. Puedes modificarlo antes de crear la orden."
+                            : "ℹ️ Ingresa el descuento y solicita autorización antes de crear la orden."}
+                        </small>
+                      </Alert>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="text-muted">Subtotal:</span>
+                      <span className="fw-bold">
+                        ${formData.subtotal.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="text-muted">Descuento:</span>
+                      <span className="text-danger fw-bold">
+                        -$
+                        {(formData.discountType === "porcentaje"
+                          ? (formData.subtotal * (formData.discount || 0)) / 100
+                          : formData.discount || 0
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                    {formData.shippingType === "envio" &&
+                      (formData.deliveryData.deliveryPrice || 0) > 0 && (
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <span className="text-muted">Costo de Envío:</span>
+                          <span className="text-success fw-bold">
                             +$
                             {(formData.deliveryData.deliveryPrice || 0).toFixed(
                               2
                             )}
                           </span>
                         </div>
-                        <div className="d-flex justify-content-between align-items-center border-top pt-2">
-                          <span className="fs-5 fw-bold">Total</span>
-                          <span className="fs-4 fw-bold text-primary">
-                            ${formData.total.toFixed(2)}
-                          </span>
-                        </div>
-                      </Col>
+                      )}
+                    <div className="d-flex justify-content-between align-items-center py-2 border-top">
+                      <span className="fs-5 fw-bold">Total:</span>
+                      <span className="fs-4 fw-bold text-primary">
+                        ${formData.total.toFixed(2)}
+                      </span>
+                    </div>
+                  </Col>
 
-                      <Col md={3}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Anticipo
-                          </Form.Label>
-                          <Form.Control
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={formData.advance}
-                            onChange={(e) =>
-                              handleAdvanceChange(
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="py-2"
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={3}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Pagó con
-                          </Form.Label>
-                          <Form.Control
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={formData.paidWith}
-                            onChange={(e) =>
-                              handlePaidWithChange(
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="py-2"
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={3}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            Cambio
-                          </Form.Label>
-                          <Form.Control
-                            type="text"
-                            value={`$${(formData.change || 0).toFixed(2)}`}
-                            disabled
-                            className="py-2 bg-light"
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={3}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">Saldo</Form.Label>
-                          <Form.Control
-                            type="text"
-                            value={`$${(formData.remainingBalance || 0).toFixed(
-                              2
-                            )}`}
-                            disabled
-                            className="py-2 bg-light fw-bold"
-                          />
-                        </Form.Group>
-                      </Col>
+                  <Col md={12}>
+                    <hr />
+                  </Col>
 
-                      <Col md={12}>
-                        <Form.Check
-                          type="checkbox"
-                          id="enviar-produccion"
-                          label="Enviar a producción"
-                          checked={formData.sendToProduction}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              sendToProduction: e.target.checked,
-                            })
-                          }
-                          className="mt-1"
-                        />
-                      </Col>
-                    </Row>
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowOrderDetailsModal(false)}
-              disabled={loading || uploadingFiles}
-            >
-              Seguir agregando
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              disabled={
-                loading ||
-                uploadingFiles ||
-                formData.items.length === 0 ||
-                !formData.paymentMethod ||
-                !cashRegister ||
-                (formData.items.some((item) => item.isProduct === true) &&
-                  !selectedStorageId) ||
-                (isSocialMedia && !formData.branchId)
-              }
-            >
-              {uploadingFiles
-                ? "Subiendo archivos..."
-                : loading
-                ? "Procesando..."
-                : "Confirmar venta"}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
+                  <Col md={3}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Anticipo</Form.Label>
+                      <Form.Control
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.advance}
+                        onChange={(e) =>
+                          handleAdvanceChange(parseFloat(e.target.value) || 0)
+                        }
+                        className="py-2"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={3}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Pagó con</Form.Label>
+                      <Form.Control
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.paidWith}
+                        onChange={(e) =>
+                          handlePaidWithChange(parseFloat(e.target.value) || 0)
+                        }
+                        className="py-2"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={3}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Cambio</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={`$${(formData.change || 0).toFixed(2)}`}
+                        disabled
+                        className="py-2 bg-light"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={3}>
+                    <Form.Group>
+                      <Form.Label className="fw-semibold">Saldo</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={`$${(formData.remainingBalance || 0).toFixed(
+                          2
+                        )}`}
+                        disabled
+                        className="py-2 bg-light fw-bold"
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={12}>
+                    <Form.Check
+                      type="checkbox"
+                      id="enviar-produccion"
+                      label="Enviar a producción"
+                      checked={formData.sendToProduction}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          sendToProduction: e.target.checked,
+                        })
+                      }
+                      className="mt-2"
+                    />
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+
+            {/* Botón Aceptar */}
+            <div className="d-flex justify-content-end gap-2 mb-4">
+              <Button
+                type="button"
+                variant="outline-secondary"
+                size="lg"
+                onClick={() => window.history.back()}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={
+                  loading ||
+                  uploadingFiles ||
+                  formData.items.length === 0 ||
+                  !formData.paymentMethod ||
+                  !cashRegister || // Validar que haya caja asignada (para todos los usuarios)
+                  (formData.items.some((item) => item.isProduct === true) &&
+                    !selectedStorageId) ||
+                  (isSocialMedia && !formData.branchId) // Validar que Redes usuarios hayan seleccionado sucursal
+                }
+                className="px-5"
+              >
+                {uploadingFiles
+                  ? "Subiendo archivos..."
+                  : loading
+                  ? "Procesando..."
+                  : "Aceptar"}
+              </Button>
+            </div>
+          </Form>
+        </Col>
+
+        {/* Catálogo de Productos - 35% derecha */}
+        <Col xs={12} lg={4} className="order-1 order-lg-2">
+          <div
+            className="position-sticky"
+            style={{ top: "20px", height: "calc(100vh - 160px)" }}
+          >
+            <ProductCatalog
+              onAddProduct={handleAddProductFromCatalog}
+              branchId={formData.branchId}
+              itemsInOrder={formData.items}
+              storage={storage}
+              searchTerm={catalogSearchTerm}
+              onSearchChange={setCatalogSearchTerm}
+            />
+          </div>
+        </Col>
+      </Row>
 
       {/* Modal de Solicitud de Autorización de Descuento */}
       <Modal
