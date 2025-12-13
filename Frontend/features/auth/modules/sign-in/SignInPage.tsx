@@ -83,7 +83,11 @@ const SignInPage = () => {
 
         // Redirigir según el rol del usuario
         const userRole = response.data.role;
-        if (userRole === "Cajero" || userRole === "Redes") {
+        const roleLower = userRole?.toLowerCase();
+
+        if (roleLower === "super admin" || roleLower === "superadmin") {
+          router.push("/gestion/roles");
+        } else if (userRole === "Cajero" || userRole === "Redes") {
           router.push("/sucursal/ventas");
         } else {
           router.push("/dashboard");

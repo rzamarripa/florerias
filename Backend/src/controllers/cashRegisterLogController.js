@@ -31,17 +31,9 @@ const getAllCashRegisterLogs = async (req, res) => {
     const filters = {};
 
     // Aplicar filtros según el rol
-    if (userRole === 'cajero' || userRole === 'cashier') {
-      // Los cajeros ven logs de cajas de su sucursal
-      const userBranches = await Branch.find({ employees: userId }).select('_id');
-      const branchIds = userBranches.map(branch => branch._id);
-
-      if (branchIds.length > 0) {
-        filters.branchId = { $in: branchIds };
-      } else {
-        // Si no tiene sucursales asignadas, no ver ningún log
-        filters._id = null;
-      }
+    if (userRole === 'cajero' || userRole === 'cashier' || userRole === 'redes') {
+      // Los cajeros y usuarios de redes ven solo sus propios logs (filtrados por cashierId)
+      filters.cashierId = userId;
     } else if (userRole === 'gerente' || userRole === 'manager') {
       // Los gerentes ven logs de cajas de su sucursal
       const userBranches = await Branch.find({ employees: userId }).select('_id');

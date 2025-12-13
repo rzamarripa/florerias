@@ -16,7 +16,8 @@ const getAllManagers = async (req, res) => {
       correo,
       telefono,
       estatus,
-      branchId
+      branchId,
+      companyId
     } = req.query;
 
     // Obtener el rol de Gerente
@@ -26,6 +27,27 @@ const getAllManagers = async (req, res) => {
         success: false,
         message: 'Rol de Gerente no encontrado'
       });
+    }
+
+    // Si se proporciona companyId, obtener todos los branchIds de esa empresa
+    let validBranchIds = [];
+    if (companyId) {
+      const branches = await Branch.find({ companyId: companyId, isActive: true }).select('_id');
+      validBranchIds = branches.map(branch => branch._id);
+
+      if (validBranchIds.length === 0) {
+        // Si no hay sucursales, retornar vacío
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
     }
 
     // Construir filtros
@@ -59,6 +81,33 @@ const getAllManagers = async (req, res) => {
 
     // Calcular skip para paginación
     const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Si se filtró por companyId, obtener los IDs de los gerentes de esas sucursales
+    let managerIds = [];
+    if (validBranchIds.length > 0) {
+      const branchesWithManagers = await Branch.find({
+        _id: { $in: validBranchIds },
+        manager: { $exists: true }
+      }).select('manager');
+
+      managerIds = branchesWithManagers.map(branch => branch.manager);
+
+      if (managerIds.length > 0) {
+        filters._id = { $in: managerIds };
+      } else {
+        // Si no hay gerentes en las sucursales, retornar vacío
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    }
 
     // Obtener managers con paginación
     const managers = await User.find(filters)

@@ -9,6 +9,7 @@ import { Manager, ManagerFilters, FilterType, FilterOption, CreateManagerData, U
 import Actions from "./components/Actions";
 import ManagerModal from "./components/ManagerModal";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { companyService } from "@/services/company";
 
 const filterOptions: FilterOption[] = [
   { value: "nombre", label: "Nombre" },
@@ -28,6 +29,8 @@ const ManagersPage: React.FC = () => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyLoaded, setCompanyLoaded] = useState<boolean>(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
@@ -57,6 +60,11 @@ const ManagersPage: React.FC = () => {
         filters.estatus = statusFilter === "true";
       }
 
+      // Agregar filtro por companyId si está disponible
+      if (companyId) {
+        filters.companyId = companyId;
+      }
+
       const response = await managersService.getAllManagers(filters);
 
       if (response.data) {
@@ -74,9 +82,34 @@ const ManagersPage: React.FC = () => {
     }
   };
 
+  // Cargar la empresa del usuario al montar el componente
   useEffect(() => {
-    loadManagers(true, 1);
-  }, [searchTerm, filterType, statusFilter]);
+    const loadUserCompany = async () => {
+      try {
+        const response = await companyService.getUserCompany();
+        if (response.success && response.data) {
+          setCompanyId(response.data._id);
+        }
+      } catch (error: any) {
+        // Si el usuario no tiene empresa asignada (ej: Super Admin), no mostrar error
+        // Solo registrar en consola para debugging
+        console.log("Usuario sin empresa asignada:", error.message);
+      } finally {
+        // Marcar como cargado independientemente del resultado
+        setCompanyLoaded(true);
+      }
+    };
+
+    loadUserCompany();
+  }, []);
+
+  // Cargar gerentes cuando cambian los filtros o se obtiene el companyId
+  useEffect(() => {
+    // Solo cargar después de que se haya intentado cargar la empresa
+    if (companyLoaded) {
+      loadManagers(true, 1);
+    }
+  }, [searchTerm, filterType, statusFilter, companyId, companyLoaded]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);

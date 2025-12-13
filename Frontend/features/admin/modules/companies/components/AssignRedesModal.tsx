@@ -216,16 +216,21 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
 
       const dataToSend: any = {};
 
-      // Si hay redesId, enviarlo (asignar usuario existente)
+      // Si hay redesId, estamos editando un usuario existente
       if (formData.redesId) {
         dataToSend.redesIds = [formData.redesId];
 
-        // Si se proporcionó una nueva contraseña, también enviar redesData para actualizar
-        if (formData.redesData?.password) {
-          dataToSend.redesUserData = {
-            ...formData.redesData,
-          };
-        }
+        // Enviar redesData para actualizar todos los campos del usuario
+        dataToSend.redesUserData = {
+          username: formData.redesData?.username || "",
+          email: formData.redesData?.email || "",
+          phone: formData.redesData?.phone || "",
+          password: formData.redesData?.password || "", // Vacío si no se cambia
+          profile: {
+            name: formData.redesData?.profile.name || "",
+            lastName: formData.redesData?.profile.lastName || "",
+          },
+        };
       }
       // Si no hay redesId, enviar redesData para crear nuevo usuario
       else if (formData.redesData) {
@@ -245,7 +250,7 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
 
       toast.success(
         formData.redesId
-          ? "Usuario redes asignado exitosamente"
+          ? "Usuario redes actualizado exitosamente"
           : "Usuario redes creado y asignado exitosamente"
       );
 
@@ -315,7 +320,7 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
               </Form.Select>
               <Form.Text className="text-muted">
                 {formData.redesId
-                  ? "Usuario redes seleccionado. Puede editar sus datos abajo."
+                  ? "Usuario redes seleccionado. Edite los datos abajo y guarde los cambios."
                   : "Puede seleccionar un usuario redes existente o crear uno nuevo llenando los campos."}
               </Form.Text>
             </Col>

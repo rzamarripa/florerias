@@ -442,60 +442,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                 </Form.Group>
               </Col>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Nombre de Usuario:
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ingresa el nombre de usuario"
-                    {...register("username")}
-                    disabled={loading}
-                    isInvalid={!!errors.username}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.username?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Email:
-                  </Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="Ingresa el email"
-                    {...register("email")}
-                    disabled={loading}
-                    isInvalid={!!errors.email}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.email?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Teléfono:
-                  </Form.Label>
-                  <Form.Control
-                    type="tel"
-                    placeholder="Ingresa el teléfono"
-                    {...register("phone")}
-                    disabled={loading}
-                    isInvalid={!!errors.phone}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.phone?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
-
+              {/* Nombre */}
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="text-dark mb-1">
@@ -514,6 +461,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                 </Form.Group>
               </Col>
 
+              {/* Apellido */}
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="text-dark mb-1">
@@ -532,6 +480,100 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                 </Form.Group>
               </Col>
 
+              {/* Teléfono */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-dark mb-1">
+                    Teléfono:
+                  </Form.Label>
+                  <Form.Control
+                    type="tel"
+                    placeholder="Ingresa el teléfono"
+                    {...register("phone")}
+                    disabled={loading}
+                    isInvalid={!!errors.phone}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.phone?.message}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+
+              {/* Email */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-dark mb-1">
+                    Email:
+                  </Form.Label>
+                  <Form.Control
+                    type="email"
+                    placeholder="Ingresa el email"
+                    {...register("email")}
+                    disabled={loading}
+                    isInvalid={!!errors.email}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.email?.message}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+
+              {/* Nombre de Usuario */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-dark mb-1">
+                    Nombre de Usuario:
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ingresa el nombre de usuario"
+                    {...register("username")}
+                    disabled={loading}
+                    isInvalid={!!errors.username}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.username?.message}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+
+              {/* Rol */}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-dark mb-1">Rol:</Form.Label>
+                  <Controller
+                    name="role"
+                    control={control}
+                    render={({ field }) => (
+                      <Form.Select
+                        {...field}
+                        disabled={loading}
+                        isInvalid={!!errors.role}
+                      >
+                        <option value="">Selecciona un rol</option>
+                        {roles
+                          .filter((role) => {
+                            // Solo Super Admin puede ver y asignar el rol Distribuidor
+                            if (role.name === "Distribuidor") {
+                              return getIsSuperAdmin();
+                            }
+                            return true;
+                          })
+                          .map((role) => (
+                            <option key={role._id} value={role._id}>
+                              {role.name}
+                            </option>
+                          ))}
+                      </Form.Select>
+                    )}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.role?.message}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+
+              {/* Contraseña y Confirmar Contraseña - Solo al crear */}
               {!isEditing && (
                 <>
                   <Col md={6}>
@@ -605,41 +647,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                   </Col>
                 </>
               )}
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">Rol:</Form.Label>
-                  <Controller
-                    name="role"
-                    control={control}
-                    render={({ field }) => (
-                      <Form.Select
-                        {...field}
-                        disabled={loading}
-                        isInvalid={!!errors.role}
-                      >
-                        <option value="">Selecciona un rol</option>
-                        {roles
-                          .filter((role) => {
-                            // Solo Super Admin puede ver y asignar el rol Distribuidor
-                            if (role.name === "Distribuidor") {
-                              return getIsSuperAdmin();
-                            }
-                            return true;
-                          })
-                          .map((role) => (
-                            <option key={role._id} value={role._id}>
-                              {role.name}
-                            </option>
-                          ))}
-                      </Form.Select>
-                    )}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.role?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
             </Row>
           </Modal.Body>
 

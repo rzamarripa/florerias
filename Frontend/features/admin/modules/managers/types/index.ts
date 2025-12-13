@@ -49,6 +49,7 @@ export interface ManagerFilters {
   correo?: string;
   telefono?: string;
   estatus?: boolean;
+  companyId?: string;
 }
 
 export type FilterType = "nombre" | "apellidoPaterno" | "usuario" | "correo" | "telefono";

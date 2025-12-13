@@ -490,7 +490,7 @@ export const updateCompany = async (req, res) => {
       updateData.administrator = newAdmin._id;
     }
 
-    // Manejar creación de nuevo usuario redes si se proporcionan datos
+    // Manejar creación o actualización de usuario redes si se proporcionan datos
     let newRedesUserId = null;
     if (req.body.redesUserData) {
       const { redesUserData } = req.body;
@@ -504,40 +504,102 @@ export const updateCompany = async (req, res) => {
         });
       }
 
-      // Verificar que no exista un usuario con el mismo username o email (case-insensitive)
-      const existingUser = await User.findOne({
-        $or: [
-          { username: { $regex: new RegExp(`^${redesUserData.username}$`, 'i') } },
-          { email: { $regex: new RegExp(`^${redesUserData.email}$`, 'i') } },
-        ],
-      });
+      // Si se proporciona redesIds (usuario existente), actualizar el usuario
+      if (redesIds && Array.isArray(redesIds) && redesIds.length > 0) {
+        const redesUserId = redesIds[0]; // Tomamos el primer ID (solo hay uno en el modal)
 
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message:
-            existingUser.username.toLowerCase() === redesUserData.username.toLowerCase()
-              ? "Ya existe un usuario con este nombre de usuario"
-              : "Ya existe un usuario con este email",
+        // Verificar que el usuario existe
+        const existingRedesUser = await User.findById(redesUserId);
+        if (!existingRedesUser) {
+          return res.status(404).json({
+            success: false,
+            message: "Usuario redes no encontrado",
+          });
+        }
+
+        // Verificar que no exista otro usuario con el mismo username o email (case-insensitive)
+        // excepto el usuario actual
+        const duplicateUser = await User.findOne({
+          $or: [
+            { username: { $regex: new RegExp(`^${redesUserData.username}$`, 'i') } },
+            { email: { $regex: new RegExp(`^${redesUserData.email}$`, 'i') } },
+          ],
+          _id: { $ne: redesUserId },
         });
+
+        if (duplicateUser) {
+          return res.status(400).json({
+            success: false,
+            message:
+              duplicateUser.username.toLowerCase() === redesUserData.username.toLowerCase()
+                ? "Ya existe un usuario con este nombre de usuario"
+                : "Ya existe un usuario con este email",
+          });
+        }
+
+        // Preparar datos de actualización
+        const redesUpdateData = {
+          username: redesUserData.username,
+          email: redesUserData.email,
+          phone: redesUserData.phone,
+          profile: {
+            name: redesUserData.profile.name,
+            lastName: redesUserData.profile.lastName,
+            fullName: `${redesUserData.profile.name} ${redesUserData.profile.lastName}`,
+            estatus: existingRedesUser.profile.estatus, // Mantener el estado actual
+          },
+        };
+
+        // Solo actualizar contraseña si se proporciona
+        if (redesUserData.password && redesUserData.password.trim() !== "") {
+          redesUpdateData.password = redesUserData.password;
+        }
+
+        // Actualizar el usuario redes
+        await User.findByIdAndUpdate(
+          redesUserId,
+          redesUpdateData,
+          { new: true, runValidators: true }
+        );
+
+        // No necesitamos crear nuevo ID, usamos el existente
+      } else {
+        // Si no hay redesIds, crear un nuevo usuario redes
+        // Verificar que no exista un usuario con el mismo username o email (case-insensitive)
+        const existingUser = await User.findOne({
+          $or: [
+            { username: { $regex: new RegExp(`^${redesUserData.username}$`, 'i') } },
+            { email: { $regex: new RegExp(`^${redesUserData.email}$`, 'i') } },
+          ],
+        });
+
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message:
+              existingUser.username.toLowerCase() === redesUserData.username.toLowerCase()
+                ? "Ya existe un usuario con este nombre de usuario"
+                : "Ya existe un usuario con este email",
+          });
+        }
+
+        // Crear el nuevo usuario redes
+        const newRedesUser = await User.create({
+          username: redesUserData.username,
+          email: redesUserData.email,
+          phone: redesUserData.phone,
+          password: redesUserData.password,
+          profile: {
+            name: redesUserData.profile.name,
+            lastName: redesUserData.profile.lastName,
+            fullName: `${redesUserData.profile.name} ${redesUserData.profile.lastName}`,
+            estatus: true,
+          },
+          role: redesRole._id,
+        });
+
+        newRedesUserId = newRedesUser._id;
       }
-
-      // Crear el nuevo usuario redes
-      const newRedesUser = await User.create({
-        username: redesUserData.username,
-        email: redesUserData.email,
-        phone: redesUserData.phone,
-        password: redesUserData.password,
-        profile: {
-          name: redesUserData.profile.name,
-          lastName: redesUserData.profile.lastName,
-          fullName: `${redesUserData.profile.name} ${redesUserData.profile.lastName}`,
-          estatus: true,
-        },
-        role: redesRole._id,
-      });
-
-      newRedesUserId = newRedesUser._id;
     }
 
     // Manejar actualización de usuarios redes

@@ -71,12 +71,12 @@ const CashCountPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Para cajeros: no enviar cashRegisterId ya que el backend filtra automáticamente por su sucursal
+      // Para cajeros: el backend filtra automáticamente por cashierId
       // Para admins: incluir el branchId de la sucursal activa si existe
       const filtersToSend = isCashier
         ? {
             ...filters,
-            cashRegisterId: undefined, // Eliminar el filtro de caja para cajeros
+            cashRegisterId: undefined, // Eliminar el filtro de caja para cajeros (el backend filtra por cashierId)
           }
         : {
             ...filters,

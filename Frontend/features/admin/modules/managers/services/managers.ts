@@ -10,8 +10,8 @@ import {
 
 export const managersService = {
   getAllManagers: async (filters: ManagerFilters = {}): Promise<GetManagerResponse> => {
-    const { page = 1, limit = 10, nombre, apellidoPaterno, usuario, correo, telefono, estatus } = filters;
-    
+    const { page = 1, limit = 10, nombre, apellidoPaterno, usuario, correo, telefono, estatus, companyId } = filters;
+
     const searchParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -23,6 +23,7 @@ export const managersService = {
     if (correo) searchParams.append('correo', correo);
     if (telefono) searchParams.append('telefono', telefono);
     if (estatus !== undefined) searchParams.append('estatus', estatus.toString());
+    if (companyId) searchParams.append('companyId', companyId);
 
     const response = await apiCall<GetManagerResponse>(`/managers?${searchParams}`);
     return response;
