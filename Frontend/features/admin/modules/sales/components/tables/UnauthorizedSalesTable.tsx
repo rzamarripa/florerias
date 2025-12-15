@@ -58,14 +58,69 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
       branchId: filters.branchId,
     },
     onOrderCreated: (newOrder) => {
-      // Si la nueva orden tiene descuento pendiente de autorización, agregarla
-      // Esto se puede verificar cuando el backend retorne información adicional
-      loadSales();
+      console.log("📩 [UnauthorizedSalesTable] Nueva orden recibida:", newOrder);
+
+      // Si la nueva orden tiene descuento (discount > 0), agregarla optimísticamente
+      // El backend ya creó el DiscountAuth antes de emitir el socket
+      if (newOrder.discount && newOrder.discount > 0) {
+        console.log("✅ Orden con descuento detectada, agregando a la tabla");
+        setSales((prev) => {
+          const exists = prev.some((s) => s._id === newOrder._id);
+          if (exists) return prev;
+          return [newOrder as Sale, ...prev];
+        });
+        toast.info(`Nueva venta con descuento: ${newOrder.orderNumber || newOrder._id}`);
+      }
     },
     onOrderUpdated: (updatedOrder) => {
-      // Recargar la lista cuando se actualice una orden
-      // (podría haber sido autorizada o rechazada)
-      loadSales();
+      console.log("📝 [UnauthorizedSalesTable] Orden actualizada:", updatedOrder);
+
+      // Verificar si la orden debe estar en "Por Autorizar"
+      // Debe tener descuento > 0 Y NO haber sido enviada a producción (canjeada) Y NO estar cancelada
+      const hasDiscount = updatedOrder.discount && updatedOrder.discount > 0;
+      const wasSentToProduction = updatedOrder.sendToProduction === true;
+      const wasCancelled = updatedOrder.status === "cancelado";
+      const shouldInclude = hasDiscount && !wasSentToProduction && !wasCancelled;
+
+      setSales((prev) => {
+        const exists = prev.some((s) => s._id === updatedOrder._id);
+
+        if (shouldInclude) {
+          // Actualizar o agregar
+          if (exists) {
+            console.log("🔄 Actualizando orden en tabla Por Autorizar");
+            return prev.map((s) =>
+              s._id === updatedOrder._id ? (updatedOrder as Sale) : s
+            );
+          } else {
+            console.log("➕ Agregando orden a tabla Por Autorizar");
+            return [updatedOrder as Sale, ...prev];
+          }
+        } else {
+          // Remover si fue canjeada, cancelada o ya no tiene descuento
+          if (exists) {
+            if (wasSentToProduction) {
+              console.log("✅ Descuento canjeado - Removiendo de Por Autorizar:", updatedOrder.orderNumber);
+              toast.success(`✅ Folio de descuento canjeado para orden ${updatedOrder.orderNumber}. Enviada a producción.`, {
+                autoClose: 5000,
+              });
+            } else if (wasCancelled) {
+              console.log("❌ Descuento rechazado - Orden cancelada:", updatedOrder.orderNumber);
+              toast.error(`❌ Descuento rechazado para orden ${updatedOrder.orderNumber}. La orden fue cancelada.`, {
+                autoClose: 5000,
+              });
+            } else {
+              console.log("🔄 Orden sin descuento - Removiendo de Por Autorizar");
+            }
+          }
+          return prev.filter((s) => s._id !== updatedOrder._id);
+        }
+      });
+
+      // Actualizar estadísticas cuando cambia una orden
+      if (wasSentToProduction || wasCancelled) {
+        onStatsUpdate?.();
+      }
     },
     onOrderDeleted: (data) => {
       setSales((prev) => prev.filter((s) => s._id !== data.orderId));

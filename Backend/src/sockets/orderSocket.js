@@ -62,3 +62,31 @@ export const emitOrderDeleted = (orderId, branchId) => {
     console.error("Error al emitir evento order:deleted:", error.message);
   }
 };
+
+/**
+ * Emite un evento de actualización de stock a todos los usuarios de la sucursal
+ * @param {String} branchId - ID de la sucursal
+ * @param {String} storageId - ID del almacén
+ * @param {Array} productsUpdated - Array de productos actualizados [{productId, newQuantity, quantityReduced}]
+ * @param {Array} materialsUpdated - Array de materiales actualizados [{materialId, newQuantity, quantityReduced}]
+ * @param {String} orderNumber - Número de orden que causó la actualización
+ */
+export const emitStockUpdated = (branchId, storageId, productsUpdated, materialsUpdated, orderNumber) => {
+  try {
+    const io = getIO();
+
+    const payload = {
+      storageId,
+      branchId,
+      productsUpdated: productsUpdated || [],
+      materialsUpdated: materialsUpdated || [],
+      orderNumber,
+      timestamp: new Date().toISOString()
+    };
+
+    io.to(`branch:${branchId}`).emit("storage:stockUpdated", payload);
+    console.log(`📤 [OrderSocket] storage:stockUpdated | Sucursal: ${branchId} | Storage: ${storageId} | Productos: ${productsUpdated?.length || 0} | Materiales: ${materialsUpdated?.length || 0}`);
+  } catch (error) {
+    console.error("Error al emitir evento storage:stockUpdated:", error.message);
+  }
+};

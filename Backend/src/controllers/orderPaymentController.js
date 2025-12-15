@@ -4,6 +4,9 @@ import CashRegister from '../models/CashRegister.js';
 import PaymentMethod from '../models/PaymentMethod.js';
 import orderLogService from '../services/orderLogService.js';
 import mongoose from 'mongoose';
+import { emitOrderUpdated } from '../sockets/orderSocket.js';
+import { Branch } from '../models/Branch.js';
+import { StageCatalog } from '../models/StageCatalog.js';
 
 // Crear un nuevo pago para una orden
 export const createOrderPayment = async (req, res) => {
@@ -57,10 +60,72 @@ export const createOrderPayment = async (req, res) => {
 
     await payment.save();
 
+    // Guardar el advance anterior para detectar si era 0
+    const previousAdvance = order.advance || 0;
+
     // Actualizar la orden
     order.advance += amount;
     order.remainingBalance -= amount;
     order.payments.push(payment._id);
+
+    // Si la orden no tenía anticipo previo (advance = 0) y no ha sido enviada a producción,
+    // enviarla automáticamente a producción cuando reciba el primer pago
+    const wasPreviouslyNotSent = !order.sendToProduction;
+    if (previousAdvance === 0 && wasPreviouslyNotSent && order.advance > 0) {
+      order.sendToProduction = true;
+      console.log(`📦 [AutoSend] Orden ${order.orderNumber} enviada a producción automáticamente al recibir primer pago`);
+      console.log(`   - Condiciones: previousAdvance=${previousAdvance}, wasPreviouslyNotSent=${wasPreviouslyNotSent}, newAdvance=${order.advance}`);
+
+      // Asignar stage de producción si no tiene uno
+      if (!order.stage) {
+        try {
+          // Obtener la empresa a través de la sucursal
+          const branchWithCompany = await Branch.findById(order.branchId).populate('companyId');
+
+          if (branchWithCompany && branchWithCompany.companyId) {
+            const companyId = branchWithCompany.companyId._id;
+
+            // Buscar la etapa con stageNumber = 1 y boardType = 'Produccion' para esta empresa
+            const firstStage = await StageCatalog.findOne({
+              company: companyId,
+              stageNumber: 1,
+              boardType: 'Produccion',
+              isActive: true
+            });
+
+            if (firstStage) {
+              order.stage = firstStage._id;
+              console.log(`   - Stage asignado: ${firstStage.name} (stageNumber: ${firstStage.stageNumber})`);
+            } else {
+              console.warn(`   - No se encontró stage inicial de Producción para la empresa ${companyId}`);
+            }
+          }
+        } catch (stageError) {
+          console.error('Error al asignar stage automáticamente:', stageError);
+          // No fallar el pago si hay error al asignar el stage
+        }
+      }
+
+      // Crear log de envío automático a producción
+      try {
+        const user = await mongoose.model('cs_user').findById(registeredBy).populate('role');
+        await orderLogService.createLog(
+          orderId,
+          'auto_sent_to_production',
+          `Orden enviada automáticamente a producción al recibir primer pago`,
+          registeredBy,
+          user?.profile?.fullName || user?.name || 'Usuario',
+          user?.role?.name || 'Usuario',
+          {
+            paymentAmount: amount,
+            orderNumber: order.orderNumber,
+            stageAssigned: order.stage ? true : false
+          }
+        );
+      } catch (logError) {
+        console.error('Error al crear log de envío automático:', logError);
+      }
+    }
 
     // NO actualizar el status de la orden aunque el saldo llegue a 0
     // El status se mantiene como está (pendiente, en-proceso, etc.)
@@ -124,6 +189,36 @@ export const createOrderPayment = async (req, res) => {
       );
     } catch (logError) {
       console.error('Error al crear log de pago:', logError);
+    }
+
+    // Emitir socket para actualización en tiempo real
+    try {
+      const updatedOrder = await Order.findById(orderId)
+        .populate('branchId', 'branchName branchCode')
+        .populate('cashRegisterId', 'name isOpen currentBalance')
+        .populate('cashier', 'name email')
+        .populate('items.productId', 'nombre imagen')
+        .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+        .populate('paymentMethod', 'name abbreviation')
+        .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+        .populate('stage', 'name abreviation stageNumber color boardType')
+        .populate({
+          path: 'payments',
+          populate: [
+            { path: 'paymentMethod', select: 'name abbreviation' },
+            { path: 'registeredBy', select: 'name email' }
+          ]
+        });
+
+      if (updatedOrder) {
+        emitOrderUpdated(updatedOrder);
+        console.log(`📡 Socket emitido: Pago recibido para orden ${updatedOrder.orderNumber} - Monto: $${amount}`);
+        if (updatedOrder.sendToProduction && updatedOrder.stage) {
+          console.log(`   - Orden enviada a producción con stage: ${updatedOrder.stage.name}`);
+        }
+      }
+    } catch (socketError) {
+      console.error('Error al emitir socket de actualización de pago:', socketError);
     }
 
     res.status(201).json({
@@ -258,6 +353,33 @@ export const deleteOrderPayment = async (req, res) => {
       );
     } catch (logError) {
       console.error('Error al crear log de pago eliminado:', logError);
+    }
+
+    // Emitir socket para actualización en tiempo real
+    try {
+      const updatedOrder = await Order.findById(payment.orderId)
+        .populate('branchId', 'branchName branchCode')
+        .populate('cashRegisterId', 'name isOpen currentBalance')
+        .populate('cashier', 'name email')
+        .populate('items.productId', 'nombre imagen')
+        .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+        .populate('paymentMethod', 'name abbreviation')
+        .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+        .populate('stage', 'name abreviation stageNumber color boardType')
+        .populate({
+          path: 'payments',
+          populate: [
+            { path: 'paymentMethod', select: 'name abbreviation' },
+            { path: 'registeredBy', select: 'name email' }
+          ]
+        });
+
+      if (updatedOrder) {
+        emitOrderUpdated(updatedOrder);
+        console.log(`📡 Socket emitido: Pago eliminado de orden ${updatedOrder.orderNumber} - Monto: $${payment.amount}`);
+      }
+    } catch (socketError) {
+      console.error('Error al emitir socket de actualización de pago eliminado:', socketError);
     }
 
     res.status(200).json({

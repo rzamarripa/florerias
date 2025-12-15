@@ -188,11 +188,32 @@ export const loginUser = async (req, res) => {
       allowedModules = Object.values(modulesByPage);
     }
 
-    // Obtener las sucursales que administra el usuario
-    const userBranches = await Branch.find({ administrator: user._id }).select('_id');
+    // Obtener TODAS las sucursales asociadas al usuario (administrator, manager, employee, o redes)
+    let userBranches = [];
+    const userId = user._id;
+    const userRoleName = user.role?.name;
+
+    if (userRoleName === 'Redes') {
+      // Para usuarios Redes, buscar la empresa donde están en el array redes
+      const userCompany = await Company.findOne({ redes: userId });
+      if (userCompany) {
+        // Obtener todas las sucursales de la empresa
+        userBranches = await Branch.find({ companyId: userCompany._id }).select('_id');
+      }
+    } else {
+      // Para otros roles, buscar sucursales donde el usuario es administrator, manager o employee
+      userBranches = await Branch.find({
+        $or: [
+          { administrator: userId },
+          { manager: userId },
+          { employees: userId }
+        ]
+      }).select('_id');
+    }
+
     const branchIds = userBranches.map(branch => branch._id.toString());
 
-    console.log(`\n👤 [Login] Usuario: ${user.username} (${user._id})`);
+    console.log(`\n👤 [Login] Usuario: ${user.username} (${user._id}) | Rol: ${userRoleName}`);
     console.log(`   Sucursales encontradas: ${userBranches.length}`);
     console.log(`   branchIds:`, branchIds);
 

@@ -312,6 +312,36 @@ const approveRejectDiscountAuth = async (req, res) => {
       .populate('branchId', 'branchName branchCode')
       .populate('orderId', 'orderNumber status');
 
+    // Emitir socket para notificar cambios en la orden (si está vinculada)
+    if (discountAuth.orderId) {
+      try {
+        const updatedOrder = await Order.findById(discountAuth.orderId)
+          .populate('branchId', 'branchName branchCode')
+          .populate('cashRegisterId', 'name isOpen currentBalance')
+          .populate('cashier', 'name email')
+          .populate('items.productId', 'nombre imagen')
+          .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+          .populate('paymentMethod', 'name abbreviation')
+          .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+          .populate('stage', 'name abreviation stageNumber color boardType')
+          .populate({
+            path: 'payments',
+            populate: [
+              { path: 'paymentMethod', select: 'name abbreviation' },
+              { path: 'registeredBy', select: 'name email' }
+            ]
+          });
+
+        if (updatedOrder) {
+          emitOrderUpdated(updatedOrder);
+          console.log(`📡 Socket emitido: Descuento ${isApproved ? 'aprobado' : 'rechazado'} para orden ${updatedOrder.orderNumber}`);
+        }
+      } catch (socketError) {
+        console.error('Error al emitir socket de actualización:', socketError);
+        // No fallar la operación si hay error al emitir socket
+      }
+    }
+
     // Crear log de aprobación o rechazo
     if (discountAuth.orderId) {
       try {

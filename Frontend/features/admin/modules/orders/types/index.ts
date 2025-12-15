@@ -16,6 +16,7 @@ export interface DeliveryData {
 }
 
 export interface OrderItemInsumo {
+  materialId?: string; // ID del material para extras (usado para descontar stock en backend)
   nombre: string;
   cantidad: number;
   importeVenta: number;

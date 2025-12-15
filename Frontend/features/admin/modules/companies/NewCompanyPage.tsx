@@ -298,9 +298,10 @@ const NewCompanyPage: React.FC = () => {
       // CASO 2: Editando empresa SIN administrador seleccionado -> Crear nuevo usuario
       if (isEditing && !formData.administratorId && formData.administratorData) {
         // Obtener el rol de Administrador
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
         const rolesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/roles?name=Administrador`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${token}`,
           },
         });
         const rolesData = await rolesResponse.json();

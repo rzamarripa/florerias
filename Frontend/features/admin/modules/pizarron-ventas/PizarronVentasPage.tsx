@@ -115,11 +115,106 @@ const PizarronVentasPage: React.FC = () => {
       console.log("📝 [PizarronVentas] Orden actualizada:", updatedOrder);
       if (!updatedOrder) return;
 
-      setOrders((prevOrders) =>
-        prevOrders.map((o) =>
-          o && o._id === updatedOrder._id ? updatedOrder as Order : o
-        )
-      );
+      // Verificar si la orden fue enviada a producción (descuento canjeado)
+      const wasSentToProduction = updatedOrder.sendToProduction === true;
+      const hasStage = updatedOrder.stage !== null && updatedOrder.stage !== undefined;
+      const isNotCancelled = updatedOrder.status !== "cancelado";
+
+      // Primero, obtener la orden anterior para detectar cambios ANTES de actualizar estado
+      setOrders((prevOrders) => {
+        const exists = prevOrders.some((o) => o && o._id === updatedOrder._id);
+        const previousOrder = prevOrders.find((o) => o && o._id === updatedOrder._id);
+
+        // Detectar cambios y preparar toasts ANTES de actualizar el estado
+        if (previousOrder) {
+          const previousAdvance = previousOrder.advance || 0;
+          const currentAdvance = updatedOrder.advance || 0;
+          const previousStatus = previousOrder.status;
+          const currentStatus = updatedOrder.status;
+
+          // Usar setTimeout para mostrar toasts después de la actualización del estado
+          setTimeout(() => {
+            // Detectar cancelación
+            if (previousStatus !== "cancelado" && currentStatus === "cancelado") {
+              toast.error(
+                `La orden ${updatedOrder.orderNumber} ha sido cancelada`,
+                { autoClose: 5000 }
+              );
+            }
+
+            // Detectar cambios en pago
+            if (currentAdvance > previousAdvance) {
+              // Se agregó un pago
+              const paymentAmount = currentAdvance - previousAdvance;
+              const userName = updatedOrder.payments && updatedOrder.payments.length > 0
+                ? updatedOrder.payments[updatedOrder.payments.length - 1]?.registeredBy?.name || "Usuario"
+                : "Usuario";
+
+              toast.success(
+                `${userName} ha realizado un pago de $${paymentAmount.toFixed(2)} en la orden ${updatedOrder.orderNumber}`,
+                { autoClose: 5000 }
+              );
+            } else if (currentAdvance < previousAdvance) {
+              // Se eliminó un pago
+              const paymentAmount = previousAdvance - currentAdvance;
+              toast.warning(
+                `Se ha eliminado un pago de $${paymentAmount.toFixed(2)} de la orden ${updatedOrder.orderNumber}`,
+                { autoClose: 5000 }
+              );
+            }
+          }, 0);
+        }
+
+        // Si la orden fue enviada a producción, tiene stage y no está cancelada
+        if (wasSentToProduction && hasStage && isNotCancelled) {
+          if (!exists) {
+            // Nueva orden llegando al pizarrón
+            console.log("✨ [PizarronVentas] Orden enviada a producción - Agregando:", updatedOrder.orderNumber);
+
+            // Verificar si tiene descuento para mostrar mensaje específico
+            const hasDiscount = updatedOrder.discount && updatedOrder.discount > 0;
+            // Verificar si se envió automáticamente por recibir primer pago
+            const wasAutoSentByPayment = previousOrder &&
+                                         (previousOrder.advance || 0) === 0 &&
+                                         (updatedOrder.advance || 0) > 0;
+
+            let toastMessage;
+            if (hasDiscount) {
+              toastMessage = `Se ha autorizado el descuento de la orden ${updatedOrder.orderNumber}. Entrando a producción`;
+            } else if (wasAutoSentByPayment) {
+              toastMessage = `La orden ${updatedOrder.orderNumber} ha recibido su primer pago y se envió automáticamente a producción`;
+            } else {
+              toastMessage = `Orden ${updatedOrder.orderNumber} enviada a producción`;
+            }
+
+            setTimeout(() => {
+              toast.success(toastMessage, {
+                autoClose: 5000,
+              });
+            }, 0);
+            return [updatedOrder as Order, ...prevOrders];
+          } else {
+            // Orden ya existe, actualizar
+            console.log("🔄 [PizarronVentas] Actualizando orden existente:", updatedOrder.orderNumber);
+            return prevOrders.map((o) =>
+              o && o._id === updatedOrder._id ? updatedOrder as Order : o
+            );
+          }
+        } else if (exists) {
+          // Si la orden está en el pizarrón pero fue cancelada o removida
+          if (!isNotCancelled) {
+            console.log("❌ [PizarronVentas] Orden cancelada - Removiendo del pizarrón:", updatedOrder.orderNumber);
+            return prevOrders.filter((o) => o && o._id !== updatedOrder._id);
+          }
+          // Actualizar orden existente
+          return prevOrders.map((o) =>
+            o && o._id === updatedOrder._id ? updatedOrder as Order : o
+          );
+        }
+
+        // No agregar ni modificar si no cumple las condiciones
+        return prevOrders;
+      });
     },
     onOrderDeleted: (data: { orderId: string }) => {
       console.log("🗑️ [PizarronVentas] Orden eliminada:", data.orderId);

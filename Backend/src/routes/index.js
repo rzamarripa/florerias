@@ -39,6 +39,8 @@ import analyticsRoutes from "./analyticsRoutes.js";
 import orderNotificationRoutes from "./orderNotificationRoutes.js";
 import stageCatalogRoutes from "./stageCatalogRoutes.js";
 import discountAuthRoutes from "./discountAuthRoutes.js";
+import pointsConfigRoutes from "./pointsConfigRoutes.js";
+import pointsRewardRoutes from "./pointsRewardRoutes.js";
 
 const router = Router();
 
@@ -81,5 +83,7 @@ router.use("/analytics", analyticsRoutes);
 router.use("/order-notifications", orderNotificationRoutes);
 router.use("/stage-catalogs", stageCatalogRoutes);
 router.use("/discount-auth", discountAuthRoutes);
+router.use("/points-config", pointsConfigRoutes);
+router.use("/points-rewards", pointsRewardRoutes);
 
 export default router;

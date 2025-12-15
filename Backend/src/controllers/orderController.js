@@ -9,7 +9,7 @@ import OrderNotification from '../models/OrderNotification.js';
 import { Company } from '../models/Company.js';
 import { StageCatalog } from '../models/StageCatalog.js';
 import DiscountAuth from '../models/DiscountAuth.js';
-import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted } from '../sockets/orderSocket.js';
+import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitStockUpdated } from '../sockets/orderSocket.js';
 import orderLogService from '../services/orderLogService.js';
 import mongoose from 'mongoose';
 
@@ -308,7 +308,8 @@ const createOrder = async (req, res) => {
       paidWith,
       change,
       remainingBalance,
-      sendToProduction
+      sendToProduction,
+      discountRequestMessage
     } = req.body;
 
     // Validar campos requeridos
@@ -632,19 +633,93 @@ const createOrder = async (req, res) => {
       await savedOrder.save();
     }
 
-    // NO descontar productos del almacén aquí porque ya fueron reservados
-    // cuando se agregaron al carrito en el frontend mediante reserveStock()
-    // El stock ya se redujo en handleAddProductFromCatalog del frontend
+    // Descontar productos y materiales del almacén al crear la orden
+    if (storage) {
+      const hasProductsFromCatalog = items.some(item => item.isProduct === true);
+      const hasExtras = items.some(item =>
+        item.insumos && item.insumos.some(insumo => insumo.isExtra === true && insumo.materialId)
+      );
 
-    // Solo actualizar la fecha de último egreso si hay storage y productos del catálogo
-    if (storage && items.some(item => item.isProduct === true)) {
-      storage.lastOutcome = Date.now();
+      if (hasProductsFromCatalog || hasExtras) {
+        // Arrays para rastrear qué productos y materiales se actualizaron
+        const productsUpdated = [];
+        const materialsUpdated = [];
 
-      try {
-        await storage.save();
-      } catch (storageError) {
-        console.error('Error al actualizar fecha de egreso del almacén:', storageError);
-        // Continuar con la creación de la orden aunque falle la actualización de la fecha
+        try {
+          for (const item of items) {
+            // Solo descontar si es un producto del catálogo
+            if (item.isProduct === true && item.productId) {
+              const productInStorageIndex = storage.products.findIndex(
+                (p) => p.productId.toString() === item.productId
+              );
+
+              if (productInStorageIndex !== -1) {
+                // Reducir la cantidad del producto en el almacén
+                storage.products[productInStorageIndex].quantity -= item.quantity;
+
+                // Si la cantidad llega a 0 o menos, no eliminar pero mantener en 0
+                if (storage.products[productInStorageIndex].quantity < 0) {
+                  storage.products[productInStorageIndex].quantity = 0;
+                }
+
+                // Rastrear el producto actualizado para el evento de socket
+                productsUpdated.push({
+                  productId: item.productId,
+                  newQuantity: storage.products[productInStorageIndex].quantity,
+                  quantityReduced: item.quantity
+                });
+              }
+            }
+
+            // Descontar materiales extras de los insumos
+            if (item.insumos && Array.isArray(item.insumos)) {
+              for (const insumo of item.insumos) {
+                if (insumo.isExtra === true && insumo.materialId) {
+                  const materialInStorageIndex = storage.materials.findIndex(
+                    (m) => m.materialId.toString() === insumo.materialId
+                  );
+
+                  if (materialInStorageIndex !== -1) {
+                    // Reducir la cantidad del material en el almacén
+                    storage.materials[materialInStorageIndex].quantity -= insumo.cantidad;
+
+                    // Si la cantidad llega a 0 o menos, mantener en 0
+                    if (storage.materials[materialInStorageIndex].quantity < 0) {
+                      storage.materials[materialInStorageIndex].quantity = 0;
+                    }
+
+                    // Rastrear el material actualizado para el evento de socket
+                    materialsUpdated.push({
+                      materialId: insumo.materialId,
+                      newQuantity: storage.materials[materialInStorageIndex].quantity,
+                      quantityReduced: insumo.cantidad
+                    });
+                  }
+                }
+              }
+            }
+          }
+
+          // Actualizar la fecha de último egreso
+          storage.lastOutcome = Date.now();
+          await storage.save();
+          console.log('Stock descontado exitosamente al crear orden:', savedOrder.orderNumber);
+
+          // Emitir evento de socket para notificar actualización de stock a otros usuarios
+          if (productsUpdated.length > 0 || materialsUpdated.length > 0) {
+            emitStockUpdated(
+              branchId,
+              storage._id.toString(),
+              productsUpdated,
+              materialsUpdated,
+              savedOrder.orderNumber
+            );
+          }
+        } catch (storageError) {
+          console.error('Error al descontar stock del almacén:', storageError);
+          // Continuar con la creación de la orden aunque falle el descuento del stock
+          // El administrador puede corregir el stock manualmente
+        }
       }
     }
 
@@ -704,6 +779,83 @@ const createOrder = async (req, res) => {
           { path: 'registeredBy', select: 'name email' }
         ]
       });
+
+    // Si hay descuento pendiente, crear la solicitud de autorización ANTES de emitir el socket
+    if (hasPendingDiscountAuth && discountRequestMessage && discountRequestMessage.trim() && discount > 0) {
+      try {
+        // Calcular monto del descuento
+        const discountAmount = discountType === 'porcentaje'
+          ? (subtotal * discount) / 100
+          : discount;
+
+        // Obtener la sucursal para obtener el gerente
+        const branch = await Branch.findById(branchId).populate('manager');
+
+        if (branch && branch.manager) {
+          // Obtener información del usuario que solicita
+          const requestingUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+
+          // Crear solicitud de autorización vinculada a la orden
+          const discountAuth = new DiscountAuth({
+            message: discountRequestMessage,
+            managerId: branch.manager._id,
+            requestedBy: req.user._id,
+            branchId,
+            orderId: savedOrder._id,
+            orderTotal: total,
+            discountValue: discount,
+            discountType,
+            discountAmount,
+            isAuth: null,
+            authFolio: null,
+            isRedeemed: false
+          });
+
+          const savedAuth = await discountAuth.save();
+
+          // Crear notificación para el gerente
+          const notification = new OrderNotification({
+            userId: branch.manager._id,
+            username: requestingUser?.profile?.fullName || requestingUser?.username || 'Usuario',
+            userRole: requestingUser?.role?.name || 'Usuario',
+            branchId,
+            orderNumber: `Solicitud de Descuento`,
+            orderId: savedOrder._id,
+            isDiscountAuth: true,
+            discountAuthId: savedAuth._id,
+            isRead: false
+          });
+
+          await notification.save();
+
+          // Crear log de solicitud de descuento
+          try {
+            await orderLogService.createLog(
+              savedOrder._id,
+              'discount_requested',
+              `Solicitud de descuento enviada al gerente: ${discount}${discountType === 'porcentaje' ? '%' : ' MXN'}`,
+              req.user._id,
+              requestingUser?.profile?.fullName || requestingUser?.username || 'Usuario',
+              requestingUser?.role?.name || 'Usuario',
+              {
+                discountValue: discount,
+                discountType,
+                discountAmount,
+                message: discountRequestMessage,
+                discountAuthId: savedAuth._id
+              }
+            );
+          } catch (logError) {
+            console.error('Error al crear log de solicitud de descuento:', logError);
+          }
+
+          console.log('✅ DiscountAuth creado antes de emitir socket:', savedAuth._id);
+        }
+      } catch (discountAuthError) {
+        console.error('Error al crear solicitud de descuento:', discountAuthError);
+        // No fallar la orden si hay error al crear la solicitud de descuento
+      }
+    }
 
     // Emitir evento de socket para notificar a otros usuarios
     emitOrderCreated(populatedOrder);

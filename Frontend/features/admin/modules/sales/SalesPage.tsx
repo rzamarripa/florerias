@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Tabs, Tab, Button } from "react-bootstrap";
 import { Download } from "lucide-react";
 import DateFilters from "./components/DateFilters";
@@ -14,6 +14,7 @@ import UnauthorizedSalesTable from "./components/tables/UnauthorizedSalesTable";
 import { paymentMethodsService } from "../payment-methods/services/paymentMethods";
 import { salesService } from "./services/sales";
 import { toast } from "react-toastify";
+import { useOrderSocket } from "@/hooks/useOrderSocket";
 
 const SalesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("nuevas");
@@ -32,6 +33,57 @@ const SalesPage: React.FC = () => {
   >(undefined);
   const [exporting, setExporting] = useState<boolean>(false);
   const [statsRefreshKey, setStatsRefreshKey] = useState<number>(0);
+  const ordersPaymentStateRef = useRef<Map<string, number>>(new Map());
+  const ordersStatusStateRef = useRef<Map<string, string>>(new Map());
+
+  // Socket listener centralizado para detectar cambios de pago y cancelaciones (evita toasts duplicados)
+  useOrderSocket({
+    filters: {},
+    onOrderCreated: () => {},
+    onOrderUpdated: (updatedOrder) => {
+      const orderId = updatedOrder._id;
+      const previousAdvance = ordersPaymentStateRef.current.get(orderId);
+      const currentAdvance = updatedOrder.advance || 0;
+      const previousStatus = ordersStatusStateRef.current.get(orderId);
+      const currentStatus = updatedOrder.status;
+
+      // Detectar cancelación de orden
+      if (previousStatus && previousStatus !== "cancelado" && currentStatus === "cancelado") {
+        toast.error(
+          `La orden ${updatedOrder.orderNumber} ha sido cancelada`,
+          { autoClose: 5000 }
+        );
+      }
+
+      // Si ya conocíamos esta orden, detectar cambios de pago
+      if (previousAdvance !== undefined) {
+        if (currentAdvance > previousAdvance) {
+          // Se agregó un pago
+          const paymentAmount = currentAdvance - previousAdvance;
+          const userName = updatedOrder.payments && updatedOrder.payments.length > 0
+            ? updatedOrder.payments[updatedOrder.payments.length - 1]?.registeredBy?.name || "Usuario"
+            : "Usuario";
+
+          toast.success(
+            `${userName} ha realizado un pago de $${paymentAmount.toFixed(2)} en la orden ${updatedOrder.orderNumber}`,
+            { autoClose: 5000 }
+          );
+        } else if (currentAdvance < previousAdvance) {
+          // Se eliminó un pago
+          const paymentAmount = previousAdvance - currentAdvance;
+          toast.warning(
+            `Se ha eliminado un pago de $${paymentAmount.toFixed(2)} de la orden ${updatedOrder.orderNumber}`,
+            { autoClose: 5000 }
+          );
+        }
+      }
+
+      // Actualizar el estado almacenado
+      ordersPaymentStateRef.current.set(orderId, currentAdvance);
+      ordersStatusStateRef.current.set(orderId, currentStatus);
+    },
+    onOrderDeleted: () => {},
+  });
 
   useEffect(() => {
     const loadPaymentMethods = async () => {

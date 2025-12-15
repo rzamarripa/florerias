@@ -30,6 +30,7 @@ import {
   HelpCircle,
   ChartPie,
   Box,
+  Stars,
 } from "lucide-react";
 
 export interface UserDropdownItem {
@@ -185,6 +186,12 @@ export const menuItems: MenuItemType[] = [
             label: "Clientes",
             url: "/panel/clientes",
             icon: User,
+          },
+          {
+            key: "configuracion-puntos",
+            label: "Configuracion de Puntos",
+            url: "/panel/config-puntos",
+            icon: Stars,
           },
           {
             key: "cajeros",

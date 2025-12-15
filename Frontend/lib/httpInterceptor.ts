@@ -50,6 +50,9 @@ function getCurrentPagePath(): string {
  * Función para verificar si el usuario tiene permisos
  */
 function hasPermission(requiredPermission: string): boolean {
+  // Solo funciona en el cliente
+  if (typeof window === 'undefined') return true;
+
   // Obtener datos del usuario desde los stores
   const userRoleStore = JSON.parse(localStorage.getItem('user-role') || '{}');
   const userModulesStore = JSON.parse(localStorage.getItem('user-modules') || '{}');
@@ -111,6 +114,8 @@ function showPermissionError(message: string) {
 /**
  * Interceptor global para fetch
  */
+// Solo ejecutar en el cliente
+if (typeof window !== 'undefined') {
 const originalFetch = window.fetch;
 
 window.fetch = async function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -199,6 +204,9 @@ XMLHttpRequest.prototype.send = function(data?: Document | XMLHttpRequestBodyIni
   return originalXHRSend.apply(this, [data]);
 };
 
+console.log('🔒 Global HTTP Permission Interceptor initialized');
+} // Cierre del bloque if (typeof window !== 'undefined')
+
 // Extender los tipos de XMLHttpRequest para incluir nuestras propiedades
 declare global {
   interface XMLHttpRequest {
@@ -206,5 +214,3 @@ declare global {
     _url: string;
   }
 }
-
-console.log('🔒 Global HTTP Permission Interceptor initialized');

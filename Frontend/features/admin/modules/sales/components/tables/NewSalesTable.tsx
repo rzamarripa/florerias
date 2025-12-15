@@ -55,7 +55,7 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
       startDate: filters.startDate,
       endDate: filters.endDate,
       branchId: filters.branchId,
-      status: ["pendiente", "en-proceso", "completado"], // Excluir canceladas
+      status: ["pendiente", "en-proceso", "completado", "sinAnticipo"], // Incluir ventas sin anticipo
     },
     onOrderCreated: (newOrder) => {
       // Agregar la nueva orden al inicio de la lista
@@ -68,11 +68,12 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
     },
     onOrderUpdated: (updatedOrder) => {
       setSales((prev) => {
-        // Si la orden actualizada debe estar en esta tabla (NO cancelada)
+        // Si la orden actualizada debe estar en esta tabla (incluir sinAnticipo, excluir canceladas)
         const shouldInclude = [
           "pendiente",
           "en-proceso",
           "completado",
+          "sinAnticipo", // Incluir ventas sin anticipo
         ].includes(updatedOrder.status);
 
         if (shouldInclude) {
