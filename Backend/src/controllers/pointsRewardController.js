@@ -22,6 +22,7 @@ export const getAllPointsRewards = async (req, res) => {
 
     const pointsRewards = await PointsReward.find(filters)
       .populate("branch", "branchName address")
+      .populate("productId", "nombre imagen totalVenta descripcion")
       .skip(skip)
       .limit(limit)
       .sort({ pointsRequired: 1 });
@@ -55,6 +56,9 @@ export const createPointsReward = async (req, res) => {
       pointsRequired,
       rewardType,
       rewardValue,
+      isProducto,
+      productId,
+      productQuantity,
       isPercentage,
       maxRedemptionsPerClient,
       maxTotalRedemptions,
@@ -85,6 +89,9 @@ export const createPointsReward = async (req, res) => {
       pointsRequired,
       rewardType: rewardType || "discount",
       rewardValue: rewardValue || 0,
+      isProducto: isProducto || false,
+      productId: productId || null,
+      productQuantity: productQuantity || 1,
       isPercentage: isPercentage || false,
       maxRedemptionsPerClient: maxRedemptionsPerClient || 0,
       maxTotalRedemptions: maxTotalRedemptions || 0,
@@ -95,10 +102,9 @@ export const createPointsReward = async (req, res) => {
     };
 
     const pointsReward = await PointsReward.create(rewardData);
-    const populatedReward = await PointsReward.findById(pointsReward._id).populate(
-      "branch",
-      "branchName address"
-    );
+    const populatedReward = await PointsReward.findById(pointsReward._id)
+      .populate("branch", "branchName address")
+      .populate("productId", "nombre imagen totalVenta descripcion");
 
     res.status(201).json({
       success: true,
@@ -115,10 +121,9 @@ export const createPointsReward = async (req, res) => {
 
 export const getPointsRewardById = async (req, res) => {
   try {
-    const pointsReward = await PointsReward.findById(req.params.id).populate(
-      "branch",
-      "branchName address"
-    );
+    const pointsReward = await PointsReward.findById(req.params.id)
+      .populate("branch", "branchName address")
+      .populate("productId", "nombre imagen totalVenta descripcion");
 
     if (!pointsReward) {
       return res.status(404).json({
@@ -153,6 +158,7 @@ export const getPointsRewardsByBranch = async (req, res) => {
 
     const pointsRewards = await PointsReward.find(filters)
       .populate("branch", "branchName address")
+      .populate("productId", "nombre imagen totalVenta descripcion")
       .skip(skip)
       .limit(limit)
       .sort({ pointsRequired: 1 });
@@ -186,6 +192,9 @@ export const updatePointsReward = async (req, res) => {
       pointsRequired,
       rewardType,
       rewardValue,
+      isProducto,
+      productId,
+      productQuantity,
       isPercentage,
       maxRedemptionsPerClient,
       maxTotalRedemptions,
@@ -201,6 +210,9 @@ export const updatePointsReward = async (req, res) => {
     if (pointsRequired !== undefined) updateData.pointsRequired = pointsRequired;
     if (rewardType !== undefined) updateData.rewardType = rewardType;
     if (rewardValue !== undefined) updateData.rewardValue = rewardValue;
+    if (isProducto !== undefined) updateData.isProducto = isProducto;
+    if (productId !== undefined) updateData.productId = productId;
+    if (productQuantity !== undefined) updateData.productQuantity = productQuantity;
     if (isPercentage !== undefined) updateData.isPercentage = isPercentage;
     if (maxRedemptionsPerClient !== undefined) updateData.maxRedemptionsPerClient = maxRedemptionsPerClient;
     if (maxTotalRedemptions !== undefined) updateData.maxTotalRedemptions = maxTotalRedemptions;
@@ -215,7 +227,9 @@ export const updatePointsReward = async (req, res) => {
         new: true,
         runValidators: true,
       }
-    ).populate("branch", "branchName address");
+    )
+      .populate("branch", "branchName address")
+      .populate("productId", "nombre imagen totalVenta descripcion");
 
     if (!pointsReward) {
       return res.status(404).json({
@@ -243,7 +257,9 @@ export const deletePointsReward = async (req, res) => {
       req.params.id,
       { status: false },
       { new: true }
-    ).populate("branch", "branchName address");
+    )
+      .populate("branch", "branchName address")
+      .populate("productId", "nombre imagen totalVenta descripcion");
 
     if (!pointsReward) {
       return res.status(404).json({
@@ -271,7 +287,9 @@ export const activatePointsReward = async (req, res) => {
       req.params.id,
       { status: true },
       { new: true }
-    ).populate("branch", "branchName address");
+    )
+      .populate("branch", "branchName address")
+      .populate("productId", "nombre imagen totalVenta descripcion");
 
     if (!pointsReward) {
       return res.status(404).json({

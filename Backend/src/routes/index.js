@@ -41,6 +41,7 @@ import stageCatalogRoutes from "./stageCatalogRoutes.js";
 import discountAuthRoutes from "./discountAuthRoutes.js";
 import pointsConfigRoutes from "./pointsConfigRoutes.js";
 import pointsRewardRoutes from "./pointsRewardRoutes.js";
+import loyaltyRoutes from "./loyaltyRoutes.js";
 
 const router = Router();
 
@@ -85,5 +86,6 @@ router.use("/stage-catalogs", stageCatalogRoutes);
 router.use("/discount-auth", discountAuthRoutes);
 router.use("/points-config", pointsConfigRoutes);
 router.use("/points-rewards", pointsRewardRoutes);
+router.use("/loyalty", loyaltyRoutes);
 
 export default router;

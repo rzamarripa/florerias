@@ -83,6 +83,35 @@ const clientSchema = new Schema(
         type: Date,
         default: Date.now
       }
+    }],
+    rewards: [{
+      reward: {
+        type: Schema.Types.ObjectId,
+        ref: "points_reward",
+        required: true
+      },
+      code: {
+        type: String,
+        uppercase: true,
+        trim: true
+      },
+      isRedeemed: {
+        type: Boolean,
+        default: false
+      },
+      redeemedAt: {
+        type: Date,
+        default: null
+      },
+      usedAt: {
+        type: Date,
+        default: null
+      },
+      usedInOrder: {
+        type: Schema.Types.ObjectId,
+        ref: "cc_orders",
+        default: null
+      }
     }]
   },
   {

@@ -11,6 +11,7 @@ import { StageCatalog } from '../models/StageCatalog.js';
 import DiscountAuth from '../models/DiscountAuth.js';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitStockUpdated } from '../sockets/orderSocket.js';
 import orderLogService from '../services/orderLogService.js';
+import clientPointsService from '../services/clientPointsService.js';
 import mongoose from 'mongoose';
 
 // Obtener todas las órdenes con filtros y paginación
@@ -500,8 +501,8 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Extraer campos de redes sociales y descuento del body
-    const { isSocialMediaOrder, socialMedia, hasPendingDiscountAuth } = req.body;
+    // Extraer campos de redes sociales, descuento y recompensa del body
+    const { isSocialMediaOrder, socialMedia, hasPendingDiscountAuth, appliedRewardCode } = req.body;
 
     // Extraer todos los materiales extras de los items
     const materials = [];
@@ -759,6 +760,62 @@ const createOrder = async (req, res) => {
       } catch (cashRegisterError) {
         console.error('Error al actualizar caja registradora:', cashRegisterError);
         // No fallar la orden si hay error al actualizar la caja
+      }
+    }
+
+    // Procesar puntos para el cliente si tiene clientId asociado
+    // NO se acumulan puntos por primera compra desde aquí (según requerimiento)
+    // Solo se acumulan puntos si la orden tiene anticipo o fue enviada a producción
+    if (clientInfo?.clientId) {
+      try {
+        const pointsResult = await clientPointsService.processOrderPoints({
+          clientId: clientInfo.clientId,
+          branchId,
+          orderId: savedOrder._id,
+          orderTotal: total,
+          advance: advance || 0,
+          sendToProduction: shouldSendToProduction,
+          registeredBy: req.user?._id,
+        });
+
+        if (pointsResult.success && pointsResult.totalPoints > 0) {
+          console.log(
+            `✅ Puntos acumulados para cliente ${clientInfo.clientId}:`,
+            pointsResult.totalPoints,
+            'pts -',
+            pointsResult.details.map(d => d.description).join(', ')
+          );
+        } else if (pointsResult.message) {
+          console.log(`ℹ️ [Puntos] ${pointsResult.message}`);
+        }
+      } catch (pointsError) {
+        console.error('Error al procesar puntos del cliente:', pointsError);
+        // No fallar la orden si hay error al procesar puntos
+      }
+    }
+
+    // Marcar recompensa como canjeada si se aplicó un código de recompensa
+    if (appliedRewardCode && clientInfo?.clientId) {
+      try {
+        const { Client } = await import('../models/Client.js');
+        const clientToUpdate = await Client.findById(clientInfo.clientId);
+
+        if (clientToUpdate && clientToUpdate.rewards) {
+          const rewardEntry = clientToUpdate.rewards.find(
+            r => r.code === appliedRewardCode.toUpperCase() && !r.isRedeemed
+          );
+
+          if (rewardEntry) {
+            rewardEntry.isRedeemed = true;
+            rewardEntry.usedAt = new Date();
+            rewardEntry.usedInOrder = savedOrder._id;
+            await clientToUpdate.save();
+            console.log(`✅ Recompensa canjeada: código ${appliedRewardCode} en orden ${savedOrder.orderNumber}`);
+          }
+        }
+      } catch (rewardError) {
+        console.error('Error al marcar recompensa como canjeada:', rewardError);
+        // No fallar la orden si hay error al procesar la recompensa
       }
     }
 

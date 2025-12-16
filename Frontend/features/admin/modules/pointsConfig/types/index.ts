@@ -92,6 +92,14 @@ export interface PointsConfigResponse {
 // PointsReward types
 export type RewardType = "discount" | "product" | "service" | "other";
 
+export interface ProductInfo {
+  _id: string;
+  nombre: string;
+  imagen?: string;
+  totalVenta?: number;
+  descripcion?: string;
+}
+
 export interface PointsReward {
   _id: string;
   name: string;
@@ -99,6 +107,9 @@ export interface PointsReward {
   pointsRequired: number;
   rewardType: RewardType;
   rewardValue: number;
+  isProducto: boolean;
+  productId: ProductInfo | string | null;
+  productQuantity: number;
   isPercentage: boolean;
   maxRedemptionsPerClient: number;
   totalRedemptions: number;
@@ -117,6 +128,9 @@ export interface CreatePointsRewardData {
   pointsRequired: number;
   rewardType?: RewardType;
   rewardValue?: number;
+  isProducto?: boolean;
+  productId?: string | null;
+  productQuantity?: number;
   isPercentage?: boolean;
   maxRedemptionsPerClient?: number;
   maxTotalRedemptions?: number;
@@ -132,6 +146,9 @@ export interface UpdatePointsRewardData {
   pointsRequired?: number;
   rewardType?: RewardType;
   rewardValue?: number;
+  isProducto?: boolean;
+  productId?: string | null;
+  productQuantity?: number;
   isPercentage?: boolean;
   maxRedemptionsPerClient?: number;
   maxTotalRedemptions?: number;

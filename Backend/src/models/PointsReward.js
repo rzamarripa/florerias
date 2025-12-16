@@ -31,6 +31,23 @@ const pointsRewardSchema = new Schema(
       required: true,
       min: 0,
     },
+    // Indica si es una recompensa de producto
+    isProducto: {
+      type: Boolean,
+      default: false,
+    },
+    // Producto asociado (cuando isProducto es true)
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      default: null,
+    },
+    // Cantidad del producto a entregar como recompensa
+    productQuantity: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
     isPercentage: {
       type: Boolean,
       default: false,
@@ -78,6 +95,9 @@ const pointsRewardSchema = new Schema(
 pointsRewardSchema.index({ branch: 1 });
 pointsRewardSchema.index({ status: 1 });
 pointsRewardSchema.index({ pointsRequired: 1 });
+pointsRewardSchema.index({ productId: 1 });
+pointsRewardSchema.index({ rewardType: 1 });
+pointsRewardSchema.index({ isProducto: 1 });
 
 pointsRewardSchema.methods.canBeRedeemed = function () {
   const now = new Date();

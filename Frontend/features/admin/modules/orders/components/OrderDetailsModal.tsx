@@ -25,14 +25,18 @@ import {
   EyeOff,
   Shield,
   Trash2,
+  Gift,
+  Check,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { CreateOrderData, ShippingType } from "../types";
-import { Client } from "@/features/admin/modules/clients/types";
+import { CreateOrderData, ShippingType, AppliedRewardInfo } from "../types";
+import { Client, AvailableRewardItem } from "@/features/admin/modules/clients/types";
 import { PaymentMethod } from "@/features/admin/modules/payment-methods/types";
 import { CashRegister } from "@/features/admin/modules/cash-registers/types";
 import { Neighborhood } from "@/features/admin/modules/neighborhoods/types";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
+import ClientRewardsModal from "./ClientRewardsModal";
 import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
 import { neighborhoodsService } from "@/features/admin/modules/neighborhoods/services/neighborhoods";
 import { toast } from "react-toastify";
@@ -101,6 +105,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+
+  // Estado para recompensas
+  const [showRewardsModal, setShowRewardsModal] = useState(false);
+  const [appliedReward, setAppliedReward] = useState<AppliedRewardInfo | null>(null);
 
   // Cargar clientes filtrados por sucursal
   const fetchClients = async (branchId?: string) => {
@@ -187,6 +195,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       setComprobanteFile(null);
       setArregloFile(null);
       setSelectedClientId("");
+      setAppliedReward(null);
+      setShowRewardsModal(false);
     }
   }, [show]);
 
@@ -194,7 +204,19 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const handleClientSelect = (clientId: string) => {
     setSelectedClientId(clientId);
 
+    // Limpiar recompensa al cambiar de cliente
+    setAppliedReward(null);
+
     if (!clientId) {
+      // Recalcular total sin recompensa si había una aplicada
+      const manualDiscountAmount =
+        formData.discountType === "porcentaje"
+          ? (formData.subtotal * (formData.discount || 0)) / 100
+          : formData.discount || 0;
+      const deliveryPrice = formData.deliveryData.deliveryPrice || 0;
+      const newTotal = Math.max(0, formData.subtotal - manualDiscountAmount + deliveryPrice);
+      const remainingBalance = newTotal - (formData.advance || 0);
+
       setFormData((prev) => ({
         ...prev,
         clientInfo: {
@@ -202,12 +224,25 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           phone: "",
           email: "",
         },
+        total: newTotal,
+        remainingBalance,
+        appliedRewardCode: null,
+        appliedReward: null,
       }));
       return;
     }
 
     const selectedClient = clients.find((c) => c._id === clientId);
     if (selectedClient) {
+      // Recalcular total sin recompensa si había una aplicada
+      const manualDiscountAmount =
+        formData.discountType === "porcentaje"
+          ? (formData.subtotal * (formData.discount || 0)) / 100
+          : formData.discount || 0;
+      const deliveryPrice = formData.deliveryData.deliveryPrice || 0;
+      const newTotal = Math.max(0, formData.subtotal - manualDiscountAmount + deliveryPrice);
+      const remainingBalance = newTotal - (formData.advance || 0);
+
       setFormData((prev) => ({
         ...prev,
         clientInfo: {
@@ -216,6 +251,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           phone: selectedClient.phoneNumber,
           email: selectedClient.email || "",
         },
+        total: newTotal,
+        remainingBalance,
+        appliedRewardCode: null,
+        appliedReward: null,
       }));
     }
   };
@@ -296,6 +335,135 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       paidWith,
       change: changeAmount > 0 ? changeAmount : 0,
     }));
+  };
+
+  // Manejar selección de recompensa desde el modal
+  const handleSelectReward = (rewardItem: AvailableRewardItem) => {
+    console.log("Reward seleccionado:", {
+      isProducto: rewardItem.reward.isProducto,
+      productId: rewardItem.reward.productId,
+      rewardType: rewardItem.reward.rewardType,
+      rewardValue: rewardItem.reward.rewardValue,
+    });
+
+    // Si es una recompensa de producto, agregar como item
+    if (rewardItem.reward.isProducto && rewardItem.reward.productId) {
+      const productReward = rewardItem.reward.productId;
+
+      // Crear el item de recompensa
+      const rewardOrderItem = {
+        isProduct: true,
+        productId: productReward._id,
+        productName: productReward.nombre,
+        quantity: rewardItem.reward.productQuantity,
+        unitPrice: 0, // Gratis
+        amount: 0, // Gratis
+        productCategory: productReward.productCategory || null,
+        insumos: [],
+        isReward: true,
+        rewardCode: rewardItem.code,
+      };
+
+      // Guardar info de la recompensa aplicada (para UI)
+      const newAppliedReward: AppliedRewardInfo = {
+        code: rewardItem.code,
+        rewardId: rewardItem.reward._id,
+        name: rewardItem.reward.name,
+        rewardValue: 0,
+        isPercentage: false,
+      };
+      setAppliedReward(newAppliedReward);
+
+      // Agregar el item a la orden
+      setFormData((prev) => ({
+        ...prev,
+        items: [...prev.items, rewardOrderItem],
+        appliedRewardCode: rewardItem.code,
+        appliedReward: newAppliedReward,
+      }));
+
+      toast.success(`Producto "${productReward.nombre}" agregado como recompensa`);
+    } else {
+      // Recompensa de descuento - comportamiento original
+      const newAppliedReward: AppliedRewardInfo = {
+        code: rewardItem.code,
+        rewardId: rewardItem.reward._id,
+        name: rewardItem.reward.name,
+        rewardValue: rewardItem.reward.rewardValue,
+        isPercentage: rewardItem.reward.isPercentage,
+      };
+      setAppliedReward(newAppliedReward);
+
+      // Calcular el nuevo total con el descuento de la recompensa
+      const rewardDiscount = newAppliedReward.isPercentage
+        ? (formData.subtotal * newAppliedReward.rewardValue) / 100
+        : newAppliedReward.rewardValue;
+
+      // Calcular descuento total (descuento manual + recompensa)
+      const manualDiscountAmount =
+        formData.discountType === "porcentaje"
+          ? (formData.subtotal * (formData.discount || 0)) / 100
+          : formData.discount || 0;
+
+      const totalDiscount = manualDiscountAmount + rewardDiscount;
+      const deliveryPrice = formData.deliveryData.deliveryPrice || 0;
+      const newTotal = Math.max(0, formData.subtotal - totalDiscount + deliveryPrice);
+      // Asegurar que remainingBalance no sea negativo
+      const remainingBalance = Math.max(0, newTotal - (formData.advance || 0));
+
+      setFormData((prev) => ({
+        ...prev,
+        total: newTotal,
+        remainingBalance,
+        appliedRewardCode: newAppliedReward.code,
+        appliedReward: newAppliedReward,
+      }));
+
+      toast.success(`Recompensa "${newAppliedReward.name}" aplicada correctamente`);
+    }
+  };
+
+  // Remover recompensa aplicada
+  const handleRemoveReward = () => {
+    if (!appliedReward) return;
+
+    // Verificar si hay un item de recompensa de producto para remover
+    const hasProductRewardItem = formData.items.some(
+      (item) => item.isReward && item.rewardCode === appliedReward.code
+    );
+
+    if (hasProductRewardItem) {
+      // Remover el item de recompensa de producto
+      setAppliedReward(null);
+      setFormData((prev) => ({
+        ...prev,
+        items: prev.items.filter(
+          (item) => !(item.isReward && item.rewardCode === appliedReward.code)
+        ),
+        appliedRewardCode: null,
+        appliedReward: null,
+      }));
+      toast.info("Recompensa de producto removida");
+    } else {
+      // Recalcular el total sin el descuento de la recompensa
+      const manualDiscountAmount =
+        formData.discountType === "porcentaje"
+          ? (formData.subtotal * (formData.discount || 0)) / 100
+          : formData.discount || 0;
+
+      const deliveryPrice = formData.deliveryData.deliveryPrice || 0;
+      const newTotal = Math.max(0, formData.subtotal - manualDiscountAmount + deliveryPrice);
+      const remainingBalance = newTotal - (formData.advance || 0);
+
+      setAppliedReward(null);
+      setFormData((prev) => ({
+        ...prev,
+        total: newTotal,
+        remainingBalance,
+        appliedRewardCode: null,
+        appliedReward: null,
+      }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -389,6 +557,51 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                         </Form.Select>
                       </Form.Group>
                     </Col>
+
+                    {/* Recompensa - Solo mostrar si hay cliente seleccionado */}
+                    {selectedClientId && (
+                      <Col md={12}>
+                        <Form.Group>
+                          <Form.Label className="fw-semibold">
+                            <Gift size={16} className="me-2" />
+                            Recompensa
+                          </Form.Label>
+                          {appliedReward ? (
+                            <Alert variant="success" className="mb-0 py-2 px-3 d-flex align-items-center justify-content-between">
+                              <div className="d-flex align-items-center gap-2">
+                                <Check size={16} />
+                                <span>
+                                  <strong>{appliedReward.name}</strong>
+                                  {" - "}
+                                  {appliedReward.rewardValue === 0
+                                    ? "Producto gratis"
+                                    : appliedReward.isPercentage
+                                    ? `${appliedReward.rewardValue}% descuento`
+                                    : `$${appliedReward.rewardValue.toFixed(2)} de valor`}
+                                </span>
+                              </div>
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                onClick={handleRemoveReward}
+                                className="ms-2 py-0 px-2"
+                              >
+                                <X size={14} />
+                              </Button>
+                            </Alert>
+                          ) : (
+                            <Button
+                              variant="outline-primary"
+                              onClick={() => setShowRewardsModal(true)}
+                              className="w-100 py-2 d-flex align-items-center justify-content-center gap-2"
+                            >
+                              <Gift size={16} />
+                              Usar recompensa
+                            </Button>
+                          )}
+                        </Form.Group>
+                      </Col>
+                    )}
 
                     {!isSocialMedia && (
                       <Col md={12}>
@@ -935,6 +1148,21 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                       ).toFixed(2)}
                     </span>
                   </div>
+                  {appliedReward && appliedReward.rewardValue > 0 && (
+                    <div className="d-flex justify-content-between mb-1">
+                      <span className="text-muted d-flex align-items-center gap-1">
+                        <Gift size={12} />
+                        Recompensa
+                      </span>
+                      <span className="text-success fw-semibold">
+                        -$
+                        {(appliedReward.isPercentage
+                          ? (formData.subtotal * appliedReward.rewardValue) / 100
+                          : appliedReward.rewardValue
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="d-flex justify-content-between mb-1">
                     <span className="text-muted">Envío</span>
                     <span className="text-success fw-semibold">
@@ -1042,6 +1270,16 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           </Button>
         </Modal.Footer>
       </Form>
+
+      {/* Modal de selección de recompensas */}
+      {formData.clientInfo.clientId && (
+        <ClientRewardsModal
+          show={showRewardsModal}
+          onHide={() => setShowRewardsModal(false)}
+          clientId={formData.clientInfo.clientId}
+          onSelectReward={handleSelectReward}
+        />
+      )}
     </Modal>
   );
 };

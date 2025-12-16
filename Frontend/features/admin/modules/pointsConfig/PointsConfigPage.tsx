@@ -13,10 +13,13 @@ import {
   Percent,
   Package,
   Sparkles,
+  ShoppingBag,
+  ArrowRight,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Button, Card, Row, Col } from "react-bootstrap";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 import { pointsConfigService } from "./services/pointsConfig";
 import { pointsRewardService } from "./services/pointsReward";
 import {
@@ -34,6 +37,7 @@ import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { branchesService } from "../branches/services/branches";
 
 const PointsConfigPage: React.FC = () => {
+  const router = useRouter();
   const [config, setConfig] = useState<PointsConfig | null>(null);
   const [rewards, setRewards] = useState<PointsReward[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -45,6 +49,13 @@ const PointsConfigPage: React.FC = () => {
   const [branchId, setBranchId] = useState<string | null>(null);
   const { user } = useUserSessionStore();
   const { activeBranch } = useActiveBranchStore();
+
+  // Separar recompensas por tipo: productos (isProducto=true) vs otras
+  const { productRewards, otherRewards } = useMemo(() => {
+    const productRewards = rewards.filter((r) => r.isProducto === true);
+    const otherRewards = rewards.filter((r) => r.isProducto !== true);
+    return { productRewards, otherRewards };
+  }, [rewards]);
 
   useEffect(() => {
     const determineBranchId = async () => {
@@ -437,8 +448,8 @@ const PointsConfigPage: React.FC = () => {
         )}
       </div>
 
-      {/* Sección: Recompensas Canjeables */}
-      <div>
+      {/* Seccion: Recompensas Canjeables */}
+      <div className="mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div className="d-flex align-items-center gap-2">
             <Gift size={20} className="text-primary" />
@@ -463,7 +474,7 @@ const PointsConfigPage: React.FC = () => {
               <span className="visually-hidden">Cargando...</span>
             </div>
           </div>
-        ) : rewards.length === 0 ? (
+        ) : otherRewards.length === 0 ? (
           <Card className="border-0 shadow-sm">
             <Card.Body className="text-center py-5">
               <Gift size={64} className="text-muted mb-3 opacity-50" />
@@ -483,9 +494,59 @@ const PointsConfigPage: React.FC = () => {
           </Card>
         ) : (
           <Row xs={1} md={2} lg={3} xl={5} className="g-3">
-            {rewards.map((reward) => renderRewardCard(reward))}
+            {otherRewards.map((reward) => renderRewardCard(reward))}
           </Row>
         )}
+      </div>
+
+      {/* Seccion: Productos como Recompensa */}
+      <div>
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <ShoppingBag size={20} className="text-primary" />
+          <h6 className="mb-0 text-uppercase text-muted fw-semibold" style={{ letterSpacing: "0.5px" }}>
+            Productos como Recompensa
+          </h6>
+        </div>
+
+        <Card className="border-0 shadow-sm">
+          <Card.Body className="p-4">
+            <div className="d-flex align-items-center justify-content-between">
+              <div className="d-flex align-items-center gap-3">
+                <div
+                  className="d-flex align-items-center justify-content-center rounded-circle"
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    backgroundColor: "#6c5ce7",
+                  }}
+                >
+                  <ShoppingBag size={28} className="text-white" />
+                </div>
+                <div>
+                  <h5 className="mb-1 fw-semibold">Gestión de Productos</h5>
+                  <p className="text-muted mb-0 small">
+                    {rewardsLoading ? (
+                      "Cargando..."
+                    ) : productRewards.length === 0 ? (
+                      "No hay productos configurados como recompensa"
+                    ) : (
+                      `${productRewards.length} producto(s) configurado(s) como recompensa`
+                    )}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => router.push("/panel/productos-recompensa")}
+                className="d-flex align-items-center gap-2"
+              >
+                <ShoppingBag size={16} />
+                Ver Productos
+                <ArrowRight size={16} />
+              </Button>
+            </div>
+          </Card.Body>
+        </Card>
       </div>
 
       <PointsConfigModal

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Plus, Users, Award } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -8,6 +8,7 @@ import { clientsService } from "./services/clients";
 import { Client, ClientFilters, FilterType, FilterOption, CreateClientData, UpdateClientData } from "./types";
 import { useRouter } from "next/navigation";
 import ClientModal from "./components/ClientModal";
+import ClientPointsDashboardModal from "./components/ClientPointsDashboardModal";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { branchesService } from "../branches/services/branches";
@@ -28,6 +29,8 @@ const ClientsPage: React.FC = () => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
+  const [showPointsModal, setShowPointsModal] = useState<boolean>(false);
+  const [pointsClient, setPointsClient] = useState<Client | null>(null);
   const [branchId, setBranchId] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -154,6 +157,11 @@ const ClientsPage: React.FC = () => {
   const handleEditClient = (client: Client) => {
     setSelectedClient(client);
     setShowModal(true);
+  };
+
+  const handleViewPoints = (client: Client) => {
+    setPointsClient(client);
+    setShowPointsModal(true);
   };
 
   const handleSaveClient = async (data: CreateClientData | UpdateClientData) => {
@@ -394,6 +402,15 @@ const ClientsPage: React.FC = () => {
                           >
                             Editar
                           </Button>
+                          <Button
+                            variant="outline-info"
+                            size="sm"
+                            onClick={() => handleViewPoints(client)}
+                            className="d-flex align-items-center gap-1"
+                          >
+                            <Award size={14} />
+                            Puntos
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -459,6 +476,13 @@ const ClientsPage: React.FC = () => {
         client={selectedClient}
         onSave={handleSaveClient}
         loading={modalLoading}
+      />
+
+      <ClientPointsDashboardModal
+        show={showPointsModal}
+        onHide={() => setShowPointsModal(false)}
+        client={pointsClient}
+        branchId={branchId}
       />
     </div>
   );

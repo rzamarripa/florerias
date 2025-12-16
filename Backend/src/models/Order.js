@@ -121,6 +121,15 @@ const orderItemSchema = new mongoose.Schema({
   insumos: {
     type: [insumoSchema],
     default: []
+  },
+  isReward: {
+    type: Boolean,
+    default: false
+  },
+  rewardCode: {
+    type: String,
+    trim: true,
+    default: null
   }
 }, { _id: true });
 
