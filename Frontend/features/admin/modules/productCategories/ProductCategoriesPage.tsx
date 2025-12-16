@@ -86,9 +86,9 @@ const ProductCategoriesPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">Categorías de Productos</h2>
           <p className="text-muted mb-0">Gestiona las categorías de productos del sistema</p>
@@ -104,9 +104,9 @@ const ProductCategoriesPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
-        <div className="card-body p-4">
-          <div className="row g-3">
+      <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
+        <div className="card-body p-2">
+          <div className="row g-2">
             <div className="col-md-12">
               <InputGroup>
                 <InputGroup.Text className="bg-light border-0">
@@ -127,7 +127,7 @@ const ProductCategoriesPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
+      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
         <div className="card-body p-0">
           {loading ? (
             <div className="text-center py-5">
@@ -139,11 +139,11 @@ const ProductCategoriesPage: React.FC = () => {
               <Table hover className="mb-0">
                 <thead style={{ background: "#f8f9fa" }}>
                   <tr>
-                    <th className="px-4 py-3 fw-semibold text-muted">#</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">DESCRIPCIÓN</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">DESCRIPCIÓN</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -157,28 +157,28 @@ const ProductCategoriesPage: React.FC = () => {
                   ) : (
                     categories.map((category, index) => (
                       <tr key={category._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </td>
-                        <td className="px-4 py-3 fw-semibold">{category.name}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2 fw-semibold">{category.name}</td>
+                        <td className="px-2 py-2">
                           {category.description || (
                             <span className="text-muted fst-italic">Sin descripción</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <Badge
                             bg={category.isActive ? "success" : "danger"}
                             style={{
-                              padding: "6px 12px",
-                              borderRadius: "20px",
+                              padding: "4px 10px",
+                              borderRadius: "12px",
                               fontWeight: "500",
                             }}
                           >
                             {category.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <ProductCategoryActions
                             category={category}
                             onEdit={handleEditCategory}
@@ -195,7 +195,7 @@ const ProductCategoriesPage: React.FC = () => {
 
           {/* Pagination */}
           {!loading && categories.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} categorías

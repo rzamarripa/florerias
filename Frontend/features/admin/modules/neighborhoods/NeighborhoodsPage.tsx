@@ -27,9 +27,9 @@ const NeighborhoodsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="mb-4">
+      <div className="mb-2">
         <div className="d-flex justify-content-between align-items-start">
           <div>
             <h2 className="mb-1 fw-bold">Colonias</h2>
@@ -53,9 +53,9 @@ const NeighborhoodsPage: React.FC = () => {
       {/* Tabla en Card */}
       <div
         className="card border-0 shadow-sm"
-        style={{ borderRadius: "15px" }}
+        style={{ borderRadius: "10px" }}
       >
-        <div className="card-body p-4">
+        <div className="card-body p-2">
           <NeighborhoodsTable
             onEdit={handleOpenModal}
             refreshTrigger={refreshTrigger}

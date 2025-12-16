@@ -222,18 +222,18 @@ const PizarronEnvioPage: React.FC = () => {
   return (
     <div className="container-fluid py-1">
       {/* Header */}
-      <div className="mb-4">
+      <div className="mb-2">
         <h2 className="fw-bold mb-1">Pizarrón de Envío</h2>
         <p className="text-muted">Gestiona las órdenes en las diferentes etapas de envío</p>
       </div>
 
       {/* Filters */}
       <div
-        className="card border-0 shadow-sm mb-4"
-        style={{ borderRadius: "15px" }}
+        className="card border-0 shadow-sm mb-2"
+        style={{ borderRadius: "10px" }}
       >
-        <div className="card-body p-4">
-          <Row className="g-3">
+        <div className="card-body p-2">
+          <Row className="g-2">
             <Col md={6}>
               <InputGroup>
                 <InputGroup.Text className="bg-light border-0">

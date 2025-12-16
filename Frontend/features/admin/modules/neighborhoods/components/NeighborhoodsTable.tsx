@@ -79,11 +79,11 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
 
   const getStatusBadge = (status: string) => {
     return status === "active" ? (
-      <Badge bg="success" className="px-3 py-2">
+      <Badge bg="success" className="px-2 py-1">
         Activo
       </Badge>
     ) : (
-      <Badge bg="secondary" className="px-3 py-2">
+      <Badge bg="secondary" className="px-2 py-1">
         Inactivo
       </Badge>
     );
@@ -101,7 +101,7 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
   return (
     <div>
       {/* Filtros */}
-      <div className="row mb-4 g-3">
+      <div className="row mb-2 g-2">
         <div className="col-md-8">
           <InputGroup>
             <InputGroup.Text
@@ -154,15 +154,15 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
         <Table hover className="mb-0">
           <thead style={{ backgroundColor: "#f8f9fa" }}>
             <tr>
-              <th className="py-3 px-4 fw-semibold text-muted">No.</th>
-              <th className="py-3 px-4 fw-semibold text-muted">Colonia</th>
-              <th className="py-3 px-4 fw-semibold text-muted text-end">
+              <th className="py-2 px-2 fw-semibold text-muted">No.</th>
+              <th className="py-2 px-2 fw-semibold text-muted">Colonia</th>
+              <th className="py-2 px-2 fw-semibold text-muted text-end">
                 Precio Entrega
               </th>
-              <th className="py-3 px-4 fw-semibold text-muted text-center">
+              <th className="py-2 px-2 fw-semibold text-muted text-center">
                 Estatus
               </th>
-              <th className="py-3 px-4 fw-semibold text-muted text-center">
+              <th className="py-2 px-2 fw-semibold text-muted text-center">
                 Acciones
               </th>
             </tr>
@@ -170,7 +170,7 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
           <tbody>
             {neighborhoods.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-5 text-muted">
+                <td colSpan={5} className="text-center py-4 text-muted">
                   {searchTerm || statusFilter
                     ? "No se encontraron colonias con los filtros aplicados"
                     : "No hay colonias registradas"}
@@ -179,17 +179,17 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
             ) : (
               neighborhoods.map((neighborhood, index) => (
                 <tr key={neighborhood._id}>
-                  <td className="py-3 px-4">
+                  <td className="py-2 px-2">
                     {(currentPage - 1) * 10 + index + 1}
                   </td>
-                  <td className="py-3 px-4 fw-semibold">{neighborhood.name}</td>
-                  <td className="py-3 px-4 text-end fw-semibold">
+                  <td className="py-2 px-2 fw-semibold">{neighborhood.name}</td>
+                  <td className="py-2 px-2 text-end fw-semibold">
                     ${neighborhood.priceDelivery.toFixed(2)}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-2 px-2 text-center">
                     {getStatusBadge(neighborhood.status)}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-2 px-2">
                     <div className="d-flex gap-2 justify-content-center">
                       <Button
                         variant="outline-primary"
@@ -226,7 +226,7 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="d-flex justify-content-between align-items-center mt-2">
           <span className="text-muted">
             Mostrando {neighborhoods.length} de {total} colonias
           </span>

@@ -90,9 +90,9 @@ const StageCatalogsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">Catálogo de Etapas</h2>
           <p className="text-muted mb-0">Gestiona las etapas de tu empresa</p>
@@ -108,9 +108,9 @@ const StageCatalogsPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
-        <div className="card-body p-4">
-          <div className="row g-3">
+      <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
+        <div className="card-body p-2">
+          <div className="row g-2">
             <div className="col-md-12">
               <InputGroup>
                 <InputGroup.Text className="bg-light border-0">
@@ -131,7 +131,7 @@ const StageCatalogsPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
+      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
         <div className="card-body p-0">
           {loading ? (
             <div className="text-center py-5">
@@ -143,15 +143,15 @@ const StageCatalogsPage: React.FC = () => {
               <Table hover className="mb-0">
                 <thead style={{ background: "#f8f9fa" }}>
                   <tr>
-                    <th className="px-4 py-3 fw-semibold text-muted">#</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">NÚMERO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ABREVIACIÓN</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">TIPO TABLERO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">COLOR</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">EMPRESA</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">NÚMERO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">ABREVIACIÓN</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">TIPO TABLERO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">COLOR</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">EMPRESA</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -165,10 +165,10 @@ const StageCatalogsPage: React.FC = () => {
                   ) : (
                     stages.map((stage, index) => (
                       <tr key={stage._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <Badge
                             bg="secondary"
                             style={{
@@ -181,8 +181,8 @@ const StageCatalogsPage: React.FC = () => {
                             {stage.stageNumber}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 fw-semibold">{stage.name}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2 fw-semibold">{stage.name}</td>
+                        <td className="px-2 py-2">
                           <Badge
                             bg="light"
                             text="dark"
@@ -196,7 +196,7 @@ const StageCatalogsPage: React.FC = () => {
                             {stage.abreviation}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <Badge
                             bg={stage.boardType === "Produccion" ? "info" : "warning"}
                             style={{
@@ -208,7 +208,7 @@ const StageCatalogsPage: React.FC = () => {
                             {stage.boardType === "Produccion" ? "Producción" : "Envío"}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <div className="d-flex align-items-center gap-2">
                             <div
                               style={{
@@ -224,7 +224,7 @@ const StageCatalogsPage: React.FC = () => {
                             </small>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <div>
                             <div className="fw-semibold">{stage.company.legalName}</div>
                             {stage.company.tradeName && (
@@ -232,19 +232,19 @@ const StageCatalogsPage: React.FC = () => {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <Badge
                             bg={stage.isActive ? "success" : "danger"}
                             style={{
-                              padding: "6px 12px",
-                              borderRadius: "20px",
+                              padding: "4px 10px",
+                              borderRadius: "12px",
                               fontWeight: "500",
                             }}
                           >
                             {stage.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <StageCatalogActions
                             stage={stage}
                             onEdit={handleEditStage}
@@ -261,7 +261,7 @@ const StageCatalogsPage: React.FC = () => {
 
           {/* Pagination */}
           {!loading && stages.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} etapas

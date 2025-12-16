@@ -99,8 +99,8 @@ const EventsPage: React.FC = () => {
       <Badge
         bg={config.bg}
         style={{
-          padding: "6px 12px",
-          borderRadius: "20px",
+          padding: "4px 10px",
+          borderRadius: "12px",
           fontWeight: "500",
         }}
       >
@@ -110,9 +110,9 @@ const EventsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">Eventos</h2>
           <p className="text-muted mb-0">Gestiona los eventos de la sucursal</p>
@@ -128,7 +128,7 @@ const EventsPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
+      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
         <div className="card-body p-0">
           {loading ? (
             <div className="text-center py-5">
@@ -140,16 +140,16 @@ const EventsPage: React.FC = () => {
               <Table hover className="mb-0">
                 <thead style={{ background: "#f8f9fa" }}>
                   <tr>
-                    <th className="px-4 py-3 fw-semibold text-muted">FOLIO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">CLIENTE</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">FECHA EVENTO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">FECHA PEDIDO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ESTATUS PAGO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-end">TOTAL</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-end">TOTAL PAGADO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-end">SALDO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">SUCURSAL</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">FOLIO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">CLIENTE</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">FECHA EVENTO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">FECHA PEDIDO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">ESTATUS PAGO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-end">TOTAL</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-end">TOTAL PAGADO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-end">SALDO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">SUCURSAL</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -162,39 +162,39 @@ const EventsPage: React.FC = () => {
                   ) : (
                     events.map((event) => (
                       <tr key={event._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-4 py-3 fw-semibold">{event.folio}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2 fw-semibold">{event.folio}</td>
+                        <td className="px-2 py-2">
                           {event.client?.name} {event.client?.lastName}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           {new Date(event.eventDate).toLocaleDateString("es-MX")}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           {new Date(event.orderDate).toLocaleDateString("es-MX")}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           {getPaymentStatusBadge(event.paymentStatus)}
                         </td>
-                        <td className="px-4 py-3 text-end fw-semibold">
+                        <td className="px-2 py-2 text-end fw-semibold">
                           ${event.totalAmount.toLocaleString("es-MX", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="px-4 py-3 text-end">
+                        <td className="px-2 py-2 text-end">
                           ${event.totalPaid.toLocaleString("es-MX", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="px-4 py-3 text-end">
+                        <td className="px-2 py-2 text-end">
                           ${event.balance.toLocaleString("es-MX", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="px-4 py-3">{event.branch?.branchName || "N/A"}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">{event.branch?.branchName || "N/A"}</td>
+                        <td className="px-2 py-2">
                           <EventActions event={event} onEventSaved={handleEventSaved} />
                         </td>
                       </tr>
@@ -207,7 +207,7 @@ const EventsPage: React.FC = () => {
 
           {/* Pagination */}
           {!loading && events.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}

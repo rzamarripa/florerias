@@ -175,7 +175,7 @@ const CashiersPage: React.FC = () => {
     <div className="row">
       <div className="col-12">
         <div className="card">
-          <div className="card-header border-light d-flex justify-content-between align-items-center py-3">
+          <div className="card-header border-light d-flex justify-content-between align-items-center py-2">
             <div className="d-flex gap-2">
               <div className="position-relative" style={{ maxWidth: 400 }}>
                 <Form.Control
@@ -327,7 +327,7 @@ const CashiersPage: React.FC = () => {
               </tbody>
             </Table>
           </div>
-          <div className="d-flex justify-content-between align-items-center p-3 border-top">
+          <div className="d-flex justify-content-between align-items-center p-2 border-top">
             <span className="text-muted">
               Mostrando {cashiers.length} de {pagination.total} registros
             </span>

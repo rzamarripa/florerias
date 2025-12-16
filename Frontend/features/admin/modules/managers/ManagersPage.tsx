@@ -233,7 +233,7 @@ const ManagersPage: React.FC = () => {
     <div className="row">
       <div className="col-12">
         <div className="card">
-          <div className="card-header border-light d-flex justify-content-between align-items-center py-3">
+          <div className="card-header border-light d-flex justify-content-between align-items-center py-2">
             <div className="d-flex gap-2">
               <Form.Select
                 value={filterType}
@@ -383,7 +383,7 @@ const ManagersPage: React.FC = () => {
               </tbody>
             </Table>
           </div>
-          <div className="d-flex justify-content-between align-items-center p-3 border-top">
+          <div className="d-flex justify-content-between align-items-center p-2 border-top">
             <span className="text-muted">
               Mostrando {managers.length} de {pagination.total} registros
             </span>

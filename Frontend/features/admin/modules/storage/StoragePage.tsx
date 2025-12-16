@@ -285,9 +285,9 @@ const StoragePage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">Almacenes</h2>
           <p className="text-muted mb-0">
@@ -308,11 +308,11 @@ const StoragePage: React.FC = () => {
 
       {/* Filters */}
       <div
-        className="card border-0 shadow-sm mb-4"
-        style={{ borderRadius: "15px" }}
+        className="card border-0 shadow-sm mb-2"
+        style={{ borderRadius: "10px" }}
       >
-        <div className="card-body p-4">
-          <div className="row g-3">
+        <div className="card-body p-2">
+          <div className="row g-2">
             <div className="col-md-4">
               <InputGroup>
                 <InputGroup.Text className="bg-light border-0">
@@ -366,7 +366,7 @@ const StoragePage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
+      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
         <div className="card-body p-0">
           {loading ? (
             <div className="text-center py-5">
@@ -378,24 +378,24 @@ const StoragePage: React.FC = () => {
               <Table hover className="mb-0">
                 <thead style={{ background: "#f8f9fa" }}>
                   <tr>
-                    <th className="px-4 py-3 fw-semibold text-muted">#</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       SUCURSAL
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       GERENTE
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       PRODUCTOS
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       CANTIDAD TOTAL
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       ÚLTIMO INGRESO
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">
+                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-center">
                       ACCIONES
                     </th>
                   </tr>
@@ -414,10 +414,10 @@ const StoragePage: React.FC = () => {
                         key={storage._id}
                         style={{ borderBottom: "1px solid #f1f3f5" }}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <div>
                             <div className="fw-semibold">
                               {getBranchName(storage)}
@@ -429,33 +429,33 @@ const StoragePage: React.FC = () => {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">{getManagerName(storage)}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">{getManagerName(storage)}</td>
+                        <td className="px-2 py-2">
                           <Badge bg="info" pill>
                             {getProductsCount(storage)}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <Badge bg="primary" pill>
                             {getTotalQuantity(storage)}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <small>{formatDate(storage.lastIncome)}</small>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <Badge
                             bg={storage.isActive ? "success" : "danger"}
                             style={{
-                              padding: "6px 12px",
-                              borderRadius: "20px",
+                              padding: "4px 10px",
+                              borderRadius: "12px",
                               fontWeight: "500",
                             }}
                           >
                             {storage.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <StorageActions
                             storage={storage}
                             onStorageUpdated={handleStorageUpdated}
@@ -471,7 +471,7 @@ const StoragePage: React.FC = () => {
 
           {/* Pagination */}
           {!loading && storages.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
