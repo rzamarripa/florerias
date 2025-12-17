@@ -95,18 +95,18 @@ export const getDashboardData = async (req, res) => {
 
     // Filtros de fecha
     if (startDate || endDate) {
-      orderFilters.orderDate = {};
+      orderFilters.createdAt = {};
 
       if (startDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        orderFilters.orderDate.$gte = start;
+        orderFilters.createdAt.$gte = start;
       }
 
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        orderFilters.orderDate.$lte = end;
+        orderFilters.createdAt.$lte = end;
       }
     }
 
@@ -257,13 +257,13 @@ function getEmptyDashboardData() {
 // Calcular cambio porcentual vs período anterior
 async function calculatePercentageChange(currentFilters, currentRevenue) {
   try {
-    if (!currentFilters.orderDate || !currentFilters.orderDate.$gte) {
+    if (!currentFilters.createdAt || !currentFilters.createdAt.$gte) {
       return 0;
     }
 
-    const startDate = new Date(currentFilters.orderDate.$gte);
-    const endDate = currentFilters.orderDate.$lte
-      ? new Date(currentFilters.orderDate.$lte)
+    const startDate = new Date(currentFilters.createdAt.$gte);
+    const endDate = currentFilters.createdAt.$lte
+      ? new Date(currentFilters.createdAt.$lte)
       : new Date();
 
     // Calcular duración del período
@@ -275,7 +275,7 @@ async function calculatePercentageChange(currentFilters, currentRevenue) {
 
     const previousFilters = {
       ...currentFilters,
-      orderDate: {
+      createdAt: {
         $gte: previousStart,
         $lte: previousEnd,
       },
@@ -307,7 +307,7 @@ function calculateSalesTrend(orders, period = "day") {
   const trendMap = new Map();
 
   orders.forEach((order) => {
-    const date = new Date(order.orderDate || order.createdAt);
+    const date = new Date(order.createdAt);
     let key;
 
     if (period === "day") {
@@ -365,7 +365,7 @@ async function calculateMonthlyComparison(branchIds) {
   // Mes actual
   const currentMonthOrders = await Order.find({
     branchId: { $in: branchIds },
-    orderDate: { $gte: currentMonthStart, $lte: currentMonthEnd },
+    createdAt: { $gte: currentMonthStart, $lte: currentMonthEnd },
   });
 
   const currentOrderIds = currentMonthOrders.map((o) => o._id);
@@ -382,7 +382,7 @@ async function calculateMonthlyComparison(branchIds) {
   // Mes anterior
   const previousMonthOrders = await Order.find({
     branchId: { $in: branchIds },
-    orderDate: { $gte: previousMonthStart, $lte: previousMonthEnd },
+    createdAt: { $gte: previousMonthStart, $lte: previousMonthEnd },
   });
 
   const previousOrderIds = previousMonthOrders.map((o) => o._id);
@@ -520,7 +520,7 @@ function calculateSalesByHour(orders) {
   }
 
   orders.forEach((order) => {
-    const date = new Date(order.orderDate || order.createdAt);
+    const date = new Date(order.createdAt);
     const hour = `${String(date.getHours()).padStart(2, "0")}:00`;
 
     const data = hourMap.get(hour);
@@ -552,7 +552,7 @@ function calculateSalesByDayOfWeek(orders) {
   });
 
   orders.forEach((order) => {
-    const date = new Date(order.orderDate || order.createdAt);
+    const date = new Date(order.createdAt);
     const dayIndex = date.getDay();
     const dayName = dayNames[dayIndex];
 

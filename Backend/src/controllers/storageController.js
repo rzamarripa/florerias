@@ -279,7 +279,14 @@ export const getStorageById = async (req, res) => {
         "username email phone profile.name profile.lastName profile.fullName"
       )
       .populate("products.productId", "nombre unidad descripcion imagen totalCosto totalVenta")
-      .populate("materials.materialId", "name unit price cost piecesPerPackage description status");
+      .populate({
+        path: "materials.materialId",
+        select: "name unit price cost piecesPerPackage description status",
+        populate: {
+          path: "unit",
+          select: "name abbreviation"
+        }
+      });
 
     if (!storage) {
       return res.status(404).json({

@@ -1,15 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  Form,
-  Button,
-  Row,
-  Col,
-  Badge,
-  Alert,
-} from "react-bootstrap";
+import { Card, Form, Button, Row, Col, Badge, Alert } from "react-bootstrap";
 import { Plus, Trash2 } from "lucide-react";
 import { OrderItem } from "../types";
 import { ProductCategory } from "@/features/admin/modules/productCategories/types";
@@ -45,18 +37,23 @@ const CartSection: React.FC<CartSectionProps> = ({
   onContinueToCheckout,
 }) => {
   // Estado interno para categorías de productos
-  const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
-  const [loadingProductCategories, setLoadingProductCategories] = useState(false);
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>(
+    []
+  );
+  const [loadingProductCategories, setLoadingProductCategories] =
+    useState(false);
 
   // Cargar categorías de productos al montar
   useEffect(() => {
     const fetchProductCategories = async () => {
       setLoadingProductCategories(true);
       try {
-        const response = await productCategoriesService.getAllProductCategories({
-          limit: 1000,
-          isActive: true,
-        });
+        const response = await productCategoriesService.getAllProductCategories(
+          {
+            limit: 1000,
+            isActive: true,
+          }
+        );
         setProductCategories(response.data);
       } catch (err) {
         console.error("Error al cargar categorías de productos:", err);
@@ -78,7 +75,8 @@ const CartSection: React.FC<CartSectionProps> = ({
     amount: 0,
     productCategory: null,
   });
-  const [selectedProductCategory, setSelectedProductCategory] = useState<string>("");
+  const [selectedProductCategory, setSelectedProductCategory] =
+    useState<string>("");
 
   // Calcular importe del item actual
   const calculateItemAmount = () => {
@@ -132,7 +130,7 @@ const CartSection: React.FC<CartSectionProps> = ({
         <Card.Body className="flex-grow-1" style={{ overflow: "auto" }}>
           {/* Producto manual rápido */}
           <div className="mb-3">
-            <div className="fw-semibold mb-2">Producto manual</div>
+            <div className="fw-semibold mb-2">Producto manuals</div>
             <Row className="g-2">
               <Col xs={12}>
                 <Form.Control

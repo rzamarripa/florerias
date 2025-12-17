@@ -1,4 +1,5 @@
 import Product from '../models/Product.js';
+import ProductList from '../models/ProductList.js';
 import { User } from '../models/User.js';
 import { Branch } from '../models/Branch.js';
 import { Company } from '../models/Company.js';
@@ -354,6 +355,46 @@ const updateProduct = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     ).populate('company', 'legalName tradeName');
+
+    // Sincronizar ProductLists que contienen este producto
+    try {
+      const productLists = await ProductList.find({ 'products.productId': id });
+
+      for (const productList of productLists) {
+        const productIndex = productList.products.findIndex(
+          p => p.productId.toString() === id
+        );
+
+        if (productIndex !== -1) {
+          // Actualizar los campos del producto embebido
+          productList.products[productIndex].nombre = updatedProduct.nombre;
+          productList.products[productIndex].unidad = updatedProduct.unidad;
+          productList.products[productIndex].descripcion = updatedProduct.descripcion;
+          productList.products[productIndex].orden = updatedProduct.orden;
+          productList.products[productIndex].imagen = updatedProduct.imagen || '';
+          productList.products[productIndex].totalCosto = updatedProduct.totalCosto;
+          productList.products[productIndex].totalVenta = updatedProduct.totalVenta;
+          productList.products[productIndex].labour = updatedProduct.labour;
+          productList.products[productIndex].estatus = updatedProduct.estatus;
+          productList.products[productIndex].productCategory = updatedProduct.productCategory;
+          productList.products[productIndex].insumos = updatedProduct.insumos.map(insumo => ({
+            materialId: insumo.materialId || insumo._id,
+            nombre: insumo.nombre,
+            cantidad: insumo.cantidad,
+            unidad: insumo.unidad,
+            importeCosto: insumo.importeCosto,
+            importeVenta: insumo.importeVenta
+          }));
+
+          await productList.save();
+        }
+      }
+
+      console.log(`✅ Sincronizadas ${productLists.length} ProductLists con el producto ${updatedProduct.nombre}`);
+    } catch (syncError) {
+      console.error('Error al sincronizar ProductLists:', syncError);
+      // No fallamos la actualización del producto por esto
+    }
 
     res.status(200).json({
       success: true,

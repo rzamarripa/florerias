@@ -1,20 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  Form,
-  Button,
-  Row,
-  Col,
-  Alert,
-} from "react-bootstrap";
-import {
-  Store,
-  Package,
-  CreditCard,
-  Search,
-} from "lucide-react";
+import { Card, Form, Button, Row, Col, Alert } from "react-bootstrap";
+import { Store, Package, CreditCard, Search } from "lucide-react";
 import { ordersService } from "./services/orders";
 import { CreateOrderData, OrderItem } from "./types";
 import ProductCatalog from "./components/ProductCatalog";
@@ -36,10 +24,7 @@ import { useUserSessionStore } from "@/stores/userSessionStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 import { uploadComprobante, uploadArreglo } from "@/services/firebaseStorage";
-import {
-  useStorageSocket,
-  StockUpdatePayload,
-} from "@/hooks/useStorageSocket";
+import { useStorageSocket, StockUpdatePayload } from "@/hooks/useStorageSocket";
 
 const NewOrderPage = () => {
   const { getIsCashier, getIsSocialMedia } = useUserRoleStore();
@@ -113,7 +98,6 @@ const NewOrderPage = () => {
     socialMedia: null,
   });
 
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -167,10 +151,9 @@ const NewOrderPage = () => {
 
       if (hasChanges) {
         setStorage(updatedStorage as any);
-        toast.info(
-          `Stock actualizado por orden ${data.orderNumber}`,
-          { autoClose: 3000 }
-        );
+        toast.info(`Stock actualizado por orden ${data.orderNumber}`, {
+          autoClose: 3000,
+        });
       }
     },
     [storage]

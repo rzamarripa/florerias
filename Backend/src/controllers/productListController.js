@@ -485,32 +485,32 @@ const getProductListByBranch = async (req, res) => {
     // Obtener el almacén correspondiente a la sucursal
     const storage = await Storage.findOne({ branch: branchId });
 
-    // Mapear los productos de la lista con las cantidades del almacén
-    const productsWithStock = productList.products.map(product => {
-      let availableQuantity = 0;
+    // Mapear los productos de la lista con las cantidades del almacén (solo activos)
+    const productsWithStock = productList.products
+      .filter(product => product.estatus === true)
+      .map(product => {
+        let availableQuantity = 0;
 
-      // Buscar el producto en el almacén
-      if (storage) {
-        const storageProduct = storage.products.find(
-          sp => sp.productId.toString() === product.productId.toString()
-        );
-        if (storageProduct) {
-          availableQuantity = storageProduct.quantity || 0;
+        // Buscar el producto en el almacén
+        if (storage) {
+          const storageProduct = storage.products.find(
+            sp => sp.productId.toString() === product.productId.toString()
+          );
+          if (storageProduct) {
+            availableQuantity = storageProduct.quantity || 0;
+          }
         }
-      }
 
-      // Convertir producto a objeto plano
-      const productObj = product.toObject();
+        // Convertir producto a objeto plano
+        const productObj = product.toObject();
 
-     
-
-      // Obtener el producto original para el precio
-      return {
-        ...productObj,
-        availableQuantity,
-        hasStock: availableQuantity > 0
-      };
-    });
+        // Obtener el producto original para el precio
+        return {
+          ...productObj,
+          availableQuantity,
+          hasStock: availableQuantity > 0
+        };
+      });
 
     res.status(200).json({
       success: true,

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(node --check:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
