@@ -115,10 +115,14 @@ export const salesService = {
     return response;
   },
 
-  updateOrderStatus: async (saleId: string, status: string): Promise<{ success: boolean; message: string; data: Sale }> => {
+  updateOrderStatus: async (saleId: string, status: string, cancellationReason?: string): Promise<{ success: boolean; message: string; data: Sale }> => {
+    const body: { status: string; cancellationReason?: string } = { status };
+    if (cancellationReason) {
+      body.cancellationReason = cancellationReason;
+    }
     const response = await apiCall<{ success: boolean; message: string; data: Sale }>(`/orders/${saleId}/status`, {
       method: "PUT",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
     return response as any;
   },

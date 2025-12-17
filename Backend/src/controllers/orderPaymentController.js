@@ -48,6 +48,7 @@ export const createOrderPayment = async (req, res) => {
     }
 
     // Crear el pago (cashRegisterId puede ser null si no es efectivo)
+    // isAdvance: false porque este endpoint es para pagos posteriores, no anticipos
     const payment = new OrderPayment({
       orderId,
       amount,
@@ -55,7 +56,8 @@ export const createOrderPayment = async (req, res) => {
       cashRegisterId: cashRegisterId || null,
       registeredBy,
       notes,
-      date: new Date()
+      date: new Date(),
+      isAdvance: false
     });
 
     await payment.save();

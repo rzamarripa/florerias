@@ -208,6 +208,7 @@ const getAllOrders = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email')
       .populate({
         path: 'payments',
         populate: [
@@ -257,6 +258,7 @@ const getOrderById = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email')
       .populate({
         path: 'payments',
         populate: [
@@ -623,7 +625,8 @@ const createOrder = async (req, res) => {
         cashRegisterId: cashRegisterId,
         date: new Date(),
         registeredBy: req.user?._id || null,
-        notes: 'Pago inicial al crear la orden'
+        notes: 'Pago inicial al crear la orden',
+        isAdvance: true
       });
 
       const savedPayment = await orderPayment.save();
@@ -829,6 +832,7 @@ const createOrder = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email')
       .populate({
         path: 'payments',
         populate: [
@@ -996,7 +1000,8 @@ const updateOrder = async (req, res) => {
 
     // Verificar si la orden existe
     const existingOrder = await Order.findById(id)
-      .populate('stage', 'name abreviation stageNumber color boardType');
+      .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email');
     if (!existingOrder) {
       return res.status(404).json({
         success: false,
@@ -1045,6 +1050,7 @@ const updateOrder = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email')
       .populate({
         path: 'payments',
         populate: [
@@ -1138,13 +1144,55 @@ const updateOrder = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, cancellationReason } = req.body;
 
     if (!status) {
       return res.status(400).json({
         success: false,
         message: 'El estado es requerido'
       });
+    }
+
+    // Validar que si se cancela, debe incluir motivo
+    if (status === 'cancelado' && (!cancellationReason || !cancellationReason.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'El motivo de cancelación es requerido'
+      });
+    }
+
+    // Si se intenta cancelar, verificar restricción de fecha
+    if (status === 'cancelado') {
+      // Obtener la orden para verificar la fecha de creación
+      const orderToCancel = await Order.findById(id);
+      if (!orderToCancel) {
+        return res.status(404).json({
+          success: false,
+          message: 'Orden no encontrada'
+        });
+      }
+
+      // Obtener el usuario y su rol
+      const currentUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+      const userRole = currentUser?.role?.name;
+
+      // Verificar si la orden fue creada en un día diferente
+      const orderDate = new Date(orderToCancel.createdAt);
+      const today = new Date();
+
+      // Comparar solo las fechas (sin hora)
+      const orderDateOnly = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate());
+      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      const isDifferentDay = orderDateOnly.getTime() !== todayOnly.getTime();
+
+      // Si es un día diferente y el usuario NO es Administrador, denegar
+      if (isDifferentDay && userRole !== 'Administrador') {
+        return res.status(403).json({
+          success: false,
+          message: 'Solo los administradores pueden cancelar ventas de días anteriores'
+        });
+      }
     }
 
     const validStatuses = ['pendiente', 'en-proceso', 'completado', 'cancelado'];
@@ -1166,9 +1214,19 @@ const updateOrderStatus = async (req, res) => {
 
     const previousStatus = existingOrder.status;
 
+    // Preparar datos de actualización
+    const updateData = { status };
+
+    // Si se cancela, agregar datos de cancelación
+    if (status === 'cancelado') {
+      updateData.cancellationReason = cancellationReason.trim();
+      updateData.cancelledAt = new Date();
+      updateData.cancelledBy = req.user._id;
+    }
+
     const order = await Order.findByIdAndUpdate(
       id,
-      { status },
+      updateData,
       { new: true, runValidators: true }
     )
       .populate('branchId', 'branchName branchCode')
@@ -1179,6 +1237,7 @@ const updateOrderStatus = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email')
       .populate({
         path: 'payments',
         populate: [
@@ -1263,14 +1322,15 @@ const updateOrderStatus = async (req, res) => {
         await orderLogService.createLog(
           id,
           'order_cancelled',
-          `Orden cancelada`,
+          `Orden cancelada. Motivo: ${cancellationReason}`,
           req.user._id,
           canceledByUser?.profile?.fullName || canceledByUser?.name || 'Usuario',
           canceledByUser?.role?.name || 'Usuario',
           {
             previousStatus,
             newStatus: 'cancelado',
-            orderNumber: order.orderNumber
+            orderNumber: order.orderNumber,
+            cancellationReason: cancellationReason
           }
         );
       } catch (logError) {
@@ -1658,6 +1718,7 @@ const sendOrderToShipping = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email')
       .populate({
         path: 'payments',
         populate: [
@@ -1761,6 +1822,7 @@ const updateOrderDeliveryInfo = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email')
       .populate({
         path: 'payments',
         populate: [
@@ -2014,6 +2076,7 @@ const getUnauthorizedOrders = async (req, res) => {
       .populate('paymentMethod', 'name abbreviation')
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate('cancelledBy', 'name email')
       .populate({
         path: 'payments',
         populate: [

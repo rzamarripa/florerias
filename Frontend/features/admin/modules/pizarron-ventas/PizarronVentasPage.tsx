@@ -21,6 +21,7 @@ import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { ordersService } from "./services/orders";
 import { stageCatalogsService } from "@/features/admin/modules/stageCatalogs/services/stageCatalogs";
+import { orderPaymentsService, OrderPayment } from "@/features/admin/modules/sales/services/orderPayments";
 import { Order, KanbanColumn as KanbanColumnType, StageCatalog, StageColor } from "./types";
 import KanbanColumn from "./components/KanbanColumn";
 
@@ -32,6 +33,7 @@ const PizarronVentasPage: React.FC = () => {
   const [productFilter, setProductFilter] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
+  const [orderPayments, setOrderPayments] = useState<OrderPayment[]>([]);
 
   // Stages dinámicos
   const [productionStages, setProductionStages] = useState<StageCatalog[]>([]);
@@ -238,9 +240,18 @@ const PizarronVentasPage: React.FC = () => {
     setProductFilter(e.target.value);
   };
 
-  const handleViewDetails = (order: Order) => {
+  const handleViewDetails = async (order: Order) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
+
+    // Cargar los pagos de la orden
+    try {
+      const payments = await orderPaymentsService.getOrderPayments(order._id);
+      setOrderPayments(payments);
+    } catch (error) {
+      console.error("Error loading order payments:", error);
+      setOrderPayments([]);
+    }
   };
 
   const handleChangeStage = async (order: Order, newStageId: string) => {
@@ -633,18 +644,21 @@ const PizarronVentasPage: React.FC = () => {
                       {formatCurrency(selectedOrder.total)}
                     </div>
                   </Col>
-                  {selectedOrder.advance > 0 && (
-                    <>
-                      <Col xs={6}>
-                        <div className="text-muted small">Anticipo:</div>
-                      </Col>
-                      <Col xs={6} className="text-end">
-                        <div className="text-success">
-                          {formatCurrency(selectedOrder.advance)}
-                        </div>
-                      </Col>
-                    </>
-                  )}
+                  {(() => {
+                    const advancePayment = orderPayments.find((p) => p.isAdvance);
+                    return advancePayment ? (
+                      <>
+                        <Col xs={6}>
+                          <div className="text-muted small">Anticipo:</div>
+                        </Col>
+                        <Col xs={6} className="text-end">
+                          <div className="text-success">
+                            {formatCurrency(advancePayment.amount)}
+                          </div>
+                        </Col>
+                      </>
+                    ) : null;
+                  })()}
                   {selectedOrder.remainingBalance > 0 && (
                     <>
                       <Col xs={6}>

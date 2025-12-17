@@ -291,6 +291,20 @@ const orderSchema = new mongoose.Schema({
   materials: {
     type: [insumoSchema],
     default: []
+  },
+  cancellationReason: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  cancelledAt: {
+    type: Date,
+    default: null
+  },
+  cancelledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cs_user',
+    default: null
   }
 }, {
   timestamps: true,

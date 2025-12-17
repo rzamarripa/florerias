@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Modal, Button, Form, Table, Spinner, Alert } from "react-bootstrap";
+import { Modal, Button, Form, Table, Spinner, Alert, Badge } from "react-bootstrap";
 import { DollarSign, Trash2, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import { orderPaymentsService, OrderPayment } from "../services/orderPayments";
@@ -141,6 +141,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validar que la orden no esté cancelada
+    if (currentSale.status === "cancelado") {
+      toast.error("No se pueden registrar pagos en una orden cancelada");
+      return;
+    }
 
     if (!userId) {
       toast.error("No se pudo obtener el ID del usuario");
@@ -302,7 +308,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 <tbody>
                   {payments.map((payment) => (
                     <tr key={payment._id}>
-                      <td>{formatDate(payment.date)}</td>
+                      <td>
+                        {formatDate(payment.date)}
+                        {payment.isAdvance && (
+                          <Badge bg="info" className="ms-2">
+                            Anticipo
+                          </Badge>
+                        )}
+                      </td>
                       <td className="fw-semibold text-success">
                         ${payment.amount.toFixed(2)}
                       </td>
@@ -315,9 +328,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                           size="sm"
                           onClick={() => handleDeletePayment(payment._id)}
                           className="border-0"
-                          title="Eliminar pago"
+                          title={currentSale.status === "cancelado" ? "No se pueden eliminar pagos de órdenes canceladas" : "Eliminar pago"}
+                          disabled={currentSale.status === "cancelado"}
                         >
-                          <Trash2 size={14} className="text-danger" />
+                          <Trash2 size={14} className={currentSale.status === "cancelado" ? "text-muted" : "text-danger"} />
                         </Button>
                       </td>
                     </tr>
@@ -336,8 +350,18 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           )}
         </div>
 
+        {/* Alerta si la orden está cancelada */}
+        {currentSale.status === "cancelado" && (
+          <Alert variant="danger" className="mb-0">
+            <Alert.Heading className="h6 mb-1">Orden Cancelada</Alert.Heading>
+            <p className="mb-0" style={{ fontSize: "14px" }}>
+              No se pueden registrar ni eliminar pagos en una orden cancelada.
+            </p>
+          </Alert>
+        )}
+
         {/* Formulario para nuevo pago */}
-        {currentSale.remainingBalance > 0 && (
+        {currentSale.remainingBalance > 0 && currentSale.status !== "cancelado" && (
           <div className="border-top pt-4">
             <h6 className="fw-semibold mb-3 d-flex align-items-center gap-2">
               <Plus size={18} />

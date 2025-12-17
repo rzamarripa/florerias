@@ -145,7 +145,7 @@ const NotificationDropdown = () => {
     const [selectedDiscountAuth, setSelectedDiscountAuth] = useState<OrderNotification | null>(null);
     const [discountAuthDetails, setDiscountAuthDetails] = useState<any>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
-    const [processingAuth, setProcessingAuth] = useState(false);
+    const [processingAuth, setProcessingAuth] = useState<'approve' | 'reject' | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [approvedFolio, setApprovedFolio] = useState<string>('');
 
@@ -252,7 +252,7 @@ const NotificationDropdown = () => {
     const handleApproveDiscount = async () => {
         if (!selectedDiscountAuth || !selectedDiscountAuth.discountAuthId) return;
 
-        setProcessingAuth(true);
+        setProcessingAuth('approve');
         try {
             const response = await discountAuthService.approveRejectDiscountAuth(
                 selectedDiscountAuth.discountAuthId,
@@ -283,14 +283,14 @@ const NotificationDropdown = () => {
             console.error('Error al aprobar descuento:', error);
             toast.error(error.message || 'Error al aprobar el descuento');
         } finally {
-            setProcessingAuth(false);
+            setProcessingAuth(null);
         }
     };
 
     const handleRejectDiscount = async () => {
         if (!selectedDiscountAuth || !selectedDiscountAuth.discountAuthId) return;
 
-        setProcessingAuth(true);
+        setProcessingAuth('reject');
         try {
             const response = await discountAuthService.approveRejectDiscountAuth(
                 selectedDiscountAuth.discountAuthId,
@@ -317,7 +317,7 @@ const NotificationDropdown = () => {
             console.error('Error al rechazar descuento:', error);
             toast.error(error.message || 'Error al rechazar el descuento');
         } finally {
-            setProcessingAuth(false);
+            setProcessingAuth(null);
         }
     };
 
@@ -563,27 +563,27 @@ const NotificationDropdown = () => {
                             setSelectedDiscountAuth(null);
                             setDiscountAuthDetails(null);
                         }}
-                        disabled={processingAuth || loadingDetails}
+                        disabled={!!processingAuth || loadingDetails}
                     >
                         Cancelar
                     </Button>
                     <Button
                         variant="danger"
                         onClick={handleRejectDiscount}
-                        disabled={processingAuth || loadingDetails || !discountAuthDetails}
+                        disabled={!!processingAuth || loadingDetails || !discountAuthDetails}
                         className="d-flex align-items-center gap-2"
                     >
                         <LuX size={16} />
-                        {processingAuth ? 'Rechazando...' : 'Rechazar'}
+                        {processingAuth === 'reject' ? 'Rechazando...' : 'Rechazar'}
                     </Button>
                     <Button
                         variant="success"
                         onClick={handleApproveDiscount}
-                        disabled={processingAuth || loadingDetails || !discountAuthDetails}
+                        disabled={!!processingAuth || loadingDetails || !discountAuthDetails}
                         className="d-flex align-items-center gap-2"
                     >
                         <LuCircleCheck size={16} />
-                        {processingAuth ? 'Aprobando...' : 'Aprobar'}
+                        {processingAuth === 'approve' ? 'Autorizando...' : 'Autorizar'}
                     </Button>
                 </Modal.Footer>
             </Modal>

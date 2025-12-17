@@ -33,6 +33,9 @@ export interface Sale {
   remainingBalance: number;
   sendToProduction: boolean;
   status: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado';
+  cancellationReason?: string | null;
+  cancelledAt?: string | null;
+  cancelledBy?: string | { _id: string; name: string; email: string } | null;
   stage?: {
     _id: string;
     name: string;
