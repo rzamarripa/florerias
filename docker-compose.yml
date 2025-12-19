@@ -1,0 +1,48 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: florerias-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpass
+      MONGO_INITDB_DATABASE: florerias
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: florerias-backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      NODE_ENV: production
+      PORT: "3005"
+      # IMPORTANT: dentro de Docker, el host de mongo es el nombre del servicio: "mongo"
+      MONGODB_URI: mongodb://root:rootpass@mongo:27017/florerias?authSource=admin
+    ports:
+      - "3005:3005"
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: florerias-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      # Esto es lo que usa el navegador (host) para pegarle al API expuesto en tu máquina.
+      NEXT_PUBLIC_API_URL: http://localhost:3005/api
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongo_data:
+
