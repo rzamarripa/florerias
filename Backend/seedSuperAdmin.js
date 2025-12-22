@@ -5,8 +5,10 @@ import { Module } from "./src/models/Module.js";
 import { Page } from "./src/models/Page.js";
 import dotenv from "dotenv";
 
-// Cargar variables de entorno desde .env.production
-dotenv.config({ path: ".env.production" });
+// Cargar variables de entorno (solo si no están ya definidas por Docker)
+if (!process.env.MONGODB_URI) {
+  dotenv.config({ path: ".env.production" });
+}
 
 // Definir todas las páginas basadas en el archivo constants.ts
 const pagesData = [
@@ -77,33 +79,41 @@ const connectDB = async () => {
 
 const createPagesAndModules = async () => {
   try {
-    console.log("📄 Creando páginas y módulos...\n");
+    console.log("📄 Creando/actualizando páginas y módulos...\n");
 
     const allModules = [];
     let pageCount = 0;
     let moduleCount = 0;
 
     for (const pageData of pagesData) {
-      // Crear la página
-      const page = await Page.create({
-        name: pageData.name,
-        path: pageData.path,
-        description: pageData.description,
-        status: true,
-      });
+      // Crear o actualizar la página
+      const page = await Page.findOneAndUpdate(
+        { name: pageData.name },
+        {
+          name: pageData.name,
+          path: pageData.path,
+          description: pageData.description,
+          status: true,
+        },
+        { upsert: true, new: true }
+      );
 
       pageCount++;
-      console.log(`✓ Página creada: ${page.name} (${page.path})`);
+      console.log(`✓ Página: ${page.name} (${page.path})`);
 
-      // Crear los 4 módulos para esta página
+      // Crear o actualizar los 4 módulos para esta página
       const pageModules = [];
       for (const moduleType of moduleTypes) {
-        const module = await Module.create({
-          name: moduleType.key,
-          description: `${moduleType.description} de ${pageData.name}`,
-          page: page._id,
-          status: true,
-        });
+        const module = await Module.findOneAndUpdate(
+          { name: moduleType.key, page: page._id },
+          {
+            name: moduleType.key,
+            description: `${moduleType.description} de ${pageData.name}`,
+            page: page._id,
+            status: true,
+          },
+          { upsert: true, new: true }
+        );
 
         pageModules.push(module._id);
         allModules.push(module);
@@ -114,11 +124,11 @@ const createPagesAndModules = async () => {
       page.modules = pageModules;
       await page.save();
 
-      console.log(`  └─ ${moduleTypes.length} módulos creados para ${page.name}`);
+      console.log(`  └─ ${moduleTypes.length} módulos para ${page.name}`);
     }
 
-    console.log(`\n✓ ${pageCount} páginas creadas`);
-    console.log(`✓ ${moduleCount} módulos creados\n`);
+    console.log(`\n✓ ${pageCount} páginas procesadas`);
+    console.log(`✓ ${moduleCount} módulos procesados\n`);
 
     return allModules.map(m => m._id);
   } catch (error) {
