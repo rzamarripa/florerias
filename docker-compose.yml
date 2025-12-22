@@ -25,6 +25,8 @@ services:
       PORT: "3005"
       # IMPORTANT: dentro de Docker, el host de mongo es el nombre del servicio: "mongo"
       MONGODB_URI: mongodb://root:rootpass@mongo:27017/florerias?authSource=admin
+      JWT_SECRET: 1213131313132ffbd777
+      JWT_EXPIRE: 7d
     ports:
       - "3005:3005"
 
@@ -45,4 +47,3 @@ services:
 
 volumes:
   mongo_data:
-
