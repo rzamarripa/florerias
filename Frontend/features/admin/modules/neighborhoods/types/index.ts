@@ -3,10 +3,10 @@ export interface Neighborhood {
   name: string;
   priceDelivery: number;
   status: "active" | "inactive";
-  company?: {
+  branch?: {
     _id: string;
-    legalName: string;
-    tradeName?: string;
+    branchName: string;
+    branchCode?: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -16,6 +16,7 @@ export interface CreateNeighborhoodData {
   name: string;
   priceDelivery: number;
   status?: "active" | "inactive";
+  branchId: string;
 }
 
 export interface UpdateNeighborhoodData {
@@ -40,4 +41,5 @@ export interface NeighborhoodFilters {
   limit?: number;
   status?: "active" | "inactive";
   search?: string;
+  branchId?: string;
 }

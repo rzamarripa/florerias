@@ -5,6 +5,9 @@ import { Modal, Button, Form, Spinner } from "react-bootstrap";
 import { neighborhoodsService } from "../services/neighborhoods";
 import { Neighborhood, CreateNeighborhoodData, UpdateNeighborhoodData } from "../types";
 import { toast } from "react-toastify";
+import { useActiveBranchStore, Branch } from "@/stores/activeBranchStore";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { branchesService } from "@/features/admin/modules/branches/services/branches";
 
 interface NeighborhoodModalProps {
   show: boolean;
@@ -20,11 +23,40 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
   neighborhood,
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     name: "",
     priceDelivery: "",
     status: "active" as "active" | "inactive",
+    branchId: "",
   });
+
+  const { activeBranch } = useActiveBranchStore();
+  const { user } = useUserSessionStore();
+  const userRole = user?.role?.name;
+  const isGerente = userRole === "Gerente";
+
+  // Cargar sucursales al abrir el modal
+  useEffect(() => {
+    const loadBranches = async () => {
+      if (!show || isGerente) return;
+
+      try {
+        setLoadingBranches(true);
+        const response = await branchesService.getUserBranches();
+        if (response.data) {
+          setBranches(response.data);
+        }
+      } catch (error) {
+        console.error("Error cargando sucursales:", error);
+      } finally {
+        setLoadingBranches(false);
+      }
+    };
+
+    loadBranches();
+  }, [show, isGerente]);
 
   useEffect(() => {
     if (neighborhood) {
@@ -32,15 +64,17 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
         name: neighborhood.name,
         priceDelivery: neighborhood.priceDelivery.toString(),
         status: neighborhood.status,
+        branchId: neighborhood.branch?._id || "",
       });
     } else {
       setFormData({
         name: "",
         priceDelivery: "",
         status: "active",
+        branchId: activeBranch?._id || (branches.length === 1 ? branches[0]._id : ""),
       });
     }
-  }, [neighborhood, show]);
+  }, [neighborhood, show, activeBranch, branches]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -59,6 +93,11 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
 
     if (!formData.name || !formData.priceDelivery) {
       toast.error("Por favor completa todos los campos requeridos");
+      return;
+    }
+
+    if (!formData.branchId && !neighborhood) {
+      toast.error("Por favor selecciona una sucursal");
       return;
     }
 
@@ -95,6 +134,7 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
           name: formData.name,
           priceDelivery: priceValue,
           status: formData.status,
+          branchId: formData.branchId,
         };
 
         const response = await neighborhoodsService.createNeighborhood(createData);
@@ -141,6 +181,37 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="p-4">
           <div className="row g-3">
+            {/* Sucursal - Solo mostrar si hay más de una y no está editando */}
+            {!neighborhood && branches.length > 1 && !isGerente && (
+              <div className="col-12">
+                <Form.Group>
+                  <Form.Label className="fw-semibold">
+                    Sucursal <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Select
+                    name="branchId"
+                    value={formData.branchId}
+                    onChange={handleChange}
+                    required
+                    disabled={loadingBranches}
+                    style={{
+                      borderRadius: "8px",
+                      border: "2px solid #e9ecef",
+                    }}
+                  >
+                    <option value="">
+                      {loadingBranches ? "Cargando sucursales..." : "Seleccionar sucursal..."}
+                    </option>
+                    {branches.map((branch) => (
+                      <option key={branch._id} value={branch._id}>
+                        {branch.branchName}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </div>
+            )}
+
             {/* Nombre de la Colonia */}
             <div className="col-12">
               <Form.Group>
