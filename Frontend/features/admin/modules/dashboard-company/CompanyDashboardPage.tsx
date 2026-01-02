@@ -158,9 +158,9 @@ const CompanyDashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="mb-4">
+      <div className="mb-2">
         <div className="d-flex justify-content-between align-items-start">
           <div>
             <h2 className="mb-1 fw-bold">Dashboard de Empresa</h2>
@@ -181,9 +181,9 @@ const CompanyDashboardPage: React.FC = () => {
       {loading ? (
         <div
           className="card border-0 shadow-sm"
-          style={{ borderRadius: "15px" }}
+          style={{ borderRadius: "10px" }}
         >
-          <div className="card-body p-5 text-center">
+          <div className="card-body p-4 text-center">
             <Spinner animation="border" variant="primary" className="mb-3" />
             <p className="text-muted mb-0">Cargando estadísticas...</p>
           </div>
@@ -192,9 +192,9 @@ const CompanyDashboardPage: React.FC = () => {
         branches.length === 0 ? (
           <div
             className="card border-0 shadow-sm"
-            style={{ borderRadius: "15px" }}
+            style={{ borderRadius: "10px" }}
           >
-            <div className="card-body p-5 text-center">
+            <div className="card-body p-4 text-center">
               <Building2 size={48} className="text-muted mb-3" />
               <h5 className="text-muted mb-2">No hay sucursales disponibles</h5>
               <p className="text-muted mb-0" style={{ fontSize: "14px" }}>
@@ -203,8 +203,8 @@ const CompanyDashboardPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="mb-4">
-            <div className="mb-3">
+          <div className="mb-2">
+            <div className="mb-2">
               <h5 className="fw-semibold mb-1">
                 Sucursales ({branches.length})
               </h5>
@@ -212,7 +212,7 @@ const CompanyDashboardPage: React.FC = () => {
                 Haz clic en las estadísticas para ver detalles
               </p>
             </div>
-            <Row className="g-4">
+            <Row className="g-3">
               {branches.map((branch) => (
                 <Col key={branch._id} xs={12} md={6} lg={4}>
                   <BranchCard
@@ -230,9 +230,9 @@ const CompanyDashboardPage: React.FC = () => {
       ) : (
         <div
           className="card border-0 shadow-sm"
-          style={{ borderRadius: "15px" }}
+          style={{ borderRadius: "10px" }}
         >
-          <div className="card-body p-5 text-center">
+          <div className="card-body p-4 text-center">
             <div className="mb-3">
               <svg
                 width="80"

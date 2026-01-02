@@ -76,10 +76,10 @@ const SaleActions: React.FC<SaleActionsProps> = ({
     setIsCanceling(false);
   };
 
-  const handleConfirmCancel = async () => {
+  const handleConfirmCancel = async (reason: string) => {
     try {
       setIsCanceling(true);
-      await salesService.updateOrderStatus(sale._id, "cancelado");
+      await salesService.updateOrderStatus(sale._id, "cancelado", reason);
       toast.success("Venta cancelada exitosamente");
       handleCloseCancelDialog();
       onSaleUpdated();

@@ -797,7 +797,8 @@ export const getUserBranches = async (req, res) => {
         isActive: true,
       })
         .populate("companyId", "legalName tradeName")
-        .select("branchName branchCode address companyId");
+        .populate("manager", "username email phone profile")
+        .select("branchName branchCode address companyId manager");
       console.log('getUserBranches - Sucursales encontradas (Manager):', branches.length);
     }
     // Si no es ni administrador ni gerente, buscar sucursales donde está en el array de employees

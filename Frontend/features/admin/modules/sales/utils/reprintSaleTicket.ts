@@ -1,6 +1,6 @@
 import { toast } from "react-toastify";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
-import { generateSaleTicket, SaleTicketData } from "@/features/branch/modules/orders/utils/generateSaleTicket";
+import { generateSaleTicket, SaleTicketData } from "@/features/admin/modules/orders/utils/generateSaleTicket";
 import { Sale } from "../types";
 
 /**

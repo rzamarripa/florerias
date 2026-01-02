@@ -1,6 +1,18 @@
 import { Client } from "../models/Client.js";
 import { Purchase } from "../models/Purchase.js";
 import { Branch } from "../models/Branch.js";
+import { PointsReward } from "../models/PointsReward.js";
+import clientPointsService from "../services/clientPointsService.js";
+
+// Function to generate unique redemption code
+const generateRedemptionCode = () => {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return code;
+};
 
 export const getAllClients = async (req, res) => {
   try {
@@ -109,24 +121,49 @@ export const createClient = async (req, res) => {
 
     const client = await Client.create(clientData);
 
+    // Procesar puntos por registro de cliente si está habilitado
+    let registrationPointsInfo = null;
+    try {
+      const pointsResult = await clientPointsService.processRegistrationPoints({
+        clientId: client._id,
+        branchId: branch,
+        registeredBy: req.user?._id || null,
+      });
+
+      if (pointsResult.success && pointsResult.points > 0) {
+        registrationPointsInfo = {
+          pointsEarned: pointsResult.points,
+          newBalance: pointsResult.newBalance,
+        };
+        console.log(`✅ Puntos por registro otorgados al cliente ${client._id}: ${pointsResult.points} pts`);
+      }
+    } catch (pointsError) {
+      console.error("Error al procesar puntos por registro:", pointsError);
+      // No fallar la creación del cliente si hay error al procesar puntos
+    }
+
+    // Obtener cliente actualizado con puntos
+    const updatedClient = await Client.findById(client._id);
+
     res.status(201).json({
       success: true,
       message: "Client created successfully",
       data: {
         client: {
-          _id: client._id,
-          name: client.name,
-          lastName: client.lastName,
-          fullName: client.getFullName(),
-          clientNumber: client.clientNumber,
-          phoneNumber: client.phoneNumber,
-          email: client.email,
-          points: client.points,
-          status: client.status,
-          purchases: client.purchases,
-          createdAt: client.createdAt,
-          updatedAt: client.updatedAt,
+          _id: updatedClient._id,
+          name: updatedClient.name,
+          lastName: updatedClient.lastName,
+          fullName: updatedClient.getFullName(),
+          clientNumber: updatedClient.clientNumber,
+          phoneNumber: updatedClient.phoneNumber,
+          email: updatedClient.email,
+          points: updatedClient.points,
+          status: updatedClient.status,
+          purchases: updatedClient.purchases,
+          createdAt: updatedClient.createdAt,
+          updatedAt: updatedClient.updatedAt,
         },
+        registrationPoints: registrationPointsInfo,
       },
     });
   } catch (error) {
@@ -371,6 +408,47 @@ export const usePointsFromClient = async (req, res) => {
   }
 };
 
+export const getClientPointsHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 10, type, branchId } = req.query;
+
+    const client = await Client.findById(id);
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Client not found",
+      });
+    }
+
+    const result = await clientPointsService.getClientPointsHistory(id, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      type,
+      branchId,
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: result.message || "Error al obtener historial de puntos",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      clientPoints: client.points,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export const addCommentToClient = async (req, res) => {
   try {
     const { comentario, tipo, usuario } = req.body;
@@ -434,6 +512,247 @@ export const addCommentToClient = async (req, res) => {
       },
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const verifyRewardCode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: "El código es requerido",
+      });
+    }
+
+    // Obtener cliente con rewards populados
+    const client = await Client.findById(id).populate("rewards.reward");
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Cliente no encontrado",
+      });
+    }
+
+    // Buscar el reward con el código proporcionado que no haya sido canjeado
+    const rewardEntry = client.rewards?.find(
+      (r) => r.code === code.toUpperCase() && !r.isRedeemed
+    );
+
+    if (!rewardEntry) {
+      return res.status(404).json({
+        success: false,
+        message: "Código inválido o ya ha sido canjeado",
+      });
+    }
+
+    const reward = rewardEntry.reward;
+
+    res.status(200).json({
+      success: true,
+      message: "Código válido",
+      data: {
+        rewardEntryId: rewardEntry._id,
+        code: rewardEntry.code,
+        reward: {
+          _id: reward._id,
+          name: reward.name,
+          rewardValue: reward.rewardValue,
+          isPercentage: reward.isPercentage,
+          pointsRequired: reward.pointsRequired,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error al verificar código de recompensa:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getAvailableRewards = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Obtener cliente con rewards populados (incluyendo producto asociado)
+    const client = await Client.findById(id).populate({
+      path: "rewards.reward",
+      select: "name description rewardValue isPercentage pointsRequired validFrom validUntil rewardType isProducto productId productQuantity",
+      populate: {
+        path: "productId",
+        select: "nombre precio imagen productCategory",
+      },
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Cliente no encontrado",
+      });
+    }
+
+    // Filtrar solo las recompensas que no han sido usadas (isRedeemed = false)
+    const availableRewards = (client.rewards || [])
+      .filter((r) => !r.isRedeemed && r.reward)
+      .map((r) => ({
+        _id: r._id,
+        code: r.code,
+        redeemedAt: r.redeemedAt,
+        reward: {
+          _id: r.reward._id,
+          name: r.reward.name,
+          description: r.reward.description,
+          rewardValue: r.reward.rewardValue,
+          isPercentage: r.reward.isPercentage,
+          pointsRequired: r.reward.pointsRequired,
+          validFrom: r.reward.validFrom,
+          validUntil: r.reward.validUntil,
+          rewardType: r.reward.rewardType,
+          isProducto: r.reward.isProducto || false,
+          productId: r.reward.productId || null,
+          productQuantity: r.reward.productQuantity || 1,
+        },
+      }));
+
+    res.status(200).json({
+      success: true,
+      count: availableRewards.length,
+      data: availableRewards,
+    });
+  } catch (error) {
+    console.error("Error al obtener recompensas disponibles:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const redeemReward = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rewardId, branchId } = req.body;
+
+    // Validaciones básicas
+    if (!rewardId) {
+      return res.status(400).json({
+        success: false,
+        message: "El ID de la recompensa es requerido",
+      });
+    }
+
+    if (!branchId) {
+      return res.status(400).json({
+        success: false,
+        message: "El ID de la sucursal es requerido",
+      });
+    }
+
+    // Obtener cliente
+    const client = await Client.findById(id);
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Cliente no encontrado",
+      });
+    }
+
+    // Obtener recompensa
+    const reward = await PointsReward.findById(rewardId);
+    if (!reward) {
+      return res.status(404).json({
+        success: false,
+        message: "Recompensa no encontrada",
+      });
+    }
+
+    // Verificar si la recompensa puede ser canjeada
+    if (!reward.canBeRedeemed()) {
+      return res.status(400).json({
+        success: false,
+        message: "Esta recompensa no está disponible para canjear",
+      });
+    }
+
+    // Verificar si el cliente tiene suficientes puntos
+    if (client.points < reward.pointsRequired) {
+      return res.status(400).json({
+        success: false,
+        message: `Puntos insuficientes. Necesitas ${reward.pointsRequired} puntos, tienes ${client.points}`,
+      });
+    }
+
+    // Verificar límite de canjes por cliente (cuenta todos los reclamados, no importa si ya fueron usados)
+    if (reward.maxRedemptionsPerClient > 0) {
+      const clientRedemptions = client.rewards?.filter(
+        (r) => r.reward.toString() === rewardId
+      ).length || 0;
+
+      if (clientRedemptions >= reward.maxRedemptionsPerClient) {
+        return res.status(400).json({
+          success: false,
+          message: `Has alcanzado el límite de canjes para esta recompensa (${reward.maxRedemptionsPerClient})`,
+        });
+      }
+    }
+
+    // Generar código único
+    const code = generateRedemptionCode();
+
+    // Agregar la recompensa canjeada al cliente
+    if (!client.rewards) {
+      client.rewards = [];
+    }
+
+    client.rewards.push({
+      reward: rewardId,
+      code,
+      isRedeemed: false,
+      redeemedAt: new Date(),
+    });
+
+    await client.save();
+
+    // Incrementar contador de canjes en la recompensa
+    reward.totalRedemptions += 1;
+    await reward.save();
+
+    // Registrar en el historial de puntos y descontar puntos del cliente
+    const pointsResult = await clientPointsService.addPointsToClient({
+      clientId: id,
+      points: reward.pointsRequired,
+      type: "redeemed",
+      reason: "redemption",
+      branchId,
+      description: `Canje de recompensa: ${reward.name}`,
+      registeredBy: req.user?._id || null,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Recompensa canjeada exitosamente",
+      data: {
+        code,
+        reward: {
+          _id: reward._id,
+          name: reward.name,
+          rewardValue: reward.rewardValue,
+          isPercentage: reward.isPercentage,
+          pointsRequired: reward.pointsRequired,
+        },
+        newBalance: pointsResult.newBalance,
+      },
+    });
+  } catch (error) {
+    console.error("Error al canjear recompensa:", error);
     res.status(500).json({
       success: false,
       message: error.message,

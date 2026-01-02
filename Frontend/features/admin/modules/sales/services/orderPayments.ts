@@ -19,6 +19,7 @@ export interface OrderPayment {
     email: string;
   };
   notes: string;
+  isAdvance?: boolean;
   createdAt: string;
   updatedAt: string;
 }

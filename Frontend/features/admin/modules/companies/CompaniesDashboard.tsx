@@ -505,14 +505,14 @@ const CompaniesDashboard: React.FC = () => {
   }
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Filters Section */}
       <Card
-        className="border-0 shadow-sm mb-4"
-        style={{ borderRadius: "12px" }}
+        className="border-0 shadow-sm mb-2"
+        style={{ borderRadius: "10px" }}
       >
-        <Card.Body className="p-4">
-          <Row className="g-3">
+        <Card.Body className="p-2">
+          <Row className="g-2">
             <Col md={3}>
               <Form.Group>
                 <Form.Label className="small fw-semibold text-muted">
@@ -578,7 +578,7 @@ const CompaniesDashboard: React.FC = () => {
               </Button>
             </Col>
           </Row>
-          <Row className="mt-2">
+          <Row className="mt-1">
             <Col md={12}>
               <Button
                 variant="outline-secondary"

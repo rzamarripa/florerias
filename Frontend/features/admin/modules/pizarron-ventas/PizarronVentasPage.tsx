@@ -21,7 +21,16 @@ import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { ordersService } from "./services/orders";
 import { stageCatalogsService } from "@/features/admin/modules/stageCatalogs/services/stageCatalogs";
-import { Order, KanbanColumn as KanbanColumnType, StageCatalog, StageColor } from "./types";
+import {
+  orderPaymentsService,
+  OrderPayment,
+} from "@/features/admin/modules/sales/services/orderPayments";
+import {
+  Order,
+  KanbanColumn as KanbanColumnType,
+  StageCatalog,
+  StageColor,
+} from "./types";
 import KanbanColumn from "./components/KanbanColumn";
 
 const PizarronVentasPage: React.FC = () => {
@@ -32,6 +41,7 @@ const PizarronVentasPage: React.FC = () => {
   const [productFilter, setProductFilter] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
+  const [orderPayments, setOrderPayments] = useState<OrderPayment[]>([]);
 
   // Stages dinámicos
   const [productionStages, setProductionStages] = useState<StageCatalog[]>([]);
@@ -48,13 +58,16 @@ const PizarronVentasPage: React.FC = () => {
       setLoadingStages(true);
 
       // Cargar stages de Producción
-      const productionResponse = await stageCatalogsService.getUserStages('Produccion');
+      const productionResponse = await stageCatalogsService.getUserStages(
+        "Produccion"
+      );
       setProductionStages(productionResponse.data || []);
 
       // Cargar stages de Envío para verificar si existen
-      const shippingResponse = await stageCatalogsService.getUserStages('Envio');
+      const shippingResponse = await stageCatalogsService.getUserStages(
+        "Envio"
+      );
       setShippingStages(shippingResponse.data || []);
-
     } catch (error: any) {
       console.error("Error loading stages:", error);
       toast.error(error.message || "Error al cargar las etapas del pizarrón");
@@ -71,7 +84,9 @@ const PizarronVentasPage: React.FC = () => {
       const response = await ordersService.getAllOrders({
         searchTerm,
         product: productFilter,
-        ...(isAdministrator && activeBranch ? { branchId: activeBranch._id } : {})
+        ...(isAdministrator && activeBranch
+          ? { branchId: activeBranch._id }
+          : {}),
       });
 
       if (response.data) {
@@ -100,7 +115,9 @@ const PizarronVentasPage: React.FC = () => {
   // Sincronizar selectedOrder con orders cuando se actualice
   useEffect(() => {
     if (selectedOrder) {
-      const updatedSelectedOrder = orders.find((o) => o && o._id === selectedOrder._id);
+      const updatedSelectedOrder = orders.find(
+        (o) => o && o._id === selectedOrder._id
+      );
       if (updatedSelectedOrder && updatedSelectedOrder !== selectedOrder) {
         setSelectedOrder(updatedSelectedOrder);
       }
@@ -125,29 +142,128 @@ const PizarronVentasPage: React.FC = () => {
       console.log("📝 [PizarronVentas] Orden actualizada:", updatedOrder);
       if (!updatedOrder) return;
 
+      // Verificar si la orden fue enviada a producción (descuento canjeado)
+      const wasSentToProduction = updatedOrder.sendToProduction === true;
+      const hasStage =
+        updatedOrder.stage !== null && updatedOrder.stage !== undefined;
+      const isNotCancelled = updatedOrder.status !== "cancelado";
+
+      // Primero, obtener la orden anterior para detectar cambios ANTES de actualizar estado
       setOrders((prevOrders) => {
-        const existingOrder = prevOrders.find((o) => o && o._id === updatedOrder._id);
-
-        // Si la orden fue cancelada, removerla del pizarrón
-        if (updatedOrder.status === "cancelado") {
-          if (existingOrder) {
-            toast.warning(`Orden cancelada: ${updatedOrder.orderNumber}`);
-          }
-          return prevOrders.filter((o) => o && o._id !== updatedOrder._id);
-        }
-
-        // Verificar si cambió el saldo pendiente (pago agregado o eliminado)
-        if (existingOrder && existingOrder.remainingBalance !== updatedOrder.remainingBalance) {
-          if (updatedOrder.remainingBalance < existingOrder.remainingBalance) {
-            toast.success(`Pago registrado para orden ${updatedOrder.orderNumber}`);
-          } else if (updatedOrder.remainingBalance > existingOrder.remainingBalance) {
-            toast.info(`Pago eliminado de orden ${updatedOrder.orderNumber}`);
-          }
-        }
-
-        return prevOrders.map((o) =>
-          o && o._id === updatedOrder._id ? updatedOrder as Order : o
+        const exists = prevOrders.some((o) => o && o._id === updatedOrder._id);
+        const previousOrder = prevOrders.find(
+          (o) => o && o._id === updatedOrder._id
         );
+
+        // Detectar cambios y preparar toasts ANTES de actualizar el estado
+        if (previousOrder) {
+          const previousAdvance = previousOrder.advance || 0;
+          const currentAdvance = updatedOrder.advance || 0;
+          const previousStatus = previousOrder.status;
+          const currentStatus = updatedOrder.status;
+
+          // Usar setTimeout para mostrar toasts después de la actualización del estado
+          setTimeout(() => {
+            // Detectar cancelación
+            if (
+              previousStatus !== "cancelado" &&
+              currentStatus === "cancelado"
+            ) {
+              toast.error(
+                `La orden ${updatedOrder.orderNumber} ha sido cancelada`,
+                { autoClose: 5000 }
+              );
+            }
+
+            // Detectar cambios en pago
+            if (currentAdvance > previousAdvance) {
+              // Se agregó un pago
+              const paymentAmount = currentAdvance - previousAdvance;
+              const userName =
+                updatedOrder.payments && updatedOrder.payments.length > 0
+                  ? updatedOrder.payments[updatedOrder.payments.length - 1]
+                      ?.registeredBy?.name || "Usuario"
+                  : "Usuario";
+
+              toast.success(
+                `${userName} ha realizado un pago de $${paymentAmount.toFixed(
+                  2
+                )} en la orden ${updatedOrder.orderNumber}`,
+                { autoClose: 5000 }
+              );
+            } else if (currentAdvance < previousAdvance) {
+              // Se eliminó un pago
+              const paymentAmount = previousAdvance - currentAdvance;
+              toast.warning(
+                `Se ha eliminado un pago de $${paymentAmount.toFixed(
+                  2
+                )} de la orden ${updatedOrder.orderNumber}`,
+                { autoClose: 5000 }
+              );
+            }
+          }, 0);
+        }
+
+        // Si la orden fue enviada a producción, tiene stage y no está cancelada
+        if (wasSentToProduction && hasStage && isNotCancelled) {
+          if (!exists) {
+            // Nueva orden llegando al pizarrón
+            console.log(
+              "✨ [PizarronVentas] Orden enviada a producción - Agregando:",
+              updatedOrder.orderNumber
+            );
+
+            // Verificar si tiene descuento para mostrar mensaje específico
+            const hasDiscount =
+              updatedOrder.discount && updatedOrder.discount > 0;
+            // Verificar si se envió automáticamente por recibir primer pago
+            const wasAutoSentByPayment =
+              previousOrder &&
+              (previousOrder.advance || 0) === 0 &&
+              (updatedOrder.advance || 0) > 0;
+
+            let toastMessage;
+            if (hasDiscount) {
+              toastMessage = `Se ha autorizado el descuento de la orden ${updatedOrder.orderNumber}. Entrando a producción`;
+            } else if (wasAutoSentByPayment) {
+              toastMessage = `La orden ${updatedOrder.orderNumber} ha recibido su primer pago y se envió automáticamente a producción`;
+            } else {
+              toastMessage = `Orden ${updatedOrder.orderNumber} enviada a producción`;
+            }
+
+            setTimeout(() => {
+              toast.success(toastMessage, {
+                autoClose: 5000,
+              });
+            }, 0);
+            return [updatedOrder as Order, ...prevOrders];
+          } else {
+            // Orden ya existe, actualizar
+            console.log(
+              "🔄 [PizarronVentas] Actualizando orden existente:",
+              updatedOrder.orderNumber
+            );
+            return prevOrders.map((o) =>
+              o && o._id === updatedOrder._id ? (updatedOrder as Order) : o
+            );
+          }
+        } else if (exists) {
+          // Si la orden está en el pizarrón pero fue cancelada o removida
+          if (!isNotCancelled) {
+            console.log(
+              "❌ [PizarronVentas] Orden cancelada - Removiendo del pizarrón:",
+              updatedOrder.orderNumber
+            );
+            return prevOrders.filter((o) => o && o._id !== updatedOrder._id);
+          }
+          // Actualizar orden existente
+          return prevOrders.map((o) =>
+            o && o._id === updatedOrder._id ? (updatedOrder as Order) : o
+          );
+        }
+
+        // No agregar ni modificar si no cumple las condiciones
+        return prevOrders;
       });
     },
     onOrderDeleted: (data: { orderId: string }) => {
@@ -172,9 +288,18 @@ const PizarronVentasPage: React.FC = () => {
     setProductFilter(e.target.value);
   };
 
-  const handleViewDetails = (order: Order) => {
+  const handleViewDetails = async (order: Order) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
+
+    // Cargar los pagos de la orden
+    try {
+      const payments = await orderPaymentsService.getOrderPayments(order._id);
+      setOrderPayments(payments);
+    } catch (error) {
+      console.error("Error loading order payments:", error);
+      setOrderPayments([]);
+    }
   };
 
   const handleChangeStage = async (order: Order, newStageId: string) => {
@@ -185,11 +310,9 @@ const PizarronVentasPage: React.FC = () => {
       });
 
       // Actualizar el estado local
-      setOrders(prevOrders =>
-        prevOrders.map(o =>
-          o._id === order._id
-            ? { ...o, stage: newStageId }
-            : o
+      setOrders((prevOrders) =>
+        prevOrders.map((o) =>
+          o._id === order._id ? { ...o, stage: newStageId } : o
         )
       );
 
@@ -216,9 +339,11 @@ const PizarronVentasPage: React.FC = () => {
       await loadOrders();
     } catch (error: any) {
       const errorMessage = error.message || "";
-      if (errorMessage.includes("No se encontró una etapa inicial de Envío") ||
-          errorMessage.includes("stageNumber = 1") ||
-          errorMessage.includes("boardType = Envio")) {
+      if (
+        errorMessage.includes("No se encontró una etapa inicial de Envío") ||
+        errorMessage.includes("stageNumber = 1") ||
+        errorMessage.includes("boardType = Envio")
+      ) {
         toast.warning("Todavía no hay etapas en el pizarrón de envío");
       } else {
         toast.error(errorMessage || "Error al enviar la orden a Envío");
@@ -228,8 +353,10 @@ const PizarronVentasPage: React.FC = () => {
   };
 
   // Convertir stages a columnas de kanban
-  const createColumnsFromStages = (stages: StageCatalog[]): KanbanColumnType[] => {
-    return stages.map(stage => ({
+  const createColumnsFromStages = (
+    stages: StageCatalog[]
+  ): KanbanColumnType[] => {
+    return stages.map((stage) => ({
       id: stage._id,
       stageNumber: stage.stageNumber,
       title: stage.name,
@@ -247,12 +374,11 @@ const PizarronVentasPage: React.FC = () => {
       if (!order) return false;
 
       // No mostrar órdenes canceladas
-      if (order.status === 'cancelado') return false;
+      if (order.status === "cancelado") return false;
 
       // Obtener el ID del stage de la orden
-      const orderStageId = typeof order.stage === 'string'
-        ? order.stage
-        : order.stage?._id;
+      const orderStageId =
+        typeof order.stage === "string" ? order.stage : order.stage?._id;
 
       // Verificar que la orden tenga el stage correcto
       if (orderStageId !== stageId) return false;
@@ -287,9 +413,10 @@ const PizarronVentasPage: React.FC = () => {
   const productionColumns = createColumnsFromStages(productionStages);
 
   // Obtener el máximo stageNumber de Producción para identificar el último stage
-  const maxProductionStageNumber = productionStages.length > 0
-    ? Math.max(...productionStages.map(s => s.stageNumber))
-    : 0;
+  const maxProductionStageNumber =
+    productionStages.length > 0
+      ? Math.max(...productionStages.map((s) => s.stageNumber))
+      : 0;
 
   // Verificar si hay etapas de Envío configuradas
   const hasShippingStages = shippingStages && shippingStages.length > 0;
@@ -297,18 +424,20 @@ const PizarronVentasPage: React.FC = () => {
   return (
     <div className="container-fluid py-1">
       {/* Header */}
-      <div className="mb-4">
+      <div className="mb-2">
         <h2 className="fw-bold mb-1">Pizarrón de Producción</h2>
-        <p className="text-muted">Gestiona las órdenes en las diferentes etapas de producción</p>
+        <p className="text-muted">
+          Gestiona las órdenes en las diferentes etapas de producción
+        </p>
       </div>
 
       {/* Filters */}
       <div
-        className="card border-0 shadow-sm mb-4"
-        style={{ borderRadius: "15px" }}
+        className="card border-0 shadow-sm mb-2"
+        style={{ borderRadius: "10px" }}
       >
-        <div className="card-body p-4">
-          <Row className="g-3">
+        <div className="card-body p-2">
+          <Row className="g-2">
             <Col md={6}>
               <InputGroup>
                 <InputGroup.Text className="bg-light border-0">
@@ -359,7 +488,10 @@ const PizarronVentasPage: React.FC = () => {
           <Package size={20} className="me-2" />
           No hay etapas configuradas para el pizarrón de Producción.
           <br />
-          <small>Crea etapas en el catálogo de etapas para poder visualizar las órdenes aquí.</small>
+          <small>
+            Crea etapas en el catálogo de etapas para poder visualizar las
+            órdenes aquí.
+          </small>
         </Alert>
       ) : (
         <DndProvider backend={HTML5Backend}>
@@ -372,7 +504,9 @@ const PizarronVentasPage: React.FC = () => {
                   orders={getOrdersByStage(column.id)}
                   color={getRGBAColor(column.color)}
                   status={column.id}
-                  isLastProductionStage={column.stageNumber === maxProductionStageNumber}
+                  isLastProductionStage={
+                    column.stageNumber === maxProductionStageNumber
+                  }
                   hasShippingStages={hasShippingStages}
                   onViewDetails={handleViewDetails}
                   onChangeStatus={handleChangeStage}
@@ -413,7 +547,11 @@ const PizarronVentasPage: React.FC = () => {
                       <label className="text-muted small mb-1">Estado</label>
                       <div className="fw-bold text-capitalize">
                         <Badge
-                          bg={selectedOrder.status === 'sinAnticipo' ? 'warning' : 'primary'}
+                          bg={
+                            selectedOrder.status === "sinAnticipo"
+                              ? "warning"
+                              : "primary"
+                          }
                         >
                           {selectedOrder.status}
                         </Badge>
@@ -444,7 +582,9 @@ const PizarronVentasPage: React.FC = () => {
                   {selectedOrder.arregloUrl && (
                     <Col md={6}>
                       <div className="mb-2">
-                        <label className="text-muted small mb-1">Imagen del Arreglo</label>
+                        <label className="text-muted small mb-1">
+                          Imagen del Arreglo
+                        </label>
                         <div className="mt-2 d-flex justify-content-center">
                           <img
                             src={selectedOrder.arregloUrl}
@@ -455,7 +595,9 @@ const PizarronVentasPage: React.FC = () => {
                               objectFit: "contain",
                               cursor: "pointer",
                             }}
-                            onClick={() => window.open(selectedOrder.arregloUrl!, '_blank')}
+                            onClick={() =>
+                              window.open(selectedOrder.arregloUrl!, "_blank")
+                            }
                           />
                         </div>
                       </div>
@@ -567,18 +709,23 @@ const PizarronVentasPage: React.FC = () => {
                       {formatCurrency(selectedOrder.total)}
                     </div>
                   </Col>
-                  {selectedOrder.advance > 0 && (
-                    <>
-                      <Col xs={6}>
-                        <div className="text-muted small">Anticipo:</div>
-                      </Col>
-                      <Col xs={6} className="text-end">
-                        <div className="text-success">
-                          {formatCurrency(selectedOrder.advance)}
-                        </div>
-                      </Col>
-                    </>
-                  )}
+                  {(() => {
+                    const advancePayment = orderPayments.find(
+                      (p) => p.isAdvance
+                    );
+                    return advancePayment ? (
+                      <>
+                        <Col xs={6}>
+                          <div className="text-muted small">Anticipo:</div>
+                        </Col>
+                        <Col xs={6} className="text-end">
+                          <div className="text-success">
+                            {formatCurrency(advancePayment.amount)}
+                          </div>
+                        </Col>
+                      </>
+                    ) : null;
+                  })()}
                   {selectedOrder.remainingBalance > 0 && (
                     <>
                       <Col xs={6}>

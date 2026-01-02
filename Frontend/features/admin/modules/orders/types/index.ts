@@ -16,6 +16,7 @@ export interface DeliveryData {
 }
 
 export interface OrderItemInsumo {
+  materialId?: string; // ID del material para extras (usado para descontar stock en backend)
   nombre: string;
   cantidad: number;
   importeVenta: number;
@@ -32,6 +33,8 @@ export interface OrderItem {
   amount: number;
   productCategory: string | null;
   insumos?: OrderItemInsumo[];
+  isReward?: boolean; // true si es un item de recompensa
+  rewardCode?: string; // código de la recompensa usada
 }
 
 export interface OrderMaterial {
@@ -112,6 +115,14 @@ export interface Order {
   updatedAt: string;
 }
 
+export interface AppliedRewardInfo {
+  code: string;
+  rewardId: string;
+  name: string;
+  rewardValue: number;
+  isPercentage: boolean;
+}
+
 export interface CreateOrderData {
   branchId: string;
   cashRegisterId?: string | null;
@@ -139,6 +150,8 @@ export interface CreateOrderData {
   comprobantePath?: string | null;
   arregloUrl?: string | null;
   arregloPath?: string | null;
+  appliedRewardCode?: string | null;
+  appliedReward?: AppliedRewardInfo | null;
 }
 
 export interface UpdateOrderData extends Partial<CreateOrderData> {

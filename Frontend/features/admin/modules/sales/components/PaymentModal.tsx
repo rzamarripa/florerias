@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Table, Spinner, Alert } from "react-bootstrap";
+import React, { useState, useEffect, useRef } from "react";
+import { Modal, Button, Form, Table, Spinner, Alert, Badge } from "react-bootstrap";
 import { DollarSign, Trash2, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import { orderPaymentsService, OrderPayment } from "../services/orderPayments";
 import { cashRegistersService, CashRegister } from "../services/cashRegisters";
 import { paymentMethodsService } from "../../payment-methods/services/paymentMethods";
 import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { Sale } from "../types";
 
 interface PaymentModalProps {
@@ -40,11 +41,44 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
   const [selectedCashRegister, setSelectedCashRegister] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [currentSale, setCurrentSale] = useState<Sale>(sale);
+  const previousAdvanceRef = useRef<number>(sale.advance || 0);
 
   const userId = useUserSessionStore((state) => state.getUserId());
 
+  // Socket listener para actualizaciones en tiempo real de esta orden específica
+  useOrderSocket({
+    filters: {},
+    onOrderCreated: () => {},
+    onOrderUpdated: (updatedOrder) => {
+      // Solo actualizar si es la misma orden que estamos viendo
+      if (updatedOrder._id === sale._id) {
+        const previousAdvance = previousAdvanceRef.current;
+        const currentAdvance = updatedOrder.advance || 0;
+
+        // Si hubo cambio en el pago, recargar la lista de pagos
+        if (currentAdvance !== previousAdvance) {
+          console.log(`🔄 [PaymentModal] Detectado cambio en pagos de orden ${updatedOrder.orderNumber}`);
+          loadPayments();
+          previousAdvanceRef.current = currentAdvance;
+        }
+
+        // Actualizar la información de la venta mostrada
+        setCurrentSale(updatedOrder as Sale);
+
+        // Notificar al componente padre para actualizar las tablas
+        if (onPaymentAdded) {
+          onPaymentAdded();
+        }
+      }
+    },
+    onOrderDeleted: () => {},
+  });
+
   useEffect(() => {
     if (show && sale) {
+      setCurrentSale(sale);
+      previousAdvanceRef.current = sale.advance || 0;
       loadPayments();
       loadCashRegisters();
       loadPaymentMethods();
@@ -108,6 +142,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validar que la orden no esté cancelada
+    if (currentSale.status === "cancelado") {
+      toast.error("No se pueden registrar pagos en una orden cancelada");
+      return;
+    }
+
     if (!userId) {
       toast.error("No se pudo obtener el ID del usuario");
       return;
@@ -121,8 +161,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       return;
     }
 
-    if (amountNum > sale.remainingBalance) {
-      toast.error(`El monto no puede exceder el saldo pendiente ($${sale.remainingBalance.toFixed(2)})`);
+    if (amountNum > currentSale.remainingBalance) {
+      toast.error(`El monto no puede exceder el saldo pendiente ($${currentSale.remainingBalance.toFixed(2)})`);
       return;
     }
 
@@ -210,7 +250,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <span>Pagos de la Venta</span>
             </div>
             <div className="text-muted" style={{ fontSize: "14px" }}>
-              {sale.orderNumber}
+              {currentSale.orderNumber}
             </div>
           </div>
         </Modal.Title>
@@ -222,21 +262,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           <div className="row">
             <div className="col-6">
               <small className="text-muted">Cliente</small>
-              <div className="fw-semibold">{sale.clientInfo?.name || "N/A"}</div>
+              <div className="fw-semibold">{currentSale.clientInfo?.name || "N/A"}</div>
             </div>
             <div className="col-6">
               <small className="text-muted">Total de la venta</small>
-              <div className="fw-semibold">${sale.total.toFixed(2)}</div>
+              <div className="fw-semibold">${currentSale.total.toFixed(2)}</div>
             </div>
           </div>
           <div className="row mt-2">
             <div className="col-6">
               <small className="text-muted">Anticipo inicial</small>
-              <div className="fw-semibold text-success">${(sale.advance - totalPaid).toFixed(2)}</div>
+              <div className="fw-semibold text-success">${(currentSale.advance - totalPaid).toFixed(2)}</div>
             </div>
             <div className="col-6">
               <small className="text-muted">Saldo pendiente</small>
-              <div className="fw-semibold text-danger">${sale.remainingBalance.toFixed(2)}</div>
+              <div className="fw-semibold text-danger">${currentSale.remainingBalance.toFixed(2)}</div>
             </div>
           </div>
         </div>
@@ -268,7 +308,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 <tbody>
                   {payments.map((payment) => (
                     <tr key={payment._id}>
-                      <td>{formatDate(payment.date)}</td>
+                      <td>
+                        {formatDate(payment.date)}
+                        {payment.isAdvance && (
+                          <Badge bg="info" className="ms-2">
+                            Anticipo
+                          </Badge>
+                        )}
+                      </td>
                       <td className="fw-semibold text-success">
                         ${payment.amount.toFixed(2)}
                       </td>
@@ -281,9 +328,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                           size="sm"
                           onClick={() => handleDeletePayment(payment._id)}
                           className="border-0"
-                          title="Eliminar pago"
+                          title={currentSale.status === "cancelado" ? "No se pueden eliminar pagos de órdenes canceladas" : "Eliminar pago"}
+                          disabled={currentSale.status === "cancelado"}
                         >
-                          <Trash2 size={14} className="text-danger" />
+                          <Trash2 size={14} className={currentSale.status === "cancelado" ? "text-muted" : "text-danger"} />
                         </Button>
                       </td>
                     </tr>
@@ -302,8 +350,18 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           )}
         </div>
 
+        {/* Alerta si la orden está cancelada */}
+        {currentSale.status === "cancelado" && (
+          <Alert variant="danger" className="mb-0">
+            <Alert.Heading className="h6 mb-1">Orden Cancelada</Alert.Heading>
+            <p className="mb-0" style={{ fontSize: "14px" }}>
+              No se pueden registrar ni eliminar pagos en una orden cancelada.
+            </p>
+          </Alert>
+        )}
+
         {/* Formulario para nuevo pago */}
-        {sale.remainingBalance > 0 && (
+        {currentSale.remainingBalance > 0 && currentSale.status !== "cancelado" && (
           <div className="border-top pt-4">
             <h6 className="fw-semibold mb-3 d-flex align-items-center gap-2">
               <Plus size={18} />
@@ -325,14 +383,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         type="number"
                         step="0.01"
                         min="0.01"
-                        max={sale.remainingBalance}
+                        max={currentSale.remainingBalance}
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="0.00"
                         required
                       />
                       <Form.Text className="text-muted">
-                        Máximo: ${sale.remainingBalance.toFixed(2)}
+                        Máximo: ${currentSale.remainingBalance.toFixed(2)}
                       </Form.Text>
                     </Form.Group>
                   </div>

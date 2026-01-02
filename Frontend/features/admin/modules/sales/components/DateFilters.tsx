@@ -79,8 +79,8 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
   };
 
   return (
-    <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
-      <div className="card-body p-3">
+    <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
+      <div className="card-body p-2">
         <div className="row g-2 align-items-end">
           <div className={isAdministrator || isCajero || isGerente ? "col-md-4" : "col-md-3"}>
             <Form.Group className="mb-0">

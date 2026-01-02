@@ -23,14 +23,18 @@ const SalesTrendChart: React.FC<SalesTrendChartProps> = ({
   previousData,
 }) => {
   // Combinar datos actuales y anteriores para el gráfico
-  const chartData = data.map((item, index) => ({
-    date: new Date(item.date).toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "short",
-    }),
-    actual: item.amount,
-    anterior: previousData?.[index]?.amount || 0,
-  }));
+  const chartData = data.map((item, index) => {
+    // Agregar T12:00:00 para evitar problemas de zona horaria
+    const dateStr = item.date.includes("T") ? item.date : `${item.date}T12:00:00`;
+    return {
+      date: new Date(dateStr).toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "short",
+      }),
+      actual: item.amount,
+      anterior: previousData?.[index]?.amount || 0,
+    };
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("es-MX", {

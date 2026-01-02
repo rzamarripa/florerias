@@ -55,7 +55,7 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
       startDate: filters.startDate,
       endDate: filters.endDate,
       branchId: filters.branchId,
-      status: ["pendiente", "en-proceso", "completado", "sinAnticipo"], // Excluir canceladas
+      status: ["pendiente", "en-proceso", "completado", "sinAnticipo"], // Incluir ventas sin anticipo
     },
     onOrderCreated: (newOrder) => {
       console.log("🆕 [NewSalesTable] Nueva orden recibida:", newOrder);
@@ -73,12 +73,12 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
     },
     onOrderUpdated: (updatedOrder) => {
       setSales((prev) => {
-        // Si la orden actualizada debe estar en esta tabla (NO cancelada)
+        // Si la orden actualizada debe estar en esta tabla (incluir sinAnticipo, excluir canceladas)
         const shouldInclude = [
           "pendiente",
           "en-proceso",
           "completado",
-          "sinAnticipo",
+          "sinAnticipo", // Incluir ventas sin anticipo
         ].includes(updatedOrder.status);
 
         if (shouldInclude) {
@@ -280,8 +280,13 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
                   <td className="px-4 py-3">
                     {sale.deliveryData?.deliveryDateTime ? (
                       <div>
-                        <div>{formatDate(sale.deliveryData.deliveryDateTime)}</div>
-                        <div className="text-muted" style={{ fontSize: "0.85em" }}>
+                        <div>
+                          {formatDate(sale.deliveryData.deliveryDateTime)}
+                        </div>
+                        <div
+                          className="text-muted"
+                          style={{ fontSize: "0.85em" }}
+                        >
                           {formatTime(sale.deliveryData.deliveryDateTime)}
                         </div>
                       </div>
@@ -290,13 +295,14 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
                     )}
                   </td>
                   <td className="px-4 py-3">{getStageBadge(sale.stage)}</td>
-                  <td className="px-4 py-3">
-                    {getPaymentStatusBadge(sale)}
-                  </td>
+                  <td className="px-4 py-3">{getPaymentStatusBadge(sale)}</td>
                   <td className="px-4 py-3">
                     <div>
                       <div>{formatDate(sale.createdAt)}</div>
-                      <div className="text-muted" style={{ fontSize: "0.85em" }}>
+                      <div
+                        className="text-muted"
+                        style={{ fontSize: "0.85em" }}
+                      >
                         {formatTime(sale.createdAt)}
                       </div>
                     </div>

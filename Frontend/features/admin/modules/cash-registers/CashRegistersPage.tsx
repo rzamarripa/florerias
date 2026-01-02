@@ -121,9 +121,9 @@ const CashRegistersPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">
             {isAdmin || isManager ? "Cajas Registradoras" : "Mis Cajas Registradoras"}
@@ -151,7 +151,7 @@ const CashRegistersPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
+      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
         <div className="card-body p-0">
           {loading ? (
             <div className="text-center py-5">
@@ -163,23 +163,23 @@ const CashRegistersPage: React.FC = () => {
               <Table hover className="mb-0">
                 <thead style={{ background: "#f8f9fa" }}>
                   <tr>
-                    <th className="px-4 py-3 fw-semibold text-muted">#</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       SUCURSAL
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">CAJERO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">CAJERO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       GERENTE
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       SALDO ACTUAL
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">
+                    <th className="px-2 py-2 fw-semibold text-muted">
                       ÚLTIMO CIERRE
                     </th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">
+                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-center">
                       ACCIONES
                     </th>
                   </tr>
@@ -200,36 +200,36 @@ const CashRegistersPage: React.FC = () => {
                         key={cashRegister._id}
                         style={{ borderBottom: "1px solid #f1f3f5" }}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </td>
-                        <td className="px-4 py-3 fw-semibold">
+                        <td className="px-2 py-2 fw-semibold">
                           {cashRegister.name}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           {getBranchName(cashRegister)}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <div className="fw-semibold">
                             {getCashierName(cashRegister)}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <div className="fw-semibold">
                             {getManagerName(cashRegister)}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <span className="fw-bold text-success">
                             {formatCurrency(cashRegister.currentBalance)}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <small className="text-muted">
                             {formatDate(cashRegister.lastOpen)}
                           </small>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <div className="d-flex flex-column gap-1">
                             <Badge
                               bg={cashRegister.isOpen ? "success" : "secondary"}
@@ -266,7 +266,7 @@ const CashRegistersPage: React.FC = () => {
                             </Badge>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <CashRegisterActions
                             cashRegister={cashRegister}
                             onCashRegisterUpdated={handleCashRegisterUpdated}
@@ -282,7 +282,7 @@ const CashRegistersPage: React.FC = () => {
 
           {/* Pagination */}
           {!loading && cashRegisters.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}

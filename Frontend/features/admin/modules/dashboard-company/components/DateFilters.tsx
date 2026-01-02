@@ -78,10 +78,10 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
 
   return (
     <div
-      className="card border-0 shadow-sm mb-4"
-      style={{ borderRadius: "12px" }}
+      className="card border-0 shadow-sm mb-2"
+      style={{ borderRadius: "10px" }}
     >
-      <div className="card-body p-3">
+      <div className="card-body p-2">
         <div className="row g-2 align-items-end">
           <div className="col-md-4">
             <Form.Group className="mb-0">
@@ -144,7 +144,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
           </div>
         </div>
 
-        <div className="row mt-2">
+        <div className="row mt-1">
           <div className="col-12">
             <div className="d-flex justify-content-end">
               <ButtonGroup size="sm">

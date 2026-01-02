@@ -8,7 +8,11 @@ const neighborhoodSchema = new Schema(
       type: String,
       required: [true, "El nombre de la colonia es requerido"],
       trim: true,
-      unique: true,
+    },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_branch",
+      required: [true, "La sucursal es requerida"],
     },
     priceDelivery: {
       type: Number,
@@ -20,11 +24,6 @@ const neighborhoodSchema = new Schema(
       enum: ["active", "inactive"],
       default: "active",
       required: [true, "El estatus es requerido"],
-    },
-    company: {
-      type: Schema.Types.ObjectId,
-      ref: "cv_company",
-      required: false,
     },
     createdAt: {
       type: Date,
@@ -47,9 +46,9 @@ neighborhoodSchema.pre("save", function (next) {
 });
 
 // Índices para búsquedas rápidas
-neighborhoodSchema.index({ name: 1 });
+neighborhoodSchema.index({ name: 1, branch: 1 }, { unique: true }); // Único por sucursal
+neighborhoodSchema.index({ branch: 1 });
 neighborhoodSchema.index({ status: 1 });
-neighborhoodSchema.index({ company: 1 });
 neighborhoodSchema.index({ createdAt: -1 });
 
 const Neighborhood = mongoose.model("cv_neighborhood", neighborhoodSchema);

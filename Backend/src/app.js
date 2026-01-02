@@ -18,6 +18,9 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 3005;
 
+// Confiar en el proxy (nginx/Docker)
+app.set('trust proxy', 1);
+
 app.use(
   cors({
     origin: "*",

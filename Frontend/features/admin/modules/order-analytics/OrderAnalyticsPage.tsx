@@ -335,15 +335,12 @@ const OrderAnalyticsPage: React.FC = () => {
                 variant="outline-secondary"
                 className="w-100"
                 onClick={() => {
+                  const now = new Date();
+                  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
                   setFilters({
-                    startDate: new Date(
-                      new Date().getFullYear(),
-                      new Date().getMonth(),
-                      1
-                    )
-                      .toISOString()
-                      .split("T")[0],
-                    endDate: new Date().toISOString().split("T")[0],
+                    startDate: firstDay.toISOString().split("T")[0],
+                    endDate: lastDay.toISOString().split("T")[0],
                     period: "day",
                   });
                 }}

@@ -84,10 +84,7 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
               s._id === updatedOrder._id ? (updatedOrder as Sale) : s
             );
           } else {
-            // Agregar venta recién cancelada
-            toast.info(
-              `Venta cancelada: ${updatedOrder.orderNumber || updatedOrder._id}`
-            );
+            // Agregar venta recién cancelada (toast se muestra desde SalesPage centralizado)
             return [updatedOrder as Sale, ...prev];
           }
         } else {

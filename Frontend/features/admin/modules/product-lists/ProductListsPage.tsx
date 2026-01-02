@@ -127,9 +127,9 @@ const ProductListsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">Listas de Productos</h2>
           <p className="text-muted mb-0">Gestiona las listas de productos</p>
@@ -146,11 +146,11 @@ const ProductListsPage: React.FC = () => {
 
       {/* Filters */}
       <div
-        className="card border-0 shadow-sm mb-4"
-        style={{ borderRadius: "15px" }}
+        className="card border-0 shadow-sm mb-2"
+        style={{ borderRadius: "10px" }}
       >
-        <div className="card-body p-4">
-          <div className="row g-3">
+        <div className="card-body p-2">
+          <div className="row g-2">
             <div className="col-md-6">
               <InputGroup>
                 <InputGroup.Text className="bg-light border-0">
@@ -171,7 +171,7 @@ const ProductListsPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
+      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
         <div className="card-body p-0">
           {loading ? (
             <div className="text-center py-5">
@@ -190,21 +190,21 @@ const ProductListsPage: React.FC = () => {
                 <Table hover className="mb-0">
                   <thead className="bg-light">
                     <tr>
-                      <th className="border-0 px-4 py-3">Nombre</th>
-                      <th className="border-0 px-4 py-3">Sucursal</th>
-                      <th className="border-0 px-4 py-3">Fecha Creación</th>
-                      <th className="border-0 px-4 py-3">Fecha Expiración</th>
-                      <th className="border-0 px-4 py-3 text-end">
+                      <th className="border-0 px-2 py-2">Nombre</th>
+                      <th className="border-0 px-2 py-2">Sucursal</th>
+                      <th className="border-0 px-2 py-2">Fecha Creación</th>
+                      <th className="border-0 px-2 py-2">Fecha Expiración</th>
+                      <th className="border-0 px-2 py-2 text-end">
                         Total Gastado
                       </th>
-                      <th className="border-0 px-4 py-3 text-end">
+                      <th className="border-0 px-2 py-2 text-end">
                         Ganancias Brutas
                       </th>
-                      <th className="border-0 px-4 py-3 text-end">
+                      <th className="border-0 px-2 py-2 text-end">
                         Ganancias Netas
                       </th>
-                      <th className="border-0 px-4 py-3 text-center">Estado</th>
-                      <th className="border-0 px-4 py-3 text-center">
+                      <th className="border-0 px-2 py-2 text-center">Estado</th>
+                      <th className="border-0 px-2 py-2 text-center">
                         Acciones
                       </th>
                     </tr>
@@ -214,7 +214,7 @@ const ProductListsPage: React.FC = () => {
                       const totals = calculateTotals(productList);
                       return (
                         <tr key={productList._id}>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2">
                             <div className="fw-semibold">
                               {productList.name}
                             </div>
@@ -223,14 +223,14 @@ const ProductListsPage: React.FC = () => {
                                 productList.company?.legalName}
                             </small>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2">
                             <div className="fw-semibold">
                               {productList.branch && typeof productList.branch === 'object'
                                 ? (productList.branch as any).branchName || 'Sin nombre'
                                 : 'Sin sucursal'}
                             </div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2">
                             {new Date(productList.createdAt).toLocaleDateString(
                               "es-MX",
                               {
@@ -240,7 +240,7 @@ const ProductListsPage: React.FC = () => {
                               }
                             )}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2">
                             {new Date(
                               productList.expirationDate
                             ).toLocaleDateString("es-MX", {
@@ -249,13 +249,13 @@ const ProductListsPage: React.FC = () => {
                               day: "numeric",
                             })}
                           </td>
-                          <td className="px-4 py-3 text-end text-danger fw-semibold">
+                          <td className="px-2 py-2 text-end text-danger fw-semibold">
                             ${formatNumber(totals.totalGastado)}
                           </td>
-                          <td className="px-4 py-3 text-end text-primary fw-semibold">
+                          <td className="px-2 py-2 text-end text-primary fw-semibold">
                             ${formatNumber(totals.gananciasBrutas)}
                           </td>
-                          <td className="px-4 py-3 text-end fw-bold">
+                          <td className="px-2 py-2 text-end fw-bold">
                             <span
                               className={
                                 totals.gananciasNetas >= 0
@@ -266,14 +266,14 @@ const ProductListsPage: React.FC = () => {
                               ${formatNumber(totals.gananciasNetas)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-2 py-2 text-center">
                             <Badge
                               bg={productList.status ? "success" : "secondary"}
                             >
                               {productList.status ? "Activo" : "Inactivo"}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2">
                             <ProductListActions
                               productList={productList}
                               onStatusChange={() => loadProductLists(false)}
@@ -288,7 +288,7 @@ const ProductListsPage: React.FC = () => {
 
               {/* Pagination */}
               {pagination.pages > 1 && (
-                <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+                <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
                   <div className="text-muted small">
                     Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                     {Math.min(

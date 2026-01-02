@@ -36,6 +36,10 @@ const orderPaymentSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
+  },
+  isAdvance: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,

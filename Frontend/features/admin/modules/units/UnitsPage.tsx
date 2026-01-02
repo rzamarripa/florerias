@@ -146,9 +146,9 @@ const UnitsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">Unidades de Medida</h2>
           <p className="text-muted mb-0">Gestiona las unidades de medida del catálogo</p>
@@ -164,9 +164,9 @@ const UnitsPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
-        <div className="card-body p-4">
-          <div className="row g-3">
+      <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
+        <div className="card-body p-2">
+          <div className="row g-2">
             <div className="col-md-6">
               <InputGroup>
                 <InputGroup.Text className="bg-light border-0">
@@ -199,7 +199,7 @@ const UnitsPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "15px" }}>
+      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
         <div className="card-body p-0">
           {loading ? (
             <div className="text-center py-5">
@@ -211,39 +211,39 @@ const UnitsPage: React.FC = () => {
               <Table hover className="mb-0">
                 <thead style={{ background: "#f8f9fa" }}>
                   <tr>
-                    <th className="px-4 py-3 fw-semibold text-muted">No.</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ABREVIATURA</th>
-                    <th className="px-4 py-3 fw-semibold text-muted">ESTATUS</th>
-                    <th className="px-4 py-3 fw-semibold text-muted text-center">ACCIONES</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">No.</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">ABREVIATURA</th>
+                    <th className="px-2 py-2 fw-semibold text-muted">ESTATUS</th>
+                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody>
                   {units.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-5 text-muted">
+                      <td colSpan={5} className="text-center py-4 text-muted">
                         No se encontraron unidades
                       </td>
                     </tr>
                   ) : (
                     units.map((unit, index) => (
                       <tr key={unit._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-4 py-3">{(pagination.page - 1) * pagination.limit + index + 1}</td>
-                        <td className="px-4 py-3 fw-semibold">{unit.name}</td>
-                        <td className="px-4 py-3">{unit.abbreviation}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">{(pagination.page - 1) * pagination.limit + index + 1}</td>
+                        <td className="px-2 py-2 fw-semibold">{unit.name}</td>
+                        <td className="px-2 py-2">{unit.abbreviation}</td>
+                        <td className="px-2 py-2">
                           <Badge
                             bg={unit.status ? "success" : "danger"}
                             style={{
-                              padding: "6px 12px",
-                              borderRadius: "20px",
+                              padding: "4px 10px",
+                              borderRadius: "12px",
                               fontWeight: "500",
                             }}
                           >
                             {unit.status ? "Activo" : "Inactivo"}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2 py-2">
                           <div className="d-flex justify-content-center gap-2">
                             <Button
                               variant="light"
@@ -277,7 +277,7 @@ const UnitsPage: React.FC = () => {
 
           {/* Pagination */}
           {!loading && units.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
               <p className="text-muted mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} unidades

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Table, Badge, Spinner, Form } from "react-bootstrap";
-import { X, Package, Calendar, MapPin, User, Save, Edit2, ArrowLeft } from "lucide-react";
+import { Modal, Button, Table, Badge, Spinner, Form, Row, Col } from "react-bootstrap";
+import { X, Package, Calendar, MapPin, User, Save, Edit2, ArrowLeft, Boxes, Archive } from "lucide-react";
 import { toast } from "react-toastify";
 import { Storage } from "../types";
 import { storageService } from "../services/storage";
@@ -64,7 +64,6 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
   const handleEnterEditMode = () => {
     if (!storage) return;
 
-    // Inicializar las cantidades editadas con las cantidades actuales
     const quantities: Record<string, number> = {};
     storage.products.forEach((item) => {
       const productId = typeof item.productId === "string" ? item.productId : item.productId._id;
@@ -97,7 +96,6 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
     try {
       setSaving(true);
 
-      // Identificar qué productos han cambiado
       const changedProducts: ProductQuantityEdit[] = [];
       storage.products.forEach((item) => {
         const productId = typeof item.productId === "string" ? item.productId : item.productId._id;
@@ -118,7 +116,6 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
         return;
       }
 
-      // Actualizar cada producto individualmente
       for (const change of changedProducts) {
         await storageService.updateProductQuantity(storage._id, {
           productId: change.productId,
@@ -131,7 +128,6 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
       setEditedQuantities({});
       onStorageUpdated();
 
-      // Recargar los detalles del almacén
       const response = await storageService.getStorageById(storage._id);
       setStorage(response.data);
     } catch (error: any) {
@@ -143,10 +139,10 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
   };
 
   const formatDate = (date: string | null) => {
-    if (!date) return "N/A";
+    if (!date) return "Sin registro";
     return new Date(date).toLocaleDateString("es-MX", {
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
@@ -162,9 +158,14 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
 
   const getProductUnit = (productItem: any) => {
     if (typeof productItem.productId === "string") {
-      return "";
+      return "-";
     }
-    return productItem.productId?.unidad || "";
+    const unidad = productItem.productId?.unidad;
+    // Si unidad es un ObjectId o string largo, mostrar solo "pieza" por defecto
+    if (!unidad || unidad.length > 20) {
+      return "pieza";
+    }
+    return unidad;
   };
 
   const getBranchName = () => {
@@ -175,7 +176,7 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
 
   const getManagerName = () => {
     if (!storage) return "";
-    if (!storage.warehouseManager) return "N/A";
+    if (!storage.warehouseManager) return "Sin asignar";
     if (typeof storage.warehouseManager === "string") return storage.warehouseManager;
     return storage.warehouseManager.profile?.fullName || storage.warehouseManager.username;
   };
@@ -208,13 +209,19 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
 
   const getMaterialUnit = (materialItem: any) => {
     if (typeof materialItem.materialId === "string") {
-      return "";
+      return "-";
     }
     const unit = materialItem.materialId?.unit;
-    if (typeof unit === "string") {
-      return unit;
+    if (!unit) return "-";
+    // Si unit es un objeto populado, obtener abbreviation o name
+    if (typeof unit === "object") {
+      return unit.abbreviation || unit.name || "-";
     }
-    return unit?.abbreviation || unit?.name || "";
+    // Si unit es un string (ObjectId), mostrar guión
+    if (typeof unit === "string" && unit.length > 10) {
+      return "-";
+    }
+    return unit;
   };
 
   const getProductId = (productItem: any): string => {
@@ -222,290 +229,253 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" centered>
-      <Modal.Header className="border-0 pb-0">
-        <div className="w-100">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h5 className="mb-1 fw-bold">Detalles del Almacén</h5>
-              <p className="text-muted mb-0">{getBranchName()}</p>
+    <Modal show={show} onHide={onHide} size="lg" centered>
+      {/* Header */}
+      <Modal.Header className="border-0 pb-2">
+        <div className="d-flex justify-content-between align-items-center w-100">
+          <div>
+            <h4 className="mb-1 fw-bold">{getBranchName()}</h4>
+            <div className="d-flex align-items-center gap-3">
+              <Badge
+                bg={storage?.isActive ? "success" : "danger"}
+                className="px-3 py-2"
+                style={{ fontSize: "0.85rem" }}
+              >
+                {storage?.isActive ? "Activo" : "Inactivo"}
+              </Badge>
+              <span className="text-muted" style={{ fontSize: "0.9rem" }}>
+                <User size={14} className="me-1" />
+                {getManagerName()}
+              </span>
             </div>
-            <Button variant="link" onClick={onHide} className="text-muted p-0">
-              <X size={24} />
-            </Button>
           </div>
+          <Button
+            variant="link"
+            onClick={onHide}
+            className="text-muted p-0"
+          >
+            <X size={24} />
+          </Button>
         </div>
       </Modal.Header>
 
-      <Modal.Body>
+      <Modal.Body className="p-0">
         {loading ? (
           <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="text-muted mt-3">Cargando detalles...</p>
+            <Spinner animation="border" variant="primary" size="sm" />
+            <p className="text-muted mt-2 mb-0">Cargando...</p>
           </div>
         ) : storage ? (
           <>
-            {/* Información General */}
-            <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
-              <div className="card-body p-4">
-                <h6 className="mb-3 fw-bold">Información General</h6>
-
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <div className="d-flex align-items-start">
-                      <MapPin size={20} className="text-primary me-2 mt-1" />
-                      <div>
-                        <small className="text-muted d-block">Sucursal</small>
-                        <span className="fw-semibold">{getBranchName()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <div className="d-flex align-items-start">
-                      <User size={20} className="text-primary me-2 mt-1" />
-                      <div>
-                        <small className="text-muted d-block">Gerente de Almacén</small>
-                        <span className="fw-semibold">{getManagerName()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <div className="d-flex align-items-start">
-                      <Calendar size={20} className="text-primary me-2 mt-1" />
-                      <div>
-                        <small className="text-muted d-block">Último Ingreso</small>
-                        <span className="fw-semibold">{formatDate(storage.lastIncome)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <div className="d-flex align-items-start">
-                      <Calendar size={20} className="text-primary me-2 mt-1" />
-                      <div>
-                        <small className="text-muted d-block">Último Egreso</small>
-                        <span className="fw-semibold">{formatDate(storage.lastOutcome)}</span>
-                      </div>
-                    </div>
-                  </div>
+            {/* Estadísticas compactas */}
+            <div className="d-flex border-bottom" style={{ background: "#f8f9fa" }}>
+              <div className="flex-fill text-center py-3 border-end">
+                <div className="d-flex align-items-center justify-content-center gap-2">
+                  <Package size={20} className="text-primary" />
+                  <span className="fs-4 fw-bold">{getTotalProducts()}</span>
                 </div>
-
-                {/* Dirección */}
-                {storage.address && (
-                  <div className="mt-3">
-                    <small className="text-muted d-block mb-1">Dirección</small>
-                    <p className="mb-0">
-                      {storage.address.street} #{storage.address.externalNumber}
-                      {storage.address.internalNumber ? ` Int. ${storage.address.internalNumber}` : ""}
-                      , {storage.address.neighborhood}, {storage.address.city}, {storage.address.state}{" "}
-                      C.P. {storage.address.postalCode}
-                    </p>
-                  </div>
-                )}
+                <small className="text-muted">Productos</small>
+              </div>
+              <div className="flex-fill text-center py-3 border-end">
+                <div className="d-flex align-items-center justify-content-center gap-2">
+                  <Boxes size={20} className="text-success" />
+                  <span className="fs-4 fw-bold">{getTotalQuantity()}</span>
+                </div>
+                <small className="text-muted">Unidades</small>
+              </div>
+              <div className="flex-fill text-center py-3 border-end">
+                <div className="d-flex align-items-center justify-content-center gap-2">
+                  <Archive size={20} className="text-warning" />
+                  <span className="fs-4 fw-bold">{getTotalMaterials()}</span>
+                </div>
+                <small className="text-muted">Materiales</small>
+              </div>
+              <div className="flex-fill text-center py-3">
+                <div className="d-flex align-items-center justify-content-center gap-2">
+                  <Archive size={20} className="text-info" />
+                  <span className="fs-4 fw-bold">{getTotalMaterialsQuantity()}</span>
+                </div>
+                <small className="text-muted">Uds. Mat.</small>
               </div>
             </div>
 
-            {/* Estadísticas */}
-            <div className="row mb-4">
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-                  <div className="card-body text-center p-4">
-                    <Package size={32} className="text-primary mb-2" />
-                    <h4 className="mb-0 fw-bold">{getTotalProducts()}</h4>
-                    <small className="text-muted">Productos</small>
-                  </div>
-                </div>
+            {/* Fechas compactas */}
+            <div className="d-flex border-bottom px-4 py-2" style={{ background: "#fff" }}>
+              <div className="flex-fill">
+                <small className="text-muted">
+                  <Calendar size={12} className="me-1" />
+                  Último ingreso: <strong>{formatDate(storage.lastIncome)}</strong>
+                </small>
               </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-                  <div className="card-body text-center p-4">
-                    <Package size={32} className="text-success mb-2" />
-                    <h4 className="mb-0 fw-bold">{getTotalQuantity()}</h4>
-                    <small className="text-muted">Cant. Productos</small>
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-                  <div className="card-body text-center p-4">
-                    <Package size={32} className="text-warning mb-2" />
-                    <h4 className="mb-0 fw-bold">{getTotalMaterials()}</h4>
-                    <small className="text-muted">Materiales</small>
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-                  <div className="card-body text-center p-4">
-                    <Badge
-                      bg={storage.isActive ? "success" : "danger"}
-                      className="fs-6 px-3 py-2"
-                      style={{ borderRadius: "20px" }}
-                    >
-                      {storage.isActive ? "Activo" : "Inactivo"}
-                    </Badge>
-                    <div className="mt-2">
-                      <small className="text-muted">Estado</small>
-                    </div>
-                  </div>
-                </div>
+              <div className="flex-fill text-end">
+                <small className="text-muted">
+                  <Calendar size={12} className="me-1" />
+                  Último egreso: <strong>{formatDate(storage.lastOutcome)}</strong>
+                </small>
               </div>
             </div>
 
             {/* Productos */}
-            <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h6 className="mb-0 fw-bold">Productos en Almacén</h6>
-                  {!editMode && storage.products.length > 0 && (
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={handleEnterEditMode}
-                      className="d-flex align-items-center gap-1"
-                    >
-                      <Edit2 size={16} />
-                      Editar Cantidades
-                    </Button>
-                  )}
-                </div>
-
-                {storage.products.length === 0 ? (
-                  <div className="text-center py-4 text-muted">
-                    <Package size={48} className="mb-3 opacity-50" />
-                    <p className="mb-0">No hay productos en este almacén</p>
-                  </div>
-                ) : (
-                  <div className="table-responsive">
-                    <Table hover className="mb-0">
-                      <thead style={{ background: "#f8f9fa" }}>
-                        <tr>
-                          <th className="px-3 py-3 fw-semibold text-muted">#</th>
-                          <th className="px-3 py-3 fw-semibold text-muted">PRODUCTO</th>
-                          <th className="px-3 py-3 fw-semibold text-muted">UNIDAD</th>
-                          <th className="px-3 py-3 fw-semibold text-muted text-end">CANTIDAD</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {storage.products.map((item, index) => {
-                          const productId = getProductId(item);
-                          return (
-                            <tr key={item._id}>
-                              <td className="px-3 py-3">{index + 1}</td>
-                              <td className="px-3 py-3 fw-semibold">{getProductName(item)}</td>
-                              <td className="px-3 py-3">
-                                <Badge bg="secondary">{getProductUnit(item)}</Badge>
-                              </td>
-                              <td className="px-3 py-3 text-end">
-                                {editMode ? (
-                                  <Form.Control
-                                    type="number"
-                                    min="0"
-                                    value={editedQuantities[productId] || 0}
-                                    onChange={(e) =>
-                                      handleQuantityChange(productId, parseInt(e.target.value) || 0)
-                                    }
-                                    size="sm"
-                                    style={{ width: "100px", display: "inline-block" }}
-                                  />
-                                ) : (
-                                  <Badge bg="primary" pill className="px-3">
-                                    {item.quantity}
-                                  </Badge>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-                  </div>
+            <div className="p-3">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <h6 className="mb-0 fw-bold" style={{ fontSize: "1.1rem" }}>
+                  <Package size={18} className="me-2 text-primary" />
+                  Productos
+                </h6>
+                {!editMode && storage.products.length > 0 && (
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={handleEnterEditMode}
+                    className="d-flex align-items-center gap-1"
+                  >
+                    <Edit2 size={14} />
+                    Editar
+                  </Button>
                 )}
               </div>
+
+              {storage.products.length === 0 ? (
+                <div className="text-center py-3 text-muted bg-light rounded">
+                  <Package size={32} className="mb-2 opacity-50" />
+                  <p className="mb-0">Sin productos</p>
+                </div>
+              ) : (
+                <div className="table-responsive" style={{ maxHeight: "250px", overflowY: "auto" }}>
+                  <Table size="sm" hover className="mb-0">
+                    <thead style={{ background: "#f1f3f5", position: "sticky", top: 0 }}>
+                      <tr>
+                        <th className="py-2 px-3" style={{ fontSize: "0.9rem" }}>Producto</th>
+                        <th className="py-2 px-2 text-center" style={{ fontSize: "0.9rem", width: "80px" }}>Unidad</th>
+                        <th className="py-2 px-3 text-end" style={{ fontSize: "0.9rem", width: "100px" }}>Cantidad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {storage.products.map((item) => {
+                        const productId = getProductId(item);
+                        return (
+                          <tr key={item._id}>
+                            <td className="py-2 px-3" style={{ fontSize: "0.95rem" }}>
+                              {getProductName(item)}
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              <Badge bg="light" text="dark" style={{ fontSize: "0.8rem" }}>
+                                {getProductUnit(item)}
+                              </Badge>
+                            </td>
+                            <td className="py-2 px-3 text-end">
+                              {editMode ? (
+                                <Form.Control
+                                  type="number"
+                                  min="0"
+                                  value={editedQuantities[productId] || 0}
+                                  onChange={(e) =>
+                                    handleQuantityChange(productId, parseInt(e.target.value) || 0)
+                                  }
+                                  size="sm"
+                                  style={{ width: "80px", display: "inline-block" }}
+                                />
+                              ) : (
+                                <span
+                                  className="fw-bold"
+                                  style={{
+                                    fontSize: "1rem",
+                                    color: item.quantity > 0 ? "#198754" : "#dc3545"
+                                  }}
+                                >
+                                  {item.quantity}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
             </div>
 
             {/* Materiales */}
-            <div className="card border-0 shadow-sm mt-4" style={{ borderRadius: "12px" }}>
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h6 className="mb-0 fw-bold">Materiales en Almacén</h6>
-                </div>
-
-                {!storage.materials || storage.materials.length === 0 ? (
-                  <div className="text-center py-4 text-muted">
-                    <Package size={48} className="mb-3 opacity-50" />
-                    <p className="mb-0">No hay materiales en este almacén</p>
-                  </div>
-                ) : (
-                  <div className="table-responsive">
-                    <Table hover className="mb-0">
-                      <thead style={{ background: "#f8f9fa" }}>
-                        <tr>
-                          <th className="px-3 py-3 fw-semibold text-muted">#</th>
-                          <th className="px-3 py-3 fw-semibold text-muted">MATERIAL</th>
-                          <th className="px-3 py-3 fw-semibold text-muted">UNIDAD</th>
-                          <th className="px-3 py-3 fw-semibold text-muted text-end">CANTIDAD</th>
+            {storage.materials && storage.materials.length > 0 && (
+              <div className="p-3 pt-0">
+                <h6 className="mb-2 fw-bold" style={{ fontSize: "1.1rem" }}>
+                  <Archive size={18} className="me-2 text-warning" />
+                  Materiales
+                </h6>
+                <div className="table-responsive" style={{ maxHeight: "200px", overflowY: "auto" }}>
+                  <Table size="sm" hover className="mb-0">
+                    <thead style={{ background: "#f1f3f5", position: "sticky", top: 0 }}>
+                      <tr>
+                        <th className="py-2 px-3" style={{ fontSize: "0.9rem" }}>Material</th>
+                        <th className="py-2 px-2 text-center" style={{ fontSize: "0.9rem", width: "80px" }}>Unidad</th>
+                        <th className="py-2 px-3 text-end" style={{ fontSize: "0.9rem", width: "100px" }}>Cantidad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {storage.materials.map((item) => (
+                        <tr key={item._id}>
+                          <td className="py-2 px-3" style={{ fontSize: "0.95rem" }}>
+                            {getMaterialName(item)}
+                          </td>
+                          <td className="py-2 px-2 text-center">
+                            <Badge bg="light" text="dark" style={{ fontSize: "0.8rem" }}>
+                              {getMaterialUnit(item)}
+                            </Badge>
+                          </td>
+                          <td className="py-2 px-3 text-end">
+                            <span
+                              className="fw-bold"
+                              style={{
+                                fontSize: "1rem",
+                                color: item.quantity > 0 ? "#fd7e14" : "#dc3545"
+                              }}
+                            >
+                              {item.quantity}
+                            </span>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {storage.materials.map((item, index) => (
-                          <tr key={item._id}>
-                            <td className="px-3 py-3">{index + 1}</td>
-                            <td className="px-3 py-3 fw-semibold">{getMaterialName(item)}</td>
-                            <td className="px-3 py-3">
-                              <Badge bg="secondary">{getMaterialUnit(item)}</Badge>
-                            </td>
-                            <td className="px-3 py-3 text-end">
-                              <Badge bg="warning" pill className="px-3">
-                                {item.quantity}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
-                )}
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
               </div>
-            </div>
+            )}
           </>
         ) : (
           <div className="text-center py-4 text-muted">
-            <p>No hay datos del almacén disponibles</p>
+            <p>No hay datos disponibles</p>
           </div>
         )}
       </Modal.Body>
 
-      <Modal.Footer className="border-0">
+      <Modal.Footer className="border-top py-2 px-3">
         <div className="d-flex justify-content-between w-100">
           <div>
             {fromOrder && (
               <Button
                 variant="outline-primary"
+                size="sm"
                 onClick={handleBackToOrder}
-                className="d-flex align-items-center gap-2"
+                className="d-flex align-items-center gap-1"
               >
-                <ArrowLeft size={18} />
-                Regresar a Orden
+                <ArrowLeft size={16} />
+                Volver a Orden
               </Button>
             )}
           </div>
           <div className="d-flex gap-2">
             {editMode ? (
               <>
-                <Button variant="secondary" onClick={handleCancelEdit} disabled={saving}>
+                <Button variant="outline-secondary" size="sm" onClick={handleCancelEdit} disabled={saving}>
                   Cancelar
                 </Button>
                 <Button
                   variant="primary"
+                  size="sm"
                   onClick={handleSaveChanges}
                   disabled={saving}
-                  className="d-flex align-items-center gap-2"
+                  className="d-flex align-items-center gap-1"
                 >
                   {saving ? (
                     <>
@@ -514,14 +484,14 @@ const ViewStorageModal: React.FC<ViewStorageModalProps> = ({
                     </>
                   ) : (
                     <>
-                      <Save size={18} />
-                      Guardar Cambios
+                      <Save size={16} />
+                      Guardar
                     </>
                   )}
                 </Button>
               </>
             ) : (
-              <Button variant="secondary" onClick={onHide}>
+              <Button variant="secondary" size="sm" onClick={onHide}>
                 Cerrar
               </Button>
             )}

@@ -29,9 +29,9 @@ const ExpensesPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-2">
       {/* Header */}
-      <div className="mb-4">
+      <div className="mb-2">
         <div className="d-flex justify-content-between align-items-start">
           <div>
             <h2 className="mb-1 fw-bold">Gastos</h2>
@@ -55,7 +55,7 @@ const ExpensesPage: React.FC = () => {
       {/* Tabs con Tablas */}
       <div
         className="card border-0 shadow-sm"
-        style={{ borderRadius: "15px" }}
+        style={{ borderRadius: "10px" }}
       >
         <div className="card-body p-0">
           {/* Header con pestañas */}

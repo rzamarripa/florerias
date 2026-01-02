@@ -1,5 +1,5 @@
 import PageBreadcrumb from "@/components/layout/PageBreadcrumb";
-import NewOrderPage from "@/features/branch/modules/orders/NewOrderPage";
+import NewOrderPage from "@/features/admin/modules/orders/NewOrderPage";
 
 export default function Page() {
   return (
