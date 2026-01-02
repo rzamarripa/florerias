@@ -40,6 +40,7 @@ export interface Company {
   branches?: string[];
   logoUrl?: string | null;
   logoPath?: string | null;
+  isFranchise?: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -85,6 +86,7 @@ export interface CreateCompanyData {
   };
   logoUrl?: string | null;
   logoPath?: string | null;
+  isFranchise?: boolean;
 }
 
 export interface Distributor {

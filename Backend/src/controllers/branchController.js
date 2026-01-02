@@ -17,6 +17,9 @@ export const createBranch = async (req, res) => {
       contactPhone,
       contactEmail,
       employees,
+      royaltiesPercentage,
+      advertisingBranchPercentage,
+      advertisingBrandPercentage,
     } = req.body;
 
 
@@ -146,6 +149,9 @@ export const createBranch = async (req, res) => {
       manager: finalManagerId,
       contactPhone,
       contactEmail,
+      royaltiesPercentage: royaltiesPercentage || 0,
+      advertisingBranchPercentage: advertisingBranchPercentage || 0,
+      advertisingBrandPercentage: advertisingBrandPercentage || 0,
       employees: employees || [],
     });
 
@@ -330,6 +336,9 @@ export const updateBranch = async (req, res) => {
       contactPhone,
       contactEmail,
       employees,
+      royaltiesPercentage,
+      advertisingBranchPercentage,
+      advertisingBrandPercentage,
     } = req.body;
 
     // Si se está actualizando el branchCode, verificar que no exista en otra sucursal
@@ -355,6 +364,9 @@ export const updateBranch = async (req, res) => {
     if (contactPhone) updateData.contactPhone = contactPhone;
     if (contactEmail) updateData.contactEmail = contactEmail;
     if (employees !== undefined) updateData.employees = employees;
+    if (royaltiesPercentage !== undefined) updateData.royaltiesPercentage = royaltiesPercentage;
+    if (advertisingBranchPercentage !== undefined) updateData.advertisingBranchPercentage = advertisingBranchPercentage;
+    if (advertisingBrandPercentage !== undefined) updateData.advertisingBrandPercentage = advertisingBrandPercentage;
 
     // Manejar actualización del gerente
     if (managerId !== undefined) {

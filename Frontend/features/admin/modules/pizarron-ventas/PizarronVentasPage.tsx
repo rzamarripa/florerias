@@ -97,6 +97,16 @@ const PizarronVentasPage: React.FC = () => {
     loadOrders();
   }, [searchTerm, productFilter, activeBranch]);
 
+  // Sincronizar selectedOrder con orders cuando se actualice
+  useEffect(() => {
+    if (selectedOrder) {
+      const updatedSelectedOrder = orders.find((o) => o && o._id === selectedOrder._id);
+      if (updatedSelectedOrder && updatedSelectedOrder !== selectedOrder) {
+        setSelectedOrder(updatedSelectedOrder);
+      }
+    }
+  }, [orders]);
+
   // Usar el hook especializado para escuchar cambios en órdenes
   useOrderSocket({
     onOrderCreated: (newOrder) => {
@@ -115,18 +125,37 @@ const PizarronVentasPage: React.FC = () => {
       console.log("📝 [PizarronVentas] Orden actualizada:", updatedOrder);
       if (!updatedOrder) return;
 
-      setOrders((prevOrders) =>
-        prevOrders.map((o) =>
+      setOrders((prevOrders) => {
+        const existingOrder = prevOrders.find((o) => o && o._id === updatedOrder._id);
+
+        // Si la orden fue cancelada, removerla del pizarrón
+        if (updatedOrder.status === "cancelado") {
+          if (existingOrder) {
+            toast.warning(`Orden cancelada: ${updatedOrder.orderNumber}`);
+          }
+          return prevOrders.filter((o) => o && o._id !== updatedOrder._id);
+        }
+
+        // Verificar si cambió el saldo pendiente (pago agregado o eliminado)
+        if (existingOrder && existingOrder.remainingBalance !== updatedOrder.remainingBalance) {
+          if (updatedOrder.remainingBalance < existingOrder.remainingBalance) {
+            toast.success(`Pago registrado para orden ${updatedOrder.orderNumber}`);
+          } else if (updatedOrder.remainingBalance > existingOrder.remainingBalance) {
+            toast.info(`Pago eliminado de orden ${updatedOrder.orderNumber}`);
+          }
+        }
+
+        return prevOrders.map((o) =>
           o && o._id === updatedOrder._id ? updatedOrder as Order : o
-        )
-      );
+        );
+      });
     },
     onOrderDeleted: (data: { orderId: string }) => {
       console.log("🗑️ [PizarronVentas] Orden eliminada:", data.orderId);
       setOrders((prevOrders) =>
         prevOrders.filter((o) => o && o._id !== data.orderId)
       );
-      toast.info("Una orden ha sido eliminada");
+      toast.error("Una orden ha sido eliminada");
     },
     filters: {
       status: ["pendiente", "en-proceso", "completado", "sinAnticipo"],

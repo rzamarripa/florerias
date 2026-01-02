@@ -71,5 +71,6 @@ export type MenuItemType = {
     target?: string
     isDisabled?: boolean
     isSpecial?: boolean
+    roleKey?: string
     children?: MenuItemType[]
 }

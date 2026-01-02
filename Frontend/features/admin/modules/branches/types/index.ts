@@ -53,6 +53,9 @@ export interface Branch {
   manager: Manager | string;
   contactPhone: string;
   contactEmail: string;
+  royaltiesPercentage?: number;
+  advertisingBranchPercentage?: number;
+  advertisingBrandPercentage?: number;
   employees: Employee[] | string[];
   isActive: boolean;
   createdAt: string;
@@ -91,6 +94,9 @@ export interface CreateBranchData {
   managerData?: ManagerData;
   contactPhone: string;
   contactEmail: string;
+  royaltiesPercentage?: number;
+  advertisingBranchPercentage?: number;
+  advertisingBrandPercentage?: number;
   employees?: string[];
   employeesData?: EmployeeData[];
 }

@@ -1,9 +1,10 @@
 "use client";
 
+import "./AppMenu.css";
 import { useLayoutContext } from "@/context/useLayoutContext";
 import { scrollToElement } from "@/helpers/layout";
 import { MenuItemType } from "@/types/layout";
-import { menuItems } from "@/config/constants";
+import { originalMenuItems } from "@/config/constants";
 import { useUserModulesStore } from "@/stores/userModulesStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import {
@@ -16,6 +17,13 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { Collapse } from "react-bootstrap";
 import { TbChevronDown } from "react-icons/tb";
+import {
+  ShieldUser,
+  UserCheck,
+  UserCog,
+  Truck,
+  Wallet,
+} from "lucide-react";
 
 const MenuItemWithChildren = ({
   item,
@@ -57,6 +65,9 @@ const MenuItemWithChildren = ({
   }, [isActive, isTopLevel, item.key, setOpenMenuKey, didAutoOpen]);
 
   const toggleOpen = () => {
+    // Si el item está deshabilitado, no hacer nada
+    if (item.isDisabled) return;
+    
     if (isTopLevel) {
       setOpenMenuKey(isOpen ? null : item.key);
     } else {
@@ -65,11 +76,12 @@ const MenuItemWithChildren = ({
   };
 
   return (
-    <li className={`side-nav-item ${isOpen ? "active" : ""}`}>
+    <li className={`side-nav-item ${isOpen ? "active" : ""} ${item.isDisabled ? "disabled" : ""}`}>
       <button
         onClick={toggleOpen}
-        className="side-nav-link"
+        className={`side-nav-link ${item.isDisabled ? "disabled opacity-50" : ""}`}
         aria-expanded={isOpen}
+        disabled={item.isDisabled}
       >
         {item.icon && (
           <span className="menu-icon">
@@ -87,7 +99,7 @@ const MenuItemWithChildren = ({
           </span>
         )}
       </button>
-      <Collapse in={isOpen}>
+      <Collapse in={isOpen && !item.isDisabled}>
         <div>
           <ul className="sub-menu">
             {(item.children || []).map((child) =>
@@ -150,56 +162,155 @@ const MenuItem = ({ item }: { item: MenuItemType }) => {
 const AppMenu = () => {
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
   const { allowedModules } = useUserModulesStore();
-  const { role } = useUserRoleStore();
+  const { role, getIsAdmin, getIsManager, getIsCashier, getIsSocialMedia, getIsDistributor } = useUserRoleStore();
 
-  // Filtrar elementos del menú según permisos
+  // Filtrar elementos del menú según permisos y roles
   const filteredMenuItems = useMemo(() => {
     const isAdmin = isSuperAdmin(role);
 
-    const filterMenuItem = (item: MenuItemType): MenuItemType | null => {
-      // Si es un título, siempre incluirlo
-      if (item.isTitle) {
-        return item;
-      }
-
-      // Si tiene children, filtrar recursivamente
-      if (item.children && item.children.length > 0) {
-        const filteredChildren = item.children
-          .map((child) => filterMenuItem(child))
-          .filter((child) => child !== null) as MenuItemType[];
-
-        // Solo mostrar el menú dropdown si tiene al menos un hijo visible
-        // Si después del filtrado no quedan children, NO mostrar este menú
-        if (filteredChildren.length === 0) {
-          return null;
-        }
-
-        return {
-          ...item,
-          children: filteredChildren,
-        };
-      }
-
-      // Si es un item con URL (página individual), verificar permisos
-      if (item.url) {
-        // Super Admin puede ver todas las páginas
-        if (isAdmin) {
+    // Si es Super Admin, usar el menú original con filtrado de permisos
+    if (isAdmin) {
+      const filterMenuItem = (item: MenuItemType): MenuItemType | null => {
+        // Si es un título, siempre incluirlo
+        if (item.isTitle) {
           return item;
         }
 
-        // Para otros usuarios, verificar permisos basados en módulos
-        const pagePath = getPagePathFromRoute(item.url);
-        return canAccessPage(allowedModules, pagePath) ? item : null;
-      }
+        // Si tiene children, filtrar recursivamente
+        if (item.children && item.children.length > 0) {
+          const filteredChildren = item.children
+            .map((child) => filterMenuItem(child))
+            .filter((child) => child !== null) as MenuItemType[];
 
-      // Si no tiene URL ni children, incluirlo (es un contenedor/separador)
-      return item;
+          // Solo mostrar el menú dropdown si tiene al menos un hijo visible
+          if (filteredChildren.length === 0) {
+            return null;
+          }
+
+          return {
+            ...item,
+            children: filteredChildren,
+          };
+        }
+
+        // Para Super Admin, todas las páginas están disponibles
+        return item;
+      };
+
+      return originalMenuItems
+        .map((item) => filterMenuItem(item))
+        .filter((item) => item !== null) as MenuItemType[];
+    }
+
+    // Para otros roles, construir menús dinámicamente basados en permisos reales
+    const buildRoleBasedMenus = (): MenuItemType[] => {
+      const result: MenuItemType[] = [];
+      
+      // Agregar título
+      result.push({ key: "menu", label: "Módulos", isTitle: true });
+
+      // Obtener todas las páginas del menú original para mapear permisos
+      const getAllMenuPages = (items: MenuItemType[]): MenuItemType[] => {
+        const pages: MenuItemType[] = [];
+        
+        const traverse = (item: MenuItemType) => {
+          if (item.url) {
+            pages.push(item);
+          }
+          if (item.children) {
+            item.children.forEach(traverse);
+          }
+        };
+        
+        items.forEach(traverse);
+        return pages;
+      };
+
+      const allPages = getAllMenuPages(originalMenuItems);
+      
+      // Filtrar páginas que el usuario puede ver
+      const accessiblePages = allPages.filter(page => {
+        if (!page.url) return false;
+        const pagePath = getPagePathFromRoute(page.url);
+        return canAccessPage(allowedModules, pagePath);
+      });
+
+      // Determinar el rol actual del usuario
+      let currentUserRole = '';
+      if (getIsDistributor()) currentUserRole = 'distribuidor';
+      else if (getIsAdmin()) currentUserRole = 'admin';
+      else if (getIsManager()) currentUserRole = 'gerente';
+      else if (getIsCashier()) currentUserRole = 'cajero';
+      else if (getIsSocialMedia()) currentUserRole = 'redes';
+
+      // Crear los módulos por rol - TODOS siempre visibles
+      const roleModules = [
+        {
+          key: "modulos-distribuidor",
+          label: "Módulos de Distribuidor",
+          icon: Truck,
+          roleKey: "distribuidor",
+          children: currentUserRole === 'distribuidor' ? accessiblePages.map(page => ({
+            ...page,
+            isDisabled: false,
+          })) : [],
+          isDisabled: currentUserRole !== 'distribuidor',
+        },
+        {
+          key: "modulos-administrador",
+          label: "Módulos de Administrador",
+          icon: ShieldUser,
+          roleKey: "admin",
+          children: currentUserRole === 'admin' ? accessiblePages.map(page => ({
+            ...page,
+            isDisabled: false,
+          })) : [],
+          isDisabled: currentUserRole !== 'admin',
+        },
+        {
+          key: "modulos-gerente",
+          label: "Módulos de Gerente",
+          icon: UserCog,
+          roleKey: "gerente",
+          children: currentUserRole === 'gerente' ? accessiblePages.map(page => ({
+            ...page,
+            isDisabled: false,
+          })) : [],
+          isDisabled: currentUserRole !== 'gerente',
+        },
+        {
+          key: "modulos-cajeros",
+          label: "Módulos de Cajeros",
+          icon: UserCheck,
+          roleKey: "cajero",
+          children: currentUserRole === 'cajero' ? accessiblePages.map(page => ({
+            ...page,
+            isDisabled: false,
+          })) : [],
+          isDisabled: currentUserRole !== 'cajero',
+        },
+        {
+          key: "modulos-redes",
+          label: "Módulos de Redes",
+          icon: Wallet,
+          roleKey: "redes",
+          children: currentUserRole === 'redes' ? accessiblePages.map(page => ({
+            ...page,
+            isDisabled: false,
+          })) : [],
+          isDisabled: currentUserRole !== 'redes',
+        },
+      ];
+
+      // Agregar todos los módulos al resultado
+      result.push(...roleModules);
+
+      return result;
     };
 
-    return menuItems
-      .map((item) => filterMenuItem(item))
-      .filter((item) => item !== null) as MenuItemType[];
-  }, [allowedModules, role]);
+    // Construir menús basados en permisos reales para usuarios no Super Admin
+    return buildRoleBasedMenus();
+  }, [allowedModules, role, getIsAdmin, getIsManager, getIsCashier, getIsSocialMedia, getIsDistributor]);
 
   const scrollToActiveLink = () => {
     const activeItem: HTMLAnchorElement | null = document.querySelector(

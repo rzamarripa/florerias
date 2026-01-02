@@ -136,7 +136,7 @@ const createSeedData = async () => {
       },
       {
         username: "juan.perez",
-        email: "juan.perez@floriSoft.com",
+        email: "juan.perez@floriSoft.c                                                                                                                                               om",
         phone: "555-0002",
         password: "User123!",
         profile: {

@@ -55,19 +55,26 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({
       startDate: filters.startDate,
       endDate: filters.endDate,
       branchId: filters.branchId,
-      status: ["pendiente", "en-proceso", "completado"],
+      status: ["pendiente", "en-proceso", "completado", "sinAnticipo"],
     },
     onOrderCreated: (newOrder) => {
+      console.log("🆕 [PendingPaymentsTable] Nueva orden recibida:", newOrder);
       // Solo agregar si tiene saldo pendiente
       if (newOrder.remainingBalance && newOrder.remainingBalance > 0) {
         setSales((prev) => {
           const exists = prev.some((s) => s._id === newOrder._id);
-          if (exists) return prev;
+          if (exists) {
+            console.log("⏭️ [PendingPaymentsTable] Orden ya existe");
+            return prev;
+          }
+          console.log("✅ [PendingPaymentsTable] Agregando nueva orden con saldo pendiente");
           return [newOrder as Sale, ...prev];
         });
         toast.info(
           `Nuevo pago pendiente: ${newOrder.orderNumber || newOrder._id}`
         );
+      } else {
+        console.log("⏭️ [PendingPaymentsTable] Orden sin saldo pendiente, ignorando");
       }
     },
     onOrderUpdated: (updatedOrder) => {
@@ -81,6 +88,7 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({
         if (shouldInclude) {
           const exists = prev.some((s) => s._id === updatedOrder._id);
           if (exists) {
+            toast.info(`Pago actualizado: ${updatedOrder.orderNumber}`);
             return prev.map((s) =>
               s._id === updatedOrder._id ? (updatedOrder as Sale) : s
             );
@@ -89,12 +97,31 @@ const PendingPaymentsTable: React.FC<PendingPaymentsTableProps> = ({
           }
         } else {
           // Si ya no tiene saldo pendiente O fue cancelada, remover
+          const removedSale = prev.find((s) => s._id === updatedOrder._id);
+          if (removedSale) {
+            if (updatedOrder.status === "cancelado") {
+              toast.warning(`Venta cancelada: ${updatedOrder.orderNumber}`);
+            } else if (updatedOrder.remainingBalance === 0) {
+              toast.success(`Pago completado: ${updatedOrder.orderNumber}`);
+            }
+          }
           return prev.filter((s) => s._id !== updatedOrder._id);
         }
       });
+
+      // Actualizar estadísticas después de cualquier cambio
+      onStatsUpdate?.();
     },
     onOrderDeleted: (data) => {
-      setSales((prev) => prev.filter((s) => s._id !== data.orderId));
+      console.log("🗑️ [PendingPaymentsTable] Orden eliminada:", data.orderId);
+      setSales((prev) => {
+        const deletedSale = prev.find((s) => s._id === data.orderId);
+        if (deletedSale) {
+          toast.error(`Venta eliminada: ${deletedSale.orderNumber}`);
+        }
+        return prev.filter((s) => s._id !== data.orderId);
+      });
+      onStatsUpdate?.();
     },
   });
 

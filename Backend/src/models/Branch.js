@@ -93,6 +93,24 @@ const branchSchema = new Schema(
         "El formato del email no es válido",
       ],
     },
+    royaltiesPercentage: {
+      type: Number,
+      min: [0, "El porcentaje de regalías debe ser mayor o igual a 0"],
+      max: [100, "El porcentaje de regalías debe ser menor o igual a 100"],
+      default: 0,
+    },
+    advertisingBranchPercentage: {
+      type: Number,
+      required: [true, "El porcentaje de publicidad de sucursal es requerido"],
+      min: [0, "El porcentaje de publicidad debe ser mayor o igual a 0"],
+      max: [100, "El porcentaje de publicidad debe ser menor o igual a 100"],
+    },
+    advertisingBrandPercentage: {
+      type: Number,
+      required: [true, "El porcentaje de publicidad de marca es requerido"],
+      min: [0, "El porcentaje de publicidad debe ser mayor o igual a 0"],
+      max: [100, "El porcentaje de publicidad debe ser menor o igual a 100"],
+    },
     employees: [
       {
         type: Schema.Types.ObjectId,

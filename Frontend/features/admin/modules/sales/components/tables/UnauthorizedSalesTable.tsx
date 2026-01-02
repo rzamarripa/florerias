@@ -58,17 +58,92 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
       branchId: filters.branchId,
     },
     onOrderCreated: (newOrder) => {
-      // Si la nueva orden tiene descuento pendiente de autorización, agregarla
-      // Esto se puede verificar cuando el backend retorne información adicional
-      loadSales();
+      console.log("🆕 [UnauthorizedSalesTable] Nueva orden recibida:", newOrder);
+
+      // Solo agregar si la orden tiene descuento > 0
+      // Las órdenes con descuento automáticamente tendrán un DiscountAuth creado en el backend
+      if (newOrder.discount && newOrder.discount > 0) {
+        setSales((prev) => {
+          const exists = prev.some((s) => s._id === newOrder._id);
+          if (exists) {
+            console.log("⏭️ [UnauthorizedSalesTable] Orden ya existe en la tabla");
+            return prev;
+          }
+
+          console.log("✅ [UnauthorizedSalesTable] Agregando nueva orden con descuento");
+          toast.info(`Nueva venta con descuento por autorizar: ${newOrder.orderNumber || newOrder._id}`);
+          return [newOrder as Sale, ...prev];
+        });
+      } else {
+        console.log("⏭️ [UnauthorizedSalesTable] Orden sin descuento, ignorando");
+      }
     },
     onOrderUpdated: (updatedOrder) => {
-      // Recargar la lista cuando se actualice una orden
-      // (podría haber sido autorizada o rechazada)
-      loadSales();
+      console.log("📝 [UnauthorizedSalesTable] Orden actualizada:", updatedOrder);
+
+      setSales((prev) => {
+        // Buscar si la orden ya existe en la tabla
+        const existingIndex = prev.findIndex((s) => s._id === updatedOrder._id);
+        const orderHasDiscount = updatedOrder.discount && updatedOrder.discount > 0;
+
+        // Verificar si la orden fue cancelada
+        if (updatedOrder.status === "cancelado" && existingIndex !== -1) {
+          console.log("❌ [UnauthorizedSalesTable] Orden cancelada - Removiendo de la tabla");
+          toast.warning(`Venta cancelada: ${updatedOrder.orderNumber}`);
+          onStatsUpdate?.();
+          return prev.filter((s) => s._id !== updatedOrder._id);
+        }
+
+        // Verificar si el descuento ya fue canjeado (orden enviada a producción)
+        // Cuando se canjea un folio, la orden se marca como sendToProduction = true
+        const discountWasRedeemed = updatedOrder.sendToProduction === true;
+
+        // Si el descuento fue canjeado, remover la orden de la tabla
+        if (discountWasRedeemed && existingIndex !== -1) {
+          console.log("✅ [UnauthorizedSalesTable] Descuento canjeado - Removiendo orden de la tabla");
+          toast.success(`Descuento de orden ${updatedOrder.orderNumber} autorizado y canjeado`);
+          onStatsUpdate?.(); // Actualizar estadísticas
+          return prev.filter((s) => s._id !== updatedOrder._id);
+        }
+
+        if (orderHasDiscount && !discountWasRedeemed) {
+          // Si tiene descuento Y NO ha sido canjeado, actualizar o agregar
+          if (existingIndex !== -1) {
+            console.log("🔄 [UnauthorizedSalesTable] Actualizando orden existente");
+            toast.info(`Descuento actualizado: ${updatedOrder.orderNumber}`);
+            const newSales = [...prev];
+            newSales[existingIndex] = updatedOrder as Sale;
+            return newSales;
+          } else {
+            console.log("➕ [UnauthorizedSalesTable] Agregando orden actualizada con descuento");
+            return [updatedOrder as Sale, ...prev];
+          }
+        } else if (!orderHasDiscount) {
+          // Si ya no tiene descuento, removerla si existe
+          if (existingIndex !== -1) {
+            console.log("➖ [UnauthorizedSalesTable] Removiendo orden (ya no tiene descuento)");
+            toast.info(`Descuento removido de orden ${updatedOrder.orderNumber}`);
+            return prev.filter((s) => s._id !== updatedOrder._id);
+          }
+          return prev;
+        }
+
+        return prev;
+      });
+
+      // Actualizar estadísticas
+      onStatsUpdate?.();
     },
     onOrderDeleted: (data) => {
-      setSales((prev) => prev.filter((s) => s._id !== data.orderId));
+      console.log("🗑️ [UnauthorizedSalesTable] Orden eliminada:", data.orderId);
+      setSales((prev) => {
+        const deletedSale = prev.find((s) => s._id === data.orderId);
+        if (deletedSale) {
+          toast.error(`Venta eliminada: ${deletedSale.orderNumber}`);
+        }
+        return prev.filter((s) => s._id !== data.orderId);
+      });
+      onStatsUpdate?.();
     },
   });
 

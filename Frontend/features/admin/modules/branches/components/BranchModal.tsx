@@ -14,6 +14,7 @@ interface Company {
   _id: string;
   legalName: string;
   rfc: string;
+  isFranchise?: boolean;
 }
 
 interface BranchModalProps {
@@ -62,6 +63,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
     },
     contactPhone: "",
     contactEmail: "",
+    royaltiesPercentage: 0,
+    advertisingBranchPercentage: 0,
+    advertisingBrandPercentage: 0,
   });
 
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -119,6 +123,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
               },
           contactPhone: branch.contactPhone,
           contactEmail: branch.contactEmail,
+          royaltiesPercentage: branch.royaltiesPercentage || 0,
+          advertisingBranchPercentage: branch.advertisingBranchPercentage || 0,
+          advertisingBrandPercentage: branch.advertisingBrandPercentage || 0,
         });
       } else {
         // Al crear una nueva sucursal, establecer companyId desde userCompany
@@ -201,6 +208,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
       },
       contactPhone: "",
       contactEmail: "",
+      royaltiesPercentage: 0,
+      advertisingBranchPercentage: 0,
+      advertisingBrandPercentage: 0,
     });
     setError(null);
   };
@@ -317,6 +327,25 @@ const BranchModal: React.FC<BranchModalProps> = ({
       return false;
     }
 
+    // Validar porcentajes de publicidad (siempre requeridos)
+    if (formData.advertisingBranchPercentage === undefined || formData.advertisingBranchPercentage < 0 || formData.advertisingBranchPercentage > 100) {
+      setError("El porcentaje de publicidad de sucursal debe estar entre 0 y 100");
+      return false;
+    }
+
+    if (formData.advertisingBrandPercentage === undefined || formData.advertisingBrandPercentage < 0 || formData.advertisingBrandPercentage > 100) {
+      setError("El porcentaje de publicidad de marca debe estar entre 0 y 100");
+      return false;
+    }
+
+    // Validar porcentaje de regalías si es franquicia
+    if (userCompany?.isFranchise) {
+      if (formData.royaltiesPercentage === undefined || formData.royaltiesPercentage < 0 || formData.royaltiesPercentage > 100) {
+        setError("El porcentaje de regalías debe estar entre 0 y 100");
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -338,6 +367,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
         address: formData.address,
         contactPhone: formData.contactPhone,
         contactEmail: formData.contactEmail,
+        royaltiesPercentage: formData.royaltiesPercentage,
+        advertisingBranchPercentage: formData.advertisingBranchPercentage,
+        advertisingBrandPercentage: formData.advertisingBrandPercentage,
       };
 
       // Si hay managerId, enviarlo
@@ -909,7 +941,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
 
             {/* Contacto Principal */}
             <h6 className="fw-semibold mb-3">Contacto Principal</h6>
-            <Row className="g-3">
+            <Row className="g-3 mb-4">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label>
@@ -940,6 +972,93 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     }
                     required
                   />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            {/* Porcentajes de Publicidad y Regalías */}
+            <h6 className="fw-semibold mb-3">Configuración de Porcentajes</h6>
+            <Row className="g-3">
+              {/* Porcentaje de Regalías - Solo si es franquicia */}
+              {userCompany?.isFranchise && (
+                <Col md={4}>
+                  <Form.Group>
+                    <Form.Label>
+                      Porcentaje de Regalías (%) <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.royaltiesPercentage}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        if (value >= 0 && value <= 100) {
+                          setFormData({ ...formData, royaltiesPercentage: value });
+                        }
+                      }}
+                      required={userCompany?.isFranchise}
+                    />
+                    <Form.Text className="text-muted">
+                      Porcentaje de regalías para la franquicia
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              )}
+              
+              {/* Porcentaje de Publicidad de Sucursal */}
+              <Col md={userCompany?.isFranchise ? 4 : 6}>
+                <Form.Group>
+                  <Form.Label>
+                    Publicidad de Sucursal (%) <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.advertisingBranchPercentage}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      if (value >= 0 && value <= 100) {
+                        setFormData({ ...formData, advertisingBranchPercentage: value });
+                      }
+                    }}
+                    required
+                  />
+                  <Form.Text className="text-muted">
+                    Porcentaje destinado a publicidad de la sucursal
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+
+              {/* Porcentaje de Publicidad de Marca */}
+              <Col md={userCompany?.isFranchise ? 4 : 6}>
+                <Form.Group>
+                  <Form.Label>
+                    Publicidad de Marca (%) <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.advertisingBrandPercentage}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      if (value >= 0 && value <= 100) {
+                        setFormData({ ...formData, advertisingBrandPercentage: value });
+                      }
+                    }}
+                    required
+                  />
+                  <Form.Text className="text-muted">
+                    Porcentaje destinado a publicidad de la marca
+                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>

@@ -4,6 +4,7 @@ import CashRegister from '../models/CashRegister.js';
 import PaymentMethod from '../models/PaymentMethod.js';
 import orderLogService from '../services/orderLogService.js';
 import mongoose from 'mongoose';
+import { emitOrderUpdated } from '../sockets/orderSocket.js';
 
 // Crear un nuevo pago para una orden
 export const createOrderPayment = async (req, res) => {
@@ -125,6 +126,27 @@ export const createOrderPayment = async (req, res) => {
     } catch (logError) {
       console.error('Error al crear log de pago:', logError);
     }
+
+    // Obtener la orden actualizada con todas las referencias pobladas para emitir el socket
+    const updatedOrder = await Order.findById(orderId)
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashRegisterId', 'name isOpen currentBalance')
+      .populate('cashier', 'name email')
+      .populate('items.productId', 'nombre imagen')
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      });
+
+    // Emitir evento de socket para notificar a otros usuarios
+    emitOrderUpdated(updatedOrder);
 
     res.status(201).json({
       message: 'Pago registrado exitosamente',
@@ -259,6 +281,27 @@ export const deleteOrderPayment = async (req, res) => {
     } catch (logError) {
       console.error('Error al crear log de pago eliminado:', logError);
     }
+
+    // Obtener la orden actualizada con todas las referencias pobladas para emitir el socket
+    const updatedOrder = await Order.findById(payment.orderId)
+      .populate('branchId', 'branchName branchCode')
+      .populate('cashRegisterId', 'name isOpen currentBalance')
+      .populate('cashier', 'name email')
+      .populate('items.productId', 'nombre imagen')
+      .populate('clientInfo.clientId', 'name lastName phoneNumber email')
+      .populate('paymentMethod', 'name abbreviation')
+      .populate('deliveryData.neighborhoodId', 'name priceDelivery')
+      .populate('stage', 'name abreviation stageNumber color boardType')
+      .populate({
+        path: 'payments',
+        populate: [
+          { path: 'paymentMethod', select: 'name abbreviation' },
+          { path: 'registeredBy', select: 'name email' }
+        ]
+      });
+
+    // Emitir evento de socket para notificar a otros usuarios
+    emitOrderUpdated(updatedOrder);
 
     res.status(200).json({
       message: 'Pago eliminado exitosamente',

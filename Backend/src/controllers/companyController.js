@@ -16,6 +16,7 @@ export const createCompany = async (req, res) => {
       administratorId,
       administratorData,
       redesIds,
+      isFranchise,
     } = req.body;
 
     // Verificar si ya existe una empresa con el mismo RFC
@@ -150,6 +151,7 @@ export const createCompany = async (req, res) => {
       administrator: finalAdministratorId,
       distributor: req.user._id,
       redes: validatedRedesIds,
+      isFranchise: isFranchise || false,
     });
 
     // Popular el distribuidor, administrador y redes para la respuesta
@@ -378,6 +380,7 @@ export const updateCompany = async (req, res) => {
       administratorId,
       administratorData,
       redesIds,
+      isFranchise,
     } = req.body;
 
     // Si se está actualizando el RFC, verificar que no exista en otra empresa
@@ -402,6 +405,7 @@ export const updateCompany = async (req, res) => {
     if (legalForm) updateData.legalForm = legalForm;
     if (fiscalAddress) updateData.fiscalAddress = fiscalAddress;
     if (primaryContact) updateData.primaryContact = primaryContact;
+    if (isFranchise !== undefined) updateData.isFranchise = isFranchise;
 
     // Manejar actualización de logo
     if (req.body.logoUrl !== undefined) updateData.logoUrl = req.body.logoUrl;
@@ -959,6 +963,7 @@ export const getMyCompany = async (req, res) => {
 
     // Buscar la empresa donde el usuario autenticado es el administrador
     const company = await Company.findOne({ administrator: req.user._id })
+      .select("+isFranchise") // Asegurar que se incluya el campo isFranchise
       .populate("branches", "branchName branchCode address isActive")
       .populate("administrator", "username email phone profile")
       .populate("distributor", "username email profile");

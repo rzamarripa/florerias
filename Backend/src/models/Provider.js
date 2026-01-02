@@ -99,7 +99,7 @@ providerSchema.pre("save", function (next) {
 // Índices para búsquedas rápidas
 providerSchema.index({ tradeName: 1 });
 providerSchema.index({ legalName: 1 });
-providerSchema.index({ rfc: 1 });
+// rfc ya tiene índice único definido en el campo
 providerSchema.index({ isActive: 1 });
 providerSchema.index({ company: 1 });
 

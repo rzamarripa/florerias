@@ -54,6 +54,7 @@ const NewCompanyPage: React.FC = () => {
         lastName: "",
       },
     },
+    isFranchise: false,
   });
 
   const [distributors, setDistributors] = useState<Distributor[]>([]);
@@ -121,6 +122,7 @@ const NewCompanyPage: React.FC = () => {
                 lastName: "",
               },
             },
+        isFranchise: company.isFranchise || false,
       });
     } catch (err: any) {
       toast.error(err.message || "Error al cargar la empresa");
@@ -335,6 +337,7 @@ const NewCompanyPage: React.FC = () => {
         legalForm: formData.legalForm,
         fiscalAddress: formData.fiscalAddress,
         primaryContact: formData.primaryContact,
+        isFranchise: formData.isFranchise || false,
       };
 
       // Usar el administratorId final (puede ser el existente o el recién creado)
@@ -531,7 +534,7 @@ const NewCompanyPage: React.FC = () => {
               </Col>
 
               {/* Logo de la Empresa */}
-              <Col md={12}>
+              <Col md={8}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">
                     <Upload size={16} className="me-2" />
@@ -555,6 +558,25 @@ const NewCompanyPage: React.FC = () => {
                   )}
                   <Form.Text className="text-muted d-block">
                     Formatos aceptados: JPG, PNG, SVG. Tamaño recomendado: 500x500px
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+
+              {/* Checkbox de Franquicia */}
+              <Col md={4}>
+                <Form.Group className="mt-4">
+                  <Form.Check 
+                    type="checkbox"
+                    id="isFranchise"
+                    label="Es Franquicia"
+                    checked={formData.isFranchise || false}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isFranchise: e.target.checked })
+                    }
+                    className="fw-semibold"
+                  />
+                  <Form.Text className="text-muted d-block">
+                    Marcar si esta empresa es una franquicia
                   </Form.Text>
                 </Form.Group>
               </Col>

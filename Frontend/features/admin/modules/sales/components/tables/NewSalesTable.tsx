@@ -55,13 +55,18 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
       startDate: filters.startDate,
       endDate: filters.endDate,
       branchId: filters.branchId,
-      status: ["pendiente", "en-proceso", "completado"], // Excluir canceladas
+      status: ["pendiente", "en-proceso", "completado", "sinAnticipo"], // Excluir canceladas
     },
     onOrderCreated: (newOrder) => {
+      console.log("🆕 [NewSalesTable] Nueva orden recibida:", newOrder);
       // Agregar la nueva orden al inicio de la lista
       setSales((prev) => {
         const exists = prev.some((s) => s._id === newOrder._id);
-        if (exists) return prev;
+        if (exists) {
+          console.log("⏭️ [NewSalesTable] Orden ya existe");
+          return prev;
+        }
+        console.log("✅ [NewSalesTable] Agregando nueva orden");
         return [newOrder as Sale, ...prev];
       });
       toast.info(`Nueva venta: ${newOrder.orderNumber || newOrder._id}`);
@@ -73,12 +78,14 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
           "pendiente",
           "en-proceso",
           "completado",
+          "sinAnticipo",
         ].includes(updatedOrder.status);
 
         if (shouldInclude) {
           // Actualizar o agregar
           const exists = prev.some((s) => s._id === updatedOrder._id);
           if (exists) {
+            toast.info(`Venta actualizada: ${updatedOrder.orderNumber}`);
             return prev.map((s) =>
               s._id === updatedOrder._id ? (updatedOrder as Sale) : s
             );
@@ -87,22 +94,27 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
           }
         } else {
           // Remover si cambió a un estado que no debe estar aquí (ej: cancelado)
-          const removed = prev.filter((s) => s._id !== updatedOrder._id);
-          // Solo mostrar notificación si realmente se removió algo
-          if (
-            removed.length < prev.length &&
-            updatedOrder.status === "cancelado"
-          ) {
-            console.log(
-              `Venta ${updatedOrder.orderNumber} removida de Nuevas Ventas (cancelada)`
-            );
+          const removedSale = prev.find((s) => s._id === updatedOrder._id);
+          if (removedSale && updatedOrder.status === "cancelado") {
+            toast.warning(`Venta cancelada: ${updatedOrder.orderNumber}`);
           }
-          return removed;
+          return prev.filter((s) => s._id !== updatedOrder._id);
         }
       });
+
+      // Actualizar estadísticas después de cualquier cambio
+      onStatsUpdate?.();
     },
     onOrderDeleted: (data) => {
-      setSales((prev) => prev.filter((s) => s._id !== data.orderId));
+      console.log("🗑️ [NewSalesTable] Orden eliminada:", data.orderId);
+      setSales((prev) => {
+        const deletedSale = prev.find((s) => s._id === data.orderId);
+        if (deletedSale) {
+          toast.error(`Venta eliminada: ${deletedSale.orderNumber}`);
+        }
+        return prev.filter((s) => s._id !== data.orderId);
+      });
+      onStatsUpdate?.();
     },
   });
 

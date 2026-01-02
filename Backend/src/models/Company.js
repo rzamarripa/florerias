@@ -119,6 +119,10 @@ const companySchema = new Schema(
       trim: true,
       default: null,
     },
+    isFranchise: {
+      type: Boolean,
+      default: false,
+    },
     isActive: {
       type: Boolean,
       default: true,
