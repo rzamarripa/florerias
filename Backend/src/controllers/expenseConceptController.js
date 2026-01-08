@@ -6,7 +6,7 @@ import { Company } from "../models/Company.js";
 // Crear nuevo concepto de gasto
 export const createExpenseConcept = async (req, res) => {
   try {
-    const { name, description, department, branch } = req.body;
+    const { name, description, department, branch: branchId } = req.body;
 
     // Verificar que el usuario esté autenticado
     if (!req.user || !req.user._id) {
@@ -28,8 +28,32 @@ export const createExpenseConcept = async (req, res) => {
 
     const userRole = currentUser.role.name;
 
+    // Determinar la sucursal según el rol
+    let finalBranchId = branchId;
+
+    if (userRole === "Gerente") {
+      // Para Gerente, buscar su sucursal automáticamente
+      const managerBranch = await Branch.findOne({ manager: req.user._id });
+      if (managerBranch) {
+        finalBranchId = managerBranch._id;
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró una sucursal asignada al gerente",
+        });
+      }
+    } else if (userRole === "Administrador") {
+      // Para Administrador, debe venir el branchId
+      if (!finalBranchId) {
+        return res.status(400).json({
+          success: false,
+          message: "Debe especificar una sucursal",
+        });
+      }
+    }
+
     // Verificar que la sucursal existe
-    const branchExists = await Branch.findById(branch);
+    const branchExists = await Branch.findById(finalBranchId);
     if (!branchExists) {
       return res.status(404).json({
         success: false,
@@ -110,7 +134,7 @@ export const createExpenseConcept = async (req, res) => {
       name,
       description,
       department,
-      branch,
+      branch: finalBranchId,
       company: companyId,
     });
 

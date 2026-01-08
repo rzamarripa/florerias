@@ -23,6 +23,9 @@ import { materialsService } from "../materials/services/materials";
 import { Material } from "../materials/types";
 import DesgloseModal from "./components/DesgloseModal";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { branchesService } from "../branches/services/branches";
+import { Branch } from "../branches/types";
 
 const NewProductListPage: React.FC = () => {
   const router = useRouter();
@@ -30,6 +33,9 @@ const NewProductListPage: React.FC = () => {
   const productListId = params?.id as string;
   const isEditing = !!productListId;
   const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
+  const isManager = hasRole("Gerente");
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
 
   const [formData, setFormData] = useState<CreateProductListData>({
     name: "",
@@ -53,6 +59,7 @@ const NewProductListPage: React.FC = () => {
   const [desgloseProduct, setDesgloseProduct] = useState<
     (Product & { cantidad: number }) | null
   >(null);
+  const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
 
   // Función para formatear números con separación de miles
   const formatNumber = (num: number): string => {
@@ -68,11 +75,14 @@ const NewProductListPage: React.FC = () => {
     loadUserCompany();
     loadMaterials();
 
-    // Establecer la sucursal activa del store
-    if (activeBranch) {
+    // Si es gerente, cargar su sucursal asignada
+    if (isManager) {
+      loadManagerBranch();
+    } else if (isAdmin && activeBranch) {
+      // Si es admin, usar la sucursal activa del store
       setFormData((prev) => ({ ...prev, branch: activeBranch._id }));
     }
-  }, [activeBranch]);
+  }, [isManager, isAdmin, activeBranch]);
 
   // Cargar lista de productos si estamos editando
   useEffect(() => {
@@ -120,6 +130,25 @@ const NewProductListPage: React.FC = () => {
       if (!err.message?.includes("no tiene una empresa asignada")) {
         toast.error(err.message || "Error al cargar la empresa del usuario");
       }
+    }
+  };
+
+  const loadManagerBranch = async () => {
+    try {
+      // Obtener las sucursales del gerente (debería ser solo una)
+      const response = await branchesService.getUserBranches();
+      
+      if (response.success && response.data && response.data.length > 0) {
+        const branch = response.data[0]; // El gerente solo debe tener una sucursal
+        setManagerBranch(branch);
+        setFormData((prev) => ({ ...prev, branch: branch._id }));
+        console.log("🔍 [ProductList] Sucursal del gerente cargada:", branch.branchName);
+      } else {
+        toast.error("No se encontró una sucursal asignada para el gerente");
+      }
+    } catch (err: any) {
+      console.error("Error al cargar sucursal del gerente:", err);
+      toast.error(err.message || "Error al cargar la sucursal del gerente");
     }
   };
 
@@ -246,9 +275,14 @@ const NewProductListPage: React.FC = () => {
     setError(null);
 
     try {
-      if (!activeBranch) {
+      // Validar que hay una sucursal seleccionada
+      const branchToUse = isManager ? managerBranch : activeBranch;
+      
+      if (!branchToUse) {
         throw new Error(
-          "No hay sucursal activa seleccionada. Por favor, selecciona una sucursal desde el selector de sucursales."
+          isManager 
+            ? "No se encontró una sucursal asignada para el gerente."
+            : "No hay sucursal activa seleccionada. Por favor, selecciona una sucursal desde el selector de sucursales."
         );
       }
 
@@ -330,11 +364,18 @@ const NewProductListPage: React.FC = () => {
 
   return (
     <div className="new-product-list-page">
-      {!activeBranch && (
+      {!isManager && !activeBranch && (
         <Alert variant="warning" className="mb-3">
           <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
           Por favor, selecciona una sucursal desde el selector de sucursales en
           la parte superior para poder crear una lista de productos.
+        </Alert>
+      )}
+
+      {isManager && !managerBranch && (
+        <Alert variant="warning" className="mb-3">
+          <strong>⚠️ Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
+          Por favor, contacta al administrador.
         </Alert>
       )}
 
@@ -423,15 +464,18 @@ const NewProductListPage: React.FC = () => {
                   <Form.Control
                     type="text"
                     value={
-                      activeBranch?.branchName || "No hay sucursal seleccionada"
+                      isManager 
+                        ? (managerBranch?.branchName || "Cargando sucursal...")
+                        : (activeBranch?.branchName || "No hay sucursal seleccionada")
                     }
                     disabled
                     readOnly
                     className="py-2"
                   />
                   <Form.Text className="text-muted">
-                    Sucursal activa actual. Puede haber múltiples listas por
-                    sucursal, pero solo una estará activa
+                    {isManager 
+                      ? "Sucursal asignada a tu usuario gerente"
+                      : "Sucursal activa actual. Puede haber múltiples listas por sucursal, pero solo una estará activa"}
                   </Form.Text>
                 </Form.Group>
               </Col>

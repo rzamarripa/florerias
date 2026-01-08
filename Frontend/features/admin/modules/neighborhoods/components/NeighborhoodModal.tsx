@@ -67,11 +67,15 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
         branchId: neighborhood.branch?._id || "",
       });
     } else {
+      // Para nuevas colonias, siempre usar la sucursal activa si existe
+      // o la primera sucursal si solo hay una disponible
+      const defaultBranchId = activeBranch?._id || (branches.length === 1 ? branches[0]._id : "");
+      
       setFormData({
         name: "",
         priceDelivery: "",
         status: "active",
-        branchId: activeBranch?._id || (branches.length === 1 ? branches[0]._id : ""),
+        branchId: defaultBranchId,
       });
     }
   }, [neighborhood, show, activeBranch, branches]);
@@ -96,9 +100,21 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
       return;
     }
 
-    if (!formData.branchId && !neighborhood) {
-      toast.error("Por favor selecciona una sucursal");
-      return;
+    // Para nuevas colonias, determinar el branchId
+    let finalBranchId = formData.branchId;
+    
+    if (!neighborhood) {
+      // Si es Gerente, el backend se encargará de asignar la sucursal
+      if (isGerente) {
+        finalBranchId = ""; // El backend lo manejará
+      } else if (!finalBranchId && activeBranch) {
+        // Si es Administrador y tiene sucursal activa, usarla
+        finalBranchId = activeBranch._id;
+      } else if (!finalBranchId) {
+        // Solo mostrar error si no hay sucursal y no es Gerente
+        toast.error("Por favor selecciona una sucursal");
+        return;
+      }
     }
 
     const priceValue = parseFloat(formData.priceDelivery);
@@ -134,7 +150,7 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
           name: formData.name,
           priceDelivery: priceValue,
           status: formData.status,
-          branchId: formData.branchId,
+          branchId: finalBranchId,
         };
 
         const response = await neighborhoodsService.createNeighborhood(createData);

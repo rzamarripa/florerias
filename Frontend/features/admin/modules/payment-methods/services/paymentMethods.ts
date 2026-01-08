@@ -9,7 +9,7 @@ import {
 
 export const paymentMethodsService = {
   getAllPaymentMethods: async (filters: PaymentMethodFilters = {}): Promise<GetPaymentMethodsResponse> => {
-    const { page = 1, limit = 1000, name, status } = filters;
+    const { page = 1, limit = 1000, name, status, branchId } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -18,6 +18,7 @@ export const paymentMethodsService = {
 
     if (name) searchParams.append('name', name);
     if (status !== undefined) searchParams.append('status', status.toString());
+    if (branchId) searchParams.append('branchId', branchId);
 
     const response = await apiCall<GetPaymentMethodsResponse>(`/payment-methods?${searchParams}`);
     return response;

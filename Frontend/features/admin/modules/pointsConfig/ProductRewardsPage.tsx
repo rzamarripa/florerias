@@ -33,7 +33,10 @@ import { pointsRewardService } from "./services/pointsReward";
 import { PointsReward, CreatePointsRewardData, UpdatePointsRewardData } from "./types";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 import PointsRewardModal from "./components/PointsRewardModal";
+import { branchesService } from "../branches/services/branches";
+import { Branch } from "../branches/types";
 
 interface ProductWithStock {
   _id: string;
@@ -59,11 +62,16 @@ const ProductRewardsPage: React.FC = () => {
   const router = useRouter();
   const { user } = useUserSessionStore();
   const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
+  const isManager = hasRole("Gerente");
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
 
   const [storage, setStorage] = useState<Storage | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [existingProductRewards, setExistingProductRewards] = useState<PointsReward[]>([]);
+  const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
+  const [currentBranchId, setCurrentBranchId] = useState<string | null>(null);
 
   // Modal para crear recompensa de producto
   const [showModal, setShowModal] = useState(false);
@@ -82,25 +90,57 @@ const ProductRewardsPage: React.FC = () => {
   const [selectedReward, setSelectedReward] = useState<PointsReward | null>(null);
   const [editModalLoading, setEditModalLoading] = useState(false);
 
-  useEffect(() => {
-    if (activeBranch?._id) {
-      loadStorageAndRewards();
+  // Cargar sucursal del gerente si aplica
+  const loadManagerBranch = async () => {
+    try {
+      const response = await branchesService.getUserBranches();
+      if (response.success && response.data && response.data.length > 0) {
+        const branch = response.data[0]; // El gerente solo debe tener una sucursal
+        setManagerBranch(branch);
+        setCurrentBranchId(branch._id);
+        console.log("🔍 [ProductRewards] Sucursal del gerente cargada:", branch.branchName);
+        return branch._id;
+      } else {
+        toast.error("No se encontró una sucursal asignada para el gerente");
+        return null;
+      }
+    } catch (error: any) {
+      console.error("Error al cargar sucursal del gerente:", error);
+      toast.error(error.message || "Error al cargar la sucursal del gerente");
+      return null;
     }
-  }, [activeBranch]);
+  };
 
-  const loadStorageAndRewards = async () => {
-    if (!activeBranch?._id) return;
+  useEffect(() => {
+    const initializeBranch = async () => {
+      if (isManager) {
+        const branchId = await loadManagerBranch();
+        if (branchId) {
+          loadStorageAndRewards(branchId);
+        }
+      } else if (isAdmin && activeBranch?._id) {
+        setCurrentBranchId(activeBranch._id);
+        loadStorageAndRewards(activeBranch._id);
+      }
+    };
+
+    initializeBranch();
+  }, [isManager, isAdmin, activeBranch]);
+
+  const loadStorageAndRewards = async (branchId?: string) => {
+    const targetBranchId = branchId || currentBranchId;
+    if (!targetBranchId) return;
 
     setLoading(true);
     try {
       // Cargar storage de la sucursal
-      const storageResponse = await storageService.getStorageByBranch(activeBranch._id);
+      const storageResponse = await storageService.getStorageByBranch(targetBranchId);
       if (storageResponse.data) {
         setStorage(storageResponse.data);
       }
 
       // Cargar recompensas existentes de tipo producto (isProducto = true)
-      const rewardsResponse = await pointsRewardService.getPointsRewardsByBranch(activeBranch._id);
+      const rewardsResponse = await pointsRewardService.getPointsRewardsByBranch(targetBranchId);
       const productRewards = rewardsResponse.data.filter(
         (reward) => reward.isProducto === true
       );
@@ -147,7 +187,19 @@ const ProductRewardsPage: React.FC = () => {
   };
 
   const handleCreateReward = async () => {
-    if (!selectedProduct || !activeBranch?._id) return;
+    if (!selectedProduct) return;
+
+    // Validar que hay una sucursal disponible
+    const branchToUse = isManager ? managerBranch?._id : currentBranchId;
+    
+    if (!branchToUse) {
+      toast.error(
+        isManager 
+          ? "No se encontró una sucursal asignada para el gerente"
+          : "No se ha seleccionado una sucursal"
+      );
+      return;
+    }
 
     if (formData.pointsRequired < 1) {
       toast.error("Los puntos requeridos deben ser al menos 1");
@@ -173,7 +225,7 @@ const ProductRewardsPage: React.FC = () => {
         isPercentage: false,
         maxRedemptionsPerClient: formData.maxRedemptionsPerClient,
         maxTotalRedemptions: formData.maxTotalRedemptions,
-        branch: activeBranch._id,
+        branch: branchToUse,
         status: formData.status,
       };
 
@@ -323,6 +375,22 @@ const ProductRewardsPage: React.FC = () => {
 
   return (
     <div className="product-rewards-page">
+      {/* Mensajes de advertencia para sucursal */}
+      {!isManager && !activeBranch && (
+        <div className="alert alert-warning mb-3">
+          <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
+          Por favor, selecciona una sucursal desde el selector de sucursales en
+          la parte superior para poder configurar productos como recompensa.
+        </div>
+      )}
+
+      {isManager && !managerBranch && (
+        <div className="alert alert-warning mb-3">
+          <strong>⚠️ Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
+          Por favor, contacta al administrador.
+        </div>
+      )}
+
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center gap-3">
@@ -338,7 +406,9 @@ const ProductRewardsPage: React.FC = () => {
           <div>
             <h5 className="mb-0">Productos como Recompensa</h5>
             <small className="text-muted">
-              {activeBranch?.branchName || "Sucursal"}
+              {isManager 
+                ? (managerBranch?.branchName || "Cargando sucursal...")
+                : (activeBranch?.branchName || "Sucursal")}
             </small>
           </div>
         </div>
@@ -438,8 +508,8 @@ const ProductRewardsPage: React.FC = () => {
                     className={`product-card border-0 shadow-sm h-100 overflow-hidden ${
                       isReward ? "reward-configured" : ""
                     }`}
-                    style={{ cursor: isReward ? "default" : "pointer" }}
-                    onClick={() => !isReward && handleProductClick(item)}
+                    style={{ cursor: isReward || (!isManager && !currentBranchId) || (isManager && !managerBranch) ? "default" : "pointer" }}
+                    onClick={() => !isReward && (isManager ? managerBranch : currentBranchId) && handleProductClick(item)}
                   >
                     {/* Product Image */}
                     <div className="position-relative">
@@ -496,7 +566,7 @@ const ProductRewardsPage: React.FC = () => {
                       </div>
 
                       {/* Quick Add Button */}
-                      {!isReward && (
+                      {!isReward && (isManager ? managerBranch : currentBranchId) && (
                         <div
                           className="add-reward-btn position-absolute d-flex align-items-center justify-content-center"
                           style={{

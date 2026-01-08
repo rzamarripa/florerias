@@ -42,6 +42,8 @@ import discountAuthRoutes from "./discountAuthRoutes.js";
 import pointsConfigRoutes from "./pointsConfigRoutes.js";
 import pointsRewardRoutes from "./pointsRewardRoutes.js";
 import loyaltyRoutes from "./loyaltyRoutes.js";
+import companySalesRoutes from "./companySalesRoutes.js";
+import passwordResetRoutes from "./passwordResetRoutes.js";
 
 const router = Router();
 
@@ -87,5 +89,7 @@ router.use("/discount-auth", discountAuthRoutes);
 router.use("/points-config", pointsConfigRoutes);
 router.use("/points-rewards", pointsRewardRoutes);
 router.use("/loyalty", loyaltyRoutes);
+router.use("/company-sales", companySalesRoutes);
+router.use("/password-reset", passwordResetRoutes);
 
 export default router;

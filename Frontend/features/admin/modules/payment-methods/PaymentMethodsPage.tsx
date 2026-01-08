@@ -6,6 +6,8 @@ import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-re
 import { toast } from "react-toastify";
 import { paymentMethodsService } from "./services/paymentMethods";
 import { PaymentMethod, PaymentMethodFilters, CreatePaymentMethodData } from "./types";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 const PaymentMethodsPage: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -25,6 +27,10 @@ const PaymentMethodsPage: React.FC = () => {
     total: 0,
     pages: 0,
   });
+
+  const { user } = useUserSessionStore();
+  const { activeBranch } = useActiveBranchStore();
+  const isGerente = user?.role?.name === "Gerente";
 
   const loadPaymentMethods = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -110,10 +116,27 @@ const PaymentMethodsPage: React.FC = () => {
 
     try {
       if (editingPaymentMethod) {
-        await paymentMethodsService.updatePaymentMethod(editingPaymentMethod._id, formData);
+        // En edición no se envía branch
+        const { branch, ...updateData } = formData;
+        await paymentMethodsService.updatePaymentMethod(editingPaymentMethod._id, updateData);
         toast.success("Método de pago actualizado exitosamente");
       } else {
-        await paymentMethodsService.createPaymentMethod(formData);
+        // Para nuevos métodos de pago, determinar la sucursal
+        let finalData = { ...formData };
+        
+        if (isGerente) {
+          // Para Gerente, el backend obtendrá la sucursal automáticamente
+          delete finalData.branch;
+        } else if (activeBranch) {
+          // Para Administrador, usar la sucursal activa
+          finalData.branch = activeBranch._id;
+        } else {
+          // Solo mostrar error si es Administrador sin sucursal
+          toast.error("Por favor selecciona una sucursal");
+          return;
+        }
+
+        await paymentMethodsService.createPaymentMethod(finalData);
         toast.success("Método de pago creado exitosamente");
       }
       handleCloseModal();

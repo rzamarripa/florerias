@@ -8,7 +8,6 @@ import { toast } from "react-toastify";
 import { X } from "lucide-react";
 import { expenseConceptSchema, ExpenseConceptFormData } from "../schemas/expenseConceptSchema";
 import { expenseConceptsService } from "../services/expenseConcepts";
-import { branchesService } from "../../branches/services/branches";
 import { ExpenseConcept } from "../types";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
@@ -37,9 +36,9 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
   concept,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [branchId, setBranchId] = useState<string | null>(null);
   const { user } = useUserSessionStore();
   const { activeBranch } = useActiveBranchStore();
+  const isGerente = user?.role?.name === "Gerente";
 
   const {
     control,
@@ -52,70 +51,60 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
       name: "",
       description: "",
       department: "sales",
-      branch: "",
     },
   });
 
-  // Determinar el branchId según el rol del usuario
+  // Reset del formulario cuando se abre el modal
+
   useEffect(() => {
-    const determineBranchId = async () => {
-      if (!user) return;
-
-      const userRole = user.role?.name;
-
-      if (userRole === "Administrador") {
-        if (activeBranch) {
-          setBranchId(activeBranch._id);
-        }
-      } else if (userRole === "Gerente") {
-        try {
-          const response = await branchesService.getAllBranches({ limit: 1000 });
-          const managerBranch = response.data.find(
-            (branch) => branch.manager === user._id
-          );
-          if (managerBranch) {
-            setBranchId(managerBranch._id);
-          }
-        } catch (error: any) {
-          console.error("Error fetching manager branch:", error);
-        }
-      }
-    };
-
     if (show) {
-      determineBranchId();
-    }
-  }, [show, user, activeBranch]);
-
-  useEffect(() => {
-    if (show && branchId) {
       if (concept) {
         reset({
           name: concept.name,
           description: concept.description || "",
           department: concept.department,
-          branch: concept.branch._id,
         });
       } else {
         reset({
           name: "",
           description: "",
           department: "sales",
-          branch: branchId,
         });
       }
     }
-  }, [show, concept, branchId, reset]);
+  }, [show, concept, reset]);
 
   const onSubmit = async (data: ExpenseConceptFormData) => {
     try {
       setLoading(true);
 
+      // Determinar la sucursal según el rol
+      let finalData = { ...data };
+      
+      if (!concept) {
+        // Para nuevos conceptos, determinar la sucursal
+        if (isGerente) {
+          // Para Gerente, el backend obtendrá la sucursal automáticamente
+          // Enviamos un string vacío o no enviamos nada
+          delete finalData.branch;
+        } else if (activeBranch) {
+          // Para Administrador, usar la sucursal activa
+          finalData.branch = activeBranch._id;
+        } else {
+          // Solo mostrar error si es Administrador sin sucursal
+          toast.error("Por favor selecciona una sucursal");
+          setLoading(false);
+          return;
+        }
+      }
+
       if (concept) {
-        await expenseConceptsService.updateExpenseConcept(concept._id, data);
+        // En edición no se envía branch
+        const { branch, ...updateData } = finalData;
+        await expenseConceptsService.updateExpenseConcept(concept._id, updateData);
         toast.success("Concepto actualizado exitosamente");
       } else {
-        await expenseConceptsService.createExpenseConcept(data);
+        await expenseConceptsService.createExpenseConcept(finalData);
         toast.success("Concepto creado exitosamente");
       }
 
@@ -238,6 +227,7 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
                 )}
               </Form.Group>
             </Col>
+
           </Row>
 
           <div className="d-flex justify-content-end gap-2 mt-4">

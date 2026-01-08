@@ -8,6 +8,10 @@ import { stageCatalogsService } from "./services/stageCatalogs";
 import { StageCatalog, RGBColor } from "./types";
 import StageCatalogActions from "./components/StageCatalogActions";
 import StageCatalogModal from "./components/StageCatalogModal";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { branchesService } from "../branches/services/branches";
+import { Branch } from "../branches/types";
 
 const StageCatalogsPage: React.FC = () => {
   const [stages, setStages] = useState<StageCatalog[]>([]);
@@ -15,12 +19,47 @@ const StageCatalogsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedStage, setSelectedStage] = useState<StageCatalog | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
     total: 0,
     pages: 0,
   });
+  
+  const { hasRole } = useUserRoleStore();
+  const { activeBranch } = useActiveBranchStore();
+  const isManager = hasRole("Gerente");
+  const isAdmin = hasRole("Administrador") || hasRole("Admin") || hasRole("Super Admin");
+
+  // Cargar sucursal del gerente si aplica
+  const loadManagerBranch = async () => {
+    try {
+      const response = await branchesService.getUserBranches();
+      if (response.success && response.data && response.data.length > 0) {
+        const branch = response.data[0]; // El gerente solo debe tener una sucursal
+        setManagerBranch(branch);
+        setBranchId(branch._id);
+        console.log("🔍 [StageCatalogs] Sucursal del gerente cargada:", branch.branchName);
+      } else {
+        toast.error("No se encontró una sucursal asignada para el gerente");
+      }
+    } catch (error: any) {
+      console.error("Error al cargar sucursal del gerente:", error);
+      toast.error(error.message || "Error al cargar la sucursal del gerente");
+    }
+  };
+
+  // Determinar el branchId según el rol del usuario
+  useEffect(() => {
+    if (isManager) {
+      loadManagerBranch();
+    } else if (isAdmin && activeBranch) {
+      setBranchId(activeBranch._id);
+      console.log("🔍 [StageCatalogs] Usando sucursal activa del admin:", activeBranch.branchName);
+    }
+  }, [isManager, isAdmin, activeBranch]);
 
   const loadStages = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -95,16 +134,24 @@ const StageCatalogsPage: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">Catálogo de Etapas</h2>
-          <p className="text-muted mb-0">Gestiona las etapas de tu empresa</p>
+          <p className="text-muted mb-0">
+            Gestiona las etapas de tu empresa
+            {isManager && managerBranch && (
+              <span className="ms-2 badge bg-info">Sucursal: {managerBranch.branchName}</span>
+            )}
+          </p>
         </div>
-        <Button
-          variant="primary"
-          onClick={handleNewStage}
-          className="d-flex align-items-center gap-2 px-4"
-        >
-          <Plus size={20} />
-          Nueva Etapa
-        </Button>
+        {/* Mostrar botón de nueva etapa para Admin y Gerente */}
+        {(isAdmin || isManager) && (
+          <Button
+            variant="primary"
+            onClick={handleNewStage}
+            className="d-flex align-items-center gap-2 px-4"
+          >
+            <Plus size={20} />
+            Nueva Etapa
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -245,11 +292,17 @@ const StageCatalogsPage: React.FC = () => {
                           </Badge>
                         </td>
                         <td className="px-2 py-2">
-                          <StageCatalogActions
-                            stage={stage}
-                            onEdit={handleEditStage}
-                            onStageUpdated={handleStageUpdated}
-                          />
+                          {(isAdmin || isManager) ? (
+                            <StageCatalogActions
+                              stage={stage}
+                              onEdit={handleEditStage}
+                              onStageUpdated={handleStageUpdated}
+                            />
+                          ) : (
+                            <div className="text-center">
+                              <span className="text-muted">-</span>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))

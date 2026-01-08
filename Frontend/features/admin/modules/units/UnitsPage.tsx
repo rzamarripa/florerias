@@ -6,6 +6,10 @@ import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-re
 import { toast } from "react-toastify";
 import { unitsService } from "./services/units";
 import { Unit, UnitFilters, CreateUnitData } from "./types";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { branchesService } from "../branches/services/branches";
+import { Branch } from "../branches/types";
 
 const UnitsPage: React.FC = () => {
   const [units, setUnits] = useState<Unit[]>([]);
@@ -19,12 +23,47 @@ const UnitsPage: React.FC = () => {
     abbreviation: "",
     status: true,
   });
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
     total: 0,
     pages: 0,
   });
+  
+  const { hasRole } = useUserRoleStore();
+  const { activeBranch } = useActiveBranchStore();
+  const isManager = hasRole("Gerente");
+  const isAdmin = hasRole("Administrador") || hasRole("Admin") || hasRole("Super Admin");
+
+  // Cargar sucursal del gerente si aplica
+  const loadManagerBranch = async () => {
+    try {
+      const response = await branchesService.getUserBranches();
+      if (response.success && response.data && response.data.length > 0) {
+        const branch = response.data[0]; // El gerente solo debe tener una sucursal
+        setManagerBranch(branch);
+        setBranchId(branch._id);
+        console.log("🔍 [Units] Sucursal del gerente cargada:", branch.branchName);
+      } else {
+        toast.error("No se encontró una sucursal asignada para el gerente");
+      }
+    } catch (error: any) {
+      console.error("Error al cargar sucursal del gerente:", error);
+      toast.error(error.message || "Error al cargar la sucursal del gerente");
+    }
+  };
+
+  // Determinar el branchId según el rol del usuario
+  useEffect(() => {
+    if (isManager) {
+      loadManagerBranch();
+    } else if (isAdmin && activeBranch) {
+      setBranchId(activeBranch._id);
+      console.log("🔍 [Units] Usando sucursal activa del admin:", activeBranch.branchName);
+    }
+  }, [isManager, isAdmin, activeBranch]);
 
   const loadUnits = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -108,12 +147,24 @@ const UnitsPage: React.FC = () => {
       return;
     }
 
+    // Para gerentes, verificar que tienen una sucursal asignada
+    if (isManager && !branchId) {
+      toast.error("No se encontró una sucursal asignada para el gerente");
+      return;
+    }
+
     try {
+      const dataToSend = {
+        ...formData,
+        // Si es gerente, agregar el branchId
+        ...(isManager && branchId ? { branchId } : {})
+      };
+
       if (editingUnit) {
-        await unitsService.updateUnit(editingUnit._id, formData);
+        await unitsService.updateUnit(editingUnit._id, dataToSend);
         toast.success("Unidad actualizada exitosamente");
       } else {
-        await unitsService.createUnit(formData);
+        await unitsService.createUnit(dataToSend);
         toast.success("Unidad creada exitosamente");
       }
       handleCloseModal();
@@ -151,16 +202,24 @@ const UnitsPage: React.FC = () => {
       <div className="d-flex justify-content-between align-items-center mb-2">
         <div>
           <h2 className="mb-1 fw-bold">Unidades de Medida</h2>
-          <p className="text-muted mb-0">Gestiona las unidades de medida del catálogo</p>
+          <p className="text-muted mb-0">
+            Gestiona las unidades de medida del catálogo
+            {isManager && managerBranch && (
+              <span className="ms-2 badge bg-info">Sucursal: {managerBranch.branchName}</span>
+            )}
+          </p>
         </div>
-        <Button
-          variant="primary"
-          onClick={handleNewUnit}
-          className="d-flex align-items-center gap-2 px-4"
-        >
-          <Plus size={20} />
-          Nueva Unidad
-        </Button>
+        {/* Mostrar botón de nueva unidad para Admin y Gerente */}
+        {(isAdmin || isManager) && (
+          <Button
+            variant="primary"
+            onClick={handleNewUnit}
+            className="d-flex align-items-center gap-2 px-4"
+          >
+            <Plus size={20} />
+            Nueva Unidad
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -245,26 +304,33 @@ const UnitsPage: React.FC = () => {
                         </td>
                         <td className="px-2 py-2">
                           <div className="d-flex justify-content-center gap-2">
-                            <Button
-                              variant="light"
-                              size="sm"
-                              onClick={() => handleEditUnit(unit)}
-                              className="border-0"
-                              style={{ borderRadius: "8px" }}
-                              title="Editar"
-                            >
-                              <Edit size={16} className="text-warning" />
-                            </Button>
-                            <Button
-                              variant="light"
-                              size="sm"
-                              onClick={() => handleDelete(unit._id)}
-                              className="border-0"
-                              style={{ borderRadius: "8px" }}
-                              title="Eliminar"
-                            >
-                              <Trash2 size={16} className="text-danger" />
-                            </Button>
+                            {(isAdmin || isManager) && (
+                              <>
+                                <Button
+                                  variant="light"
+                                  size="sm"
+                                  onClick={() => handleEditUnit(unit)}
+                                  className="border-0"
+                                  style={{ borderRadius: "8px" }}
+                                  title="Editar"
+                                >
+                                  <Edit size={16} className="text-warning" />
+                                </Button>
+                                <Button
+                                  variant="light"
+                                  size="sm"
+                                  onClick={() => handleDelete(unit._id)}
+                                  className="border-0"
+                                  style={{ borderRadius: "8px" }}
+                                  title="Eliminar"
+                                >
+                                  <Trash2 size={16} className="text-danger" />
+                                </Button>
+                              </>
+                            )}
+                            {!isAdmin && !isManager && (
+                              <span className="text-muted">-</span>
+                            )}
                           </div>
                         </td>
                       </tr>

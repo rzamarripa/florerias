@@ -21,7 +21,12 @@ export interface CreateExpenseConceptData {
   name: string;
   description?: string;
   department: "sales" | "administration" | "operations" | "marketing" | "finance" | "human_resources" | "other";
-  branch: string;
+  branch?: string; // Se puede enviar vacío para Gerente, el backend lo determina
 }
 
-export interface UpdateExpenseConceptData extends CreateExpenseConceptData {}
+export interface UpdateExpenseConceptData {
+  name: string;
+  description?: string;
+  department: "sales" | "administration" | "operations" | "marketing" | "finance" | "human_resources" | "other";
+  // No se actualiza la branch en edición
+}

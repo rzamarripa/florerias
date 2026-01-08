@@ -579,6 +579,18 @@ export const originalMenuItems: MenuItemType[] = [
         icon: Package,
         children: [
           {
+            key: "listado-produccion",
+            label: "Listado de Producción",
+            url: "/ventas/listado-produccion",
+            icon: ClipboardList,
+          },
+          {
+            key: "ventas-empresas",
+            label: "Ventas de Franquicias",
+            url: "/ventas/ventas-empresas",
+            icon: Building,
+          },
+          {
             key: "pizarron-produccion",
             label: "Pizarrón de Produccion",
             url: "/produccion/pizarron-ventas",
@@ -779,3 +791,31 @@ export const originalMenuItems: MenuItemType[] = [
 
 // Export por defecto para compatibilidad
 export const menuItems: MenuItemType[] = originalMenuItems;
+
+// Helper function para obtener el menú de un rol específico
+export const getRoleMenuConfig = (roleKey: string) => {
+  return roleBasedMenuItems.find(item => item.roleKey === roleKey);
+};
+
+// Helper function para normalizar nombre de rol a roleKey
+export const normalizeRoleToKey = (role: string | null): string | null => {
+  if (!role) return null;
+  
+  const normalizedRole = role.toLowerCase();
+  
+  if (normalizedRole === 'gerente' || normalizedRole === 'manager') {
+    return 'gerente';
+  } else if (normalizedRole === 'cajero' || normalizedRole === 'cashier') {
+    return 'cajero';
+  } else if (normalizedRole === 'distribuidor' || normalizedRole === 'distributor') {
+    return 'distribuidor';
+  } else if (normalizedRole === 'redes' || normalizedRole === 'social media') {
+    return 'redes';
+  } else if (normalizedRole === 'admin' || normalizedRole === 'administrador') {
+    return 'admin';
+  } else if (normalizedRole === 'super admin' || normalizedRole === 'superadmin') {
+    return 'superadmin';
+  }
+  
+  return null;
+};

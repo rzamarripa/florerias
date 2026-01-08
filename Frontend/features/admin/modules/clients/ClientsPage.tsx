@@ -11,7 +11,9 @@ import ClientModal from "./components/ClientModal";
 import ClientPointsDashboardModal from "./components/ClientPointsDashboardModal";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 import { branchesService } from "../branches/services/branches";
+import { Branch } from "../branches/types";
 
 const filterOptions: FilterOption[] = [
   { value: "name", label: "Nombre" },
@@ -32,6 +34,7 @@ const ClientsPage: React.FC = () => {
   const [showPointsModal, setShowPointsModal] = useState<boolean>(false);
   const [pointsClient, setPointsClient] = useState<Client | null>(null);
   const [branchId, setBranchId] = useState<string | null>(null);
+  const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
@@ -41,38 +44,37 @@ const ClientsPage: React.FC = () => {
   const router = useRouter();
   const { user } = useUserSessionStore();
   const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
+  const isManager = hasRole("Gerente");
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
+
+  // Cargar sucursal del gerente si aplica
+  const loadManagerBranch = async () => {
+    try {
+      const response = await branchesService.getUserBranches();
+      if (response.success && response.data && response.data.length > 0) {
+        const branch = response.data[0]; // El gerente solo debe tener una sucursal
+        setManagerBranch(branch);
+        setBranchId(branch._id);
+        console.log("🔍 [Clients] Sucursal del gerente cargada:", branch.branchName);
+      } else {
+        toast.error("No se encontró una sucursal asignada para el gerente");
+      }
+    } catch (error: any) {
+      console.error("Error al cargar sucursal del gerente:", error);
+      toast.error(error.message || "Error al cargar la sucursal del gerente");
+    }
+  };
 
   // Determinar el branchId según el rol del usuario
   useEffect(() => {
-    const determineBranchId = async () => {
-      if (!user) return;
-
-      const userRole = user.role?.name;
-
-      if (userRole === "Administrador") {
-        // Para Administrador, usar el activeBranch del store
-        if (activeBranch) {
-          setBranchId(activeBranch._id);
-        }
-      } else if (userRole === "Gerente") {
-        // Para Gerente, buscar su sucursal por el campo manager
-        try {
-          const response = await branchesService.getAllBranches({ limit: 1000 });
-          const managerBranch = response.data.find(
-            (branch) => branch.manager === user._id
-          );
-          if (managerBranch) {
-            setBranchId(managerBranch._id);
-          }
-        } catch (error: any) {
-          console.error("Error fetching manager branch:", error);
-          toast.error("Error al obtener la sucursal del gerente");
-        }
-      }
-    };
-
-    determineBranchId();
-  }, [user, activeBranch]);
+    if (isManager) {
+      loadManagerBranch();
+    } else if (isAdmin && activeBranch) {
+      setBranchId(activeBranch._id);
+      console.log("🔍 [Clients] Usando sucursal activa del admin:", activeBranch.branchName);
+    }
+  }, [isManager, isAdmin, activeBranch]);
 
   const loadClients = async (
     isInitial: boolean,
@@ -171,12 +173,19 @@ const ClientsPage: React.FC = () => {
         await clientsService.updateClient(selectedClient._id, data);
         toast.success("Cliente actualizado exitosamente");
       } else {
-        // Agregar el branchId al crear un nuevo cliente
-        if (!branchId) {
-          toast.error("No se ha seleccionado una sucursal");
+        // Validar que hay una sucursal disponible
+        const branchToUse = isManager ? managerBranch?._id : branchId;
+        
+        if (!branchToUse) {
+          toast.error(
+            isManager 
+              ? "No se encontró una sucursal asignada para el gerente"
+              : "No se ha seleccionado una sucursal"
+          );
           return;
         }
-        const clientData = { ...data, branch: branchId } as CreateClientData;
+        
+        const clientData = { ...data, branch: branchToUse } as CreateClientData;
         await clientsService.createClient(clientData);
         toast.success("Cliente creado exitosamente");
       }
@@ -231,6 +240,22 @@ const ClientsPage: React.FC = () => {
   return (
     <div className="row">
       <div className="col-12">
+        {/* Mensajes de advertencia para sucursal */}
+        {!isManager && !activeBranch && (
+          <div className="alert alert-warning mb-3">
+            <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
+            Por favor, selecciona una sucursal desde el selector de sucursales en
+            la parte superior para poder ver y crear clientes.
+          </div>
+        )}
+
+        {isManager && !managerBranch && (
+          <div className="alert alert-warning mb-3">
+            <strong>⚠️ Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
+            Por favor, contacta al administrador.
+          </div>
+        )}
+
         <div className="card">
           <div className="card-header border-light d-flex justify-content-between align-items-center py-2">
             <div className="d-flex gap-2">
@@ -282,6 +307,14 @@ const ClientsPage: React.FC = () => {
               variant="primary"
               onClick={handleCreateClient}
               className="d-flex align-items-center gap-2"
+              disabled={isManager ? !managerBranch : !branchId}
+              title={
+                isManager && !managerBranch 
+                  ? "No hay sucursal asignada"
+                  : !branchId 
+                  ? "Selecciona una sucursal primero"
+                  : ""
+              }
             >
               <Plus size={16} />
               Nuevo Cliente

@@ -29,7 +29,7 @@ export const createStageCatalog = async (req, res) => {
     const userRole = currentUser.role.name;
 
     // Verificar permisos según el rol
-    if (userRole !== "Super Admin" && userRole !== "Administrador") {
+    if (userRole !== "Super Admin" && userRole !== "Administrador" && userRole !== "Gerente") {
       return res.status(403).json({
         success: false,
         message: "No tienes permisos para crear etapas",
@@ -73,6 +73,33 @@ export const createStageCatalog = async (req, res) => {
 
       companyId = company._id;
       administratorId = req.user._id;
+    } else if (userRole === "Gerente") {
+      // Buscar la sucursal del gerente
+      const managerBranch = await Branch.findOne({
+        manager: req.user._id,
+      });
+
+      if (!managerBranch) {
+        return res.status(404).json({
+          success: false,
+          message: "No tienes una sucursal asignada",
+        });
+      }
+
+      // Buscar la empresa por el ID de la sucursal
+      const company = await Company.findOne({
+        branches: managerBranch._id,
+      });
+
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: "Tu sucursal no está asociada a ninguna empresa",
+        });
+      }
+
+      companyId = company._id;
+      administratorId = company.administrator; // Usar el administrador de la empresa
     }
 
     // Verificar que no exista una etapa con el mismo nombre, tipo de tablero en la empresa
@@ -185,6 +212,32 @@ export const getAllStageCatalogs = async (req, res) => {
         return res.status(403).json({
           success: false,
           message: "No tienes una empresa asignada",
+        });
+      }
+
+      filters.company = userCompany._id;
+    } else if (userRole === "Gerente") {
+      // Gerente solo ve etapas de su empresa
+      const managerBranch = await Branch.findOne({
+        manager: req.user._id,
+      });
+
+      if (!managerBranch) {
+        return res.status(403).json({
+          success: false,
+          message: "No tienes una sucursal asignada",
+        });
+      }
+
+      // Buscar la empresa por el ID de la sucursal
+      const userCompany = await Company.findOne({
+        branches: managerBranch._id,
+      });
+
+      if (!userCompany) {
+        return res.status(403).json({
+          success: false,
+          message: "Tu sucursal no está asociada a ninguna empresa",
         });
       }
 

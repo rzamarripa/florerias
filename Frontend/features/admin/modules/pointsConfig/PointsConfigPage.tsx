@@ -34,7 +34,9 @@ import PointsConfigModal from "./components/PointsConfigModal";
 import PointsRewardModal from "./components/PointsRewardModal";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 import { branchesService } from "../branches/services/branches";
+import { Branch } from "../branches/types";
 
 const PointsConfigPage: React.FC = () => {
   const router = useRouter();
@@ -47,8 +49,12 @@ const PointsConfigPage: React.FC = () => {
   const [selectedReward, setSelectedReward] = useState<PointsReward | null>(null);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
   const [branchId, setBranchId] = useState<string | null>(null);
+  const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
   const { user } = useUserSessionStore();
   const { activeBranch } = useActiveBranchStore();
+  const { hasRole } = useUserRoleStore();
+  const isManager = hasRole("Gerente");
+  const isAdmin = hasRole("Administrador") || hasRole("Admin");
 
   // Separar recompensas por tipo: productos (isProducto=true) vs otras
   const { productRewards, otherRewards } = useMemo(() => {
@@ -57,34 +63,33 @@ const PointsConfigPage: React.FC = () => {
     return { productRewards, otherRewards };
   }, [rewards]);
 
-  useEffect(() => {
-    const determineBranchId = async () => {
-      if (!user) return;
-
-      const userRole = user.role?.name;
-
-      if (userRole === "Administrador") {
-        if (activeBranch) {
-          setBranchId(activeBranch._id);
-        }
-      } else if (userRole === "Gerente") {
-        try {
-          const response = await branchesService.getAllBranches({ limit: 1000 });
-          const managerBranch = response.data.find(
-            (branch) => branch.manager === user._id
-          );
-          if (managerBranch) {
-            setBranchId(managerBranch._id);
-          }
-        } catch (error: any) {
-          console.error("Error fetching manager branch:", error);
-          toast.error("Error al obtener la sucursal del gerente");
-        }
+  // Cargar sucursal del gerente si aplica
+  const loadManagerBranch = async () => {
+    try {
+      const response = await branchesService.getUserBranches();
+      if (response.success && response.data && response.data.length > 0) {
+        const branch = response.data[0]; // El gerente solo debe tener una sucursal
+        setManagerBranch(branch);
+        setBranchId(branch._id);
+        console.log("🔍 [PointsConfig] Sucursal del gerente cargada:", branch.branchName);
+      } else {
+        toast.error("No se encontró una sucursal asignada para el gerente");
       }
-    };
+    } catch (error: any) {
+      console.error("Error al cargar sucursal del gerente:", error);
+      toast.error(error.message || "Error al cargar la sucursal del gerente");
+    }
+  };
 
-    determineBranchId();
-  }, [user, activeBranch]);
+  // Determinar el branchId según el rol del usuario
+  useEffect(() => {
+    if (isManager) {
+      loadManagerBranch();
+    } else if (isAdmin && activeBranch) {
+      setBranchId(activeBranch._id);
+      console.log("🔍 [PointsConfig] Usando sucursal activa del admin:", activeBranch.branchName);
+    }
+  }, [isManager, isAdmin, activeBranch]);
 
   const loadConfig = async () => {
     if (!branchId) return;
@@ -140,11 +145,19 @@ const PointsConfigPage: React.FC = () => {
         await pointsConfigService.updatePointsConfig(config._id, data);
         toast.success("Configuración actualizada exitosamente");
       } else {
-        if (!branchId) {
-          toast.error("No se ha seleccionado una sucursal");
+        // Validar que hay una sucursal disponible
+        const branchToUse = isManager ? managerBranch?._id : branchId;
+        
+        if (!branchToUse) {
+          toast.error(
+            isManager 
+              ? "No se encontró una sucursal asignada para el gerente"
+              : "No se ha seleccionado una sucursal"
+          );
           return;
         }
-        const configData = { ...data, branch: branchId } as CreatePointsConfigData;
+        
+        const configData = { ...data, branch: branchToUse } as CreatePointsConfigData;
         await pointsConfigService.createPointsConfig(configData);
         toast.success("Configuración creada exitosamente");
       }
@@ -174,11 +187,19 @@ const PointsConfigPage: React.FC = () => {
         await pointsRewardService.updatePointsReward(selectedReward._id, data);
         toast.success("Recompensa actualizada exitosamente");
       } else {
-        if (!branchId) {
-          toast.error("No se ha seleccionado una sucursal");
+        // Validar que hay una sucursal disponible
+        const branchToUse = isManager ? managerBranch?._id : branchId;
+        
+        if (!branchToUse) {
+          toast.error(
+            isManager 
+              ? "No se encontró una sucursal asignada para el gerente"
+              : "No se ha seleccionado una sucursal"
+          );
           return;
         }
-        const rewardData = { ...data, branch: branchId } as CreatePointsRewardData;
+        
+        const rewardData = { ...data, branch: branchToUse } as CreatePointsRewardData;
         await pointsRewardService.createPointsReward(rewardData);
         toast.success("Recompensa creada exitosamente");
       }
@@ -333,10 +354,30 @@ const PointsConfigPage: React.FC = () => {
 
   return (
     <div>
+      {/* Mensajes de advertencia para sucursal */}
+      {!isManager && !activeBranch && (
+        <div className="alert alert-warning mb-3">
+          <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
+          Por favor, selecciona una sucursal desde el selector de sucursales en
+          la parte superior para poder configurar puntos.
+        </div>
+      )}
+
+      {isManager && !managerBranch && (
+        <div className="alert alert-warning mb-3">
+          <strong>⚠️ Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
+          Por favor, contacta al administrador.
+        </div>
+      )}
+
       {/* Header con botón de configuración */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h5 className="mb-1">{activeBranch?.branchName || "Sucursal"}</h5>
+          <h5 className="mb-1">
+            {isManager 
+              ? (managerBranch?.branchName || "Cargando sucursal...")
+              : (activeBranch?.branchName || "Sucursal")}
+          </h5>
           <small className="text-muted">
             {config ? "Configuración activa" : "Sin configuración"}
           </small>
@@ -345,6 +386,14 @@ const PointsConfigPage: React.FC = () => {
           variant="primary"
           onClick={handleCreateOrEditConfig}
           className="d-flex align-items-center gap-2"
+          disabled={isManager ? !managerBranch : !branchId}
+          title={
+            isManager && !managerBranch 
+              ? "No hay sucursal asignada"
+              : !branchId 
+              ? "Selecciona una sucursal primero"
+              : ""
+          }
         >
           {config ? <Settings size={16} /> : <Plus size={16} />}
           {config ? "Editar Configuración" : "Nueva Configuración"}
@@ -372,6 +421,7 @@ const PointsConfigPage: React.FC = () => {
                 variant="primary"
                 onClick={handleCreateOrEditConfig}
                 className="d-flex align-items-center gap-2 mx-auto"
+                disabled={isManager ? !managerBranch : !branchId}
               >
                 <Plus size={16} />
                 Crear Configuración
@@ -462,6 +512,14 @@ const PointsConfigPage: React.FC = () => {
             size="sm"
             onClick={handleCreateReward}
             className="d-flex align-items-center gap-2"
+            disabled={isManager ? !managerBranch : !branchId}
+            title={
+              isManager && !managerBranch 
+                ? "No hay sucursal asignada"
+                : !branchId 
+                ? "Selecciona una sucursal primero"
+                : ""
+            }
           >
             <Plus size={14} />
             Nueva Recompensa
@@ -486,6 +544,7 @@ const PointsConfigPage: React.FC = () => {
                 variant="outline-primary"
                 onClick={handleCreateReward}
                 className="d-flex align-items-center gap-2 mx-auto"
+                disabled={isManager ? !managerBranch : !branchId}
               >
                 <Plus size={16} />
                 Crear Recompensa

@@ -17,6 +17,8 @@ import { ProductList, ProductListFilters } from "./types";
 import ProductListActions from "./components/ProductListActions";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { branchesService } from "../branches/services/branches";
+import { Branch } from "../branches/types";
 
 const ProductListsPage: React.FC = () => {
   const [productLists, setProductLists] = useState<ProductList[]>([]);
@@ -32,6 +34,8 @@ const ProductListsPage: React.FC = () => {
   const { activeBranch } = useActiveBranchStore();
   const { hasRole } = useUserRoleStore();
   const isAdmin = hasRole("Administrador") || hasRole("Admin");
+  const isManager = hasRole("Gerente");
+  const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
 
   // Función para formatear números con separación de miles
   const formatNumber = (num: number): string => {
@@ -59,12 +63,15 @@ const ProductListsPage: React.FC = () => {
         filters.name = searchTerm;
       }
 
-      // Si es admin y tiene sucursal activa, filtrar por esa sucursal
-      if (isAdmin && activeBranch) {
+      // Filtrar por sucursal según el rol
+      if (isManager && managerBranch) {
+        filters.branchId = managerBranch._id;
+        console.log("🔍 [ProductLists] Filtrando por sucursal del gerente:", managerBranch.branchName, managerBranch._id);
+      } else if (isAdmin && activeBranch) {
         filters.branchId = activeBranch._id;
-        console.log("🔍 [ProductLists] Filtrando por sucursal:", activeBranch.branchName, activeBranch._id);
+        console.log("🔍 [ProductLists] Filtrando por sucursal activa del admin:", activeBranch.branchName, activeBranch._id);
       } else {
-        console.log("🔍 [ProductLists] Sin filtro de sucursal - isAdmin:", isAdmin, "activeBranch:", activeBranch);
+        console.log("🔍 [ProductLists] Sin filtro de sucursal - isAdmin:", isAdmin, "isManager:", isManager, "activeBranch:", activeBranch, "managerBranch:", managerBranch);
       }
 
       console.log("🔍 [ProductLists] Filtros enviados:", filters);
@@ -85,9 +92,33 @@ const ProductListsPage: React.FC = () => {
     }
   };
 
+  // Cargar sucursal del gerente si aplica
+  const loadManagerBranch = async () => {
+    try {
+      const response = await branchesService.getUserBranches();
+      if (response.success && response.data && response.data.length > 0) {
+        setManagerBranch(response.data[0]);
+        console.log("🔍 [ProductLists] Sucursal del gerente cargada:", response.data[0].branchName);
+      }
+    } catch (err: any) {
+      console.error("Error al cargar sucursal del gerente:", err);
+      toast.error("Error al cargar la sucursal del gerente");
+    }
+  };
+
   useEffect(() => {
+    if (isManager) {
+      loadManagerBranch();
+    }
+  }, [isManager]);
+
+  useEffect(() => {
+    // Solo cargar si tenemos la sucursal correspondiente según el rol
+    if (isManager && !managerBranch) {
+      return; // Esperar a que se cargue la sucursal del gerente
+    }
     loadProductLists(true, 1);
-  }, [searchTerm, activeBranch]);
+  }, [searchTerm, activeBranch, managerBranch]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);

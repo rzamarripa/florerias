@@ -130,14 +130,22 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   };
 
-  // Cargar métodos de pago
-  const fetchPaymentMethods = async () => {
+  // Cargar métodos de pago filtrados por sucursal si hay una seleccionada
+  const fetchPaymentMethods = async (branchId?: string) => {
     setLoadingPaymentMethods(true);
     try {
-      const response = await paymentMethodsService.getAllPaymentMethods({
+      const filters: any = {
         limit: 1000,
         status: true,
-      });
+      };
+      
+      // Si hay un branchId (del formulario o pasado como parámetro), usarlo como filtro
+      const branchToUse = branchId || formData.branchId;
+      if (branchToUse) {
+        filters.branchId = branchToUse;
+      }
+      
+      const response = await paymentMethodsService.getAllPaymentMethods(filters);
       setPaymentMethods(response.data);
       // Establecer el primer método de pago si no hay uno seleccionado
       if (response.data.length > 0 && !formData.paymentMethod) {
@@ -174,7 +182,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   // Cargar datos al montar o cuando se abre el modal
   useEffect(() => {
     if (show) {
-      fetchPaymentMethods();
+      // Pasar el branchId del formulario para filtrar métodos de pago
+      fetchPaymentMethods(formData.branchId);
       fetchNeighborhoods();
       if (formData.branchId) {
         fetchClients(formData.branchId);

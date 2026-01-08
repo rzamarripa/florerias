@@ -3,6 +3,11 @@ export interface PaymentMethod {
   name: string;
   abbreviation: string;
   status: boolean;
+  branch: {
+    _id: string;
+    branchName: string;
+    branchCode?: string;
+  };
   company?: {
     _id: string;
     legalName: string;
@@ -16,6 +21,7 @@ export interface CreatePaymentMethodData {
   name: string;
   abbreviation: string;
   status?: boolean;
+  branch?: string; // Se puede enviar vacío para Gerente, el backend lo determina
 }
 
 export interface UpdatePaymentMethodData {
@@ -40,4 +46,5 @@ export interface PaymentMethodFilters {
   limit?: number;
   status?: boolean;
   name?: string;
+  branchId?: string;
 }

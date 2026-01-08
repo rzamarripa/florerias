@@ -20,6 +20,7 @@ import {
 } from "react-bootstrap";
 import { TbLockPassword, TbMail } from "react-icons/tb";
 import { AuthError, loginService } from "./services/auth";
+import PasswordResetModal from "./components/PasswordResetModal";
 
 const SignInPage = () => {
   const router = useRouter();
@@ -30,6 +31,8 @@ const SignInPage = () => {
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
 
   const { setUser, setLoading } = useUserSessionStore();
   const { setAllowedModules } = useUserModulesStore();
@@ -94,6 +97,7 @@ const SignInPage = () => {
         }
       } else {
         setError(response.message || "Error en el inicio de sesión");
+        setLoginAttempts(prev => prev + 1);
       }
     } catch (err) {
       if (err instanceof AuthError) {
@@ -101,6 +105,7 @@ const SignInPage = () => {
       } else {
         setError("Error inesperado. Intenta nuevamente.");
       }
+      setLoginAttempts(prev => prev + 1);
       console.error("Login error:", err);
     } finally {
       setIsSubmitting(false);
@@ -157,6 +162,17 @@ const SignInPage = () => {
                             disabled={isSubmitting}
                           />
                         </div>
+                        {loginAttempts > 0 && (
+                          <div className="text-end mt-2 mb-2">
+                            <Button 
+                              variant="link" 
+                              className="p-0 text-decoration-none text-primary"
+                              onClick={() => setShowPasswordReset(true)}
+                            >
+                              ¿Has olvidado tu contraseña? Recuperar
+                            </Button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mb-3">
@@ -231,6 +247,12 @@ const SignInPage = () => {
           </Col>
         </Row>
       </div>
+
+      <PasswordResetModal
+        show={showPasswordReset}
+        onClose={() => setShowPasswordReset(false)}
+        userEmail={formData.username.includes('@') ? formData.username : ''}
+      />
     </div>
   );
 };
