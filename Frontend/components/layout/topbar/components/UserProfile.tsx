@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   Dropdown,
   DropdownDivider,
@@ -6,12 +7,15 @@ import {
   DropdownMenu,
   DropdownToggle,
 } from "react-bootstrap";
-import { TbChevronDown, TbLogout } from "react-icons/tb";
+import { TbChevronDown, TbLogout, TbShoppingCart } from "react-icons/tb";
 
 import { useUserSessionStore } from "@/stores";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 const UserProfile = () => {
   const { user, logout } = useUserSessionStore();
+  const { getIsManager } = useUserRoleStore();
+  const isManager = getIsManager();
 
   const handleLogout = () => {
     logout();
@@ -73,6 +77,16 @@ const UserProfile = () => {
             )}
           </div>
           <DropdownDivider />
+
+          {isManager && (
+            <>
+              <DropdownItem as={Link} href="/ecommerce/configuracion">
+                <TbShoppingCart className="me-2 fs-17 align-middle" />
+                <span className="align-middle">Configuración e-commerce</span>
+              </DropdownItem>
+              <DropdownDivider />
+            </>
+          )}
 
           <DropdownItem onClick={handleLogout} style={{ cursor: "pointer" }}>
             <TbLogout className="me-2 fs-17 align-middle" />

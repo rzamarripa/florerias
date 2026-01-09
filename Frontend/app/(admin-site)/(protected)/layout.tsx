@@ -5,7 +5,7 @@ import { LayoutProvider } from "@/context/useLayoutContext";
 import { useUserSessionStore } from "@/stores";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import React, { useEffect, useState, useCallback } from "react";
 import BranchSelectionModal from "@/components/branches/BranchSelectionModal";
 import BranchModal from "@/features/admin/modules/branches/components/BranchModal";
@@ -18,12 +18,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, isLoading } = useUserSessionStore();
   const { activeBranch } = useActiveBranchStore();
   const [isInitialized, setIsInitialized] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showCreateBranchModal, setShowCreateBranchModal] = useState(false);
   const [userCompany, setUserCompany] = useState<any>(null);
+  
+  // Verificar si estamos en la ruta de ecommerce
+  const isEcommercePath = pathname?.startsWith('/ecommerce');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -174,6 +178,12 @@ export default function RootLayout({
     );
   }
 
+  // Si estamos en la ruta de ecommerce, solo devolver children (el layout de ecommerce manejará su propia estructura)
+  if (isEcommercePath) {
+    return <>{children}</>;
+  }
+
+  // Para todas las demás rutas, usar el MainLayout normal
   return (
     <LayoutProvider>
       <MainLayout>{children}</MainLayout>

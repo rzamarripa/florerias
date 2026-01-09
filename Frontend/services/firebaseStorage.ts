@@ -92,3 +92,69 @@ export const uploadCompanyLogo = async (
   const folder = `Empresas/${companyId}/logo`;
   return uploadFile(file, folder);
 };
+
+/**
+ * Sube el logo del e-commerce
+ * @param file - El archivo del logo
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @returns URL de descarga del logo
+ */
+export const uploadEcommerceLogo = async (
+  file: File,
+  companyId: string,
+  branchId: string
+): Promise<UploadFileResult> => {
+  const folder = `ecommerce/empresas/${companyId}/sucursales/${branchId}/logo`;
+  return uploadFile(file, folder);
+};
+
+/**
+ * Sube la portada del e-commerce
+ * @param file - El archivo de la portada
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @returns URL de descarga de la portada
+ */
+export const uploadEcommerceCover = async (
+  file: File,
+  companyId: string,
+  branchId: string
+): Promise<UploadFileResult> => {
+  const folder = `ecommerce/empresas/${companyId}/sucursales/${branchId}/portada`;
+  return uploadFile(file, folder);
+};
+
+/**
+ * Sube el banner del e-commerce
+ * @param file - El archivo del banner
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @returns URL de descarga del banner
+ */
+export const uploadEcommerceBanner = async (
+  file: File,
+  companyId: string,
+  branchId: string
+): Promise<UploadFileResult> => {
+  const folder = `ecommerce/empresas/${companyId}/sucursales/${branchId}/banner`;
+  return uploadFile(file, folder);
+};
+
+/**
+ * Sube una imagen del carrusel del e-commerce
+ * @param file - El archivo de la imagen
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @param index - El índice de la imagen en el carrusel
+ * @returns URL de descarga de la imagen
+ */
+export const uploadEcommerceCarouselImage = async (
+  file: File,
+  companyId: string,
+  branchId: string,
+  index: number
+): Promise<UploadFileResult> => {
+  const folder = `ecommerce/empresas/${companyId}/sucursales/${branchId}/imagenes`;
+  return uploadFile(file, folder);
+};

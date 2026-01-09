@@ -819,3 +819,18 @@ export const normalizeRoleToKey = (role: string | null): string | null => {
   
   return null;
 };
+
+// Menú especial para configuración de e-commerce
+export const ecommerceMenuItems: MenuItemType[] = [
+  {
+    key: "ecommerce-config",
+    label: "Configuración E-commerce",
+    isTitle: true,
+  },
+  {
+    key: "diseno",
+    label: "Diseño",
+    url: "/ecommerce/configuracion/diseno",
+    icon: ChartPie,
+  },
+];
