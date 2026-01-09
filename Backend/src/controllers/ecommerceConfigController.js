@@ -17,8 +17,8 @@ const getConfigByBranch = async (req, res) => {
     }
 
     let config = await EcommerceConfig.findOne({ branchId })
-      .populate('companyId', 'legalName tradeName')
-      .populate('branchId', 'name address');
+      .populate({ path: 'companyId', select: 'legalName tradeName' })
+      .populate({ path: 'branchId', select: 'branchName address' });
 
     // Si no existe configuración, crear una por defecto
     if (!config) {
@@ -31,8 +31,8 @@ const getConfigByBranch = async (req, res) => {
       });
       
       config = await EcommerceConfig.findById(config._id)
-        .populate('companyId', 'legalName tradeName')
-        .populate('branchId', 'name address');
+        .populate({ path: 'companyId', select: 'legalName tradeName' })
+        .populate({ path: 'branchId', select: 'branchName address' });
     }
 
     res.json({ 
@@ -52,14 +52,23 @@ const getConfigByBranch = async (req, res) => {
 // Crear configuración inicial
 const createConfig = async (req, res) => {
   try {
-    const { branchId, companyId } = req.body;
+    const { branchId, companyId, ...configData } = req.body;
 
     // Verificar si ya existe configuración para esta sucursal
     const existingConfig = await EcommerceConfig.findOne({ branchId });
     if (existingConfig) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Ya existe una configuración para esta sucursal' 
+      // Si ya existe, actualizarla en lugar de crear una nueva
+      const updatedConfig = await EcommerceConfig.findByIdAndUpdate(
+        existingConfig._id,
+        { ...configData },
+        { new: true, runValidators: true }
+      ).populate({ path: 'companyId', select: 'legalName tradeName' })
+        .populate({ path: 'branchId', select: 'branchName address' });
+      
+      return res.json({ 
+        success: true, 
+        data: updatedConfig,
+        message: 'Configuración actualizada correctamente' 
       });
     }
 
@@ -75,18 +84,19 @@ const createConfig = async (req, res) => {
     }
 
     const config = await EcommerceConfig.create({
-      ...req.body,
       companyId,
-      branchId
+      branchId,
+      ...configData
     });
 
     const populatedConfig = await EcommerceConfig.findById(config._id)
-      .populate('companyId', 'legalName tradeName')
-      .populate('branchId', 'name address');
+      .populate({ path: 'companyId', select: 'legalName tradeName' })
+      .populate({ path: 'branchId', select: 'branchName address' });
 
     res.status(201).json({ 
       success: true, 
-      data: populatedConfig 
+      data: populatedConfig,
+      message: 'Configuración creada correctamente' 
     });
   } catch (error) {
     console.error('Error al crear configuración:', error);
@@ -298,29 +308,15 @@ const getManagerConfig = async (req, res) => {
       }
     }
 
-    let config = await EcommerceConfig.findOne({ branchId: branch._id })
-      .populate('companyId', 'legalName tradeName')
-      .populate('branchId', 'name address');
+    const config = await EcommerceConfig.findOne({ branchId: branch._id })
+      .populate({ path: 'companyId', select: 'legalName tradeName' })
+      .populate({ path: 'branchId', select: 'branchName address' });
 
-    // Si no existe configuración, crear una por defecto
-    if (!config) {
-      config = await EcommerceConfig.create({
-        companyId: branch.companyId,
-        branchId: branch._id,
-        header: {
-          businessName: branch.branchName
-        }
-      });
-      
-      config = await EcommerceConfig.findById(config._id)
-        .populate('companyId', 'legalName tradeName')
-        .populate('branchId', 'name address');
-    }
-
+    // Devolver la información aunque no exista configuración
     res.json({ 
       success: true, 
       data: {
-        config,
+        config: config || null,  // Puede ser null si no existe
         branch,
         companyId: branch.companyId
       }

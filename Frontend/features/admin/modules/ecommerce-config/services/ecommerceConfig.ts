@@ -13,76 +13,97 @@ class EcommerceConfigService {
    * Obtener configuración del gerente actual
    */
   async getManagerConfig(): Promise<ManagerConfigResponse> {
-    return apiCall<ManagerConfigResponse>("/ecommerce-config/manager", "GET");
+    const response = await apiCall<ManagerConfigResponse>("/ecommerce-config/manager");
+    return response as any;
   }
 
   /**
    * Obtener configuración por sucursal
    */
   async getConfigByBranch(branchId: string): Promise<EcommerceConfig> {
-    return apiCall<EcommerceConfig>(`/ecommerce-config/branch/${branchId}`, "GET");
+    const response = await apiCall<EcommerceConfig>(`/ecommerce-config/branch/${branchId}`);
+    return response as any;
   }
 
   /**
    * Crear nueva configuración
    */
   async createConfig(data: Partial<EcommerceConfig>): Promise<EcommerceConfig> {
-    return apiCall<EcommerceConfig>("/ecommerce-config", "POST", data);
+    const response = await apiCall<EcommerceConfig>("/ecommerce-config", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+    return response as any;
   }
 
   /**
    * Actualizar encabezado
    */
   async updateHeader(id: string, header: EcommerceConfigHeader): Promise<EcommerceConfig> {
-    return apiCall<EcommerceConfig>(
+    const response = await apiCall<EcommerceConfig>(
       `/ecommerce-config/${id}/header`,
-      "PATCH",
-      { header }
+      {
+        method: "PATCH",
+        body: JSON.stringify({ header })
+      }
     );
+    return response as any;
   }
 
   /**
    * Actualizar plantilla
    */
   async updateTemplate(id: string, template: string): Promise<EcommerceConfig> {
-    return apiCall<EcommerceConfig>(
+    const response = await apiCall<EcommerceConfig>(
       `/ecommerce-config/${id}/template`,
-      "PATCH",
-      { template }
+      {
+        method: "PATCH",
+        body: JSON.stringify({ template })
+      }
     );
+    return response as any;
   }
 
   /**
    * Actualizar colores
    */
   async updateColors(id: string, colors: EcommerceConfigColors): Promise<EcommerceConfig> {
-    return apiCall<EcommerceConfig>(
+    const response = await apiCall<EcommerceConfig>(
       `/ecommerce-config/${id}/colors`,
-      "PATCH",
-      { colors }
+      {
+        method: "PATCH",
+        body: JSON.stringify({ colors })
+      }
     );
+    return response as any;
   }
 
   /**
    * Actualizar tipografías
    */
   async updateTypography(id: string, typography: EcommerceConfigTypography): Promise<EcommerceConfig> {
-    return apiCall<EcommerceConfig>(
+    const response = await apiCall<EcommerceConfig>(
       `/ecommerce-config/${id}/typography`,
-      "PATCH",
-      { typography }
+      {
+        method: "PATCH",
+        body: JSON.stringify({ typography })
+      }
     );
+    return response as any;
   }
 
   /**
    * Actualizar elementos destacados
    */
   async updateFeaturedElements(id: string, featuredElements: EcommerceConfigFeaturedElements): Promise<EcommerceConfig> {
-    return apiCall<EcommerceConfig>(
+    const response = await apiCall<EcommerceConfig>(
       `/ecommerce-config/${id}/featured`,
-      "PATCH",
-      { featuredElements }
+      {
+        method: "PATCH",
+        body: JSON.stringify({ featuredElements })
+      }
     );
+    return response as any;
   }
 }
 

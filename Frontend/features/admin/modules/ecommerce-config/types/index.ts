@@ -74,7 +74,10 @@ export interface EcommerceConfig {
 }
 
 export interface ManagerConfigResponse {
-  config: EcommerceConfig;
-  branch: any;
-  companyId: string;
+  success: boolean;
+  data: {
+    config: EcommerceConfig | null;
+    branch: any;
+    companyId: string;
+  };
 }

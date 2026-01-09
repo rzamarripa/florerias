@@ -3,12 +3,12 @@ import mongoose from 'mongoose';
 const ecommerceConfigSchema = new mongoose.Schema({
   companyId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Company',
+    ref: 'cv_company',
     required: true
   },
   branchId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Branch',
+    ref: 'cv_branch',
     required: true
   },
   // Tab Encabezado

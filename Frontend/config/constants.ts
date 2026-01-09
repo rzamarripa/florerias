@@ -833,4 +833,10 @@ export const ecommerceMenuItems: MenuItemType[] = [
     url: "/ecommerce/configuracion/diseno",
     icon: ChartPie,
   },
+  {
+    key: "catalogo",
+    label: "Catálogo de productos",
+    url: "/ecommerce/catalogo",
+    icon: Package,
+  },
 ];

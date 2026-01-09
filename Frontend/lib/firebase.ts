@@ -1,5 +1,5 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getStorage } from "firebase/storage";
 
@@ -15,16 +15,26 @@ const firebaseConfig = {
   measurementId: "G-VVS1NPWGYL"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase (evitar múltiples inicializaciones)
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Analytics (solo en el navegador)
-let analytics;
+let analytics = null;
 if (typeof window !== 'undefined') {
-  analytics = getAnalytics(app);
+  try {
+    analytics = getAnalytics(app);
+  } catch (error) {
+    console.warn("Analytics no disponible:", error);
+  }
 }
 
 // Initialize Cloud Storage
-const storage = getStorage(app);
+let storage = null;
+try {
+  storage = getStorage(app);
+  console.log("Firebase Storage inicializado correctamente");
+} catch (error) {
+  console.error("Error al inicializar Firebase Storage:", error);
+}
 
 export { app, analytics, storage };

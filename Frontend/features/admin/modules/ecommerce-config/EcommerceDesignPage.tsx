@@ -96,50 +96,53 @@ export default function EcommerceDesignPage() {
     try {
       setLoading(true);
       console.log("Cargando configuración del gerente...");
-      const response: ManagerConfigResponse = await ecommerceConfigService.getManagerConfig();
+      const response = await ecommerceConfigService.getManagerConfig();
       console.log("Respuesta del servidor:", response);
       
+      // Acceder a los datos dentro de response.data
+      const { config, branch, companyId } = response.data;
+      
       // Siempre establecer companyId y branchId aunque no haya config
-      if (response.companyId) {
-        setCompanyId(response.companyId);
+      if (companyId) {
+        setCompanyId(companyId);
       }
-      if (response.branch?._id) {
-        setBranchId(response.branch._id);
+      if (branch?._id) {
+        setBranchId(branch._id);
       }
       
       // La config puede ser null si no existe
-      setConfig(response.config);
+      setConfig(config);
       
-      console.log("Config establecida:", response.config);
-      console.log("Config._id:", response.config?._id);
-      console.log("CompanyId:", response.companyId);
-      console.log("BranchId:", response.branch?._id);
+      console.log("Config establecida:", config);
+      console.log("Config._id:", config?._id);
+      console.log("CompanyId:", companyId);
+      console.log("BranchId:", branch?._id);
       
       // Cargar datos en los estados SOLO si existe config
-      if (response.config) {
-        if (response.config.header) {
-          setBusinessName(response.config.header.businessName || response.branch?.branchName || "");
-          setLogoUrl(response.config.header.logoUrl || "");
-          setCoverUrl(response.config.header.coverUrl || "");
+      if (config) {
+        if (config.header) {
+          setBusinessName(config.header.businessName || branch?.branchName || "");
+          setLogoUrl(config.header.logoUrl || "");
+          setCoverUrl(config.header.coverUrl || "");
         } else {
           // Si no hay header, usar el nombre de la sucursal
-          setBusinessName(response.branch?.branchName || "");
+          setBusinessName(branch?.branchName || "");
         }
         
-        if (response.config.template) {
-          setSelectedTemplate(response.config.template);
+        if (config.template) {
+          setSelectedTemplate(config.template);
         }
         
-        if (response.config.colors) {
-          setColors(response.config.colors);
+        if (config.colors) {
+          setColors(config.colors);
         }
         
-        if (response.config.typography) {
-          setTypography(response.config.typography);
+        if (config.typography) {
+          setTypography(config.typography);
         }
         
-        if (response.config.featuredElements) {
-          const featured = response.config.featuredElements;
+        if (config.featuredElements) {
+          const featured = config.featuredElements;
           
           if (featured.banner) {
             setBannerEnabled(featured.banner.enabled);
@@ -179,8 +182,8 @@ export default function EcommerceDesignPage() {
         }
       } else {
         // Si no hay config, usar el nombre de la sucursal por defecto
-        if (response.branch?.branchName) {
-          setBusinessName(response.branch.branchName);
+        if (branch?.branchName) {
+          setBusinessName(branch.branchName);
         }
       }
     } catch (error: any) {
@@ -280,6 +283,11 @@ export default function EcommerceDesignPage() {
 
   // Guardar plantilla
   const saveTemplate = async () => {
+    if (!companyId || !branchId) {
+      toast.error("No se ha podido obtener la información de la sucursal");
+      return;
+    }
+    
     try {
       setSaving(true);
       
@@ -307,6 +315,11 @@ export default function EcommerceDesignPage() {
 
   // Guardar colores
   const saveColors = async () => {
+    if (!companyId || !branchId) {
+      toast.error("No se ha podido obtener la información de la sucursal");
+      return;
+    }
+    
     try {
       setSaving(true);
       
@@ -334,6 +347,11 @@ export default function EcommerceDesignPage() {
 
   // Guardar tipografías
   const saveTypography = async () => {
+    if (!companyId || !branchId) {
+      toast.error("No se ha podido obtener la información de la sucursal");
+      return;
+    }
+    
     try {
       setSaving(true);
       
@@ -361,6 +379,11 @@ export default function EcommerceDesignPage() {
 
   // Guardar elementos destacados
   const saveFeaturedElements = async () => {
+    if (!companyId || !branchId) {
+      toast.error("No se ha podido obtener la información de la sucursal");
+      return;
+    }
+    
     try {
       setSaving(true);
       
@@ -381,11 +404,27 @@ export default function EcommerceDesignPage() {
       
       // Subir imágenes del carrusel
       const finalCarouselImages = [...carouselImages];
-      for (let i = 0; i < carouselFiles.length; i++) {
-        const file = carouselFiles[i];
-        if (file) {
-          const result = await uploadEcommerceCarouselImage(file, companyId, branchId, i);
-          finalCarouselImages.push({ url: result.url, path: result.path });
+      
+      // Subir cada archivo nuevo del carrusel
+      if (carouselFiles.length > 0) {
+        toast.info(`Subiendo ${carouselFiles.length} imágenes del carrusel...`);
+        
+        for (let i = 0; i < carouselFiles.length; i++) {
+          const file = carouselFiles[i];
+          if (file) {
+            try {
+              const result = await uploadEcommerceCarouselImage(
+                file, 
+                companyId, 
+                branchId, 
+                finalCarouselImages.length + i // Usar el índice correcto
+              );
+              finalCarouselImages.push({ url: result.url, path: result.path });
+            } catch (error) {
+              console.error(`Error subiendo imagen ${i + 1}:`, error);
+              toast.error(`Error subiendo imagen ${file.name}`);
+            }
+          }
         }
       }
       
@@ -1011,8 +1050,9 @@ export default function EcommerceDesignPage() {
                       {carouselEnabled && (
                         <div>
                           <Row className="g-3">
+                            {/* Imágenes existentes (ya guardadas) */}
                             {carouselImages.map((image, index) => (
-                              <Col key={index} xs={6} md={4} lg={2}>
+                              <Col key={`existing-${index}`} xs={6} md={4} lg={2}>
                                 <div className="position-relative">
                                   <img 
                                     src={image.url} 
@@ -1031,12 +1071,38 @@ export default function EcommerceDesignPage() {
                                 </div>
                               </Col>
                             ))}
-                            {carouselImages.length < 5 && (
-                              <Col xs={6} md={4} lg={2}>
-                                <div 
-                                  className="border rounded p-3 text-center bg-light d-flex align-items-center justify-content-center"
-                                  style={{ height: "100px", cursor: "pointer" }}
-                                >
+                            
+                            {/* Archivos pendientes de subir (preview) */}
+                            {carouselFiles.map((file, index) => (
+                              <Col key={`pending-${index}`} xs={6} md={4} lg={2}>
+                                <div className="position-relative">
+                                  <div 
+                                    className="bg-secondary bg-opacity-10 rounded d-flex flex-column align-items-center justify-content-center"
+                                    style={{ height: "100px", width: "100%" }}
+                                  >
+                                    <TbUpload size={24} className="text-muted mb-1" />
+                                    <small className="text-truncate px-1" style={{ maxWidth: "90%" }}>
+                                      {file.name}
+                                    </small>
+                                    <span className="badge bg-warning text-dark mt-1">Pendiente</span>
+                                  </div>
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    className="position-absolute top-0 end-0 m-1"
+                                    onClick={() => {
+                                      const newFiles = carouselFiles.filter((_, i) => i !== index);
+                                      setCarouselFiles(newFiles);
+                                    }}
+                                  >
+                                    <TbTrash size={14} />
+                                  </Button>
+                                </div>
+                              </Col>
+                            ))}
+                            {(carouselImages.length + carouselFiles.length) < 5 && (
+                              <Col xs={12}>
+                                <div className="mt-3">
                                   <Form.Control
                                     type="file"
                                     accept="image/*"
@@ -1044,21 +1110,31 @@ export default function EcommerceDesignPage() {
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                       const files = Array.from(e.target.files || []);
                                       const validFiles = files.filter(file => file.size <= 5 * 1024 * 1024);
-                                      const remainingSlots = 5 - carouselImages.length;
+                                      const remainingSlots = 5 - carouselImages.length - carouselFiles.length;
                                       const filesToAdd = validFiles.slice(0, remainingSlots);
                                       
                                       if (validFiles.length !== files.length) {
                                         toast.error("Algunos archivos exceden 5MB y no se agregaron");
                                       }
                                       
-                                      setCarouselFiles([...carouselFiles, ...filesToAdd]);
+                                      if (filesToAdd.length > 0) {
+                                        setCarouselFiles([...carouselFiles, ...filesToAdd]);
+                                      }
+                                      
+                                      if (filesToAdd.length < validFiles.length) {
+                                        toast.warning(`Solo se agregaron ${filesToAdd.length} imágenes. Máximo 5 en total.`);
+                                      }
                                     }}
                                     className="d-none"
                                     id="carousel-upload"
                                   />
-                                  <label htmlFor="carousel-upload" className="cursor-pointer">
-                                    <TbPlus size={24} className="text-muted" />
+                                  <label htmlFor="carousel-upload" className="btn btn-outline-primary btn-sm">
+                                    <TbUpload className="me-1" />
+                                    Agregar imágenes
                                   </label>
+                                  <span className="ms-2 text-muted small">
+                                    {5 - carouselImages.length - carouselFiles.length} espacios disponibles
+                                  </span>
                                 </div>
                               </Col>
                             )}

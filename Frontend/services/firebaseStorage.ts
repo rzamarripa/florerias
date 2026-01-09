@@ -1,11 +1,30 @@
-import { storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { storage as firebaseStorage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL, deleteObject, getStorage } from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
+import { getApp } from "firebase/app";
 
 export interface UploadFileResult {
   url: string;
   path: string;
 }
+
+/**
+ * Obtiene una instancia de Firebase Storage, inicializándola si es necesario
+ */
+const getStorageInstance = () => {
+  if (firebaseStorage) {
+    return firebaseStorage;
+  }
+  
+  // Si storage es null, intentar obtenerlo nuevamente
+  try {
+    const app = getApp();
+    return getStorage(app);
+  } catch (error) {
+    console.error("Error obteniendo Firebase Storage:", error);
+    throw new Error("No se pudo inicializar Firebase Storage");
+  }
+};
 
 /**
  * Sube un archivo a Firebase Storage
@@ -15,6 +34,8 @@ export const uploadFile = async (
   file: File,
   folder: string
 ): Promise<UploadFileResult> => {
+  const storage = getStorageInstance();
+
   const fileExtension = file.name.split('.').pop();
   const fileName = `${uuidv4()}.${fileExtension}`;
   const filePath = `${folder}/${fileName}`;
@@ -35,11 +56,13 @@ export const uploadFile = async (
  */
 export const deleteFile = async (filePath: string): Promise<void> => {
   try {
+    const storage = getStorageInstance();
     const fileRef = ref(storage, filePath);
     await deleteObject(fileRef);
   } catch (error) {
     console.error("Error al eliminar archivo de Firebase Storage:", error);
-    throw new Error("Error al eliminar el archivo.");
+    // No lanzar error, solo loggear
+    console.warn("No se pudo eliminar el archivo:", filePath);
   }
 };
 
@@ -155,6 +178,6 @@ export const uploadEcommerceCarouselImage = async (
   branchId: string,
   index: number
 ): Promise<UploadFileResult> => {
-  const folder = `ecommerce/empresas/${companyId}/sucursales/${branchId}/imagenes`;
+  const folder = `ecommerce/empresas/${companyId}/sucursales/${branchId}/carrusel`;
   return uploadFile(file, folder);
 };
