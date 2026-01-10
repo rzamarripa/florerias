@@ -1,6 +1,7 @@
 import EcommerceConfig from '../models/EcommerceConfig.js';
 import { Branch } from '../models/Branch.js';
 import { Company } from '../models/Company.js';
+import { Storage } from '../models/Storage.js';
 
 // Obtener configuración por branchId
 const getConfigByBranch = async (req, res) => {
@@ -331,6 +332,103 @@ const getManagerConfig = async (req, res) => {
   }
 };
 
+// Actualizar productos del catálogo (itemsStock)
+const updateItemsStock = async (req, res) => {
+  try {
+    const { branchId, items } = req.body;
+    
+    if (!branchId || !items) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Se requiere branchId y items' 
+      });
+    }
+
+    // Buscar el storage de la sucursal
+    const storage = await Storage.findOne({ branch: branchId });
+    if (!storage) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'No se encontró almacén para esta sucursal' 
+      });
+    }
+
+    // Actualizar el stock en cv_storages
+    for (const item of items) {
+      const productInStorage = storage.products.find(
+        p => p.productId.toString() === item.productId
+      );
+      
+      if (productInStorage) {
+        // Verificar que hay suficiente stock
+        if (productInStorage.quantity < item.quantity) {
+          return res.status(400).json({ 
+            success: false,
+            message: `Stock insuficiente para el producto ${item.nombre}. Disponible: ${productInStorage.quantity}, Solicitado: ${item.quantity}` 
+          });
+        }
+        
+        // Descontar la cantidad del stock
+        productInStorage.quantity -= item.quantity;
+        
+        // Si el stock llega a 0, opcionalmente podrías eliminar el producto del array
+        // if (productInStorage.quantity === 0) {
+        //   storage.products = storage.products.filter(p => p.productId.toString() !== item.productId);
+        // }
+      } else {
+        return res.status(400).json({ 
+          success: false,
+          message: `Producto ${item.nombre} no encontrado en el almacén` 
+        });
+      }
+    }
+
+    // Guardar cambios en el storage
+    await storage.save();
+
+    // Buscar la configuración existente o crear una nueva
+    let config = await EcommerceConfig.findOne({ branchId });
+    
+    if (!config) {
+      // Si no existe, obtener la compañía de la sucursal
+      const branch = await Branch.findById(branchId);
+      if (!branch) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Sucursal no encontrada' 
+        });
+      }
+      
+      config = await EcommerceConfig.create({
+        companyId: branch.companyId,
+        branchId: branchId,
+        itemsStock: items
+      });
+    } else {
+      // Si existe, actualizar los items
+      config.itemsStock = items;
+      await config.save();
+    }
+
+    const populatedConfig = await EcommerceConfig.findById(config._id)
+      .populate({ path: 'companyId', select: 'legalName tradeName' })
+      .populate({ path: 'branchId', select: 'branchName address' });
+
+    res.json({ 
+      success: true, 
+      data: populatedConfig,
+      message: 'Productos guardados y stock actualizado correctamente' 
+    });
+  } catch (error) {
+    console.error('Error al actualizar productos:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error al guardar los productos',
+      error: error.message 
+    });
+  }
+};
+
 export {
   getConfigByBranch,
   createConfig,
@@ -339,5 +437,6 @@ export {
   updateColors,
   updateTypography,
   updateFeaturedElements,
-  getManagerConfig
+  getManagerConfig,
+  updateItemsStock
 };

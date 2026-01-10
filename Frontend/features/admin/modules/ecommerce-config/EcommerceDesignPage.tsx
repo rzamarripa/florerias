@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Nav, Tab, Form, Button, Row, Col, Spinner } from "react-bootstrap";
-import { TbArrowLeft, TbUpload, TbTrash, TbPlus } from "react-icons/tb";
+import { Card, Nav, Tab, Spinner, Button } from "react-bootstrap";
+import { TbArrowLeft, TbZoomIn, TbZoomOut, TbZoomReset } from "react-icons/tb";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import { ecommerceConfigService } from "./services/ecommerceConfig";
 import {
   uploadEcommerceLogo,
-  uploadEcommerceCover,
   uploadEcommerceBanner,
   uploadEcommerceCarouselImage,
   deleteFile
@@ -17,8 +16,16 @@ import type {
   EcommerceConfig,
   EcommerceConfigColors,
   EcommerceConfigTypography,
-  ManagerConfigResponse
+  EcommerceConfigFeaturedElements,
+  TopbarItem,
+  PromotionItem
 } from "./types";
+import HeaderTab from "./components/tabs/HeaderTab";
+import TemplatesTab from "./components/tabs/TemplatesTab";
+import ColorsTab from "./components/tabs/ColorsTab";
+import TypographyTab from "./components/tabs/TypographyTab";
+import FeaturedElementsTab from "./components/tabs/elements/FeaturedElementsTab";
+import EcommerceView from "./components/EcommerceView";
 
 export default function EcommerceDesignPage() {
   const [activeKey, setActiveKey] = useState("encabezado");
@@ -27,15 +34,15 @@ export default function EcommerceDesignPage() {
   const [config, setConfig] = useState<EcommerceConfig | null>(null);
   const [companyId, setCompanyId] = useState<string>("");
   const [branchId, setBranchId] = useState<string>("");
+  const [zoomLevel, setZoomLevel] = useState(100); // Start at 100% (which represents the scaled view)
   
   // Estados para cada sección
-  const [businessName, setBusinessName] = useState("");
+  const [pageTitle, setPageTitle] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string>("");
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverUrl, setCoverUrl] = useState<string>("");
+  const [topbarItems, setTopbarItems] = useState<TopbarItem[]>([]);
   
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("modern");
+  const [selectedTemplate, setSelectedTemplate] = useState<'classic' | 'modern' | 'minimalist' | 'elegant'>('modern');
   
   const [colors, setColors] = useState<EcommerceConfigColors>({
     primary: "#6366f1",
@@ -52,16 +59,21 @@ export default function EcommerceDesignPage() {
     normalSize: 16
   });
   
-  // Estados para elementos destacados
+  // Estados para elementos destacados - Banner
   const [bannerEnabled, setBannerEnabled] = useState(true);
+  const [bannerTitle, setBannerTitle] = useState("");
+  const [bannerText, setBannerText] = useState("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string>("");
-  const [bannerButtonText, setBannerButtonText] = useState("Ver ofertas");
+  const [bannerButtonName, setBannerButtonName] = useState("Ver más");
+  const [bannerButtonLink, setBannerButtonLink] = useState("#");
   
+  // Estados para carrusel
   const [carouselEnabled, setCarouselEnabled] = useState(true);
   const [carouselImages, setCarouselImages] = useState<Array<{ url: string; path: string }>>([]);
   const [carouselFiles, setCarouselFiles] = useState<File[]>([]);
   
+  // Estados para delivery
   const [pickupEnabled, setPickupEnabled] = useState(true);
   const [pickupTime, setPickupTime] = useState("30 minutos");
   const [pickupFrom, setPickupFrom] = useState("09:00");
@@ -72,12 +84,18 @@ export default function EcommerceDesignPage() {
   const [deliveryFrom, setDeliveryFrom] = useState("09:00");
   const [deliveryTo, setDeliveryTo] = useState("21:00");
   
-  const [featuredProductsEnabled, setFeaturedProductsEnabled] = useState(true);
-  const [featuredProductsTitle, setFeaturedProductsTitle] = useState("Productos destacados");
-  const [featuredProductsQuantity, setFeaturedProductsQuantity] = useState(8);
-  
+  // Estados para promociones
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
-  const [promotionsQuantity, setPromotionsQuantity] = useState(4);
+  const [promotionItems, setPromotionItems] = useState<PromotionItem[]>([]);
+  
+  // Estados para catálogo de productos
+  const [catalogEnabled, setCatalogEnabled] = useState(true);
+  const [catalogDisplay, setCatalogDisplay] = useState("grid");
+  const [catalogProductsPerPage, setCatalogProductsPerPage] = useState(12);
+  const [catalogShowFilters, setCatalogShowFilters] = useState(true);
+  const [catalogShowCategories, setCatalogShowCategories] = useState(true);
+  const [catalogShowSearch, setCatalogShowSearch] = useState(true);
+  const [catalogShowSort, setCatalogShowSort] = useState(true);
 
   const tabs = [
     { key: "encabezado", label: "Encabezado" },
@@ -87,6 +105,89 @@ export default function EcommerceDesignPage() {
     { key: "elementos", label: "Elementos destacados" },
   ];
 
+  // Crear objeto unificado de featuredElements
+  const featuredElements: EcommerceConfigFeaturedElements = {
+    banner: {
+      enabled: bannerEnabled,
+      title: bannerTitle,
+      text: bannerText,
+      imageUrl: bannerUrl,
+      imagePath: config?.featuredElements?.banner?.imagePath || "",
+      button: {
+        name: bannerButtonName,
+        link: bannerButtonLink
+      }
+    },
+    carousel: {
+      enabled: carouselEnabled,
+      images: carouselImages
+    },
+    delivery: {
+      pickup: {
+        enabled: pickupEnabled,
+        time: pickupTime,
+        availableFrom: pickupFrom,
+        availableTo: pickupTo
+      },
+      delivery: {
+        enabled: deliveryEnabled,
+        time: deliveryTime,
+        availableFrom: deliveryFrom,
+        availableTo: deliveryTo
+      }
+    },
+    promotions: {
+      enabled: promotionsEnabled,
+      items: promotionItems
+    },
+    productCatalog: {
+      enabled: catalogEnabled,
+      display: catalogDisplay,
+      productsPerPage: catalogProductsPerPage,
+      showFilters: catalogShowFilters,
+      showCategories: catalogShowCategories,
+      showSearch: catalogShowSearch,
+      showSort: catalogShowSort
+    }
+  };
+
+  const setFeaturedElements = (newElements: EcommerceConfigFeaturedElements) => {
+    // Update banner
+    setBannerEnabled(newElements.banner.enabled);
+    setBannerTitle(newElements.banner.title || "");
+    setBannerText(newElements.banner.text || "");
+    setBannerUrl(newElements.banner.imageUrl || "");
+    setBannerButtonName(newElements.banner.button?.name || "Ver más");
+    setBannerButtonLink(newElements.banner.button?.link || "#");
+    
+    // Update carousel
+    setCarouselEnabled(newElements.carousel.enabled);
+    setCarouselImages(newElements.carousel.images);
+    
+    // Update delivery
+    setPickupEnabled(newElements.delivery.pickup.enabled);
+    setPickupTime(newElements.delivery.pickup.time);
+    setPickupFrom(newElements.delivery.pickup.availableFrom);
+    setPickupTo(newElements.delivery.pickup.availableTo);
+    setDeliveryEnabled(newElements.delivery.delivery.enabled);
+    setDeliveryTime(newElements.delivery.delivery.time);
+    setDeliveryFrom(newElements.delivery.delivery.availableFrom);
+    setDeliveryTo(newElements.delivery.delivery.availableTo);
+    
+    // Update promotions
+    setPromotionsEnabled(newElements.promotions.enabled);
+    setPromotionItems(newElements.promotions.items);
+    
+    // Update product catalog
+    setCatalogEnabled(newElements.productCatalog.enabled);
+    setCatalogDisplay(newElements.productCatalog.display || "grid");
+    setCatalogProductsPerPage(newElements.productCatalog.productsPerPage || 12);
+    setCatalogShowFilters(newElements.productCatalog.showFilters !== false);
+    setCatalogShowCategories(newElements.productCatalog.showCategories !== false);
+    setCatalogShowSearch(newElements.productCatalog.showSearch !== false);
+    setCatalogShowSort(newElements.productCatalog.showSort !== false);
+  };
+
   // Cargar configuración al montar
   useEffect(() => {
     loadConfig();
@@ -95,14 +196,9 @@ export default function EcommerceDesignPage() {
   const loadConfig = async () => {
     try {
       setLoading(true);
-      console.log("Cargando configuración del gerente...");
       const response = await ecommerceConfigService.getManagerConfig();
-      console.log("Respuesta del servidor:", response);
-      
-      // Acceder a los datos dentro de response.data
       const { config, branch, companyId } = response.data;
       
-      // Siempre establecer companyId y branchId aunque no haya config
       if (companyId) {
         setCompanyId(companyId);
       }
@@ -110,23 +206,15 @@ export default function EcommerceDesignPage() {
         setBranchId(branch._id);
       }
       
-      // La config puede ser null si no existe
       setConfig(config);
       
-      console.log("Config establecida:", config);
-      console.log("Config._id:", config?._id);
-      console.log("CompanyId:", companyId);
-      console.log("BranchId:", branch?._id);
-      
-      // Cargar datos en los estados SOLO si existe config
       if (config) {
         if (config.header) {
-          setBusinessName(config.header.businessName || branch?.branchName || "");
+          setPageTitle(config.header.pageTitle || branch?.branchName || "");
           setLogoUrl(config.header.logoUrl || "");
-          setCoverUrl(config.header.coverUrl || "");
+          setTopbarItems(config.header.topbar || []);
         } else {
-          // Si no hay header, usar el nombre de la sucursal
-          setBusinessName(branch?.branchName || "");
+          setPageTitle(branch?.branchName || "");
         }
         
         if (config.template) {
@@ -146,8 +234,11 @@ export default function EcommerceDesignPage() {
           
           if (featured.banner) {
             setBannerEnabled(featured.banner.enabled);
+            setBannerTitle(featured.banner.title || "");
+            setBannerText(featured.banner.text || "");
             setBannerUrl(featured.banner.imageUrl || "");
-            setBannerButtonText(featured.banner.buttonText || "Ver ofertas");
+            setBannerButtonName(featured.banner.button?.name || "Ver más");
+            setBannerButtonLink(featured.banner.button?.link || "#");
           }
           
           if (featured.carousel) {
@@ -155,35 +246,38 @@ export default function EcommerceDesignPage() {
             setCarouselImages(featured.carousel.images || []);
           }
           
-          if (featured.deliveryData) {
-            const { pickup, delivery } = featured.deliveryData;
+          if (featured.delivery) {
+            const { pickup, delivery } = featured.delivery;
             
             setPickupEnabled(pickup.enabled);
-            setPickupTime(pickup.deliveryTime);
+            setPickupTime(pickup.time);
             setPickupFrom(pickup.availableFrom);
             setPickupTo(pickup.availableTo);
             
             setDeliveryEnabled(delivery.enabled);
-            setDeliveryTime(delivery.deliveryTime);
+            setDeliveryTime(delivery.time);
             setDeliveryFrom(delivery.availableFrom);
             setDeliveryTo(delivery.availableTo);
           }
           
-          if (featured.featuredProducts) {
-            setFeaturedProductsEnabled(featured.featuredProducts.enabled);
-            setFeaturedProductsTitle(featured.featuredProducts.title);
-            setFeaturedProductsQuantity(featured.featuredProducts.quantity);
-          }
-          
           if (featured.promotions) {
             setPromotionsEnabled(featured.promotions.enabled);
-            setPromotionsQuantity(featured.promotions.quantity);
+            setPromotionItems(featured.promotions.items || []);
+          }
+          
+          if (featured.productCatalog) {
+            setCatalogEnabled(featured.productCatalog.enabled);
+            setCatalogDisplay(featured.productCatalog.display || "grid");
+            setCatalogProductsPerPage(featured.productCatalog.productsPerPage || 12);
+            setCatalogShowFilters(featured.productCatalog.showFilters !== false);
+            setCatalogShowCategories(featured.productCatalog.showCategories !== false);
+            setCatalogShowSearch(featured.productCatalog.showSearch !== false);
+            setCatalogShowSort(featured.productCatalog.showSort !== false);
           }
         }
       } else {
-        // Si no hay config, usar el nombre de la sucursal por defecto
         if (branch?.branchName) {
-          setBusinessName(branch.branchName);
+          setPageTitle(branch.branchName);
         }
       }
     } catch (error: any) {
@@ -194,31 +288,62 @@ export default function EcommerceDesignPage() {
     }
   };
 
+  // Funciones para manejar topbar
+  const addTopbarItem = () => {
+    const newItem: TopbarItem = {
+      name: "",
+      link: "",
+      order: topbarItems.length
+    };
+    setTopbarItems([...topbarItems, newItem]);
+  };
+
+  const updateTopbarItem = (index: number, field: keyof TopbarItem, value: string | number) => {
+    const updated = [...topbarItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setTopbarItems(updated);
+  };
+
+  const removeTopbarItem = (index: number) => {
+    setTopbarItems(topbarItems.filter((_, i) => i !== index));
+  };
+
+  // Funciones para manejar promociones
+  const addPromotionItem = () => {
+    const newPromotion: PromotionItem = {
+      name: "",
+      text: "",
+      expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    };
+    setPromotionItems([...promotionItems, newPromotion]);
+  };
+
+  const updatePromotionItem = (index: number, field: keyof PromotionItem, value: string) => {
+    const updated = [...promotionItems];
+    updated[index] = { ...updated[index], [field]: value };
+    setPromotionItems(updated);
+  };
+
+  const removePromotionItem = (index: number) => {
+    setPromotionItems(promotionItems.filter((_, i) => i !== index));
+  };
+
   // Guardar encabezado
   const saveHeader = async () => {
-    console.log("saveHeader llamado");
-    console.log("config:", config);
-    console.log("config._id:", config?._id);
-    console.log("companyId:", companyId);
-    console.log("branchId:", branchId);
-    
     if (!companyId || !branchId) {
       toast.error("No se ha podido obtener la información de la sucursal");
       return;
     }
     
+    const validTopbarItems = topbarItems.filter(item => item.name && item.link);
+    
     try {
       setSaving(true);
-      console.log("Enviando petición para guardar header...");
       
       let finalLogoUrl = logoUrl;
       let finalLogoPath = config?.header?.logoPath || "";
-      let finalCoverUrl = coverUrl;
-      let finalCoverPath = config?.header?.coverPath || "";
       
-      // Subir logo si hay archivo nuevo
       if (logoFile) {
-        // Eliminar logo anterior si existe
         if (config?.header?.logoPath) {
           await deleteFile(config.header.logoPath).catch(console.error);
         }
@@ -228,51 +353,32 @@ export default function EcommerceDesignPage() {
         finalLogoPath = logoResult.path;
       }
       
-      // Subir portada si hay archivo nuevo
-      if (coverFile) {
-        // Eliminar portada anterior si existe
-        if (config?.header?.coverPath) {
-          await deleteFile(config.header.coverPath).catch(console.error);
-        }
-        
-        const coverResult = await uploadEcommerceCover(coverFile, companyId, branchId);
-        finalCoverUrl = coverResult.url;
-        finalCoverPath = coverResult.path;
-      }
-      
-      // Si no existe config, crear una nueva
       let updatedConfig;
       if (!config?._id) {
-        console.log("No existe configuración, creando nueva...");
         updatedConfig = await ecommerceConfigService.createConfig({
           companyId: companyId,
           branchId: branchId,
           header: {
-            businessName,
+            pageTitle,
             logoUrl: finalLogoUrl,
             logoPath: finalLogoPath,
-            coverUrl: finalCoverUrl,
-            coverPath: finalCoverPath
+            topbar: validTopbarItems
           }
         });
         toast.success("Configuración creada correctamente");
       } else {
-        console.log("Actualizando configuración existente...");
         updatedConfig = await ecommerceConfigService.updateHeader(config._id, {
-          businessName,
+          pageTitle,
           logoUrl: finalLogoUrl,
           logoPath: finalLogoPath,
-          coverUrl: finalCoverUrl,
-          coverPath: finalCoverPath
+          topbar: validTopbarItems
         });
         toast.success("Encabezado actualizado correctamente");
       }
       
       setConfig(updatedConfig);
       setLogoUrl(finalLogoUrl);
-      setCoverUrl(finalCoverUrl);
       setLogoFile(null);
-      setCoverFile(null);
     } catch (error: any) {
       console.error("Error al guardar encabezado:", error);
       toast.error("Error al guardar el encabezado");
@@ -390,9 +496,7 @@ export default function EcommerceDesignPage() {
       let finalBannerUrl = bannerUrl;
       let finalBannerPath = config?.featuredElements?.banner?.imagePath || "";
       
-      // Subir banner si hay archivo nuevo
       if (bannerFile) {
-        // Eliminar banner anterior si existe
         if (config?.featuredElements?.banner?.imagePath) {
           await deleteFile(config.featuredElements.banner.imagePath).catch(console.error);
         }
@@ -402,10 +506,8 @@ export default function EcommerceDesignPage() {
         finalBannerPath = bannerResult.path;
       }
       
-      // Subir imágenes del carrusel
       const finalCarouselImages = [...carouselImages];
       
-      // Subir cada archivo nuevo del carrusel
       if (carouselFiles.length > 0) {
         toast.info(`Subiendo ${carouselFiles.length} imágenes del carrusel...`);
         
@@ -417,7 +519,7 @@ export default function EcommerceDesignPage() {
                 file, 
                 companyId, 
                 branchId, 
-                finalCarouselImages.length + i // Usar el índice correcto
+                finalCarouselImages.length + i
               );
               finalCarouselImages.push({ url: result.url, path: result.path });
             } catch (error) {
@@ -428,43 +530,52 @@ export default function EcommerceDesignPage() {
         }
       }
       
-      // Limitar a 5 imágenes máximo
       const limitedCarouselImages = finalCarouselImages.slice(0, 5);
+      const validPromotions = promotionItems.filter(item => item.name && item.name.trim() !== '');
       
       let updatedConfig;
       const featuredElementsData = {
         banner: {
           enabled: bannerEnabled,
+          title: bannerTitle,
+          text: bannerText,
           imageUrl: finalBannerUrl,
           imagePath: finalBannerPath,
-          buttonText: bannerButtonText
+          button: {
+            name: bannerButtonName,
+            link: bannerButtonLink
+          }
         },
         carousel: {
           enabled: carouselEnabled,
           images: limitedCarouselImages
         },
-        deliveryData: {
+        delivery: {
           pickup: {
             enabled: pickupEnabled,
-            deliveryTime: pickupTime,
+            time: pickupTime,
             availableFrom: pickupFrom,
             availableTo: pickupTo
           },
           delivery: {
             enabled: deliveryEnabled,
-            deliveryTime: deliveryTime,
+            time: deliveryTime,
             availableFrom: deliveryFrom,
             availableTo: deliveryTo
           }
         },
-        featuredProducts: {
-          enabled: featuredProductsEnabled,
-          title: featuredProductsTitle,
-          quantity: featuredProductsQuantity
-        },
         promotions: {
           enabled: promotionsEnabled,
-          quantity: promotionsQuantity
+          items: validPromotions
+        },
+        productCatalog: {
+          enabled: catalogEnabled,
+          display: catalogDisplay,
+          productsPerPage: catalogProductsPerPage,
+          showFilters: catalogShowFilters,
+          showCategories: catalogShowCategories,
+          showSearch: catalogShowSearch,
+          showSort: catalogShowSort
         }
       };
       
@@ -513,7 +624,7 @@ export default function EcommerceDesignPage() {
   }
 
   return (
-    <>
+    <div className="d-flex flex-column h-100">
       {/* Header */}
       <div className="d-flex align-items-center mb-4">
         <Link href="/" className="btn btn-link text-muted p-0 me-3">
@@ -522,9 +633,11 @@ export default function EcommerceDesignPage() {
         <h4 className="mb-0">Diseño</h4>
       </div>
 
-      {/* Main Card with Tabs */}
-      <Card className="border-0 shadow-sm">
-        <Card.Body className="p-0">
+      {/* Main Container with Config Panel and Preview */}
+      <div className="d-flex flex-grow-1 gap-3" style={{ height: 'calc(100vh - 100px)' }}>
+        {/* Configuration Panel */}
+        <Card className="border-0 shadow-sm flex-grow-1" style={{ maxWidth: '60%' }}>
+          <Card.Body className="p-0 d-flex flex-column">
           {/* Tabs Navigation */}
           <Nav variant="tabs" className="nav-tabs-custom border-bottom-0">
             {tabs.map((tab) => (
@@ -549,797 +662,145 @@ export default function EcommerceDesignPage() {
           </Nav>
 
           {/* Tab Content */}
-          <div className="p-4">
+          <div className="p-4 overflow-auto flex-grow-1">
             <Tab.Container activeKey={activeKey}>
               <Tab.Content>
                 {/* Encabezado Tab */}
                 <Tab.Pane eventKey="encabezado">
-                  <div>
-                    <h5 className="mb-4">Datos del negocio</h5>
-                    <Form>
-                      <Row className="g-3 mb-3">
-                        <Col md={12}>
-                          <Form.Group>
-                            <Form.Label className="fw-medium">
-                              Nombre de tu negocio <span className="text-danger">*</span>
-                            </Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={businessName}
-                              onChange={(e) => setBusinessName(e.target.value)}
-                              placeholder="Ingresa el nombre de tu negocio"
-                              maxLength={50}
-                            />
-                            <Form.Text className="text-muted">
-                              {businessName.length}/50
-                            </Form.Text>
-                          </Form.Group>
-                        </Col>
-                      </Row>
-
-                      <Row className="g-3">
-                        {/* Logo */}
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="fw-medium">
-                              Logo del negocio <span className="text-danger">*</span>
-                            </Form.Label>
-                            <div className="border rounded p-4 text-center bg-light">
-                              {logoUrl ? (
-                                <div className="mb-3">
-                                  <img 
-                                    src={logoUrl} 
-                                    alt="Logo" 
-                                    style={{ maxWidth: "200px", maxHeight: "150px" }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="mb-3">
-                                  <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                                    <polyline points="21 15 16 10 5 21"/>
-                                  </svg>
-                                </div>
-                              )}
-                              <Form.Control
-                                type="file"
-                                accept="image/*"
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                  const file = e.target.files?.[0];
-                                  if (file && file.size <= 5 * 1024 * 1024) {
-                                    setLogoFile(file);
-                                  } else {
-                                    toast.error("El archivo debe ser menor a 5MB");
-                                  }
-                                }}
-                                className="d-none"
-                                id="logo-upload"
-                              />
-                              <label htmlFor="logo-upload" className="btn btn-outline-primary btn-sm">
-                                <TbUpload className="me-1" />
-                                Subir logo
-                              </label>
-                              {logoFile && (
-                                <p className="text-success small mt-2 mb-0">
-                                  Archivo seleccionado: {logoFile.name}
-                                </p>
-                              )}
-                              <p className="text-muted small mt-2 mb-0">
-                                Tamaño recomendado: 400x400px. Máximo: 5MB
-                              </p>
-                            </div>
-                          </Form.Group>
-                        </Col>
-
-                        {/* Portada */}
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="fw-medium">
-                              Portada del negocio <span className="text-danger">*</span>
-                            </Form.Label>
-                            <div className="border rounded p-4 text-center bg-light">
-                              {coverUrl ? (
-                                <div className="mb-3">
-                                  <img 
-                                    src={coverUrl} 
-                                    alt="Portada" 
-                                    style={{ maxWidth: "200px", maxHeight: "150px" }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="mb-3">
-                                  <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                                    <polyline points="21 15 16 10 5 21"/>
-                                  </svg>
-                                </div>
-                              )}
-                              <Form.Control
-                                type="file"
-                                accept="image/*"
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                  const file = e.target.files?.[0];
-                                  if (file && file.size <= 5 * 1024 * 1024) {
-                                    setCoverFile(file);
-                                  } else {
-                                    toast.error("El archivo debe ser menor a 5MB");
-                                  }
-                                }}
-                                className="d-none"
-                                id="cover-upload"
-                              />
-                              <label htmlFor="cover-upload" className="btn btn-outline-primary btn-sm">
-                                <TbUpload className="me-1" />
-                                Subir portada
-                              </label>
-                              {coverFile && (
-                                <p className="text-success small mt-2 mb-0">
-                                  Archivo seleccionado: {coverFile.name}
-                                </p>
-                              )}
-                              <p className="text-muted small mt-2 mb-0">
-                                Tamaño recomendado: 1920x600px. Máximo: 5MB
-                              </p>
-                            </div>
-                          </Form.Group>
-                        </Col>
-                      </Row>
-
-                      <div className="d-flex justify-content-end mt-4">
-                        <Button 
-                          variant="primary"
-                          onClick={saveHeader}
-                          disabled={saving || !businessName}
-                        >
-                          {saving ? <Spinner animation="border" size="sm" className="me-2" /> : null}
-                          Guardar cambios
-                        </Button>
-                      </div>
-                    </Form>
-                  </div>
+                  <HeaderTab
+                    pageTitle={pageTitle}
+                    setPageTitle={setPageTitle}
+                    logoUrl={logoUrl}
+                    logoFile={logoFile}
+                    setLogoFile={setLogoFile}
+                    topbarItems={topbarItems}
+                    setTopbarItems={setTopbarItems}
+                    saving={saving}
+                    onSave={saveHeader}
+                  />
                 </Tab.Pane>
 
                 {/* Plantillas Tab */}
                 <Tab.Pane eventKey="plantillas">
-                  <div>
-                    <h5 className="mb-4">Selecciona una plantilla</h5>
-                    <Row className="g-3">
-                      {[
-                        { key: 'classic', name: 'Clásica' },
-                        { key: 'modern', name: 'Moderna' },
-                        { key: 'minimalist', name: 'Minimalista' },
-                        { key: 'elegant', name: 'Elegante' }
-                      ].map((template) => (
-                        <Col key={template.key} xs={12} sm={6} lg={3}>
-                          <Card 
-                            className={`cursor-pointer hover-shadow ${selectedTemplate === template.key ? 'border-primary' : ''}`}
-                            onClick={() => setSelectedTemplate(template.key)}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <Card.Body className="text-center p-3">
-                              <div className="bg-light rounded mb-3" style={{ height: "150px" }}>
-                                <div className="d-flex align-items-center justify-content-center h-100">
-                                  <span className="text-muted">{template.name}</span>
-                                </div>
-                              </div>
-                              <h6 className="mb-1">{template.name}</h6>
-                              {selectedTemplate === template.key && (
-                                <span className="badge bg-primary">Seleccionada</span>
-                              )}
-                            </Card.Body>
-                          </Card>
-                        </Col>
-                      ))}
-                    </Row>
-                    <div className="d-flex justify-content-end mt-4">
-                      <Button 
-                        variant="primary"
-                        onClick={saveTemplate}
-                        disabled={saving}
-                      >
-                        {saving ? <Spinner animation="border" size="sm" className="me-2" /> : null}
-                        Guardar cambios
-                      </Button>
-                    </div>
-                  </div>
+                  <TemplatesTab
+                    selectedTemplate={selectedTemplate}
+                    setSelectedTemplate={setSelectedTemplate}
+                    saving={saving}
+                    onSave={saveTemplate}
+                  />
                 </Tab.Pane>
 
                 {/* Colores Tab */}
                 <Tab.Pane eventKey="colores">
-                  <div>
-                    <h5 className="mb-4">Personaliza los colores</h5>
-                    <Row className="g-4">
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-medium">
-                            Color primario <span className="text-danger">*</span>
-                          </Form.Label>
-                          <div className="d-flex align-items-center">
-                            <Form.Control
-                              type="color"
-                              value={colors.primary}
-                              onChange={(e) => setColors({ ...colors, primary: e.target.value })}
-                              className="me-3"
-                              style={{ width: "60px", height: "40px" }}
-                            />
-                            <Form.Control
-                              type="text"
-                              value={colors.primary}
-                              onChange={(e) => setColors({ ...colors, primary: e.target.value })}
-                              placeholder="#000000"
-                            />
-                          </div>
-                        </Form.Group>
-                      </Col>
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-medium">
-                            Color secundario <span className="text-danger">*</span>
-                          </Form.Label>
-                          <div className="d-flex align-items-center">
-                            <Form.Control
-                              type="color"
-                              value={colors.secondary}
-                              onChange={(e) => setColors({ ...colors, secondary: e.target.value })}
-                              className="me-3"
-                              style={{ width: "60px", height: "40px" }}
-                            />
-                            <Form.Control
-                              type="text"
-                              value={colors.secondary}
-                              onChange={(e) => setColors({ ...colors, secondary: e.target.value })}
-                              placeholder="#000000"
-                            />
-                          </div>
-                        </Form.Group>
-                      </Col>
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-medium">
-                            Color de fondo <span className="text-danger">*</span>
-                          </Form.Label>
-                          <div className="d-flex align-items-center">
-                            <Form.Control
-                              type="color"
-                              value={colors.background}
-                              onChange={(e) => setColors({ ...colors, background: e.target.value })}
-                              className="me-3"
-                              style={{ width: "60px", height: "40px" }}
-                            />
-                            <Form.Control
-                              type="text"
-                              value={colors.background}
-                              onChange={(e) => setColors({ ...colors, background: e.target.value })}
-                              placeholder="#000000"
-                            />
-                          </div>
-                        </Form.Group>
-                      </Col>
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-medium">
-                            Color de texto <span className="text-danger">*</span>
-                          </Form.Label>
-                          <div className="d-flex align-items-center">
-                            <Form.Control
-                              type="color"
-                              value={colors.text}
-                              onChange={(e) => setColors({ ...colors, text: e.target.value })}
-                              className="me-3"
-                              style={{ width: "60px", height: "40px" }}
-                            />
-                            <Form.Control
-                              type="text"
-                              value={colors.text}
-                              onChange={(e) => setColors({ ...colors, text: e.target.value })}
-                              placeholder="#000000"
-                            />
-                          </div>
-                        </Form.Group>
-                      </Col>
-                    </Row>
-                    <div className="d-flex justify-content-end mt-4">
-                      <Button 
-                        variant="primary"
-                        onClick={saveColors}
-                        disabled={saving}
-                      >
-                        {saving ? <Spinner animation="border" size="sm" className="me-2" /> : null}
-                        Guardar cambios
-                      </Button>
-                    </div>
-                  </div>
+                  <ColorsTab
+                    colors={colors}
+                    setColors={setColors}
+                    saving={saving}
+                    onSave={saveColors}
+                  />
                 </Tab.Pane>
 
                 {/* Tipografías Tab */}
                 <Tab.Pane eventKey="tipografias">
-                  <div>
-                    <h5 className="mb-4">Selecciona las tipografías</h5>
-                    <Row className="g-4">
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-medium">
-                            Fuente para títulos <span className="text-danger">*</span>
-                          </Form.Label>
-                          <Form.Select
-                            value={typography.titleFont}
-                            onChange={(e) => setTypography({ ...typography, titleFont: e.target.value })}
-                          >
-                            <option value="Inter">Inter</option>
-                            <option value="Roboto">Roboto</option>
-                            <option value="Open Sans">Open Sans</option>
-                            <option value="Montserrat">Montserrat</option>
-                            <option value="Poppins">Poppins</option>
-                            <option value="Lato">Lato</option>
-                          </Form.Select>
-                          <div className="mt-2 p-3 bg-light rounded">
-                            <h3 className="mb-0" style={{ fontFamily: typography.titleFont, fontSize: typography.titleSize }}>
-                              Título de ejemplo
-                            </h3>
-                          </div>
-                        </Form.Group>
-                      </Col>
-                      <Col md={6}>
-                        <Form.Group>
-                          <Form.Label className="fw-medium">
-                            Fuente para textos <span className="text-danger">*</span>
-                          </Form.Label>
-                          <Form.Select
-                            value={typography.textFont}
-                            onChange={(e) => setTypography({ ...typography, textFont: e.target.value })}
-                          >
-                            <option value="Inter">Inter</option>
-                            <option value="Roboto">Roboto</option>
-                            <option value="Open Sans">Open Sans</option>
-                            <option value="Source Sans Pro">Source Sans Pro</option>
-                            <option value="Noto Sans">Noto Sans</option>
-                            <option value="Work Sans">Work Sans</option>
-                          </Form.Select>
-                          <div className="mt-2 p-3 bg-light rounded">
-                            <p className="mb-0" style={{ fontFamily: typography.textFont, fontSize: typography.normalSize }}>
-                              Este es un texto de ejemplo para mostrar cómo se ve la tipografía seleccionada en párrafos normales.
-                            </p>
-                          </div>
-                        </Form.Group>
-                      </Col>
-                    </Row>
-                    
-                    <Row className="g-4 mt-3">
-                      <Col md={12}>
-                        <Form.Group>
-                          <Form.Label className="fw-medium">
-                            Tamaños de fuente <span className="text-danger">*</span>
-                          </Form.Label>
-                          <Row className="g-3">
-                            <Col md={4}>
-                              <Form.Label className="small text-muted">Título principal</Form.Label>
-                              <Form.Range 
-                                min="24" 
-                                max="48" 
-                                value={typography.titleSize}
-                                onChange={(e) => setTypography({ ...typography, titleSize: Number(e.target.value) })}
-                              />
-                              <div className="text-center small text-muted">{typography.titleSize}px</div>
-                            </Col>
-                            <Col md={4}>
-                              <Form.Label className="small text-muted">Subtítulos</Form.Label>
-                              <Form.Range 
-                                min="18" 
-                                max="32" 
-                                value={typography.subtitleSize}
-                                onChange={(e) => setTypography({ ...typography, subtitleSize: Number(e.target.value) })}
-                              />
-                              <div className="text-center small text-muted">{typography.subtitleSize}px</div>
-                            </Col>
-                            <Col md={4}>
-                              <Form.Label className="small text-muted">Texto normal</Form.Label>
-                              <Form.Range 
-                                min="12" 
-                                max="20" 
-                                value={typography.normalSize}
-                                onChange={(e) => setTypography({ ...typography, normalSize: Number(e.target.value) })}
-                              />
-                              <div className="text-center small text-muted">{typography.normalSize}px</div>
-                            </Col>
-                          </Row>
-                        </Form.Group>
-                      </Col>
-                    </Row>
-
-                    <div className="d-flex justify-content-end mt-4">
-                      <Button 
-                        variant="primary"
-                        onClick={saveTypography}
-                        disabled={saving}
-                      >
-                        {saving ? <Spinner animation="border" size="sm" className="me-2" /> : null}
-                        Guardar cambios
-                      </Button>
-                    </div>
-                  </div>
+                  <TypographyTab
+                    typography={typography}
+                    setTypography={setTypography}
+                    saving={saving}
+                    onSave={saveTypography}
+                  />
                 </Tab.Pane>
 
                 {/* Elementos destacados Tab */}
                 <Tab.Pane eventKey="elementos">
-                  <div>
-                    <h5 className="mb-4">Configura elementos destacados</h5>
-                    
-                    {/* Banner principal */}
-                    <div className="mb-4 pb-4 border-bottom">
-                      <h6 className="mb-3">Banner principal</h6>
-                      <Form.Check 
-                        type="switch"
-                        id="banner-switch"
-                        label="Mostrar banner en la página de inicio"
-                        checked={bannerEnabled}
-                        onChange={(e) => setBannerEnabled(e.target.checked)}
-                        className="mb-3"
-                      />
-                      {bannerEnabled && (
-                        <Row className="g-3">
-                          <Col md={8}>
-                            <Form.Group>
-                              <Form.Label className="small text-muted">Imagen del banner</Form.Label>
-                              <div className="border rounded p-3 bg-light">
-                                {bannerUrl && (
-                                  <div className="mb-2">
-                                    <img 
-                                      src={bannerUrl} 
-                                      alt="Banner" 
-                                      style={{ maxWidth: "100%", maxHeight: "150px" }}
-                                    />
-                                  </div>
-                                )}
-                                <Form.Control
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                    const file = e.target.files?.[0];
-                                    if (file && file.size <= 5 * 1024 * 1024) {
-                                      setBannerFile(file);
-                                    } else {
-                                      toast.error("El archivo debe ser menor a 5MB");
-                                    }
-                                  }}
-                                  className="d-none"
-                                  id="banner-upload"
-                                />
-                                <label htmlFor="banner-upload" className="btn btn-outline-primary btn-sm">
-                                  <TbUpload className="me-1" />
-                                  Subir imagen
-                                </label>
-                                {bannerFile && (
-                                  <p className="text-success small mt-2 mb-0">
-                                    Archivo seleccionado: {bannerFile.name}
-                                  </p>
-                                )}
-                                <p className="text-muted small mt-2 mb-0">
-                                  Tamaño recomendado: 1920x600px. Máximo: 5MB
-                                </p>
-                              </div>
-                            </Form.Group>
-                          </Col>
-                          <Col md={4}>
-                            <Form.Group>
-                              <Form.Label className="small text-muted">Texto del botón</Form.Label>
-                              <Form.Control 
-                                type="text" 
-                                placeholder="Ver ofertas"
-                                value={bannerButtonText}
-                                onChange={(e) => setBannerButtonText(e.target.value)}
-                              />
-                            </Form.Group>
-                          </Col>
-                        </Row>
-                      )}
-                    </div>
-
-                    {/* Carrusel de imágenes */}
-                    <div className="mb-4 pb-4 border-bottom">
-                      <h6 className="mb-3">Carrusel de imágenes</h6>
-                      <Form.Check 
-                        type="switch"
-                        id="carousel-switch"
-                        label="Mostrar carrusel de imágenes"
-                        checked={carouselEnabled}
-                        onChange={(e) => setCarouselEnabled(e.target.checked)}
-                        className="mb-3"
-                      />
-                      {carouselEnabled && (
-                        <div>
-                          <Row className="g-3">
-                            {/* Imágenes existentes (ya guardadas) */}
-                            {carouselImages.map((image, index) => (
-                              <Col key={`existing-${index}`} xs={6} md={4} lg={2}>
-                                <div className="position-relative">
-                                  <img 
-                                    src={image.url} 
-                                    alt={`Imagen ${index + 1}`}
-                                    className="img-fluid rounded"
-                                    style={{ height: "100px", width: "100%", objectFit: "cover" }}
-                                  />
-                                  <Button
-                                    variant="danger"
-                                    size="sm"
-                                    className="position-absolute top-0 end-0 m-1"
-                                    onClick={() => removeCarouselImage(index)}
-                                  >
-                                    <TbTrash size={14} />
-                                  </Button>
-                                </div>
-                              </Col>
-                            ))}
-                            
-                            {/* Archivos pendientes de subir (preview) */}
-                            {carouselFiles.map((file, index) => (
-                              <Col key={`pending-${index}`} xs={6} md={4} lg={2}>
-                                <div className="position-relative">
-                                  <div 
-                                    className="bg-secondary bg-opacity-10 rounded d-flex flex-column align-items-center justify-content-center"
-                                    style={{ height: "100px", width: "100%" }}
-                                  >
-                                    <TbUpload size={24} className="text-muted mb-1" />
-                                    <small className="text-truncate px-1" style={{ maxWidth: "90%" }}>
-                                      {file.name}
-                                    </small>
-                                    <span className="badge bg-warning text-dark mt-1">Pendiente</span>
-                                  </div>
-                                  <Button
-                                    variant="danger"
-                                    size="sm"
-                                    className="position-absolute top-0 end-0 m-1"
-                                    onClick={() => {
-                                      const newFiles = carouselFiles.filter((_, i) => i !== index);
-                                      setCarouselFiles(newFiles);
-                                    }}
-                                  >
-                                    <TbTrash size={14} />
-                                  </Button>
-                                </div>
-                              </Col>
-                            ))}
-                            {(carouselImages.length + carouselFiles.length) < 5 && (
-                              <Col xs={12}>
-                                <div className="mt-3">
-                                  <Form.Control
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                      const files = Array.from(e.target.files || []);
-                                      const validFiles = files.filter(file => file.size <= 5 * 1024 * 1024);
-                                      const remainingSlots = 5 - carouselImages.length - carouselFiles.length;
-                                      const filesToAdd = validFiles.slice(0, remainingSlots);
-                                      
-                                      if (validFiles.length !== files.length) {
-                                        toast.error("Algunos archivos exceden 5MB y no se agregaron");
-                                      }
-                                      
-                                      if (filesToAdd.length > 0) {
-                                        setCarouselFiles([...carouselFiles, ...filesToAdd]);
-                                      }
-                                      
-                                      if (filesToAdd.length < validFiles.length) {
-                                        toast.warning(`Solo se agregaron ${filesToAdd.length} imágenes. Máximo 5 en total.`);
-                                      }
-                                    }}
-                                    className="d-none"
-                                    id="carousel-upload"
-                                  />
-                                  <label htmlFor="carousel-upload" className="btn btn-outline-primary btn-sm">
-                                    <TbUpload className="me-1" />
-                                    Agregar imágenes
-                                  </label>
-                                  <span className="ms-2 text-muted small">
-                                    {5 - carouselImages.length - carouselFiles.length} espacios disponibles
-                                  </span>
-                                </div>
-                              </Col>
-                            )}
-                          </Row>
-                          <p className="text-muted small mt-2">
-                            Máximo 5 imágenes. Tamaño recomendado: 800x600px. Máximo: 5MB por imagen
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Delivery Data */}
-                    <div className="mb-4 pb-4 border-bottom">
-                      <h6 className="mb-3">Opciones de entrega</h6>
-                      
-                      <Nav variant="pills" className="mb-3">
-                        <Nav.Item>
-                          <Nav.Link active>Retirar</Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item>
-                          <Nav.Link>Delivery</Nav.Link>
-                        </Nav.Item>
-                      </Nav>
-
-                      {/* Retirar */}
-                      <div className="mb-3">
-                        <Form.Check 
-                          type="switch"
-                          id="pickup-switch"
-                          label="Habilitar retiro en tienda"
-                          checked={pickupEnabled}
-                          onChange={(e) => setPickupEnabled(e.target.checked)}
-                          className="mb-3"
-                        />
-                        {pickupEnabled && (
-                          <Row className="g-3">
-                            <Col md={4}>
-                              <Form.Group>
-                                <Form.Label className="small text-muted">Tiempo de preparación</Form.Label>
-                                <Form.Control 
-                                  type="text" 
-                                  placeholder="30 minutos"
-                                  value={pickupTime}
-                                  onChange={(e) => setPickupTime(e.target.value)}
-                                />
-                              </Form.Group>
-                            </Col>
-                            <Col md={4}>
-                              <Form.Group>
-                                <Form.Label className="small text-muted">Disponible desde</Form.Label>
-                                <Form.Control 
-                                  type="time"
-                                  value={pickupFrom}
-                                  onChange={(e) => setPickupFrom(e.target.value)}
-                                />
-                              </Form.Group>
-                            </Col>
-                            <Col md={4}>
-                              <Form.Group>
-                                <Form.Label className="small text-muted">Disponible hasta</Form.Label>
-                                <Form.Control 
-                                  type="time"
-                                  value={pickupTo}
-                                  onChange={(e) => setPickupTo(e.target.value)}
-                                />
-                              </Form.Group>
-                            </Col>
-                          </Row>
-                        )}
-                      </div>
-
-                      {/* Delivery */}
-                      <div>
-                        <Form.Check 
-                          type="switch"
-                          id="delivery-switch"
-                          label="Habilitar delivery"
-                          checked={deliveryEnabled}
-                          onChange={(e) => setDeliveryEnabled(e.target.checked)}
-                          className="mb-3"
-                        />
-                        {deliveryEnabled && (
-                          <Row className="g-3">
-                            <Col md={4}>
-                              <Form.Group>
-                                <Form.Label className="small text-muted">Tiempo de entrega</Form.Label>
-                                <Form.Control 
-                                  type="text" 
-                                  placeholder="45 minutos"
-                                  value={deliveryTime}
-                                  onChange={(e) => setDeliveryTime(e.target.value)}
-                                />
-                              </Form.Group>
-                            </Col>
-                            <Col md={4}>
-                              <Form.Group>
-                                <Form.Label className="small text-muted">Disponible desde</Form.Label>
-                                <Form.Control 
-                                  type="time"
-                                  value={deliveryFrom}
-                                  onChange={(e) => setDeliveryFrom(e.target.value)}
-                                />
-                              </Form.Group>
-                            </Col>
-                            <Col md={4}>
-                              <Form.Group>
-                                <Form.Label className="small text-muted">Disponible hasta</Form.Label>
-                                <Form.Control 
-                                  type="time"
-                                  value={deliveryTo}
-                                  onChange={(e) => setDeliveryTo(e.target.value)}
-                                />
-                              </Form.Group>
-                            </Col>
-                          </Row>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Productos destacados */}
-                    <div className="mb-4 pb-4 border-bottom">
-                      <h6 className="mb-3">Productos destacados</h6>
-                      <Form.Check 
-                        type="switch"
-                        id="featured-switch"
-                        label="Mostrar productos destacados"
-                        checked={featuredProductsEnabled}
-                        onChange={(e) => setFeaturedProductsEnabled(e.target.checked)}
-                        className="mb-3"
-                      />
-                      {featuredProductsEnabled && (
-                        <Row className="g-3">
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="small text-muted">Título de la sección</Form.Label>
-                              <Form.Control 
-                                type="text" 
-                                value={featuredProductsTitle}
-                                onChange={(e) => setFeaturedProductsTitle(e.target.value)}
-                              />
-                            </Form.Group>
-                          </Col>
-                          <Col md={6}>
-                            <Form.Group>
-                              <Form.Label className="small text-muted">Productos a mostrar</Form.Label>
-                              <Form.Select
-                                value={featuredProductsQuantity}
-                                onChange={(e) => setFeaturedProductsQuantity(Number(e.target.value))}
-                              >
-                                <option value={4}>4</option>
-                                <option value={6}>6</option>
-                                <option value={8}>8</option>
-                                <option value={12}>12</option>
-                              </Form.Select>
-                            </Form.Group>
-                          </Col>
-                        </Row>
-                      )}
-                    </div>
-
-                    {/* Promociones */}
-                    <div className="mb-4">
-                      <h6 className="mb-3">Promociones</h6>
-                      <Form.Check 
-                        type="switch"
-                        id="promo-switch"
-                        label="Mostrar sección de promociones"
-                        checked={promotionsEnabled}
-                        onChange={(e) => setPromotionsEnabled(e.target.checked)}
-                        className="mb-3"
-                      />
-                      {promotionsEnabled && (
-                        <Form.Group>
-                          <Form.Label className="small text-muted">Número de promociones a mostrar</Form.Label>
-                          <Form.Select 
-                            style={{ width: "auto" }}
-                            value={promotionsQuantity}
-                            onChange={(e) => setPromotionsQuantity(Number(e.target.value))}
-                          >
-                            <option value={3}>3</option>
-                            <option value={4}>4</option>
-                            <option value={6}>6</option>
-                            <option value={8}>8</option>
-                          </Form.Select>
-                        </Form.Group>
-                      )}
-                    </div>
-
-                    <div className="d-flex justify-content-end mt-4">
-                      <Button 
-                        variant="primary"
-                        onClick={saveFeaturedElements}
-                        disabled={saving}
-                      >
-                        {saving ? <Spinner animation="border" size="sm" className="me-2" /> : null}
-                        Guardar cambios
-                      </Button>
-                    </div>
-                  </div>
+                  <FeaturedElementsTab
+                    featuredElements={featuredElements}
+                    setFeaturedElements={setFeaturedElements}
+                    carouselFiles={carouselFiles}
+                    setCarouselFiles={setCarouselFiles}
+                    bannerFile={bannerFile}
+                    setBannerFile={setBannerFile}
+                    saving={saving}
+                    onSave={saveFeaturedElements}
+                  />
                 </Tab.Pane>
               </Tab.Content>
             </Tab.Container>
           </div>
         </Card.Body>
       </Card>
-    </>
+
+      {/* Preview Panel */}
+      <div className="border rounded shadow-sm d-flex flex-column" style={{ width: '40%', backgroundColor: '#f8f9fa' }}>
+        {/* Zoom Controls */}
+        <div className="d-flex align-items-center justify-content-between px-2 py-1 border-bottom bg-white">
+          <div className="d-flex align-items-center gap-1">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
+              disabled={zoomLevel <= 50}
+              style={{ padding: '2px 6px', fontSize: '12px' }}
+            >
+              <TbZoomOut size={12} />
+            </Button>
+            <span className="badge bg-secondary px-2 py-1" style={{ minWidth: '45px', fontSize: '10px' }}>
+              {zoomLevel}%
+            </span>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
+              disabled={zoomLevel >= 200}
+              style={{ padding: '2px 6px', fontSize: '12px' }}
+            >
+              <TbZoomIn size={12} />
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setZoomLevel(100)}
+              style={{ padding: '2px 6px', fontSize: '12px' }}
+            >
+              <TbZoomReset size={12} />
+            </Button>
+          </div>
+          <span className="text-muted" style={{ fontSize: '11px' }}>Vista previa</span>
+        </div>
+        
+        {/* Preview Container */}
+        <div 
+          className="flex-grow-1 position-relative overflow-auto" 
+          style={{ 
+            backgroundColor: '#e2e8f0',
+            minHeight: 0
+          }}
+        >
+          <div 
+            className="position-absolute"
+            style={{ 
+              width: `${100 / 0.3}%`,
+              height: `${100 / 0.3}%`,
+              transform: `scale(${(zoomLevel * 0.3) / 100})`,
+              transformOrigin: 'top left',
+              left: 0,
+              top: 0
+            }}
+          >
+            <EcommerceView
+              header={{
+                pageTitle: pageTitle,
+                logoUrl: logoUrl,
+                topbar: topbarItems,
+                logoPath: config?.header?.logoPath || ""
+              }}
+              colors={colors}
+              typography={typography}
+              featuredElements={featuredElements}
+            />
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
   );
 }

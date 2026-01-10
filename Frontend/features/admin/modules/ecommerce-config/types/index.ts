@@ -1,9 +1,14 @@
+export interface TopbarItem {
+  name: string;
+  link: string;
+  order?: number;
+}
+
 export interface EcommerceConfigHeader {
-  businessName?: string;
+  pageTitle?: string;
   logoUrl?: string;
   logoPath?: string;
-  coverUrl?: string;
-  coverPath?: string;
+  topbar?: TopbarItem[];
 }
 
 export interface EcommerceConfigColors {
@@ -23,7 +28,7 @@ export interface EcommerceConfigTypography {
 
 export interface DeliverySettings {
   enabled: boolean;
-  deliveryTime: string;
+  time: string;
   availableFrom: string;
   availableTo: string;
 }
@@ -33,29 +38,45 @@ export interface CarouselImage {
   path: string;
 }
 
+export interface PromotionItem {
+  name: string;
+  text?: string;
+  expirationDate?: string;
+  createdAt?: string;
+}
+
 export interface EcommerceConfigFeaturedElements {
   banner?: {
     enabled: boolean;
+    title?: string;
+    text?: string;
     imageUrl?: string;
     imagePath?: string;
-    buttonText?: string;
+    button?: {
+      name: string;
+      link: string;
+    };
   };
   carousel?: {
     enabled: boolean;
     images: CarouselImage[];
   };
-  deliveryData?: {
+  delivery?: {
     pickup: DeliverySettings;
     delivery: DeliverySettings;
   };
-  featuredProducts?: {
-    enabled: boolean;
-    title: string;
-    quantity: number;
-  };
   promotions?: {
     enabled: boolean;
-    quantity: number;
+    items?: PromotionItem[];
+  };
+  productCatalog?: {
+    enabled: boolean;
+    display?: string;
+    productsPerPage?: number;
+    showFilters?: boolean;
+    showCategories?: boolean;
+    showSearch?: boolean;
+    showSort?: boolean;
   };
 }
 

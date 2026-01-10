@@ -8,7 +8,8 @@ import {
   updateColors,
   updateTypography,
   updateFeaturedElements,
-  getManagerConfig
+  getManagerConfig,
+  updateItemsStock
 } from '../controllers/ecommerceConfigController.js';
 
 const router = Router();
@@ -31,5 +32,8 @@ router.patch('/:id/template', updateTemplate);
 router.patch('/:id/colors', updateColors);
 router.patch('/:id/typography', updateTypography);
 router.patch('/:id/featured', updateFeaturedElements);
+
+// Actualizar productos del catálogo (itemsStock)
+router.post('/items-stock', updateItemsStock);
 
 export default router;

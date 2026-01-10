@@ -13,14 +13,29 @@ const ecommerceConfigSchema = new mongoose.Schema({
   },
   // Tab Encabezado
   header: {
-    businessName: {
+    pageTitle: {
       type: String,
-      maxlength: 50
+      maxlength: 100,
+      default: ''
     },
     logoUrl: String,
     logoPath: String,
-    coverUrl: String,
-    coverPath: String
+    topbar: [{
+      name: {
+        type: String,
+        required: true,
+        maxlength: 50
+      },
+      link: {
+        type: String,
+        required: true,
+        maxlength: 200
+      },
+      order: {
+        type: Number,
+        default: 0
+      }
+    }]
   },
   // Tab Plantillas
   template: {
@@ -83,11 +98,29 @@ const ecommerceConfigSchema = new mongoose.Schema({
         type: Boolean,
         default: true
       },
+      title: {
+        type: String,
+        maxlength: 100,
+        default: ''
+      },
+      text: {
+        type: String,
+        maxlength: 300,
+        default: ''
+      },
       imageUrl: String,
       imagePath: String,
-      buttonText: {
-        type: String,
-        default: 'Ver ofertas'
+      button: {
+        name: {
+          type: String,
+          maxlength: 50,
+          default: 'Ver más'
+        },
+        link: {
+          type: String,
+          maxlength: 200,
+          default: '#'
+        }
       }
     },
     carousel: {
@@ -138,35 +171,82 @@ const ecommerceConfigSchema = new mongoose.Schema({
         }
       }
     },
-    featuredProducts: {
+    promotions: {
+      enabled: {
+        type: Boolean,
+        default: true
+      },
+      items: [{
+        name: {
+          type: String,
+          required: true,
+          maxlength: 100
+        },
+        text: {
+          type: String,
+          maxlength: 200
+        },
+        expirationDate: {
+          type: Date
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
+      }]
+    },
+    productCatalog: {
       enabled: {
         type: Boolean,
         default: true
       },
       title: {
         type: String,
-        default: 'Productos destacados'
+        default: 'Catálogo de productos'
       },
-      quantity: {
-        type: Number,
-        default: 8,
-        min: 4,
-        max: 12
-      }
-    },
-    promotions: {
-      enabled: {
+      showPrice: {
         type: Boolean,
         default: true
       },
-      quantity: {
-        type: Number,
-        default: 4,
-        min: 3,
-        max: 8
+      showStock: {
+        type: Boolean,
+        default: true
+      },
+      showAddToCart: {
+        type: Boolean,
+        default: true
       }
     }
   },
+  // Campo para almacenar productos seleccionados del catálogo
+  itemsStock: [{
+    productId: {
+      type: String,
+      required: true
+    },
+    nombre: {
+      type: String,
+      required: true
+    },
+    descripcion: String,
+    precio: {
+      type: Number,
+      required: true
+    },
+    precioEditado: Number,
+    quantity: {
+      type: Number,
+      required: true
+    },
+    imagen: String,
+    productCategory: {
+      type: mongoose.Schema.Types.Mixed
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   isActive: {
     type: Boolean,
     default: true

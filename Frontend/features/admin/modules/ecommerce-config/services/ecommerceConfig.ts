@@ -105,6 +105,17 @@ class EcommerceConfigService {
     );
     return response as any;
   }
+
+  /**
+   * Guardar productos del catálogo en itemsStock
+   */
+  async saveItemsStock(branchId: string, items: any[]): Promise<any> {
+    const response = await apiCall<any>("/ecommerce-config/items-stock", {
+      method: "POST",
+      body: JSON.stringify({ branchId, items })
+    });
+    return response as any;
+  }
 }
 
 export const ecommerceConfigService = new EcommerceConfigService();
