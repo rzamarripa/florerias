@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, Nav, Tab, Spinner, Button } from "react-bootstrap";
-import { TbArrowLeft, TbZoomIn, TbZoomOut, TbZoomReset } from "react-icons/tb";
+import { TbArrowLeft, TbZoomIn, TbZoomOut, TbZoomReset, TbExternalLink } from "react-icons/tb";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import { ecommerceConfigService } from "./services/ecommerceConfig";
@@ -764,7 +764,18 @@ export default function EcommerceDesignPage() {
               <TbZoomReset size={12} />
             </Button>
           </div>
-          <span className="text-muted" style={{ fontSize: '11px' }}>Vista previa</span>
+          <div className="d-flex align-items-center gap-2">
+            <span className="text-muted" style={{ fontSize: '11px' }}>Vista previa</span>
+            <Link 
+              href="/ecommerce-preview?preview=true" 
+              target="_blank"
+              className="btn btn-primary btn-sm d-flex align-items-center gap-1"
+              style={{ padding: '2px 8px', fontSize: '11px' }}
+            >
+              <TbExternalLink size={12} />
+              Ver completo
+            </Link>
+          </div>
         </div>
         
         {/* Preview Container */}
@@ -796,6 +807,7 @@ export default function EcommerceDesignPage() {
               colors={colors}
               typography={typography}
               featuredElements={featuredElements}
+              itemsStock={config?.itemsStock}
             />
           </div>
         </div>

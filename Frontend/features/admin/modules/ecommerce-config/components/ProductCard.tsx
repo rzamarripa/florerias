@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, Badge, Button, InputGroup, Form } from "react-bootstrap";
 import { TbShoppingCart, TbStar, TbStarFilled, TbPackage, TbPlus, TbMinus } from "react-icons/tb";
 import Image from "next/image";
 import { useCartStore } from "../store/cartStore";
 import { toast } from "react-toastify";
+import { ecommerceConfigService } from "../services/ecommerceConfig";
 
 interface ProductWithStock {
   _id: string;
@@ -25,7 +26,40 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
   const [quantity, setQuantity] = useState(1);
+  const [stockInEcommerce, setStockInEcommerce] = useState(0);
+  const [availableStock, setAvailableStock] = useState(product.stock);
+  
   const addToCart = useCartStore((state) => state.addToCart);
+  const items = useCartStore((state) => state.items);
+  const getAvailableStock = useCartStore((state) => state.getAvailableStock);
+  
+  // Obtener stock comprometido en itemsStock
+  useEffect(() => {
+    const getStockInEcommerce = async () => {
+      try {
+        const response = await ecommerceConfigService.getManagerConfig();
+        const itemsStock = response.data.config?.itemsStock || [];
+        const productInEcommerce = itemsStock.find((item: any) => 
+          item.productId === product._id || item._id === product._id
+        );
+        const ecommerceStock = productInEcommerce?.stock || 0;
+        setStockInEcommerce(ecommerceStock);
+        
+        // Calcular stock disponible real
+        const stockInCart = items.find(item => item._id === product._id)?.quantity || 0;
+        const realAvailable = product.stock - ecommerceStock - stockInCart;
+        setAvailableStock(Math.max(0, realAvailable));
+      } catch (error) {
+        console.error("Error obteniendo stock del e-commerce:", error);
+        // Si hay error, usar solo el stock del carrito
+        const stockInCart = items.find(item => item._id === product._id)?.quantity || 0;
+        setAvailableStock(Math.max(0, product.stock - stockInCart));
+      }
+    };
+    
+    getStockInEcommerce();
+  }, [product._id, product.stock, items]);
+  
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -34,16 +68,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
   };
 
   const handleAddToCart = () => {
-    if (quantity > 0 && quantity <= product.stock) {
+    // Validar contra el stock disponible real
+    if (quantity > availableStock) {
+      toast.error(`No se puede tener más stock en el e-commerce que en el storage. Storage: ${product.stock}, En e-commerce: ${stockInEcommerce}, En carrito: ${items.find(item => item._id === product._id)?.quantity || 0}, Disponible: ${availableStock}`);
+      return;
+    }
+    
+    if (quantity > 0) {
       addToCart({
         _id: product._id,
         nombre: product.nombre || "Sin nombre",
         precio: product.precio || 0,
-        stock: product.stock,
-        imagen: product.imagen || product.imageUrl
+        stock: product.stock, // Mantener el stock total para referencia
+        imagen: product.imagen || product.imageUrl,
+        descripcion: product.descripcion,
+        productCategory: product.productCategory
       }, quantity);
       toast.success(`${quantity} ${product.nombre} agregado(s) al carrito`);
       setQuantity(1);
+      
+      // Actualizar stock disponible después de agregar
+      setAvailableStock(prev => Math.max(0, prev - quantity));
     } else {
       toast.error("Cantidad inválida");
     }
@@ -51,7 +96,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
 
   const handleQuantityChange = (delta: number) => {
     const newQuantity = quantity + delta;
-    if (newQuantity >= 1 && newQuantity <= product.stock) {
+    if (newQuantity >= 1 && newQuantity <= availableStock) {
       setQuantity(newQuantity);
     }
   };
@@ -123,12 +168,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
                       {formatPrice(product.precio || 0)}
                     </h5>
                   </div>
-                  <Badge 
-                    bg={getStockBadgeColor(product.stock)} 
-                    className="mt-2 mb-2"
-                  >
-                    Stock: {product.stock}
-                  </Badge>
+                  <div className="d-flex flex-column gap-1">
+                    <Badge 
+                      bg={getStockBadgeColor(product.stock)} 
+                      className="mt-2"
+                    >
+                      Storage: {product.stock}
+                    </Badge>
+                    {stockInEcommerce > 0 && (
+                      <Badge 
+                        bg="info"
+                      >
+                        E-commerce: {stockInEcommerce}
+                      </Badge>
+                    )}
+                    <Badge 
+                      bg={availableStock > 0 ? "success" : "danger"}
+                    >
+                      Disponible: {availableStock}
+                    </Badge>
+                  </div>
                   <div className="d-flex gap-2 mt-2">
                     <div className="d-flex align-items-center border rounded" style={{ padding: "2px" }}>
                       <Button 
@@ -146,7 +205,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
                         value={quantity}
                         onChange={(e) => {
                           const val = parseInt(e.target.value);
-                          if (!isNaN(val) && val >= 1 && val <= product.stock) {
+                          if (!isNaN(val) && val >= 1 && val <= availableStock) {
                             setQuantity(val);
                           }
                         }}
@@ -161,7 +220,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
                         variant="link" 
                         size="sm"
                         onClick={() => handleQuantityChange(1)}
-                        disabled={quantity >= product.stock}
+                        disabled={quantity >= availableStock}
                         className="p-1 text-secondary"
                         style={{ border: "none", background: "none" }}
                       >
@@ -242,14 +301,28 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
           </h5>
         </div>
 
-        {/* Stock Badge and Cart Actions */}
-        <div className="mb-2">
+        {/* Stock Badges */}
+        <div className="d-flex flex-wrap gap-1 mb-2">
           <Badge 
             bg={getStockBadgeColor(product.stock)}
-            className="px-2 py-1 mb-2"
+            className="px-2 py-1"
           >
             <TbPackage size={12} className="me-1" />
-            Stock: {product.stock}
+            Storage: {product.stock}
+          </Badge>
+          {stockInEcommerce > 0 && (
+            <Badge 
+              bg="info"
+              className="px-2 py-1"
+            >
+              E-com: {stockInEcommerce}
+            </Badge>
+          )}
+          <Badge 
+            bg={availableStock > 0 ? "success" : "danger"}
+            className="px-2 py-1"
+          >
+            Disp: {availableStock}
           </Badge>
         </div>
         
@@ -271,7 +344,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
               value={quantity}
               onChange={(e) => {
                 const val = parseInt(e.target.value);
-                if (!isNaN(val) && val >= 1 && val <= product.stock) {
+                if (!isNaN(val) && val >= 1 && val <= availableStock) {
                   setQuantity(val);
                 }
               }}
@@ -286,7 +359,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
               variant="link" 
               size="sm"
               onClick={() => handleQuantityChange(1)}
-              disabled={quantity >= product.stock}
+              disabled={quantity >= availableStock}
               className="p-1 text-secondary"
               style={{ border: "none", background: "none" }}
             >

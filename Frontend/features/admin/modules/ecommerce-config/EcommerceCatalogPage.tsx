@@ -17,6 +17,7 @@ import {
   TbList,
   TbShoppingCart,
   TbPackage,
+  TbCloudUpload,
 } from "react-icons/tb";
 import { productListsService } from "@/features/admin/modules/product-lists/services/productLists";
 import { storageService } from "@/features/admin/modules/storage/services/storage";
@@ -58,6 +59,8 @@ export default function EcommerceCatalogPage() {
   const [productCounts, setProductCounts] = useState<Record<string, number>>(
     {}
   );
+  const [syncingToEcommerce, setSyncingToEcommerce] = useState(false);
+  const [configId, setConfigId] = useState<string | null>(null);
 
   const { openCart, getTotalItems, initializeStock } = useCartStore();
   const totalItemsInCart = getTotalItems();
@@ -74,6 +77,7 @@ export default function EcommerceCatalogPage() {
       // Obtener la configuración del gerente para obtener el branchId
       const configResponse = await ecommerceConfigService.getManagerConfig();
       const branch = configResponse.data.branch;
+      const config = configResponse.data.config;
 
       if (!branch?._id) {
         toast.error("No se pudo obtener la información de la sucursal");
@@ -81,6 +85,9 @@ export default function EcommerceCatalogPage() {
       }
 
       setBranchId(branch._id);
+      if (config?._id) {
+        setConfigId(config._id);
+      }
 
       // Cargar productos, storage y categorías en paralelo
       const [productListResponse, storageResponse, categoriesResponse] =
@@ -254,6 +261,69 @@ export default function EcommerceCatalogPage() {
     setSortBy("name");
   };
 
+  // Sincronizar productos con la configuración del e-commerce
+  const syncProductsToEcommerce = async () => {
+    if (!configId) {
+      toast.error("No se ha configurado el e-commerce para esta sucursal");
+      return;
+    }
+
+    try {
+      setSyncingToEcommerce(true);
+
+      // Obtener la configuración actual para sumar al stock existente
+      const configResponse = await ecommerceConfigService.getManagerConfig();
+      const currentItemsStock = configResponse.data.config?.itemsStock || [];
+      
+      // Crear mapa de items existentes
+      const existingItemsMap = new Map(
+        currentItemsStock.map((item: any) => [item.productId || item._id, item])
+      );
+
+      // Preparar los productos para sincronizar
+      const itemsStock = products.map(product => {
+        const existingItem = existingItemsMap.get(product._id);
+        
+        return {
+          _id: product._id,
+          productId: product._id,
+          nombre: product.nombre,
+          descripcion: product.descripcion,
+          precio: product.precio,
+          // Si ya existe, sumar el stock del storage al existente
+          stock: existingItem ? (existingItem.stock + product.stock) : product.stock,
+          imagen: product.imagen,
+          productCategory: typeof product.productCategory === 'string' 
+            ? product.productCategory 
+            : product.productCategory?._id,
+          originalPrice: product.originalPrice,
+          discountPercentage: product.discountPercentage
+        };
+      });
+
+      // Mantener productos que ya estaban pero no están en el storage actual
+      currentItemsStock.forEach((existingItem: any) => {
+        const productId = existingItem.productId || existingItem._id;
+        if (!products.find(p => p._id === productId)) {
+          itemsStock.push(existingItem);
+        }
+      });
+
+      // Actualizar la configuración y vaciar el storage
+      await ecommerceConfigService.updateItemsStock(configId, itemsStock, true, true); // deductFromStorage=true, transferAll=true
+      
+      toast.success(`Stock transferido completamente al e-commerce. Storage vaciado.`);
+      
+      // Recargar los datos para reflejar el storage vacío
+      await loadInitialData();
+    } catch (error) {
+      console.error("Error al sincronizar productos:", error);
+      toast.error("Error al sincronizar productos con el e-commerce");
+    } finally {
+      setSyncingToEcommerce(false);
+    }
+  };
+
   if (loading) {
     return (
       <div
@@ -342,6 +412,25 @@ export default function EcommerceCatalogPage() {
                   <TbList size={18} />
                 </Button>
               </div>
+
+              {/* Sync to Ecommerce Button */}
+              <Button
+                variant="success"
+                size="sm"
+                onClick={syncProductsToEcommerce}
+                disabled={syncingToEcommerce || products.length === 0}
+                className="d-flex align-items-center gap-1"
+                title="Transfiere TODO el stock del almacén al e-commerce"
+              >
+                {syncingToEcommerce ? (
+                  <Spinner animation="border" size="sm" />
+                ) : (
+                  <TbCloudUpload size={18} />
+                )}
+                <span className="d-none d-sm-inline">
+                  {syncingToEcommerce ? "Transfiriendo..." : "Transferir Todo"}
+                </span>
+              </Button>
 
               {/* Cart Button */}
               <Button

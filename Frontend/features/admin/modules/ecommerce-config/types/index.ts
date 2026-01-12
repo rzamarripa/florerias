@@ -80,6 +80,19 @@ export interface EcommerceConfigFeaturedElements {
   };
 }
 
+export interface StockItem {
+  _id: string;
+  productId: string;
+  nombre: string;
+  descripcion?: string;
+  precio: number;
+  stock: number;
+  imagen?: string;
+  productCategory?: string | any;
+  originalPrice?: number;
+  discountPercentage?: number;
+}
+
 export interface EcommerceConfig {
   _id: string;
   companyId: string | any;
@@ -89,6 +102,7 @@ export interface EcommerceConfig {
   colors?: EcommerceConfigColors;
   typography?: EcommerceConfigTypography;
   featuredElements?: EcommerceConfigFeaturedElements;
+  itemsStock?: StockItem[];
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

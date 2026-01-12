@@ -43,25 +43,39 @@ const CartModal: React.FC<CartModalProps> = ({ branchId: propBranchId, onProduct
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState<number>(0);
   const [branchId, setBranchId] = useState<string>("");
+  const [configId, setConfigId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Usar branchId de prop o obtenerlo
   useEffect(() => {
+    const getConfigData = async () => {
+      try {
+        const configResponse = await ecommerceConfigService.getManagerConfig();
+        const branch = configResponse.data.branch;
+        const config = configResponse.data.config;
+        
+        if (branch?._id) {
+          setBranchId(branch._id);
+        }
+        
+        // Si existe config, usar su ID
+        if (config?._id) {
+          setConfigId(config._id);
+          console.log("Configuración encontrada:", config._id);
+        } else if (branch?._id) {
+          // Si no existe config pero hay branch, podemos crear una nueva cuando guardemos
+          console.log("No hay configuración, se creará al guardar");
+          setConfigId(null);
+        }
+      } catch (error) {
+        console.error("Error al obtener configuración:", error);
+      }
+    };
+    
     if (propBranchId) {
       setBranchId(propBranchId);
-    } else {
-      const getBranchId = async () => {
-        try {
-          const configResponse = await ecommerceConfigService.getManagerConfig();
-          if (configResponse.data.branch?._id) {
-            setBranchId(configResponse.data.branch._id);
-          }
-        } catch (error) {
-          console.error("Error al obtener branchId:", error);
-        }
-      };
-      getBranchId();
     }
+    getConfigData();
   }, [propBranchId]);
 
   const formatPrice = (price: number) => {
@@ -325,22 +339,65 @@ const CartModal: React.FC<CartModalProps> = ({ branchId: propBranchId, onProduct
                   
                   setSaving(true);
                   try {
-                    // Preparar los items para guardar
-                    const itemsToSave = items.map(item => ({
-                      productId: item._id,
-                      nombre: item.nombre,
-                      descripcion: item.descripcion || "",
-                      precio: item.precio,
-                      precioEditado: item.precioEditado,
-                      quantity: item.quantity,
-                      imagen: item.imagen || "",
-                      productCategory: item.productCategory
-                    }));
+                    // Obtener la configuración actual
+                    const configResponse = await ecommerceConfigService.getManagerConfig();
+                    const config = configResponse.data.config;
+                    const companyId = configResponse.data.companyId;
                     
-                    // Guardar en la base de datos
-                    await ecommerceConfigService.saveItemsStock(branchId, itemsToSave);
+                    let currentConfigId = configId;
+                    let currentItemsStock = config?.itemsStock || [];
                     
-                    toast.success("Productos guardados exitosamente en el catálogo");
+                    // Si no existe configuración, crearla primero
+                    if (!config || !currentConfigId) {
+                      console.log("Creando nueva configuración para la sucursal");
+                      const newConfig = await ecommerceConfigService.createConfig({
+                        companyId: companyId,
+                        branchId: branchId,
+                        itemsStock: []
+                      });
+                      currentConfigId = newConfig._id;
+                      setConfigId(currentConfigId);
+                      currentItemsStock = [];
+                    }
+                    
+                    // Crear un mapa de los items existentes por productId
+                    const existingItemsMap = new Map(
+                      currentItemsStock.map((item: any) => [item.productId || item._id, item])
+                    );
+                    
+                    // Preparar los nuevos items o actualizar existentes
+                    items.forEach(item => {
+                      const itemToSave = {
+                        _id: item._id,
+                        productId: item._id,
+                        nombre: item.nombre,
+                        descripcion: item.descripcion || "",
+                        precio: item.precioEditado || item.precio,
+                        stock: item.quantity, // Usar quantity como el nuevo stock
+                        imagen: item.imagen || "",
+                        productCategory: item.productCategory,
+                        originalPrice: item.precio,
+                        discountPercentage: item.precioEditado && item.precioEditado < item.precio 
+                          ? Math.round(((item.precio - item.precioEditado) / item.precio) * 100)
+                          : 0
+                      };
+                      
+                      // Si el producto ya existe, actualizar cantidad y precio
+                      if (existingItemsMap.has(item._id)) {
+                        const existingItem = existingItemsMap.get(item._id);
+                        itemToSave.stock = existingItem.stock + item.quantity; // Sumar al stock existente
+                      }
+                      
+                      existingItemsMap.set(item._id, itemToSave);
+                    });
+                    
+                    // Convertir el mapa de vuelta a array
+                    const finalItemsStock = Array.from(existingItemsMap.values());
+                    
+                    // Actualizar en la base de datos y descontar del storage (solo lo necesario)
+                    await ecommerceConfigService.updateItemsStock(currentConfigId, finalItemsStock, true, false); // deductFromStorage=true, transferAll=false
+                    
+                    toast.success("Productos actualizados en el catálogo de e-commerce y stock descontado del almacén");
                     clearCart();
                     closeCart();
                     
@@ -350,13 +407,13 @@ const CartModal: React.FC<CartModalProps> = ({ branchId: propBranchId, onProduct
                     }
                   } catch (error) {
                     console.error("Error al guardar productos:", error);
-                    toast.error("Error al guardar los productos");
+                    toast.error("Error al guardar los productos en el catálogo");
                   } finally {
                     setSaving(false);
                   }
                 }}
               >
-                {saving ? "Guardando..." : "Guardar productos"}
+                {saving ? "Guardando..." : "Guardar en catálogo e-commerce"}
               </Button>
             </div>
           </div>

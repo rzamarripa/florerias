@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { TbTruck, TbTag, TbClock, TbMapPin, TbShoppingCart, TbStar, TbArrowRight, TbCheck, TbPhone, TbMail } from 'react-icons/tb';
-import type { EcommerceConfigFeaturedElements, EcommerceConfigColors, EcommerceConfigTypography, EcommerceConfigHeader } from '../types';
+import type { EcommerceConfigFeaturedElements, EcommerceConfigColors, EcommerceConfigTypography, EcommerceConfigHeader, StockItem } from '../types';
 
 interface EcommerceViewProps {
   header: EcommerceConfigHeader;
   colors: EcommerceConfigColors;
   typography: EcommerceConfigTypography;
   featuredElements: EcommerceConfigFeaturedElements;
+  itemsStock?: StockItem[];
 }
 
 const EcommerceView: React.FC<EcommerceViewProps> = ({
   header,
   colors,
   typography,
-  featuredElements
+  featuredElements,
+  itemsStock = []
 }) => {
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -630,131 +632,304 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
               </div>
               
               <div className="row g-4">
-                {[1, 2, 3, 4].map((num) => (
-                  <div key={num} className={`col-${featuredElements.productCatalog.display === 'list' ? '12' : featuredElements.productCatalog.display === 'cards' ? '6' : 'lg-3 md-6'}`}>
-                    <div 
-                      className="card border-0 h-100 shadow-sm position-relative overflow-hidden"
-                      style={{ 
-                        borderRadius: '16px',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-5px)';
-                        e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.15)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                      }}
-                    >
-                      {/* Product Badge */}
-                      {num === 1 && (
-                        <span 
-                          className="position-absolute top-0 start-0 badge m-3"
-                          style={{ 
-                            backgroundColor: colors?.secondary || '#8b5cf6',
-                            zIndex: 10,
-                            padding: '6px 12px',
-                            borderRadius: '8px'
-                          }}
-                        >
-                          Nuevo
-                        </span>
-                      )}
-                      
-                      {/* Product Image */}
+                {/* Mostrar productos reales si existen, sino mostrar productos de ejemplo */}
+                {itemsStock && itemsStock.length > 0 ? (
+                  // Productos reales
+                  itemsStock.slice(0, featuredElements.productCatalog?.productsPerPage || 12).map((product, index) => (
+                    <div key={product._id} className={`col-${featuredElements.productCatalog?.display === 'list' ? '12' : featuredElements.productCatalog?.display === 'cards' ? '6' : 'lg-3 md-6'}`}>
                       <div 
-                        className="position-relative overflow-hidden"
-                        style={{ height: '220px' }}
+                        className="card border-0 h-100 shadow-sm position-relative overflow-hidden"
+                        style={{ 
+                          borderRadius: '16px',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-5px)';
+                          e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                        }}
                       >
-                        <div 
-                          className="w-100 h-100"
-                          style={{ 
-                            background: `linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)`
-                          }}
-                        />
-                        <div 
-                          className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center opacity-0"
-                          style={{ 
-                            backgroundColor: 'rgba(0,0,0,0.7)',
-                            transition: 'opacity 0.3s ease'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                          onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-                        >
-                          <button 
-                            className="btn btn-light rounded-circle p-3"
+                        {/* Product Badge */}
+                        {index === 0 && (
+                          <span 
+                            className="position-absolute top-0 start-0 badge m-3"
                             style={{ 
-                              boxShadow: '0 4px 20px rgba(255,255,255,0.3)'
+                              backgroundColor: colors?.secondary || '#8b5cf6',
+                              zIndex: 10,
+                              padding: '6px 12px',
+                              borderRadius: '8px'
                             }}
                           >
-                            <TbShoppingCart size={20} />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <div className="card-body p-4">
-                        {/* Rating */}
-                        <div className="d-flex gap-1 mb-2">
-                          {[...Array(5)].map((_, i) => (
-                            <TbStar 
-                              key={i} 
-                              size={14} 
-                              fill={i < 4 ? '#fbbf24' : 'none'}
-                              style={{ color: '#fbbf24' }}
-                            />
-                          ))}
-                          <small className="text-muted ms-2">(4.5)</small>
-                        </div>
+                            Nuevo
+                          </span>
+                        )}
+                        {product.discountPercentage && product.discountPercentage > 0 && (
+                          <span 
+                            className="position-absolute top-0 end-0 badge m-3"
+                            style={{ 
+                              backgroundColor: '#ef4444',
+                              zIndex: 10,
+                              padding: '6px 12px',
+                              borderRadius: '8px'
+                            }}
+                          >
+                            -{product.discountPercentage}%
+                          </span>
+                        )}
                         
-                        <h5 
-                          className="fw-bold mb-2"
-                          style={{
-                            fontFamily: typography?.titleFont || 'Inter',
-                            color: colors?.text || '#1f2937',
-                            fontSize: '18px'
-                          }}
+                        {/* Product Image */}
+                        <div 
+                          className="position-relative overflow-hidden"
+                          style={{ height: '220px' }}
                         >
-                          Producto Premium {num}
-                        </h5>
-                        
-                        <p className="text-muted small mb-3">
-                          Descripción breve del producto con sus características principales
-                        </p>
-                        
-                        <div className="d-flex align-items-center justify-content-between">
-                          <div>
-                            <span className="text-muted small text-decoration-line-through">
-                              ${399 * num}
-                            </span>
-                            <h5 
-                              className="fw-bold mb-0"
+                          {product.imagen ? (
+                            <img 
+                              src={product.imagen} 
+                              alt={product.nombre}
+                              className="w-100 h-100"
                               style={{ 
-                                color: colors?.primary || '#6366f1',
-                                fontSize: '22px'
+                                objectFit: 'cover'
+                              }}
+                            />
+                          ) : (
+                            <div 
+                              className="w-100 h-100 d-flex align-items-center justify-content-center"
+                              style={{ 
+                                background: `linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)`
                               }}
                             >
-                              ${299 * num}
-                            </h5>
+                              <TbShoppingCart size={48} className="text-muted opacity-50" />
+                            </div>
+                          )}
+                          <div 
+                            className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center opacity-0"
+                            style={{ 
+                              backgroundColor: 'rgba(0,0,0,0.7)',
+                              transition: 'opacity 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                          >
+                            <button 
+                              className="btn btn-light rounded-circle p-3"
+                              style={{ 
+                                boxShadow: '0 4px 20px rgba(255,255,255,0.3)'
+                              }}
+                            >
+                              <TbShoppingCart size={20} />
+                            </button>
                           </div>
-                          <button
-                            className="btn rounded-pill"
+                        </div>
+                        
+                        <div className="card-body p-4">
+                          {/* Stock Badge */}
+                          <div className="d-flex align-items-center gap-2 mb-2">
+                            <span 
+                              className="badge rounded-pill"
+                              style={{
+                                backgroundColor: product.stock > 10 ? '#10b98120' : product.stock > 0 ? '#f59e0b20' : '#ef444420',
+                                color: product.stock > 10 ? '#10b981' : product.stock > 0 ? '#f59e0b' : '#ef4444',
+                                fontSize: '11px',
+                                padding: '4px 8px'
+                              }}
+                            >
+                              {product.stock > 10 ? `En stock: ${product.stock}` : product.stock > 0 ? `Últimos ${product.stock}` : 'Agotado'}
+                            </span>
+                          </div>
+                          
+                          <h5 
+                            className="fw-bold mb-2"
                             style={{
-                              backgroundColor: colors?.primary || '#6366f1',
-                              color: 'white',
-                              padding: '8px 20px',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              boxShadow: `0 4px 14px 0 ${colors?.primary || '#6366f1'}40`
+                              fontFamily: typography?.titleFont || 'Inter',
+                              color: colors?.text || '#1f2937',
+                              fontSize: '18px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
                             }}
                           >
-                            Agregar
-                          </button>
+                            {product.nombre}
+                          </h5>
+                          
+                          <p 
+                            className="text-muted small mb-3"
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              lineHeight: '1.5'
+                            }}
+                          >
+                            {product.descripcion || 'Sin descripción disponible'}
+                          </p>
+                          
+                          <div className="d-flex align-items-center justify-content-between">
+                            <div>
+                              {product.originalPrice && product.originalPrice > product.precio && (
+                                <span className="text-muted small text-decoration-line-through d-block">
+                                  ${product.originalPrice.toFixed(2)}
+                                </span>
+                              )}
+                              <h5 
+                                className="fw-bold mb-0"
+                                style={{ 
+                                  color: colors?.primary || '#6366f1',
+                                  fontSize: '22px'
+                                }}
+                              >
+                                ${product.precio.toFixed(2)}
+                              </h5>
+                            </div>
+                            <button
+                              className="btn rounded-pill"
+                              disabled={product.stock === 0}
+                              style={{
+                                backgroundColor: product.stock > 0 ? (colors?.primary || '#6366f1') : '#9ca3af',
+                                color: 'white',
+                                padding: '8px 20px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                boxShadow: product.stock > 0 ? `0 4px 14px 0 ${colors?.primary || '#6366f1'}40` : 'none',
+                                cursor: product.stock > 0 ? 'pointer' : 'not-allowed'
+                              }}
+                            >
+                              {product.stock > 0 ? 'Agregar' : 'Agotado'}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  // Productos de ejemplo cuando no hay productos reales
+                  [1, 2, 3, 4].map((num) => (
+                    <div key={num} className={`col-${featuredElements.productCatalog?.display === 'list' ? '12' : featuredElements.productCatalog?.display === 'cards' ? '6' : 'lg-3 md-6'}`}>
+                      <div 
+                        className="card border-0 h-100 shadow-sm position-relative overflow-hidden"
+                        style={{ 
+                          borderRadius: '16px',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-5px)';
+                          e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                        }}
+                      >
+                        {num === 1 && (
+                          <span 
+                            className="position-absolute top-0 start-0 badge m-3"
+                            style={{ 
+                              backgroundColor: colors?.secondary || '#8b5cf6',
+                              zIndex: 10,
+                              padding: '6px 12px',
+                              borderRadius: '8px'
+                            }}
+                          >
+                            Nuevo
+                          </span>
+                        )}
+                        
+                        <div 
+                          className="position-relative overflow-hidden"
+                          style={{ height: '220px' }}
+                        >
+                          <div 
+                            className="w-100 h-100"
+                            style={{ 
+                              background: `linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)`
+                            }}
+                          />
+                          <div 
+                            className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center opacity-0"
+                            style={{ 
+                              backgroundColor: 'rgba(0,0,0,0.7)',
+                              transition: 'opacity 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                          >
+                            <button 
+                              className="btn btn-light rounded-circle p-3"
+                              style={{ 
+                                boxShadow: '0 4px 20px rgba(255,255,255,0.3)'
+                              }}
+                            >
+                              <TbShoppingCart size={20} />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="card-body p-4">
+                          <div className="d-flex gap-1 mb-2">
+                            {[...Array(5)].map((_, i) => (
+                              <TbStar 
+                                key={i} 
+                                size={14} 
+                                fill={i < 4 ? '#fbbf24' : 'none'}
+                                style={{ color: '#fbbf24' }}
+                              />
+                            ))}
+                            <small className="text-muted ms-2">(4.5)</small>
+                          </div>
+                          
+                          <h5 
+                            className="fw-bold mb-2"
+                            style={{
+                              fontFamily: typography?.titleFont || 'Inter',
+                              color: colors?.text || '#1f2937',
+                              fontSize: '18px'
+                            }}
+                          >
+                            Producto Premium {num}
+                          </h5>
+                          
+                          <p className="text-muted small mb-3">
+                            Descripción breve del producto con sus características principales
+                          </p>
+                          
+                          <div className="d-flex align-items-center justify-content-between">
+                            <div>
+                              <span className="text-muted small text-decoration-line-through">
+                                ${399 * num}
+                              </span>
+                              <h5 
+                                className="fw-bold mb-0"
+                                style={{ 
+                                  color: colors?.primary || '#6366f1',
+                                  fontSize: '22px'
+                                }}
+                              >
+                                ${299 * num}
+                              </h5>
+                            </div>
+                            <button
+                              className="btn rounded-pill"
+                              style={{
+                                backgroundColor: colors?.primary || '#6366f1',
+                                color: 'white',
+                                padding: '8px 20px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                boxShadow: `0 4px 14px 0 ${colors?.primary || '#6366f1'}40`
+                              }}
+                            >
+                              Agregar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Load More Button */}
