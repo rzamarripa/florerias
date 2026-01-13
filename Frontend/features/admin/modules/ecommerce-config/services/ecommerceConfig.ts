@@ -5,7 +5,8 @@ import type {
   EcommerceConfigColors,
   EcommerceConfigTypography,
   EcommerceConfigFeaturedElements,
-  ManagerConfigResponse
+  ManagerConfigResponse,
+  StockItem
 } from "../types";
 
 class EcommerceConfigService {
@@ -107,13 +108,21 @@ class EcommerceConfigService {
   }
 
   /**
-   * Guardar productos del catálogo en itemsStock
+   * Actualizar items de stock
    */
-  async saveItemsStock(branchId: string, items: any[]): Promise<any> {
-    const response = await apiCall<any>("/ecommerce-config/items-stock", {
-      method: "POST",
-      body: JSON.stringify({ branchId, items })
-    });
+  async updateItemsStock(
+    id: string, 
+    itemsStock: StockItem[], 
+    deductFromStorage: boolean = false,
+    transferAll: boolean = false
+  ): Promise<EcommerceConfig> {
+    const response = await apiCall<EcommerceConfig>(
+      `/ecommerce-config/${id}/items-stock`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ itemsStock, deductFromStorage, transferAll })
+      }
+    );
     return response as any;
   }
 }

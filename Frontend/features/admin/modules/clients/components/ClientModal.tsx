@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col } from "react-bootstrap";
-import { X, Save, User } from "lucide-react";
+import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
+import { X, Save, User, QrCode, Download } from "lucide-react";
 import { Client, CreateClientData, UpdateClientData } from "../types";
+import { useRouter } from "next/navigation";
+import digitalCardService from "../../digitalCards/services/digitalCardService";
+import { toast } from "react-toastify";
 
 interface ClientModalProps {
   show: boolean;
@@ -18,6 +21,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
   onSave,
   loading = false,
 }) => {
+  const router = useRouter();
   const [formData, setFormData] = useState<CreateClientData>({
     name: "",
     lastName: "",
@@ -25,9 +29,13 @@ const ClientModal: React.FC<ClientModalProps> = ({
     email: "",
     points: 0,
     status: true,
+    branch: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generatingCard, setGeneratingCard] = useState(false);
+  const [digitalCard, setDigitalCard] = useState<any>(null);
+  const [showCardActions, setShowCardActions] = useState(false);
 
   useEffect(() => {
     if (client) {
@@ -38,7 +46,12 @@ const ClientModal: React.FC<ClientModalProps> = ({
         email: client.email || "",
         points: client.points,
         status: client.status,
+        branch: client.branch?._id || "",
       });
+      // Cargar tarjeta digital si existe
+      if (client._id) {
+        checkDigitalCard(client._id);
+      }
     } else {
       setFormData({
         name: "",
@@ -47,7 +60,10 @@ const ClientModal: React.FC<ClientModalProps> = ({
         email: "",
         points: 0,
         status: true,
+        branch: "",
       });
+      setDigitalCard(null);
+      setShowCardActions(false);
     }
     setErrors({});
   }, [client, show]);
@@ -87,6 +103,57 @@ const ClientModal: React.FC<ClientModalProps> = ({
   };
 
   const isEditing = !!client;
+
+  const checkDigitalCard = async (clientId: string) => {
+    try {
+      const card = await digitalCardService.getDigitalCard(clientId);
+      if (card) {
+        setDigitalCard(card);
+        setShowCardActions(true);
+      }
+    } catch (error) {
+      console.log("No hay tarjeta digital para este cliente");
+    }
+  };
+
+  const handleGenerateCard = async () => {
+    if (!client?._id) return;
+    
+    try {
+      setGeneratingCard(true);
+      let card = digitalCard;
+      
+      if (!card) {
+        card = await digitalCardService.generateDigitalCard(client._id);
+        toast.success("Tarjeta digital generada exitosamente");
+      }
+      
+      setDigitalCard(card);
+      setShowCardActions(true);
+    } catch (error) {
+      console.error("Error generando tarjeta:", error);
+      toast.error("Error al generar la tarjeta digital");
+    } finally {
+      setGeneratingCard(false);
+    }
+  };
+
+  const handleDownloadQR = () => {
+    if (digitalCard?.qrCode) {
+      digitalCardService.downloadQRImage(
+        digitalCard.qrCode, 
+        `qr-${client?.clientNumber || 'cliente'}.png`
+      );
+      toast.success("Código QR descargado");
+    }
+  };
+
+  const handleViewFullCard = () => {
+    if (client?._id) {
+      router.push(`/admin/digital-cards?clientId=${client._id}`);
+      onHide();
+    }
+  };
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered>
@@ -216,27 +283,76 @@ const ClientModal: React.FC<ClientModalProps> = ({
       </Modal.Body>
 
       <Modal.Footer className="border-top-0 pt-0">
-        <Button variant="outline-secondary" onClick={onHide} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={loading}
-          className="d-flex align-items-center gap-2"
-        >
-          {loading ? (
-            <>
-              <div className="spinner-border spinner-border-sm" role="status" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save size={16} />
-              {isEditing ? "Actualizar" : "Crear"} Cliente
-            </>
-          )}
-        </Button>
+        <div className="d-flex justify-content-between w-100">
+          <div>
+            {isEditing && (
+              <div className="d-flex gap-2">
+                {!digitalCard ? (
+                  <Button
+                    variant="outline-primary"
+                    onClick={handleGenerateCard}
+                    disabled={generatingCard}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    {generatingCard ? (
+                      <>
+                        <Spinner size="sm" animation="border" />
+                        Generando...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode size={16} />
+                        Generar Tarjeta
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline-success"
+                      onClick={handleDownloadQR}
+                      className="d-flex align-items-center gap-2"
+                    >
+                      <Download size={16} />
+                      Descargar QR
+                    </Button>
+                    <Button
+                      variant="outline-primary"
+                      onClick={handleViewFullCard}
+                      className="d-flex align-items-center gap-2"
+                    >
+                      <QrCode size={16} />
+                      Ver Tarjeta
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="d-flex gap-2">
+            <Button variant="outline-secondary" onClick={onHide} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={loading}
+              className="d-flex align-items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="spinner-border spinner-border-sm" role="status" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  {isEditing ? "Actualizar" : "Crear"} Cliente
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </Modal.Footer>
     </Modal>
   );

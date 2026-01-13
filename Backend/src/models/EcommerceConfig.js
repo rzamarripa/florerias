@@ -220,6 +220,10 @@ const ecommerceConfigSchema = new mongoose.Schema({
   },
   // Campo para almacenar productos seleccionados del catálogo
   itemsStock: [{
+    _id: {
+      type: String,
+      required: true
+    },
     productId: {
       type: String,
       required: true
@@ -233,15 +237,17 @@ const ecommerceConfigSchema = new mongoose.Schema({
       type: Number,
       required: true
     },
-    precioEditado: Number,
-    quantity: {
+    stock: {
       type: Number,
-      required: true
+      required: true,
+      default: 0
     },
     imagen: String,
     productCategory: {
       type: mongoose.Schema.Types.Mixed
     },
+    originalPrice: Number,
+    discountPercentage: Number,
     addedAt: {
       type: Date,
       default: Date.now

@@ -30,6 +30,7 @@ import {
   ChartPie,
   Box,
   Stars,
+  QrCode,
 } from "lucide-react";
 
 export interface UserDropdownItem {
@@ -161,6 +162,12 @@ export const roleBasedMenuItems: MenuItemType[] = [
             label: "Clientes",
             url: "/panel/clientes",
             icon: User,
+          },
+          {
+            key: "tarjetas-digitales",
+            label: "Tarjetas Digitales",
+            url: "/admin/digital-cards",
+            icon: CreditCard,
           },
           {
             key: "cajeros",
@@ -375,6 +382,12 @@ export const roleBasedMenuItems: MenuItemType[] = [
             label: "Clientes",
             url: "/panel/clientes",
             icon: User,
+          },
+          {
+            key: "tarjetas-digitales-gerente",
+            label: "Tarjetas Digitales",
+            url: "/admin/digital-cards",
+            icon: CreditCard,
           },
           {
             key: "cajeros",
@@ -639,6 +652,12 @@ export const originalMenuItems: MenuItemType[] = [
             label: "Clientes",
             url: "/panel/clientes",
             icon: User,
+          },
+          {
+            key: "tarjetas-digitales",
+            label: "Tarjetas Digitales",
+            url: "/admin/digital-cards",
+            icon: QrCode,
           },
           {
             key: "configuracion-puntos",

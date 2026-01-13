@@ -7,6 +7,7 @@ export interface BranchFilters {
   search?: string;
   isActive?: boolean;
   companyId?: string;
+  managerId?: string;
 }
 
 export interface GetBranchesResponse {
@@ -23,7 +24,7 @@ export interface GetBranchesResponse {
 
 export const branchesService = {
   getAllBranches: async (filters: BranchFilters = {}): Promise<GetBranchesResponse> => {
-    const { page = 1, limit = 10, search, isActive, companyId } = filters;
+    const { page = 1, limit = 10, search, isActive, companyId, managerId } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -33,6 +34,7 @@ export const branchesService = {
     if (search) searchParams.append('search', search);
     if (isActive !== undefined) searchParams.append('isActive', isActive.toString());
     if (companyId) searchParams.append('companyId', companyId);
+    if (managerId) searchParams.append('managerId', managerId);
 
     const response = await apiCall<GetBranchesResponse>(`/branches?${searchParams}`);
     return response as any;

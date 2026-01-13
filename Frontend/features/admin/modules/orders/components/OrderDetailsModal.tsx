@@ -28,6 +28,7 @@ import {
   Gift,
   Check,
   X,
+  ScanLine,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CreateOrderData, ShippingType, AppliedRewardInfo } from "../types";
@@ -66,6 +67,7 @@ interface OrderDetailsModalProps {
   onCancelDiscount: () => void;
   setError: (error: string | null) => void;
   setSuccess: (success: boolean) => void;
+  onScanQR?: () => void;
 }
 
 const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
@@ -89,6 +91,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   onCancelDiscount,
   setError,
   setSuccess,
+  onScanQR,
 }) => {
   const router = useRouter();
 
@@ -663,9 +666,22 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                       <>
                         <Col md={6}>
                           <Form.Group>
-                            <Form.Label className="fw-semibold">
-                              <User size={16} className="me-2" />
-                              Cliente
+                            <Form.Label className="fw-semibold d-flex justify-content-between align-items-center">
+                              <span>
+                                <User size={16} className="me-2" />
+                                Cliente
+                              </span>
+                              {onScanQR && (
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={onScanQR}
+                                  className="ms-2"
+                                >
+                                  <ScanLine size={14} className="me-1" />
+                                  Escanear QR
+                                </Button>
+                              )}
                             </Form.Label>
                             <Form.Control
                               type="text"

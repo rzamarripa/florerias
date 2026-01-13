@@ -9,6 +9,7 @@ import {
   updateTypography,
   updateFeaturedElements,
   getManagerConfig,
+  syncItemsStock,
   updateItemsStock
 } from '../controllers/ecommerceConfigController.js';
 
@@ -32,8 +33,9 @@ router.patch('/:id/template', updateTemplate);
 router.patch('/:id/colors', updateColors);
 router.patch('/:id/typography', updateTypography);
 router.patch('/:id/featured', updateFeaturedElements);
+router.patch('/:id/items-stock', syncItemsStock);  // Nueva ruta para sincronizar productos
 
-// Actualizar productos del catálogo (itemsStock)
+// Actualizar productos del catálogo (itemsStock) - DEPRECATED
 router.post('/items-stock', updateItemsStock);
 
 export default router;

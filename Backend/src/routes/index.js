@@ -45,6 +45,8 @@ import loyaltyRoutes from "./loyaltyRoutes.js";
 import companySalesRoutes from "./companySalesRoutes.js";
 import passwordResetRoutes from "./passwordResetRoutes.js";
 import ecommerceConfigRoutes from "./ecommerceConfigRoutes.js";
+import digitalCardRoutes from "./digitalCardRoutes.js";
+import scannerRoutes from "./scannerRoutes.js";
 
 const router = Router();
 
@@ -93,5 +95,7 @@ router.use("/loyalty", loyaltyRoutes);
 router.use("/company-sales", companySalesRoutes);
 router.use("/password-reset", passwordResetRoutes);
 router.use("/ecommerce-config", ecommerceConfigRoutes);
+router.use("/digital-cards", digitalCardRoutes);
+router.use("/scanner", scannerRoutes);
 
 export default router;

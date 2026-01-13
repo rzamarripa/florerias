@@ -332,7 +332,114 @@ const getManagerConfig = async (req, res) => {
   }
 };
 
-// Actualizar productos del catálogo (itemsStock)
+// Sincronizar productos con el catálogo de e-commerce (itemsStock) y descontar del storage
+const syncItemsStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { itemsStock, deductFromStorage = false, transferAll = false } = req.body;
+
+    // Obtener la configuración actual
+    const currentConfig = await EcommerceConfig.findById(id);
+    if (!currentConfig) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Configuración no encontrada' 
+      });
+    }
+
+    // Si se debe descontar del storage
+    if (deductFromStorage) {
+      const storage = await Storage.findOne({ branch: currentConfig.branchId });
+      if (!storage) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'No se encontró almacén para esta sucursal' 
+        });
+      }
+
+      // Crear mapa de items existentes en la configuración
+      const existingItemsMap = new Map(
+        (currentConfig.itemsStock || []).map(item => [item.productId || item._id, item])
+      );
+
+      if (transferAll) {
+        // Sincronización completa: Transferir TODO el stock del storage a itemsStock
+        for (const item of itemsStock) {
+          const productInStorage = storage.products.find(
+            p => (p.productId._id || p.productId).toString() === item.productId
+          );
+          
+          if (productInStorage) {
+            // Vaciar completamente el stock del storage
+            productInStorage.quantity = 0;
+          }
+        }
+      } else {
+        // Guardado desde carrito: Validar y descontar solo lo necesario
+        for (const item of itemsStock) {
+          const productInStorage = storage.products.find(
+            p => (p.productId._id || p.productId).toString() === item.productId
+          );
+          
+          if (!productInStorage) {
+            return res.status(400).json({ 
+              success: false,
+              message: `Producto ${item.nombre} no encontrado en el almacén` 
+            });
+          }
+
+          // Calcular cuánto stock nuevo se está agregando
+          let quantityToDeduct = item.stock;
+          const existingItem = existingItemsMap.get(item.productId);
+          if (existingItem) {
+            // Si ya existe, solo descontar la diferencia
+            quantityToDeduct = item.stock - (existingItem.stock || 0);
+          }
+
+          // Validar que hay suficiente stock
+          if (quantityToDeduct > 0 && productInStorage.quantity < quantityToDeduct) {
+            return res.status(400).json({ 
+              success: false,
+              message: `Stock insuficiente para ${item.nombre}. Disponible: ${productInStorage.quantity}, Requerido: ${quantityToDeduct}` 
+            });
+          }
+
+          // Descontar del storage
+          if (quantityToDeduct > 0) {
+            productInStorage.quantity -= quantityToDeduct;
+          }
+        }
+      }
+
+      // Guardar cambios en el storage
+      await storage.save();
+    }
+
+    // Actualizar la configuración con los nuevos itemsStock
+    const config = await EcommerceConfig.findByIdAndUpdate(
+      id,
+      { itemsStock },
+      { new: true, runValidators: true }
+    );
+
+    res.json({ 
+      success: true, 
+      data: config,
+      message: deductFromStorage 
+        ? 'Productos sincronizados y stock actualizado en almacén' 
+        : 'Productos sincronizados correctamente'
+    });
+  } catch (error) {
+    console.error('Error al sincronizar productos:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error al sincronizar los productos',
+      error: error.message 
+    });
+  }
+};
+
+// Actualizar productos del catálogo (itemsStock) - DEPRECATED
 const updateItemsStock = async (req, res) => {
   try {
     const { branchId, items } = req.body;
@@ -438,5 +545,6 @@ export {
   updateTypography,
   updateFeaturedElements,
   getManagerConfig,
+  syncItemsStock,
   updateItemsStock
 };

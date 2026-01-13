@@ -219,6 +219,10 @@ export const getAllBranches = async (req, res) => {
       if (req.query.companyId) {
         filters.companyId = req.query.companyId;
       }
+      // Si envía managerId como filtro, aplicarlo (para buscar sucursales de un gerente específico)
+      if (req.query.managerId) {
+        filters.manager = req.query.managerId;
+      }
       // Si no envía filtro, verá todas las sucursales del sistema
     }
     // CASO 2: Si el usuario tiene rol "Administrador" (administrador de empresa)
