@@ -26,7 +26,15 @@ const digitalCardSchema = new Schema(
     },
     qrCode: {
       type: String,
-      required: true, // Base64 encoded QR image
+      required: false, // Base64 encoded QR image - ahora opcional para compatibilidad
+    },
+    qrCodeUrl: {
+      type: String,
+      default: null, // URL del QR en Firebase Storage
+    },
+    qrCodePath: {
+      type: String,
+      default: null, // Path del QR en Firebase Storage
     },
     qrData: {
       type: String,

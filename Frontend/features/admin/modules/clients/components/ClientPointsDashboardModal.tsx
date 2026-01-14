@@ -21,7 +21,7 @@ import { toast } from "react-toastify";
 interface ClientPointsDashboardModalProps {
   show: boolean;
   onHide: () => void;
-  client: Client | null;
+  client: Client | any | null;
   branchId: string | null;
 }
 

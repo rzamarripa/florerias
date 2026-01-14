@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Table, Button, Spinner, Badge, Pagination } from "react-bootstrap";
 import { Package, Truck, Clock, Calendar } from "lucide-react";
-import { salesService } from "../../../sales/services/sales";
+import { productionOrdersService } from "../../services/productionOrders";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 
@@ -113,42 +113,21 @@ const LaterProductionTable: React.FC<LaterProductionTableProps> = ({
       setLoading(true);
       setError(null);
 
-      // Obtener fechas para días posteriores a mañana
-      const afterTomorrow = new Date();
-      afterTomorrow.setDate(afterTomorrow.getDate() + 2);
-      afterTomorrow.setHours(0, 0, 0, 0);
-
-      // Obtener todas las órdenes (usamos un rango amplio y luego filtramos)
-      const response = await salesService.getAllSales({
-        startDate: new Date().toISOString().split("T")[0],
-        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0], // 1 año adelante
+      // Usar el servicio de producción que ya filtra correctamente
+      const response = await productionOrdersService.getLaterOrders({
+        startDate: '', // No necesario, el servicio ya filtra por deliveryDateTime
+        endDate: '',   // No necesario, el servicio ya filtra por deliveryDateTime
         branchId,
-        limit: 1000,
+        limit: 1000,   // Obtener todas las órdenes, la paginación se hace en el cliente
+        page: 1
       });
 
       if (response.data) {
-        // Filtrar órdenes por fecha de entrega (deliveryDateTime) posteriores a mañana
-        const filteredOrders = response.data.filter((order: any) => {
-          if (!order.deliveryData?.deliveryDateTime) return false;
-
-          const deliveryDate = new Date(order.deliveryData.deliveryDateTime);
-          const isAfterTomorrow = deliveryDate >= afterTomorrow;
-
-          // Excluir órdenes canceladas o sin anticipo
-          const isValidStatus =
-            order.status !== "cancelado" && order.status !== "sinAnticipo";
-
-          return (
-            isAfterTomorrow &&
-            isValidStatus &&
-            (order.sendToProduction || order.advance > 0)
-          );
-        });
+        // Las órdenes ya vienen filtradas por fecha de entrega >= PASADO MAÑANA
+        const allOrders = response.data;
 
         // Ordenar por fecha y hora de entrega
-        filteredOrders.sort((a: any, b: any) => {
+        allOrders.sort((a: any, b: any) => {
           const dateA = new Date(a.deliveryData.deliveryDateTime).getTime();
           const dateB = new Date(b.deliveryData.deliveryDateTime).getTime();
           return dateA - dateB;
@@ -157,11 +136,11 @@ const LaterProductionTable: React.FC<LaterProductionTableProps> = ({
         // Aplicar paginación manualmente
         const startIndex = (currentPage - 1) * limit;
         const endIndex = startIndex + limit;
-        const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+        const paginatedOrders = allOrders.slice(startIndex, endIndex);
 
         setOrders(paginatedOrders);
-        setTotalOrders(filteredOrders.length);
-        setTotalPages(Math.ceil(filteredOrders.length / limit));
+        setTotalOrders(allOrders.length);
+        setTotalPages(Math.ceil(allOrders.length / limit));
       }
     } catch (err: any) {
       console.error("Error fetching later production:", err);

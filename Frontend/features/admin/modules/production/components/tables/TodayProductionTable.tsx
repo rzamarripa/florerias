@@ -10,7 +10,7 @@ import {
   Pagination,
 } from "react-bootstrap";
 import { Package, Truck, Clock, CheckCircle } from "lucide-react";
-import { salesService } from "../../../sales/services/sales";
+import { productionOrdersService } from "../../services/productionOrders";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 
@@ -119,50 +119,21 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
       setLoading(true);
       setError(null);
 
-      // Obtener fechas para el día de hoy
-      const today = new Date();
-      const startDate = new Date(today.setHours(0, 0, 0, 0))
-        .toISOString()
-        .split("T")[0];
-      const endDate = new Date(today.setHours(23, 59, 59, 999))
-        .toISOString()
-        .split("T")[0];
-
-      // Obtener todas las órdenes del día actual
-      const response = await salesService.getAllSales({
-        startDate,
-        endDate,
+      // Usar el servicio de producción que ya filtra correctamente
+      const response = await productionOrdersService.getTodayOrders({
+        startDate: '', // No necesario, el servicio ya filtra por deliveryDateTime
+        endDate: '',   // No necesario, el servicio ya filtra por deliveryDateTime
         branchId,
-        limit: 100,
+        limit: 1000,   // Obtener todas las órdenes, la paginación se hace en el cliente
+        page: 1
       });
 
       if (response.data) {
-        // Filtrar órdenes por fecha de entrega (deliveryDateTime) del día actual
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date();
-        todayEnd.setHours(23, 59, 59, 999);
-
-        const filteredOrders = response.data.filter((order: Order) => {
-          if (!order.deliveryData?.deliveryDateTime) return false;
-
-          const deliveryDate = new Date(order.deliveryData.deliveryDateTime);
-          const isToday =
-            deliveryDate >= todayStart && deliveryDate <= todayEnd;
-
-          // Excluir órdenes canceladas o sin anticipo
-          const isValidStatus =
-            order.status !== "cancelado" && order.status !== "sinAnticipo";
-
-          return (
-            isToday &&
-            isValidStatus &&
-            (order.sendToProduction || order.advance > 0)
-          );
-        });
+        // Las órdenes ya vienen filtradas por fecha de entrega = HOY
+        const allOrders = response.data;
 
         // Ordenar por hora de entrega
-        filteredOrders.sort((a: Order, b: Order) => {
+        allOrders.sort((a: Order, b: Order) => {
           const dateA = new Date(a.deliveryData.deliveryDateTime).getTime();
           const dateB = new Date(b.deliveryData.deliveryDateTime).getTime();
           return dateA - dateB;
@@ -171,11 +142,11 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
         // Aplicar paginación manualmente
         const startIndex = (currentPage - 1) * limit;
         const endIndex = startIndex + limit;
-        const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+        const paginatedOrders = allOrders.slice(startIndex, endIndex);
 
         setOrders(paginatedOrders);
-        setTotalOrders(filteredOrders.length);
-        setTotalPages(Math.ceil(filteredOrders.length / limit));
+        setTotalOrders(allOrders.length);
+        setTotalPages(Math.ceil(allOrders.length / limit));
       }
     } catch (err: any) {
       console.error("Error fetching today production:", err);

@@ -2,9 +2,11 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Modal, Button, Form, Alert, Spinner } from "react-bootstrap";
-import { Camera, Upload, X } from "lucide-react";
+import { Camera, Upload, X, CheckCircle } from "lucide-react";
 import QrScanner from "qr-scanner";
+import { toast } from "react-toastify";
 import digitalCardService from "../services/digitalCardService";
+import ClientPointsDashboardModal from "../../clients/components/ClientPointsDashboardModal";
 
 interface QRScannerProps {
   show: boolean;
@@ -18,6 +20,8 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<any>(null);
+  const [showPointsDashboard, setShowPointsDashboard] = useState(false);
+  const [scannedClientData, setScannedClientData] = useState<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,11 +67,37 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
       stopScanner();
 
       const response = await digitalCardService.scanQRCode(qrData, branchId);
+      
+      // Verificar si la respuesta fue exitosa
+      if (!response.success) {
+        throw new Error(response.message || "Error al procesar el código QR");
+      }
 
       setScanResult(response.data);
-      onScanSuccess(response.data);
+      setScannedClientData(response.data);
+      
+      // Mostrar toast de éxito
+      toast.success(
+        `✓ Código QR verificado correctamente para ${response.data.client.fullName}`,
+        { position: "top-center" }
+      );
+      
+      // Cerrar el modal del scanner y abrir el dashboard después de un breve delay
+      setTimeout(() => {
+        // Primero cerrar el scanner
+        stopScanner();
+        setError(null);
+        setScanResult(null);
+        onHide(); // Cerrar el modal del scanner
+        
+        // Luego notificar el éxito y abrir el dashboard
+        onScanSuccess(response.data);
+        setShowPointsDashboard(true);
+      }, 1500);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al procesar el código QR");
+      const errorMessage = err.message || err.response?.data?.message || "Error al procesar el código QR";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setProcessing(false);
     }
@@ -100,7 +130,13 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
     onHide();
   };
 
+  const handlePointsDashboardClose = () => {
+    setShowPointsDashboard(false);
+    setScannedClientData(null);
+  };
+
   return (
+    <>
     <Modal show={show} onHide={handleClose} size="lg" centered>
       <Modal.Header closeButton>
         <Modal.Title>Escanear Código QR</Modal.Title>
@@ -172,33 +208,33 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
 
         {scanResult && (
           <div className="text-center py-4">
+            <CheckCircle size={64} className="text-success mb-3" />
             <div className="mb-4">
-              <h5>Cliente Escaneado</h5>
+              <h5 className="text-success">¡Código QR Verificado!</h5>
               <div className="bg-light rounded p-3 mt-3">
                 <p className="mb-2">
-                  <strong>Nombre:</strong> {scanResult.client.name}
+                  <strong>Cliente:</strong> {scanResult.client.fullName}
                 </p>
                 <p className="mb-2">
                   <strong>Número:</strong> {scanResult.client.clientNumber}
                 </p>
                 <p className="mb-0">
-                  <strong>Puntos:</strong> {scanResult.client.points}
+                  <strong>Puntos Disponibles:</strong> <span className="text-primary fw-bold">{scanResult.client.points}</span>
                 </p>
               </div>
             </div>
 
-            {scanResult.recentTransactions?.length > 0 && (
-              <div className="mt-4">
-                <h6>Transacciones Recientes</h6>
-                <div className="small text-muted">
-                  {scanResult.recentTransactions.map((tx: any, idx: number) => (
-                    <div key={idx} className="border-bottom py-2">
-                      {tx.description}
-                    </div>
-                  ))}
-                </div>
+            {scanResult.rewards?.available > 0 && (
+              <div className="alert alert-info">
+                <small>
+                  El cliente tiene <strong>{scanResult.rewards.available}</strong> recompensa(s) disponible(s)
+                </small>
               </div>
             )}
+
+            <div className="text-muted small">
+              Abriendo dashboard de puntos...
+            </div>
           </div>
         )}
       </Modal.Body>
@@ -213,5 +249,25 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
         )}
       </Modal.Footer>
     </Modal>
+
+    {/* Modal del Dashboard de Puntos */}
+    {scannedClientData && (
+      <ClientPointsDashboardModal
+        show={showPointsDashboard}
+        onHide={handlePointsDashboardClose}
+        client={{
+          _id: scannedClientData.client.id,
+          name: scannedClientData.client.name,
+          lastName: scannedClientData.client.lastName,
+          clientNumber: scannedClientData.client.clientNumber,
+          phoneNumber: scannedClientData.client.phoneNumber,
+          email: scannedClientData.client.email,
+          points: scannedClientData.client.points,
+          status: scannedClientData.client.status,
+        }}
+        branchId={branchId}
+      />
+    )}
+    </>
   );
 }

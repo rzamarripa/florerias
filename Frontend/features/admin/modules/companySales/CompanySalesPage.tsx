@@ -1,82 +1,67 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Table, Button, Form, Spinner, Modal, Row, Col } from "react-bootstrap";
-import { Search, X, Eye, Building2 } from "lucide-react";
+import { Table, Button, Form, Spinner, Row, Col } from "react-bootstrap";
+import { Search, X } from "lucide-react";
 import { companySalesService } from "./services/companySales";
-import { CompanySales, BranchSales } from "./types";
+import { BranchSalesData } from "./types";
 import { formatCurrency } from "@/utils";
 import { toast } from "react-toastify";
 import SalesChart from "./components/SalesChart";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { branchesService } from "../branches/services/branches";
 
 export default function CompanySalesPage() {
   const [loading, setLoading] = useState(false);
-  const [companiesSales, setCompaniesSales] = useState<CompanySales[]>([]);
+  const [branchesSales, setBranchesSales] = useState<BranchSalesData[]>([]);
+  const userId = useUserSessionStore((state) => state.getUserId());
 
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  // Estado para el modal de detalle
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<CompanySales | null>(
-    null
-  );
-  const [companyDetail, setCompanyDetail] = useState<BranchSales[]>([]);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-
-  // Cargar datos
-  const loadCompanySales = async () => {
+  // Cargar datos de sucursales del usuario administrador
+  const loadBranchesSales = async () => {
     try {
       setLoading(true);
 
-      const params: any = {};
-
-      if (startDate) {
-        params.startDate = startDate;
-      }
-      if (endDate) {
-        params.endDate = endDate;
+      if (!userId) {
+        toast.error("No se pudo obtener el usuario actual");
+        return;
       }
 
-      const response = await companySalesService.getCompaniesSalesSummary(
-        params
-      );
+      // Primero obtener las sucursales donde el usuario es administrador
+      const branchesResponse = await branchesService.getAllBranches({
+        managerId: userId,
+        limit: 100
+      });
 
-      if (response.success) {
-        setCompaniesSales(response.data || []);
+      if (!branchesResponse.success || !branchesResponse.data?.length) {
+        setBranchesSales([]);
+        return;
       }
-    } catch (error) {
-      console.error("Error al cargar ventas de empresas:", error);
-      toast.error("Error al cargar las ventas de franquicias");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // Cargar detalle de empresa
-  const loadCompanyDetail = async (company: CompanySales) => {
-    try {
-      setLoadingDetail(true);
-      setSelectedCompany(company);
-
+      // Para cada sucursal, obtener sus datos de ventas
       const params: any = {};
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
-      const response = await companySalesService.getCompanySalesDetail(
-        company.companyId,
-        params
-      );
+      // Obtener los IDs de las sucursales
+      const branchIds = branchesResponse.data.map(branch => branch._id);
 
-      if (response.success) {
-        setCompanyDetail(response.data.branches || []);
-        setShowDetailModal(true);
+      // Llamar al endpoint para obtener las ventas de estas sucursales específicas
+      const salesResponse = await companySalesService.getBranchesSales({
+        branchIds,
+        ...params
+      });
+
+      if (salesResponse.success && salesResponse.data) {
+        setBranchesSales(salesResponse.data);
       }
     } catch (error) {
-      console.error("Error al cargar detalle de empresa:", error);
-      toast.error("Error al cargar el detalle de la empresa");
+      console.error("Error al cargar ventas de sucursales:", error);
+      toast.error("Error al cargar las ventas de sucursales");
     } finally {
-      setLoadingDetail(false);
+      setLoading(false);
     }
   };
 
@@ -85,44 +70,51 @@ export default function CompanySalesPage() {
     const today = new Date().toISOString().split("T")[0];
     setStartDate(today);
     setEndDate(today);
-    loadCompanySales();
+    loadBranchesSales();
   }, []);
 
   const handleClearFilters = () => {
     const today = new Date().toISOString().split("T")[0];
     setStartDate(today);
     setEndDate(today);
-    loadCompanySales();
+    loadBranchesSales();
   };
 
-  // Preparar datos para la gráfica con datos reales de empresas
+  // Preparar datos para la gráfica con datos reales de sucursales
   const chartData = useMemo(() => {
-    // Usar los nombres de las empresas como etiquetas
-    const labels = companiesSales.slice(0, 10).map(company => {
+    // Usar los nombres de las sucursales como etiquetas
+    const labels = branchesSales.slice(0, 10).map(branch => {
       // Acortar nombres largos
-      const name = company.companyName;
-      return name.length > 15 ? name.substring(0, 12) + '...' : name;
+      const name = `${branch.branchName} (${branch.branchCode})`;
+      return name.length > 20 ? name.substring(0, 17) + '...' : name;
     });
     
-    // Extraer datos reales de cada empresa
-    const salesData = companiesSales.slice(0, 10).map(company => company.totalSales);
-    const paidData = companiesSales.slice(0, 10).map(company => company.totalPaid);
-    const royaltiesData = companiesSales.slice(0, 10).map(company => company.royaltiesAmount);
-    const brandAdvData = companiesSales.slice(0, 10).map(company => company.brandAdvertisingAmount);
-    const branchAdvData = companiesSales.slice(0, 10).map(company => company.branchAdvertisingAmount);
+    // Extraer datos reales de cada sucursal
+    const salesData = branchesSales.slice(0, 10).map(branch => branch.totalSalesWithoutDelivery); // S/S
+    const deliveryData = branchesSales.slice(0, 10).map(branch => branch.totalDeliveryService); // Servicio
+    const paidData = branchesSales.slice(0, 10).map(branch => branch.totalPaid);
+    const royaltiesData = branchesSales.slice(0, 10).map(branch => branch.royaltiesAmount);
+    const brandAdvData = branchesSales.slice(0, 10).map(branch => branch.brandAdvertisingAmount);
+    const branchAdvData = branchesSales.slice(0, 10).map(branch => branch.branchAdvertisingAmount);
 
     return {
       labels: labels,
       datasets: [
         {
-          label: 'Págos',
-          data: paidData,
+          label: 'Ventas S/S',
+          data: salesData,
           borderColor: '#1ab394',
           backgroundColor: 'rgba(26, 179, 148, 0.1)',
         },
         {
-          label: 'Gastos',
-          data: salesData.map((sale, index) => sale - paidData[index]), // Diferencia entre ventas y pagado
+          label: 'Servicio',
+          data: deliveryData,
+          borderColor: '#9b59b6',
+          backgroundColor: 'rgba(155, 89, 182, 0.1)',
+        },
+        {
+          label: 'Pagado',
+          data: paidData,
           borderColor: '#f8ac59',
           backgroundColor: 'rgba(248, 172, 89, 0.1)',
         },
@@ -139,14 +131,14 @@ export default function CompanySalesPage() {
           backgroundColor: 'rgba(28, 132, 198, 0.1)',
         },
         {
-          label: 'Publicidad Franquicia',
+          label: 'Publicidad Sucursal',
           data: branchAdvData,
           borderColor: '#23c6c8',
           backgroundColor: 'rgba(35, 198, 200, 0.1)',
         }
       ]
     };
-  }, [companiesSales]);
+  }, [branchesSales]);
 
   return (
     <div className="container-fluid py-1">
@@ -154,9 +146,9 @@ export default function CompanySalesPage() {
       <div className="mb-1">
         <div className="d-flex justify-content-between align-items-start">
           <div>
-            <h2 className="mb-0 fw-bold">Ventas de Franquicias</h2>
+            <h2 className="mb-0 fw-bold">Ventas de Sucursales del Administrador</h2>
             <p className="text-muted mb-0" style={{ fontSize: "13px" }}>
-              Resumen de ventas por empresa franquicia
+              Resumen de ventas por sucursal
             </p>
           </div>
         </div>
@@ -200,7 +192,7 @@ export default function CompanySalesPage() {
             <Col md={4} className="d-flex gap-2">
               <Button
                 variant="primary"
-                onClick={loadCompanySales}
+                onClick={loadBranchesSales}
                 disabled={loading}
                 size="sm"
                 className="px-3"
@@ -223,7 +215,7 @@ export default function CompanySalesPage() {
       </div>
 
       {/* Gráfica de ventas */}
-      {companiesSales.length > 0 && (
+      {branchesSales.length > 0 && (
         <div className="mb-2">
           <SalesChart 
             data={chartData} 
@@ -250,19 +242,37 @@ export default function CompanySalesPage() {
                       className="border-0 px-4 py-2"
                       style={{ fontSize: "14px", fontWeight: "700" }}
                     >
-                      Empresa
+                      Sucursal
                     </th>
                     <th
                       className="border-0 text-center py-2"
                       style={{ fontSize: "14px", fontWeight: "700" }}
                     >
-                      Sucursales
+                      Código
+                    </th>
+                    <th
+                      className="border-0 text-center py-2"
+                      style={{ fontSize: "14px", fontWeight: "700" }}
+                    >
+                      Órdenes
                     </th>
                     <th
                       className="border-0 text-end px-3 py-2"
                       style={{ fontSize: "14px", fontWeight: "700" }}
                     >
                       Total Ventas
+                    </th>
+                    <th
+                      className="border-0 text-end px-3 py-2"
+                      style={{ fontSize: "14px", fontWeight: "700" }}
+                    >
+                      Servicio
+                    </th>
+                    <th
+                      className="border-0 text-end px-3 py-2"
+                      style={{ fontSize: "14px", fontWeight: "700" }}
+                    >
+                      S/S
                     </th>
                     <th
                       className="border-0 text-end px-3 py-2"
@@ -280,57 +290,64 @@ export default function CompanySalesPage() {
                       className="border-0 text-end px-3 py-2"
                       style={{ fontSize: "14px", fontWeight: "700" }}
                     >
-                      Publicidad Marca
+                      Pub. Marca
                     </th>
                     <th
                       className="border-0 text-end px-3 py-2"
                       style={{ fontSize: "14px", fontWeight: "700" }}
                     >
-                      Publicidad Sucursal
-                    </th>
-                    <th
-                      className="border-0 text-center py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
-                      Acciones
+                      Pub. Sucursal
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {companiesSales.length === 0 ? (
+                  {branchesSales.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-3 text-muted">
+                      <td colSpan={10} className="text-center py-3 text-muted">
                         No se encontraron datos para el período seleccionado
                       </td>
                     </tr>
                   ) : (
-                    companiesSales.map((company) => (
-                      <tr key={company.companyId}>
+                    branchesSales.map((branch) => (
+                      <tr key={branch.branchId}>
                         <td className="px-4 py-2">
                           <span className="fw-semibold">
-                            {company.companyName}
+                            {branch.branchName}
                           </span>
                         </td>
                         <td className="text-center py-2">
                           <span className="badge bg-light text-dark">
-                            {company.totalBranches}
+                            {branch.branchCode}
+                          </span>
+                        </td>
+                        <td className="text-center py-2">
+                          {branch.totalOrders}
+                        </td>
+                        <td className="text-end px-3 py-2">
+                          <span className="fw-semibold">
+                            {formatCurrency(branch.totalSales)}
                           </span>
                         </td>
                         <td className="text-end px-3 py-2">
                           <span className="fw-semibold">
-                            {formatCurrency(company.totalSales)}
+                            {formatCurrency(branch.totalDeliveryService)}
+                          </span>
+                        </td>
+                        <td className="text-end px-3 py-2">
+                          <span className="fw-semibold text-success">
+                            {formatCurrency(branch.totalSalesWithoutDelivery)}
                           </span>
                         </td>
                         <td className="text-end px-3 py-2">
                           <div>
                             <span className="fw-semibold">
-                              {formatCurrency(company.totalPaid)}
+                              {formatCurrency(branch.totalPaid)}
                             </span>
-                            {company.totalSales > 0 && (
+                            {branch.totalSalesWithoutDelivery > 0 && (
                               <div>
                                 <small className="text-muted">
                                   {(
-                                    (company.totalPaid / company.totalSales) *
+                                    (branch.totalPaid / branch.totalSalesWithoutDelivery) *
                                     100
                                   ).toFixed(1)}
                                   %
@@ -340,16 +357,16 @@ export default function CompanySalesPage() {
                           </div>
                         </td>
                         <td className="text-end px-3 py-2">
-                          {company.royaltiesAmount === 0 ? (
+                          {branch.royaltiesAmount === 0 ? (
                             <span className="text-muted">-</span>
                           ) : (
                             <div>
                               <span className="fw-semibold">
-                                {formatCurrency(company.royaltiesAmount)}
+                                {formatCurrency(branch.royaltiesAmount)}
                               </span>
                               <div>
                                 <small className="text-muted">
-                                  {company.royalties.toFixed(2)}%
+                                  {branch.royalties.toFixed(2)}%
                                 </small>
                               </div>
                             </div>
@@ -358,11 +375,11 @@ export default function CompanySalesPage() {
                         <td className="text-end px-3 py-2">
                           <div>
                             <span className="fw-semibold">
-                              {formatCurrency(company.brandAdvertisingAmount)}
+                              {formatCurrency(branch.brandAdvertisingAmount)}
                             </span>
                             <div>
                               <small className="text-muted">
-                                {company.brandAdvertising.toFixed(2)}%
+                                {branch.brandAdvertising.toFixed(2)}%
                               </small>
                             </div>
                           </div>
@@ -370,25 +387,14 @@ export default function CompanySalesPage() {
                         <td className="text-end px-3 py-2">
                           <div>
                             <span className="fw-semibold">
-                              {formatCurrency(company.branchAdvertisingAmount)}
+                              {formatCurrency(branch.branchAdvertisingAmount)}
                             </span>
                             <div>
                               <small className="text-muted">
-                                {company.branchAdvertising.toFixed(2)}%
+                                {branch.branchAdvertising.toFixed(2)}%
                               </small>
                             </div>
                           </div>
-                        </td>
-                        <td className="text-center py-2">
-                          <Button
-                            size="sm"
-                            variant="outline-primary"
-                            onClick={() => loadCompanyDetail(company)}
-                            disabled={loadingDetail}
-                            className="px-2 py-1"
-                          >
-                            <Eye size={16} />
-                          </Button>
                         </td>
                       </tr>
                     ))
@@ -400,166 +406,6 @@ export default function CompanySalesPage() {
         </div>
       </div>
 
-      {/* Modal de detalle por sucursales */}
-      <Modal
-        show={showDetailModal}
-        onHide={() => setShowDetailModal(false)}
-        size="xl"
-        centered
-      >
-        <Modal.Header closeButton style={{ borderBottom: "2px solid #f1f3f5" }}>
-          <Modal.Title className="d-flex align-items-center">
-            <Building2 size={20} className="me-2" />
-            <span className="fw-bold">
-              Detalle de Ventas - {selectedCompany?.companyName}
-            </span>
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="p-0">
-          {loadingDetail ? (
-            <div className="text-center p-3">
-              <Spinner animation="border" role="status" variant="primary">
-                <span className="visually-hidden">Cargando...</span>
-              </Spinner>
-            </div>
-          ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ backgroundColor: "#f8f9fa" }}>
-                  <tr>
-                    <th
-                      className="border-0 px-4 py-2"
-                      style={{ fontSize: "13px", fontWeight: "600" }}
-                    >
-                      Sucursal
-                    </th>
-                    <th
-                      className="border-0 px-3 py-2"
-                      style={{ fontSize: "13px", fontWeight: "600" }}
-                    >
-                      Código
-                    </th>
-                    <th
-                      className="border-0 text-center py-2"
-                      style={{ fontSize: "13px", fontWeight: "600" }}
-                    >
-                      Órdenes
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "13px", fontWeight: "600" }}
-                    >
-                      Ventas
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "13px", fontWeight: "600" }}
-                    >
-                      Pagado
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "13px", fontWeight: "600" }}
-                    >
-                      Regalías
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "13px", fontWeight: "600" }}
-                    >
-                      Pub. Marca
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "13px", fontWeight: "600" }}
-                    >
-                      Pub. Sucursal
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {companyDetail.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-3 text-muted">
-                        No se encontraron sucursales
-                      </td>
-                    </tr>
-                  ) : (
-                    companyDetail.map((branch) => (
-                      <tr key={branch.branchId}>
-                        <td className="px-4 py-2">{branch.branchName}</td>
-                        <td className="px-3 py-2">
-                          <span className="badge bg-light text-dark">
-                            {branch.branchCode}
-                          </span>
-                        </td>
-                        <td className="text-center py-2">
-                          {branch.totalOrders}
-                        </td>
-                        <td className="text-end px-3 py-2 fw-semibold">
-                          {formatCurrency(branch.totalSales)}
-                        </td>
-                        <td className="text-end px-3 py-2">
-                          <div>{formatCurrency(branch.totalPaid)}</div>
-                          {branch.totalSales > 0 && (
-                            <small className="text-muted">
-                              {(
-                                (branch.totalPaid / branch.totalSales) *
-                                100
-                              ).toFixed(1)}
-                              %
-                            </small>
-                          )}
-                        </td>
-                        <td className="text-end px-3 py-2">
-                          {!selectedCompany?.isFranchise ||
-                          branch.royaltiesAmount === 0 ? (
-                            <span className="text-muted">-</span>
-                          ) : (
-                            <div>
-                              <div>
-                                {formatCurrency(branch.royaltiesAmount)}
-                              </div>
-                              <small className="text-muted">
-                                {branch.royaltiesPercentage.toFixed(2)}%
-                              </small>
-                            </div>
-                          )}
-                        </td>
-                        <td className="text-end px-3 py-2">
-                          <div>
-                            {formatCurrency(branch.brandAdvertisingAmount)}
-                          </div>
-                          <small className="text-muted">
-                            {branch.brandAdvertisingPercentage.toFixed(2)}%
-                          </small>
-                        </td>
-                        <td className="text-end px-3 py-2">
-                          <div>
-                            {formatCurrency(branch.branchAdvertisingAmount)}
-                          </div>
-                          <small className="text-muted">
-                            {branch.branchAdvertisingPercentage.toFixed(2)}%
-                          </small>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer style={{ borderTop: "2px solid #f1f3f5" }}>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowDetailModal(false)}
-          >
-            Cerrar
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Table, Button, Spinner, Badge, Pagination } from "react-bootstrap";
 import { Package, Truck, Clock } from "lucide-react";
-import { salesService } from "../../../sales/services/sales";
+import { productionOrdersService } from "../../services/productionOrders";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 
@@ -112,45 +112,21 @@ const TomorrowProductionTable: React.FC<TomorrowProductionTableProps> = ({
       setLoading(true);
       setError(null);
 
-      // Obtener fechas para el día siguiente basadas en deliveryDateTime
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      const tomorrowEnd = new Date(tomorrow);
-      tomorrowEnd.setHours(23, 59, 59, 999);
-
-      // Obtener todas las órdenes (usamos un rango amplio y luego filtramos)
-      const response = await salesService.getAllSales({
-        startDate: new Date().toISOString().split("T")[0],
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0], // 30 días adelante
+      // Usar el servicio de producción que ya filtra correctamente
+      const response = await productionOrdersService.getTomorrowOrders({
+        startDate: '', // No necesario, el servicio ya filtra por deliveryDateTime
+        endDate: '',   // No necesario, el servicio ya filtra por deliveryDateTime
         branchId,
-        limit: 1000,
+        limit: 1000,   // Obtener todas las órdenes, la paginación se hace en el cliente
+        page: 1
       });
 
       if (response.data) {
-        // Filtrar órdenes por fecha de entrega (deliveryDateTime) del día siguiente
-        const filteredOrders = response.data.filter((order: any) => {
-          if (!order.deliveryData?.deliveryDateTime) return false;
-
-          const deliveryDate = new Date(order.deliveryData.deliveryDateTime);
-          const isTomorrow =
-            deliveryDate >= tomorrow && deliveryDate <= tomorrowEnd;
-
-          // Excluir órdenes canceladas o sin anticipo
-          const isValidStatus =
-            order.status !== "cancelado" && order.status !== "sinAnticipo";
-
-          return (
-            isTomorrow &&
-            isValidStatus &&
-            (order.sendToProduction || order.advance > 0)
-          );
-        });
+        // Las órdenes ya vienen filtradas por fecha de entrega = MAÑANA
+        const allOrders = response.data;
 
         // Ordenar por hora de entrega
-        filteredOrders.sort((a: any, b: any) => {
+        allOrders.sort((a: any, b: any) => {
           const dateA = new Date(a.deliveryData.deliveryDateTime).getTime();
           const dateB = new Date(b.deliveryData.deliveryDateTime).getTime();
           return dateA - dateB;
@@ -159,11 +135,11 @@ const TomorrowProductionTable: React.FC<TomorrowProductionTableProps> = ({
         // Aplicar paginación manualmente
         const startIndex = (currentPage - 1) * limit;
         const endIndex = startIndex + limit;
-        const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+        const paginatedOrders = allOrders.slice(startIndex, endIndex);
 
         setOrders(paginatedOrders);
-        setTotalOrders(filteredOrders.length);
-        setTotalPages(Math.ceil(filteredOrders.length / limit));
+        setTotalOrders(allOrders.length);
+        setTotalPages(Math.ceil(allOrders.length / limit));
       }
     } catch (err: any) {
       console.error("Error fetching tomorrow production:", err);

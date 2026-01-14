@@ -6,7 +6,10 @@ export interface DigitalCard {
   passSerialNumber: string;
   passTypeId?: string;
   googleWalletId?: string;
-  qrCode: string; // Base64
+  qrCode?: string; // Base64 - ahora opcional
+  qrCodeUrl?: string; // URL del QR en Firebase
+  qrCodePath?: string; // Path del QR en Firebase
+  tempQrCode?: string; // QR temporal que viene del backend
   qrData: string;
   barcode?: string;
   cardType: 'apple' | 'google' | 'generic';
@@ -157,9 +160,15 @@ class DigitalCardService {
       const response = await apiCall<DigitalCard>(`/digital-cards/client/${clientId}`);
       return response.data;
     } catch (error: any) {
-      if (error.message?.includes('404')) {
+      // Si el error indica que no se encontró la tarjeta, retornar null
+      // Esto es esperado cuando el cliente aún no tiene tarjeta digital
+      const errorMessage = error.message?.toLowerCase() || '';
+      if (errorMessage.includes('no encontrada') || 
+          errorMessage.includes('not found') || 
+          errorMessage.includes('404')) {
         return null;
       }
+      // Para otros errores, propagarlos
       throw error;
     }
   }
@@ -284,7 +293,7 @@ class DigitalCardService {
       deviceInfo?: any;
     }
   ): Promise<ScanResult> {
-    const response = await apiCall<ScanResult>('/scanner/scan', {
+    const response = await apiCall<any>('/scanner/scan', {
       method: 'POST',
       body: JSON.stringify({
         qrData,
@@ -292,6 +301,8 @@ class DigitalCardService {
         ...additionalData,
       }),
     });
+    // El backend retorna directamente { success: true, data: {...} }
+    // apiCall ya extrae el contenido, así que response ya es el objeto completo
     return response;
   }
 
@@ -411,6 +422,17 @@ class DigitalCardService {
   isGoogleWalletSupported(): boolean {
     const userAgent = window.navigator.userAgent.toLowerCase();
     return userAgent.includes('android');
+  }
+
+  /**
+   * Actualiza las URLs del QR después de subirlo a Firebase
+   */
+  async updateQRUrls(cardId: string, qrCodeUrl: string, qrCodePath: string): Promise<DigitalCard> {
+    const response = await apiCall<DigitalCard>(`/digital-cards/update-qr-urls/${cardId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ qrCodeUrl, qrCodePath }),
+    });
+    return response.data;
   }
 
   /**

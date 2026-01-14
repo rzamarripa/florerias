@@ -5,10 +5,11 @@ import { toast } from 'react-toastify';
 import CardPreview from './components/CardPreview';
 import DownloadCard from './components/DownloadCard';
 import QRScanner from './components/QRScanner';
-import ClientPointsDashboardModal from '../clients/components/ClientPointsDashboardModal';
 import digitalCardService from './services/digitalCardService';
 import { clientsService } from '../clients/services/clients';
 import { branchesService } from '../branches/services/branches';
+import { companiesService } from '../companies/services/companies';
+import { uploadDigitalCardQR } from '@/services/firebaseStorage';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import { useUserRoleStore } from '@/stores/userRoleStore';
 import { useActiveBranchStore } from '@/stores/activeBranchStore';
@@ -38,8 +39,6 @@ const DigitalCardsPage: React.FC = () => {
   const [showCardModal, setShowCardModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
-  const [showPointsModal, setShowPointsModal] = useState(false);
-  const [scannedClient, setScannedClient] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentBranchId, setCurrentBranchId] = useState<string>('');
   
@@ -104,13 +103,24 @@ const DigitalCardsPage: React.FC = () => {
         const branchInfo = await branchesService.getBranchById(currentBranchId);
         const branch = branchInfo.data;
         
-        // Mapear los clientes para incluir el objeto branch completo
+        // Obtener el companyId de la sucursal
+        let branchCompanyId = '';
+        if (branch.companyId) {
+          if (typeof branch.companyId === 'object' && branch.companyId !== null) {
+            branchCompanyId = (branch.companyId as any)._id || '';
+          } else if (typeof branch.companyId === 'string') {
+            branchCompanyId = branch.companyId;
+          }
+        }
+        
+        // Mapear los clientes para incluir el objeto branch completo con companyId
         const clientsWithBranch = response.data.map((client: any) => ({
           ...client,
           branch: {
             _id: branch._id || currentBranchId,
             name: branch.branchName || branch.name || 'Sucursal',
-            address: branch.address || ''
+            address: branch.address || '',
+            companyId: branchCompanyId // Incluir el companyId aquí
           }
         }));
         
@@ -124,8 +134,13 @@ const DigitalCardsPage: React.FC = () => {
             if (card) {
               cardsMap[client._id] = card;
             }
-          } catch (error) {
-            // Client doesn't have a card yet, that's fine
+          } catch (error: any) {
+            // Solo mostrar error si NO es un 404 (tarjeta no encontrada es normal)
+            if (!error.message?.toLowerCase().includes('no encontrada') && 
+                !error.message?.toLowerCase().includes('not found')) {
+              console.error(`Error cargando tarjeta para cliente ${client._id}:`, error);
+            }
+            // Si es 404, es normal que no tenga tarjeta, no hacer nada
           }
         }
         setDigitalCards(cardsMap);
@@ -153,7 +168,73 @@ const DigitalCardsPage: React.FC = () => {
         if (!card) {
           // Generate new card if doesn't exist
           card = await digitalCardService.generateDigitalCard(client._id);
-          toast.success('Tarjeta digital generada exitosamente');
+          
+          // Si la tarjeta viene con un QR temporal, subirlo a Firebase
+          if (card.tempQrCode) {
+            try {
+              toast.info('Subiendo código QR a la nube...');
+              
+              // Primero intentar usar el companyId que ya viene en el cliente
+              let companyId = (client.branch as any).companyId || '';
+              
+              // Si no está disponible en el cliente, obtenerlo de la API
+              if (!companyId) {
+                console.log('CompanyId no disponible en cliente, obteniendo de API...');
+                const branchInfo = await branchesService.getBranchById(client.branch._id);
+                
+                console.log('Branch info completa:', branchInfo.data);
+                
+                if (branchInfo.data?.companyId) {
+                  // Si companyId existe, verificar si es objeto o string
+                  if (typeof branchInfo.data.companyId === 'object' && branchInfo.data.companyId !== null) {
+                    // Es un objeto poblado, obtener el _id
+                    companyId = (branchInfo.data.companyId as any)._id || '';
+                    console.log('CompanyId es objeto, _id:', companyId);
+                  } else if (typeof branchInfo.data.companyId === 'string') {
+                    // Es directamente el string ID
+                    companyId = branchInfo.data.companyId;
+                    console.log('CompanyId es string:', companyId);
+                  }
+                }
+              } else {
+                console.log('Usando companyId del cliente:', companyId);
+              }
+              
+              if (!companyId) {
+                console.error('No se pudo obtener companyId. Cliente branch:', client.branch);
+                throw new Error('No se pudo determinar la empresa de la sucursal');
+              }
+              
+              console.log('Company ID final para Firebase:', companyId);
+              
+              // Subir QR a Firebase
+              const { url, path } = await uploadDigitalCardQR(
+                card.tempQrCode,
+                companyId,
+                client.branch._id,
+                client._id
+              );
+              
+              // Actualizar la tarjeta con las URLs de Firebase
+              const updatedCard = await digitalCardService.updateQRUrls(card._id, url, path);
+              
+              // Actualizar el objeto local
+              card = {
+                ...updatedCard,
+                qrCodeUrl: url,
+                qrCodePath: path
+              };
+              
+              // Limpiar el QR temporal
+              delete card.tempQrCode;
+              delete card.qrCode;
+              
+              toast.success('Tarjeta digital generada exitosamente');
+            } catch (uploadError) {
+              console.error('Error subiendo QR a Firebase:', uploadError);
+              toast.warning('Tarjeta creada pero hubo un error al subir el QR. Intente regenerarla.');
+            }
+          }
         }
         
         // Update cards state
@@ -178,17 +259,10 @@ const DigitalCardsPage: React.FC = () => {
 
 
   const handleScanSuccess = (scanData: any) => {
-    setShowScannerModal(false);
-    
-    if (scanData && scanData.client) {
-      // Guardar cliente escaneado
-      setScannedClient(scanData.client);
-      
-      // Abrir modal de puntos y recompensas
-      setShowPointsModal(true);
-      
-      toast.success(`Cliente ${scanData.client.name} ${scanData.client.lastName} identificado`);
-    }
+    // El modal del scanner ya se cierra automáticamente
+    // y el dashboard de puntos se abre desde el componente QRScanner
+    // Este callback ahora es opcional y puede usarse para actualizar el estado local si es necesario
+    console.log('Cliente escaneado:', scanData?.client?.fullName);
   };
 
   const filteredClients = clients.filter(client => {
@@ -430,17 +504,7 @@ const DigitalCardsPage: React.FC = () => {
         branchId={currentBranchId}
       />
 
-      {/* Modal de Puntos y Recompensas */}
-      {scannedClient && (
-        <ClientPointsDashboardModal
-          show={showPointsModal}
-          onHide={() => {
-            setShowPointsModal(false);
-            setScannedClient(null);
-          }}
-          client={scannedClient}
-        />
-      )}
+      {/* El modal de puntos ahora se maneja directamente en QRScanner */}
     </Container>
   );
 };

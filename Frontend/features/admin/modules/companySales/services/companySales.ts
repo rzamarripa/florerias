@@ -1,12 +1,12 @@
-import { apiCall } from '@/utils/api';
-import { CompanySalesResponse, CompanyDetailResponse } from '../types';
+import { apiCall, ApiResponse } from '@/utils/api';
+import { CompanySalesResponse, CompanyDetailResponse, BranchSalesResponse, CompanyDetailData, BranchSalesData } from '../types';
 
 export const companySalesService = {
   // Obtener resumen de ventas de todas las empresas franquicia
   getCompaniesSalesSummary: async (params?: {
     startDate?: string;
     endDate?: string;
-  }): Promise<CompanySalesResponse> => {
+  }): Promise<ApiResponse<CompanySalesResponse>> => {
     const queryParams = new URLSearchParams();
     
     // Siempre filtrar solo franquicias
@@ -33,7 +33,7 @@ export const companySalesService = {
       startDate?: string;
       endDate?: string;
     }
-  ): Promise<CompanyDetailResponse> => {
+  ): Promise<ApiResponse<CompanyDetailData>> => {
     const queryParams = new URLSearchParams();
     
     if (params?.startDate) {
@@ -46,7 +46,20 @@ export const companySalesService = {
     const queryString = queryParams.toString();
     const url = `/company-sales/${companyId}/detail${queryString ? `?${queryString}` : ''}`;
     
-    const response = await apiCall<CompanyDetailResponse>(url);
+    const response = await apiCall<CompanyDetailData>(url);
+    return response;
+  },
+
+  // Obtener ventas de sucursales específicas
+  getBranchesSales: async (params: {
+    branchIds: string[];
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<BranchSalesData[]>> => {
+    const response = await apiCall<BranchSalesData[]>('/branch-sales/summary', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
     return response;
   },
 };

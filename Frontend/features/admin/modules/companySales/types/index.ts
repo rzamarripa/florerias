@@ -1,3 +1,21 @@
+export interface BranchSalesData {
+  branchId: string;
+  branchName: string;
+  branchCode: string;
+  totalOrders: number;
+  totalSales: number;
+  totalDeliveryService: number; // Total de costos de envío
+  totalSalesWithoutDelivery: number; // S/S - Ventas sin servicio
+  totalPaid: number;
+  royalties: number; // Porcentaje sobre S/S
+  royaltiesAmount: number; // Monto de regalías sobre S/S
+  brandAdvertising: number; // Porcentaje sobre S/S
+  brandAdvertisingAmount: number; // Monto de publicidad de marca sobre S/S
+  branchAdvertising: number; // Porcentaje sobre S/S
+  branchAdvertisingAmount: number; // Monto de publicidad de sucursal sobre S/S
+}
+
+// Mantener CompanySales para compatibilidad temporal
 export interface CompanySales {
   companyId: string;
   companyName: string;
@@ -13,6 +31,24 @@ export interface CompanySales {
   branchAdvertisingAmount: number; // Monto total de publicidad de sucursal
 }
 
+export interface BranchSalesSummary {
+  totalBranches: number;
+  totalSales: number;
+  totalDeliveryService: number;
+  totalSalesWithoutDelivery: number;
+  totalPaid: number;
+  totalRoyalties: number;
+  totalBrandAdvertising: number;
+  totalBranchAdvertising: number;
+}
+
+export interface BranchSalesResponse {
+  success: boolean;
+  data: BranchSalesData[];
+  summary: BranchSalesSummary;
+}
+
+// Mantener interfaces anteriores para compatibilidad
 export interface CompanySalesSummary {
   totalCompanies: number;
   totalSales: number;

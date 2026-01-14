@@ -123,11 +123,18 @@ export const apiCall = async <T>(
       } as ApiResponse<T>;
     }
 
-    console.error("Error en la petición:", {
-      status: response.status,
-      statusText: response.statusText,
-      data,
-    });
+    // Solo loggear errores que no sean 404 de tarjetas digitales
+    const isDigitalCard404 = response.status === 404 && 
+                            url.includes('/digital-cards/') && 
+                            data?.message?.toLowerCase().includes('no encontrada');
+    
+    if (!isDigitalCard404) {
+      console.error("Error en la petición:", {
+        status: response.status,
+        statusText: response.statusText,
+        data,
+      });
+    }
 
     // Manejo especial para errores 429
     if (response.status === 429) {

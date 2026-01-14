@@ -4,6 +4,7 @@ import { CardTransaction } from "../models/CardTransaction.js";
 import { Branch } from "../models/Branch.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import appleWalletService from "../services/digitalCards/appleWalletService.js";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Genera o obtiene la tarjeta digital de un cliente
@@ -23,6 +24,9 @@ export const generateDigitalCard = async (req, res) => {
       });
     }
 
+    // Variable para almacenar el QR temporal
+    let tempQrCode = null;
+
     // Verificar si ya existe una tarjeta digital para este cliente
     let digitalCard = await DigitalCard.findOne({ clientId });
 
@@ -37,6 +41,7 @@ export const generateDigitalCard = async (req, res) => {
         });
 
         await digitalCard.rotate(qrCode, qrData);
+        tempQrCode = qrCode; // Guardar QR temporal para enviarlo al frontend
 
         // Registrar la rotación en las transacciones
         await CardTransaction.create({
@@ -49,31 +54,37 @@ export const generateDigitalCard = async (req, res) => {
         });
       }
     } else {
-      // Generar nueva tarjeta digital
+      // Primero generar el QR con un passSerialNumber temporal
+      const tempPassSerialNumber = uuidv4();
+      
+      // Generar el QR con el passSerialNumber temporal
       const { qrCode, qrData, expiresAt } = await qrCodeService.generateQRCode({
         clientId: client._id,
         clientNumber: client.clientNumber,
-        passSerialNumber: null, // Se generará automáticamente
+        passSerialNumber: tempPassSerialNumber,
         branchId: client.branch._id,
       });
+
+      tempQrCode = qrCode; // Guardar QR temporal para enviarlo al frontend
 
       // Generar código de barras
       const barcode = await qrCodeService.generateBarcode(client.clientNumber);
 
-      // Crear la tarjeta digital
+      // Ahora crear la tarjeta con todos los datos necesarios
       digitalCard = new DigitalCard({
         clientId: client._id,
-        qrCode,
-        qrData,
-        barcode,
         cardType,
         lastPointsBalance: client.points,
         branchId: client.branch._id,
+        passSerialNumber: tempPassSerialNumber, // Usar el mismo passSerialNumber
+        qrData: qrData, // Asignar qrData desde el inicio
+        barcode: barcode,
         metadata: {
           logoText: client.branch.name || "Corazón Violeta",
         },
       });
 
+      // Guardar la tarjeta con todos los datos
       await digitalCard.save();
 
       // Registrar la generación en las transacciones
@@ -88,9 +99,13 @@ export const generateDigitalCard = async (req, res) => {
       });
     }
 
+    // Convertir a objeto plano si es necesario
+    const digitalCardObj = digitalCard.toObject ? digitalCard.toObject() : digitalCard;
+    
     // Preparar respuesta con datos del cliente
     const cardData = {
-      ...digitalCard.toObject(),
+      ...digitalCardObj,
+      tempQrCode: tempQrCode, // Agregar el QR temporal para que el frontend lo suba
       client: {
         name: client.name,
         lastName: client.lastName,
@@ -452,6 +467,52 @@ export const generateTemporaryQR = async (req, res) => {
     });
   } catch (error) {
     console.error("Error generando QR temporal:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Actualiza las URLs del QR después de subirlo a Firebase
+ */
+export const updateQRUrls = async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const { qrCodeUrl, qrCodePath } = req.body;
+
+    if (!qrCodeUrl || !qrCodePath) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requieren qrCodeUrl y qrCodePath",
+      });
+    }
+
+    const digitalCard = await DigitalCard.findById(cardId);
+
+    if (!digitalCard) {
+      return res.status(404).json({
+        success: false,
+        message: "Tarjeta digital no encontrada",
+      });
+    }
+
+    // Actualizar URLs del QR
+    digitalCard.qrCodeUrl = qrCodeUrl;
+    digitalCard.qrCodePath = qrCodePath;
+    // Limpiar el campo qrCode base64 si existe
+    digitalCard.qrCode = undefined;
+    
+    await digitalCard.save();
+
+    res.status(200).json({
+      success: true,
+      data: digitalCard,
+      message: "URLs del QR actualizadas correctamente",
+    });
+  } catch (error) {
+    console.error("Error actualizando URLs del QR:", error);
     res.status(500).json({
       success: false,
       message: error.message,

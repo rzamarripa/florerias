@@ -5,8 +5,26 @@ import crypto from "crypto";
 class QRCodeService {
   constructor() {
     this.jwtSecret = process.env.JWT_SECRET || "corazon-violeta-digital-cards-2024";
-    this.encryptionKey = process.env.ENCRYPTION_KEY || crypto.randomBytes(32);
-    this.encryptionIV = process.env.ENCRYPTION_IV || crypto.randomBytes(16);
+    
+    // Use stable encryption keys from environment or generate deterministic ones
+    if (process.env.ENCRYPTION_KEY) {
+      this.encryptionKey = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+    } else {
+      // Generate a deterministic key based on JWT secret for consistency
+      this.encryptionKey = crypto.createHash('sha256')
+        .update(this.jwtSecret + '-encryption-key')
+        .digest();
+    }
+    
+    if (process.env.ENCRYPTION_IV) {
+      this.encryptionIV = Buffer.from(process.env.ENCRYPTION_IV, 'hex');
+    } else {
+      // Generate a deterministic IV based on JWT secret for consistency
+      this.encryptionIV = crypto.createHash('sha256')
+        .update(this.jwtSecret + '-encryption-iv')
+        .digest()
+        .slice(0, 16); // IV must be 16 bytes for AES
+    }
   }
 
   /**
@@ -165,12 +183,9 @@ class QRCodeService {
   encryptData(data) {
     try {
       const algorithm = "aes-256-cbc";
-      const key = Buffer.isBuffer(this.encryptionKey) 
-        ? this.encryptionKey 
-        : Buffer.from(this.encryptionKey, "hex");
-      const iv = Buffer.isBuffer(this.encryptionIV)
-        ? this.encryptionIV
-        : Buffer.from(this.encryptionIV, "hex");
+      // Keys are already Buffers from constructor
+      const key = this.encryptionKey;
+      const iv = this.encryptionIV;
 
       const cipher = crypto.createCipheriv(algorithm, key, iv);
       
@@ -192,12 +207,9 @@ class QRCodeService {
   decryptData(encryptedData) {
     try {
       const algorithm = "aes-256-cbc";
-      const key = Buffer.isBuffer(this.encryptionKey)
-        ? this.encryptionKey
-        : Buffer.from(this.encryptionKey, "hex");
-      const iv = Buffer.isBuffer(this.encryptionIV)
-        ? this.encryptionIV
-        : Buffer.from(this.encryptionIV, "hex");
+      // Keys are already Buffers from constructor
+      const key = this.encryptionKey;
+      const iv = this.encryptionIV;
 
       const decipher = crypto.createDecipheriv(algorithm, key, iv);
       
@@ -271,14 +283,13 @@ class QRCodeService {
    */
   async rotateQRCode(clientData) {
     try {
-      // Generar nuevo serial number para el QR rotado
-      const newSerialNumber = crypto.randomBytes(16).toString("hex");
-      
+      // Mantener el mismo passSerialNumber pero actualizar el timestamp
+      // Esto evita problemas con el escaneo del QR
       const rotatedData = {
         ...clientData,
-        passSerialNumber: newSerialNumber,
+        passSerialNumber: clientData.passSerialNumber, // Mantener el mismo
         rotatedAt: Date.now(),
-        previousSerial: clientData.passSerialNumber,
+        timestamp: Date.now(), // Nuevo timestamp
       };
 
       return await this.generateQRCode(rotatedData);

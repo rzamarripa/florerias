@@ -181,3 +181,41 @@ export const uploadEcommerceCarouselImage = async (
   const folder = `ecommerce/empresas/${companyId}/sucursales/${branchId}/carrusel`;
   return uploadFile(file, folder);
 };
+
+/**
+ * Sube el código QR de una tarjeta digital a Firebase Storage
+ * @param qrBase64 - El código QR en formato base64
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @param clientId - El ID del cliente
+ * @returns URL de descarga del QR y path en Firebase
+ */
+export const uploadDigitalCardQR = async (
+  qrBase64: string,
+  companyId: string,
+  branchId: string,
+  clientId: string
+): Promise<UploadFileResult> => {
+  // Remover el prefijo data:image/png;base64, si existe
+  const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
+  
+  // Convertir base64 a Blob
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: 'image/png' });
+  
+  // Crear un File object desde el Blob
+  const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+  
+  // Definir la carpeta de destino
+  const folder = `Empresas/${companyId}/branches/${branchId}/clients/${clientId}/tarjeta`;
+  
+  // Subir el archivo a Firebase
+  return uploadFile(file, folder);
+};

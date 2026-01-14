@@ -13,7 +13,8 @@ import Image from 'next/image';
 interface CardPreviewProps {
   digitalCard: {
     _id: string;
-    qrCode: string;
+    qrCode?: string; // Base64 - ahora opcional
+    qrCodeUrl?: string; // URL del QR en Firebase
     barcode?: string;
     lastPointsBalance: number;
     lastUpdated: Date;
@@ -180,13 +181,31 @@ const CardPreview: React.FC<CardPreviewProps> = ({
         {/* QR Code Section */}
         <div className="d-flex flex-column align-items-center gap-3 p-4 rounded-3 bg-white mt-4">
           <div className="rounded-2 overflow-hidden">
-            <Image 
-              src={digitalCard.qrCode} 
-              alt="QR Code" 
-              width={160}
-              height={160}
-              style={{ display: 'block' }}
-            />
+            {digitalCard.qrCodeUrl ? (
+              <Image 
+                src={digitalCard.qrCodeUrl} 
+                alt="QR Code" 
+                width={160}
+                height={160}
+                style={{ display: 'block' }}
+                unoptimized
+              />
+            ) : digitalCard.qrCode ? (
+              <Image 
+                src={digitalCard.qrCode} 
+                alt="QR Code" 
+                width={160}
+                height={160}
+                style={{ display: 'block' }}
+              />
+            ) : (
+              <div 
+                className="d-flex align-items-center justify-content-center"
+                style={{ width: 160, height: 160, backgroundColor: '#f3f4f6' }}
+              >
+                <span className="text-muted">QR no disponible</span>
+              </div>
+            )}
           </div>
           <p className="small fw-medium text-secondary mb-0">Escanea para compartir</p>
         </div>

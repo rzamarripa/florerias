@@ -9,6 +9,7 @@ import {
   deactivateCard,
   generateTemporaryQR,
   getCardsByBranch,
+  updateQRUrls,
 } from "../controllers/digitalCardController.js";
 import { DigitalCard } from "../models/DigitalCard.js";
 
@@ -21,6 +22,9 @@ router.post("/generate/:clientId", generateDigitalCard);
 
 // Obtener tarjeta digital de un cliente
 router.get("/client/:clientId", getDigitalCard);
+
+// Actualizar URLs del QR después de subir a Firebase
+router.put("/update-qr-urls/:cardId", updateQRUrls);
 
 // Obtener tarjeta digital pública (sin autenticación)
 router.get("/public/:cardId", async (req, res) => {
@@ -52,6 +56,7 @@ router.get("/public/:cardId", async (req, res) => {
           points: digitalCard.clientId.points,
         },
         qrCode: digitalCard.qrCode,
+        qrCodeUrl: digitalCard.qrCodeUrl,
         expiresAt: digitalCard.expiresAt,
         lastUpdated: digitalCard.lastUpdated,
         isActive: digitalCard.isActive,

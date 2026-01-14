@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Tabs, Tab, Alert } from "react-bootstrap";
-import { Factory, CalendarDays, Calendar, Clock, Cuboid } from "lucide-react";
+import { Tabs, Tab, Alert, Button } from "react-bootstrap";
+import { Factory, CalendarDays, Calendar, Clock, Cuboid, FileSpreadsheet } from "lucide-react";
 import TodayProductionTable from "./components/tables/TodayProductionTable";
 import TomorrowProductionTable from "./components/tables/TomorrowProductionTable";
 import LaterProductionTable from "./components/tables/LaterProductionTable";
@@ -10,6 +10,8 @@ import { branchesService } from "../branches/services/branches";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { toast } from "react-toastify";
+import { productionOrdersService } from "./services/productionOrders";
+import { generateProductionExcelReport } from "./utils/productionExcelReport";
 
 const ProductionListPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("hoy");
@@ -21,6 +23,7 @@ const ProductionListPage: React.FC = () => {
   const { role } = useUserRoleStore();
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const ordersStateRef = useRef<Set<string>>(new Set());
+  const [exportingExcel, setExportingExcel] = useState<boolean>(false);
 
   // Cargar sucursales del usuario
   useEffect(() => {
@@ -148,6 +151,40 @@ const ProductionListPage: React.FC = () => {
     });
   };
 
+  // Función para exportar a Excel
+  const handleExportExcel = async () => {
+    try {
+      setExportingExcel(true);
+      
+      // Obtener todas las órdenes de producción
+      const allOrders = await productionOrdersService.getAllProductionOrders(selectedBranchId);
+      
+      // Verificar si hay órdenes para exportar
+      const totalOrders = allOrders.todayOrders.length + 
+                         allOrders.tomorrowOrders.length + 
+                         allOrders.laterOrders.length;
+      
+      if (totalOrders === 0) {
+        toast.warning("No hay órdenes de producción para exportar");
+        return;
+      }
+      
+      // Obtener el nombre de la sucursal seleccionada
+      const selectedBranch = branches.find(b => b._id === selectedBranchId);
+      const branchName = selectedBranch?.branchName;
+      
+      // Generar el reporte Excel
+      generateProductionExcelReport(allOrders, branchName);
+      
+      toast.success(`Reporte Excel generado con ${totalOrders} órdenes`);
+    } catch (error) {
+      console.error("Error al exportar a Excel:", error);
+      toast.error("Error al generar el reporte Excel");
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   return (
     <div className="container-fluid py-2">
       {/* Header */}
@@ -163,55 +200,87 @@ const ProductionListPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Selector de sucursal si hay múltiples */}
-          {branches.length > 1 && (
-            <div className="d-flex align-items-center gap-2">
-              <label className="text-muted small">Sucursal:</label>
-              <select
-                className="form-select form-select-sm"
-                value={selectedBranchId || ""}
-                onChange={(e) =>
-                  setSelectedBranchId(e.target.value || undefined)
-                }
-                style={{ minWidth: "200px" }}
-              >
-                <option value="">Todas las sucursales</option>
-                {branches.map((branch) => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.branchName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="d-flex align-items-center gap-3">
+            {/* Selector de sucursal si hay múltiples */}
+            {branches.length > 1 && (
+              <div className="d-flex align-items-center gap-2">
+                <label className="text-muted small">Sucursal:</label>
+                <select
+                  className="form-select form-select-sm"
+                  value={selectedBranchId || ""}
+                  onChange={(e) =>
+                    setSelectedBranchId(e.target.value || undefined)
+                  }
+                  style={{ minWidth: "200px" }}
+                >
+                  <option value="">Todas las sucursales</option>
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.branchName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {/* Botón de exportar Excel */}
+            <Button
+              variant="success"
+              onClick={handleExportExcel}
+              disabled={exportingExcel || loadingBranches}
+              className="d-flex align-items-center gap-2"
+              style={{ 
+                paddingLeft: "20px",
+                paddingRight: "20px",
+                paddingTop: "8px",
+                paddingBottom: "8px"
+              }}
+            >
+              {exportingExcel ? (
+                <>
+                  <span 
+                    className="spinner-border spinner-border-sm" 
+                    role="status" 
+                    aria-hidden="true"
+                  ></span>
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet size={20} />
+                  Exportar a Excel
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Tabs con el mismo diseño que SalesPage */}
+      {/* Tabs con diseño más compacto */}
       <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
         <div className="card-body p-0">
-          {/* Header con pestañas */}
+          {/* Header con pestañas más pequeñas */}
           <div
-            className="px-4 pt-3"
+            className="px-3 pt-2"
             style={{
-              borderBottom: "2px solid #f1f3f5",
+              borderBottom: "1px solid #e0e0e0",
             }}
           >
             <Tabs
               activeKey={activeTab}
               onSelect={(k) => setActiveTab(k || "hoy")}
-              className="border-0"
+              className="border-0 small"
             >
               <Tab
                 eventKey="hoy"
                 title={
-                  <span className="px-3 py-2 fw-semibold d-flex align-items-center gap-2">
-                    <CalendarDays size={18} />
+                  <span className="px-2 py-1 fw-semibold d-flex align-items-center gap-1">
+                    <CalendarDays size={14} />
                     Hoy
                   </span>
                 }
               >
-                <div className="p-4">
+                <div className="p-3">
                   <TodayProductionTable
                     key={`today-${refreshKey}`}
                     branchId={selectedBranchId}
@@ -223,13 +292,13 @@ const ProductionListPage: React.FC = () => {
               <Tab
                 eventKey="manana"
                 title={
-                  <span className="px-3 py-2 fw-semibold d-flex align-items-center gap-2">
-                    <Calendar size={18} />
+                  <span className="px-2 py-1 fw-semibold d-flex align-items-center gap-1">
+                    <Calendar size={14} />
                     Mañana
                   </span>
                 }
               >
-                <div className="p-4">
+                <div className="p-3">
                   <TomorrowProductionTable
                     key={`tomorrow-${refreshKey}`}
                     branchId={selectedBranchId}
@@ -241,13 +310,13 @@ const ProductionListPage: React.FC = () => {
               <Tab
                 eventKey="posteriores"
                 title={
-                  <span className="px-3 py-2 fw-semibold d-flex align-items-center gap-2">
-                    <CalendarDays size={18} />
+                  <span className="px-2 py-1 fw-semibold d-flex align-items-center gap-1">
+                    <CalendarDays size={14} />
                     Posteriores
                   </span>
                 }
               >
-                <div className="p-4">
+                <div className="p-3">
                   <LaterProductionTable
                     key={`later-${refreshKey}`}
                     branchId={selectedBranchId}

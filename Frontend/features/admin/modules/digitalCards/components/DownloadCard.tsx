@@ -15,7 +15,8 @@ interface DownloadCardProps {
   onHide: () => void;
   card: {
     _id: string;
-    qrCode: string;
+    qrCode?: string; // Base64 - ahora opcional para compatibilidad
+    qrCodeUrl?: string; // URL del QR en Firebase
     passSerialNumber: string;
   };
   client: {
@@ -36,13 +37,43 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   onDownloadGoogle,
 }) => {
   const downloadQRAsImage = () => {
-    const link = document.createElement('a');
-    link.download = `QR-${client.clientNumber}.png`;
-    link.href = card.qrCode;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('QR descargado correctamente');
+    try {
+      // Determinar la fuente del QR (URL de Firebase o base64)
+      const qrSource = card.qrCodeUrl || card.qrCode;
+      
+      if (!qrSource) {
+        toast.error('No hay código QR disponible para descargar');
+        return;
+      }
+
+      // Solución simple: abrir directamente la URL para descargar
+      // Firebase Storage permite acceso directo a las imágenes
+      if (card.qrCodeUrl) {
+        // Crear un link invisible con el atributo download
+        // Esto funciona porque Firebase Storage ya permite el acceso directo
+        const link = document.createElement('a');
+        link.download = `QR-${client.clientNumber}.png`;
+        link.href = card.qrCodeUrl;
+        link.target = '_blank'; // Abrir en nueva pestaña si falla la descarga
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success('Descargando QR...');
+      } else {
+        // Si es base64 (compatibilidad con tarjetas antiguas)
+        const link = document.createElement('a');
+        link.download = `QR-${client.clientNumber}.png`;
+        link.href = card.qrCode!;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('QR descargado correctamente');
+      }
+    } catch (error) {
+      console.error('Error descargando QR:', error);
+      toast.error('Error al descargar el código QR');
+    }
   };
 
   const shareViaWhatsApp = () => {
@@ -66,39 +97,24 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   };
 
   const saveToPhotos = () => {
-    // En móviles, esto abrirá el diálogo de guardar imagen
+    // En móviles, usar el share nativo o simplemente descargar
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new window.Image();
-      
-      img.onload = function() {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx?.drawImage(img, 0, 0);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], `QR-${client.clientNumber}.png`, { type: 'image/png' });
-            
-            if (navigator.share) {
-              navigator.share({
-                files: [file],
-                title: 'Tarjeta Digital',
-                text: 'Mi tarjeta de fidelidad'
-              }).catch(() => {
-                // Si falla el share, descargar normalmente
-                downloadQRAsImage();
-              });
-            } else {
-              downloadQRAsImage();
-            }
-          }
+      // Para móviles, intentar compartir la URL directamente
+      if (navigator.share && card.qrCodeUrl) {
+        navigator.share({
+          title: 'Tarjeta Digital - QR',
+          text: `QR de ${client.name} ${client.lastName}`,
+          url: card.qrCodeUrl
+        }).catch(() => {
+          // Si falla el share, descargar normalmente
+          downloadQRAsImage();
         });
-      };
-      
-      img.src = card.qrCode;
+      } else {
+        // Si no hay API de share o es base64, descargar normal
+        downloadQRAsImage();
+      }
     } else {
+      // En desktop, descargar normal
       downloadQRAsImage();
     }
   };

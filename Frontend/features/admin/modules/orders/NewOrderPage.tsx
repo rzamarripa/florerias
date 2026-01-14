@@ -25,6 +25,8 @@ import { companiesService } from "@/features/admin/modules/companies/services/co
 import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 import { uploadComprobante, uploadArreglo } from "@/services/firebaseStorage";
 import { useStorageSocket, StockUpdatePayload } from "@/hooks/useStorageSocket";
+import QRScanner from "@/features/admin/modules/digitalCards/components/QRScanner";
+import ClientPointsDashboardModal from "@/features/admin/modules/clients/components/ClientPointsDashboardModal";
 
 const NewOrderPage = () => {
   const { getIsCashier, getIsSocialMedia } = useUserRoleStore();
@@ -61,6 +63,9 @@ const NewOrderPage = () => {
     useState<number>(-1);
   const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
   const [catalogSearchTerm, setCatalogSearchTerm] = useState("");
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showPointsDashboard, setShowPointsDashboard] = useState(false);
+  const [scannedClientData, setScannedClientData] = useState<any>(null);
 
   const [formData, setFormData] = useState<CreateOrderData>({
     branchId: "",
@@ -787,6 +792,47 @@ const NewOrderPage = () => {
     toast.success("Producto agregado correctamente");
   };
 
+  // Manejar apertura del scanner QR
+  const handleScanQR = () => {
+    // Cerrar el modal de detalles de orden temporalmente
+    setShowOrderDetailsModal(false);
+    // Abrir el scanner
+    setShowQRScanner(true);
+  };
+
+  // Manejar éxito del escaneo QR
+  const handleQRScanSuccess = (scanData: any) => {
+    // Guardar los datos del cliente escaneado
+    setScannedClientData(scanData);
+    
+    // Actualizar el formulario con los datos del cliente
+    if (scanData && scanData.client) {
+      setFormData((prev) => ({
+        ...prev,
+        clientInfo: {
+          clientId: scanData.client.id,
+          name: scanData.client.fullName || `${scanData.client.name} ${scanData.client.lastName}`,
+          phone: scanData.client.phoneNumber || "",
+          email: scanData.client.email || "",
+        },
+      }));
+      
+      // Cerrar el scanner
+      setShowQRScanner(false);
+      
+      // Reabrir el modal de detalles con los datos actualizados
+      setTimeout(() => {
+        setShowOrderDetailsModal(true);
+        // Abrir el dashboard de puntos después de un breve delay
+        setTimeout(() => {
+          setShowPointsDashboard(true);
+        }, 500);
+      }, 100);
+      
+      toast.success(`Cliente ${scanData.client.fullName} identificado correctamente`);
+    }
+  };
+
   // Generar e imprimir ticket de venta
   const generateAndPrintSaleTicket = async (orderData: any) => {
     if (!user) {
@@ -1293,6 +1339,7 @@ const NewOrderPage = () => {
         }}
         setError={setError}
         setSuccess={setSuccess}
+        onScanQR={handleScanQR}
       />
       {/* Modal de Solicitud de Autorización de Descuento */}
       <DiscountAuthModal
@@ -1316,6 +1363,36 @@ const NewOrderPage = () => {
         storage={storage}
         onAddExtras={handleAddExtras}
       />
+
+      {/* Modal de QR Scanner */}
+      <QRScanner
+        show={showQRScanner}
+        onHide={() => setShowQRScanner(false)}
+        onScanSuccess={handleQRScanSuccess}
+        branchId={formData.branchId}
+      />
+
+      {/* Modal del Dashboard de Puntos */}
+      {scannedClientData && (
+        <ClientPointsDashboardModal
+          show={showPointsDashboard}
+          onHide={() => {
+            setShowPointsDashboard(false);
+            // No limpiar scannedClientData para mantener los datos del cliente en el formulario
+          }}
+          client={{
+            _id: scannedClientData.client.id,
+            name: scannedClientData.client.name,
+            lastName: scannedClientData.client.lastName,
+            clientNumber: scannedClientData.client.clientNumber,
+            phoneNumber: scannedClientData.client.phoneNumber,
+            email: scannedClientData.client.email,
+            points: scannedClientData.client.points,
+            status: scannedClientData.client.status,
+          }}
+          branchId={formData.branchId}
+        />
+      )}
     </div>
   );
 };
