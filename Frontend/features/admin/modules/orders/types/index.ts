@@ -152,6 +152,10 @@ export interface CreateOrderData {
   arregloPath?: string | null;
   appliedRewardCode?: string | null;
   appliedReward?: AppliedRewardInfo | null;
+  stripePaymentIntentId?: string | null;
+  stripePaymentMethodId?: string | null;
+  stripePaymentStatus?: string | null;
+  stripeCustomerId?: string | null;
 }
 
 export interface UpdateOrderData extends Partial<CreateOrderData> {

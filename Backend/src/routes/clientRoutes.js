@@ -13,6 +13,7 @@ import {
   getAvailableRewards,
   redeemReward,
   verifyRewardCode,
+  getClientRewards,
 } from "../controllers/clientController.js";
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.get("/", getAllClients);
 router.get("/:id", getClientById);
 router.get("/:id/points-history", getClientPointsHistory);
 router.get("/:id/available-rewards", getAvailableRewards);
+router.get("/:id/rewards", getClientRewards);
 
 // POST routes
 router.post("/", createClient);

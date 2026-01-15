@@ -164,4 +164,9 @@ export const clientsService = {
     );
     return response as unknown as GetAvailableRewardsResponse;
   },
+
+  getClientRewards: async (clientId: string): Promise<any> => {
+    const response = await apiCall<any>(`/clients/${clientId}/rewards`);
+    return response;
+  },
 };

@@ -636,6 +636,45 @@ export const getAvailableRewards = async (req, res) => {
   }
 };
 
+export const getClientRewards = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Obtener cliente con rewards populados
+    const client = await Client.findById(id)
+      .populate({
+        path: "rewards.reward",
+        select: "name description rewardValue isPercentage pointsRequired",
+      })
+      .populate({
+        path: "rewards.usedInOrder",
+        select: "orderNumber",
+      });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Cliente no encontrado",
+      });
+    }
+
+    // Filtrar y formatear las recompensas
+    const rewards = client.rewards || [];
+
+    res.status(200).json({
+      success: true,
+      message: "Recompensas obtenidas exitosamente",
+      data: rewards,
+    });
+  } catch (error) {
+    console.error("Error al obtener recompensas del cliente:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export const redeemReward = async (req, res) => {
   try {
     const { id } = req.params;

@@ -48,6 +48,7 @@ import passwordResetRoutes from "./passwordResetRoutes.js";
 import ecommerceConfigRoutes from "./ecommerceConfigRoutes.js";
 import digitalCardRoutes from "./digitalCardRoutes.js";
 import scannerRoutes from "./scannerRoutes.js";
+import stripeRoutes from "./stripeRoutes.js";
 
 const router = Router();
 
@@ -99,5 +100,6 @@ router.use("/password-reset", passwordResetRoutes);
 router.use("/ecommerce-config", ecommerceConfigRoutes);
 router.use("/digital-cards", digitalCardRoutes);
 router.use("/scanner", scannerRoutes);
+router.use("/stripe", stripeRoutes);
 
 export default router;

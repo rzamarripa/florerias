@@ -109,7 +109,7 @@ const clientSchema = new Schema(
       },
       usedInOrder: {
         type: Schema.Types.ObjectId,
-        ref: "cc_orders",
+        ref: "Order",
         default: null
       }
     }]

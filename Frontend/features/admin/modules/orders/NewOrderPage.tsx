@@ -805,8 +805,26 @@ const NewOrderPage = () => {
     // Guardar los datos del cliente escaneado
     setScannedClientData(scanData);
     
-    // Actualizar el formulario con los datos del cliente
+    // Verificar si el cliente pertenece a la sucursal actual
     if (scanData && scanData.client) {
+      // Obtener la sucursal del cliente
+      const clientBranchId = scanData.client.branchId || scanData.client.branch;
+      
+      // Obtener la sucursal actual (del cajero o la seleccionada por el usuario de redes)
+      const currentBranchId = formData.branchId || cashRegister?.branchId?._id;
+      
+      // Verificar que el cliente pertenezca a la misma sucursal
+      if (clientBranchId && currentBranchId && clientBranchId !== currentBranchId) {
+        toast.error("El cliente no corresponde a la sucursal actual");
+        // No actualizar el formulario si el cliente no es de la misma sucursal
+        setShowQRScanner(false);
+        setTimeout(() => {
+          setShowOrderDetailsModal(true);
+        }, 100);
+        return;
+      }
+      
+      // Si pasa la validación, actualizar el formulario con los datos del cliente
       setFormData((prev) => ({
         ...prev,
         clientInfo: {
@@ -820,7 +838,7 @@ const NewOrderPage = () => {
       // Cerrar el scanner
       setShowQRScanner(false);
       
-      // Reabrir el modal de detalles con los datos actualizados
+      // Reabrir el modal de detalles con los datos actualizados y el cliente seleccionado
       setTimeout(() => {
         setShowOrderDetailsModal(true);
         // Abrir el dashboard de puntos después de un breve delay
@@ -1329,6 +1347,7 @@ const NewOrderPage = () => {
         uploadingFiles={uploadingFiles}
         error={error}
         success={success}
+        scannedClientId={scannedClientData?.client?.id || null}
         onDiscountChange={handleDiscountChange}
         onSubmit={handleSubmitWithFiles}
         onShowDiscountRequestDialog={() => setShowDiscountRequestDialog(true)}

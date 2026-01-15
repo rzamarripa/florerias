@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, Plus, Users, Award } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Button, Form, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -9,6 +9,8 @@ import { Client, ClientFilters, FilterType, FilterOption, CreateClientData, Upda
 import { useRouter } from "next/navigation";
 import ClientModal from "./components/ClientModal";
 import ClientPointsDashboardModal from "./components/ClientPointsDashboardModal";
+import ClientRedeemedRewardsModal from "./components/ClientRedeemedRewardsModal";
+import ClientActions from "./components/ClientActions";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
@@ -33,6 +35,8 @@ const ClientsPage: React.FC = () => {
   const [modalLoading, setModalLoading] = useState<boolean>(false);
   const [showPointsModal, setShowPointsModal] = useState<boolean>(false);
   const [pointsClient, setPointsClient] = useState<Client | null>(null);
+  const [showRewardsModal, setShowRewardsModal] = useState<boolean>(false);
+  const [rewardsClient, setRewardsClient] = useState<Client | null>(null);
   const [branchId, setBranchId] = useState<string | null>(null);
   const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
   const [pagination, setPagination] = useState({
@@ -164,6 +168,11 @@ const ClientsPage: React.FC = () => {
   const handleViewPoints = (client: Client) => {
     setPointsClient(client);
     setShowPointsModal(true);
+  };
+
+  const handleViewRewards = (client: Client) => {
+    setRewardsClient(client);
+    setShowRewardsModal(true);
   };
 
   const handleSaveClient = async (data: CreateClientData | UpdateClientData) => {
@@ -418,33 +427,13 @@ const ClientsPage: React.FC = () => {
                       </td>
                       <td>{formatDate(client.createdAt)}</td>
                       <td className="text-center">
-                        <div className="d-flex gap-1 justify-content-center">
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            onClick={() => handleViewClient(client)}
-                            className="d-flex align-items-center gap-1"
-                          >
-                            Ver
-                          </Button>
-                          <Button
-                            variant="outline-secondary"
-                            size="sm"
-                            onClick={() => handleEditClient(client)}
-                            className="d-flex align-items-center gap-1"
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            variant="outline-info"
-                            size="sm"
-                            onClick={() => handleViewPoints(client)}
-                            className="d-flex align-items-center gap-1"
-                          >
-                            <Award size={14} />
-                            Puntos
-                          </Button>
-                        </div>
+                        <ClientActions
+                          client={client}
+                          onView={handleViewClient}
+                          onEdit={handleEditClient}
+                          onViewPoints={handleViewPoints}
+                          onViewRewards={handleViewRewards}
+                        />
                       </td>
                     </tr>
                   ))
@@ -516,6 +505,12 @@ const ClientsPage: React.FC = () => {
         onHide={() => setShowPointsModal(false)}
         client={pointsClient}
         branchId={branchId}
+      />
+
+      <ClientRedeemedRewardsModal
+        show={showRewardsModal}
+        onHide={() => setShowRewardsModal(false)}
+        client={rewardsClient}
       />
     </div>
   );

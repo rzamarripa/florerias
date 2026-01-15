@@ -40,6 +40,33 @@ const orderPaymentSchema = new mongoose.Schema({
   isAdvance: {
     type: Boolean,
     default: false
+  },
+  // Campos para integración con Stripe
+  stripePaymentIntentId: {
+    type: String,
+    trim: true,
+    default: null,
+    index: true // Índice para búsquedas rápidas
+  },
+  stripePaymentStatus: {
+    type: String,
+    enum: ['pending', 'processing', 'succeeded', 'failed', 'canceled', 'refunded', null],
+    default: null
+  },
+  stripePaymentMethod: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  stripeRefundId: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  stripeCustomerId: {
+    type: String,
+    trim: true,
+    default: null
   }
 }, {
   timestamps: true,

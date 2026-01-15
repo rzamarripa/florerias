@@ -38,7 +38,10 @@ import { CashRegister } from "@/features/admin/modules/cash-registers/types";
 import { Neighborhood } from "@/features/admin/modules/neighborhoods/types";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
 import ClientRewardsModal from "./ClientRewardsModal";
+import ClientRedeemedRewardsModal from "@/features/admin/modules/clients/components/ClientRedeemedRewardsModal";
+import StripePaymentModal from "./StripePaymentModal";
 import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
+import { isCardPaymentMethod } from "@/services/stripeService";
 import { neighborhoodsService } from "@/features/admin/modules/neighborhoods/services/neighborhoods";
 import { toast } from "react-toastify";
 import {
@@ -61,6 +64,7 @@ interface OrderDetailsModalProps {
   uploadingFiles: boolean;
   error: string | null;
   success: boolean;
+  scannedClientId?: string | null;
   onDiscountChange: (value: number, tipo: "porcentaje" | "cantidad") => void;
   onSubmit: (e: React.FormEvent, files: { comprobante: File | null; arreglo: File | null }) => void;
   onShowDiscountRequestDialog: () => void;
@@ -85,6 +89,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   uploadingFiles,
   error,
   success,
+  scannedClientId,
   onDiscountChange,
   onSubmit,
   onShowDiscountRequestDialog,
@@ -111,7 +116,16 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
   // Estado para recompensas
   const [showRewardsModal, setShowRewardsModal] = useState(false);
+  const [showRedeemedRewardsModal, setShowRedeemedRewardsModal] = useState(false);
   const [appliedReward, setAppliedReward] = useState<AppliedRewardInfo | null>(null);
+  const [selectedClientForRewards, setSelectedClientForRewards] = useState<Client | null>(null);
+  
+  // Estado para pago con Stripe
+  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [stripePaymentData, setStripePaymentData] = useState<any>(null);
+  const [pendingOrderData, setPendingOrderData] = useState<any>(null);
+  const [pendingFiles, setPendingFiles] = useState<{ comprobante: File | null; arreglo: File | null } | null>(null);
+  const [shouldSubmitOrder, setShouldSubmitOrder] = useState(false);
 
   // Cargar clientes filtrados por sucursal
   const fetchClients = async (branchId?: string) => {
@@ -194,6 +208,19 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   }, [show]);
 
+  // Efecto para actualizar el cliente seleccionado cuando se escanea un QR
+  useEffect(() => {
+    if (show && scannedClientId && clients.length > 0) {
+      // Buscar si el cliente escaneado está en la lista de clientes
+      const clientExists = clients.find(c => c._id === scannedClientId);
+      if (clientExists) {
+        // Seleccionar automáticamente el cliente en el select
+        setSelectedClientId(scannedClientId);
+        handleClientSelect(scannedClientId);
+      }
+    }
+  }, [show, scannedClientId, clients]);
+
   // Recargar clientes cuando cambia la sucursal
   useEffect(() => {
     if (show && formData.branchId) {
@@ -206,11 +233,34 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     if (!show) {
       setComprobanteFile(null);
       setArregloFile(null);
-      setSelectedClientId("");
+      // Solo limpiar el cliente si no hay uno escaneado
+      if (!scannedClientId) {
+        setSelectedClientId("");
+      }
       setAppliedReward(null);
       setShowRewardsModal(false);
+      setStripePaymentData(null);
+      setPendingOrderData(null);
+      setPendingFiles(null);
+      setShouldSubmitOrder(false);
     }
-  }, [show]);
+  }, [show, scannedClientId]);
+
+  // Efecto para manejar el envío de la orden después del pago con Stripe
+  useEffect(() => {
+    if (shouldSubmitOrder && pendingFiles && stripePaymentData) {
+      // Asegurar que el formData tenga los datos de Stripe antes de enviar
+      console.log("Enviando orden con datos de Stripe:", {
+        stripePaymentIntentId: formData.stripePaymentIntentId,
+        stripePaymentMethodId: formData.stripePaymentMethodId,
+        stripePaymentStatus: formData.stripePaymentStatus,
+      });
+      
+      const fakeEvent = new Event('submit') as any;
+      onSubmit(fakeEvent, pendingFiles);
+      setShouldSubmitOrder(false);
+    }
+  }, [shouldSubmitOrder, formData.stripePaymentIntentId]);
 
   // Manejar selección de cliente
   const handleClientSelect = (clientId: string) => {
@@ -218,6 +268,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
     // Limpiar recompensa al cambiar de cliente
     setAppliedReward(null);
+    setSelectedClientForRewards(null);
 
     if (!clientId) {
       // Recalcular total sin recompensa si había una aplicada
@@ -246,6 +297,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
     const selectedClient = clients.find((c) => c._id === clientId);
     if (selectedClient) {
+      setSelectedClientForRewards(selectedClient);
       // Recalcular total sin recompensa si había una aplicada
       const manualDiscountAmount =
         formData.discountType === "porcentaje"
@@ -478,9 +530,53 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(e, { comprobante: comprobanteFile, arreglo: arregloFile });
+    
+    // Verificar si el método de pago seleccionado es tarjeta
+    const selectedMethod = paymentMethods.find(m => m._id === formData.paymentMethod);
+    if (selectedMethod && isCardPaymentMethod(selectedMethod.name)) {
+      // Si es pago con tarjeta, guardar datos y abrir modal de Stripe
+      setPendingOrderData(formData);
+      setPendingFiles({ comprobante: comprobanteFile, arreglo: arregloFile });
+      setShowStripeModal(true);
+    } else {
+      // Si no es tarjeta, proceder con el flujo normal
+      onSubmit(e, { comprobante: comprobanteFile, arreglo: arregloFile });
+    }
+  };
+  
+  // Manejar éxito del pago con Stripe
+  const handleStripePaymentSuccess = (paymentData: any) => {
+    console.log("Pago exitoso con Stripe, datos recibidos:", paymentData);
+    
+    setStripePaymentData(paymentData);
+    setShowStripeModal(false);
+    
+    // Actualizar el formData con la información del pago
+    const updatedFormData = {
+      ...pendingOrderData,
+      stripePaymentIntentId: paymentData.paymentIntentId,
+      stripePaymentMethodId: paymentData.paymentMethodId,
+      stripePaymentStatus: paymentData.status,
+      stripeCustomerId: paymentData.stripeCustomerId,
+    };
+    
+    console.log("Actualizando formData con datos de Stripe:", updatedFormData);
+    
+    // IMPORTANTE: Actualizar el estado formData del componente padre con los datos de Stripe
+    setFormData(updatedFormData);
+    
+    // Activar el flag para que el useEffect envíe la orden
+    setShouldSubmitOrder(true);
+    
+    toast.success("Pago procesado exitosamente. Creando orden...");
+  };
+  
+  // Manejar error del pago con Stripe
+  const handleStripePaymentError = (error: string) => {
+    toast.error(`Error en el pago: ${error}`);
+    setShowStripeModal(false);
   };
 
   return (
@@ -602,14 +698,25 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                               </Button>
                             </Alert>
                           ) : (
-                            <Button
-                              variant="outline-primary"
-                              onClick={() => setShowRewardsModal(true)}
-                              className="w-100 py-2 d-flex align-items-center justify-content-center gap-2"
-                            >
-                              <Gift size={16} />
-                              Usar recompensa
-                            </Button>
+                            <div className="d-flex gap-2">
+                              <Button
+                                variant="outline-primary"
+                                onClick={() => setShowRewardsModal(true)}
+                                className="flex-fill py-2 d-flex align-items-center justify-content-center gap-2"
+                              >
+                                <Gift size={16} />
+                                Usar recompensa
+                              </Button>
+                              <Button
+                                variant="outline-success"
+                                onClick={() => setShowRedeemedRewardsModal(true)}
+                                className="flex-fill py-2 d-flex align-items-center justify-content-center gap-2"
+                                title="Ver todas las recompensas reclamadas del cliente"
+                              >
+                                <Eye size={16} />
+                                Ver recompensas
+                              </Button>
+                            </div>
                           )}
                         </Form.Group>
                       </Col>
@@ -1295,6 +1402,30 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           </Button>
         </Modal.Footer>
       </Form>
+      
+      {/* Modal de pago con Stripe */}
+      {showStripeModal && (
+        <StripePaymentModal
+          show={showStripeModal}
+          onHide={() => {
+            setShowStripeModal(false);
+            setPendingOrderData(null);
+            setPendingFiles(null);
+            setStripePaymentData(null);
+          }}
+          amount={pendingOrderData?.advance > 0 ? pendingOrderData.advance : pendingOrderData?.total || formData.total}
+          orderId={undefined} // Se asignará después de crear la orden
+          customerInfo={{
+            clientId: pendingOrderData?.clientInfo.clientId || formData.clientInfo.clientId,
+            name: pendingOrderData?.clientInfo.name || formData.clientInfo.name,
+            email: pendingOrderData?.clientInfo.email || formData.clientInfo.email,
+            phone: pendingOrderData?.clientInfo.phone || formData.clientInfo.phone,
+          }}
+          branchId={pendingOrderData?.branchId || formData.branchId}
+          onPaymentSuccess={handleStripePaymentSuccess}
+          onPaymentError={handleStripePaymentError}
+        />
+      )}
 
       {/* Modal de selección de recompensas */}
       {formData.clientInfo.clientId && (
@@ -1303,6 +1434,15 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           onHide={() => setShowRewardsModal(false)}
           clientId={formData.clientInfo.clientId}
           onSelectReward={handleSelectReward}
+        />
+      )}
+
+      {/* Modal de recompensas reclamadas */}
+      {selectedClientForRewards && (
+        <ClientRedeemedRewardsModal
+          show={showRedeemedRewardsModal}
+          onHide={() => setShowRedeemedRewardsModal(false)}
+          client={selectedClientForRewards}
         />
       )}
     </Modal>

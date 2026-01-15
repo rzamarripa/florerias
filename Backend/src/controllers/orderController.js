@@ -503,8 +503,17 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Extraer campos de redes sociales, descuento y recompensa del body
-    const { isSocialMediaOrder, socialMedia, hasPendingDiscountAuth, appliedRewardCode } = req.body;
+    // Extraer campos de redes sociales, descuento, recompensa y Stripe del body
+    const { 
+      isSocialMediaOrder, 
+      socialMedia, 
+      hasPendingDiscountAuth, 
+      appliedRewardCode,
+      stripePaymentIntentId,
+      stripePaymentMethodId,
+      stripePaymentStatus,
+      stripeCustomerId 
+    } = req.body;
 
     // Extraer todos los materiales extras de los items
     const materials = [];
@@ -616,21 +625,32 @@ const createOrder = async (req, res) => {
     // Variable para guardar el ID del pago (si se crea uno)
     let savedPaymentId = null;
 
-    // Si hay un anticipo (advance > 0), crear el registro en OrderPayment
-    if (advance && advance > 0 && cashRegisterId) {
+    // Si hay un anticipo (advance > 0) o un pago con Stripe, crear el registro en OrderPayment
+    if ((advance && advance > 0 && cashRegisterId) || stripePaymentIntentId) {
+      const paymentAmount = stripePaymentIntentId ? total : advance; // Si es Stripe, es pago completo
       const orderPayment = new OrderPayment({
         orderId: savedOrder._id,
-        amount: advance,
+        amount: paymentAmount,
         paymentMethod: paymentMethod,
         cashRegisterId: cashRegisterId,
         date: new Date(),
         registeredBy: req.user?._id || null,
-        notes: 'Pago inicial al crear la orden',
-        isAdvance: true
+        notes: stripePaymentIntentId ? 'Pago con tarjeta procesado por Stripe' : 'Pago inicial al crear la orden',
+        isAdvance: !stripePaymentIntentId, // Solo es anticipo si NO es pago con Stripe
+        // Campos de Stripe si aplican
+        stripePaymentIntentId: stripePaymentIntentId || null,
+        stripePaymentStatus: stripePaymentStatus || null,
+        stripePaymentMethod: stripePaymentMethodId || null,
+        stripeCustomerId: stripeCustomerId || null
       });
 
       const savedPayment = await orderPayment.save();
       savedPaymentId = savedPayment._id;
+      
+      // Si es pago con Stripe y fue exitoso, actualizar el remainingBalance a 0
+      if (stripePaymentIntentId && stripePaymentStatus === 'succeeded') {
+        savedOrder.remainingBalance = 0;
+      }
 
       // Agregar la referencia del pago a la orden
       savedOrder.payments.push(savedPayment._id);
@@ -728,7 +748,8 @@ const createOrder = async (req, res) => {
     }
 
     // Si hay caja registradora asignada, actualizar su balance según el tipo de caja
-    if (cashRegisterId && advance > 0 && paymentMethod) {
+    // NO actualizar si es pago con Stripe (se maneja diferente)
+    if (cashRegisterId && advance > 0 && paymentMethod && !stripePaymentIntentId) {
       try {
         // Obtener la caja registradora para saber si es de redes sociales
         const cashRegister = await CashRegister.findById(cashRegisterId);
@@ -739,7 +760,7 @@ const createOrder = async (req, res) => {
 
         // Determinar si se debe actualizar el balance:
         // - Cajas normales: solo si el pago es en efectivo
-        // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo
+        // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo y tarjetas con Stripe
         const shouldUpdateBalance = cashRegister?.isSocialMediaBox
           ? !isEffectivo  // Cajas de redes: actualizar si NO es efectivo
           : isEffectivo;  // Cajas normales: actualizar si ES efectivo
