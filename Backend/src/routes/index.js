@@ -1,6 +1,5 @@
 import { Router } from "express";
 
-import chatRoutes from "./chatRoutes.js";
 import clientRoutes from "./clientRoutes.js";
 import departmentRoutes from "./departmentRoutes.js";
 import moduleRoutes from "./moduleRoutes.js";
@@ -58,7 +57,6 @@ router.use("/departments", departmentRoutes);
 router.use("/roles", roleRoutes);
 router.use("/pages", pageRoutes);
 router.use("/modules", moduleRoutes);
-router.use("/chat", chatRoutes);
 router.use("/role-visibility", roleVisibilityRoutes);
 router.use("/fix", fixIndexesRoutes);
 router.use("/cashiers", cashierRoutes);
