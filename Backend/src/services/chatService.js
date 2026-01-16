@@ -132,7 +132,14 @@ async function executeMongoQuery(queryStr) {
       if (pipelineMatch) {
         try {
           const pipelineStr = pipelineMatch[1];
-          const pipeline = eval("(" + pipelineStr + ")");
+          // SECURITY FIX: Use JSON.parse instead of eval to prevent RCE attacks
+          const pipeline = JSON.parse(pipelineStr);
+
+          // Validate pipeline is an array
+          if (!Array.isArray(pipeline)) {
+            throw new Error("Aggregation pipeline must be an array");
+          }
+
           result = await targetCollection.aggregate(pipeline);
         } catch (parseError) {
           throw new Error(
