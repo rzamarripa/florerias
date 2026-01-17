@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import cors from "cors";
 import express from "express";
+import helmet from "helmet";
 import morgan from "morgan";
 import { createServer } from "http";
 
@@ -21,9 +22,33 @@ const PORT = process.env.PORT || 3005;
 // Confiar en el proxy (nginx/Docker)
 app.set('trust proxy', 1);
 
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable for API, enable for serving HTML
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS configuration - restrict to allowed origins
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.) in development
+      if (!origin && process.env.NODE_ENV === 'development') {
+        return callback(null, true);
+      }
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
   })
 );
 app.use(generalLimiter);

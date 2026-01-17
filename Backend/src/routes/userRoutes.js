@@ -13,6 +13,7 @@ import {
 } from "../controllers/userController.js";
 import { uploadSingle } from "../middleware/multerUpload.js";
 import { protect } from "../middleware/auth.js";
+import { authLimiter } from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get("/", protect, getAllUsers);
 router.get("/:id", protect, getUserById);
 
 router.post("/register", protect, uploadSingle("image"), registerUser);
-router.post("/login", loginUser);
+router.post("/login", authLimiter, loginUser);
 
 router.put("/:id", protect, uploadSingle("image"), updateUser);
 router.put("/:id/password", protect, changePassword);

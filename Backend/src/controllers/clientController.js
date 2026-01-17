@@ -3,6 +3,7 @@ import { Purchase } from "../models/Purchase.js";
 import { Branch } from "../models/Branch.js";
 import { PointsReward } from "../models/PointsReward.js";
 import clientPointsService from "../services/clientPointsService.js";
+import { createSafeRegexFilter } from "../utils/sanitize.js";
 
 // Function to generate unique redemption code
 const generateRedemptionCode = () => {
@@ -26,22 +27,18 @@ export const getAllClients = async (req, res) => {
       filters.branch = req.query.branchId;
     }
 
-    // Filtros opcionales
-    if (req.query.name) {
-      filters.name = { $regex: req.query.name, $options: "i" };
-    }
+    // Filtros opcionales - usando sanitización para prevenir ReDoS
+    const nameFilter = createSafeRegexFilter(req.query.name);
+    if (nameFilter) filters.name = nameFilter;
 
-    if (req.query.lastName) {
-      filters.lastName = { $regex: req.query.lastName, $options: "i" };
-    }
+    const lastNameFilter = createSafeRegexFilter(req.query.lastName);
+    if (lastNameFilter) filters.lastName = lastNameFilter;
 
-    if (req.query.clientNumber) {
-      filters.clientNumber = { $regex: req.query.clientNumber, $options: "i" };
-    }
+    const clientNumberFilter = createSafeRegexFilter(req.query.clientNumber);
+    if (clientNumberFilter) filters.clientNumber = clientNumberFilter;
 
-    if (req.query.phoneNumber) {
-      filters.phoneNumber = { $regex: req.query.phoneNumber, $options: "i" };
-    }
+    const phoneNumberFilter = createSafeRegexFilter(req.query.phoneNumber);
+    if (phoneNumberFilter) filters.phoneNumber = phoneNumberFilter;
 
     if (req.query.status !== undefined) {
       filters.status = req.query.status === "true";

@@ -4,7 +4,10 @@ import crypto from "crypto";
 
 class QRCodeService {
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || "corazon-violeta-digital-cards-2024";
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET environment variable is required");
+    }
+    this.jwtSecret = process.env.JWT_SECRET;
     
     // Use stable encryption keys from environment or generate deterministic ones
     if (process.env.ENCRYPTION_KEY) {
