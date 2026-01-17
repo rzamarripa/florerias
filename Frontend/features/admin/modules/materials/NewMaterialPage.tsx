@@ -1,8 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col, Alert } from "react-bootstrap";
-import { Save, ArrowLeft, Package2, DollarSign } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Save, ArrowLeft, Package2, DollarSign, Loader2, X } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { materialsService } from "./services/materials";
@@ -128,7 +141,7 @@ const NewMaterialPage: React.FC = () => {
     router.push("/catalogos/materiales");
   };
 
-  // Función para formatear números con separación de miles
+  // Funcion para formatear numeros con separacion de miles
   const formatNumber = (num: number): string => {
     return num.toLocaleString("es-MX", {
       minimumFractionDigits: 2,
@@ -142,13 +155,8 @@ const NewMaterialPage: React.FC = () => {
 
   if (loading && isEditing) {
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "400px" }}
-      >
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -156,262 +164,255 @@ const NewMaterialPage: React.FC = () => {
   return (
     <div className="new-material-page">
       {error && (
-        <Alert variant="danger" onClose={() => setError(null)} dismissible>
-          {error}
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription className="flex items-center justify-between">
+            {error}
+            <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+              <X size={16} />
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
-      <Form onSubmit={handleSubmit}>
-        {/* Información General */}
+      <form onSubmit={handleSubmit}>
+        {/* Informacion General */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-white border-0 py-3">
+            <div className="flex items-center gap-2">
               <Package2 size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Información del Material</h5>
+              <h5 className="mb-0 font-bold text-lg">Informacion del Material</h5>
             </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre del Material <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ej: Rosas Rojas, Papel Kraft, etc."
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Nombre del Material <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Ej: Rosas Rojas, Papel Kraft, etc."
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Unidad <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.unit}
-                    onChange={(e) =>
-                      setFormData({ ...formData, unit: e.target.value })
-                    }
-                    required
-                    disabled={loadingUnits}
-                    className="py-2"
-                  >
-                    <option value="">Seleccionar unidad...</option>
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Unidad <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.unit}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, unit: value })
+                  }
+                  disabled={loadingUnits}
+                >
+                  <SelectTrigger className="py-2">
+                    <SelectValue placeholder="Seleccionar unidad..." />
+                  </SelectTrigger>
+                  <SelectContent>
                     {units.map((unit) => (
-                      <option key={unit._id} value={unit._id}>
+                      <SelectItem key={unit._id} value={unit._id}>
                         {unit.name} ({unit.abbreviation})
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                  {units.length === 0 && !loadingUnits && (
-                    <Form.Text className="text-danger">
-                      No hay unidades disponibles. Por favor, crea una primero.
-                    </Form.Text>
-                  )}
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+                {units.length === 0 && !loadingUnits && (
+                  <p className="text-sm text-red-500">
+                    No hay unidades disponibles. Por favor, crea una primero.
+                  </p>
+                )}
+              </div>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Piezas por Paquete <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="1"
-                    value={formData.piecesPerPackage}
-                    onChange={(e) =>
-                      setFormData({ ...formData, piecesPerPackage: parseInt(e.target.value) || 1 })
-                    }
-                    required
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Cantidad de piezas que vienen por paquete
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Piezas por Paquete <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="1"
+                  value={formData.piecesPerPackage}
+                  onChange={(e) =>
+                    setFormData({ ...formData, piecesPerPackage: parseInt(e.target.value) || 1 })
+                  }
+                  required
+                  className="py-2"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Cantidad de piezas que vienen por paquete
+                </p>
+              </div>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Estado</Form.Label>
-                  <div className="pt-2">
-                    <Form.Check
-                      type="switch"
-                      id="status-switch"
-                      label={formData.status ? "Activo" : "Inactivo"}
-                      checked={formData.status}
-                      onChange={(e) =>
-                        setFormData({ ...formData, status: e.target.checked })
-                      }
-                      className="fs-5"
-                    />
-                  </div>
-                </Form.Group>
-              </Col>
-
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Descripción</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    placeholder="Descripción opcional del material..."
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
+              <div className="space-y-2">
+                <Label className="font-semibold">Estado</Label>
+                <div className="pt-2 flex items-center gap-3">
+                  <Switch
+                    id="status-switch"
+                    checked={formData.status}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, status: checked })
                     }
                   />
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
+                  <Label htmlFor="status-switch" className="text-lg">
+                    {formData.status ? "Activo" : "Inactivo"}
+                  </Label>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-2">
+                <Label className="font-semibold">Descripcion</Label>
+                <Textarea
+                  rows={3}
+                  placeholder="Descripcion opcional del material..."
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Precios */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-white border-0 py-3">
+            <div className="flex items-center gap-2">
               <DollarSign size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Precios</h5>
+              <h5 className="mb-0 font-bold text-lg">Precios</h5>
             </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Costo <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.cost}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })
-                    }
-                    required
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Costo de adquisición del material
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Costo <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.cost}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })
+                  }
+                  required
+                  className="py-2"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Costo de adquisicion del material
+                </p>
+              </div>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Precio de Venta <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
-                    }
-                    required
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Precio de venta al público
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Precio de Venta <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
+                  }
+                  required
+                  className="py-2"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Precio de venta al publico
+                </p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Resumen Financiero */}
         {formData.price > 0 && formData.cost > 0 && (
-          <Card className="mb-4 border-0 shadow-sm">
-            <Card.Header className="bg-success text-white py-3">
-              <h5 className="mb-0">
-                <DollarSign className="me-2" size={20} />
-                Resumen Financiero
-              </h5>
-            </Card.Header>
-            <Card.Body>
-              <Row className="align-items-center">
-                <Col md={6}>
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="fw-semibold">Precio de Venta:</span>
-                    <span className="fs-5 text-primary">
+          <Card className="mb-4 border-0 shadow-sm overflow-hidden">
+            <CardHeader className="bg-green-600 text-white py-3">
+              <div className="flex items-center gap-2">
+                <DollarSign size={20} />
+                <h5 className="mb-0 font-bold text-lg">Resumen Financiero</h5>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-semibold">Precio de Venta:</span>
+                    <span className="text-xl text-primary">
                       ${formatNumber(formData.price)}
                     </span>
                   </div>
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="fw-semibold">Costo:</span>
-                    <span className="fs-5 text-danger">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-semibold">Costo:</span>
+                    <span className="text-xl text-red-500">
                       ${formatNumber(formData.cost)}
                     </span>
                   </div>
-                  <hr />
-                  <div className="d-flex justify-content-between align-items-center">
-                    <span className="fw-bold fs-4">Ganancia:</span>
-                    <span className="fs-3 fw-bold text-success">
+                  <hr className="my-3" />
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-2xl">Ganancia:</span>
+                    <span className="text-3xl font-bold text-green-600">
                       ${formatNumber(ganancia)}
                     </span>
                   </div>
-                </Col>
-                <Col md={6}>
-                  <div className="text-center">
-                    <div className="p-4 bg-light rounded">
-                      <h6 className="text-muted mb-2">Margen de Ganancia</h6>
-                      <div className="fs-1 fw-bold text-success mb-2">
-                        {margen.toFixed(1)}%
-                      </div>
-                      <small className="text-muted">
-                        Por cada ${formatNumber(formData.price)} vendido, ganas ${formatNumber(ganancia)}
-                      </small>
+                </div>
+                <div className="text-center">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h6 className="text-muted-foreground mb-2">Margen de Ganancia</h6>
+                    <div className="text-5xl font-bold text-green-600 mb-2">
+                      {margen.toFixed(1)}%
                     </div>
+                    <small className="text-muted-foreground">
+                      Por cada ${formatNumber(formData.price)} vendido, ganas ${formatNumber(ganancia)}
+                    </small>
                   </div>
-                </Col>
-              </Row>
-            </Card.Body>
+                </div>
+              </div>
+            </CardContent>
           </Card>
         )}
 
         {/* Botones */}
-        <div className="d-flex justify-content-between gap-2 mb-4">
+        <div className="flex justify-between gap-2 mb-4">
           <Button
             type="button"
-            variant="outline-secondary"
+            variant="outline"
             size="lg"
             onClick={handleBack}
             disabled={loading}
-            className="d-flex align-items-center gap-2"
+            className="flex items-center gap-2"
           >
             <ArrowLeft size={18} />
             Volver
           </Button>
           <Button
             type="submit"
-            variant="primary"
             size="lg"
             disabled={loading || loadingUnits}
-            className="d-flex align-items-center gap-2 px-5"
+            className="flex items-center gap-2 px-5"
           >
-            <Save size={18} />
+            {loading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Save size={18} />
+            )}
             {loading ? "Guardando..." : isEditing ? "Actualizar Material" : "Crear Material"}
           </Button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 };

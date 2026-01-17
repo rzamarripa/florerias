@@ -1,6 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
-import { Form, Modal, Spinner } from "react-bootstrap";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 const ACCESS_KEY = process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY || "";
 
@@ -66,112 +74,83 @@ const UnsplashSelector: React.FC<UnsplashSelectorProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onClose} size="lg" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>Buscar imagen en Unsplash</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <Form onSubmit={handleSearch}>
-          <Form.Control
+    <Dialog open={show} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Buscar imagen en Unsplash</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSearch}>
+          <Input
             type="text"
             placeholder="Buscar..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-        </Form>
-        <div
-          style={{
-            maxHeight: 800,
-            overflowY: "auto",
-            overflowX: "hidden",
-          }}
-        >
-          <div className="row mt-2">
-            {loading && <Spinner animation="border" />}
+        </form>
+        <div className="max-h-[500px] overflow-y-auto overflow-x-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {loading && (
+              <div className="col-span-full flex justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            )}
             {results.map((img) => (
               <div
                 key={img.id}
-                className="col-12 col-md-4 mb-2"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
+                className="flex flex-col items-center"
               >
                 <div
-                  style={{
-                    width: 200,
-                    height: 120,
-                    overflow: "hidden",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                  }}
+                  className="w-[200px] h-[120px] overflow-hidden rounded-lg cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                   onClick={() => onSelect(img.urls.regular)}
                 >
                   <img
                     src={img.urls.regular}
                     alt={img.alt_description || "Unsplash"}
-                    style={{ width: 200, height: 120, objectFit: "cover" }}
+                    className="w-[200px] h-[120px] object-cover"
                   />
                 </div>
-                <div
-                  style={{ fontSize: 13, marginTop: 8, textAlign: "center" }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                    }}
-                  >
+                <div className="text-sm mt-2 text-center">
+                  <div className="flex items-center justify-center gap-2">
                     <img
                       src={img.user.profile_image.medium}
                       alt={img.user.name}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                      }}
+                      className="w-7 h-7 rounded-full object-cover"
                     />
-                    <div>
-                      <a
-                        href={img.user.links.html}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontWeight: 500 }}
-                      >
-                        {img.user.name}
-                      </a>
-                    </div>
+                    <a
+                      href={img.user.links.html}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium hover:underline"
+                    >
+                      {img.user.name}
+                    </a>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <button
-            className="btn btn-outline-secondary"
+        <div className="flex justify-between items-center mt-4">
+          <Button
+            variant="outline"
             onClick={() => setPage(page - 1)}
             disabled={page === 1 || loading}
           >
             Anterior
-          </button>
-          <span>
+          </Button>
+          <span className="text-sm text-muted-foreground">
             Página {page} de {totalPages}
           </span>
-          <button
-            className="btn btn-outline-secondary"
+          <Button
+            variant="outline"
             onClick={() => setPage(page + 1)}
             disabled={page === totalPages || loading}
           >
             Siguiente
-          </button>
+          </Button>
         </div>
-      </Modal.Body>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 };
 

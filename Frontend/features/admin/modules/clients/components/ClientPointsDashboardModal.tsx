@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Table, ProgressBar, Spinner } from "react-bootstrap";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   X,
   Award,
@@ -11,6 +27,7 @@ import {
   Star,
   Check,
   Copy,
+  Loader2,
 } from "lucide-react";
 import { Client, ClientPointsHistory, PointsHistoryReason } from "../types";
 import { clientsService } from "../services/clients";
@@ -169,292 +186,279 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
   if (!client) return null;
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header className="border-0 pb-0">
-        <div className="d-flex align-items-center gap-2">
-          <div
-            className="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle"
-            style={{ width: "40px", height: "40px" }}
-          >
-            <Award size={20} />
-          </div>
-          <div>
-            <Modal.Title className="mb-0 fs-5">Dashboard de Puntos</Modal.Title>
-            <small className="text-muted">
-              {client.name} {client.lastName}
-            </small>
-          </div>
-        </div>
-        <Button variant="link" className="text-muted p-0" onClick={onHide}>
-          <X size={24} />
-        </Button>
-      </Modal.Header>
-
-      <Modal.Body className="pt-3">
-        {/* Balance de puntos */}
-        <div className="bg-primary bg-opacity-10 rounded-3 p-3 mb-4">
-          <div className="d-flex align-items-center justify-content-between">
-            <div>
-              <p className="text-muted mb-1 small">Balance actual</p>
-              <h2 className="mb-0 text-primary fw-bold">
-                {clientPoints.toLocaleString()} pts
-              </h2>
-            </div>
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader className="border-0 pb-0">
+          <div className="flex items-center gap-2">
             <div
-              className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
-              style={{ width: "60px", height: "60px" }}
-            >
-              <Star size={28} />
-            </div>
-          </div>
-        </div>
-        {/* Progreso hacia Recompensas - Estilo Project Performance */}
-        <div>
-          <h6 className="text-uppercase text-muted fw-semibold mb-3 d-flex align-items-center gap-2">
-            <Gift size={16} />
-            Progreso hacia Recompensas
-          </h6>
-
-          <div className="border rounded p-3">
-            {loadingRewards ? (
-              <div className="text-center py-3">
-                <Spinner animation="border" size="sm" className="text-primary" />
-                <p className="mb-0 mt-2 small text-muted">
-                  Cargando recompensas...
-                </p>
-              </div>
-            ) : rewards.length === 0 ? (
-              <div className="text-center py-3">
-                <Gift size={40} className="text-muted mb-2 opacity-50" />
-                <p className="mb-0 text-muted">
-                  No hay recompensas configuradas
-                </p>
-              </div>
-            ) : (
-              <div className="d-flex flex-column gap-3">
-                {rewards.map((reward) => {
-                  const progress = calculateProgress(reward.pointsRequired);
-                  const remaining = getPointsRemaining(reward.pointsRequired);
-                  const isComplete = progress >= 100;
-                  const isRedeeming = redeemingRewardId === reward._id;
-
-                  return (
-                    <div key={reward._id}>
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <h6 className="mb-0 small fw-medium">{reward.name}</h6>
-                        <div className="d-flex align-items-center gap-3">
-                          <span className="text-muted small">
-                            {isComplete ? (
-                              <span className="text-success fw-semibold">
-                                Disponible
-                              </span>
-                            ) : (
-                              <>Faltan {remaining} pts</>
-                            )}
-                          </span>
-                          <span
-                            className={`fw-bold ${
-                              isComplete ? "text-success" : "text-primary"
-                            }`}
-                          >
-                            {progress.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                      <ProgressBar
-                        now={progress}
-                        variant={isComplete ? "success" : "primary"}
-                        style={{ height: "8px" }}
-                        className="rounded-pill"
-                      />
-                      <div className="d-flex justify-content-between align-items-center mt-1">
-                        <small className="text-muted">
-                          {reward.isPercentage
-                            ? `${reward.rewardValue}% descuento`
-                            : `$${reward.rewardValue} de valor`}
-                        </small>
-                        <div className="d-flex align-items-center gap-2">
-                          <small className="text-muted">
-                            {clientPoints} / {reward.pointsRequired} pts
-                          </small>
-                          {isComplete && (
-                            <Button
-                              variant="success"
-                              size="sm"
-                              className="py-0 px-2"
-                              onClick={() => handleRedeemReward(reward)}
-                              disabled={isRedeeming}
-                            >
-                              {isRedeeming ? (
-                                <Spinner animation="border" size="sm" />
-                              ) : (
-                                <>
-                                  <Gift size={12} className="me-1" />
-                                  Reclamar
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-        {/* Historial de puntos */}
-        <div className="mb-4">
-          <h6 className="text-uppercase text-muted fw-semibold mb-3 d-flex align-items-center gap-2">
-            <TrendingUp size={16} />
-            Historial de Puntos
-          </h6>
-
-          <div
-            className="table-responsive border rounded"
-            style={{ maxHeight: "250px", overflowY: "auto" }}
-          >
-            {loadingHistory ? (
-              <div className="text-center py-4">
-                <Spinner animation="border" size="sm" className="text-primary" />
-                <p className="mb-0 mt-2 small text-muted">Cargando historial...</p>
-              </div>
-            ) : history.length === 0 ? (
-              <div className="text-center py-4">
-                <Award size={40} className="text-muted mb-2 opacity-50" />
-                <p className="mb-0 text-muted">No hay historial de puntos</p>
-              </div>
-            ) : (
-              <Table className="table-sm mb-0" hover>
-                <thead className="bg-light sticky-top">
-                  <tr>
-                    <th style={{ width: "35%" }}>Concepto</th>
-                    <th style={{ width: "20%" }}>Orden</th>
-                    <th className="text-end" style={{ width: "15%" }}>
-                      Puntos
-                    </th>
-                    <th className="text-end" style={{ width: "30%" }}>
-                      Fecha
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((item) => (
-                    <tr key={item._id}>
-                      <td>
-                        <div className="d-flex align-items-center gap-2">
-                          <span
-                            className={`d-flex align-items-center justify-content-center rounded ${
-                              item.type === "earned"
-                                ? "bg-success bg-opacity-10 text-success"
-                                : "bg-danger bg-opacity-10 text-danger"
-                            }`}
-                            style={{ width: "24px", height: "24px" }}
-                          >
-                            {reasonIcons[item.reason]}
-                          </span>
-                          <span className="small">
-                            {reasonLabels[item.reason] || item.reason}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        {item.orderId ? (
-                          <span className="badge bg-secondary bg-opacity-10 text-secondary small">
-                            {item.orderId.orderNumber}
-                          </span>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </td>
-                      <td className="text-end">
-                        <span
-                          className={`fw-semibold ${
-                            item.type === "earned"
-                              ? "text-success"
-                              : "text-danger"
-                          }`}
-                        >
-                          {item.type === "earned" ? "+" : "-"}
-                          {item.points}
-                        </span>
-                      </td>
-                      <td className="text-end small text-muted">
-                        {formatDate(item.createdAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
-          </div>
-        </div>
-
-        
-      </Modal.Body>
-
-      <Modal.Footer className="border-0 pt-0">
-        <Button variant="secondary" onClick={onHide}>
-          Cerrar
-        </Button>
-      </Modal.Footer>
-
-      {/* Modal para mostrar el código generado */}
-      <Modal
-        show={showCodeModal}
-        onHide={() => setShowCodeModal(false)}
-        centered
-        size="sm"
-      >
-        <Modal.Header className="border-0 pb-0">
-          <div className="d-flex align-items-center gap-2">
-            <div
-              className="bg-success text-white d-flex align-items-center justify-content-center rounded-circle"
+              className="bg-primary text-white flex items-center justify-center rounded-full"
               style={{ width: "40px", height: "40px" }}
             >
-              <Check size={20} />
+              <Award size={20} />
             </div>
             <div>
-              <Modal.Title className="mb-0 fs-6">Recompensa Reclamada</Modal.Title>
-              <small className="text-muted">{redeemedRewardName}</small>
+              <DialogTitle className="mb-0 text-lg">Dashboard de Puntos</DialogTitle>
+              <small className="text-muted-foreground">
+                {client.name} {client.lastName}
+              </small>
             </div>
           </div>
-          <Button
-            variant="link"
-            className="text-muted p-0"
-            onClick={() => setShowCodeModal(false)}
-          >
-            <X size={20} />
-          </Button>
-        </Modal.Header>
-        <Modal.Body className="text-center py-4">
-          <p className="text-muted small mb-2">Tu código de canje es:</p>
-          <div className="bg-light rounded-3 p-3 mb-3">
-            <h3 className="mb-0 font-monospace fw-bold text-primary letter-spacing-2">
-              {generatedCode}
-            </h3>
+        </DialogHeader>
+
+        <div className="pt-3">
+          {/* Balance de puntos */}
+          <div className="bg-primary/10 rounded-lg p-3 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground mb-1 text-sm">Balance actual</p>
+                <h2 className="mb-0 text-primary font-bold text-3xl">
+                  {clientPoints.toLocaleString()} pts
+                </h2>
+              </div>
+              <div
+                className="bg-primary text-white rounded-full flex items-center justify-center"
+                style={{ width: "60px", height: "60px" }}
+              >
+                <Star size={28} />
+              </div>
+            </div>
           </div>
-          <Button
-            variant="outline-primary"
-            size="sm"
-            onClick={copyCodeToClipboard}
-            className="d-flex align-items-center gap-2 mx-auto"
-          >
-            <Copy size={14} />
-            Copiar código
+
+          {/* Progreso hacia Recompensas */}
+          <div>
+            <h6 className="uppercase text-muted-foreground font-semibold mb-3 flex items-center gap-2 text-xs">
+              <Gift size={16} />
+              Progreso hacia Recompensas
+            </h6>
+
+            <div className="border rounded-lg p-3">
+              {loadingRewards ? (
+                <div className="text-center py-3">
+                  <Loader2 className="animate-spin text-primary mx-auto" size={24} />
+                  <p className="mb-0 mt-2 text-sm text-muted-foreground">
+                    Cargando recompensas...
+                  </p>
+                </div>
+              ) : rewards.length === 0 ? (
+                <div className="text-center py-3">
+                  <Gift size={40} className="text-muted-foreground mb-2 opacity-50 mx-auto" />
+                  <p className="mb-0 text-muted-foreground">
+                    No hay recompensas configuradas
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {rewards.map((reward) => {
+                    const progress = calculateProgress(reward.pointsRequired);
+                    const remaining = getPointsRemaining(reward.pointsRequired);
+                    const isComplete = progress >= 100;
+                    const isRedeeming = redeemingRewardId === reward._id;
+
+                    return (
+                      <div key={reward._id}>
+                        <div className="flex justify-between items-center mb-1">
+                          <h6 className="mb-0 text-sm font-medium">{reward.name}</h6>
+                          <div className="flex items-center gap-3">
+                            <span className="text-muted-foreground text-sm">
+                              {isComplete ? (
+                                <span className="text-green-500 font-semibold">
+                                  Disponible
+                                </span>
+                              ) : (
+                                <>Faltan {remaining} pts</>
+                              )}
+                            </span>
+                            <span
+                              className={`font-bold ${
+                                isComplete ? "text-green-500" : "text-primary"
+                              }`}
+                            >
+                              {progress.toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                        <Progress
+                          value={progress}
+                          className={`h-2 ${isComplete ? "[&>div]:bg-green-500" : ""}`}
+                        />
+                        <div className="flex justify-between items-center mt-1">
+                          <small className="text-muted-foreground">
+                            {reward.isPercentage
+                              ? `${reward.rewardValue}% descuento`
+                              : `$${reward.rewardValue} de valor`}
+                          </small>
+                          <div className="flex items-center gap-2">
+                            <small className="text-muted-foreground">
+                              {clientPoints} / {reward.pointsRequired} pts
+                            </small>
+                            {isComplete && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="py-0 px-2 bg-green-500 hover:bg-green-600"
+                                onClick={() => handleRedeemReward(reward)}
+                                disabled={isRedeeming}
+                              >
+                                {isRedeeming ? (
+                                  <Loader2 className="animate-spin" size={14} />
+                                ) : (
+                                  <>
+                                    <Gift size={12} className="mr-1" />
+                                    Reclamar
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Historial de puntos */}
+          <div className="mb-4 mt-4">
+            <h6 className="uppercase text-muted-foreground font-semibold mb-3 flex items-center gap-2 text-xs">
+              <TrendingUp size={16} />
+              Historial de Puntos
+            </h6>
+
+            <div
+              className="border rounded-lg overflow-hidden"
+              style={{ maxHeight: "250px", overflowY: "auto" }}
+            >
+              {loadingHistory ? (
+                <div className="text-center py-4">
+                  <Loader2 className="animate-spin text-primary mx-auto" size={24} />
+                  <p className="mb-0 mt-2 text-sm text-muted-foreground">Cargando historial...</p>
+                </div>
+              ) : history.length === 0 ? (
+                <div className="text-center py-4">
+                  <Award size={40} className="text-muted-foreground mb-2 opacity-50 mx-auto" />
+                  <p className="mb-0 text-muted-foreground">No hay historial de puntos</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="bg-muted sticky top-0">
+                    <TableRow>
+                      <TableHead style={{ width: "35%" }}>Concepto</TableHead>
+                      <TableHead style={{ width: "20%" }}>Orden</TableHead>
+                      <TableHead className="text-right" style={{ width: "15%" }}>
+                        Puntos
+                      </TableHead>
+                      <TableHead className="text-right" style={{ width: "30%" }}>
+                        Fecha
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {history.map((item) => (
+                      <TableRow key={item._id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`flex items-center justify-center rounded ${
+                                item.type === "earned"
+                                  ? "bg-green-500/10 text-green-500"
+                                  : "bg-red-500/10 text-red-500"
+                              }`}
+                              style={{ width: "24px", height: "24px" }}
+                            >
+                              {reasonIcons[item.reason]}
+                            </span>
+                            <span className="text-sm">
+                              {reasonLabels[item.reason] || item.reason}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {item.orderId ? (
+                            <span className="bg-secondary/10 text-secondary text-sm px-2 py-1 rounded">
+                              {item.orderId.orderNumber}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span
+                            className={`font-semibold ${
+                              item.type === "earned"
+                                ? "text-green-500"
+                                : "text-red-500"
+                            }`}
+                          >
+                            {item.type === "earned" ? "+" : "-"}
+                            {item.points}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">
+                          {formatDate(item.createdAt)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="border-0 pt-0">
+          <Button variant="secondary" onClick={onHide}>
+            Cerrar
           </Button>
-          <p className="text-muted small mt-3 mb-0">
-            Presenta este código al momento de realizar tu compra para aplicar tu recompensa.
-          </p>
-        </Modal.Body>
-        <Modal.Footer className="border-0 pt-0 justify-content-center">
-          <Button variant="success" onClick={() => setShowCodeModal(false)}>
-            Entendido
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </Modal>
+        </DialogFooter>
+
+        {/* Modal para mostrar el código generado */}
+        <Dialog open={showCodeModal} onOpenChange={(open) => !open && setShowCodeModal(false)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader className="border-0 pb-0">
+              <div className="flex items-center gap-2">
+                <div
+                  className="bg-green-500 text-white flex items-center justify-center rounded-full"
+                  style={{ width: "40px", height: "40px" }}
+                >
+                  <Check size={20} />
+                </div>
+                <div>
+                  <DialogTitle className="mb-0 text-base">Recompensa Reclamada</DialogTitle>
+                  <small className="text-muted-foreground">{redeemedRewardName}</small>
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="text-center py-4">
+              <p className="text-muted-foreground text-sm mb-2">Tu código de canje es:</p>
+              <div className="bg-muted rounded-lg p-3 mb-3">
+                <h3 className="mb-0 font-mono font-bold text-primary tracking-widest text-2xl">
+                  {generatedCode}
+                </h3>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyCodeToClipboard}
+                className="flex items-center gap-2 mx-auto"
+              >
+                <Copy size={14} />
+                Copiar código
+              </Button>
+              <p className="text-muted-foreground text-sm mt-3 mb-0">
+                Presenta este código al momento de realizar tu compra para aplicar tu recompensa.
+              </p>
+            </div>
+            <DialogFooter className="border-0 pt-0 justify-center">
+              <Button variant="default" className="bg-green-500 hover:bg-green-600" onClick={() => setShowCodeModal(false)}>
+                Entendido
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
   );
 };
 

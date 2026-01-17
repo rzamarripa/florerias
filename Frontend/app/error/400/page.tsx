@@ -2,41 +2,35 @@ import AppLogo from "@/components/ui/AppLogo";
 import { author, currentYear } from "@/helpers";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Col, Container, Row } from "react-bootstrap";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Error 400" };
 
 const Error400 = () => {
   return (
-    <div className="auth-box overflow-hidden align-items-center d-flex">
-      <Container>
-        <Row className="justify-content-center">
-          <Col xxl={4} md={6} sm={8}>
-            <div className="auth-brand text-center mb-3">
-              <AppLogo />
-            </div>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <AppLogo />
+        </div>
 
-            <div className="p-2 text-center">
-              <div className="error-glitch" data-text="400">
-                400
-              </div>
-              <h3 className="fw-bold text-uppercase">Bad Request</h3>
-              <p className="text-muted">
-                Something&apos;s not right in the request you made.
-              </p>
+        <div className="p-4 text-center">
+          <div className="text-8xl font-bold text-primary mb-4">400</div>
+          <h3 className="font-bold text-xl uppercase mb-2">Bad Request</h3>
+          <p className="text-muted-foreground mb-6">
+            Something&apos;s not right in the request you made.
+          </p>
 
-              <Link href="/" className="btn btn-primary mt-3 rounded-pill">
-                Go Home
-              </Link>
-            </div>
+          <Button asChild className="rounded-full">
+            <Link href="/">Go Home</Link>
+          </Button>
+        </div>
 
-            <p className="text-center text-muted mt-5 mb-0">
-              © 2014 - {currentYear} INSPINIA — by{" "}
-              <span className="fw-bold">{author}</span>
-            </p>
-          </Col>
-        </Row>
-      </Container>
+        <p className="text-center text-muted-foreground mt-8">
+          © 2014 - {currentYear} MaFlores — by{" "}
+          <span className="font-bold">{author}</span>
+        </p>
+      </div>
     </div>
   );
 };

@@ -1,19 +1,49 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner, Modal } from "react-bootstrap";
-import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { toast } from "react-toastify";
+import { Plus, Search, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, CreditCard } from "lucide-react";
+import { toast } from "sonner";
 import { paymentMethodsService } from "./services/paymentMethods";
 import { PaymentMethod, PaymentMethodFilters, CreatePaymentMethodData } from "./types";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PageHeader } from "@/components/ui/page-header";
+
 const PaymentMethodsPage: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<PaymentMethod | null>(null);
   const [formData, setFormData] = useState<CreatePaymentMethodData>({
@@ -47,7 +77,7 @@ const PaymentMethodsPage: React.FC = () => {
         filters.name = searchTerm;
       }
 
-      if (statusFilter) {
+      if (statusFilter !== "all") {
         filters.status = statusFilter === "true";
       }
 
@@ -74,10 +104,6 @@ const PaymentMethodsPage: React.FC = () => {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
-  };
-
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-    setStatusFilter(e.target.value);
   };
 
   const handlePageChange = (page: number) => {
@@ -116,22 +142,17 @@ const PaymentMethodsPage: React.FC = () => {
 
     try {
       if (editingPaymentMethod) {
-        // En edición no se envía branch
         const { branch, ...updateData } = formData;
         await paymentMethodsService.updatePaymentMethod(editingPaymentMethod._id, updateData);
         toast.success("Método de pago actualizado exitosamente");
       } else {
-        // Para nuevos métodos de pago, determinar la sucursal
         let finalData = { ...formData };
-        
+
         if (isGerente) {
-          // Para Gerente, el backend obtendrá la sucursal automáticamente
           delete finalData.branch;
         } else if (activeBranch) {
-          // Para Administrador, usar la sucursal activa
           finalData.branch = activeBranch._id;
         } else {
-          // Solo mostrar error si es Administrador sin sucursal
           toast.error("Por favor selecciona una sucursal");
           return;
         }
@@ -143,16 +164,6 @@ const PaymentMethodsPage: React.FC = () => {
       loadPaymentMethods(false);
     } catch (error: any) {
       toast.error(error.message || "Error al guardar el método de pago");
-    }
-  };
-
-  const handleToggleStatus = async (paymentMethod: PaymentMethod) => {
-    try {
-      await paymentMethodsService.updatePaymentMethodStatus(paymentMethod._id, !paymentMethod.status);
-      toast.success(`Método de pago ${!paymentMethod.status ? "activado" : "desactivado"} exitosamente`);
-      loadPaymentMethods(false);
-    } catch (error: any) {
-      toast.error(error.message || "Error al cambiar el estado del método de pago");
     }
   };
 
@@ -169,235 +180,230 @@ const PaymentMethodsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <h2 className="mb-1 fw-bold">Métodos de Pago</h2>
-          <p className="text-muted mb-0">Gestiona los métodos de pago del sistema</p>
-        </div>
-        <Button
-          variant="primary"
-          onClick={handleNewPaymentMethod}
-          className="d-flex align-items-center gap-2 px-4"
-        >
-          <Plus size={20} />
-          Nuevo Método de Pago
-        </Button>
-      </div>
+      <PageHeader
+        title="Métodos de Pago"
+        description="Gestiona los métodos de pago del sistema"
+        action={{
+          label: "Nuevo Método de Pago",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleNewPaymentMethod,
+        }}
+      />
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-2">
-          <div className="row g-2">
-            <div className="col-md-6">
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por nombre..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
-            <div className="col-md-6">
-              <Form.Select
+            <div className="w-full md:w-48">
+              <Select
                 value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
+                onValueChange={setStatusFilter}
               >
-                <option value="">Todos los estados</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="true">Activos</SelectItem>
+                  <SelectItem value="false">Inactivos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card>
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando métodos de pago...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando métodos de pago...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">No.</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ABREVIATURA</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ESTATUS</th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Abreviatura</TableHead>
+                    <TableHead>Estatus</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {paymentMethods.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-center py-4 text-muted">
-                        No se encontraron métodos de pago
-                      </td>
-                    </tr>
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <CreditCard className="h-12 w-12 opacity-50" />
+                          <p>No se encontraron métodos de pago</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     paymentMethods.map((paymentMethod, index) => (
-                      <tr key={paymentMethod._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-2 py-2">{(pagination.page - 1) * pagination.limit + index + 1}</td>
-                        <td className="px-2 py-2 fw-semibold">{paymentMethod.name}</td>
-                        <td className="px-2 py-2">{paymentMethod.abbreviation}</td>
-                        <td className="px-2 py-2">
-                          <Badge
-                            bg={paymentMethod.status ? "success" : "danger"}
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontWeight: "500",
-                            }}
-                          >
+                      <TableRow key={paymentMethod._id}>
+                        <TableCell>
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </TableCell>
+                        <TableCell className="font-medium">{paymentMethod.name}</TableCell>
+                        <TableCell>{paymentMethod.abbreviation}</TableCell>
+                        <TableCell>
+                          <Badge variant={paymentMethod.status ? "default" : "destructive"}>
                             {paymentMethod.status ? "Activo" : "Inactivo"}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="d-flex justify-content-center gap-2">
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center gap-2">
                             <Button
-                              variant="light"
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
                               onClick={() => handleEditPaymentMethod(paymentMethod)}
-                              className="border-0"
-                              style={{ borderRadius: "8px" }}
                               title="Editar"
                             >
-                              <Edit size={16} className="text-warning" />
+                              <Edit2 className="h-4 w-4" />
                             </Button>
                             <Button
-                              variant="light"
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
                               onClick={() => handleDelete(paymentMethod._id)}
-                              className="border-0"
-                              style={{ borderRadius: "8px" }}
                               title="Eliminar"
                             >
-                              <Trash2 size={16} className="text-danger" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
+                </TableBody>
               </Table>
-            </div>
-          )}
 
-          {/* Pagination */}
-          {!loading && paymentMethods.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
-                Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} métodos de pago
-              </p>
-              <div className="d-flex gap-2">
-                <Button
-                  variant="light"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <span className="px-3 py-1">
-                  Página {pagination.page} de {pagination.pages}
-                </span>
-                <Button
-                  variant="light"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
-                >
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
-            </div>
+              {/* Pagination */}
+              {paymentMethods.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
+                    {pagination.total} métodos de pago
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Modal para crear/editar */}
-      <Modal show={showModal} onHide={handleCloseModal} centered>
-        <Modal.Header closeButton className="border-0">
-          <Modal.Title className="fw-bold">
-            {editingPaymentMethod ? "Editar Método de Pago" : "Nuevo Método de Pago"}
-          </Modal.Title>
-        </Modal.Header>
-        <Form onSubmit={handleSubmit}>
-          <Modal.Body className="p-4">
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">
-                Nombre <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Ej: Efectivo, Tarjeta de Crédito, Transferencia"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px", padding: "12px 16px" }}
-              />
-            </Form.Group>
+      <Dialog open={showModal} onOpenChange={(open) => !open && handleCloseModal()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPaymentMethod ? "Editar Método de Pago" : "Nuevo Método de Pago"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingPaymentMethod
+                ? "Actualiza la información del método de pago"
+                : "Completa los datos del nuevo método de pago"}
+            </DialogDescription>
+          </DialogHeader>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">
-                Abreviatura <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Ej: EFE, TC, TRANS"
-                value={formData.abbreviation}
-                onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value.toUpperCase() })}
-                required
-                maxLength={10}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px", padding: "12px 16px" }}
-              />
-              <Form.Text className="text-muted">
-                Máximo 10 caracteres
-              </Form.Text>
-            </Form.Group>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Nombre <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Ej: Efectivo, Tarjeta de Crédito, Transferencia"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
 
-            <Form.Check
-              type="switch"
-              id="status-switch"
-              label={formData.status ? "Activo" : "Inactivo"}
-              checked={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.checked })}
-              className="fs-5"
-            />
-          </Modal.Body>
-          <Modal.Footer className="border-0">
-            <Button variant="light" onClick={handleCloseModal} style={{ borderRadius: "10px" }}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-            >
-              {editingPaymentMethod ? "Actualizar" : "Crear"}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
+              <div className="space-y-2">
+                <Label htmlFor="abbreviation">
+                  Abreviatura <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="abbreviation"
+                  type="text"
+                  placeholder="Ej: EFE, TC, TRANS"
+                  value={formData.abbreviation}
+                  onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value.toUpperCase() })}
+                  required
+                  maxLength={10}
+                />
+                <p className="text-sm text-muted-foreground">Máximo 10 caracteres</p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="status">Estado</Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="status"
+                    checked={formData.status}
+                    onCheckedChange={(checked) => setFormData({ ...formData, status: checked })}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {formData.status ? "Activo" : "Inactivo"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseModal}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {editingPaymentMethod ? "Actualizar" : "Crear"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

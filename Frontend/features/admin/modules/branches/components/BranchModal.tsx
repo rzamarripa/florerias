@@ -1,14 +1,33 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner, Alert } from "react-bootstrap";
-import { Save, X, UserPlus } from "lucide-react";
-import { toast } from "react-toastify";
+import { Save, UserPlus, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Branch, CreateBranchData, Manager } from "../types";
 import { branchesService } from "../services/branches";
 import { companiesService } from "../../companies/services/companies";
 import { useBranchModalStore } from "@/stores/branchModalStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Company {
   _id: string;
@@ -77,7 +96,6 @@ const BranchModal: React.FC<BranchModalProps> = ({
 
   useEffect(() => {
     if (show) {
-      console.log("Modal abierto - userCompany:", userCompany);
       loadCompanies();
       loadManagers();
       if (branch) {
@@ -128,16 +146,12 @@ const BranchModal: React.FC<BranchModalProps> = ({
           advertisingBrandPercentage: branch.advertisingBrandPercentage || 0,
         });
       } else {
-        // Al crear una nueva sucursal, establecer companyId desde userCompany
         resetForm();
         if (userCompany?._id) {
-          console.log("Estableciendo companyId:", userCompany._id);
           setFormData((prev) => ({
             ...prev,
             companyId: userCompany._id,
           }));
-        } else {
-          console.warn("userCompany no está disponible o no tiene _id");
         }
       }
     }
@@ -152,7 +166,6 @@ const BranchModal: React.FC<BranchModalProps> = ({
       });
       setCompanies(response.data || []);
     } catch (err: any) {
-      // Silenciar error si no hay empresas, es un caso válido
       setCompanies([]);
     } finally {
       setLoading(false);
@@ -161,11 +174,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
 
   const loadManagers = async () => {
     try {
-      // Obtener gerentes disponibles (sin sucursal asignada)
       const response = await branchesService.getAvailableManagers();
       setManagers(response.data || []);
 
-      // Capturar mensaje si existe
       if (response.message) {
         setManagersMessage(response.message);
       } else if (!response.data || response.data.length === 0) {
@@ -174,7 +185,6 @@ const BranchModal: React.FC<BranchModalProps> = ({
         setManagersMessage("");
       }
     } catch (err: any) {
-      // Silenciar error si no hay gerentes disponibles, es un caso válido
       setManagers([]);
       setManagersMessage("No se pudieron cargar los gerentes disponibles");
     }
@@ -215,12 +225,8 @@ const BranchModal: React.FC<BranchModalProps> = ({
     setError(null);
   };
 
-  // Manejar selección de gerente
-  const handleManagerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedId = e.target.value;
-
-    if (selectedId === "") {
-      // Limpiar selección
+  const handleManagerChange = (value: string) => {
+    if (value === "" || value === "none") {
       setFormData({
         ...formData,
         managerId: "",
@@ -236,12 +242,11 @@ const BranchModal: React.FC<BranchModalProps> = ({
         },
       });
     } else {
-      // Gerente existente seleccionado - rellenar campos
-      const manager = managers.find((m) => m._id === selectedId);
+      const manager = managers.find((m) => m._id === value);
       if (manager) {
         setFormData({
           ...formData,
-          managerId: selectedId,
+          managerId: value,
           managerData: {
             username: manager.username,
             email: manager.email,
@@ -257,7 +262,6 @@ const BranchModal: React.FC<BranchModalProps> = ({
     }
   };
 
-  // Limpiar selección de gerente
   const handleClearManager = () => {
     setFormData({
       ...formData,
@@ -275,28 +279,17 @@ const BranchModal: React.FC<BranchModalProps> = ({
     });
   };
 
-  // Validar formulario
   const validateForm = (): boolean => {
-    // Validar empresa
     if (!formData.companyId || formData.companyId.trim() === "") {
-      setError(
-        "No se ha seleccionado una empresa. Por favor, verifica que tengas una empresa asignada."
-      );
+      setError("No se ha seleccionado una empresa.");
       return false;
     }
 
-    // Validar datos básicos
-    if (
-      !formData.branchName ||
-      !formData.rfc ||
-      !formData.contactPhone ||
-      !formData.contactEmail
-    ) {
+    if (!formData.branchName || !formData.rfc || !formData.contactPhone || !formData.contactEmail) {
       setError("Por favor completa todos los campos requeridos de la sucursal");
       return false;
     }
 
-    // Validar dirección
     if (
       !formData.address.street ||
       !formData.address.externalNumber ||
@@ -309,7 +302,6 @@ const BranchModal: React.FC<BranchModalProps> = ({
       return false;
     }
 
-    // Validar datos del gerente (SIEMPRE OBLIGATORIO)
     if (
       !formData.managerData?.username ||
       !formData.managerData?.email ||
@@ -321,29 +313,9 @@ const BranchModal: React.FC<BranchModalProps> = ({
       return false;
     }
 
-    // Validar contraseña solo si se está creando un nuevo gerente (sin managerId)
     if (!isEditing && !formData.managerId && !formData.managerData?.password) {
       setError("La contraseña es requerida para crear un nuevo gerente");
       return false;
-    }
-
-    // Validar porcentajes de publicidad (siempre requeridos)
-    if (formData.advertisingBranchPercentage === undefined || formData.advertisingBranchPercentage < 0 || formData.advertisingBranchPercentage > 100) {
-      setError("El porcentaje de publicidad de sucursal debe estar entre 0 y 100");
-      return false;
-    }
-
-    if (formData.advertisingBrandPercentage === undefined || formData.advertisingBrandPercentage < 0 || formData.advertisingBrandPercentage > 100) {
-      setError("El porcentaje de publicidad de marca debe estar entre 0 y 100");
-      return false;
-    }
-
-    // Validar porcentaje de regalías si es franquicia
-    if (userCompany?.isFranchise) {
-      if (formData.royaltiesPercentage === undefined || formData.royaltiesPercentage < 0 || formData.royaltiesPercentage > 100) {
-        setError("El porcentaje de regalías debe estar entre 0 y 100");
-        return false;
-      }
     }
 
     return true;
@@ -372,18 +344,13 @@ const BranchModal: React.FC<BranchModalProps> = ({
         advertisingBrandPercentage: formData.advertisingBrandPercentage,
       };
 
-      // Si hay managerId, enviarlo
       if (formData.managerId) {
         dataToSend.managerId = formData.managerId;
       }
 
-      // Si no hay managerId, enviar managerData para crear nuevo gerente
       if (!formData.managerId && formData.managerData) {
         dataToSend.managerData = formData.managerData;
       }
-
-      // Log para debugging
-      console.log("Datos a enviar:", dataToSend);
 
       let response;
 
@@ -393,9 +360,6 @@ const BranchModal: React.FC<BranchModalProps> = ({
         response = await branchesService.createBranch(dataToSend);
       }
 
-      console.log("Respuesta del servidor:", response);
-
-      // Verificar si la operación fue exitosa
       if (!response.success) {
         const errorMsg = response.message || "Error al guardar la sucursal";
         setError(errorMsg);
@@ -412,15 +376,12 @@ const BranchModal: React.FC<BranchModalProps> = ({
       onBranchSaved?.();
       onHide();
 
-      // Si no es edición y no hay sucursal activa, reabrir el modal de selección
       if (!isEditing && !activeBranch) {
-        // Esperar un momento para que el modal se cierre antes de abrir el siguiente
         setTimeout(() => {
           reopenBranchSelectionAfterCreate();
         }, 300);
       }
     } catch (err: any) {
-      console.error("Error completo:", err);
       const errorMessage = err.message || "Error al guardar la sucursal";
       setError(errorMessage);
       toast.error(errorMessage);
@@ -436,663 +397,360 @@ const BranchModal: React.FC<BranchModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          {isEditing ? "Editar Sucursal" : "Nueva Sucursal"}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
-        {error && (
-          <Alert variant="danger" onClose={() => setError(null)} dismissible>
-            {error}
-          </Alert>
-        )}
+    <Dialog open={show} onOpenChange={(open) => !saving && !open && handleClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>
+            {isEditing ? "Editar Sucursal" : "Nueva Sucursal"}
+          </DialogTitle>
+        </DialogHeader>
 
-        {loading ? (
-          <div className="d-flex justify-content-center align-items-center py-5">
-            <Spinner animation="border" variant="primary" />
-          </div>
-        ) : (
-          <Form>
-            {/* Información Básica */}
-            <h6 className="fw-semibold mb-3">Información Básica</h6>
-            <Row className="g-3 mb-4">
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label>
-                    Nombre de la Sucursal <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre de la sucursal"
-                    value={formData.branchName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, branchName: e.target.value })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label>Código</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Código (opcional)"
-                    value={formData.branchCode}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        branchCode: e.target.value.toUpperCase(),
-                      })
-                    }
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label>
-                    RFC <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="RFC de la sucursal"
-                    value={formData.rfc}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        rfc: e.target.value.toUpperCase(),
-                      })
-                    }
-                    maxLength={13}
-                    required
-                  />
-                  <Form.Text className="text-muted">
-                    Formato: ABC123456XYZ
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label>
-                    Empresa <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={
-                      userCompany?.tradeName ||
-                      userCompany?.legalName ||
-                      "Cargando..."
-                    }
-                    disabled
-                    readOnly
-                  />
-                  <Form.Text className="text-muted">
-                    {userCompany
-                      ? "Empresa asignada a tu usuario"
-                      : "Esperando empresa..."}
-                  </Form.Text>
-                  {!userCompany && (
-                    <Form.Text className="text-danger d-block mt-1">
-                      No se ha cargado tu empresa. Verifica tu configuración.
-                    </Form.Text>
-                  )}
-                </Form.Group>
-              </Col>
-            </Row>
+        <ScrollArea className="max-h-[60vh] pr-4">
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-            {/* Dirección */}
-            <h6 className="fw-semibold mb-3">Dirección</h6>
-            <Row className="g-3 mb-4">
-              <Col md={8}>
-                <Form.Group>
-                  <Form.Label>
-                    Calle <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre de la calle"
-                    value={formData.address.street}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: {
-                          ...formData.address,
-                          street: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label>
-                    Núm. Ext. <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="123"
-                    value={formData.address.externalNumber}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: {
-                          ...formData.address,
-                          externalNumber: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label>Núm. Int.</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="A"
-                    value={formData.address.internalNumber}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: {
-                          ...formData.address,
-                          internalNumber: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label>
-                    Colonia <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Colonia"
-                    value={formData.address.neighborhood}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: {
-                          ...formData.address,
-                          neighborhood: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label>
-                    Ciudad <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ciudad"
-                    value={formData.address.city}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: { ...formData.address, city: e.target.value },
-                      })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label>
-                    Estado <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Estado"
-                    value={formData.address.state}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: { ...formData.address, state: e.target.value },
-                      })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label>
-                    C.P. <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="12345"
-                    maxLength={5}
-                    value={formData.address.postalCode}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        address: {
-                          ...formData.address,
-                          postalCode: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-
-            {/* Usuario Gerente */}
-            <div className="d-flex align-items-center justify-content-between mb-3">
-              <div className="d-flex align-items-center gap-2">
-                <UserPlus size={20} className="text-primary" />
-                <h6 className="fw-semibold mb-0">
-                  Usuario Gerente <span className="text-danger">*</span>
-                </h6>
-              </div>
-              {formData.managerId && (
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={handleClearManager}
-                  className="d-flex align-items-center gap-1"
-                >
-                  <X size={16} />
-                  Limpiar
-                </Button>
-              )}
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-            <Row className="g-3 mb-4">
-              {/* Selector de Gerente */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Seleccionar Gerente (Opcional)
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.managerId || ""}
-                    onChange={handleManagerChange}
-                    className="py-2"
+          ) : (
+            <div className="space-y-6">
+              {/* Información Básica */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Información Básica</h3>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nombre de la Sucursal <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Nombre de la sucursal"
+                      value={formData.branchName}
+                      onChange={(e) => setFormData({ ...formData, branchName: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Código</Label>
+                    <Input
+                      placeholder="Código (opcional)"
+                      value={formData.branchCode}
+                      onChange={(e) => setFormData({ ...formData, branchCode: e.target.value.toUpperCase() })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>RFC <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="RFC de la sucursal"
+                      value={formData.rfc}
+                      onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })}
+                      maxLength={13}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Empresa <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={userCompany?.tradeName || userCompany?.legalName || "Cargando..."}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dirección */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Dirección</h3>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-2 space-y-2">
+                    <Label>Calle <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Nombre de la calle"
+                      value={formData.address.street}
+                      onChange={(e) => setFormData({ ...formData, address: { ...formData.address, street: e.target.value } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Núm. Ext. <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="123"
+                      value={formData.address.externalNumber}
+                      onChange={(e) => setFormData({ ...formData, address: { ...formData.address, externalNumber: e.target.value } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Núm. Int.</Label>
+                    <Input
+                      placeholder="A"
+                      value={formData.address.internalNumber}
+                      onChange={(e) => setFormData({ ...formData, address: { ...formData.address, internalNumber: e.target.value } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Colonia <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Colonia"
+                      value={formData.address.neighborhood}
+                      onChange={(e) => setFormData({ ...formData, address: { ...formData.address, neighborhood: e.target.value } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ciudad <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Ciudad"
+                      value={formData.address.city}
+                      onChange={(e) => setFormData({ ...formData, address: { ...formData.address, city: e.target.value } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estado <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Estado"
+                      value={formData.address.state}
+                      onChange={(e) => setFormData({ ...formData, address: { ...formData.address, state: e.target.value } })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>C.P. <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="12345"
+                      maxLength={5}
+                      value={formData.address.postalCode}
+                      onChange={(e) => setFormData({ ...formData, address: { ...formData.address, postalCode: e.target.value } })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Usuario Gerente */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold">Usuario Gerente <span className="text-destructive">*</span></h3>
+                  </div>
+                  {formData.managerId && (
+                    <Button variant="outline" size="sm" onClick={handleClearManager}>
+                      <X className="h-4 w-4 mr-1" />
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Seleccionar Gerente (Opcional)</Label>
+                  <Select
+                    value={formData.managerId || "none"}
+                    onValueChange={handleManagerChange}
                     disabled={managers.length === 0}
                   >
-                    <option value="">
-                      {managers.length === 0 && managersMessage
-                        ? `-- ${managersMessage} --`
-                        : "-- Seleccione un gerente existente o cree uno nuevo --"}
-                    </option>
-                    {managers.map((manager) => (
-                      <option key={manager._id} value={manager._id}>
-                        {manager.profile.fullName} ({manager.email})
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text
-                    className={
-                      managersMessage && managers.length === 0
-                        ? "text-warning"
-                        : "text-muted"
-                    }
-                  >
-                    {managersMessage && managers.length === 0
-                      ? managersMessage
-                      : formData.managerId
-                      ? "Gerente seleccionado. Puede editar sus datos abajo."
-                      : "Puede seleccionar un gerente existente o crear uno nuevo llenando los campos."}
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un gerente existente o cree uno nuevo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        {managers.length === 0 && managersMessage
+                          ? `-- ${managersMessage} --`
+                          : "-- Seleccione un gerente existente o cree uno nuevo --"}
+                      </SelectItem>
+                      {managers.map((manager) => (
+                        <SelectItem key={manager._id} value={manager._id}>
+                          {manager.profile.fullName} ({manager.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Campos del Gerente - Siempre habilitados */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ingresa el nombre"
-                    value={formData.managerData?.profile.name || ""}
-                    onChange={(e) =>
-                      setFormData({
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nombre <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Ingresa el nombre"
+                      value={formData.managerData?.profile.name || ""}
+                      onChange={(e) => setFormData({
                         ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              profile: {
-                                ...formData.managerData.profile,
-                                name: e.target.value,
-                              },
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Apellido <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ingresa el apellido"
-                    value={formData.managerData?.profile.lastName || ""}
-                    onChange={(e) =>
-                      setFormData({
+                        managerData: formData.managerData ? {
+                          ...formData.managerData,
+                          profile: { ...formData.managerData.profile, name: e.target.value },
+                        } : undefined,
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Apellido <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Ingresa el apellido"
+                      value={formData.managerData?.profile.lastName || ""}
+                      onChange={(e) => setFormData({
                         ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              profile: {
-                                ...formData.managerData.profile,
-                                lastName: e.target.value,
-                              },
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Teléfono <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="tel"
-                    placeholder="Ingresa el teléfono"
-                    value={formData.managerData?.phone || ""}
-                    onChange={(e) =>
-                      setFormData({
+                        managerData: formData.managerData ? {
+                          ...formData.managerData,
+                          profile: { ...formData.managerData.profile, lastName: e.target.value },
+                        } : undefined,
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teléfono <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="tel"
+                      placeholder="Ingresa el teléfono"
+                      value={formData.managerData?.phone || ""}
+                      onChange={(e) => setFormData({
                         ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              phone: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Email <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="Ingresa el email"
-                    value={formData.managerData?.email || ""}
-                    onChange={(e) =>
-                      setFormData({
+                        managerData: formData.managerData ? { ...formData.managerData, phone: e.target.value } : undefined,
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="email"
+                      placeholder="Ingresa el email"
+                      value={formData.managerData?.email || ""}
+                      onChange={(e) => setFormData({
                         ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              email: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre de Usuario <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ingresa el nombre de usuario"
-                    value={formData.managerData?.username || ""}
-                    onChange={(e) =>
-                      setFormData({
+                        managerData: formData.managerData ? { ...formData.managerData, email: e.target.value } : undefined,
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nombre de Usuario <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Ingresa el nombre de usuario"
+                      value={formData.managerData?.username || ""}
+                      onChange={(e) => setFormData({
                         ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              username: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Contraseña{" "}
-                    {!formData.managerId && (
-                      <span className="text-danger">*</span>
-                    )}
-                  </Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder={
-                      formData.managerId
-                        ? "●●●●●●●● (Sin cambios)"
-                        : "Ingresa la contraseña"
-                    }
-                    value={formData.managerData?.password || ""}
-                    onChange={(e) =>
-                      setFormData({
+                        managerData: formData.managerData ? { ...formData.managerData, username: e.target.value } : undefined,
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      Contraseña {!formData.managerId && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Input
+                      type="password"
+                      placeholder={formData.managerId ? "Sin cambios" : "Ingresa la contraseña"}
+                      value={formData.managerData?.password || ""}
+                      onChange={(e) => setFormData({
                         ...formData,
-                        managerData: formData.managerData
-                          ? {
-                              ...formData.managerData,
-                              password: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    {formData.managerId
-                      ? "Dejar en blanco para mantener la contraseña actual"
-                      : "Requerida para crear nuevo gerente"}
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+                        managerData: formData.managerData ? { ...formData.managerData, password: e.target.value } : undefined,
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
 
-              {/* Rol - Siempre Gerente por defecto */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Rol</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value="Gerente"
-                    disabled
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Los usuarios de sucursales siempre tienen rol Gerente
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
+              {/* Contacto Principal */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Contacto Principal</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Teléfono <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="tel"
+                      placeholder="1234567890"
+                      value={formData.contactPhone}
+                      onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="email"
+                      placeholder="contacto@sucursal.com"
+                      value={formData.contactEmail}
+                      onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
 
-            {/* Contacto Principal */}
-            <h6 className="fw-semibold mb-3">Contacto Principal</h6>
-            <Row className="g-3 mb-4">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>
-                    Teléfono <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="tel"
-                    placeholder="1234567890"
-                    value={formData.contactPhone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, contactPhone: e.target.value })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>
-                    Email <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="contacto@sucursal.com"
-                    value={formData.contactEmail}
-                    onChange={(e) =>
-                      setFormData({ ...formData, contactEmail: e.target.value })
-                    }
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-
-            {/* Porcentajes de Publicidad y Regalías */}
-            <h6 className="fw-semibold mb-3">Configuración de Porcentajes</h6>
-            <Row className="g-3">
-              {/* Porcentaje de Regalías - Solo si es franquicia */}
-              {userCompany?.isFranchise && (
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>
-                      Porcentaje de Regalías (%) <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
+              {/* Porcentajes */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Configuración de Porcentajes</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {userCompany?.isFranchise && (
+                    <div className="space-y-2">
+                      <Label>Porcentaje de Regalías (%) <span className="text-destructive">*</span></Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.royaltiesPercentage}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          if (value >= 0 && value <= 100) {
+                            setFormData({ ...formData, royaltiesPercentage: value });
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>Publicidad de Sucursal (%) <span className="text-destructive">*</span></Label>
+                    <Input
                       type="number"
                       min="0"
                       max="100"
                       step="0.01"
                       placeholder="0.00"
-                      value={formData.royaltiesPercentage}
+                      value={formData.advertisingBranchPercentage}
                       onChange={(e) => {
                         const value = parseFloat(e.target.value) || 0;
                         if (value >= 0 && value <= 100) {
-                          setFormData({ ...formData, royaltiesPercentage: value });
+                          setFormData({ ...formData, advertisingBranchPercentage: value });
                         }
                       }}
-                      required={userCompany?.isFranchise}
                     />
-                    <Form.Text className="text-muted">
-                      Porcentaje de regalías para la franquicia
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              )}
-              
-              {/* Porcentaje de Publicidad de Sucursal */}
-              <Col md={userCompany?.isFranchise ? 4 : 6}>
-                <Form.Group>
-                  <Form.Label>
-                    Publicidad de Sucursal (%) <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.advertisingBranchPercentage}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      if (value >= 0 && value <= 100) {
-                        setFormData({ ...formData, advertisingBranchPercentage: value });
-                      }
-                    }}
-                    required
-                  />
-                  <Form.Text className="text-muted">
-                    Porcentaje destinado a publicidad de la sucursal
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-
-              {/* Porcentaje de Publicidad de Marca */}
-              <Col md={userCompany?.isFranchise ? 4 : 6}>
-                <Form.Group>
-                  <Form.Label>
-                    Publicidad de Marca (%) <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.advertisingBrandPercentage}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      if (value >= 0 && value <= 100) {
-                        setFormData({ ...formData, advertisingBrandPercentage: value });
-                      }
-                    }}
-                    required
-                  />
-                  <Form.Text className="text-muted">
-                    Porcentaje destinado a publicidad de la marca
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
-          </Form>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose} disabled={saving}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSave}
-          disabled={saving || loading || !formData.companyId}
-          className="d-flex align-items-center gap-2"
-        >
-          {saving ? (
-            <>
-              <Spinner
-                animation="border"
-                size="sm"
-                style={{ width: "16px", height: "16px" }}
-              />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save size={18} />
-              Guardar
-            </>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Publicidad de Marca (%) <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.advertisingBrandPercentage}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        if (value >= 0 && value <= 100) {
+                          setFormData({ ...formData, advertisingBrandPercentage: value });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        </ScrollArea>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving || loading || !formData.companyId}>
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

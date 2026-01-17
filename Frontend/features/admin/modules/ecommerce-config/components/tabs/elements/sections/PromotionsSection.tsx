@@ -1,6 +1,16 @@
 import React from 'react';
-import { Form, Row, Col, Button, Accordion } from 'react-bootstrap';
-import { TbTag, TbPlus, TbTrash, TbCalendar } from 'react-icons/tb';
+import { Tag, Plus, Trash2, Calendar } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import {
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 interface PromotionItem {
   name: string;
@@ -26,11 +36,11 @@ const PromotionsSection: React.FC<PromotionsSectionProps> = ({
     if (promotions.length < 5) {
       setPromotions([
         ...promotions,
-        { 
-          name: '', 
-          text: '', 
-          expirationDate: '', 
-          order: promotions.length 
+        {
+          name: '',
+          text: '',
+          expirationDate: '',
+          order: promotions.length
         }
       ]);
     }
@@ -47,104 +57,97 @@ const PromotionsSection: React.FC<PromotionsSectionProps> = ({
   };
 
   return (
-    <Accordion.Item eventKey="promotions" className="mb-3 border-0 shadow-sm rounded overflow-hidden">
-      <Accordion.Header className="bg-light">
-        <div className="d-flex align-items-center w-100">
-          <TbTag size={20} className="text-warning me-2" />
-          <span className="fw-semibold fs-6">Promociones</span>
-          <Form.Check 
-            type="switch"
+    <AccordionItem value="promotions" className="border rounded-lg shadow-sm overflow-hidden">
+      <AccordionTrigger className="px-4 py-3 bg-muted/50 hover:no-underline">
+        <div className="flex items-center justify-between w-full pr-2">
+          <div className="flex items-center gap-2">
+            <Tag className="h-5 w-5 text-yellow-500" />
+            <span className="font-semibold">Promociones</span>
+          </div>
+          <Switch
             id="promotions-switch"
             checked={promotionsEnabled}
-            onChange={(e) => setPromotionsEnabled(e.target.checked)}
-            className="ms-auto me-2"
+            onCheckedChange={setPromotionsEnabled}
             onClick={(e) => e.stopPropagation()}
           />
         </div>
-      </Accordion.Header>
-      <Accordion.Body className="bg-white">
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4 pt-2 bg-background">
         {promotionsEnabled ? (
-          <div>
+          <div className="space-y-4">
             {promotions.map((promotion, index) => (
-              <div key={index} className="mb-3 pb-3 border-bottom">
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <span className="badge bg-secondary">Promoción {index + 1}</span>
+              <div key={index} className="pb-4 border-b last:border-b-0">
+                <div className="flex justify-between items-start mb-3">
+                  <Badge variant="secondary">Promocion {index + 1}</Badge>
                   <Button
-                    variant="outline-danger"
-                    size="sm"
+                    variant="outline"
+                    size="icon-sm"
                     onClick={() => removePromotion(index)}
+                    className="text-destructive hover:text-destructive"
                   >
-                    <TbTrash size={14} />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <Row className="g-2">
-                  <Col md={12}>
-                    <Form.Group>
-                      <Form.Label className="small fw-medium">Nombre de la promoción</Form.Label>
-                      <Form.Control
-                        size="sm"
-                        type="text"
-                        placeholder="2x1 en flores"
-                        value={promotion.name}
-                        onChange={(e) => updatePromotion(index, 'name', e.target.value)}
-                        maxLength={50}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={8}>
-                    <Form.Group>
-                      <Form.Label className="small fw-medium">Descripción</Form.Label>
-                      <Form.Control
-                        size="sm"
-                        as="textarea"
-                        rows={2}
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Nombre de la promocion</Label>
+                    <Input
+                      type="text"
+                      placeholder="2x1 en flores"
+                      value={promotion.name}
+                      onChange={(e) => updatePromotion(index, 'name', e.target.value)}
+                      maxLength={50}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="text-sm font-medium">Descripcion</Label>
+                      <Textarea
                         placeholder="Compra una docena y lleva dos docenas"
                         value={promotion.text}
                         onChange={(e) => updatePromotion(index, 'text', e.target.value)}
                         maxLength={200}
+                        rows={2}
                       />
-                    </Form.Group>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Group>
-                      <Form.Label className="small fw-medium">
-                        <TbCalendar size={14} className="me-1" />
-                        Fecha de expiración
-                      </Form.Label>
-                      <Form.Control
-                        size="sm"
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        Fecha de expiracion
+                      </Label>
+                      <Input
                         type="date"
                         value={promotion.expirationDate}
                         onChange={(e) => updatePromotion(index, 'expirationDate', e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
                       />
-                    </Form.Group>
-                  </Col>
-                </Row>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
-            
+
             {promotions.length < 5 && (
               <Button
-                variant="outline-primary"
+                variant="outline"
                 size="sm"
                 onClick={addPromotion}
-                className="d-flex align-items-center"
+                className="flex items-center"
               >
-                <TbPlus size={16} className="me-1" />
-                Agregar promoción
+                <Plus className="mr-1 h-4 w-4" />
+                Agregar promocion
               </Button>
             )}
-            
-            <p className="text-muted small mt-2 mb-0">
-              Máximo 5 promociones. Las promociones expiradas se ocultarán automáticamente.
+
+            <p className="text-sm text-muted-foreground">
+              Maximo 5 promociones. Las promociones expiradas se ocultaran automaticamente.
             </p>
           </div>
         ) : (
-          <p className="text-muted text-center my-3">Promociones deshabilitadas</p>
+          <p className="text-muted-foreground text-center py-3">Promociones deshabilitadas</p>
         )}
-      </Accordion.Body>
-    </Accordion.Item>
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 

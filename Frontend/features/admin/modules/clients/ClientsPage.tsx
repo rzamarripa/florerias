@@ -1,11 +1,25 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Button, Form, Table } from "react-bootstrap";
-import { toast } from "react-toastify";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Users,
+  Loader2,
+  AlertTriangle,
+} from "lucide-react";
+import { toast } from "sonner";
 import { clientsService } from "./services/clients";
-import { Client, ClientFilters, FilterType, FilterOption, CreateClientData, UpdateClientData } from "./types";
+import {
+  Client,
+  ClientFilters,
+  FilterType,
+  FilterOption,
+  CreateClientData,
+  UpdateClientData,
+} from "./types";
 import { useRouter } from "next/navigation";
 import ClientModal from "./components/ClientModal";
 import ClientPointsDashboardModal from "./components/ClientPointsDashboardModal";
@@ -16,6 +30,29 @@ import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { branchesService } from "../branches/services/branches";
 import { Branch } from "../branches/types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const filterOptions: FilterOption[] = [
   { value: "name", label: "Nombre" },
@@ -29,7 +66,7 @@ const ClientsPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filterType, setFilterType] = useState<FilterType>("name");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
@@ -52,15 +89,13 @@ const ClientsPage: React.FC = () => {
   const isManager = hasRole("Gerente");
   const isAdmin = hasRole("Administrador") || hasRole("Admin");
 
-  // Cargar sucursal del gerente si aplica
   const loadManagerBranch = async () => {
     try {
       const response = await branchesService.getUserBranches();
       if (response.success && response.data && response.data.length > 0) {
-        const branch = response.data[0]; // El gerente solo debe tener una sucursal
+        const branch = response.data[0];
         setManagerBranch(branch);
         setBranchId(branch._id);
-        console.log("🔍 [Clients] Sucursal del gerente cargada:", branch.branchName);
       } else {
         toast.error("No se encontró una sucursal asignada para el gerente");
       }
@@ -70,13 +105,11 @@ const ClientsPage: React.FC = () => {
     }
   };
 
-  // Determinar el branchId según el rol del usuario
   useEffect(() => {
     if (isManager) {
       loadManagerBranch();
     } else if (isAdmin && activeBranch) {
       setBranchId(activeBranch._id);
-      console.log("🔍 [Clients] Usando sucursal activa del admin:", activeBranch.branchName);
     }
   }, [isManager, isAdmin, activeBranch]);
 
@@ -98,11 +131,10 @@ const ClientsPage: React.FC = () => {
         filters[filterType] = searchTerm;
       }
 
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== "all") {
         filters.status = statusFilter === "true";
       }
 
-      // Agregar el branchId a los filtros si está disponible
       if (branchId) {
         filters.branchId = branchId;
       }
@@ -134,17 +166,13 @@ const ClientsPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleFilterTypeChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setFilterType(e.target.value as FilterType);
+  const handleFilterTypeChange = (value: string): void => {
+    setFilterType(value as FilterType);
     setSearchTerm("");
   };
 
-  const handleStatusFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value);
   };
 
   const handlePageChange = (page: number) => {
@@ -175,25 +203,26 @@ const ClientsPage: React.FC = () => {
     setShowRewardsModal(true);
   };
 
-  const handleSaveClient = async (data: CreateClientData | UpdateClientData) => {
+  const handleSaveClient = async (
+    data: CreateClientData | UpdateClientData
+  ) => {
     try {
       setModalLoading(true);
       if (selectedClient) {
         await clientsService.updateClient(selectedClient._id, data);
         toast.success("Cliente actualizado exitosamente");
       } else {
-        // Validar que hay una sucursal disponible
         const branchToUse = isManager ? managerBranch?._id : branchId;
-        
+
         if (!branchToUse) {
           toast.error(
-            isManager 
+            isManager
               ? "No se encontró una sucursal asignada para el gerente"
               : "No se ha seleccionado una sucursal"
           );
           return;
         }
-        
+
         const clientData = { ...data, branch: branchToUse } as CreateClientData;
         await clientsService.createClient(clientData);
         toast.success("Cliente creado exitosamente");
@@ -207,37 +236,6 @@ const ClientsPage: React.FC = () => {
     }
   };
 
-  const getPageNumbers = () => {
-    const { page, pages } = pagination;
-    const delta = 2;
-    const range: number[] = [];
-    const rangeWithDots: (number | string)[] = [];
-
-    for (
-      let i = Math.max(2, page - delta);
-      i <= Math.min(pages - 1, page + delta);
-      i++
-    ) {
-      range.push(i);
-    }
-
-    if (page - delta > 2) {
-      rangeWithDots.push(1, "...");
-    } else {
-      rangeWithDots.push(1);
-    }
-
-    rangeWithDots.push(...range);
-
-    if (page + delta < pages - 1) {
-      rangeWithDots.push("...", pages);
-    } else if (pages > 1) {
-      rangeWithDots.push(pages);
-    }
-
-    return rangeWithDots;
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-ES", {
       year: "numeric",
@@ -247,250 +245,225 @@ const ClientsPage: React.FC = () => {
   };
 
   return (
-    <div className="row">
-      <div className="col-12">
-        {/* Mensajes de advertencia para sucursal */}
-        {!isManager && !activeBranch && (
-          <div className="alert alert-warning mb-3">
-            <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
-            Por favor, selecciona una sucursal desde el selector de sucursales en
-            la parte superior para poder ver y crear clientes.
-          </div>
-        )}
+    <div className="space-y-4">
+      {/* Header */}
+      <PageHeader
+        title="Clientes"
+        description="Gestiona los clientes de la sucursal"
+        badge={
+          managerBranch ? (
+            <Badge variant="secondary">Sucursal: {managerBranch.branchName}</Badge>
+          ) : activeBranch ? (
+            <Badge variant="secondary">Sucursal: {activeBranch.branchName}</Badge>
+          ) : undefined
+        }
+        action={{
+          label: "Nuevo Cliente",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleCreateClient,
+          disabled: isManager ? !managerBranch : !branchId,
+        }}
+      />
 
-        {isManager && !managerBranch && (
-          <div className="alert alert-warning mb-3">
-            <strong>⚠️ Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
-            Por favor, contacta al administrador.
-          </div>
-        )}
+      {/* Warnings */}
+      {!isManager && !activeBranch && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Advertencia</AlertTitle>
+          <AlertDescription>
+            No hay sucursal activa seleccionada. Por favor, selecciona una
+            sucursal desde el selector en la parte superior para poder ver y
+            crear clientes.
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <div className="card">
-          <div className="card-header border-light d-flex justify-content-between align-items-center py-2">
-            <div className="d-flex gap-2">
-              <Form.Select
-                value={filterType}
-                onChange={handleFilterTypeChange}
-                className="shadow-none"
-                style={{ maxWidth: 180 }}
-              >
+      {isManager && !managerBranch && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Advertencia</AlertTitle>
+          <AlertDescription>
+            No se encontró una sucursal asignada para tu usuario. Por favor,
+            contacta al administrador.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Select value={filterType} onValueChange={handleFilterTypeChange}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Buscar por..." />
+              </SelectTrigger>
+              <SelectContent>
                 {filterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value}>
                     {option.label}
-                  </option>
+                  </SelectItem>
                 ))}
-              </Form.Select>
-              <div className="position-relative" style={{ maxWidth: 400 }}>
-                <Form.Control
-                  type="search"
-                  placeholder={`Buscar por ${filterOptions
-                    .find((opt) => opt.value === filterType)
-                    ?.label.toLowerCase()}...`}
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="shadow-none px-4"
-                  style={{ fontSize: 15, paddingLeft: "2.5rem" }}
-                />
-                <Search
-                  className="text-muted position-absolute"
-                  size={18}
-                  style={{
-                    left: "0.75rem",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              </div>
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="shadow-none"
-                style={{ maxWidth: 150 }}
-              >
-                <option value="">Todos</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
+              </SelectContent>
+            </Select>
+
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={`Buscar por ${filterOptions
+                  .find((opt) => opt.value === filterType)
+                  ?.label.toLowerCase()}...`}
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
-            <Button
-              variant="primary"
-              onClick={handleCreateClient}
-              className="d-flex align-items-center gap-2"
-              disabled={isManager ? !managerBranch : !branchId}
-              title={
-                isManager && !managerBranch 
-                  ? "No hay sucursal asignada"
-                  : !branchId 
-                  ? "Selecciona una sucursal primero"
-                  : ""
-              }
-            >
-              <Plus size={16} />
-              Nuevo Cliente
-            </Button>
+
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="table-responsive shadow-sm">
-            <Table className="table table-custom table-centered table-hover w-100 mb-0">
-              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
-                <tr>
-                  <th>#</th>
-                  <th>Cliente</th>
-                  <th>Número de Cliente</th>
-                  <th>Teléfono</th>
-                  <th>Correo</th>
-                  <th>Puntos</th>
-                  <th>Estado</th>
-                  <th>Fecha de Registro</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={9} className="text-center py-4">
-                      <div className="d-flex flex-column align-items-center">
-                        <div
-                          className="spinner-border text-primary mb-2"
-                          role="status"
-                        >
-                          <span className="visually-hidden">Cargando...</span>
-                        </div>
-                        <p className="text-muted mb-0 small">
-                          Cargando clientes...
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : clients.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="text-center py-4">
-                      <div className="text-muted">
-                        <Users size={48} className="mb-3 opacity-50" />
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando clientes...</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>No. Cliente</TableHead>
+                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Correo</TableHead>
+                    <TableHead>Puntos</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fecha Registro</TableHead>
+                    <TableHead className="text-center w-12">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {clients.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={9}
+                        className="text-center py-12 text-muted-foreground"
+                      >
+                        <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <div>No se encontraron clientes</div>
-                        <small>Intenta ajustar los filtros de búsqueda</small>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  clients.map((client, index) => (
-                    <tr key={client._id}>
-                      <td>
-                        {(pagination.page - 1) * pagination.limit + index + 1}
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center gap-2">
-                          <div
-                            className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              borderRadius: "50%",
-                              fontSize: "14px",
-                            }}
-                          >
-                            {client.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="fw-medium">{client.fullName}</div>
-                            <div className="text-muted small">
-                              {client.name} {client.lastName}
+                        <p className="text-sm">
+                          Intenta ajustar los filtros de búsqueda
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    clients.map((client, index) => (
+                      <TableRow key={client._id}>
+                        <TableCell>
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                                {client.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{client.fullName}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {client.name} {client.lastName}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge bg-secondary bg-opacity-10 text-secondary">
-                          {client.clientNumber}
-                        </span>
-                      </td>
-                      <td>{client.phoneNumber}</td>
-                      <td>
-                        <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                          {client.email || <span className="text-muted">-</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge bg-info bg-opacity-10 text-info">
-                          {client.points} pts
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`badge fs-6 ${
-                            client.status
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
-                        >
-                          {client.status ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td>{formatDate(client.createdAt)}</td>
-                      <td className="text-center">
-                        <ClientActions
-                          client={client}
-                          onView={handleViewClient}
-                          onEdit={handleEditClient}
-                          onViewPoints={handleViewPoints}
-                          onViewRewards={handleViewRewards}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          </div>
-          <div className="d-flex justify-content-between align-items-center p-2 border-top">
-            <span className="text-muted">
-              Mostrando {clients.length} de {pagination.total} registros
-            </span>
-            <div className="d-flex gap-1 align-items-center">
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === 1}
-                onClick={() => handlePageChange(pagination.page - 1)}
-                className="d-flex align-items-center"
-              >
-                <ChevronLeft size={16} />
-                Anterior
-              </Button>
-
-              {getPageNumbers().map((pageNum, index) => (
-                <React.Fragment key={index}>
-                  {pageNum === "..." ? (
-                    <span className="px-2 text-muted">...</span>
-                  ) : (
-                    <Button
-                      variant={
-                        pageNum === pagination.page
-                          ? "primary"
-                          : "outline-secondary"
-                      }
-                      size="sm"
-                      onClick={() => handlePageChange(pageNum as number)}
-                    >
-                      {pageNum}
-                    </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{client.clientNumber}</Badge>
+                        </TableCell>
+                        <TableCell>{client.phoneNumber}</TableCell>
+                        <TableCell>
+                          <div className="truncate max-w-[200px]">
+                            {client.email || (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{client.points} pts</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={client.status ? "default" : "destructive"}
+                          >
+                            {client.status ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(client.createdAt)}</TableCell>
+                        <TableCell className="text-center">
+                          <ClientActions
+                            client={client}
+                            onView={handleViewClient}
+                            onEdit={handleEditClient}
+                            onViewPoints={handleViewPoints}
+                            onViewRewards={handleViewRewards}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
-                </React.Fragment>
-              ))}
+                </TableBody>
+              </Table>
 
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => handlePageChange(pagination.page + 1)}
-                className="d-flex align-items-center"
-              >
-                Siguiente
-                <ChevronRight size={16} />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+              {/* Pagination */}
+              {clients.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {clients.length} de {pagination.total} registros
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      Siguiente
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <ClientModal
         show={showModal}

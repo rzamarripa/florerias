@@ -1,15 +1,36 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Form, Alert } from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight, PackageSearch, Building2 } from "lucide-react";
-import { toast } from "react-toastify";
+import { Plus, Search, ChevronLeft, ChevronRight, PackageSearch, Building2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { providersService } from "./services/providers";
 import { Provider } from "./types";
 import ProviderActions from "./components/ProviderActions";
 import ProviderForm from "./components/ProviderForm";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "../companies/services/companies";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
 
 const ProvidersPage: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -93,8 +114,8 @@ const ProvidersPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value);
   };
 
   const handlePageChange = (page: number) => {
@@ -121,193 +142,172 @@ const ProvidersPage: React.FC = () => {
   };
 
   return (
-    <div className="row">
-      <div className="col-12">
-        <div className="card">
-          <div className="card-header border-light d-flex justify-content-between align-items-center py-2">
-            <div className="d-flex gap-2">
-              <div className="position-relative" style={{ maxWidth: 400 }}>
-                <Form.Control
-                  type="search"
-                  placeholder="Buscar por nombre comercial, fiscal, RFC o contacto..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="shadow-none px-4"
-                  style={{ fontSize: 15, paddingLeft: "2.5rem" }}
-                />
-                <Search
-                  className="text-muted position-absolute"
-                  size={18}
-                  style={{
-                    left: "0.75rem",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              </div>
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="shadow-none"
-                style={{ maxWidth: 150 }}
-              >
-                <option value="">Todos</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
+    <div className="space-y-4">
+      {/* Header */}
+      <PageHeader
+        title="Proveedores"
+        description="Gestiona los proveedores del sistema"
+        action={{
+          label: "Nuevo Proveedor",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleNewProvider,
+        }}
+      />
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar por nombre comercial, fiscal, RFC o contacto..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
-            <Button
-              variant="primary"
-              onClick={handleNewProvider}
-              className="d-flex align-items-center gap-2"
-            >
-              <Plus size={16} />
-              Nuevo Proveedor
-            </Button>
+            <Select value={statusFilter || "all"} onValueChange={(value) => handleStatusFilterChange(value === "all" ? "" : value)}>
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Company Info Banner for Admin/Manager */}
-          {isAdminOrManager && userCompany && (
-            <Alert
-              variant="info"
-              className="mx-3 mt-3 mb-0 border-0"
-            >
-              <div className="d-flex align-items-center gap-3">
-                <Building2 size={24} className="text-primary" />
-                <div>
-                  <div className="fw-bold text-dark">
-                    {userCompany.tradeName || userCompany.legalName}
-                  </div>
-                  <small className="text-muted">
-                    {userCompany.rfc} • Estás viendo los proveedores de esta empresa
-                  </small>
-                </div>
-              </div>
-            </Alert>
-          )}
+      {/* Company Info Banner for Admin/Manager */}
+      {isAdminOrManager && userCompany && (
+        <Alert>
+          <Building2 className="h-5 w-5" />
+          <AlertDescription>
+            <div className="font-semibold">
+              {userCompany.tradeName || userCompany.legalName}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {userCompany.rfc} - Estás viendo los proveedores de esta empresa
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <div className="table-responsive shadow-sm">
-            <Table className="table table-custom table-centered table-hover w-100 mb-0">
-              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
-                <tr>
-                  <th>#</th>
-                  <th>Nombre Comercial</th>
-                  <th>Nombre Fiscal</th>
-                  <th>RFC</th>
-                  <th>Contacto</th>
-                  <th>Empresa</th>
-                  <th>Estado</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-4">
-                      <div className="d-flex flex-column align-items-center">
-                        <div
-                          className="spinner-border text-primary mb-2"
-                          role="status"
-                        >
-                          <span className="visually-hidden">Cargando...</span>
-                        </div>
-                        <p className="text-muted mb-0 small">
-                          Cargando proveedores...
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : providers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-4">
-                      <div className="text-muted">
-                        <PackageSearch size={48} className="mb-3 opacity-50" />
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando proveedores...</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Nombre Comercial</TableHead>
+                    <TableHead>Nombre Fiscal</TableHead>
+                    <TableHead>RFC</TableHead>
+                    <TableHead>Contacto</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {providers.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="text-center py-12 text-muted-foreground"
+                      >
+                        <PackageSearch className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <div>No se encontraron proveedores</div>
-                        <small>Intenta ajustar los filtros de búsqueda</small>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  providers.map((provider, index) => (
-                    <tr key={provider._id}>
-                      <td>
-                        {(pagination.page - 1) * pagination.limit + index + 1}
-                      </td>
-                      <td>
-                        <div className="fw-medium">{provider.tradeName}</div>
-                      </td>
-                      <td>{provider.legalName}</td>
-                      <td>{provider.rfc}</td>
-                      <td>
-                        <div>
-                          <div className="fw-medium">{provider.contactName}</div>
-                          <div className="text-muted small">{provider.phone}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <div>
-                          <div className="fw-medium">{provider.company.legalName}</div>
-                          <div className="text-muted small">{provider.company.rfc}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`badge fs-6 ${
-                            provider.isActive
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
-                        >
-                          {provider.isActive ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className="text-center">
-                        <ProviderActions
-                          provider={provider}
-                          onEdit={handleEditProvider}
-                          onProviderUpdated={handleProviderUpdated}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          </div>
-          <div className="d-flex justify-content-between align-items-center p-2 border-top">
-            <span className="text-muted">
-              Mostrando {providers.length} de {pagination.total} registros
-            </span>
-            <div className="d-flex gap-1 align-items-center">
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === 1}
-                onClick={() => handlePageChange(pagination.page - 1)}
-                className="d-flex align-items-center"
-              >
-                <ChevronLeft size={16} />
-                Anterior
-              </Button>
+                        <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    providers.map((provider, index) => (
+                      <TableRow key={provider._id}>
+                        <TableCell>
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{provider.tradeName}</div>
+                        </TableCell>
+                        <TableCell>{provider.legalName}</TableCell>
+                        <TableCell>{provider.rfc}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{provider.contactName}</div>
+                            <div className="text-sm text-muted-foreground">{provider.phone}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{provider.company.legalName}</div>
+                            <div className="text-sm text-muted-foreground">{provider.company.rfc}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={provider.isActive ? "default" : "destructive"}>
+                            {provider.isActive ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <ProviderActions
+                            provider={provider}
+                            onEdit={handleEditProvider}
+                            onProviderUpdated={handleProviderUpdated}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
 
-              <span className="px-2 text-muted">
-                Página {pagination.page} de {pagination.pages}
-              </span>
-
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => handlePageChange(pagination.page + 1)}
-                className="d-flex align-items-center"
-              >
-                Siguiente
-                <ChevronRight size={16} />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+              {/* Pagination */}
+              {providers.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {providers.length} de {pagination.total} registros
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      Siguiente
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Provider Form Modal */}
       <ProviderForm

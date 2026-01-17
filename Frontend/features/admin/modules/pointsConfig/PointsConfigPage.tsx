@@ -15,9 +15,9 @@ import {
   Sparkles,
   ShoppingBag,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
-import { Button, Card, Row, Col } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { pointsConfigService } from "./services/pointsConfig";
@@ -37,6 +37,9 @@ import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { branchesService } from "../branches/services/branches";
 import { Branch } from "../branches/types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const PointsConfigPage: React.FC = () => {
   const router = useRouter();
@@ -147,16 +150,16 @@ const PointsConfigPage: React.FC = () => {
       } else {
         // Validar que hay una sucursal disponible
         const branchToUse = isManager ? managerBranch?._id : branchId;
-        
+
         if (!branchToUse) {
           toast.error(
-            isManager 
+            isManager
               ? "No se encontró una sucursal asignada para el gerente"
               : "No se ha seleccionado una sucursal"
           );
           return;
         }
-        
+
         const configData = { ...data, branch: branchToUse } as CreatePointsConfigData;
         await pointsConfigService.createPointsConfig(configData);
         toast.success("Configuración creada exitosamente");
@@ -189,16 +192,16 @@ const PointsConfigPage: React.FC = () => {
       } else {
         // Validar que hay una sucursal disponible
         const branchToUse = isManager ? managerBranch?._id : branchId;
-        
+
         if (!branchToUse) {
           toast.error(
-            isManager 
+            isManager
               ? "No se encontró una sucursal asignada para el gerente"
               : "No se ha seleccionado una sucursal"
           );
           return;
         }
-        
+
         const rewardData = { ...data, branch: branchToUse } as CreatePointsRewardData;
         await pointsRewardService.createPointsReward(rewardData);
         toast.success("Recompensa creada exitosamente");
@@ -220,12 +223,12 @@ const PointsConfigPage: React.FC = () => {
     bgColor: string,
     detail?: string
   ) => (
-    <Col>
-      <Card className="border-0 shadow-sm h-100">
-        <Card.Body className="p-4">
-          <div className="d-flex align-items-center">
+    <div>
+      <Card className="border-0 shadow-sm h-full">
+        <CardContent className="p-4">
+          <div className="flex items-center">
             <div
-              className="d-flex align-items-center justify-content-center rounded-circle me-3"
+              className="flex items-center justify-center rounded-full mr-3"
               style={{
                 width: "48px",
                 height: "48px",
@@ -234,33 +237,29 @@ const PointsConfigPage: React.FC = () => {
             >
               {icon}
             </div>
-            <div className="flex-grow-1">
-              <h2 className="mb-0 fw-bold" style={{ fontSize: "1.75rem" }}>
+            <div className="flex-grow">
+              <h2 className="mb-0 font-bold text-2xl">
                 {value}
               </h2>
-              <p className="text-muted mb-0 small">{label}</p>
+              <p className="text-muted-foreground mb-0 text-sm">{label}</p>
             </div>
             <div>
-              <span
-                className={`badge ${
-                  enabled
-                    ? "bg-success bg-opacity-10 text-success"
-                    : "bg-secondary bg-opacity-10 text-secondary"
-                }`}
-                style={{ fontSize: "0.75rem" }}
+              <Badge
+                variant={enabled ? "default" : "secondary"}
+                className={enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}
               >
                 {enabled ? "Activo" : "Inactivo"}
-              </span>
+              </Badge>
             </div>
           </div>
           {detail && (
-            <div className="mt-2 pt-2 border-top">
-              <small className="text-muted">{detail}</small>
+            <div className="mt-2 pt-2 border-t">
+              <small className="text-muted-foreground">{detail}</small>
             </div>
           )}
-        </Card.Body>
+        </CardContent>
       </Card>
-    </Col>
+    </div>
   );
 
   const getRewardIcon = (type: string) => {
@@ -281,12 +280,12 @@ const PointsConfigPage: React.FC = () => {
   };
 
   const renderRewardCard = (reward: PointsReward) => (
-    <Col key={reward._id}>
-      <Card className="border-0 shadow-sm h-100">
-        <Card.Body className="p-4">
-          <div className="d-flex align-items-center">
+    <div key={reward._id}>
+      <Card className="border-0 shadow-sm h-full">
+        <CardContent className="p-4">
+          <div className="flex items-center">
             <div
-              className="d-flex align-items-center justify-content-center rounded-circle me-3"
+              className="flex items-center justify-center rounded-full mr-3"
               style={{
                 width: "48px",
                 height: "48px",
@@ -295,29 +294,25 @@ const PointsConfigPage: React.FC = () => {
             >
               {getRewardIcon(reward.rewardType)}
             </div>
-            <div className="flex-grow-1">
-              <h2 className="mb-0 fw-bold" style={{ fontSize: "1.5rem" }}>
+            <div className="flex-grow">
+              <h2 className="mb-0 font-bold text-xl">
                 {reward.pointsRequired} pts
               </h2>
-              <p className="text-muted mb-0 small text-truncate" style={{ maxWidth: "150px" }}>
+              <p className="text-muted-foreground mb-0 text-sm truncate max-w-[150px]">
                 {reward.name}
               </p>
             </div>
-            <div className="d-flex flex-column align-items-end gap-1">
-              <span
-                className={`badge ${
-                  reward.status
-                    ? "bg-success bg-opacity-10 text-success"
-                    : "bg-secondary bg-opacity-10 text-secondary"
-                }`}
-                style={{ fontSize: "0.75rem" }}
+            <div className="flex flex-col items-end gap-1">
+              <Badge
+                variant={reward.status ? "default" : "secondary"}
+                className={reward.status ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}
               >
                 {reward.status ? "Activo" : "Inactivo"}
-              </span>
+              </Badge>
               <Button
                 variant="link"
                 size="sm"
-                className="p-0 text-muted"
+                className="p-0 text-muted-foreground"
                 onClick={() => handleEditReward(reward)}
                 title="Editar"
               >
@@ -325,29 +320,27 @@ const PointsConfigPage: React.FC = () => {
               </Button>
             </div>
           </div>
-          <div className="mt-2 pt-2 border-top">
-            <small className="text-muted d-block">
+          <div className="mt-2 pt-2 border-t">
+            <small className="text-muted-foreground block">
               {reward.isPercentage
                 ? `${reward.rewardValue}% de descuento`
                 : `$${reward.rewardValue} de valor`}
             </small>
             {reward.description && (
-              <small className="text-muted d-block mt-1" style={{ opacity: 0.7 }}>
+              <small className="text-muted-foreground block mt-1 opacity-70">
                 {reward.description}
               </small>
             )}
           </div>
-        </Card.Body>
+        </CardContent>
       </Card>
-    </Col>
+    </div>
   );
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center py-5">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -356,41 +349,40 @@ const PointsConfigPage: React.FC = () => {
     <div>
       {/* Mensajes de advertencia para sucursal */}
       {!isManager && !activeBranch && (
-        <div className="alert alert-warning mb-3">
-          <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-3">
+          <strong>Advertencia:</strong> No hay sucursal activa seleccionada.
           Por favor, selecciona una sucursal desde el selector de sucursales en
           la parte superior para poder configurar puntos.
         </div>
       )}
 
       {isManager && !managerBranch && (
-        <div className="alert alert-warning mb-3">
-          <strong>⚠️ Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-3">
+          <strong>Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
           Por favor, contacta al administrador.
         </div>
       )}
 
       {/* Header con botón de configuración */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h5 className="mb-1">
-            {isManager 
+          <h5 className="mb-1 font-medium">
+            {isManager
               ? (managerBranch?.branchName || "Cargando sucursal...")
               : (activeBranch?.branchName || "Sucursal")}
           </h5>
-          <small className="text-muted">
+          <small className="text-muted-foreground">
             {config ? "Configuración activa" : "Sin configuración"}
           </small>
         </div>
         <Button
-          variant="primary"
           onClick={handleCreateOrEditConfig}
-          className="d-flex align-items-center gap-2"
+          className="flex items-center gap-2"
           disabled={isManager ? !managerBranch : !branchId}
           title={
-            isManager && !managerBranch 
+            isManager && !managerBranch
               ? "No hay sucursal asignada"
-              : !branchId 
+              : !branchId
               ? "Selecciona una sucursal primero"
               : ""
           }
@@ -402,34 +394,33 @@ const PointsConfigPage: React.FC = () => {
 
       {/* Sección: Acumulación de Puntos */}
       <div className="mb-4">
-        <div className="d-flex align-items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3">
           <Award size={20} className="text-primary" />
-          <h6 className="mb-0 text-uppercase text-muted fw-semibold" style={{ letterSpacing: "0.5px" }}>
+          <h6 className="mb-0 uppercase text-muted-foreground font-semibold tracking-wide text-sm">
             Acumulación de Puntos
           </h6>
         </div>
 
         {!config ? (
           <Card className="border-0 shadow-sm">
-            <Card.Body className="text-center py-5">
-              <Award size={64} className="text-muted mb-3 opacity-50" />
-              <h5 className="text-muted">No hay configuración de puntos</h5>
-              <p className="text-muted mb-4">
+            <CardContent className="text-center py-10">
+              <Award size={64} className="text-muted-foreground mb-3 opacity-50 mx-auto" />
+              <h5 className="text-muted-foreground">No hay configuración de puntos</h5>
+              <p className="text-muted-foreground mb-4">
                 Crea una configuración para definir cómo se acumulan los puntos
               </p>
               <Button
-                variant="primary"
                 onClick={handleCreateOrEditConfig}
-                className="d-flex align-items-center gap-2 mx-auto"
+                className="flex items-center gap-2 mx-auto"
                 disabled={isManager ? !managerBranch : !branchId}
               >
                 <Plus size={16} />
                 Crear Configuración
               </Button>
-            </Card.Body>
+            </CardContent>
           </Card>
         ) : (
-          <Row xs={1} md={2} lg={3} xl={5} className="g-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {renderStatCard(
               <DollarSign size={24} className="text-white" />,
               config.pointsPerPurchaseAmount.enabled
@@ -494,29 +485,29 @@ const PointsConfigPage: React.FC = () => {
                 ? `Máx. ${config.pointsForBranchVisit.maxVisitsPerDay} visita(s)/día`
                 : undefined
             )}
-          </Row>
+          </div>
         )}
       </div>
 
       {/* Seccion: Recompensas Canjeables */}
       <div className="mb-4">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <div className="d-flex align-items-center gap-2">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-2">
             <Gift size={20} className="text-primary" />
-            <h6 className="mb-0 text-uppercase text-muted fw-semibold" style={{ letterSpacing: "0.5px" }}>
+            <h6 className="mb-0 uppercase text-muted-foreground font-semibold tracking-wide text-sm">
               Recompensas Canjeables
             </h6>
           </div>
           <Button
-            variant="outline-primary"
+            variant="outline"
             size="sm"
             onClick={handleCreateReward}
-            className="d-flex align-items-center gap-2"
+            className="flex items-center gap-2"
             disabled={isManager ? !managerBranch : !branchId}
             title={
-              isManager && !managerBranch 
+              isManager && !managerBranch
                 ? "No hay sucursal asignada"
-                : !branchId 
+                : !branchId
                 ? "Selecciona una sucursal primero"
                 : ""
             }
@@ -528,51 +519,49 @@ const PointsConfigPage: React.FC = () => {
 
         {rewardsLoading ? (
           <div className="text-center py-4">
-            <div className="spinner-border spinner-border-sm text-primary" role="status">
-              <span className="visually-hidden">Cargando...</span>
-            </div>
+            <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
           </div>
         ) : otherRewards.length === 0 ? (
           <Card className="border-0 shadow-sm">
-            <Card.Body className="text-center py-5">
-              <Gift size={64} className="text-muted mb-3 opacity-50" />
-              <h5 className="text-muted">No hay recompensas configuradas</h5>
-              <p className="text-muted mb-4">
+            <CardContent className="text-center py-10">
+              <Gift size={64} className="text-muted-foreground mb-3 opacity-50 mx-auto" />
+              <h5 className="text-muted-foreground">No hay recompensas configuradas</h5>
+              <p className="text-muted-foreground mb-4">
                 Crea recompensas que los clientes puedan canjear con sus puntos
               </p>
               <Button
-                variant="outline-primary"
+                variant="outline"
                 onClick={handleCreateReward}
-                className="d-flex align-items-center gap-2 mx-auto"
+                className="flex items-center gap-2 mx-auto"
                 disabled={isManager ? !managerBranch : !branchId}
               >
                 <Plus size={16} />
                 Crear Recompensa
               </Button>
-            </Card.Body>
+            </CardContent>
           </Card>
         ) : (
-          <Row xs={1} md={2} lg={3} xl={5} className="g-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {otherRewards.map((reward) => renderRewardCard(reward))}
-          </Row>
+          </div>
         )}
       </div>
 
       {/* Seccion: Productos como Recompensa */}
       <div>
-        <div className="d-flex align-items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3">
           <ShoppingBag size={20} className="text-primary" />
-          <h6 className="mb-0 text-uppercase text-muted fw-semibold" style={{ letterSpacing: "0.5px" }}>
+          <h6 className="mb-0 uppercase text-muted-foreground font-semibold tracking-wide text-sm">
             Productos como Recompensa
           </h6>
         </div>
 
         <Card className="border-0 shadow-sm">
-          <Card.Body className="p-4">
-            <div className="d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center gap-3">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <div
-                  className="d-flex align-items-center justify-content-center rounded-circle"
+                  className="flex items-center justify-center rounded-full"
                   style={{
                     width: "56px",
                     height: "56px",
@@ -582,8 +571,8 @@ const PointsConfigPage: React.FC = () => {
                   <ShoppingBag size={28} className="text-white" />
                 </div>
                 <div>
-                  <h5 className="mb-1 fw-semibold">Gestión de Productos</h5>
-                  <p className="text-muted mb-0 small">
+                  <h5 className="mb-1 font-semibold">Gestión de Productos</h5>
+                  <p className="text-muted-foreground mb-0 text-sm">
                     {rewardsLoading ? (
                       "Cargando..."
                     ) : productRewards.length === 0 ? (
@@ -595,16 +584,15 @@ const PointsConfigPage: React.FC = () => {
                 </div>
               </div>
               <Button
-                variant="primary"
                 onClick={() => router.push("/panel/productos-recompensa")}
-                className="d-flex align-items-center gap-2"
+                className="flex items-center gap-2"
               >
                 <ShoppingBag size={16} />
                 Ver Productos
                 <ArrowRight size={16} />
               </Button>
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
       </div>
 

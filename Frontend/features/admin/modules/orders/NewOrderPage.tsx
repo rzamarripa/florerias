@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col, Alert } from "react-bootstrap";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Store, Package, CreditCard, Search } from "lucide-react";
 import { ordersService } from "./services/orders";
 import { CreateOrderData, OrderItem } from "./types";
@@ -804,15 +815,15 @@ const NewOrderPage = () => {
   const handleQRScanSuccess = (scanData: any) => {
     // Guardar los datos del cliente escaneado
     setScannedClientData(scanData);
-    
+
     // Verificar si el cliente pertenece a la sucursal actual
     if (scanData && scanData.client) {
       // Obtener la sucursal del cliente
       const clientBranchId = scanData.client.branchId || scanData.client.branch;
-      
+
       // Obtener la sucursal actual (del cajero o la seleccionada por el usuario de redes)
       const currentBranchId = formData.branchId || cashRegister?.branchId?._id;
-      
+
       // Verificar que el cliente pertenezca a la misma sucursal
       if (clientBranchId && currentBranchId && clientBranchId !== currentBranchId) {
         toast.error("El cliente no corresponde a la sucursal actual");
@@ -823,7 +834,7 @@ const NewOrderPage = () => {
         }, 100);
         return;
       }
-      
+
       // Si pasa la validación, actualizar el formulario con los datos del cliente
       setFormData((prev) => ({
         ...prev,
@@ -834,10 +845,10 @@ const NewOrderPage = () => {
           email: scanData.client.email || "",
         },
       }));
-      
+
       // Cerrar el scanner
       setShowQRScanner(false);
-      
+
       // Reabrir el modal de detalles con los datos actualizados y el cliente seleccionado
       setTimeout(() => {
         setShowOrderDetailsModal(true);
@@ -846,7 +857,7 @@ const NewOrderPage = () => {
           setShowPointsDashboard(true);
         }, 500);
       }, 100);
-      
+
       toast.success(`Cliente ${scanData.client.fullName} identificado correctamente`);
     }
   };
@@ -1171,138 +1182,141 @@ const NewOrderPage = () => {
     >
       {hasNoStorage && (
         <Alert
-          variant="warning"
-          className="mb-3 d-flex align-items-center gap-2"
+          variant="default"
+          className="mb-3 flex items-center gap-2 border-yellow-500 bg-yellow-50"
         >
-          <Package size={20} />
-          <div>
+          <Package size={20} className="text-yellow-600" />
+          <AlertDescription>
             <strong>No hay almacén asignado a esta sucursal</strong>
-            <p className="mb-0 small">
+            <p className="mb-0 text-sm">
               Los productos del catálogo se mostrarán con stock en 0. Para poder
               crear órdenes con productos del catálogo, necesitas crear un
               almacén para esta sucursal.
             </p>
-          </div>
+          </AlertDescription>
         </Alert>
       )}
 
-      <Row className="g-3" style={{ height: "100%" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
         {/* Catálogo (izquierda) */}
-        <Col xs={12} lg={8} style={{ height: "100%" }}>
+        <div className="lg:col-span-8 h-full flex flex-col">
           {/* Config POS para usuarios Redes (sucursal/caja) */}
           {isSocialMedia && (
             <Card className="border-0 shadow-sm mb-3">
-              <Card.Body>
-                <Row className="g-3 align-items-end">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <Store size={16} className="me-2" />
-                        Sucursal
-                      </Form.Label>
-                      <Form.Select
-                        value={formData.branchId}
-                        onChange={(e) => handleBranchChange(e.target.value)}
-                        className="py-2"
-                        disabled={loadingCompanyBranches}
-                      >
-                        <option value="">
-                          {loadingCompanyBranches
-                            ? "Cargando sucursales..."
-                            : "-- Selecciona una sucursal --"}
-                        </option>
+              <CardContent className="py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                  <div>
+                    <Label className="font-semibold flex items-center gap-2 mb-2">
+                      <Store size={16} />
+                      Sucursal
+                    </Label>
+                    <Select
+                      value={formData.branchId}
+                      onValueChange={(value) => handleBranchChange(value)}
+                      disabled={loadingCompanyBranches}
+                    >
+                      <SelectTrigger className="py-2">
+                        <SelectValue
+                          placeholder={
+                            loadingCompanyBranches
+                              ? "Cargando sucursales..."
+                              : "-- Selecciona una sucursal --"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
                         {companyBranches.map((branch) => (
-                          <option key={branch._id} value={branch._id}>
+                          <SelectItem key={branch._id} value={branch._id}>
                             {branch.branchName} - {branch.branchCode}
-                          </option>
+                          </SelectItem>
                         ))}
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">
-                        <CreditCard size={16} className="me-2" />
-                        Caja (Redes)
-                      </Form.Label>
-                      <div className="d-flex gap-2">
-                        <Form.Select
-                          value={selectedCashRegisterId}
-                          onChange={(e) =>
-                            handleCashRegisterSelect(e.target.value)
-                          }
-                          className="py-2"
-                          disabled={
-                            !formData.branchId || loadingAvailableCashRegisters
-                          }
-                        >
-                          <option value="">
-                            {!formData.branchId
-                              ? "Selecciona una sucursal primero"
-                              : loadingAvailableCashRegisters
-                              ? "Cargando cajas..."
-                              : "-- Selecciona una caja --"}
-                          </option>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="font-semibold flex items-center gap-2 mb-2">
+                      <CreditCard size={16} />
+                      Caja (Redes)
+                    </Label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={selectedCashRegisterId}
+                        onValueChange={(value) =>
+                          handleCashRegisterSelect(value)
+                        }
+                        disabled={
+                          !formData.branchId || loadingAvailableCashRegisters
+                        }
+                      >
+                        <SelectTrigger className="py-2 flex-1">
+                          <SelectValue
+                            placeholder={
+                              !formData.branchId
+                                ? "Selecciona una sucursal primero"
+                                : loadingAvailableCashRegisters
+                                ? "Cargando cajas..."
+                                : "-- Selecciona una caja --"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
                           {availableCashRegisters.map((cr) => (
-                            <option key={cr._id} value={cr._id}>
+                            <SelectItem key={cr._id} value={cr._id}>
                               {cr.name} -{" "}
                               {cr.isOpen ? "🟢 Abierta" : "🔴 Cerrada"}
                               {cr.cashierId
                                 ? ` (${cr.cashierId.username})`
                                 : ""}
-                            </option>
+                            </SelectItem>
                           ))}
-                        </Form.Select>
-                        {selectedCashRegisterId &&
-                          !availableCashRegisters.find(
-                            (cr) =>
-                              cr._id === selectedCashRegisterId && cr.isOpen
-                          ) && (
-                            <Button
-                              variant="success"
-                              onClick={handleOpenCashRegister}
-                              disabled={togglingCashRegister}
-                              style={{ whiteSpace: "nowrap" }}
-                            >
-                              {togglingCashRegister ? "Abriendo..." : "Abrir"}
-                            </Button>
-                          )}
-                      </div>
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </Card.Body>
+                        </SelectContent>
+                      </Select>
+                      {selectedCashRegisterId &&
+                        !availableCashRegisters.find(
+                          (cr) =>
+                            cr._id === selectedCashRegisterId && cr.isOpen
+                        ) && (
+                          <Button
+                            variant="default"
+                            onClick={handleOpenCashRegister}
+                            disabled={togglingCashRegister}
+                            className="whitespace-nowrap bg-green-600 hover:bg-green-700"
+                          >
+                            {togglingCashRegister ? "Abriendo..." : "Abrir"}
+                          </Button>
+                        )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           )}
 
-          <Card className="border-0 shadow-sm h-100 d-flex flex-column">
-            <Card.Header className="bg-white border-0 py-2 flex-shrink-0">
-              <div
-                className="d-flex align-items-center w-100"
-                style={{ justifyContent: "space-between" }}
-              >
-                <div className="d-flex align-items-center gap-2">
+          <Card className="border-0 shadow-sm flex-1 flex flex-col">
+            <CardHeader className="bg-white border-0 py-2 flex-shrink-0">
+              <div className="flex items-center w-full justify-between">
+                <div className="flex items-center gap-2">
                   <Package size={18} className="text-primary" />
-                  <span className="fw-bold">Catálogo</span>
+                  <span className="font-bold">Catálogo</span>
                 </div>
-                <div style={{ width: "360px", flexShrink: 0 }}>
-                  <div className="input-group input-group-sm">
-                    <span className="input-group-text bg-white border-end-0">
-                      <Search size={14} className="text-muted" />
-                    </span>
-                    <Form.Control
+                <div className="w-[360px] flex-shrink-0">
+                  <div className="relative">
+                    <Search
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    />
+                    <Input
                       type="text"
                       placeholder="Buscar productos en el catálogo"
                       value={catalogSearchTerm}
                       onChange={(e) => setCatalogSearchTerm(e.target.value)}
-                      className="border-start-0 ps-0"
-                      size="sm"
+                      className="pl-9 h-8"
                     />
                   </div>
                 </div>
               </div>
-            </Card.Header>
-            <Card.Body className="p-2 flex-grow-1" style={{ overflow: "auto" }}>
+            </CardHeader>
+            <CardContent className="p-2 flex-grow-1 overflow-auto">
               <ProductCatalog
                 onAddProduct={handleAddProductFromCatalog}
                 branchId={formData.branchId}
@@ -1311,9 +1325,9 @@ const NewOrderPage = () => {
                 searchTerm={catalogSearchTerm}
                 onSearchChange={setCatalogSearchTerm}
               />
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
         {/* Carrito (derecha) */}
         <CartSection
@@ -1329,7 +1343,7 @@ const NewOrderPage = () => {
           onOpenExtrasModal={handleOpenExtrasModal}
           onContinueToCheckout={() => setShowOrderDetailsModal(true)}
         />
-      </Row>
+      </div>
 
       {/* Modal POS: datos del pedido */}
       <OrderDetailsModal

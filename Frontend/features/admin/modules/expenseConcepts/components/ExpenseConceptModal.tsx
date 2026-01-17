@@ -1,16 +1,35 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-toastify";
-import { X } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { expenseConceptSchema, ExpenseConceptFormData } from "../schemas/expenseConceptSchema";
 import { expenseConceptsService } from "../services/expenseConcepts";
 import { ExpenseConcept } from "../types";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ExpenseConceptModalProps {
   show: boolean;
@@ -54,8 +73,6 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
     },
   });
 
-  // Reset del formulario cuando se abre el modal
-
   useEffect(() => {
     if (show) {
       if (concept) {
@@ -78,20 +95,14 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
     try {
       setLoading(true);
 
-      // Determinar la sucursal según el rol
       let finalData = { ...data };
-      
+
       if (!concept) {
-        // Para nuevos conceptos, determinar la sucursal
         if (isGerente) {
-          // Para Gerente, el backend obtendrá la sucursal automáticamente
-          // Enviamos un string vacío o no enviamos nada
           delete finalData.branch;
         } else if (activeBranch) {
-          // Para Administrador, usar la sucursal activa
           finalData.branch = activeBranch._id;
         } else {
-          // Solo mostrar error si es Administrador sin sucursal
           toast.error("Por favor selecciona una sucursal");
           setLoading(false);
           return;
@@ -99,7 +110,6 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
       }
 
       if (concept) {
-        // En edición no se envía branch
         const { branch, ...updateData } = finalData;
         await expenseConceptsService.updateExpenseConcept(concept._id, updateData);
         toast.success("Concepto actualizado exitosamente");
@@ -119,144 +129,107 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header className="border-0 pb-0">
-        <div>
-          <Modal.Title className="fw-bold">
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
             {concept ? "Editar Concepto de Gasto" : "Nuevo Concepto de Gasto"}
-          </Modal.Title>
-          <p className="text-muted mb-0 small">
+          </DialogTitle>
+          <DialogDescription>
             {concept
               ? "Actualiza la información del concepto"
               : "Completa los datos del nuevo concepto"}
-          </p>
-        </div>
-        <Button
-          variant="link"
-          onClick={onHide}
-          className="text-muted p-0"
-          style={{ fontSize: "1.5rem" }}
-        >
-          <X size={24} />
-        </Button>
-      </Modal.Header>
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body className="pt-3">
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Row className="g-3">
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid gap-4 py-4">
             {/* Nombre */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Nombre del Concepto <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="name"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Control
-                      {...field}
-                      type="text"
-                      placeholder="Ej: Renta de local, Electricidad, Papelería"
-                      isInvalid={!!errors.name}
-                      style={{ borderRadius: "8px" }}
-                    />
-                  )}
-                />
-                {errors.name && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.name.message}
-                  </Form.Control.Feedback>
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Nombre del Concepto <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                name="name"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="name"
+                    type="text"
+                    placeholder="Ej: Renta de local, Electricidad, Papelería"
+                    className={errors.name ? "border-destructive" : ""}
+                  />
                 )}
-              </Form.Group>
-            </Col>
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
 
             {/* Departamento */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Departamento <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="department"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Select
-                      {...field}
-                      isInvalid={!!errors.department}
-                      style={{ borderRadius: "8px" }}
-                    >
+            <div className="space-y-2">
+              <Label htmlFor="department">
+                Departamento <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                name="department"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger className={errors.department ? "border-destructive" : ""}>
+                      <SelectValue placeholder="Selecciona el departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
                       {DEPARTMENT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
+                        <SelectItem key={option.value} value={option.value}>
                           {option.label}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </Form.Select>
-                  )}
-                />
-                {errors.department && (
-                  <Form.Control.Feedback type="invalid" className="d-block">
-                    {errors.department.message}
-                  </Form.Control.Feedback>
+                    </SelectContent>
+                  </Select>
                 )}
-              </Form.Group>
-            </Col>
+              />
+              {errors.department && (
+                <p className="text-sm text-destructive">{errors.department.message}</p>
+              )}
+            </div>
 
             {/* Descripción */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Descripción (Opcional)</Form.Label>
-                <Controller
-                  name="description"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Control
-                      {...field}
-                      as="textarea"
-                      rows={3}
-                      placeholder="Describe el concepto de gasto..."
-                      isInvalid={!!errors.description}
-                      style={{ borderRadius: "8px" }}
-                    />
-                  )}
-                />
-                {errors.description && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.description.message}
-                  </Form.Control.Feedback>
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción (Opcional)</Label>
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <Textarea
+                    {...field}
+                    id="description"
+                    placeholder="Describe el concepto de gasto..."
+                    rows={3}
+                    className={errors.description ? "border-destructive" : ""}
+                  />
                 )}
-              </Form.Group>
-            </Col>
+              />
+              {errors.description && (
+                <p className="text-sm text-destructive">{errors.description.message}</p>
+              )}
+            </div>
+          </div>
 
-          </Row>
-
-          <div className="d-flex justify-content-end gap-2 mt-4">
+          <DialogFooter>
             <Button
-              variant="light"
+              type="button"
+              variant="outline"
               onClick={onHide}
               disabled={loading}
-              style={{ borderRadius: "8px" }}
             >
               Cancelar
             </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={loading}
-              style={{
-                borderRadius: "8px",
-              }}
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Guardando...
                 </>
               ) : concept ? (
@@ -265,10 +238,10 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
                 "Crear Concepto"
               )}
             </Button>
-          </div>
-        </Form>
-      </Modal.Body>
-    </Modal>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Button,
-  Table,
-  Form,
-  InputGroup,
-  Spinner,
-  Row,
-  Col,
-} from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { buysService } from "./services/buys";
 import { Buy, BuyFilters } from "./types";
@@ -20,6 +11,18 @@ import { branchesService } from "../branches/services/branches";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const BuysPage: React.FC = () => {
   const [buys, setBuys] = useState<Buy[]>([]);
@@ -54,7 +57,7 @@ const BuysPage: React.FC = () => {
         const response = await branchesService.getUserBranches();
         if (response.data) {
           setUserBranches(response.data);
-          // Si solo hay una sucursal, seleccionarla automáticamente
+          // Si solo hay una sucursal, seleccionarla automaticamente
           if (response.data.length === 1) {
             setSelectedBranch(response.data[0]._id);
           }
@@ -67,12 +70,12 @@ const BuysPage: React.FC = () => {
     loadUserBranches();
   }, [userId, isAdmin]);
 
-  // Si es administrador con sucursal activa, usarla automáticamente
+  // Si es administrador con sucursal activa, usarla automaticamente
   useEffect(() => {
     if (isAdmin && activeBranch) {
       setSelectedBranch(activeBranch._id);
     } else if (isAdmin && !activeBranch) {
-      setSelectedBranch(""); // Permitir búsqueda sin filtro
+      setSelectedBranch(""); // Permitir busqueda sin filtro
     }
   }, [isAdmin, activeBranch]);
 
@@ -101,22 +104,22 @@ const BuysPage: React.FC = () => {
       if (selectedBranch) {
         filters.branchId = selectedBranch;
         console.log(
-          "🔍 [Buys] Filtrando por sucursal selectedBranch:",
+          "[Buys] Filtrando por sucursal selectedBranch:",
           selectedBranch
         );
       } else {
         console.log(
-          "🔍 [Buys] Sin filtro de sucursal - selectedBranch:",
+          "[Buys] Sin filtro de sucursal - selectedBranch:",
           selectedBranch
         );
       }
 
-      console.log("🔍 [Buys] isAdmin:", isAdmin, "activeBranch:", activeBranch);
-      console.log("🔍 [Buys] Filtros enviados:", filters);
+      console.log("[Buys] isAdmin:", isAdmin, "activeBranch:", activeBranch);
+      console.log("[Buys] Filtros enviados:", filters);
       const response = await buysService.getAllBuys(filters);
 
       if (response.data) {
-        // Filtrar por búsqueda local si hay término de búsqueda
+        // Filtrar por busqueda local si hay termino de busqueda
         let filteredBuys = response.data;
         if (searchTerm) {
           filteredBuys = response.data.filter(
@@ -165,7 +168,7 @@ const BuysPage: React.FC = () => {
     loadBuys(true, 1);
   };
 
-  // Opciones para los botones de período
+  // Opciones para los botones de periodo
   const handleViewModeChange = (mode: "dia" | "semana" | "mes") => {
     setViewMode(mode);
     const today = new Date();
@@ -188,17 +191,16 @@ const BuysPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="container mx-auto py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h2 className="mb-1 fw-bold">Compras</h2>
-          <p className="text-muted mb-0">Gestiona las compras de la sucursal</p>
+          <h2 className="mb-1 font-bold text-2xl">Compras</h2>
+          <p className="text-muted-foreground mb-0">Gestiona las compras de la sucursal</p>
         </div>
         <Button
-          variant="primary"
           onClick={() => setShowModal(true)}
-          className="d-flex align-items-center gap-2 px-4"
+          className="flex items-center gap-2 px-4"
         >
           <Plus size={20} />
           Agregar
@@ -206,219 +208,189 @@ const BuysPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div
-        className="card border-0 shadow-sm mb-2"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body p-2">
-          <Row className="g-2 align-items-end">
-            <Col md={3}>
-              <Form.Label className="fw-semibold mb-2">
+      <Card className="mb-2 shadow-sm border-0">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+            <div className="md:col-span-3">
+              <Label className="font-semibold mb-2">
                 Fecha Inicial *
-              </Form.Label>
-              <Form.Control
+              </Label>
+              <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px," }}
+                className="bg-muted/50 border-0"
               />
-            </Col>
-            <Col md={3}>
-              <Form.Label className="fw-semibold mb-2">
+            </div>
+            <div className="md:col-span-3">
+              <Label className="font-semibold mb-2">
                 Fecha Final *
-              </Form.Label>
-              <Form.Control
+              </Label>
+              <Input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
+                className="bg-muted/50 border-0"
               />
-            </Col>
-            <Col md={4}>
-              <div className="d-flex ">
+            </div>
+            <div className="md:col-span-4">
+              <div className="flex gap-1">
                 <Button
-                  variant={viewMode === "dia" ? "primary" : "outline-primary"}
+                  variant={viewMode === "dia" ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleViewModeChange("dia")}
-                  style={{ borderRadius: "8px", flex: 1 }}
+                  className="flex-1 rounded-lg"
                 >
-                  Día
+                  Dia
                 </Button>
                 <Button
-                  variant={
-                    viewMode === "semana" ? "primary" : "outline-primary"
-                  }
+                  variant={viewMode === "semana" ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleViewModeChange("semana")}
-                  style={{ borderRadius: "8px", flex: 1 }}
+                  className="flex-1 rounded-lg"
                 >
                   Semana
                 </Button>
                 <Button
-                  variant={viewMode === "mes" ? "primary" : "outline-primary"}
+                  variant={viewMode === "mes" ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleViewModeChange("mes")}
-                  style={{ borderRadius: "8px", flex: 1 }}
+                  className="flex-1 rounded-lg"
                 >
                   Mes
                 </Button>
               </div>
-            </Col>
-            <Col md={2}>
+            </div>
+            <div className="md:col-span-2">
               <Button
-                variant="primary"
                 onClick={handleSearch}
-                className="w-100"
+                className="w-full"
               >
                 Buscar
               </Button>
-            </Col>
-          </Row>
+            </div>
+          </div>
 
-          <Row className="g-3 mt-2">
-            <Col md={6}>
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por folio o concepto..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
-            </Col>
-          </Row>
-        </div>
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por folio o concepto..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10 bg-muted/50 border-0"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card className="shadow-sm border-0">
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando compras...</p>
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando compras...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">No.</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ACCIÓN</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">FECHA</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      SUCURSAL
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      FORMA PAGO
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      CONCEPTO
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      DESCRIPCIÓN
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-end">
-                      IMPORTE
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {buys.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-5 text-muted">
-                        No se encontraron compras
-                      </td>
-                    </tr>
-                  ) : (
-                    buys.map((buy, index) => (
-                      <tr
-                        key={buy._id}
-                        style={{ borderBottom: "1px solid #f1f3f5" }}
-                      >
-                        <td className="px-2 py-2">
-                          {(pagination.page - 1) * pagination.limit + index + 1}
-                        </td>
-                        <td className="px-2 py-2">
-                          <BuyActions buy={buy} onBuySaved={handleBuySaved} />
-                        </td>
-                        <td className="px-2 py-2">
-                          {new Date(buy.paymentDate).toLocaleDateString(
-                            "es-MX"
-                          )}
-                        </td>
-                        <td className="px-2 py-2">
-                          {buy.branch?.branchName || "N/A"}
-                        </td>
-                        <td className="px-2 py-2">
-                          {buy.paymentMethod?.name || "N/A"}
-                        </td>
-                        <td className="px-2 py-2 fw-semibold">
-                          {buy.concept?.name || "N/A"}
-                        </td>
-                        <td className="px-2 py-2">{buy.description || "-"}</td>
-                        <td className="px-2 py-2 text-end fw-semibold">
-                          $
-                          {buy.amount.toLocaleString("es-MX", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">No.</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ACCION</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">FECHA</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">SUCURSAL</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">FORMA PAGO</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">CONCEPTO</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">DESCRIPCION</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-right">IMPORTE</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {buys.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                      No se encontraron compras
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  buys.map((buy, index) => (
+                    <TableRow key={buy._id}>
+                      <TableCell className="px-2 py-2">
+                        {(pagination.page - 1) * pagination.limit + index + 1}
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        <BuyActions buy={buy} onBuySaved={handleBuySaved} />
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        {new Date(buy.paymentDate).toLocaleDateString("es-MX")}
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        {buy.branch?.branchName || "N/A"}
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        {buy.paymentMethod?.name || "N/A"}
+                      </TableCell>
+                      <TableCell className="px-2 py-2 font-semibold">
+                        {buy.concept?.name || "N/A"}
+                      </TableCell>
+                      <TableCell className="px-2 py-2">{buy.description || "-"}</TableCell>
+                      <TableCell className="px-2 py-2 text-right font-semibold">
+                        $
+                        {buy.amount.toLocaleString("es-MX", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           )}
 
           {/* Pagination */}
           {!loading && buys.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
+            <div className="flex justify-between items-center px-4 py-2 border-t">
+              <p className="text-muted-foreground text-sm">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
                 de {pagination.total} compras
               </p>
-              <div className="d-flex gap-2">
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="light"
+                  variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 >
                   <ChevronLeft size={16} />
                 </Button>
-                <span className="px-3 py-1">
-                  Página {pagination.page} de {pagination.pages}
+                <span className="px-3 py-1 text-sm">
+                  Pagina {pagination.page} de {pagination.pages}
                 </span>
                 <Button
-                  variant="light"
+                  variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 >
                   <ChevronRight size={16} />
                 </Button>
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Modal para crear compra */}
       <BuyModal
-        show={showModal}
-        onHide={() => setShowModal(false)}
+        open={showModal}
+        onOpenChange={setShowModal}
         onSuccess={handleBuySaved}
         branchId={activeBranch?._id}
       />

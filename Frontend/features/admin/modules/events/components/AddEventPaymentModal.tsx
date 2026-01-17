@@ -1,11 +1,30 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner, Alert } from "react-bootstrap";
+import { Loader2, Info } from "lucide-react";
 import { toast } from "react-toastify";
 import { eventPaymentsService } from "../services/eventPayments";
 import { CreateEventPaymentData, Event, PaymentMethod } from "../types";
 import { paymentMethodsService } from "../../payment-methods/services/paymentMethods";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AddEventPaymentModalProps {
   show: boolean;
@@ -29,7 +48,7 @@ const AddEventPaymentModal: React.FC<AddEventPaymentModalProps> = ({
     notes: "",
   });
 
-  // Cargar métodos de pago
+  // Cargar metodos de pago
   useEffect(() => {
     const loadPaymentMethods = async () => {
       try {
@@ -62,7 +81,7 @@ const AddEventPaymentModal: React.FC<AddEventPaymentModalProps> = ({
     e.preventDefault();
 
     if (!formData.paymentMethod) {
-      toast.error("Selecciona un método de pago");
+      toast.error("Selecciona un metodo de pago");
       return;
     }
 
@@ -100,65 +119,60 @@ const AddEventPaymentModal: React.FC<AddEventPaymentModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="md" centered backdrop="static">
-      <Modal.Header closeButton className="border-0">
-        <Modal.Title className="fw-bold">Registrar Pago</Modal.Title>
-      </Modal.Header>
-      <Form onSubmit={handleSubmit}>
-        <Modal.Body className="p-4">
-          <Alert variant="info" className="mb-3">
-            <div className="d-flex justify-content-between">
-              <span>
-                <strong>Evento:</strong> Folio #{event.folio}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between mt-2">
-              <span>
-                <strong>Cliente:</strong> {event.client.name} {event.client.lastName}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between mt-2">
-              <span>
-                <strong>Total del Evento:</strong>
-              </span>
-              <span className="fw-bold">
-                ${event.totalAmount.toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between">
-              <span>
-                <strong>Total Pagado:</strong>
-              </span>
-              <span className="fw-bold text-success">
-                ${event.totalPaid.toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between">
-              <span>
-                <strong>Saldo Pendiente:</strong>
-              </span>
-              <span className="fw-bold text-danger">
-                ${event.balance.toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
-          </Alert>
+    <Dialog open={show} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-bold">Registrar Pago</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="p-4 space-y-4">
+            <Alert className="bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-sm">
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span><strong>Evento:</strong> Folio #{event.folio}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span><strong>Cliente:</strong> {event.client.name} {event.client.lastName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span><strong>Total del Evento:</strong></span>
+                    <span className="font-bold">
+                      ${event.totalAmount.toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span><strong>Total Pagado:</strong></span>
+                    <span className="font-bold text-green-600">
+                      ${event.totalPaid.toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span><strong>Saldo Pendiente:</strong></span>
+                    <span className="font-bold text-red-600">
+                      ${event.balance.toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
 
-          <Row className="g-3">
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Monto del Pago <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Monto del Pago <span className="text-destructive">*</span>
+                </Label>
+                <Input
                   type="number"
                   step="0.01"
                   min="0.01"
@@ -169,76 +183,67 @@ const AddEventPaymentModal: React.FC<AddEventPaymentModalProps> = ({
                     setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
                   }
                   required
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
+                  className="bg-muted/50 rounded-[10px] h-11"
                 />
-                <Form.Text className="text-muted">
-                  Máximo: ${event.balance.toFixed(2)}
-                </Form.Text>
-              </Form.Group>
-            </Col>
+                <p className="text-sm text-muted-foreground">
+                  Maximo: ${event.balance.toFixed(2)}
+                </p>
+              </div>
 
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Método de Pago <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Select
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Metodo de Pago <span className="text-destructive">*</span>
+                </Label>
+                <Select
                   value={formData.paymentMethod}
-                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  required
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
+                  onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
                 >
-                  <option value="">Seleccionar método de pago...</option>
-                  {paymentMethods.map((method) => (
-                    <option key={method._id} value={method._id}>
-                      {method.name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
+                  <SelectTrigger className="w-full bg-muted/50 rounded-[10px] h-11">
+                    <SelectValue placeholder="Seleccionar metodo de pago..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((method) => (
+                      <SelectItem key={method._id} value={method._id}>
+                        {method.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Notas (opcional)</Form.Label>
-                <Form.Control
-                  as="textarea"
+              <div className="space-y-2">
+                <Label className="font-semibold">Notas (opcional)</Label>
+                <Textarea
                   rows={3}
                   placeholder="Notas adicionales sobre el pago..."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
+                  className="bg-muted/50 rounded-[10px]"
                 />
-              </Form.Group>
-            </Col>
-          </Row>
-        </Modal.Body>
-        <Modal.Footer className="border-0">
-          <Button
-            variant="light"
-            onClick={handleClose}
-            disabled={loading}
-            style={{ borderRadius: "10px" }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={loading}
-            style={{
-              borderRadius: "10px",
-              minWidth: "120px",
-            }}
-          >
-            {loading ? <Spinner animation="border" size="sm" /> : "Registrar Pago"}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={loading}
+              className="rounded-[10px]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="rounded-[10px] min-w-[120px]"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Registrar Pago"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

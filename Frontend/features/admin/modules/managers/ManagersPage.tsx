@@ -1,15 +1,35 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Plus, Users, Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Button, Form, Table, Badge } from "react-bootstrap";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { managersService } from "./services/managers";
 import { Manager, ManagerFilters, FilterType, FilterOption, CreateManagerData, UpdateManagerData } from "./types";
 import Actions from "./components/Actions";
 import ManagerModal from "./components/ManagerModal";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { companyService } from "@/services/company";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
 
 const filterOptions: FilterOption[] = [
   { value: "nombre", label: "Nombre" },
@@ -115,17 +135,13 @@ const ManagersPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleFilterTypeChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setFilterType(e.target.value as FilterType);
+  const handleFilterTypeChange = (value: string): void => {
+    setFilterType(value as FilterType);
     setSearchTerm("");
   };
 
-  const handleStatusFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value);
   };
 
   const handlePageChange = (page: number) => {
@@ -230,209 +246,177 @@ const ManagersPage: React.FC = () => {
   };
 
   return (
-    <div className="row">
-      <div className="col-12">
-        <div className="card">
-          <div className="card-header border-light d-flex justify-content-between align-items-center py-2">
-            <div className="d-flex gap-2">
-              <Form.Select
-                value={filterType}
-                onChange={handleFilterTypeChange}
-                className="shadow-none"
-                style={{ maxWidth: 180 }}
-              >
+    <div className="space-y-4">
+      {/* Header */}
+      <PageHeader
+        title="Gerentes"
+        description="Gestiona los gerentes del sistema"
+        action={{
+          label: "Nuevo Gerente",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleCreateManager,
+        }}
+      />
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Select value={filterType} onValueChange={handleFilterTypeChange}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filtrar por" />
+              </SelectTrigger>
+              <SelectContent>
                 {filterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value}>
                     {option.label}
-                  </option>
+                  </SelectItem>
                 ))}
-              </Form.Select>
-              <div className="position-relative" style={{ maxWidth: 400 }}>
-                <Form.Control
-                  type="search"
-                  placeholder={`Buscar por ${filterOptions
-                    .find((opt) => opt.value === filterType)
-                    ?.label.toLowerCase()}...`}
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="shadow-none px-4"
-                  style={{ fontSize: 15, paddingLeft: "2.5rem" }}
-                />
-                <Search
-                  className="text-muted position-absolute"
-                  size={18}
-                  style={{
-                    left: "0.75rem",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              </div>
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="shadow-none"
-                style={{ maxWidth: 150 }}
-              >
-                <option value="">Todos</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
+              </SelectContent>
+            </Select>
+
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={`Buscar por ${filterOptions
+                  .find((opt) => opt.value === filterType)
+                  ?.label.toLowerCase()}...`}
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
-            <Button
-              variant="primary"
-              onClick={handleCreateManager}
-              className="d-flex align-items-center gap-2"
+
+            <Select
+              value={statusFilter || "all"}
+              onValueChange={(value) => handleStatusFilterChange(value === "all" ? "" : value)}
             >
-              <Plus size={16} />
-              Nuevo Gerente
-            </Button>
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="table-responsive shadow-sm">
-            <Table className="table table-custom table-centered table-hover w-100 mb-0">
-              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
-                <tr>
-                  <th>#</th>
-                  <th>Nombre</th>
-                  <th>Usuario</th>
-                  <th>Dirección</th>
-                  <th>Teléfono</th>
-                  <th>Correo</th>
-                  <th>Estatus</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-4">
-                      <div className="d-flex flex-column align-items-center">
-                        <div
-                          className="spinner-border text-primary mb-2"
-                          role="status"
-                        >
-                          <span className="visually-hidden">Cargando...</span>
-                        </div>
-                        <p className="text-muted mb-0 small">
-                          Cargando gerentes...
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : managers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-4">
-                      <div className="text-muted">
-                        <Users size={48} className="mb-3 opacity-50" />
-                        <div>No se encontraron gerentes</div>
-                        <small>Intenta ajustar los filtros de búsqueda</small>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  managers.map((person, index) => (
-                    <tr key={person._id}>
-                      <td>
-                        {(pagination.page - 1) * pagination.limit + index + 1}
-                      </td>
-                      <td>
-                        <div>
-                          <div className="fw-medium">{getFullName(person)}</div>
-                          <div className="text-muted small">
-                            {formatDate(person.createdAt)}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge bg-secondary bg-opacity-10 text-secondary">
-                          @{person.usuario}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                          {person.direccion}
-                        </div>
-                      </td>
-                      <td>{person.telefono}</td>
-                      <td>
-                        <div className="text-truncate" style={{ maxWidth: "180px" }}>
-                          {person.correo}
-                        </div>
-                      </td>
-                      <td>
-                        <Badge
-                          bg={person.estatus ? "success" : "danger"}
-                          className="bg-opacity-10"
-                          style={{
-                            color: person.estatus ? "#198754" : "#dc3545",
-                          }}
-                        >
-                          {person.estatus ? "Activo" : "Inactivo"}
-                        </Badge>
-                      </td>
-                      <td className="text-center">
-                        <Actions
-                          manager={person}
-                          onEdit={handleEditManager}
-                          onToggleStatus={handleToggleStatus}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          </div>
-          <div className="d-flex justify-content-between align-items-center p-2 border-top">
-            <span className="text-muted">
-              Mostrando {managers.length} de {pagination.total} registros
-            </span>
-            <div className="d-flex gap-1 align-items-center">
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === 1}
-                onClick={() => handlePageChange(pagination.page - 1)}
-                className="d-flex align-items-center"
-              >
-                <ChevronLeft size={16} />
-                Anterior
-              </Button>
+        </CardContent>
+      </Card>
 
-              {getPageNumbers().map((pageNum, index) => (
-                <React.Fragment key={index}>
-                  {pageNum === "..." ? (
-                    <span className="px-2 text-muted">...</span>
-                  ) : (
-                    <Button
-                      variant={
-                        pageNum === pagination.page
-                          ? "primary"
-                          : "outline-secondary"
-                      }
-                      size="sm"
-                      onClick={() => handlePageChange(pageNum as number)}
-                    >
-                      {pageNum}
-                    </Button>
-                  )}
-                </React.Fragment>
-              ))}
-
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => handlePageChange(pagination.page + 1)}
-                className="d-flex align-items-center"
-              >
-                Siguiente
-                <ChevronRight size={16} />
-              </Button>
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando gerentes...</p>
             </div>
-          </div>
-        </div>
-      </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Dirección</TableHead>
+                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Correo</TableHead>
+                    <TableHead>Estatus</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {managers.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="text-center py-12 text-muted-foreground"
+                      >
+                        <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <div>No se encontraron gerentes</div>
+                        <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    managers.map((person, index) => (
+                      <TableRow key={person._id}>
+                        <TableCell>
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{getFullName(person)}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatDate(person.createdAt)}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">@{person.usuario}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="truncate max-w-[200px]">{person.direccion}</div>
+                        </TableCell>
+                        <TableCell>{person.telefono}</TableCell>
+                        <TableCell>
+                          <div className="truncate max-w-[180px]">{person.correo}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={person.estatus ? "default" : "destructive"}>
+                            {person.estatus ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Actions
+                            manager={person}
+                            onEdit={handleEditManager}
+                            onToggleStatus={handleToggleStatus}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {managers.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {managers.length} de {pagination.total} registros
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      Siguiente
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <ManagerModal
         show={showModal}

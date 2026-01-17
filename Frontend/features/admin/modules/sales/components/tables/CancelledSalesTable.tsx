@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Table, Badge, Button, Spinner } from "react-bootstrap";
-import { Eye, Edit, Trash2, Printer } from "lucide-react";
+import { Eye, Edit, Trash2, Printer, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../../services/sales";
@@ -10,6 +9,16 @@ import { Sale } from "../../types";
 import SaleDetailModal from "../SaleDetailModal";
 import { reprintSaleTicket } from "../../utils/reprintSaleTicket";
 import { useUserSessionStore } from "@/stores/userSessionStore";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface CancelledSalesTableProps {
   filters: {
@@ -84,11 +93,11 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
               s._id === updatedOrder._id ? (updatedOrder as Sale) : s
             );
           } else {
-            // Agregar venta recién cancelada (toast se muestra desde SalesPage centralizado)
+            // Agregar venta recien cancelada (toast se muestra desde SalesPage centralizado)
             return [updatedOrder as Sale, ...prev];
           }
         } else {
-          // Remover si cambió a otro estado
+          // Remover si cambio a otro estado
           return prev.filter((s) => s._id !== updatedOrder._id);
         }
       });
@@ -99,12 +108,12 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
   });
 
   const handleDelete = async (saleId: string) => {
-    if (!confirm("¿Estás seguro de eliminar esta venta?")) return;
+    if (!confirm("Estas seguro de eliminar esta venta?")) return;
 
     try {
       await salesService.deleteSale(saleId);
       toast.success("Venta eliminada exitosamente");
-      // No llamar loadSales() - el socket actualizará automáticamente
+      // No llamar loadSales() - el socket actualizara automaticamente
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar la venta");
     }
@@ -129,42 +138,24 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
     if (sale.status === "cancelado") {
       return (
         <Badge
-          bg="danger"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "20px",
-            fontWeight: "500",
-          }}
+          variant="destructive"
+          className="px-3 py-1 rounded-full font-medium"
         >
           Pago Cancelado
         </Badge>
       );
     }
 
-    // Si no está cancelada, verificar el saldo (aunque en esta tabla todas deberían estar canceladas)
+    // Si no esta cancelada, verificar el saldo (aunque en esta tabla todas deberian estar canceladas)
     if (sale.remainingBalance === 0) {
       return (
-        <Badge
-          bg="success"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "20px",
-            fontWeight: "500",
-          }}
-        >
+        <Badge className="px-3 py-1 rounded-full font-medium bg-green-500 hover:bg-green-500/90 text-white">
           Completado
         </Badge>
       );
     } else {
       return (
-        <Badge
-          bg="warning"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "20px",
-            fontWeight: "500",
-          }}
-        >
+        <Badge className="px-3 py-1 rounded-full font-medium bg-yellow-500 hover:bg-yellow-500/90 text-white">
           Pendiente
         </Badge>
       );
@@ -175,12 +166,8 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
     if (!stage) {
       return (
         <Badge
-          bg="secondary"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "20px",
-            fontWeight: "500",
-          }}
+          variant="secondary"
+          className="px-3 py-1 rounded-full font-medium"
         >
           Sin etapa
         </Badge>
@@ -191,13 +178,8 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
 
     return (
       <Badge
-        style={{
-          padding: "6px 12px",
-          borderRadius: "20px",
-          fontWeight: "500",
-          backgroundColor: backgroundColor,
-          color: "#fff",
-        }}
+        className="px-3 py-1 rounded-full font-medium text-white"
+        style={{ backgroundColor }}
       >
         {stage.name}
       </Badge>
@@ -229,146 +211,123 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="text-muted mt-3">Cargando ventas...</p>
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground mt-3">Cargando ventas...</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="table-responsive">
-        <Table hover className="mb-0">
-          <thead style={{ background: "#f8f9fa" }}>
-            <tr>
-              <th className="px-4 py-3 fw-semibold text-muted">No.</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Clientes</th>
-              <th className="px-4 py-3 fw-semibold text-muted">
-                Fecha Entrega
-              </th>
-              <th className="px-4 py-3 fw-semibold text-muted">
-                Estatus Prod.
-              </th>
-              <th className="px-4 py-3 fw-semibold text-muted">
-                Estatus Pago.
-              </th>
-              <th className="px-4 py-3 fw-semibold text-muted">Fecha Pedido</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Pagado</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Saldo</th>
-              <th className="px-4 py-3 fw-semibold text-muted text-center">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {sales.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="text-center py-5 text-muted">
-                  No se encontraron ventas canceladas
-                </td>
-              </tr>
-            ) : (
-              sales.map((sale, index) => (
-                <tr
-                  key={sale._id}
-                  style={{ borderBottom: "1px solid #f1f3f5" }}
-                >
-                  <td className="px-4 py-3">{index + 1}</td>
-                  <td className="px-4 py-3">
-                    {sale.clientInfo?.name || "N/A"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {sale.deliveryData?.deliveryDateTime ? (
-                      <div>
-                        <div>{formatDate(sale.deliveryData.deliveryDateTime)}</div>
-                        <div className="text-muted" style={{ fontSize: "0.85em" }}>
-                          {formatTime(sale.deliveryData.deliveryDateTime)}
-                        </div>
-                      </div>
-                    ) : (
-                      "N/A"
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{getStageBadge(sale.stage)}</td>
-                  <td className="px-4 py-3">
-                    {getPaymentStatusBadge(sale)}
-                  </td>
-                  <td className="px-4 py-3">
+      <Table>
+        <TableHeader className="bg-muted/50">
+          <TableRow>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">No.</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Clientes</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Fecha Entrega</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Estatus Prod.</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Estatus Pago.</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Fecha Pedido</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Pagado</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Saldo</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-center">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sales.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                No se encontraron ventas canceladas
+              </TableCell>
+            </TableRow>
+          ) : (
+            sales.map((sale, index) => (
+              <TableRow key={sale._id}>
+                <TableCell className="px-4 py-3">{index + 1}</TableCell>
+                <TableCell className="px-4 py-3">
+                  {sale.clientInfo?.name || "N/A"}
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  {sale.deliveryData?.deliveryDateTime ? (
                     <div>
-                      <div>{formatDate(sale.createdAt)}</div>
-                      <div className="text-muted" style={{ fontSize: "0.85em" }}>
-                        {formatTime(sale.createdAt)}
+                      <div>{formatDate(sale.deliveryData.deliveryDateTime)}</div>
+                      <div className="text-muted-foreground text-xs">
+                        {formatTime(sale.deliveryData.deliveryDateTime)}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 fw-semibold text-success">
-                    ${(sale.advance || 0).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 fw-semibold text-danger text-end">
-                    ${(sale.remainingBalance || 0).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="d-flex justify-content-center gap-2">
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleReprintTicket(sale)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Reimprimir ticket"
-                      >
-                        <Printer size={16} className="text-primary" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleOpenDetailModal(sale)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Ver detalles"
-                      >
-                        <Eye size={16} className="text-info" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Editar"
-                      >
-                        <Edit size={16} className="text-warning" />
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        onClick={() => handleDelete(sale._id)}
-                        className="border-0"
-                        style={{ borderRadius: "8px" }}
-                        title="Eliminar"
-                      >
-                        <Trash2 size={16} className="text-danger" />
-                      </Button>
+                  ) : (
+                    "N/A"
+                  )}
+                </TableCell>
+                <TableCell className="px-4 py-3">{getStageBadge(sale.stage)}</TableCell>
+                <TableCell className="px-4 py-3">
+                  {getPaymentStatusBadge(sale)}
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  <div>
+                    <div>{formatDate(sale.createdAt)}</div>
+                    <div className="text-muted-foreground text-xs">
+                      {formatTime(sale.createdAt)}
                     </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
-      </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-4 py-3 font-semibold text-green-600">
+                  ${(sale.advance || 0).toFixed(2)}
+                </TableCell>
+                <TableCell className="px-4 py-3 font-semibold text-red-600 text-right">
+                  ${(sale.remainingBalance || 0).toFixed(2)}
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  <div className="flex justify-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleReprintTicket(sale)}
+                      title="Reimprimir ticket"
+                    >
+                      <Printer size={16} className="text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleOpenDetailModal(sale)}
+                      title="Ver detalles"
+                    >
+                      <Eye size={16} className="text-cyan-500" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Editar"
+                    >
+                      <Edit size={16} className="text-yellow-500" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleDelete(sale._id)}
+                      title="Eliminar"
+                    >
+                      <Trash2 size={16} className="text-red-500" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
 
-      <div className="border-top px-4 py-3">
-        <div className="row">
-          <div className="col text-end">
-            <span className="fw-bold me-5">Total</span>
-            <span className="fw-bold text-success me-5">
-              ${totalPaid.toFixed(2)}
-            </span>
-            <span className="fw-bold text-danger">
-              ${totalBalance.toFixed(2)}
-            </span>
-          </div>
+      <div className="border-t px-4 py-3">
+        <div className="flex justify-end">
+          <span className="font-bold mr-10">Total</span>
+          <span className="font-bold text-green-600 mr-10">
+            ${totalPaid.toFixed(2)}
+          </span>
+          <span className="font-bold text-red-600">
+            ${totalBalance.toFixed(2)}
+          </span>
         </div>
       </div>
 

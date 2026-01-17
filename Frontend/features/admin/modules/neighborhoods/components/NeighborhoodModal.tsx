@@ -1,13 +1,32 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Spinner } from "react-bootstrap";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { neighborhoodsService } from "../services/neighborhoods";
 import { Neighborhood, CreateNeighborhoodData, UpdateNeighborhoodData } from "../types";
-import { toast } from "react-toastify";
 import { useActiveBranchStore, Branch } from "@/stores/activeBranchStore";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface NeighborhoodModalProps {
   show: boolean;
@@ -37,7 +56,6 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
   const userRole = user?.role?.name;
   const isGerente = userRole === "Gerente";
 
-  // Cargar sucursales al abrir el modal
   useEffect(() => {
     const loadBranches = async () => {
       if (!show || isGerente) return;
@@ -67,10 +85,7 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
         branchId: neighborhood.branch?._id || "",
       });
     } else {
-      // Para nuevas colonias, siempre usar la sucursal activa si existe
-      // o la primera sucursal si solo hay una disponible
       const defaultBranchId = activeBranch?._id || (branches.length === 1 ? branches[0]._id : "");
-      
       setFormData({
         name: "",
         priceDelivery: "",
@@ -80,18 +95,6 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
     }
   }, [neighborhood, show, activeBranch, branches]);
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -100,18 +103,14 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
       return;
     }
 
-    // Para nuevas colonias, determinar el branchId
     let finalBranchId = formData.branchId;
-    
+
     if (!neighborhood) {
-      // Si es Gerente, el backend se encargará de asignar la sucursal
       if (isGerente) {
-        finalBranchId = ""; // El backend lo manejará
+        finalBranchId = "";
       } else if (!finalBranchId && activeBranch) {
-        // Si es Administrador y tiene sucursal activa, usarla
         finalBranchId = activeBranch._id;
       } else if (!finalBranchId) {
-        // Solo mostrar error si no hay sucursal y no es Gerente
         toast.error("Por favor selecciona una sucursal");
         return;
       }
@@ -127,7 +126,6 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
       setLoading(true);
 
       if (neighborhood) {
-        // Actualizar colonia existente
         const updateData: UpdateNeighborhoodData = {
           name: formData.name,
           priceDelivery: priceValue,
@@ -145,7 +143,6 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
           onHide();
         }
       } else {
-        // Crear nueva colonia
         const createData: CreateNeighborhoodData = {
           name: formData.name,
           priceDelivery: priceValue,
@@ -172,185 +169,133 @@ const NeighborhoodModal: React.FC<NeighborhoodModalProps> = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      backdrop="static"
-      keyboard={!loading}
-    >
-      <Modal.Header
-        closeButton
-        className="bg-primary text-white"
-        style={{
-          border: "none",
-          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
-          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
-        }}
-      >
-        <Modal.Title className="fw-bold">
-          {neighborhood ? "Editar Colonia" : "Nueva Colonia"}
-        </Modal.Title>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {neighborhood ? "Editar Colonia" : "Nueva Colonia"}
+          </DialogTitle>
+          <DialogDescription>
+            {neighborhood
+              ? "Actualiza la información de la colonia"
+              : "Completa los datos de la nueva colonia"}
+          </DialogDescription>
+        </DialogHeader>
 
-      <Form onSubmit={handleSubmit}>
-        <Modal.Body className="p-4">
-          <div className="row g-3">
-            {/* Sucursal - Solo mostrar si hay más de una y no está editando */}
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            {/* Sucursal */}
             {!neighborhood && branches.length > 1 && !isGerente && (
-              <div className="col-12">
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Sucursal <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    name="branchId"
-                    value={formData.branchId}
-                    onChange={handleChange}
-                    required
-                    disabled={loadingBranches}
-                    style={{
-                      borderRadius: "8px",
-                      border: "2px solid #e9ecef",
-                    }}
-                  >
-                    <option value="">
-                      {loadingBranches ? "Cargando sucursales..." : "Seleccionar sucursal..."}
-                    </option>
+              <div className="space-y-2">
+                <Label htmlFor="branchId">
+                  Sucursal <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.branchId}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, branchId: value }))}
+                  disabled={loadingBranches}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingBranches ? "Cargando sucursales..." : "Seleccionar sucursal..."} />
+                  </SelectTrigger>
+                  <SelectContent>
                     {branches.map((branch) => (
-                      <option key={branch._id} value={branch._id}>
+                      <SelectItem key={branch._id} value={branch._id}>
                         {branch.branchName}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                </Form.Group>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
-            {/* Nombre de la Colonia */}
-            <div className="col-12">
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Nombre de la Colonia <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Ej: Centro, Jardines de la Paz, etc."
-                  required
-                  style={{
-                    borderRadius: "8px",
-                    border: "2px solid #e9ecef",
-                  }}
-                />
-              </Form.Group>
+            {/* Nombre */}
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Nombre de la Colonia <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Ej: Centro, Jardines de la Paz, etc."
+                required
+              />
             </div>
 
-            {/* Precio de Entrega */}
-            <div className="col-md-6">
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Precio de Entrega <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-2 gap-4">
+              {/* Precio */}
+              <div className="space-y-2">
+                <Label htmlFor="priceDelivery">
+                  Precio de Entrega <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="priceDelivery"
                   type="number"
                   step="0.01"
                   min="0"
-                  name="priceDelivery"
                   value={formData.priceDelivery}
-                  onChange={handleChange}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, priceDelivery: e.target.value }))}
                   placeholder="0.00"
                   required
-                  style={{
-                    borderRadius: "8px",
-                    border: "2px solid #e9ecef",
-                  }}
                 />
-                <Form.Text className="text-muted">
+                <p className="text-sm text-muted-foreground">
                   Costo de entrega para esta colonia
-                </Form.Text>
-              </Form.Group>
-            </div>
+                </p>
+              </div>
 
-            {/* Estatus */}
-            <div className="col-md-6">
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Estatus <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Select
-                  name="status"
+              {/* Estatus */}
+              <div className="space-y-2">
+                <Label htmlFor="status">
+                  Estatus <span className="text-destructive">*</span>
+                </Label>
+                <Select
                   value={formData.status}
-                  onChange={handleChange}
-                  required
-                  style={{
-                    borderRadius: "8px",
-                    border: "2px solid #e9ecef",
-                  }}
+                  onValueChange={(value: "active" | "inactive") =>
+                    setFormData((prev) => ({ ...prev, status: value }))
+                  }
                 >
-                  <option value="active">Activo</option>
-                  <option value="inactive">Inactivo</option>
-                </Form.Select>
-                <Form.Text className="text-muted">
-                  Solo las colonias activas estarán disponibles para entregas
-                </Form.Text>
-              </Form.Group>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar estatus" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Activo</SelectItem>
+                    <SelectItem value="inactive">Inactivo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Solo las colonias activas estarán disponibles
+                </p>
+              </div>
             </div>
           </div>
-        </Modal.Body>
 
-        <Modal.Footer
-          style={{
-            borderTop: "2px solid #f1f3f5",
-            padding: "1rem 1.5rem",
-          }}
-        >
-          <Button
-            variant="light"
-            onClick={onHide}
-            disabled={loading}
-            style={{
-              borderRadius: "8px",
-              padding: "8px 20px",
-              fontWeight: "600",
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={loading}
-            style={{
-              borderRadius: "8px",
-              padding: "8px 20px",
-              fontWeight: "600",
-            }}
-          >
-            {loading ? (
-              <>
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                  className="me-2"
-                />
-                Guardando...
-              </>
-            ) : neighborhood ? (
-              "Actualizar Colonia"
-            ) : (
-              "Crear Colonia"
-            )}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onHide}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : neighborhood ? (
+                "Actualizar Colonia"
+              ) : (
+                "Crear Colonia"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,8 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dropdown } from "react-bootstrap";
-import { MoreVertical, Plus, Eye, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical, Plus, Eye, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "react-toastify";
 import { storageService } from "../services/storage";
 import { Storage } from "../types";
@@ -27,15 +34,15 @@ const StorageActions: React.FC<StorageActionsProps> = ({ storage, onStorageUpdat
 
       if (storage.isActive) {
         await storageService.deactivateStorage(storage._id);
-        toast.success("Almacén desactivado exitosamente");
+        toast.success("Almacen desactivado exitosamente");
       } else {
         await storageService.activateStorage(storage._id);
-        toast.success("Almacén activado exitosamente");
+        toast.success("Almacen activado exitosamente");
       }
 
       onStorageUpdated();
     } catch (error: any) {
-      toast.error(error.message || "Error al cambiar el estado del almacén");
+      toast.error(error.message || "Error al cambiar el estado del almacen");
       console.error("Error toggling storage status:", error);
     } finally {
       setLoading(false);
@@ -43,17 +50,17 @@ const StorageActions: React.FC<StorageActionsProps> = ({ storage, onStorageUpdat
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("¿Estás seguro de eliminar este almacén?")) {
+    if (!window.confirm("Estas seguro de eliminar este almacen?")) {
       return;
     }
 
     try {
       setLoading(true);
       await storageService.deleteStorage(storage._id);
-      toast.success("Almacén eliminado exitosamente");
+      toast.success("Almacen eliminado exitosamente");
       onStorageUpdated();
     } catch (error: any) {
-      toast.error(error.message || "Error al eliminar almacén");
+      toast.error(error.message || "Error al eliminar almacen");
       console.error("Error deleting storage:", error);
     } finally {
       setLoading(false);
@@ -62,55 +69,56 @@ const StorageActions: React.FC<StorageActionsProps> = ({ storage, onStorageUpdat
 
   return (
     <>
-      <Dropdown>
-        <Dropdown.Toggle
-          variant="light"
-          size="sm"
-          className="border-0"
-          disabled={loading}
-          style={{ background: "transparent" }}
-        >
-          <MoreVertical size={18} />
-        </Dropdown.Toggle>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            disabled={loading}
+          >
+            <MoreVertical size={18} />
+          </Button>
+        </DropdownMenuTrigger>
 
-        <Dropdown.Menu align="end">
-          <Dropdown.Item onClick={() => setShowViewModal(true)}>
-            <Eye size={16} className="me-2" />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setShowViewModal(true)}>
+            <Eye size={16} className="mr-2" />
             Ver Detalles
-          </Dropdown.Item>
+          </DropdownMenuItem>
 
-          <Dropdown.Item onClick={() => setShowAddProductsModal(true)}>
-            <Plus size={16} className="me-2" />
+          <DropdownMenuItem onClick={() => setShowAddProductsModal(true)}>
+            <Plus size={16} className="mr-2" />
             Agregar Productos
-          </Dropdown.Item>
+          </DropdownMenuItem>
 
-          <Dropdown.Item onClick={() => setShowAddMaterialsModal(true)}>
-            <Plus size={16} className="me-2" />
+          <DropdownMenuItem onClick={() => setShowAddMaterialsModal(true)}>
+            <Plus size={16} className="mr-2" />
             Agregar Materiales
-          </Dropdown.Item>
+          </DropdownMenuItem>
 
-          <Dropdown.Divider />
+          <DropdownMenuSeparator />
 
-          <Dropdown.Item onClick={handleToggleStatus}>
+          <DropdownMenuItem onClick={handleToggleStatus}>
             {storage.isActive ? (
               <>
-                <ToggleLeft size={16} className="me-2" />
+                <ToggleLeft size={16} className="mr-2" />
                 Desactivar
               </>
             ) : (
               <>
-                <ToggleRight size={16} className="me-2" />
+                <ToggleRight size={16} className="mr-2" />
                 Activar
               </>
             )}
-          </Dropdown.Item>
+          </DropdownMenuItem>
 
-          <Dropdown.Item onClick={handleDelete} className="text-danger">
-            <Trash2 size={16} className="me-2" />
+          <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+            <Trash2 size={16} className="mr-2" />
             Eliminar
-          </Dropdown.Item>
-        </Dropdown.Menu>
-      </Dropdown>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Modals */}
       <AddProductsModal

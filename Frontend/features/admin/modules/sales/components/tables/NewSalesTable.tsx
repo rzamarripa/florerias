@@ -1,12 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Table, Badge, Spinner } from "react-bootstrap";
+import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../../services/sales";
 import { Sale } from "../../types";
 import SaleActions from "../SaleActions";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface NewSalesTableProps {
   filters: {
@@ -58,15 +67,15 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
       status: ["pendiente", "en-proceso", "completado", "sinAnticipo"], // Incluir ventas sin anticipo
     },
     onOrderCreated: (newOrder) => {
-      console.log("🆕 [NewSalesTable] Nueva orden recibida:", newOrder);
+      console.log("[NewSalesTable] Nueva orden recibida:", newOrder);
       // Agregar la nueva orden al inicio de la lista
       setSales((prev) => {
         const exists = prev.some((s) => s._id === newOrder._id);
         if (exists) {
-          console.log("⏭️ [NewSalesTable] Orden ya existe");
+          console.log("[NewSalesTable] Orden ya existe");
           return prev;
         }
-        console.log("✅ [NewSalesTable] Agregando nueva orden");
+        console.log("[NewSalesTable] Agregando nueva orden");
         return [newOrder as Sale, ...prev];
       });
       toast.info(`Nueva venta: ${newOrder.orderNumber || newOrder._id}`);
@@ -93,7 +102,7 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
             return [updatedOrder as Sale, ...prev];
           }
         } else {
-          // Remover si cambió a un estado que no debe estar aquí (ej: cancelado)
+          // Remover si cambio a un estado que no debe estar aqui (ej: cancelado)
           const removedSale = prev.find((s) => s._id === updatedOrder._id);
           if (removedSale && updatedOrder.status === "cancelado") {
             toast.warning(`Venta cancelada: ${updatedOrder.orderNumber}`);
@@ -102,11 +111,11 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
         }
       });
 
-      // Actualizar estadísticas después de cualquier cambio
+      // Actualizar estadisticas despues de cualquier cambio
       onStatsUpdate?.();
     },
     onOrderDeleted: (data) => {
-      console.log("🗑️ [NewSalesTable] Orden eliminada:", data.orderId);
+      console.log("[NewSalesTable] Orden eliminada:", data.orderId);
       setSales((prev) => {
         const deletedSale = prev.find((s) => s._id === data.orderId);
         if (deletedSale) {
@@ -124,46 +133,28 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
   };
 
   const getPaymentStatusBadge = (sale: Sale) => {
-    // Si la venta está cancelada, mostrar badge rojo
+    // Si la venta esta cancelada, mostrar badge rojo
     if (sale.status === "cancelado") {
       return (
         <Badge
-          bg="danger"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "20px",
-            fontWeight: "500",
-          }}
+          variant="destructive"
+          className="px-3 py-1 rounded-full font-medium"
         >
           Pago Cancelado
         </Badge>
       );
     }
 
-    // Si no está cancelada, verificar el saldo
+    // Si no esta cancelada, verificar el saldo
     if (sale.remainingBalance === 0) {
       return (
-        <Badge
-          bg="success"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "20px",
-            fontWeight: "500",
-          }}
-        >
+        <Badge className="px-3 py-1 rounded-full font-medium bg-green-500 hover:bg-green-500/90 text-white">
           Completado
         </Badge>
       );
     } else {
       return (
-        <Badge
-          bg="warning"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "20px",
-            fontWeight: "500",
-          }}
-        >
+        <Badge className="px-3 py-1 rounded-full font-medium bg-yellow-500 hover:bg-yellow-500/90 text-white">
           Pendiente
         </Badge>
       );
@@ -174,12 +165,8 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
     if (!stage) {
       return (
         <Badge
-          bg="secondary"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "20px",
-            fontWeight: "500",
-          }}
+          variant="secondary"
+          className="px-3 py-1 rounded-full font-medium"
         >
           Sin etapa
         </Badge>
@@ -190,13 +177,8 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
 
     return (
       <Badge
-        style={{
-          padding: "6px 12px",
-          borderRadius: "20px",
-          fontWeight: "500",
-          backgroundColor: backgroundColor,
-          color: "#fff",
-        }}
+        className="px-3 py-1 rounded-full font-medium text-white"
+        style={{ backgroundColor }}
       >
         {stage.name}
       </Badge>
@@ -228,125 +210,104 @@ const NewSalesTable: React.FC<NewSalesTableProps> = ({
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="text-muted mt-3">Cargando ventas...</p>
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground mt-3">Cargando ventas...</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="table-responsive">
-        <Table hover className="mb-0">
-          <thead style={{ background: "#f8f9fa" }}>
-            <tr>
-              <th className="px-4 py-3 fw-semibold text-muted">Folio</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Clientes</th>
-              <th className="px-4 py-3 fw-semibold text-muted">
-                Fecha Entrega
-              </th>
-              <th className="px-4 py-3 fw-semibold text-muted">
-                Estatus Prod.
-              </th>
-              <th className="px-4 py-3 fw-semibold text-muted">
-                Estatus Pago.
-              </th>
-              <th className="px-4 py-3 fw-semibold text-muted">Fecha Pedido</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Pagado</th>
-              <th className="px-4 py-3 fw-semibold text-muted">Saldo</th>
-              <th className="px-4 py-3 fw-semibold text-muted text-center">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {sales.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="text-center py-5 text-muted">
-                  No se encontraron ventas nuevas
-                </td>
-              </tr>
-            ) : (
-              sales.map((sale) => (
-                <tr
-                  key={sale._id}
-                  style={{ borderBottom: "1px solid #f1f3f5" }}
-                >
-                  <td className="px-4 py-3 fw-semibold">{sale.orderNumber}</td>
-                  <td className="px-4 py-3">
-                    {sale.clientInfo?.name || "N/A"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {sale.deliveryData?.deliveryDateTime ? (
-                      <div>
-                        <div>
-                          {formatDate(sale.deliveryData.deliveryDateTime)}
-                        </div>
-                        <div
-                          className="text-muted"
-                          style={{ fontSize: "0.85em" }}
-                        >
-                          {formatTime(sale.deliveryData.deliveryDateTime)}
-                        </div>
-                      </div>
-                    ) : (
-                      "N/A"
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{getStageBadge(sale.stage)}</td>
-                  <td className="px-4 py-3">{getPaymentStatusBadge(sale)}</td>
-                  <td className="px-4 py-3">
+      <Table>
+        <TableHeader className="bg-muted/50">
+          <TableRow>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Folio</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Clientes</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Fecha Entrega</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Estatus Prod.</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Estatus Pago.</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Fecha Pedido</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Pagado</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground">Saldo</TableHead>
+            <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-center">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sales.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                No se encontraron ventas nuevas
+              </TableCell>
+            </TableRow>
+          ) : (
+            sales.map((sale) => (
+              <TableRow key={sale._id}>
+                <TableCell className="px-4 py-3 font-semibold">{sale.orderNumber}</TableCell>
+                <TableCell className="px-4 py-3">
+                  {sale.clientInfo?.name || "N/A"}
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  {sale.deliveryData?.deliveryDateTime ? (
                     <div>
-                      <div>{formatDate(sale.createdAt)}</div>
-                      <div
-                        className="text-muted"
-                        style={{ fontSize: "0.85em" }}
-                      >
-                        {formatTime(sale.createdAt)}
+                      <div>
+                        {formatDate(sale.deliveryData.deliveryDateTime)}
+                      </div>
+                      <div className="text-muted-foreground text-xs">
+                        {formatTime(sale.deliveryData.deliveryDateTime)}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 fw-semibold text-success">
-                    ${(sale.advance || 0).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 fw-semibold text-danger">
-                    ${(sale.remainingBalance || 0).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <SaleActions
-                      sale={sale}
-                      onSaleUpdated={handleSaleUpdated}
-                    />
-                  </td>
-                </tr>
-              ))
-            )}
-            <tr
-              style={{ background: "#f8f9fa", borderTop: "2px solid #dee2e6" }}
-            >
-              <td colSpan={8} className="text-end px-4 py-3">
-                <span className="fw-bold me-5">Total</span>
-                <span className="fw-bold text-success me-5">
-                  $
-                  {totalPaid.toLocaleString("es-MX", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-                <span className="fw-bold text-danger">
-                  $
-                  {totalBalance.toLocaleString("es-MX", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </td>
-              <td></td>
-            </tr>
-          </tbody>
-        </Table>
-      </div>
+                  ) : (
+                    "N/A"
+                  )}
+                </TableCell>
+                <TableCell className="px-4 py-3">{getStageBadge(sale.stage)}</TableCell>
+                <TableCell className="px-4 py-3">{getPaymentStatusBadge(sale)}</TableCell>
+                <TableCell className="px-4 py-3">
+                  <div>
+                    <div>{formatDate(sale.createdAt)}</div>
+                    <div className="text-muted-foreground text-xs">
+                      {formatTime(sale.createdAt)}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-4 py-3 font-semibold text-green-600">
+                  ${(sale.advance || 0).toFixed(2)}
+                </TableCell>
+                <TableCell className="px-4 py-3 font-semibold text-red-600">
+                  ${(sale.remainingBalance || 0).toFixed(2)}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-center">
+                  <SaleActions
+                    sale={sale}
+                    onSaleUpdated={handleSaleUpdated}
+                  />
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+          <TableRow className="bg-muted/50 border-t-2">
+            <TableCell colSpan={8} className="text-right px-4 py-3">
+              <span className="font-bold mr-10">Total</span>
+              <span className="font-bold text-green-600 mr-10">
+                $
+                {totalPaid.toLocaleString("es-MX", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+              <span className="font-bold text-red-600">
+                $
+                {totalBalance.toLocaleString("es-MX", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+            </TableCell>
+            <TableCell></TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
     </>
   );
 };

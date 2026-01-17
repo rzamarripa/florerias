@@ -2,7 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useState } from "react";
-import { Button, Card, Form } from "react-bootstrap";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import RoleVisibilityTree from "../../userVisibility/components/UserVisibilityTree";
@@ -18,11 +22,13 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [modules, setModules] = useState<any[]>([]);
   const [showVisibility, setShowVisibility] = useState(false);
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(roleSchema),
@@ -40,6 +46,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
       const response = await roleService.getById(roleId);
       if (response.success) {
         reset(response.data);
+        setSelectedModules(response.data.modules || []);
         setShowVisibility(true);
       }
     } catch (error) {
@@ -54,21 +61,32 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
         setModules(response.data);
       }
     } catch (error) {
-      console.error("Error al cargar los módulos:", error);
+      console.error("Error al cargar los modulos:", error);
     }
+  };
+
+  const handleModuleChange = (moduleId: string, checked: boolean) => {
+    const newSelectedModules = checked
+      ? [...selectedModules, moduleId]
+      : selectedModules.filter((id) => id !== moduleId);
+
+    setSelectedModules(newSelectedModules);
+    setValue("modules", newSelectedModules);
   };
 
   const onSubmit = async (data: any) => {
     try {
       setLoading(true);
+      const submitData = { ...data, modules: selectedModules };
       const response = roleId
-        ? await roleService.update(roleId, data)
-        : await roleService.create(data);
+        ? await roleService.update(roleId, submitData)
+        : await roleService.create(submitData);
 
       if (response.success) {
         toast.success(response.message || "Rol guardado exitosamente");
         if (!roleId) {
           reset();
+          setSelectedModules([]);
         }
         if (onSave) {
           onSave();
@@ -86,70 +104,75 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
   };
 
   return (
-    <div className="container-fluid">
-      <Form onSubmit={handleSubmit(onSubmit)}>
+    <div className="container mx-auto">
+      <form onSubmit={handleSubmit(onSubmit)}>
         <Card>
-          <Card.Header>
-            <h4 className="card-title">{roleId ? "Editar" : "Nuevo"} Rol</h4>
-          </Card.Header>
-          <Card.Body>
-            <div className="row">
-              <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>Nombre</Form.Label>
-                  <Form.Control
-                    type="text"
-                    {...register("name")}
-                    isInvalid={!!errors.name}
-                  />
-                  {errors.name && (
-                    <Form.Control.Feedback type="invalid">
-                      {errors.name.message as string}
-                    </Form.Control.Feedback>
-                  )}
-                </Form.Group>
+          <CardHeader>
+            <h4 className="text-lg font-semibold">{roleId ? "Editar" : "Nuevo"} Rol</h4>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  {...register("name")}
+                  className={errors.name ? "border-red-500" : ""}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500">
+                    {errors.name.message as string}
+                  </p>
+                )}
               </div>
-              <div className="col-md-6">
-                <Form.Group className="mb-3">
-                  <Form.Label>Descripción</Form.Label>
-                  <Form.Control
-                    type="text"
-                    {...register("description")}
-                    isInvalid={!!errors.description}
-                  />
-                  {errors.description && (
-                    <Form.Control.Feedback type="invalid">
-                      {errors.description.message as string}
-                    </Form.Control.Feedback>
-                  )}
-                </Form.Group>
+              <div className="space-y-2">
+                <Label htmlFor="description">Descripcion</Label>
+                <Input
+                  id="description"
+                  type="text"
+                  {...register("description")}
+                  className={errors.description ? "border-red-500" : ""}
+                />
+                {errors.description && (
+                  <p className="text-sm text-red-500">
+                    {errors.description.message as string}
+                  </p>
+                )}
               </div>
             </div>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Módulos</Form.Label>
-              <div className="row">
+            <div className="mt-4 space-y-2">
+              <Label>Modulos</Label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {modules.map((module) => (
-                  <div key={module._id} className="col-md-4">
-                    <Form.Check
-                      type="checkbox"
-                      label={module.name}
-                      value={module._id}
-                      {...register("modules")}
+                  <div key={module._id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`module-${module._id}`}
+                      checked={selectedModules.includes(module._id)}
+                      onCheckedChange={(checked) =>
+                        handleModuleChange(module._id, checked as boolean)
+                      }
                     />
+                    <Label
+                      htmlFor={`module-${module._id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {module.name}
+                    </Label>
                   </div>
                 ))}
               </div>
-            </Form.Group>
+            </div>
 
-            <div className="text-end">
-              <Button type="submit" variant="primary" disabled={loading}>
+            <div className="flex justify-end mt-6">
+              <Button type="submit" disabled={loading}>
                 {loading ? "Guardando..." : "Guardar"}
               </Button>
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
-      </Form>
+      </form>
 
       {showVisibility && roleId && (
         <div className="mt-4">

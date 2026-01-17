@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Row, Col, Spinner } from "react-bootstrap";
+import { Loader2, Building2 } from "lucide-react";
 import { toast } from "react-toastify";
 import DateFilters from "./components/DateFilters";
 import BranchCard from "./components/BranchCard";
@@ -11,7 +11,6 @@ import ExpensesModal from "./components/ExpensesModal";
 import PurchasesModal from "./components/PurchasesModal";
 import { companyDashboardService } from "./services/companyDashboard";
 import { BranchStats, DateFilters as DateFiltersType, Employee, Sale, Expense, Purchase } from "./types";
-import { Building2 } from "lucide-react";
 
 const CompanyDashboardPage: React.FC = () => {
   const [branches, setBranches] = useState<BranchStats[]>([]);
@@ -161,14 +160,14 @@ const CompanyDashboardPage: React.FC = () => {
     <div className="container-fluid py-2">
       {/* Header */}
       <div className="mb-2">
-        <div className="d-flex justify-content-between align-items-start">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="mb-1 fw-bold">Dashboard de Empresa</h2>
-            <p className="text-muted mb-0">
+            <h2 className="mb-1 font-bold">Dashboard de Empresa</h2>
+            <p className="text-muted-foreground mb-0">
               Visualiza y gestiona todas tus sucursales
             </p>
           </div>
-          <div className="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle" style={{ width: "50px", height: "50px" }}>
+          <div className="bg-primary text-white flex items-center justify-center rounded-full" style={{ width: "50px", height: "50px" }}>
             <Building2 size={28} />
           </div>
         </div>
@@ -184,8 +183,8 @@ const CompanyDashboardPage: React.FC = () => {
           style={{ borderRadius: "10px" }}
         >
           <div className="card-body p-4 text-center">
-            <Spinner animation="border" variant="primary" className="mb-3" />
-            <p className="text-muted mb-0">Cargando estadísticas...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+            <p className="text-muted-foreground mb-0">Cargando estadísticas...</p>
           </div>
         </div>
       ) : hasSearched ? (
@@ -195,9 +194,9 @@ const CompanyDashboardPage: React.FC = () => {
             style={{ borderRadius: "10px" }}
           >
             <div className="card-body p-4 text-center">
-              <Building2 size={48} className="text-muted mb-3" />
-              <h5 className="text-muted mb-2">No hay sucursales disponibles</h5>
-              <p className="text-muted mb-0" style={{ fontSize: "14px" }}>
+              <Building2 size={48} className="text-muted-foreground mb-3 mx-auto" />
+              <h5 className="text-muted-foreground mb-2">No hay sucursales disponibles</h5>
+              <p className="text-muted-foreground mb-0" style={{ fontSize: "14px" }}>
                 No se encontraron sucursales para tu usuario
               </p>
             </div>
@@ -205,16 +204,16 @@ const CompanyDashboardPage: React.FC = () => {
         ) : (
           <div className="mb-2">
             <div className="mb-2">
-              <h5 className="fw-semibold mb-1">
+              <h5 className="font-semibold mb-1">
                 Sucursales ({branches.length})
               </h5>
-              <p className="text-muted mb-0" style={{ fontSize: "14px" }}>
+              <p className="text-muted-foreground mb-0" style={{ fontSize: "14px" }}>
                 Haz clic en las estadísticas para ver detalles
               </p>
             </div>
-            <Row className="g-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {branches.map((branch) => (
-                <Col key={branch._id} xs={12} md={6} lg={4}>
+                <div key={branch._id}>
                   <BranchCard
                     branch={branch}
                     onEmployeesClick={() => handleEmployeesClick(branch)}
@@ -222,9 +221,9 @@ const CompanyDashboardPage: React.FC = () => {
                     onExpensesClick={() => handleExpensesClick(branch)}
                     onPurchasesClick={() => handlePurchasesClick(branch)}
                   />
-                </Col>
+                </div>
               ))}
-            </Row>
+            </div>
           </div>
         )
       ) : (
@@ -241,15 +240,15 @@ const CompanyDashboardPage: React.FC = () => {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
-                className="text-muted"
+                className="text-muted-foreground mx-auto"
               >
                 <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h5 className="text-muted mb-2">
+            <h5 className="text-muted-foreground mb-2">
               Los filtros se cargarán automáticamente
             </h5>
-            <p className="text-muted mb-0" style={{ fontSize: "14px" }}>
+            <p className="text-muted-foreground mb-0" style={{ fontSize: "14px" }}>
               Espera un momento mientras cargamos las estadísticas del mes actual
             </p>
           </div>

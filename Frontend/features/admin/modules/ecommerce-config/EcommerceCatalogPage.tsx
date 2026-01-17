@@ -2,23 +2,27 @@
 
 import { useState, useEffect } from "react";
 import {
-  Card,
-  Row,
-  Col,
-  Form,
-  Button,
-  Badge,
-  Spinner,
-  Alert,
-} from "react-bootstrap";
+  Search,
+  LayoutGrid,
+  List,
+  ShoppingCart,
+  Package,
+  CloudUpload,
+  Loader2,
+  AlertTriangle,
+} from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  TbSearch,
-  TbGridDots,
-  TbList,
-  TbShoppingCart,
-  TbPackage,
-  TbCloudUpload,
-} from "react-icons/tb";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { productListsService } from "@/features/admin/modules/product-lists/services/productLists";
 import { storageService } from "@/features/admin/modules/storage/services/storage";
 import { productCategoriesService } from "@/features/admin/modules/productCategories/services/productCategories";
@@ -74,13 +78,13 @@ export default function EcommerceCatalogPage() {
     try {
       setLoading(true);
 
-      // Obtener la configuración del gerente para obtener el branchId
+      // Obtener la configuracion del gerente para obtener el branchId
       const configResponse = await ecommerceConfigService.getManagerConfig();
       const branch = configResponse.data.branch;
       const config = configResponse.data.config;
 
       if (!branch?._id) {
-        toast.error("No se pudo obtener la información de la sucursal");
+        toast.error("No se pudo obtener la informacion de la sucursal");
         return;
       }
 
@@ -89,7 +93,7 @@ export default function EcommerceCatalogPage() {
         setConfigId(config._id);
       }
 
-      // Cargar productos, storage y categorías en paralelo
+      // Cargar productos, storage y categorias en paralelo
       const [productListResponse, storageResponse, categoriesResponse] =
         await Promise.all([
           productListsService.getProductListByBranch(branch._id),
@@ -147,7 +151,7 @@ export default function EcommerceCatalogPage() {
 
           console.log("Products with stock:", productsWithStock);
 
-          // Calcular precio máximo
+          // Calcular precio maximo
           const max = Math.max(
             ...productsWithStock.map((p) => p.precio || 0),
             10000
@@ -155,7 +159,7 @@ export default function EcommerceCatalogPage() {
           setMaxPrice(max);
           setPriceRange([0, max]);
 
-          // Calcular conteo de productos por categoría
+          // Calcular conteo de productos por categoria
           const counts: Record<string, number> = {};
           productsWithStock.forEach((product) => {
             const categoryId =
@@ -171,20 +175,20 @@ export default function EcommerceCatalogPage() {
 
           setProducts(productsWithStock);
           setFilteredProducts(productsWithStock);
-          
+
           // Inicializar el stock disponible en el store
           initializeStock(productsWithStock.map(p => ({ _id: p._id, stock: p.stock })));
         }
       }
 
-      // Establecer categorías
+      // Establecer categorias
       if (categoriesResponse.success) {
         console.log("Categories Response:", categoriesResponse.data);
         setCategories(categoriesResponse.data);
       }
     } catch (error: any) {
       console.error("Error al cargar datos:", error);
-      toast.error("Error al cargar el catálogo de productos");
+      toast.error("Error al cargar el catalogo de productos");
     } finally {
       setLoading(false);
     }
@@ -194,7 +198,7 @@ export default function EcommerceCatalogPage() {
   useEffect(() => {
     let filtered = [...products];
 
-    // Filtrar por búsqueda
+    // Filtrar por busqueda
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -204,7 +208,7 @@ export default function EcommerceCatalogPage() {
       );
     }
 
-    // Filtrar por categorías
+    // Filtrar por categorias
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(
         (p) =>
@@ -261,7 +265,7 @@ export default function EcommerceCatalogPage() {
     setSortBy("name");
   };
 
-  // Sincronizar productos con la configuración del e-commerce
+  // Sincronizar productos con la configuracion del e-commerce
   const syncProductsToEcommerce = async () => {
     if (!configId) {
       toast.error("No se ha configurado el e-commerce para esta sucursal");
@@ -271,10 +275,10 @@ export default function EcommerceCatalogPage() {
     try {
       setSyncingToEcommerce(true);
 
-      // Obtener la configuración actual para sumar al stock existente
+      // Obtener la configuracion actual para sumar al stock existente
       const configResponse = await ecommerceConfigService.getManagerConfig();
       const currentItemsStock = configResponse.data.config?.itemsStock || [];
-      
+
       // Crear mapa de items existentes
       const existingItemsMap = new Map(
         currentItemsStock.map((item: any) => [item.productId || item._id, item])
@@ -283,7 +287,7 @@ export default function EcommerceCatalogPage() {
       // Preparar los productos para sincronizar
       const itemsStock = products.map(product => {
         const existingItem = existingItemsMap.get(product._id);
-        
+
         return {
           _id: product._id,
           productId: product._id,
@@ -293,15 +297,15 @@ export default function EcommerceCatalogPage() {
           // Si ya existe, sumar el stock del storage al existente
           stock: existingItem ? (existingItem.stock + product.stock) : product.stock,
           imagen: product.imagen,
-          productCategory: typeof product.productCategory === 'string' 
-            ? product.productCategory 
+          productCategory: typeof product.productCategory === 'string'
+            ? product.productCategory
             : product.productCategory?._id,
           originalPrice: product.originalPrice,
           discountPercentage: product.discountPercentage
         };
       });
 
-      // Mantener productos que ya estaban pero no están en el storage actual
+      // Mantener productos que ya estaban pero no estan en el storage actual
       currentItemsStock.forEach((existingItem: any) => {
         const productId = existingItem.productId || existingItem._id;
         if (!products.find(p => p._id === productId)) {
@@ -309,12 +313,12 @@ export default function EcommerceCatalogPage() {
         }
       });
 
-      // Actualizar la configuración y vaciar el storage
+      // Actualizar la configuracion y vaciar el storage
       await ecommerceConfigService.updateItemsStock(configId, itemsStock, true, true); // deductFromStorage=true, transferAll=true
-      
+
       toast.success(`Stock transferido completamente al e-commerce. Storage vaciado.`);
-      
-      // Recargar los datos para reflejar el storage vacío
+
+      // Recargar los datos para reflejar el storage vacio
       await loadInitialData();
     } catch (error) {
       console.error("Error al sincronizar productos:", error);
@@ -326,24 +330,24 @@ export default function EcommerceCatalogPage() {
 
   if (loading) {
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "400px" }}
-      >
-        <Spinner animation="border" variant="primary" />
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (hasNoStorage) {
     return (
-      <Alert variant="warning" className="m-4">
-        <TbPackage size={24} className="me-2" />
-        <strong>No hay almacén configurado</strong>
-        <p className="mb-0 mt-2">
-          Esta sucursal no tiene un almacén configurado. Por favor, configure un
-          almacén para ver los productos disponibles.
-        </p>
+      <Alert variant="destructive" className="m-4">
+        <AlertTriangle className="h-5 w-5" />
+        <AlertTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          No hay almacen configurado
+        </AlertTitle>
+        <AlertDescription>
+          Esta sucursal no tiene un almacen configurado. Por favor, configure un
+          almacen para ver los productos disponibles.
+        </AlertDescription>
       </Alert>
     );
   }
@@ -354,132 +358,120 @@ export default function EcommerceCatalogPage() {
       <CartModal branchId={branchId} onProductsSaved={loadInitialData} />
 
       {/* Header */}
-      <div className="bg-white border-bottom px-4 py-3 mb-4">
-        <Row className="align-items-center g-3">
-          <Col xs={12} md={2} lg={2}>
-            <h6 className="mb-0 text-muted">
+      <div className="bg-background border-b px-4 py-3 mb-4">
+        <div className="grid grid-cols-12 gap-3 items-center">
+          <div className="col-span-12 md:col-span-2">
+            <h6 className="text-sm text-muted-foreground mb-0">
               {filteredProducts.length} Productos
             </h6>
-          </Col>
-          <Col xs={12} md={4} lg={4}>
-            <div className="position-relative">
-              <TbSearch
-                className="position-absolute top-50 translate-middle-y ms-3 text-muted"
-                size={20}
-              />
-              <Form.Control
+          </div>
+          <div className="col-span-12 md:col-span-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
                 type="text"
                 placeholder="Buscar productos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="ps-5"
-                size="sm"
+                className="pl-9 h-9"
               />
             </div>
-          </Col>
-          <Col xs={12} md={6} lg={6} className="text-md-end">
-            <div className="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-              <Form.Select
-                size="sm"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                style={{ width: "auto", maxWidth: "180px" }}
-              >
-                <option value="name">Nombre</option>
-                <option value="price-asc">Precio ↑</option>
-                <option value="price-desc">Precio ↓</option>
-                <option value="stock">Stock</option>
-              </Form.Select>
+          </div>
+          <div className="col-span-12 md:col-span-6">
+            <div className="flex items-center justify-end gap-2 flex-wrap">
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue placeholder="Ordenar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Nombre</SelectItem>
+                  <SelectItem value="price-asc">Precio ↑</SelectItem>
+                  <SelectItem value="price-desc">Precio ↓</SelectItem>
+                  <SelectItem value="stock">Stock</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* View Mode Buttons */}
-              <div className="btn-group" role="group">
+              <div className="flex border rounded-md">
                 <Button
-                  variant={
-                    viewMode === "grid" ? "primary" : "outline-secondary"
-                  }
+                  variant={viewMode === "grid" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("grid")}
+                  className="rounded-r-none h-9"
                 >
-                  <TbGridDots size={18} />
+                  <LayoutGrid className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={
-                    viewMode === "list" ? "primary" : "outline-secondary"
-                  }
+                  variant={viewMode === "list" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("list")}
+                  className="rounded-l-none h-9"
                 >
-                  <TbList size={18} />
+                  <List className="h-4 w-4" />
                 </Button>
               </div>
 
               {/* Sync to Ecommerce Button */}
               <Button
-                variant="success"
+                variant="default"
                 size="sm"
                 onClick={syncProductsToEcommerce}
                 disabled={syncingToEcommerce || products.length === 0}
-                className="d-flex align-items-center gap-1"
-                title="Transfiere TODO el stock del almacén al e-commerce"
+                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 h-9"
+                title="Transfiere TODO el stock del almacen al e-commerce"
               >
                 {syncingToEcommerce ? (
-                  <Spinner animation="border" size="sm" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <TbCloudUpload size={18} />
+                  <CloudUpload className="h-4 w-4" />
                 )}
-                <span className="d-none d-sm-inline">
+                <span className="hidden sm:inline">
                   {syncingToEcommerce ? "Transfiriendo..." : "Transferir Todo"}
                 </span>
               </Button>
 
               {/* Cart Button */}
               <Button
-                variant="warning"
+                variant="secondary"
                 size="sm"
                 onClick={openCart}
-                className="position-relative"
+                className="relative bg-yellow-500 hover:bg-yellow-600 text-white h-9"
               >
-                <TbShoppingCart size={18} />
+                <ShoppingCart className="h-4 w-4" />
                 {totalItemsInCart > 0 && (
                   <Badge
-                    bg="danger"
-                    pill
-                    className="position-absolute"
-                    style={{
-                      top: "-8px",
-                      right: "-8px",
-                      fontSize: "0.65rem",
-                    }}
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full"
                   >
                     {totalItemsInCart}
                   </Badge>
                 )}
               </Button>
             </div>
-          </Col>
-        </Row>
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
-      <Row className="g-4 px-3">
+      <div className="grid grid-cols-12 gap-4 px-3">
         {/* Sidebar Filters */}
-        <Col lg={3}>
+        <div className="col-span-12 lg:col-span-3">
           <Card className="border-0 shadow-sm mb-3">
-            <Card.Header className="bg-light border-0">
-              <div className="d-flex justify-content-between align-items-center">
-                <h6 className="mb-0">Filtros</h6>
+            <CardHeader className="bg-muted/50 border-0 py-3">
+              <div className="flex justify-between items-center">
+                <h6 className="text-sm font-medium mb-0">Filtros</h6>
                 <Button
                   variant="link"
                   size="sm"
-                  className="p-0 text-decoration-none"
+                  className="p-0 h-auto text-xs"
                   onClick={clearFilters}
                 >
                   Limpiar
                 </Button>
               </div>
-            </Card.Header>
-            <Card.Body>
-              {/* Categorías */}
+            </CardHeader>
+            <CardContent className="pt-4">
+              {/* Categorias */}
               <CategoryFilter
                 categories={categories}
                 selectedCategories={selectedCategories}
@@ -494,39 +486,31 @@ export default function EcommerceCatalogPage() {
                 value={priceRange}
                 onChange={handlePriceRangeChange}
               />
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
         {/* Products Grid/List */}
-        <Col lg={9}>
+        <div className="col-span-12 lg:col-span-9">
           {filteredProducts.length === 0 ? (
             <Card className="border-0 shadow-sm">
-              <Card.Body className="text-center py-5">
-                <TbPackage size={64} className="text-muted mb-3" />
-                <h5>No se encontraron productos</h5>
-                <p className="text-muted">
-                  Intenta ajustar los filtros o términos de búsqueda
+              <CardContent className="text-center py-12">
+                <Package className="h-16 w-16 text-muted-foreground mx-auto mb-3" />
+                <h5 className="text-lg font-medium">No se encontraron productos</h5>
+                <p className="text-muted-foreground">
+                  Intenta ajustar los filtros o terminos de busqueda
                 </p>
-              </Card.Body>
+              </CardContent>
             </Card>
           ) : (
-            <Row className={viewMode === "grid" ? "g-3" : "g-2"}>
+            <div className={`grid gap-3 ${viewMode === "grid" ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"}`}>
               {filteredProducts.map((product) => (
-                <Col
-                  key={product._id}
-                  xs={12}
-                  sm={viewMode === "grid" ? 6 : 12}
-                  md={viewMode === "grid" ? 4 : 12}
-                  lg={viewMode === "grid" ? 3 : 12}
-                >
-                  <ProductCard product={product} viewMode={viewMode} />
-                </Col>
+                <ProductCard key={product._id} product={product} viewMode={viewMode} />
               ))}
-            </Row>
+            </div>
           )}
-        </Col>
-      </Row>
+        </div>
+      </div>
     </div>
   );
 }

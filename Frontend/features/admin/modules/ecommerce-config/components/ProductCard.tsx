@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
-import { Card, Badge, Button, InputGroup, Form } from "react-bootstrap";
-import { TbShoppingCart, TbStar, TbStarFilled, TbPackage, TbPlus, TbMinus } from "react-icons/tb";
+import { ShoppingCart, Star, Package, Plus, Minus } from "lucide-react";
 import Image from "next/image";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useCartStore } from "../store/cartStore";
 import { toast } from "react-toastify";
 import { ecommerceConfigService } from "../services/ecommerceConfig";
@@ -28,23 +31,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
   const [quantity, setQuantity] = useState(1);
   const [stockInEcommerce, setStockInEcommerce] = useState(0);
   const [availableStock, setAvailableStock] = useState(product.stock);
-  
+
   const addToCart = useCartStore((state) => state.addToCart);
   const items = useCartStore((state) => state.items);
   const getAvailableStock = useCartStore((state) => state.getAvailableStock);
-  
+
   // Obtener stock comprometido en itemsStock
   useEffect(() => {
     const getStockInEcommerce = async () => {
       try {
         const response = await ecommerceConfigService.getManagerConfig();
         const itemsStock = response.data.config?.itemsStock || [];
-        const productInEcommerce = itemsStock.find((item: any) => 
+        const productInEcommerce = itemsStock.find((item: any) =>
           item.productId === product._id || item._id === product._id
         );
         const ecommerceStock = productInEcommerce?.stock || 0;
         setStockInEcommerce(ecommerceStock);
-        
+
         // Calcular stock disponible real
         const stockInCart = items.find(item => item._id === product._id)?.quantity || 0;
         const realAvailable = product.stock - ecommerceStock - stockInCart;
@@ -56,10 +59,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
         setAvailableStock(Math.max(0, product.stock - stockInCart));
       }
     };
-    
+
     getStockInEcommerce();
   }, [product._id, product.stock, items]);
-  
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -70,10 +73,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
   const handleAddToCart = () => {
     // Validar contra el stock disponible real
     if (quantity > availableStock) {
-      toast.error(`No se puede tener más stock en el e-commerce que en el storage. Storage: ${product.stock}, En e-commerce: ${stockInEcommerce}, En carrito: ${items.find(item => item._id === product._id)?.quantity || 0}, Disponible: ${availableStock}`);
+      toast.error(`No se puede tener mas stock en el e-commerce que en el storage. Storage: ${product.stock}, En e-commerce: ${stockInEcommerce}, En carrito: ${items.find(item => item._id === product._id)?.quantity || 0}, Disponible: ${availableStock}`);
       return;
     }
-    
+
     if (quantity > 0) {
       addToCart({
         _id: product._id,
@@ -86,11 +89,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
       }, quantity);
       toast.success(`${quantity} ${product.nombre} agregado(s) al carrito`);
       setQuantity(1);
-      
-      // Actualizar stock disponible después de agregar
+
+      // Actualizar stock disponible despues de agregar
       setAvailableStock(prev => Math.max(0, prev - quantity));
     } else {
-      toast.error("Cantidad inválida");
+      toast.error("Cantidad invalida");
     }
   };
 
@@ -101,106 +104,104 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
     }
   };
 
-  const getStockBadgeColor = (stock: number) => {
-    if (stock > 20) return "success";
-    if (stock > 10) return "warning";
-    return "danger";
+  const getStockBadgeVariant = (stock: number): "default" | "secondary" | "destructive" => {
+    if (stock > 20) return "default";
+    if (stock > 10) return "secondary";
+    return "destructive";
   };
 
   const renderRating = (rating: number = 4) => {
     return (
-      <div className="d-flex gap-1 mb-2">
+      <div className="flex gap-1 mb-2">
         {[1, 2, 3, 4, 5].map((star) => (
-          star <= rating ? 
-            <TbStarFilled key={star} size={14} className="text-warning" /> :
-            <TbStar key={star} size={14} className="text-muted" />
+          <Star
+            key={star}
+            className={`h-3.5 w-3.5 ${star <= rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`}
+          />
         ))}
-        <small className="text-muted ms-1">({Math.floor(Math.random() * 50) + 10})</small>
+        <small className="text-muted-foreground ml-1">({Math.floor(Math.random() * 50) + 10})</small>
       </div>
     );
   };
 
   if (viewMode === "list") {
     return (
-      <Card className="border-0 shadow-sm h-100 product-card-list">
-        <Card.Body>
-          <div className="d-flex">
+      <Card className="border-0 shadow-sm h-full hover:shadow-md transition-shadow">
+        <CardContent className="p-4">
+          <div className="flex gap-4">
             {/* Image */}
-            <div className="flex-shrink-0 me-3" style={{ width: "120px", height: "120px" }}>
-              <div className="bg-light rounded d-flex align-items-center justify-content-center h-100">
+            <div className="flex-shrink-0 w-[120px] h-[120px]">
+              <div className="bg-muted rounded-lg flex items-center justify-center h-full">
                 {product.imageUrl ? (
-                  <Image 
-                    src={product.imageUrl} 
+                  <Image
+                    src={product.imageUrl}
                     alt={product.nombre || "Producto"}
                     width={100}
                     height={100}
-                    className="img-fluid"
+                    className="object-contain"
                   />
                 ) : (
-                  <TbPackage size={48} className="text-muted" />
+                  <Package className="h-12 w-12 text-muted-foreground" />
                 )}
               </div>
             </div>
 
             {/* Product Info */}
-            <div className="flex-grow-1">
-              <div className="d-flex justify-content-between align-items-start">
+            <div className="flex-grow">
+              <div className="flex justify-between items-start">
                 <div>
-                  <h6 className="mb-1">{product.nombre || "Sin nombre"}</h6>
-                  <p className="text-muted small mb-2">
-                    {product.descripcion || "Sin descripción"}
+                  <h6 className="font-medium mb-1">{product.nombre || "Sin nombre"}</h6>
+                  <p className="text-muted-foreground text-sm mb-2">
+                    {product.descripcion || "Sin descripcion"}
                   </p>
                   {renderRating()}
                 </div>
-                <div className="text-end">
+                <div className="text-right">
                   {product.discountPercentage && (
-                    <Badge bg="danger" className="mb-2">
+                    <Badge variant="destructive" className="mb-2">
                       -{product.discountPercentage}% OFF
                     </Badge>
                   )}
                   <div>
                     {product.originalPrice && (
-                      <div className="text-muted text-decoration-line-through small">
+                      <div className="text-muted-foreground line-through text-sm">
                         {formatPrice(product.originalPrice)}
                       </div>
                     )}
-                    <h5 className="text-primary mb-0">
+                    <h5 className="text-primary font-bold text-lg">
                       {formatPrice(product.precio || 0)}
                     </h5>
                   </div>
-                  <div className="d-flex flex-column gap-1">
-                    <Badge 
-                      bg={getStockBadgeColor(product.stock)} 
-                      className="mt-2"
+                  <div className="flex flex-col gap-1 mt-2">
+                    <Badge
+                      variant={getStockBadgeVariant(product.stock)}
                     >
                       Storage: {product.stock}
                     </Badge>
                     {stockInEcommerce > 0 && (
-                      <Badge 
-                        bg="info"
-                      >
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                         E-commerce: {stockInEcommerce}
                       </Badge>
                     )}
-                    <Badge 
-                      bg={availableStock > 0 ? "success" : "danger"}
+                    <Badge
+                      variant={availableStock > 0 ? "default" : "destructive"}
+                      className={availableStock > 0 ? "bg-green-600" : ""}
                     >
                       Disponible: {availableStock}
                     </Badge>
                   </div>
-                  <div className="d-flex gap-2 mt-2">
-                    <div className="d-flex align-items-center border rounded" style={{ padding: "2px" }}>
-                      <Button 
-                        variant="link" 
+                  <div className="flex gap-2 mt-2">
+                    <div className="flex items-center border rounded-md">
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleQuantityChange(-1)}
                         disabled={quantity <= 1}
-                        className="p-1 text-secondary"
-                        style={{ border: "none", background: "none" }}
+                        className="h-8 w-8 p-0"
                       >
-                        <TbMinus size={16} />
+                        <Minus className="h-4 w-4" />
                       </Button>
-                      <input
+                      <Input
                         type="number"
                         value={quantity}
                         onChange={(e) => {
@@ -209,70 +210,64 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
                             setQuantity(val);
                           }
                         }}
-                        className="text-center border-0"
-                        style={{ 
-                          width: "40px", 
-                          outline: "none",
-                          appearance: "textfield"
-                        }}
+                        className="w-10 h-8 text-center border-0 p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <Button 
-                        variant="link" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleQuantityChange(1)}
                         disabled={quantity >= availableStock}
-                        className="p-1 text-secondary"
-                        style={{ border: "none", background: "none" }}
+                        className="h-8 w-8 p-0"
                       >
-                        <TbPlus size={16} />
+                        <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Button 
-                      variant="primary" 
+                    <Button
                       size="sm"
                       onClick={handleAddToCart}
+                      className="h-8"
                     >
-                      <TbShoppingCart size={14} /> Agregar
+                      <ShoppingCart className="h-4 w-4 mr-1" /> Agregar
                     </Button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </Card.Body>
+        </CardContent>
       </Card>
     );
   }
 
   // Grid View
   return (
-    <Card className="border-0 shadow-sm h-100 product-card">
+    <Card className="border-0 shadow-sm h-full hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
       {/* Discount Badge */}
       {product.discountPercentage && (
-        <div className="position-absolute top-0 end-0 m-2" style={{ zIndex: 1 }}>
-          <Badge bg="danger">-{product.discountPercentage}% OFF</Badge>
+        <div className="absolute top-2 right-2 z-10">
+          <Badge variant="destructive">-{product.discountPercentage}% OFF</Badge>
         </div>
       )}
 
       {/* Product Image */}
-      <div className="position-relative" style={{ height: "200px", backgroundColor: "#f8f9fa" }}>
+      <div className="relative h-[200px] bg-muted">
         {product.imageUrl ? (
-          <Image 
-            src={product.imageUrl} 
+          <Image
+            src={product.imageUrl}
             alt={product.nombre || "Producto"}
             fill
-            className="object-fit-contain p-3"
+            className="object-contain p-3"
           />
         ) : (
-          <div className="h-100 d-flex align-items-center justify-content-center">
-            <TbPackage size={64} className="text-muted" />
+          <div className="h-full flex items-center justify-center">
+            <Package className="h-16 w-16 text-muted-foreground" />
           </div>
         )}
       </div>
 
-      <Card.Body className="d-flex flex-column">
+      <CardContent className="flex flex-col p-4">
         {/* Product Name */}
-        <h6 className="mb-2 text-truncate" title={product.nombre}>
+        <h6 className="font-medium mb-2 truncate" title={product.nombre}>
           {product.nombre || "Sin nombre"}
         </h6>
 
@@ -280,66 +275,60 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
         {renderRating()}
 
         {/* Description */}
-        <p className="text-muted small mb-3 flex-grow-1" style={{ 
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden"
-        }}>
-          {product.descripcion || "Sin descripción disponible"}
+        <p className="text-muted-foreground text-sm mb-3 flex-grow line-clamp-2">
+          {product.descripcion || "Sin descripcion disponible"}
         </p>
 
         {/* Price */}
         <div className="mb-2">
           {product.originalPrice && (
-            <span className="text-muted text-decoration-line-through small me-2">
+            <span className="text-muted-foreground line-through text-sm mr-2">
               {formatPrice(product.originalPrice)}
             </span>
           )}
-          <h5 className="text-primary mb-0">
+          <h5 className="text-primary font-bold text-lg inline">
             {formatPrice(product.precio || 0)}
           </h5>
         </div>
 
         {/* Stock Badges */}
-        <div className="d-flex flex-wrap gap-1 mb-2">
-          <Badge 
-            bg={getStockBadgeColor(product.stock)}
-            className="px-2 py-1"
+        <div className="flex flex-wrap gap-1 mb-2">
+          <Badge
+            variant={getStockBadgeVariant(product.stock)}
+            className="px-2 py-0.5 text-xs"
           >
-            <TbPackage size={12} className="me-1" />
+            <Package className="h-3 w-3 mr-1" />
             Storage: {product.stock}
           </Badge>
           {stockInEcommerce > 0 && (
-            <Badge 
-              bg="info"
-              className="px-2 py-1"
+            <Badge
+              variant="secondary"
+              className="px-2 py-0.5 text-xs bg-blue-100 text-blue-800"
             >
               E-com: {stockInEcommerce}
             </Badge>
           )}
-          <Badge 
-            bg={availableStock > 0 ? "success" : "danger"}
-            className="px-2 py-1"
+          <Badge
+            variant={availableStock > 0 ? "default" : "destructive"}
+            className={`px-2 py-0.5 text-xs ${availableStock > 0 ? "bg-green-600" : ""}`}
           >
             Disp: {availableStock}
           </Badge>
         </div>
-        
+
         {/* Quantity and Add to Cart */}
-        <div className="d-flex gap-2">
-          <div className="d-flex align-items-center border rounded" style={{ padding: "2px" }}>
-            <Button 
-              variant="link" 
+        <div className="flex gap-2">
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => handleQuantityChange(-1)}
               disabled={quantity <= 1}
-              className="p-1 text-secondary"
-              style={{ border: "none", background: "none" }}
+              className="h-8 w-8 p-0"
             >
-              <TbMinus size={16} />
+              <Minus className="h-4 w-4" />
             </Button>
-            <input
+            <Input
               type="number"
               value={quantity}
               onChange={(e) => {
@@ -348,59 +337,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
                   setQuantity(val);
                 }
               }}
-              className="text-center border-0"
-              style={{ 
-                width: "40px", 
-                outline: "none",
-                appearance: "textfield"
-              }}
+              className="w-10 h-8 text-center border-0 p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <Button 
-              variant="link" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => handleQuantityChange(1)}
               disabled={quantity >= availableStock}
-              className="p-1 text-secondary"
-              style={{ border: "none", background: "none" }}
+              className="h-8 w-8 p-0"
             >
-              <TbPlus size={16} />
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
-          <Button 
-            variant="primary" 
+          <Button
             size="sm"
-            className="flex-grow-1"
+            className="flex-grow h-8"
             onClick={handleAddToCart}
           >
-            <TbShoppingCart size={16} />
+            <ShoppingCart className="h-4 w-4" />
           </Button>
         </div>
-      </Card.Body>
-
-      <style jsx>{`
-        .product-card {
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .product-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
-        }
-        .product-card-list {
-          transition: box-shadow 0.2s;
-        }
-        .product-card-list:hover {
-          box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
-        }
-        /* Ocultar flechas del input number */
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        input[type="number"] {
-          -moz-appearance: textfield;
-        }
-      `}</style>
+      </CardContent>
     </Card>
   );
 };

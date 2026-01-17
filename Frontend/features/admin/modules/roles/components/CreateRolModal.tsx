@@ -1,10 +1,24 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { Plus } from "lucide-react";
+"use client";
+
+import { Plus, Loader2 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { Button, Form, Modal } from "react-bootstrap";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { rolesService } from "../services/roles";
 import { Module, Page, SelectedModules } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CreateRoleModalProps {
   pages: Page[];
@@ -59,7 +73,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
   const getStatusIndicator = useCallback(
     (page: Page) => {
       if (page.modules.length === 0) {
-        return <span className="ms-2 text-danger">○</span>;
+        return <span className="ml-2 text-destructive">○</span>;
       }
 
       const hasSelectedModules = page.modules.some(
@@ -67,9 +81,9 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
       );
 
       if (hasSelectedModules) {
-        return <span className="ms-2 text-success">●</span>;
+        return <span className="ml-2 text-green-600">●</span>;
       }
-      return <span className="ms-2 text-warning">○</span>;
+      return <span className="ml-2 text-yellow-600">○</span>;
     },
     [selectedModules]
   );
@@ -113,114 +127,111 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
 
   return (
     <>
-      <Button variant="primary" onClick={handleShow}>
-        <Plus size={16} className="me-2" />
-        Nuevo
+      <Button onClick={handleShow}>
+        <Plus className="h-4 w-4 mr-2" />
+        Nuevo Rol
       </Button>
 
-      <Modal
-        show={show}
-        onHide={handleClose}
-        size="lg"
-        centered
-        backdrop="static"
-        keyboard={!loading}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Crear Nuevo Rol</Modal.Title>
-        </Modal.Header>
+      <Dialog open={show} onOpenChange={(open) => !loading && setShow(open)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Rol</DialogTitle>
+            <DialogDescription>
+              Define un nombre y selecciona los módulos para el nuevo rol
+            </DialogDescription>
+          </DialogHeader>
 
-        <Form onSubmit={handleSubmit}>
-          <Modal.Body>
-            <Form.Group className="mb-3">
-              <Form.Label>Nombre del rol *</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Escriba el nombre del rol"
-                value={roleName}
-                onChange={handleRoleNameChange}
-                disabled={loading}
-                required
-                autoFocus
-              />
-            </Form.Group>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="roleName">
+                  Nombre del rol <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="roleName"
+                  type="text"
+                  placeholder="Escriba el nombre del rol"
+                  value={roleName}
+                  onChange={handleRoleNameChange}
+                  disabled={loading}
+                  required
+                  autoFocus
+                />
+              </div>
 
-            <div className="mb-2">
-              <Form.Label className="fw-bold" style={{ fontSize: "14px" }}>
-                Módulos ({selectedCount} seleccionados)
-              </Form.Label>
-            </div>
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Módulos ({selectedCount} seleccionados)
+                </Label>
 
-            <div
-              style={{
-                maxHeight: "350px",
-                overflowY: "auto",
-                border: "1px solid #dee2e6",
-                borderRadius: "0.375rem",
-              }}
-            >
-              {pages.map((page: Page) => (
-                <div key={page._id} className="border-bottom">
-                  <div
-                    className="bg-light px-3 py-2"
-                    style={{ fontSize: "13px", color: "#495057" }}
-                  >
-                    <div className="d-flex align-items-center">
-                      <strong>{page.name}</strong>
-                      {getStatusIndicator(page)}
-                    </div>
-                  </div>
+                <ScrollArea className="h-[350px] border rounded-md">
+                  {pages.map((page: Page) => (
+                    <div key={page._id} className="border-b last:border-b-0">
+                      <div className="bg-muted px-3 py-2 text-sm">
+                        <div className="flex items-center">
+                          <span className="font-semibold">{page.name}</span>
+                          {getStatusIndicator(page)}
+                        </div>
+                      </div>
 
-                  {page.modules.map((module: Module) => (
-                    <div key={module._id} className="px-3 py-2 border-bottom">
-                      <Form.Check
-                        type="checkbox"
-                        id={`modal-${module._id}`}
-                        label={module.name}
-                        checked={selectedModules[module._id] || false}
-                        onChange={(e) =>
-                          handleModuleChange(module._id, e.target.checked)
-                        }
-                        disabled={loading}
-                        style={{ fontSize: "13px" }}
-                      />
+                      {page.modules.map((module: Module) => (
+                        <div
+                          key={module._id}
+                          className="flex items-center space-x-2 px-3 py-2 border-b last:border-b-0"
+                        >
+                          <Checkbox
+                            id={`modal-${module._id}`}
+                            checked={selectedModules[module._id] || false}
+                            onCheckedChange={(checked) =>
+                              handleModuleChange(module._id, checked as boolean)
+                            }
+                            disabled={loading}
+                          />
+                          <label
+                            htmlFor={`modal-${module._id}`}
+                            className="text-sm cursor-pointer flex-1"
+                          >
+                            {module.name}
+                          </label>
+                        </div>
+                      ))}
+
+                      {page.modules.length === 0 && (
+                        <div className="px-3 py-3 text-center">
+                          <span className="text-muted-foreground text-sm italic">
+                            Sin módulos disponibles
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
-
-                  {page.modules.length === 0 && (
-                    <div className="px-3 py-3 text-center">
-                      <span
-                        className="text-muted fst-italic"
-                        style={{ fontSize: "12px" }}
-                      >
-                        Sin módulos disponibles
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
+                </ScrollArea>
+              </div>
             </div>
-          </Modal.Body>
 
-          <Modal.Footer>
-            <Button
-              variant="light"
-              onClick={handleClose}
-              disabled={loading}
-              className="fw-medium px-4"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={loading || !roleName.trim()}
-            >
-              {loading ? "Creando..." : "Crear Rol"}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading || !roleName.trim()}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  "Crear Rol"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

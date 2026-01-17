@@ -1,14 +1,15 @@
 import React from 'react';
-import { Button, Spinner, Accordion } from 'react-bootstrap';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Accordion } from '@/components/ui/accordion';
 import BannerSection from './sections/BannerSection';
 import CarouselSection from './sections/CarouselSection';
 import DeliverySection from './sections/DeliverySection';
 import PromotionsSection from './sections/PromotionsSection';
 import ProductCatalogSection from './sections/ProductCatalogSection';
-import type { 
-  EcommerceConfigFeaturedElements, 
+import type {
+  EcommerceConfigFeaturedElements,
   PromotionItem,
-  CarouselImage
 } from '../../../types';
 
 interface FeaturedElementsTabProps {
@@ -45,9 +46,9 @@ const FeaturedElementsTab: React.FC<FeaturedElementsTabProps> = ({
 
   return (
     <div>
-      <h5 className="mb-4">Configura los elementos destacados de tu tienda</h5>
-      
-      <Accordion defaultActiveKey="banner" className="mb-4">
+      <h5 className="mb-4 text-lg font-semibold">Configura los elementos destacados de tu tienda</h5>
+
+      <Accordion type="single" collapsible defaultValue="banner" className="mb-4 space-y-3">
         <BannerSection
           bannerEnabled={featuredElements.banner.enabled}
           setBannerEnabled={(enabled) => setFeaturedElements({
@@ -223,13 +224,12 @@ const FeaturedElementsTab: React.FC<FeaturedElementsTabProps> = ({
         />
       </Accordion>
 
-      <div className="d-flex justify-content-end mt-4">
-        <Button 
-          variant="primary"
+      <div className="flex justify-end mt-4">
+        <Button
           onClick={onSave}
           disabled={saving}
         >
-          {saving ? <Spinner animation="border" size="sm" className="me-2" /> : null}
+          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Guardar cambios
         </Button>
       </div>

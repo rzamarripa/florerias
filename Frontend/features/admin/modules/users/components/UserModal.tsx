@@ -1,16 +1,35 @@
+"use client";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Plus, Upload, X } from "lucide-react";
+import { Eye, EyeOff, Plus, Upload, X, Pencil, Loader2 } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
-import { Button, Col, Form, Modal, Row } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
-import { BsPencil } from "react-icons/bs";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { Role } from "../../roles/types";
 import { UserFormData, userFormSchema } from "../schemas/userSchema";
 import { usersService } from "../services/users";
 import type { User } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface UsersModalProps {
   user?: User;
@@ -25,7 +44,8 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [removedExistingImage, setRemovedExistingImage] = useState<boolean>(false);
+  const [removedExistingImage, setRemovedExistingImage] =
+    useState<boolean>(false);
 
   const isEditing = Boolean(user);
   const { getIsSuperAdmin } = useUserRoleStore();
@@ -54,34 +74,24 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     control,
     formState: { errors },
     reset,
-    setValue
+    setValue,
   } = form;
 
-
-
-  // Función para obtener la URL de la imagen del usuario
   const getUserImageUrl = (user: User): string | null => {
     if (user?.profile?.image?.data) {
-      const imageUrl = `data:${user.profile.image.contentType};base64,${user.profile.image.data}`;
-      console.log('User image URL generated:', imageUrl.substring(0, 50) + '...');
-      return imageUrl;
+      return `data:${user.profile.image.contentType};base64,${user.profile.image.data}`;
     }
-    console.log('No user image data found');
     return null;
   };
 
   useEffect(() => {
     if (isOpen) {
       if (isEditing && user) {
-        console.log('Opening modal in edit mode for user:', user.username);
-        console.log('User profile image:', user.profile?.image);
-
-        // Resetear el estado de imagen removida
         setRemovedExistingImage(false);
 
         let roleValue = "";
         if (user.role) {
-          if (typeof user.role === 'object') {
+          if (typeof user.role === "object") {
             roleValue = user.role._id;
           } else {
             roleValue = user.role;
@@ -99,17 +109,13 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
         setValue("profile.estatus", user.profile?.estatus ?? true);
         setValue("role", roleValue);
 
-        // Configurar la imagen del usuario para edición
         const userImageUrl = getUserImageUrl(user);
         if (userImageUrl) {
-          console.log('Setting image preview for user');
           setImagePreview(userImageUrl);
         } else {
-          console.log('No image to set for user');
           setImagePreview(null);
         }
       } else {
-        console.log('Opening modal in create mode');
         setRemovedExistingImage(false);
         reset({
           username: "",
@@ -130,15 +136,13 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     }
   }, [isOpen, isEditing, user, reset, setValue]);
 
-
-  // Efecto para actualizar automáticamente el fullName cuando cambien name o lastName
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      if (name === 'profile.name' || name === 'profile.lastName') {
-        const name = form.getValues('profile.name') || '';
-        const lastName = form.getValues('profile.lastName') || '';
+      if (name === "profile.name" || name === "profile.lastName") {
+        const name = form.getValues("profile.name") || "";
+        const lastName = form.getValues("profile.lastName") || "";
         const fullName = getFullName(name, lastName);
-        form.setValue('profile.fullName', fullName);
+        form.setValue("profile.fullName", fullName);
       }
     });
     return () => subscription.unsubscribe();
@@ -149,7 +153,9 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     if (file) {
       if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
         toast.error("Por favor selecciona un archivo JPG o PNG válido");
-        const fileInput = document.getElementById("imageInput") as HTMLInputElement;
+        const fileInput = document.getElementById(
+          "imageInput"
+        ) as HTMLInputElement;
         if (fileInput) {
           fileInput.value = "";
         }
@@ -159,7 +165,9 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
       const maxSize = 1048576;
       if (file.size > maxSize) {
         toast.error("El tamaño de la imagen no debe exceder 1MB");
-        const fileInput = document.getElementById("imageInput") as HTMLInputElement;
+        const fileInput = document.getElementById(
+          "imageInput"
+        ) as HTMLInputElement;
         if (fileInput) {
           fileInput.value = "";
         }
@@ -179,7 +187,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const removeImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
-    // Si estamos en modo edición y había una imagen existente, marcamos que se quitó
     if (isEditing && user?.profile?.image?.data) {
       setRemovedExistingImage(true);
     }
@@ -187,13 +194,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     if (fileInput) {
       fileInput.value = "";
     }
-  };
-
-  const getFirstName = (fullName: string) => {
-    const parts = fullName.trim().split(/\s+/);
-    const givenNames =
-      parts.length > 3 ? parts.slice(0, 2).join(" ") : parts[0];
-    return givenNames;
   };
 
   const getFullName = (name: string, lastName: string) => {
@@ -204,10 +204,11 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     try {
       setLoading(true);
 
-      // Validación: Solo Super Admin puede crear/asignar rol Distribuidor
-      const selectedRole = roles.find(r => r._id === data.role);
+      const selectedRole = roles.find((r) => r._id === data.role);
       if (selectedRole?.name === "Distribuidor" && !getIsSuperAdmin()) {
-        toast.warning("Solo usuarios con rol Super Admin pueden crear usuarios con rol Distribuidor");
+        toast.warning(
+          "Solo usuarios con rol Super Admin pueden crear usuarios con rol Distribuidor"
+        );
         setLoading(false);
         return;
       }
@@ -226,7 +227,6 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
           role: data.role,
         };
 
-        // Si se quitó la imagen existente, pasamos null para indicar que se debe eliminar
         const imageToSend = removedExistingImage ? null : selectedImage;
 
         await usersService.updateUser(user._id, updateData, imageToSend);
@@ -284,400 +284,348 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   return (
     <>
       {isEditing ? (
-        <button
-          className="btn btn-light btn-icon btn-sm rounded-circle"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-full"
           title="Editar usuario"
           onClick={(e) => {
             e.preventDefault();
             handleOpen();
           }}
-          tabIndex={0}
         >
-          <BsPencil size={16} />
-        </button>
+          <Pencil className="h-4 w-4" />
+        </Button>
       ) : (
-        <Button
-          variant="primary"
-          className="d-flex align-items-center gap-2 text-nowrap px-3"
-          onClick={handleOpen}
-        >
-          <Plus size={18} />
+        <Button onClick={handleOpen}>
+          <Plus className="h-4 w-4 mr-2" />
           Agregar Usuario
         </Button>
       )}
 
-      <Modal
-        show={isOpen}
-        onHide={handleClose}
-        size="lg"
-        centered
-        backdrop="static"
-        keyboard={!loading}
-        dialogClassName="modal-90vh"
-      >
-        <Modal.Header closeButton className="border-0 pb-2 pt-3">
-          <Modal.Title className="text-dark fs-5">
-            {isEditing ? "Editar Usuario" : "Crear Nuevo Usuario"}
-          </Modal.Title>
-        </Modal.Header>
+      <Dialog open={isOpen} onOpenChange={(open) => !loading && setIsOpen(open)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Editar Usuario" : "Crear Nuevo Usuario"}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? "Modifica los datos del usuario"
+                : "Completa los datos para crear un nuevo usuario"}
+            </DialogDescription>
+          </DialogHeader>
 
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Modal.Body className="px-4 py-2">
-            <Row className="g-3">
-              <Col xs={12}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Imagen de Perfil
-                  </Form.Label>
-                  <div className="d-flex flex-column align-items-center gap-2">
-                    {imagePreview ? (
-                      <div className="d-flex flex-column align-items-center position-relative">
-                        <div
-                          style={{
-                            width: "120px",
-                            height: "120px",
-                            borderRadius: "50%",
-                            overflow: "hidden",
-                            border: "2px solid #e9ecef",
-                          }}
-                        >
-                          <Image
-                            src={imagePreview}
-                            alt={`imagen de perfil de ${form.getValues(
-                              "profile.fullName"
-                            )}`}
-                            fill
-                            style={{
-                              objectFit: "cover",
-                            }}
-                            sizes="120px"
-                          />
-                        </div>
-                        {isEditing && !selectedImage && user?.profile?.image?.data && (
-                          <small className="text-info mt-1">
-                            Imagen actual del usuario
-                          </small>
-                        )}
-                        <Button
-                          variant="link"
-                          className="position-absolute text-danger p-0"
-                          onClick={removeImage}
-                          disabled={loading}
-                          style={{
-                            top: "-10px",
-                            right: "-10px",
-                            width: "24px",
-                            height: "24px",
-                            borderRadius: "50%",
-                            backgroundColor: "white",
-                            border: "1px solid #dc3545",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
-                          type="button"
-                        >
-                          <X size={14} />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div
-                        className="d-flex align-items-center justify-content-center bg-light border"
-                        style={{
-                          width: "120px",
-                          height: "120px",
-                          borderRadius: "50%",
-                          border: "2px dashed #dee2e6 !important",
-                        }}
-                      >
-                        <Upload size={40} className="text-muted" />
-                      </div>
-                    )}
-
-                    <div className="d-flex gap-2">
-                      <Form.Control
-                        type="file"
-                        id="imageInput"
-                        accept="image/jpeg,image/jpg,image/png"
-                        onChange={handleImageChange}
-                        disabled={loading}
-                        className="d-none"
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-4 py-4">
+              {/* Image Upload */}
+              <div className="flex flex-col items-center gap-3">
+                <Label>Imagen de Perfil</Label>
+                {imagePreview ? (
+                  <div className="relative">
+                    <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-border relative">
+                      <Image
+                        src={imagePreview}
+                        alt="Vista previa"
+                        fill
+                        style={{ objectFit: "cover" }}
+                        sizes="112px"
                       />
-                      <Button
-                        variant="outline-primary"
-                        onClick={() =>
-                          document.getElementById("imageInput")?.click()
-                        }
-                        disabled={loading}
-                        className="px-2 py-1"
-                        type="button"
-                      >
-                        {imagePreview ? "Cambiar" : "Seleccionar"}
-                      </Button>
-                      {imagePreview && (
-                        <Button
-                          variant="outline-secondary"
-                          onClick={removeImage}
-                          disabled={loading}
-                          className="px-2 py-1"
-                          type="button"
-                        >
-                          Quitar
-                        </Button>
-                      )}
                     </div>
-                    <small
-                      className="text-muted text-center"
-                      style={{ fontSize: "0.75rem", lineHeight: "1.2" }}
+                    {isEditing &&
+                      !selectedImage &&
+                      user?.profile?.image?.data && (
+                        <p className="text-sm text-muted-foreground mt-1 text-center">
+                          Imagen actual
+                        </p>
+                      )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={removeImage}
+                      disabled={loading}
                     >
-                      <strong>Requisitos:</strong> Máximo 1MB • JPG/PNG únicamente
-                      {isEditing && !imagePreview && !user?.profile?.image?.data && (
-                        <br />
-                      )}
-                      {isEditing && !imagePreview && !user?.profile?.image?.data && (
-                        <span className="text-info">No hay imagen de perfil</span>
-                      )}
-                    </small>
+                      <X className="h-3 w-3" />
+                    </Button>
                   </div>
-                </Form.Group>
-              </Col>
+                ) : (
+                  <div className="w-28 h-28 rounded-full border-2 border-dashed border-border flex items-center justify-center bg-muted">
+                    <Upload className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    id="imageInput"
+                    accept="image/jpeg,image/jpg,image/png"
+                    onChange={handleImageChange}
+                    disabled={loading}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      document.getElementById("imageInput")?.click()
+                    }
+                    disabled={loading}
+                  >
+                    {imagePreview ? "Cambiar" : "Seleccionar"}
+                  </Button>
+                  {imagePreview && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removeImage}
+                      disabled={loading}
+                    >
+                      Quitar
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Máximo 1MB - JPG/PNG únicamente
+                </p>
+              </div>
 
-              {/* Nombre */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Nombre:
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
+              {/* Name fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="profile.name">Nombre</Label>
+                  <Input
+                    id="profile.name"
                     placeholder="Ingresa el nombre"
                     {...register("profile.name")}
                     disabled={loading}
-                    isInvalid={!!errors.profile?.name}
+                    className={errors.profile?.name ? "border-destructive" : ""}
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.profile?.name?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
+                  {errors.profile?.name && (
+                    <p className="text-sm text-destructive">
+                      {errors.profile.name.message}
+                    </p>
+                  )}
+                </div>
 
-              {/* Apellido */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Apellido:
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
+                <div className="space-y-2">
+                  <Label htmlFor="profile.lastName">Apellido</Label>
+                  <Input
+                    id="profile.lastName"
                     placeholder="Ingresa el apellido"
                     {...register("profile.lastName")}
                     disabled={loading}
-                    isInvalid={!!errors.profile?.lastName}
+                    className={
+                      errors.profile?.lastName ? "border-destructive" : ""
+                    }
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.profile?.lastName?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
+                  {errors.profile?.lastName && (
+                    <p className="text-sm text-destructive">
+                      {errors.profile.lastName.message}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-              {/* Teléfono */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Teléfono:
-                  </Form.Label>
-                  <Form.Control
+              {/* Contact fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Teléfono</Label>
+                  <Input
+                    id="phone"
                     type="tel"
                     placeholder="Ingresa el teléfono"
                     {...register("phone")}
                     disabled={loading}
-                    isInvalid={!!errors.phone}
+                    className={errors.phone ? "border-destructive" : ""}
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.phone?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
+                  {errors.phone && (
+                    <p className="text-sm text-destructive">
+                      {errors.phone.message}
+                    </p>
+                  )}
+                </div>
 
-              {/* Email */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Email:
-                  </Form.Label>
-                  <Form.Control
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
                     type="email"
                     placeholder="Ingresa el email"
                     {...register("email")}
                     disabled={loading}
-                    isInvalid={!!errors.email}
+                    className={errors.email ? "border-destructive" : ""}
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.email?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
+                  {errors.email && (
+                    <p className="text-sm text-destructive">
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-              {/* Nombre de Usuario */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">
-                    Nombre de Usuario:
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
+              {/* Username and Role */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Nombre de Usuario</Label>
+                  <Input
+                    id="username"
                     placeholder="Ingresa el nombre de usuario"
                     {...register("username")}
                     disabled={loading}
-                    isInvalid={!!errors.username}
+                    className={errors.username ? "border-destructive" : ""}
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.username?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
+                  {errors.username && (
+                    <p className="text-sm text-destructive">
+                      {errors.username.message}
+                    </p>
+                  )}
+                </div>
 
-              {/* Rol */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="text-dark mb-1">Rol:</Form.Label>
+                <div className="space-y-2">
+                  <Label>Rol</Label>
                   <Controller
                     name="role"
                     control={control}
                     render={({ field }) => (
-                      <Form.Select
-                        {...field}
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
                         disabled={loading}
-                        isInvalid={!!errors.role}
                       >
-                        <option value="">Selecciona un rol</option>
-                        {roles
-                          .filter((role) => {
-                            // Solo Super Admin puede ver y asignar el rol Distribuidor
-                            if (role.name === "Distribuidor") {
-                              return getIsSuperAdmin();
-                            }
-                            return true;
-                          })
-                          .map((role) => (
-                            <option key={role._id} value={role._id}>
-                              {role.name}
-                            </option>
-                          ))}
-                      </Form.Select>
+                        <SelectTrigger
+                          className={errors.role ? "border-destructive" : ""}
+                        >
+                          <SelectValue placeholder="Selecciona un rol" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles
+                            .filter((role) => {
+                              if (role.name === "Distribuidor") {
+                                return getIsSuperAdmin();
+                              }
+                              return true;
+                            })
+                            .map((role) => (
+                              <SelectItem key={role._id} value={role._id}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.role?.message}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </Col>
+                  {errors.role && (
+                    <p className="text-sm text-destructive">
+                      {errors.role.message}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-              {/* Contraseña y Confirmar Contraseña - Solo al crear */}
+              {/* Password fields - Only for new users */}
               {!isEditing && (
-                <>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="text-dark mb-1">
-                        Contraseña:
-                      </Form.Label>
-                      <div className="position-relative">
-                        <Form.Control
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Ingresa la contraseña"
-                          {...register("password")}
-                          disabled={loading}
-                          isInvalid={!!errors.password}
-                        />
-                        <Button
-                          variant="link"
-                          className="position-absolute end-0 top-50 translate-middle-y p-1 border-0 text-muted"
-                          onClick={() => setShowPassword(!showPassword)}
-                          disabled={loading}
-                          style={{ marginRight: "6px" }}
-                          type="button"
-                        >
-                          {showPassword ? (
-                            <EyeOff size={14} />
-                          ) : (
-                            <Eye size={14} />
-                          )}
-                        </Button>
-                        <Form.Control.Feedback type="invalid">
-                          {errors.password?.message}
-                        </Form.Control.Feedback>
-                      </div>
-                    </Form.Group>
-                  </Col>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Ingresa la contraseña"
+                        {...register("password")}
+                        disabled={loading}
+                        className={errors.password ? "border-destructive" : ""}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={loading}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-sm text-destructive">
+                        {errors.password.message}
+                      </p>
+                    )}
+                  </div>
 
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="text-dark mb-1">
-                        Confirmar Contraseña:
-                      </Form.Label>
-                      <div className="position-relative">
-                        <Form.Control
-                          type={showConfirmPassword ? "text" : "password"}
-                          placeholder="Confirma la contraseña"
-                          {...register("confirmPassword")}
-                          disabled={loading}
-                          isInvalid={!!errors.confirmPassword}
-                        />
-                        <Button
-                          variant="link"
-                          className="position-absolute end-0 top-50 translate-middle-y p-1 border-0 text-muted"
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
-                          disabled={loading}
-                          style={{ marginRight: "6px" }}
-                          type="button"
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff size={14} />
-                          ) : (
-                            <Eye size={14} />
-                          )}
-                        </Button>
-                        <Form.Control.Feedback type="invalid">
-                          {errors.confirmPassword?.message}
-                        </Form.Control.Feedback>
-                      </div>
-                    </Form.Group>
-                  </Col>
-                </>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirma la contraseña"
+                        {...register("confirmPassword")}
+                        disabled={loading}
+                        className={
+                          errors.confirmPassword ? "border-destructive" : ""
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        disabled={loading}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                    {errors.confirmPassword && (
+                      <p className="text-sm text-destructive">
+                        {errors.confirmPassword.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
-            </Row>
-          </Modal.Body>
+            </div>
 
-          <Modal.Footer className="border-0 pt-2 pb-3">
-            <Button
-              type="button"
-              variant="light"
-              onClick={handleClose}
-              className="fw-medium px-4"
-              disabled={loading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={loading}
-              className="px-3 py-1"
-            >
-              {loading ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-1" />
-                  {isEditing ? "Actualizando..." : "Guardando..."}
-                </>
-              ) : (
-                <>{isEditing ? "Actualizar" : "Guardar"}</>
-              )}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {isEditing ? "Actualizando..." : "Guardando..."}
+                  </>
+                ) : isEditing ? (
+                  "Actualizar"
+                ) : (
+                  "Guardar"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

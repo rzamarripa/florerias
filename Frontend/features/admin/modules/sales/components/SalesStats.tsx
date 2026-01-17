@@ -7,10 +7,11 @@ import {
   CheckCircle,
   XCircle,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { salesService } from "../services/sales";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
-import { Col } from "react-bootstrap";
 
 interface SalesStatsProps {
   filters: {
@@ -45,72 +46,47 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   return (
-    <div className="col-xl col-lg-4 col-md-6 col-sm-6 mb-3">
-      <div
-        className="card border-0 shadow-sm h-100"
-        style={{
-          borderRadius: "12px",
-          transition: "transform 0.2s ease, box-shadow 0.2s ease",
-          cursor: "pointer",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-4px)";
-          e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
-        }}
+    <div className="flex-1 min-w-[180px]">
+      <Card
+        className="border-0 shadow-sm h-full rounded-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
       >
-        <div className="card-body p-4">
-          <div className="d-flex align-items-center justify-content-between mb-3">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
             <h6
-              className="text-muted mb-0 fw-semibold"
-              style={{
-                fontSize: "12px",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
+              className="text-muted-foreground mb-0 font-semibold text-xs uppercase tracking-wide"
             >
               {title}
             </h6>
             <div
-              className="d-flex align-items-center justify-content-center"
-              style={{
-                width: "50px",
-                height: "50px",
-                borderRadius: "12px",
-                background: bgColor,
-              }}
+              className="flex items-center justify-center w-12 h-12 rounded-xl"
+              style={{ background: bgColor }}
             >
               <div style={{ color: iconColor }}>{icon}</div>
             </div>
           </div>
           <h2
-            className="mb-2 fw-bold"
-            style={{ fontSize: "32px", color: "#2c3e50", lineHeight: "1.2" }}
+            className="mb-2 font-bold text-3xl leading-tight"
+            style={{ color: "#2c3e50" }}
           >
             {count.toLocaleString("es-MX")}
           </h2>
           <div
-            className="d-flex align-items-center justify-content-between pt-2"
-            style={{ borderTop: "1px solid #f1f3f5" }}
+            className="flex items-center justify-between pt-2 border-t"
           >
             <span
-              className="text-muted"
-              style={{ fontSize: "11px", fontWeight: "500" }}
+              className="text-muted-foreground text-xs font-medium"
             >
               Monto Total
             </span>
             <span
-              className="fw-bold"
-              style={{ fontSize: "14px", color: iconColor }}
+              className="font-bold text-sm"
+              style={{ color: iconColor }}
             >
               {formatCurrency(amount)}
             </span>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
@@ -156,7 +132,7 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
         });
       }
     } catch (error) {
-      console.error("Error al cargar estadísticas:", error);
+      console.error("Error al cargar estadisticas:", error);
     } finally {
       setLoading(false);
     }
@@ -170,34 +146,32 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
       branchId: filters.branchId,
     },
     onOrderCreated: () => {
-      // Recargar estadísticas cuando se crea una orden
+      // Recargar estadisticas cuando se crea una orden
       loadStats();
     },
     onOrderUpdated: () => {
-      // Recargar estadísticas cuando se actualiza una orden
+      // Recargar estadisticas cuando se actualiza una orden
       loadStats();
     },
     onOrderDeleted: () => {
-      // Recargar estadísticas cuando se elimina una orden
+      // Recargar estadisticas cuando se elimina una orden
       loadStats();
     },
   });
 
   if (loading) {
     return (
-      <div className="row g-3 mb-4">
+      <div className="flex flex-wrap gap-3 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="col-xl-2 col-lg-4 col-md-6 col-sm-6 mb-3">
-            <div
-              className="card border-0 shadow-sm h-100"
-              style={{ borderRadius: "12px", minHeight: "160px" }}
+          <div key={i} className="flex-1 min-w-[180px]">
+            <Card
+              className="border-0 shadow-sm h-full rounded-xl"
+              style={{ minHeight: "160px" }}
             >
-              <div className="card-body p-4 d-flex align-items-center justify-content-center">
-                <div className="spinner-border text-primary" role="status">
-                  <span className="visually-hidden">Cargando...</span>
-                </div>
-              </div>
-            </div>
+              <CardContent className="p-4 flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </CardContent>
+            </Card>
           </div>
         ))}
       </div>
@@ -205,12 +179,12 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
   }
 
   return (
-    <div className="row g-3 mb-4">
+    <div className="flex flex-wrap gap-3 mb-4">
       <StatCard
         title="Ventas Totales"
         count={stats.totalSales.count}
         amount={stats.totalSales.amount}
-        icon={<ShoppingCart size={24} />}
+        icon={<ShoppingCart className="h-6 w-6" />}
         bgColor="rgba(26, 188, 156, 0.1)"
         iconColor="#1ABC9C"
       />
@@ -218,7 +192,7 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
         title="Pendientes de Pago"
         count={stats.pendingPayment.count}
         amount={stats.pendingPayment.amount}
-        icon={<Clock size={24} />}
+        icon={<Clock className="h-6 w-6" />}
         bgColor="rgba(243, 156, 18, 0.1)"
         iconColor="#F39C12"
       />
@@ -226,7 +200,7 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
         title="Ventas Pagadas"
         count={stats.paidSales.count}
         amount={stats.paidSales.amount}
-        icon={<CheckCircle size={24} />}
+        icon={<CheckCircle className="h-6 w-6" />}
         bgColor="rgba(52, 152, 219, 0.1)"
         iconColor="#3498DB"
       />
@@ -234,7 +208,7 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
         title="Ventas Canceladas"
         count={stats.cancelledSales.count}
         amount={stats.cancelledSales.amount}
-        icon={<XCircle size={24} />}
+        icon={<XCircle className="h-6 w-6" />}
         bgColor="rgba(231, 76, 60, 0.1)"
         iconColor="#E74C3C"
       />
@@ -242,7 +216,7 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
         title="Ticket Promedio"
         count={stats.averageTicket.count}
         amount={stats.averageTicket.amount}
-        icon={<TrendingUp size={24} />}
+        icon={<TrendingUp className="h-6 w-6" />}
         bgColor="rgba(155, 89, 182, 0.1)"
         iconColor="#9B59B6"
       />

@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  Form,
-  Button,
-  Row,
-  Col,
-  Table,
-  Badge,
-  Alert,
-} from "react-bootstrap";
-import { Package, Plus, Trash2, Save, ArrowLeft, List } from "lucide-react";
+import { Package, Plus, Trash2, Save, ArrowLeft, List, Loader2 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { productListsService } from "./services/productLists";
@@ -26,6 +16,28 @@ import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { branchesService } from "../branches/services/branches";
 import { Branch } from "../branches/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter,
+} from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const NewProductListPage: React.FC = () => {
   const router = useRouter();
@@ -61,7 +73,7 @@ const NewProductListPage: React.FC = () => {
   >(null);
   const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
 
-  // Función para formatear números con separación de miles
+  // Funcion para formatear numeros con separacion de miles
   const formatNumber = (num: number): string => {
     return num.toLocaleString("es-MX", {
       minimumFractionDigits: 2,
@@ -135,16 +147,16 @@ const NewProductListPage: React.FC = () => {
 
   const loadManagerBranch = async () => {
     try {
-      // Obtener las sucursales del gerente (debería ser solo una)
+      // Obtener las sucursales del gerente (deberia ser solo una)
       const response = await branchesService.getUserBranches();
-      
+
       if (response.success && response.data && response.data.length > 0) {
         const branch = response.data[0]; // El gerente solo debe tener una sucursal
         setManagerBranch(branch);
         setFormData((prev) => ({ ...prev, branch: branch._id }));
         console.log("🔍 [ProductList] Sucursal del gerente cargada:", branch.branchName);
       } else {
-        toast.error("No se encontró una sucursal asignada para el gerente");
+        toast.error("No se encontro una sucursal asignada para el gerente");
       }
     } catch (err: any) {
       console.error("Error al cargar sucursal del gerente:", err);
@@ -220,7 +232,7 @@ const NewProductListPage: React.FC = () => {
 
     // Check if already added
     if (formData.products.some((p) => p.productId === currentProductId)) {
-      toast.warning("Este producto ya está agregado");
+      toast.warning("Este producto ya esta agregado");
       return;
     }
 
@@ -277,11 +289,11 @@ const NewProductListPage: React.FC = () => {
     try {
       // Validar que hay una sucursal seleccionada
       const branchToUse = isManager ? managerBranch : activeBranch;
-      
+
       if (!branchToUse) {
         throw new Error(
-          isManager 
-            ? "No se encontró una sucursal asignada para el gerente."
+          isManager
+            ? "No se encontro una sucursal asignada para el gerente."
             : "No hay sucursal activa seleccionada. Por favor, selecciona una sucursal desde el selector de sucursales."
         );
       }
@@ -293,7 +305,7 @@ const NewProductListPage: React.FC = () => {
         !formData.expirationDate
       ) {
         throw new Error(
-          "El nombre, empresa, sucursal y fecha de expiración son obligatorios"
+          "El nombre, empresa, sucursal y fecha de expiracion son obligatorios"
         );
       }
 
@@ -308,7 +320,7 @@ const NewProductListPage: React.FC = () => {
         const response = await productListsService.createProductList(formData);
         if (response.data?.status === false) {
           toast.success(
-            "Lista de productos creada exitosamente. Se creó como inactiva porque ya existe una lista activa para esta sucursal"
+            "Lista de productos creada exitosamente. Se creo como inactiva porque ya existe una lista activa para esta sucursal"
           );
         } else {
           toast.success("Lista de productos creada exitosamente y activada");
@@ -351,13 +363,8 @@ const NewProductListPage: React.FC = () => {
 
   if (loading && isEditing) {
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "400px" }}
-      >
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -365,233 +372,234 @@ const NewProductListPage: React.FC = () => {
   return (
     <div className="new-product-list-page">
       {!isManager && !activeBranch && (
-        <Alert variant="warning" className="mb-3">
-          <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
-          Por favor, selecciona una sucursal desde el selector de sucursales en
-          la parte superior para poder crear una lista de productos.
+        <Alert variant="destructive" className="mb-3 border-yellow-500 bg-yellow-50 text-yellow-800">
+          <AlertDescription>
+            <strong>Advertencia:</strong> No hay sucursal activa seleccionada.
+            Por favor, selecciona una sucursal desde el selector de sucursales en
+            la parte superior para poder crear una lista de productos.
+          </AlertDescription>
         </Alert>
       )}
 
       {isManager && !managerBranch && (
-        <Alert variant="warning" className="mb-3">
-          <strong>⚠️ Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
-          Por favor, contacta al administrador.
+        <Alert variant="destructive" className="mb-3 border-yellow-500 bg-yellow-50 text-yellow-800">
+          <AlertDescription>
+            <strong>Advertencia:</strong> No se encontro una sucursal asignada para tu usuario.
+            Por favor, contacta al administrador.
+          </AlertDescription>
         </Alert>
       )}
 
       {error && (
-        <Alert variant="danger" onClose={() => setError(null)} dismissible>
-          {error}
+        <Alert variant="destructive" className="mb-3">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <Form onSubmit={handleSubmit}>
-        {/* Información Básica */}
+      <form onSubmit={handleSubmit}>
+        {/* Informacion Basica */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-white border-0 py-3">
+            <div className="flex items-center gap-2">
               <Package size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Información de la Lista</h5>
+              <h5 className="mb-0 font-bold">Informacion de la Lista</h5>
             </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre de la Lista <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre de la lista"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Nombre de la Lista <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Nombre de la lista"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Fecha de Expiración <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={formData.expirationDate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        expirationDate: e.target.value,
-                      })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Fecha de Expiracion <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="date"
+                  value={formData.expirationDate}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      expirationDate: e.target.value,
+                    })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Empresa <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={
-                      userCompany?.tradeName ||
-                      userCompany?.legalName ||
-                      "Cargando..."
-                    }
-                    disabled
-                    readOnly
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Empresa asignada a tu usuario
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Empresa <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  value={
+                    userCompany?.tradeName ||
+                    userCompany?.legalName ||
+                    "Cargando..."
+                  }
+                  disabled
+                  readOnly
+                  className="py-2"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Empresa asignada a tu usuario
+                </p>
+              </div>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Sucursal <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={
-                      isManager 
-                        ? (managerBranch?.branchName || "Cargando sucursal...")
-                        : (activeBranch?.branchName || "No hay sucursal seleccionada")
-                    }
-                    disabled
-                    readOnly
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    {isManager 
-                      ? "Sucursal asignada a tu usuario gerente"
-                      : "Sucursal activa actual. Puede haber múltiples listas por sucursal, pero solo una estará activa"}
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Sucursal <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  value={
+                    isManager
+                      ? (managerBranch?.branchName || "Cargando sucursal...")
+                      : (activeBranch?.branchName || "No hay sucursal seleccionada")
+                  }
+                  disabled
+                  readOnly
+                  className="py-2"
+                />
+                <p className="text-sm text-muted-foreground">
+                  {isManager
+                    ? "Sucursal asignada a tu usuario gerente"
+                    : "Sucursal activa actual. Puede haber multiples listas por sucursal, pero solo una estara activa"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Agregar Productos */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-white border-0 py-3">
+            <div className="flex items-center gap-2">
               <Package size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Productos</h5>
+              <h5 className="mb-0 font-bold">Productos</h5>
             </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3 mb-3">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Seleccionar Producto
-                  </Form.Label>
-                  <Form.Select
-                    value={currentProductId}
-                    onChange={(e) => setCurrentProductId(e.target.value)}
-                    className="py-2"
-                  >
-                    <option value="">-- Seleccionar un producto --</option>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+              <div className="md:col-span-6 space-y-2">
+                <Label className="font-semibold">
+                  Seleccionar Producto
+                </Label>
+                <Select
+                  value={currentProductId}
+                  onValueChange={(value) => setCurrentProductId(value)}
+                >
+                  <SelectTrigger className="py-2">
+                    <SelectValue placeholder="-- Seleccionar un producto --" />
+                  </SelectTrigger>
+                  <SelectContent>
                     {availableProducts.map((product) => (
-                      <option key={product._id} value={product._id}>
+                      <SelectItem key={product._id} value={product._id}>
                         {product.nombre} ({product.unidad})
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Cantidad</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="1"
-                    value={currentQuantity}
-                    onChange={(e) =>
-                      setCurrentQuantity(parseInt(e.target.value) || 1)
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              <div className="md:col-span-4 space-y-2">
+                <Label className="font-semibold">Cantidad</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={currentQuantity}
+                  onChange={(e) =>
+                    setCurrentQuantity(parseInt(e.target.value) || 1)
+                  }
+                  className="py-2"
+                />
+              </div>
 
-              <Col md={2} className="d-flex align-items-end">
+              <div className="md:col-span-2 flex items-end">
                 <Button
-                  variant="success"
+                  type="button"
+                  variant="default"
                   onClick={handleAddProduct}
-                  className="w-100 py-2"
+                  className="w-full py-2 bg-green-600 hover:bg-green-700"
                   disabled={!currentProductId}
                 >
-                  <Plus size={18} className="me-1" />
+                  <Plus size={18} className="mr-1" />
                   Agregar
                 </Button>
-              </Col>
-            </Row>
+              </div>
+            </div>
 
             {/* Lista de Productos Seleccionados */}
             {selectedProducts.length > 0 && (
-              <div className="table-responsive">
-                <Table className="table table-hover table-sm">
-                  <thead className="table-light">
-                    <tr>
-                      <th>Producto</th>
-                      <th>Unidad</th>
-                      <th className="text-center">Cantidad</th>
-                      <th className="text-end">Total Costo</th>
-                      <th className="text-end">Labour</th>
-                      <th className="text-end">Total Venta</th>
-                      <th className="text-center">Lotes</th>
-                      <th className="text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="overflow-x-auto border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Producto</TableHead>
+                      <TableHead>Unidad</TableHead>
+                      <TableHead className="text-center">Cantidad</TableHead>
+                      <TableHead className="text-right">Total Costo</TableHead>
+                      <TableHead className="text-right">Labour</TableHead>
+                      <TableHead className="text-right">Total Venta</TableHead>
+                      <TableHead className="text-center">Lotes</TableHead>
+                      <TableHead className="text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {selectedProducts.map((product) => {
                       const cantidad = product.cantidad || 1;
                       const lotes = calculateLotes(product);
                       return (
-                        <tr key={product._id}>
-                          <td>{product.nombre}</td>
-                          <td>
-                            <Badge bg="secondary">{product.unidad}</Badge>
-                          </td>
-                          <td className="text-center fw-bold">{cantidad}</td>
-                          <td className="text-end text-danger">
+                        <TableRow key={product._id} className="hover:bg-muted/50">
+                          <TableCell>{product.nombre}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{product.unidad}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center font-bold">{cantidad}</TableCell>
+                          <TableCell className="text-right text-red-600">
                             ${formatNumber(product.totalCosto * cantidad)}
-                          </td>
-                          <td className="text-end text-warning">
+                          </TableCell>
+                          <TableCell className="text-right text-yellow-600">
                             ${formatNumber(product.labour * cantidad)}
-                          </td>
-                          <td className="text-end text-primary">
+                          </TableCell>
+                          <TableCell className="text-right text-primary">
                             ${formatNumber(product.totalVenta * cantidad)}
-                          </td>
-                          <td className="text-center">
-                            <Badge bg="info">{formatNumber(lotes)}</Badge>
-                          </td>
-                          <td className="text-center">
-                            <div className="d-flex gap-1 justify-content-center">
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary" className="bg-cyan-500 text-white">
+                              {formatNumber(lotes)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex gap-1 justify-center">
                               <Button
-                                variant="outline-info"
+                                type="button"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleShowDesglose(product)}
                                 title="Ver desglose"
+                                className="text-cyan-500 border-cyan-500 hover:bg-cyan-50"
                               >
                                 <List size={14} />
                               </Button>
                               <Button
-                                variant="danger"
+                                type="button"
+                                variant="destructive"
                                 size="sm"
                                 onClick={() => handleRemoveProduct(product._id)}
                                 title="Eliminar"
@@ -599,69 +607,71 @@ const NewProductListPage: React.FC = () => {
                                 <Trash2 size={14} />
                               </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                  <tfoot className="table-light fw-bold">
-                    <tr>
-                      <td colSpan={3} className="text-end">
+                  </TableBody>
+                  <TableFooter className="bg-muted/50 font-bold">
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-right">
                         Totales ({totals.totalProducts} productos):
-                      </td>
-                      <td className="text-end text-danger">
+                      </TableCell>
+                      <TableCell className="text-right text-red-600">
                         ${formatNumber(totals.totalGastado)}
-                      </td>
-                      <td></td>
-                      <td className="text-end text-primary">
+                      </TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right text-primary">
                         ${formatNumber(totals.gananciasBrutas)}
-                      </td>
-                      <td colSpan={2}></td>
-                    </tr>
-                    <tr>
-                      <td colSpan={7} className="text-end">
+                      </TableCell>
+                      <TableCell colSpan={2}></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-right">
                         Ganancias Netas:
-                      </td>
-                      <td className="text-center">
+                      </TableCell>
+                      <TableCell className="text-center">
                         <Badge
-                          bg={totals.gananciasNetas >= 0 ? "success" : "danger"}
-                          className="fs-6"
+                          className={`text-base ${totals.gananciasNetas >= 0 ? "bg-green-600" : "bg-red-600"} text-white`}
                         >
                           ${formatNumber(totals.gananciasNetas)}
                         </Badge>
-                      </td>
-                    </tr>
-                  </tfoot>
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
                 </Table>
               </div>
             )}
-          </Card.Body>
+          </CardContent>
         </Card>
 
         {/* Botones */}
-        <div className="d-flex justify-content-between gap-2 mb-4">
+        <div className="flex justify-between gap-2 mb-4">
           <Button
             type="button"
-            variant="outline-secondary"
+            variant="outline"
             size="lg"
             onClick={() => router.back()}
-            className="d-flex align-items-center gap-2"
+            className="flex items-center gap-2"
           >
             <ArrowLeft size={18} />
             Volver
           </Button>
           <Button
             type="submit"
-            variant="primary"
             size="lg"
             disabled={loading}
-            className="d-flex align-items-center gap-2 px-5"
+            className="flex items-center gap-2 px-8"
           >
-            <Save size={18} />
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save size={18} />
+            )}
             {loading ? "Guardando..." : "Guardar"}
           </Button>
         </div>
-      </Form>
+      </form>
 
       {/* Modal de Desglose */}
       <DesgloseModal

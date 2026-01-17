@@ -1,17 +1,30 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col, Alert } from "react-bootstrap";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Building2,
   Save,
   ArrowLeft,
   User,
   MapPin,
-  FileText,
   UserPlus,
   X,
   Upload,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -63,12 +76,10 @@ const NewCompanyPage: React.FC = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  // Cargar distribuidores
   useEffect(() => {
     loadDistributors();
   }, [companyId]);
 
-  // Cargar empresa si estamos editando
   useEffect(() => {
     if (isEditing) {
       loadCompany();
@@ -77,7 +88,6 @@ const NewCompanyPage: React.FC = () => {
 
   const loadDistributors = async () => {
     try {
-      // Pasar el companyId si estamos editando para incluir el administrador actual
       const response = await companiesService.getAdministrators(isEditing ? companyId : undefined);
       setDistributors(response.data || []);
     } catch (err: any) {
@@ -132,12 +142,8 @@ const NewCompanyPage: React.FC = () => {
     }
   };
 
-  // Manejar selección de distribuidor
-  const handleDistributorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedId = e.target.value;
-
+  const handleDistributorChange = (selectedId: string) => {
     if (selectedId === "") {
-      // Limpiar selección
       setFormData({
         ...formData,
         administratorId: "",
@@ -158,7 +164,6 @@ const NewCompanyPage: React.FC = () => {
         },
       });
     } else {
-      // Distribuidor existente seleccionado - rellenar campos
       const distributor = distributors.find((d) => d._id === selectedId);
       if (distributor) {
         setFormData({
@@ -184,7 +189,6 @@ const NewCompanyPage: React.FC = () => {
     }
   };
 
-  // Limpiar selección de distribuidor
   const handleClearDistributor = () => {
     setFormData({
       ...formData,
@@ -207,9 +211,7 @@ const NewCompanyPage: React.FC = () => {
     });
   };
 
-  // Validar formulario
   const validateForm = (): boolean => {
-    // Validar datos de empresa
     if (!formData.legalName || !formData.rfc || !formData.legalForm) {
       setError("Por favor completa todos los campos requeridos de la empresa");
       return false;
@@ -234,7 +236,6 @@ const NewCompanyPage: React.FC = () => {
       return false;
     }
 
-    // Validar datos del usuario administrador
     if (
       !formData.administratorData?.username ||
       !formData.administratorData?.email ||
@@ -246,12 +247,7 @@ const NewCompanyPage: React.FC = () => {
       return false;
     }
 
-    // Validar contraseña:
-    // - Requerida al crear una empresa nueva sin administrador existente
-    // - Requerida al editar si NO hay administrador seleccionado (crear nuevo usuario)
-    // - Opcional al editar si HAY administrador seleccionado (solo si se quiere cambiar)
     if (!formData.administratorId) {
-      // No hay administrador seleccionado, se va a crear uno nuevo
       if (!formData.administratorData?.password) {
         setError("La contraseña es requerida para crear un nuevo usuario");
         return false;
@@ -261,7 +257,6 @@ const NewCompanyPage: React.FC = () => {
     return true;
   };
 
-  // Enviar formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -275,7 +270,6 @@ const NewCompanyPage: React.FC = () => {
     try {
       let finalAdministratorId = formData.administratorId;
 
-      // CASO 1: Editando empresa CON administrador existente -> Actualizar usuario
       if (isEditing && formData.administratorId && formData.administratorData) {
         const userDataToUpdate = {
           username: formData.administratorData.username,
@@ -288,18 +282,14 @@ const NewCompanyPage: React.FC = () => {
           },
         };
 
-        // Solo incluir password si se proporcionó una nueva
         if (formData.administratorData.password && formData.administratorData.password.trim() !== "") {
           (userDataToUpdate as any).password = formData.administratorData.password;
         }
 
-        // Actualizar el usuario en cs_users
         await usersService.updateUser(formData.administratorId, userDataToUpdate);
       }
 
-      // CASO 2: Editando empresa SIN administrador seleccionado -> Crear nuevo usuario
       if (isEditing && !formData.administratorId && formData.administratorData) {
-        // Obtener el rol de Administrador
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
         const rolesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/roles?name=Administrador`, {
           headers: {
@@ -313,7 +303,6 @@ const NewCompanyPage: React.FC = () => {
           throw new Error("No se encontró el rol de Administrador");
         }
 
-        // Crear nuevo usuario administrador
         const newUserData = {
           username: formData.administratorData.username,
           email: formData.administratorData.email,
@@ -341,12 +330,10 @@ const NewCompanyPage: React.FC = () => {
         isFranchise: formData.isFranchise || false,
       };
 
-      // Usar el administratorId final (puede ser el existente o el recién creado)
       if (finalAdministratorId) {
         dataToSend.administratorId = finalAdministratorId;
       }
 
-      // Si estamos creando empresa (no editando), enviar administratorData para que el backend cree el usuario
       if (!isEditing && !finalAdministratorId && formData.administratorData) {
         dataToSend.administratorData = formData.administratorData;
       }
@@ -359,17 +346,13 @@ const NewCompanyPage: React.FC = () => {
         response = await companiesService.createCompany(dataToSend);
       }
 
-      // Verificar si la operación fue exitosa
       if (!response.success) {
-        // Si es error de permisos, el toast ya se mostró desde el interceptor
         if ((response as any).permissionDenied) {
           return;
         }
-        // Para otros errores, mostrar mensaje
         throw new Error(response.message || "Error al guardar la empresa");
       }
 
-      // Subir logo a Firebase Storage DESPUÉS de crear/actualizar la empresa
       let logoUrl: string | null = null;
       let logoPath: string | null = null;
 
@@ -380,12 +363,10 @@ const NewCompanyPage: React.FC = () => {
         try {
           const savedCompanyId = response.data._id;
 
-          // Subir logo
           const logoResult = await uploadCompanyLogo(logoFile, savedCompanyId);
           logoUrl = logoResult.url;
           logoPath = logoResult.path;
 
-          // Actualizar la empresa con las URLs del logo
           await companiesService.updateCompany(savedCompanyId, {
             logoUrl,
             logoPath,
@@ -400,7 +381,6 @@ const NewCompanyPage: React.FC = () => {
         }
       }
 
-      // Mostrar toast de éxito
       toast.success(
         isEditing
           ? "Empresa actualizada exitosamente"
@@ -418,12 +398,11 @@ const NewCompanyPage: React.FC = () => {
   if (loading && isEditing) {
     return (
       <div
-        className="d-flex justify-content-center align-items-center"
+        className="flex justify-center items-center"
         style={{ minHeight: "400px" }}
       >
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <span className="sr-only">Cargando...</span>
       </div>
     );
   }
@@ -431,665 +410,623 @@ const NewCompanyPage: React.FC = () => {
   return (
     <div className="new-company-page">
       {error && (
-        <Alert variant="danger" onClose={() => setError(null)} dismissible>
-          {error}
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            {error}
+            <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+              <X size={16} />
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
-      <Form onSubmit={handleSubmit}>
-        {/* Información de la Empresa */}
+      <form onSubmit={handleSubmit}>
+        {/* Company Information */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-white border-0 py-3">
+            <div className="flex items-center gap-2">
               <Building2 size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Datos de la Empresa</h5>
+              <h5 className="mb-0 font-bold">Datos de la Empresa</h5>
             </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              {/* Razón Social */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Razón Social <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Razón social de la empresa"
-                    value={formData.legalName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, legalName: e.target.value })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Legal Name */}
+              <div>
+                <Label className="font-semibold">
+                  Razón Social <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Razón social de la empresa"
+                  value={formData.legalName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, legalName: e.target.value })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
 
-              {/* Nombre Comercial */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre Comercial
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre comercial (opcional)"
-                    value={formData.tradeName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, tradeName: e.target.value })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              {/* Trade Name */}
+              <div>
+                <Label className="font-semibold">Nombre Comercial</Label>
+                <Input
+                  type="text"
+                  placeholder="Nombre comercial (opcional)"
+                  value={formData.tradeName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tradeName: e.target.value })
+                  }
+                  className="py-2"
+                />
+              </div>
 
               {/* RFC */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    RFC <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="RFC de la empresa"
-                    value={formData.rfc}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        rfc: e.target.value.toUpperCase(),
-                      })
-                    }
-                    required
-                    maxLength={13}
-                    className="py-2"
-                    style={{ textTransform: "uppercase" }}
-                  />
-                  <Form.Text className="text-muted">
-                    Formato: ABC123456XYZ (12-13 caracteres)
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+              <div>
+                <Label className="font-semibold">
+                  RFC <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="RFC de la empresa"
+                  value={formData.rfc}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      rfc: e.target.value.toUpperCase(),
+                    })
+                  }
+                  required
+                  maxLength={13}
+                  className="py-2 uppercase"
+                />
+                <p className="text-muted-foreground text-sm">
+                  Formato: ABC123456XYZ (12-13 caracteres)
+                </p>
+              </div>
 
-              {/* Forma Legal */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Forma Legal <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.legalForm}
-                    onChange={(e) =>
-                      setFormData({ ...formData, legalForm: e.target.value })
-                    }
-                    required
-                    className="py-2"
-                  >
+              {/* Legal Form */}
+              <div>
+                <Label className="font-semibold">
+                  Forma Legal <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.legalForm}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, legalForm: value })
+                  }
+                >
+                  <SelectTrigger className="py-2">
+                    <SelectValue placeholder="Selecciona forma legal" />
+                  </SelectTrigger>
+                  <SelectContent>
                     {legalForms.map((form) => (
-                      <option key={form} value={form}>
+                      <SelectItem key={form} value={form}>
                         {form}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              {/* Logo de la Empresa */}
-              <Col md={8}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    <Upload size={16} className="me-2" />
-                    Logo de la Empresa
-                  </Form.Label>
-                  <Form.Control
-                    type="file"
-                    className="py-2"
-                    accept="image/*"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setLogoFile(file);
-                      }
-                    }}
-                  />
-                  {logoFile && (
-                    <Form.Text className="text-success">
-                      ✓ Archivo seleccionado: {logoFile.name}
-                    </Form.Text>
-                  )}
-                  <Form.Text className="text-muted d-block">
-                    Formatos aceptados: JPG, PNG, SVG. Tamaño recomendado: 500x500px
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-
-              {/* Checkbox de Franquicia */}
-              <Col md={4}>
-                <Form.Group className="mt-4">
-                  <Form.Check 
-                    type="checkbox"
-                    id="isFranchise"
-                    label="Es Franquicia"
-                    checked={formData.isFranchise || false}
-                    onChange={(e) =>
-                      setFormData({ ...formData, isFranchise: e.target.checked })
+              {/* Company Logo */}
+              <div className="md:col-span-1">
+                <Label className="font-semibold flex items-center">
+                  <Upload size={16} className="mr-2" />
+                  Logo de la Empresa
+                </Label>
+                <Input
+                  type="file"
+                  className="py-2"
+                  accept="image/*"
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setLogoFile(file);
                     }
-                    className="fw-semibold"
-                  />
-                  <Form.Text className="text-muted d-block">
-                    Marcar si esta empresa es una franquicia
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
-        </Card>
+                  }}
+                />
+                {logoFile && (
+                  <p className="text-green-500 text-sm">
+                    Archivo seleccionado: {logoFile.name}
+                  </p>
+                )}
+                <p className="text-muted-foreground text-sm">
+                  Formatos aceptados: JPG, PNG, SVG. Tamaño recomendado: 500x500px
+                </p>
+              </div>
 
-        {/* Dirección Fiscal */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
-              <MapPin size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Dirección Fiscal</h5>
+              {/* Franchise Checkbox */}
+              <div className="flex items-center space-x-2 mt-4">
+                <Checkbox
+                  id="isFranchise"
+                  checked={formData.isFranchise || false}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, isFranchise: checked as boolean })
+                  }
+                />
+                <Label htmlFor="isFranchise" className="font-semibold">
+                  Es Franquicia
+                </Label>
+              </div>
             </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              {/* Calle */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Calle <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Calle y número"
-                    value={formData.fiscalAddress.street}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        fiscalAddress: {
-                          ...formData.fiscalAddress,
-                          street: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              {/* Ciudad */}
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Ciudad <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ciudad"
-                    value={formData.fiscalAddress.city}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        fiscalAddress: {
-                          ...formData.fiscalAddress,
-                          city: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              {/* Estado */}
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Estado <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Estado"
-                    value={formData.fiscalAddress.state}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        fiscalAddress: {
-                          ...formData.fiscalAddress,
-                          state: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              {/* Código Postal */}
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Código Postal <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="00000"
-                    value={formData.fiscalAddress.postalCode}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        fiscalAddress: {
-                          ...formData.fiscalAddress,
-                          postalCode: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                    maxLength={5}
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
+          </CardContent>
         </Card>
 
-        {/* Usuario Administrador */}
+        {/* Fiscal Address */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-white border-0 py-3">
+            <div className="flex items-center gap-2">
+              <MapPin size={20} className="text-primary" />
+              <h5 className="mb-0 font-bold">Dirección Fiscal</h5>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Street */}
+              <div className="md:col-span-3">
+                <Label className="font-semibold">
+                  Calle <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Calle y número"
+                  value={formData.fiscalAddress.street}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      fiscalAddress: {
+                        ...formData.fiscalAddress,
+                        street: e.target.value,
+                      },
+                    })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
+
+              {/* City */}
+              <div>
+                <Label className="font-semibold">
+                  Ciudad <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Ciudad"
+                  value={formData.fiscalAddress.city}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      fiscalAddress: {
+                        ...formData.fiscalAddress,
+                        city: e.target.value,
+                      },
+                    })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
+
+              {/* State */}
+              <div>
+                <Label className="font-semibold">
+                  Estado <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Estado"
+                  value={formData.fiscalAddress.state}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      fiscalAddress: {
+                        ...formData.fiscalAddress,
+                        state: e.target.value,
+                      },
+                    })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
+
+              {/* Postal Code */}
+              <div>
+                <Label className="font-semibold">
+                  Código Postal <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="00000"
+                  value={formData.fiscalAddress.postalCode}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      fiscalAddress: {
+                        ...formData.fiscalAddress,
+                        postalCode: e.target.value,
+                      },
+                    })
+                  }
+                  required
+                  maxLength={5}
+                  className="py-2"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Administrator User */}
+        <Card className="mb-4 border-0 shadow-sm">
+          <CardHeader className="bg-white border-0 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <UserPlus size={20} className="text-primary" />
-                <h5 className="mb-0 fw-bold">Usuario Administrador</h5>
+                <h5 className="mb-0 font-bold">Usuario Administrador</h5>
               </div>
               {formData.administratorId && (
                 <Button
-                  variant="outline-secondary"
+                  variant="outline"
                   size="sm"
                   onClick={handleClearDistributor}
-                  className="d-flex align-items-center gap-1"
+                  className="flex items-center gap-1"
+                  type="button"
                 >
                   <X size={16} />
                   Limpiar
                 </Button>
               )}
             </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              {/* Selector de Distribuidor */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Seleccionar Administrador (Opcional)
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.administratorId || ""}
-                    onChange={handleDistributorChange}
-                    className="py-2"
-                  >
-                    <option value="">
-                      -- Seleccione un administrador existente o cree uno nuevo
-                      --
-                    </option>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Administrator Selector */}
+              <div className="md:col-span-2">
+                <Label className="font-semibold">
+                  Seleccionar Administrador (Opcional)
+                </Label>
+                <Select
+                  value={formData.administratorId || ""}
+                  onValueChange={handleDistributorChange}
+                >
+                  <SelectTrigger className="py-2">
+                    <SelectValue placeholder="-- Seleccione un administrador existente o cree uno nuevo --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">
+                      -- Seleccione un administrador existente o cree uno nuevo --
+                    </SelectItem>
                     {distributors.map((dist) => (
-                      <option key={dist._id} value={dist._id}>
+                      <SelectItem key={dist._id} value={dist._id}>
                         {dist.profile.fullName} ({dist.email})
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    {formData.administratorId
-                      ? "Administrador seleccionado. Puede editar sus datos abajo."
-                      : "Puede seleccionar un administrador existente o crear uno nuevo llenando los campos."}
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-sm">
+                  {formData.administratorId
+                    ? "Administrador seleccionado. Puede editar sus datos abajo."
+                    : "Puede seleccionar un administrador existente o crear uno nuevo llenando los campos."}
+                </p>
+              </div>
 
-              {/* Campos del Administrador - Siempre habilitados */}
-              {/* Nombre */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Nombre</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ingresa el nombre"
-                    value={formData.administratorData?.profile.name || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        administratorData: formData.administratorData
-                          ? {
-                              ...formData.administratorData,
-                              profile: {
-                                ...formData.administratorData.profile,
-                                name: e.target.value,
-                              },
-                            }
-                          : undefined,
-                        primaryContact: {
-                          ...formData.primaryContact,
-                          name: `${e.target.value} ${
-                            formData.administratorData?.profile.lastName || ""
-                          }`.trim(),
-                        },
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              {/* Name */}
+              <div>
+                <Label className="font-semibold">Nombre</Label>
+                <Input
+                  type="text"
+                  placeholder="Ingresa el nombre"
+                  value={formData.administratorData?.profile.name || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      administratorData: formData.administratorData
+                        ? {
+                            ...formData.administratorData,
+                            profile: {
+                              ...formData.administratorData.profile,
+                              name: e.target.value,
+                            },
+                          }
+                        : undefined,
+                      primaryContact: {
+                        ...formData.primaryContact,
+                        name: `${e.target.value} ${
+                          formData.administratorData?.profile.lastName || ""
+                        }`.trim(),
+                      },
+                    })
+                  }
+                  className="py-2"
+                />
+              </div>
 
-              {/* Apellido */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Apellido</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ingresa el apellido"
-                    value={formData.administratorData?.profile.lastName || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        administratorData: formData.administratorData
-                          ? {
-                              ...formData.administratorData,
-                              profile: {
-                                ...formData.administratorData.profile,
-                                lastName: e.target.value,
-                              },
-                            }
-                          : undefined,
-                        primaryContact: {
-                          ...formData.primaryContact,
-                          name: `${
-                            formData.administratorData?.profile.name || ""
-                          } ${e.target.value}`.trim(),
-                        },
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              {/* Last Name */}
+              <div>
+                <Label className="font-semibold">Apellido</Label>
+                <Input
+                  type="text"
+                  placeholder="Ingresa el apellido"
+                  value={formData.administratorData?.profile.lastName || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      administratorData: formData.administratorData
+                        ? {
+                            ...formData.administratorData,
+                            profile: {
+                              ...formData.administratorData.profile,
+                              lastName: e.target.value,
+                            },
+                          }
+                        : undefined,
+                      primaryContact: {
+                        ...formData.primaryContact,
+                        name: `${
+                          formData.administratorData?.profile.name || ""
+                        } ${e.target.value}`.trim(),
+                      },
+                    })
+                  }
+                  className="py-2"
+                />
+              </div>
 
-              {/* Teléfono */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Teléfono</Form.Label>
-                  <Form.Control
-                    type="tel"
-                    placeholder="Ingresa el teléfono"
-                    value={formData.administratorData?.phone || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        administratorData: formData.administratorData
-                          ? {
-                              ...formData.administratorData,
-                              phone: e.target.value,
-                            }
-                          : undefined,
-                        primaryContact: {
-                          ...formData.primaryContact,
-                          phone: e.target.value,
-                        },
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              {/* Phone */}
+              <div>
+                <Label className="font-semibold">Teléfono</Label>
+                <Input
+                  type="tel"
+                  placeholder="Ingresa el teléfono"
+                  value={formData.administratorData?.phone || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      administratorData: formData.administratorData
+                        ? {
+                            ...formData.administratorData,
+                            phone: e.target.value,
+                          }
+                        : undefined,
+                      primaryContact: {
+                        ...formData.primaryContact,
+                        phone: e.target.value,
+                      },
+                    })
+                  }
+                  className="py-2"
+                />
+              </div>
 
               {/* Email */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Email</Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="Ingresa el email"
-                    value={formData.administratorData?.email || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        administratorData: formData.administratorData
-                          ? {
-                              ...formData.administratorData,
-                              email: e.target.value,
-                            }
-                          : undefined,
-                        primaryContact: {
-                          ...formData.primaryContact,
-                          email: e.target.value,
-                        },
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              <div>
+                <Label className="font-semibold">Email</Label>
+                <Input
+                  type="email"
+                  placeholder="Ingresa el email"
+                  value={formData.administratorData?.email || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      administratorData: formData.administratorData
+                        ? {
+                            ...formData.administratorData,
+                            email: e.target.value,
+                          }
+                        : undefined,
+                      primaryContact: {
+                        ...formData.primaryContact,
+                        email: e.target.value,
+                      },
+                    })
+                  }
+                  className="py-2"
+                />
+              </div>
 
-              {/* Nombre de Usuario */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre de Usuario
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ingresa el nombre de usuario"
-                    value={formData.administratorData?.username || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        administratorData: formData.administratorData
-                          ? {
-                              ...formData.administratorData,
-                              username: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              {/* Username */}
+              <div>
+                <Label className="font-semibold">Nombre de Usuario</Label>
+                <Input
+                  type="text"
+                  placeholder="Ingresa el nombre de usuario"
+                  value={formData.administratorData?.username || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      administratorData: formData.administratorData
+                        ? {
+                            ...formData.administratorData,
+                            username: e.target.value,
+                          }
+                        : undefined,
+                    })
+                  }
+                  className="py-2"
+                />
+              </div>
 
-              {/* Rol - Siempre Administrador por defecto */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Rol</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value="Administrador"
-                    disabled
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Los usuarios de empresas siempre tienen rol Administrador
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+              {/* Role - Always Administrator */}
+              <div>
+                <Label className="font-semibold">Rol</Label>
+                <Input
+                  type="text"
+                  value="Administrador"
+                  disabled
+                  className="py-2"
+                />
+                <p className="text-muted-foreground text-sm">
+                  Los usuarios de empresas siempre tienen rol Administrador
+                </p>
+              </div>
 
-              {/* Contraseña */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Contraseña</Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder={
-                      formData.administratorId
-                        ? "●●●●●●●● (Sin cambios)"
-                        : "Ingresa la contraseña"
-                    }
-                    value={formData.administratorData?.password || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        administratorData: formData.administratorData
-                          ? {
-                              ...formData.administratorData,
-                              password: e.target.value,
-                            }
-                          : undefined,
-                      })
-                    }
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    {formData.administratorId
-                      ? "Dejar en blanco para mantener la contraseña actual"
-                      : "Requerida para crear nuevo usuario"}
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+              {/* Password */}
+              <div>
+                <Label className="font-semibold">Contraseña</Label>
+                <Input
+                  type="password"
+                  placeholder={
+                    formData.administratorId
+                      ? "******** (Sin cambios)"
+                      : "Ingresa la contraseña"
+                  }
+                  value={formData.administratorData?.password || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      administratorData: formData.administratorData
+                        ? {
+                            ...formData.administratorData,
+                            password: e.target.value,
+                          }
+                        : undefined,
+                    })
+                  }
+                  className="py-2"
+                />
+                <p className="text-muted-foreground text-sm">
+                  {formData.administratorId
+                    ? "Dejar en blanco para mantener la contraseña actual"
+                    : "Requerida para crear nuevo usuario"}
+                </p>
+              </div>
 
-              {/* Confirmar Contraseña */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Confirmar Contraseña
-                  </Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder={
-                      formData.administratorId
-                        ? "●●●●●●●● (Sin cambios)"
-                        : "Confirma la contraseña"
-                    }
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    {formData.administratorId &&
-                      "Solo si desea cambiar la contraseña"}
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
-        </Card>
-
-        {/* Contacto Principal */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
-              <User size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Contacto Principal</h5>
+              {/* Confirm Password */}
+              <div>
+                <Label className="font-semibold">Confirmar Contraseña</Label>
+                <Input
+                  type="password"
+                  placeholder={
+                    formData.administratorId
+                      ? "******** (Sin cambios)"
+                      : "Confirma la contraseña"
+                  }
+                  className="py-2"
+                />
+                <p className="text-muted-foreground text-sm">
+                  {formData.administratorId &&
+                    "Solo si desea cambiar la contraseña"}
+                </p>
+              </div>
             </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              {/* Nombre del Contacto */}
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre del contacto"
-                    value={formData.primaryContact.name}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        primaryContact: {
-                          ...formData.primaryContact,
-                          name: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Se rellena automáticamente con los datos del usuario
-                    administrador
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-
-              {/* Email del Contacto */}
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Email <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="email@ejemplo.com"
-                    value={formData.primaryContact.email}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        primaryContact: {
-                          ...formData.primaryContact,
-                          email: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-
-              {/* Teléfono del Contacto */}
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Teléfono <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="tel"
-                    placeholder="1234567890"
-                    value={formData.primaryContact.phone}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        primaryContact: {
-                          ...formData.primaryContact,
-                          phone: e.target.value,
-                        },
-                      })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
+          </CardContent>
         </Card>
 
-        {/* Botones */}
-        <div className="d-flex justify-content-between gap-2 mb-4">
+        {/* Primary Contact */}
+        <Card className="mb-4 border-0 shadow-sm">
+          <CardHeader className="bg-white border-0 py-3">
+            <div className="flex items-center gap-2">
+              <User size={20} className="text-primary" />
+              <h5 className="mb-0 font-bold">Contacto Principal</h5>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Contact Name */}
+              <div>
+                <Label className="font-semibold">
+                  Nombre <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Nombre del contacto"
+                  value={formData.primaryContact.name}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      primaryContact: {
+                        ...formData.primaryContact,
+                        name: e.target.value,
+                      },
+                    })
+                  }
+                  required
+                  className="py-2"
+                />
+                <p className="text-muted-foreground text-sm">
+                  Se rellena automáticamente con los datos del usuario
+                  administrador
+                </p>
+              </div>
+
+              {/* Contact Email */}
+              <div>
+                <Label className="font-semibold">
+                  Email <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="email"
+                  placeholder="email@ejemplo.com"
+                  value={formData.primaryContact.email}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      primaryContact: {
+                        ...formData.primaryContact,
+                        email: e.target.value,
+                      },
+                    })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
+
+              {/* Contact Phone */}
+              <div>
+                <Label className="font-semibold">
+                  Teléfono <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="tel"
+                  placeholder="1234567890"
+                  value={formData.primaryContact.phone}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      primaryContact: {
+                        ...formData.primaryContact,
+                        phone: e.target.value,
+                      },
+                    })
+                  }
+                  required
+                  className="py-2"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Buttons */}
+        <div className="flex justify-between gap-2 mb-4">
           <Button
             type="button"
-            variant="outline-secondary"
+            variant="outline"
             size="lg"
             onClick={() => router.back()}
-            className="d-flex align-items-center gap-2"
+            className="flex items-center gap-2"
           >
             <ArrowLeft size={18} />
             Volver
           </Button>
           <Button
             type="submit"
-            variant="primary"
+            variant="default"
             size="lg"
             disabled={loading || uploadingLogo}
-            className="d-flex align-items-center gap-2 px-5"
+            className="flex items-center gap-2 px-5"
           >
             <Save size={18} />
             {uploadingLogo ? "Subiendo logo..." : loading ? "Guardando..." : isEditing ? "Actualizar" : "Guardar"}
           </Button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 };

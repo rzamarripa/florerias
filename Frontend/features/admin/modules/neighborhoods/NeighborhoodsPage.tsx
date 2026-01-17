@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "react-bootstrap";
 import { Plus } from "lucide-react";
 import NeighborhoodsTable from "./components/NeighborhoodsTable";
 import NeighborhoodModal from "./components/NeighborhoodModal";
 import { Neighborhood } from "./types";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 
 const NeighborhoodsPage: React.FC = () => {
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -27,41 +29,27 @@ const NeighborhoodsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="mb-2">
-        <div className="d-flex justify-content-between align-items-start">
-          <div>
-            <h2 className="mb-1 fw-bold">Colonias</h2>
-            <p className="text-muted mb-0">
-              Gestiona las colonias y sus precios de entrega
-            </p>
-          </div>
-
-          {/* Botón de nueva colonia */}
-          <Button
-            variant="primary"
-            onClick={() => handleOpenModal()}
-            className="d-flex align-items-center gap-2"
-          >
-            <Plus size={18} />
-            Nueva Colonia
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Colonias"
+        description="Gestiona las colonias y sus precios de entrega"
+        action={{
+          label: "Nueva Colonia",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: () => handleOpenModal(),
+        }}
+      />
 
       {/* Tabla en Card */}
-      <div
-        className="card border-0 shadow-sm"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body p-2">
+      <Card>
+        <CardContent className="p-4">
           <NeighborhoodsTable
             onEdit={handleOpenModal}
             refreshTrigger={refreshTrigger}
           />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Modal de Creación/Edición */}
       <NeighborhoodModal

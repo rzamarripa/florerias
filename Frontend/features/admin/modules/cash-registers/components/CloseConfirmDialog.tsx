@@ -1,8 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Alert } from "react-bootstrap";
 import { DollarSign, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CloseConfirmDialogProps {
   show: boolean;
@@ -49,7 +59,7 @@ const CloseConfirmDialog: React.FC<CloseConfirmDialogProps> = ({
 
     // Validations
     if (!remainingBalance || isNaN(parsed)) {
-      setError("Por favor ingresa un monto válido");
+      setError("Por favor ingresa un monto valido");
       return;
     }
 
@@ -75,101 +85,96 @@ const CloseConfirmDialog: React.FC<CloseConfirmDialogProps> = ({
     : 0;
 
   return (
-    <Modal show={show} onHide={onHide} centered backdrop="static">
-      <Modal.Header closeButton={!isClosing}>
-        <Modal.Title className="fw-bold">Cerrar Caja Registradora</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <div className="mb-4">
-          <Alert variant="info" className="d-flex align-items-start">
-            <AlertTriangle size={20} className="me-2 mt-1 flex-shrink-0" />
-            <div>
-              <strong>Importante:</strong> Ingresa el saldo que quedará en la
-              caja después del cierre. Este será el saldo inicial para la
-              próxima apertura.
-            </div>
+    <Dialog open={show} onOpenChange={(open) => !open && !isClosing && onHide()}>
+      <DialogContent className="sm:max-w-md" showCloseButton={!isClosing}>
+        <DialogHeader>
+          <DialogTitle className="font-bold">Cerrar Caja Registradora</DialogTitle>
+        </DialogHeader>
+
+        <div className="py-4 space-y-4">
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertTriangle size={20} className="text-blue-600" />
+            <AlertDescription className="ml-2">
+              <strong>Importante:</strong> Ingresa el saldo que quedara en la
+              caja despues del cierre. Este sera el saldo inicial para la
+              proxima apertura.
+            </AlertDescription>
           </Alert>
-        </div>
 
-        <div
-          className="mb-4 p-3 rounded"
-          style={{ backgroundColor: "#f8f9fa" }}
-        >
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <span className="text-muted">Saldo actual de la caja:</span>
-            <span className="fw-bold fs-5 text-primary">
-              {formatCurrency(currentBalance)}
-            </span>
-          </div>
-        </div>
-
-        <Form.Group className="mb-3">
-          <Form.Label className="fw-semibold">
-            ¿Cuánto saldo quedará en la caja?
-          </Form.Label>
-          <div className="position-relative">
-            <DollarSign
-              size={20}
-              className="position-absolute"
-              style={{ left: "12px", top: "50%", transform: "translateY(-50%)" }}
-            />
-            <Form.Control
-              type="text"
-              placeholder="0.00"
-              value={remainingBalance}
-              onChange={(e) => handleInputChange(e.target.value)}
-              isInvalid={!!error}
-              disabled={isClosing}
-              style={{
-                paddingLeft: "40px",
-                fontSize: "1.1rem",
-                fontWeight: "500",
-              }}
-              autoFocus
-            />
-            <Form.Control.Feedback type="invalid">
-              {error}
-            </Form.Control.Feedback>
-          </div>
-          <Form.Text className="text-muted">
-            Ingresa solo números (ejemplo: 500 o 1500.50)
-          </Form.Text>
-        </Form.Group>
-
-        {remainingBalance && !error && parseFloat(remainingBalance) >= 0 && (
-          <div
-            className="p-3 rounded mb-3"
-            style={{
-              backgroundColor: withdrawAmount > 0 ? "#fff3cd" : "#d1ecf1",
-              border: `1px solid ${
-                withdrawAmount > 0 ? "#ffc107" : "#bee5eb"
-              }`,
-            }}
-          >
-            <div className="d-flex justify-content-between align-items-center">
-              <span className="fw-semibold">
-                {withdrawAmount > 0 ? "Se retirará:" : "Saldo final:"}
-              </span>
-              <span className="fw-bold fs-5">
-                {formatCurrency(withdrawAmount)}
+          <div className="p-3 rounded-lg bg-muted">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-muted-foreground">Saldo actual de la caja:</span>
+              <span className="font-bold text-xl text-primary">
+                {formatCurrency(currentBalance)}
               </span>
             </div>
           </div>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="light" onClick={onHide} disabled={isClosing}>
-          Cancelar
-        </Button>
-        <Button
-          variant="danger"
-          onClick={handleConfirm}
-          disabled={isClosing || !remainingBalance}
-        >
-          {isClosing ? "Cerrando..." : "Confirmar y Cerrar Caja"}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+
+          <div className="space-y-2">
+            <Label className="font-semibold">
+              Cuanto saldo quedara en la caja?
+            </Label>
+            <div className="relative">
+              <DollarSign
+                size={20}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                type="text"
+                placeholder="0.00"
+                value={remainingBalance}
+                onChange={(e) => handleInputChange(e.target.value)}
+                disabled={isClosing}
+                className={`pl-10 text-lg font-medium ${error ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                autoFocus
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Ingresa solo numeros (ejemplo: 500 o 1500.50)
+            </p>
+          </div>
+
+          {remainingBalance && !error && parseFloat(remainingBalance) >= 0 && (
+            <div
+              className={`p-3 rounded-lg border ${
+                withdrawAmount > 0
+                  ? "bg-yellow-50 border-yellow-300"
+                  : "bg-cyan-50 border-cyan-300"
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">
+                  {withdrawAmount > 0 ? "Se retirara:" : "Saldo final:"}
+                </span>
+                <span className="font-bold text-xl">
+                  {formatCurrency(withdrawAmount)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onHide}
+            disabled={isClosing}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isClosing || !remainingBalance}
+          >
+            {isClosing ? "Cerrando..." : "Confirmar y Cerrar Caja"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

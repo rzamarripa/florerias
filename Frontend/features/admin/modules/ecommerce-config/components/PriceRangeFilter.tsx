@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Form, Row, Col } from "react-bootstrap";
-import { TbCurrencyDollar } from "react-icons/tb";
+import { DollarSign } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 interface PriceRangeFilterProps {
   min: number;
@@ -9,11 +10,11 @@ interface PriceRangeFilterProps {
   onChange: (range: [number, number]) => void;
 }
 
-const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({ 
-  min, 
-  max, 
-  value, 
-  onChange 
+const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
+  min,
+  max,
+  value,
+  onChange
 }) => {
   const [localMin, setLocalMin] = useState(value[0]);
   const [localMax, setLocalMax] = useState(value[1]);
@@ -57,27 +58,53 @@ const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
   };
 
   return (
-    <div className="price-range-filter">
-      <div className="d-flex align-items-center mb-3">
-        <TbCurrencyDollar size={18} className="me-2 text-muted" />
-        <h6 className="mb-0">Rango de Precio</h6>
+    <div className="pt-4">
+      <div className="flex items-center mb-3">
+        <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
+        <h6 className="text-sm font-medium mb-0">Rango de Precio</h6>
       </div>
 
-      <div className="price-display mb-3">
-        <div className="d-flex justify-content-between align-items-center">
-          <span className="badge bg-light text-dark">{formatPrice(localMin)}</span>
-          <span className="text-muted">-</span>
-          <span className="badge bg-light text-dark">{formatPrice(localMax)}</span>
+      <div className="bg-muted/50 p-2 rounded mb-3">
+        <div className="flex justify-between items-center">
+          <Badge variant="secondary">{formatPrice(localMin)}</Badge>
+          <span className="text-muted-foreground">-</span>
+          <Badge variant="secondary">{formatPrice(localMax)}</Badge>
         </div>
       </div>
 
-      <div className="slider-container position-relative mb-3">
-        <div className="slider-track"></div>
-        <div className="slider-progress" style={getProgressStyle()}></div>
-        
+      <div className="relative h-10 py-2.5 mb-3">
+        {/* Track */}
+        <div className="absolute w-full h-1.5 bg-muted rounded top-1/2 -translate-y-1/2" />
+
+        {/* Progress */}
+        <div
+          className="absolute h-1.5 bg-gradient-to-r from-primary to-primary/80 rounded top-1/2 -translate-y-1/2"
+          style={getProgressStyle()}
+        />
+
+        {/* Min Slider */}
         <input
           type="range"
-          className="form-range slider-input"
+          className="absolute w-full top-0 h-10 bg-transparent pointer-events-none z-10 appearance-none
+            [&::-webkit-slider-thumb]:pointer-events-auto
+            [&::-webkit-slider-thumb]:w-5
+            [&::-webkit-slider-thumb]:h-5
+            [&::-webkit-slider-thumb]:rounded-full
+            [&::-webkit-slider-thumb]:border-2
+            [&::-webkit-slider-thumb]:border-primary
+            [&::-webkit-slider-thumb]:bg-background
+            [&::-webkit-slider-thumb]:cursor-pointer
+            [&::-webkit-slider-thumb]:appearance-none
+            [&::-webkit-slider-thumb]:shadow-md
+            [&::-moz-range-thumb]:pointer-events-auto
+            [&::-moz-range-thumb]:w-5
+            [&::-moz-range-thumb]:h-5
+            [&::-moz-range-thumb]:rounded-full
+            [&::-moz-range-thumb]:border-2
+            [&::-moz-range-thumb]:border-primary
+            [&::-moz-range-thumb]:bg-background
+            [&::-moz-range-thumb]:cursor-pointer
+            [&::-moz-range-thumb]:shadow-md"
           min={min}
           max={max}
           step={(max - min) / 100}
@@ -86,10 +113,30 @@ const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
           onMouseUp={handleRangeUpdate}
           onTouchEnd={handleRangeUpdate}
         />
-        
+
+        {/* Max Slider */}
         <input
           type="range"
-          className="form-range slider-input"
+          className="absolute w-full top-0 h-10 bg-transparent pointer-events-none appearance-none
+            [&::-webkit-slider-thumb]:pointer-events-auto
+            [&::-webkit-slider-thumb]:w-5
+            [&::-webkit-slider-thumb]:h-5
+            [&::-webkit-slider-thumb]:rounded-full
+            [&::-webkit-slider-thumb]:border-2
+            [&::-webkit-slider-thumb]:border-primary
+            [&::-webkit-slider-thumb]:bg-background
+            [&::-webkit-slider-thumb]:cursor-pointer
+            [&::-webkit-slider-thumb]:appearance-none
+            [&::-webkit-slider-thumb]:shadow-md
+            [&::-moz-range-thumb]:pointer-events-auto
+            [&::-moz-range-thumb]:w-5
+            [&::-moz-range-thumb]:h-5
+            [&::-moz-range-thumb]:rounded-full
+            [&::-moz-range-thumb]:border-2
+            [&::-moz-range-thumb]:border-primary
+            [&::-moz-range-thumb]:bg-background
+            [&::-moz-range-thumb]:cursor-pointer
+            [&::-moz-range-thumb]:shadow-md"
           min={min}
           max={max}
           step={(max - min) / 100}
@@ -100,98 +147,28 @@ const PriceRangeFilter: React.FC<PriceRangeFilterProps> = ({
         />
       </div>
 
-      <Row className="g-2">
-        <Col xs={6}>
-          <Form.Control
-            type="number"
-            size="sm"
-            value={localMin}
-            min={min}
-            max={max}
-            onChange={(e) => setLocalMin(parseFloat(e.target.value) || min)}
-            onBlur={handleRangeUpdate}
-            placeholder="Mín"
-          />
-        </Col>
-        <Col xs={6}>
-          <Form.Control
-            type="number"
-            size="sm"
-            value={localMax}
-            min={min}
-            max={max}
-            onChange={(e) => setLocalMax(parseFloat(e.target.value) || max)}
-            onBlur={handleRangeUpdate}
-            placeholder="Máx"
-          />
-        </Col>
-      </Row>
-
-      <style jsx>{`
-        .price-range-filter {
-          padding-top: 1rem;
-        }
-        .slider-container {
-          height: 40px;
-          padding: 10px 0;
-        }
-        .slider-track {
-          position: absolute;
-          width: 100%;
-          height: 5px;
-          background: #e9ecef;
-          border-radius: 3px;
-          top: 50%;
-          transform: translateY(-50%);
-        }
-        .slider-progress {
-          position: absolute;
-          height: 5px;
-          background: linear-gradient(90deg, #007bff, #0056b3);
-          border-radius: 3px;
-          top: 50%;
-          transform: translateY(-50%);
-        }
-        .slider-input {
-          position: absolute;
-          width: 100%;
-          top: 0;
-          height: 40px;
-          background: transparent;
-          pointer-events: none;
-          -webkit-appearance: none;
-          z-index: 1;
-        }
-        .slider-input::-webkit-slider-thumb {
-          pointer-events: auto;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          border: 2px solid #007bff;
-          background: white;
-          cursor: pointer;
-          -webkit-appearance: none;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .slider-input::-moz-range-thumb {
-          pointer-events: auto;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          border: 2px solid #007bff;
-          background: white;
-          cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .slider-input:first-of-type {
-          z-index: 2;
-        }
-        .price-display {
-          background: #f8f9fa;
-          padding: 0.5rem;
-          border-radius: 0.25rem;
-        }
-      `}</style>
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          type="number"
+          className="h-9 text-sm"
+          value={localMin}
+          min={min}
+          max={max}
+          onChange={(e) => setLocalMin(parseFloat(e.target.value) || min)}
+          onBlur={handleRangeUpdate}
+          placeholder="Min"
+        />
+        <Input
+          type="number"
+          className="h-9 text-sm"
+          value={localMax}
+          min={min}
+          max={max}
+          onChange={(e) => setLocalMax(parseFloat(e.target.value) || max)}
+          onBlur={handleRangeUpdate}
+          placeholder="Max"
+        />
+      </div>
     </div>
   );
 };

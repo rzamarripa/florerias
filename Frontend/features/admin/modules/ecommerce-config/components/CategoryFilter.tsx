@@ -1,5 +1,7 @@
-import { Form, Accordion } from "react-bootstrap";
-import { TbChevronDown, TbCategory } from "react-icons/tb";
+import { LayoutGrid } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import type { ProductCategory } from "@/features/admin/modules/productCategories/types";
 
 interface CategoryFilterProps {
@@ -9,84 +11,53 @@ interface CategoryFilterProps {
   productCounts?: Record<string, number>;
 }
 
-const CategoryFilter: React.FC<CategoryFilterProps> = ({ 
-  categories, 
-  selectedCategories, 
+const CategoryFilter: React.FC<CategoryFilterProps> = ({
+  categories,
+  selectedCategories,
   onCategoryToggle,
-  productCounts 
+  productCounts
 }) => {
   const getCategoryCount = (categoryId: string) => {
     return productCounts?.[categoryId] || 0;
   };
 
   return (
-    <div className="category-filter mb-4">
-      <div className="d-flex align-items-center mb-3">
-        <TbCategory size={18} className="me-2 text-muted" />
-        <h6 className="mb-0">Categorías</h6>
+    <div className="border-b pb-4 mb-4">
+      <div className="flex items-center mb-3">
+        <LayoutGrid className="h-4 w-4 mr-2 text-muted-foreground" />
+        <h6 className="text-sm font-medium mb-0">Categorias</h6>
       </div>
-      
-      <div className="category-list">
+
+      <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
         {categories.length === 0 ? (
-          <p className="text-muted small">No hay categorías disponibles</p>
+          <p className="text-muted-foreground text-sm">No hay categorias disponibles</p>
         ) : (
-          <div className="d-flex flex-column gap-2">
+          <div className="flex flex-col gap-2">
             {categories.map((category) => (
-              <Form.Check
+              <div
                 key={category._id}
-                type="checkbox"
-                id={`category-${category._id}`}
-                className="category-item"
+                className="flex items-center space-x-2 py-1 px-1 hover:bg-muted/50 rounded transition-colors cursor-pointer"
+                onClick={() => onCategoryToggle(category._id)}
               >
-                <Form.Check.Input
-                  type="checkbox"
+                <Checkbox
+                  id={`category-${category._id}`}
                   checked={selectedCategories.includes(category._id)}
-                  onChange={() => onCategoryToggle(category._id)}
+                  onCheckedChange={() => onCategoryToggle(category._id)}
                 />
-                <Form.Check.Label className="d-flex justify-content-between align-items-center w-100">
-                  <span className="text-truncate me-2">{category.name}</span>
-                  <span className="badge bg-light text-muted">
+                <Label
+                  htmlFor={`category-${category._id}`}
+                  className="flex-1 flex justify-between items-center cursor-pointer text-sm"
+                >
+                  <span className="truncate mr-2">{category.name}</span>
+                  <Badge variant="secondary" className="text-xs">
                     {getCategoryCount(category._id)}
-                  </span>
-                </Form.Check.Label>
-              </Form.Check>
+                  </Badge>
+                </Label>
+              </div>
             ))}
           </div>
         )}
       </div>
-
-      <style jsx>{`
-        .category-filter {
-          border-bottom: 1px solid #e9ecef;
-          padding-bottom: 1rem;
-        }
-        .category-list {
-          max-height: 300px;
-          overflow-y: auto;
-        }
-        .category-list::-webkit-scrollbar {
-          width: 4px;
-        }
-        .category-list::-webkit-scrollbar-track {
-          background: #f1f1f1;
-        }
-        .category-list::-webkit-scrollbar-thumb {
-          background: #888;
-          border-radius: 2px;
-        }
-        .category-item {
-          padding: 0.25rem 0;
-        }
-        .category-item:hover {
-          background-color: #f8f9fa;
-          padding-left: 0.5rem;
-          transition: all 0.2s;
-        }
-        .form-check-label {
-          cursor: pointer;
-          font-size: 0.9rem;
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   getAllChildrenIds,
   getAllDescendantIds,
   TreeNodeWithChildren,
 } from "../helpers";
 import { TreeNode } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface CustomTreeProps {
   data: TreeNode[];
@@ -17,7 +23,7 @@ const CustomTree: React.FC<CustomTreeProps> = ({ data, onSelectionChange }) => {
   const [indeterminateNodes, setIndeterminateNodes] = useState<Set<string>>(
     new Set()
   );
-  const checkboxRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const checkboxRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
   useEffect(() => {
     const initialSelected = new Set<string>();
@@ -35,19 +41,6 @@ const CustomTree: React.FC<CustomTreeProps> = ({ data, onSelectionChange }) => {
     setSelectedNodes(initialSelected);
     setExpandedNodes(initialExpanded);
   }, [data]);
-
-  useEffect(() => {
-    indeterminateNodes.forEach((id) => {
-      if (checkboxRefs.current[id]) {
-        checkboxRefs.current[id]!.indeterminate = true;
-      }
-    });
-    Object.keys(checkboxRefs.current).forEach((id) => {
-      if (!indeterminateNodes.has(id) && checkboxRefs.current[id]) {
-        checkboxRefs.current[id]!.indeterminate = false;
-      }
-    });
-  }, [indeterminateNodes, selectedNodes]);
 
   const buildTreeStructure = (nodes: TreeNode[]): TreeNodeWithChildren[] => {
     const nodeMap = new Map<string, TreeNodeWithChildren>();
@@ -189,42 +182,44 @@ const CustomTree: React.FC<CustomTreeProps> = ({ data, onSelectionChange }) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node.id);
     const isSelected = selectedNodes.has(node.id);
+    const isIndeterminate = indeterminateNodes.has(node.id);
 
     return (
       <div key={node.id} style={{ marginLeft: level * 20 }}>
         <div
-          className="d-flex align-items-center py-1 px-2 rounded cursor-pointer"
-          style={{
-            backgroundColor: isSelected ? "#e3f2fd" : "transparent",
-            cursor: "pointer",
-            minHeight: "32px",
-          }}
+          className={cn(
+            "flex items-center py-1 px-2 rounded cursor-pointer min-h-[32px] hover:bg-muted/50",
+            isSelected && "bg-primary/10"
+          )}
           onClick={() => handleToggleSelect(node)}
         >
           {hasChildren && (
-            <button
-              className="btn btn-sm btn-link p-0 me-2"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 mr-2"
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggleExpand(node.id);
               }}
-              style={{ width: "16px", height: "16px" }}
             >
-              {isExpanded ? "▼" : "▶"}
-            </button>
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
           )}
-          {!hasChildren && <div className="me-4" />}
+          {!hasChildren && <div className="w-6 mr-2" />}
 
-          <div className="d-flex align-items-center flex-grow-1">
-            <input
-              type="checkbox"
-              checked={isSelected}
+          <div className="flex items-center flex-grow gap-2">
+            <Checkbox
+              checked={isIndeterminate ? "indeterminate" : isSelected}
+              onCheckedChange={(checked) => handleToggleSelect(node, checked === true)}
+              onClick={(e) => e.stopPropagation()}
               ref={(el) => {
                 checkboxRefs.current[node.id] = el;
               }}
-              onChange={(e) => handleToggleSelect(node, e.target.checked)}
-              onClick={(e) => e.stopPropagation()}
-              className="me-2"
             />
             <span className="text-sm">{node.text}</span>
           </div>
@@ -242,21 +237,15 @@ const CustomTree: React.FC<CustomTreeProps> = ({ data, onSelectionChange }) => {
   const renderRoot = (node: TreeNodeWithChildren) => (
     <div key={node.id}>
       <div
-        className="d-flex align-items-center py-1 px-2 rounded cursor-pointer"
-        style={{
-          backgroundColor: allSelected ? "#e3f2fd" : "transparent",
-          cursor: "pointer",
-          minHeight: "32px",
-        }}
+        className={cn(
+          "flex items-center py-1 px-2 rounded cursor-pointer min-h-[32px] hover:bg-muted/50",
+          allSelected && "bg-primary/10"
+        )}
       >
-        <input
-          type="checkbox"
-          checked={allSelected}
-          ref={(el) => {
-            if (el) el.indeterminate = rootIndeterminate;
-          }}
-          onChange={(e) => {
-            if (e.target.checked) {
+        <Checkbox
+          checked={rootIndeterminate ? "indeterminate" : allSelected}
+          onCheckedChange={(checked) => {
+            if (checked) {
               setSelectedNodes(new Set(allSelectableIds));
               onSelectionChange(allSelectableIds);
             } else {
@@ -264,7 +253,7 @@ const CustomTree: React.FC<CustomTreeProps> = ({ data, onSelectionChange }) => {
               onSelectionChange([]);
             }
           }}
-          className="me-2"
+          className="mr-2"
         />
         <span className="text-sm">{node.text}</span>
       </div>
@@ -273,14 +262,11 @@ const CustomTree: React.FC<CustomTreeProps> = ({ data, onSelectionChange }) => {
   );
 
   return (
-    <div
-      className="border rounded p-3"
-      style={{ maxHeight: "400px", overflowY: "auto" }}
-    >
+    <ScrollArea className="h-[400px] border rounded-md p-3">
       {treeStructure.length > 0 && treeStructure[0].id === "root"
         ? renderRoot(treeStructure[0])
         : treeStructure.map((node) => renderNode(node))}
-    </div>
+    </ScrollArea>
   );
 };
 

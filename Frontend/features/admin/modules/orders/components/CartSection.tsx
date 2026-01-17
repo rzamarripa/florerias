@@ -1,13 +1,24 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col, Badge, Alert } from "react-bootstrap";
 import { Plus, Trash2 } from "lucide-react";
 import { OrderItem } from "../types";
 import { ProductCategory } from "@/features/admin/modules/productCategories/types";
 import { Storage } from "@/features/admin/modules/storage/types";
 import { productCategoriesService } from "@/features/admin/modules/productCategories/services/productCategories";
 import { toast } from "react-toastify";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CartSectionProps {
   items: OrderItem[];
@@ -36,14 +47,14 @@ const CartSection: React.FC<CartSectionProps> = ({
   onOpenExtrasModal,
   onContinueToCheckout,
 }) => {
-  // Estado interno para categorías de productos
+  // Estado interno para categorias de productos
   const [productCategories, setProductCategories] = useState<ProductCategory[]>(
     []
   );
   const [loadingProductCategories, setLoadingProductCategories] =
     useState(false);
 
-  // Cargar categorías de productos al montar
+  // Cargar categorias de productos al montar
   useEffect(() => {
     const fetchProductCategories = async () => {
       setLoadingProductCategories(true);
@@ -56,8 +67,8 @@ const CartSection: React.FC<CartSectionProps> = ({
         );
         setProductCategories(response.data);
       } catch (err) {
-        console.error("Error al cargar categorías de productos:", err);
-        toast.error("Error al cargar las categorías de productos");
+        console.error("Error al cargar categorias de productos:", err);
+        toast.error("Error al cargar las categorias de productos");
       } finally {
         setLoadingProductCategories(false);
       }
@@ -91,7 +102,7 @@ const CartSection: React.FC<CartSectionProps> = ({
     }
 
     if (!selectedProductCategory) {
-      toast.error("Debes seleccionar una categoría para el producto");
+      toast.error("Debes seleccionar una categoria para el producto");
       return;
     }
 
@@ -119,30 +130,30 @@ const CartSection: React.FC<CartSectionProps> = ({
   };
 
   return (
-    <Col xs={12} lg={4} style={{ height: "100%" }}>
-      <Card className="border-0 shadow-sm h-100 d-flex flex-column">
-        <Card.Header className="bg-white border-0 py-2 flex-shrink-0">
-          <div className="d-flex align-items-center gap-2">
-            <span className="fw-bold">Carrito</span>
-            <Badge bg="primary">{items.length}</Badge>
+    <div className="col-span-12 lg:col-span-4 h-full">
+      <Card className="border-0 shadow-sm h-full flex flex-col">
+        <CardHeader className="bg-white border-0 py-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-bold">Carrito</span>
+            <Badge variant="default">{items.length}</Badge>
           </div>
-        </Card.Header>
-        <Card.Body className="flex-grow-1" style={{ overflow: "auto" }}>
-          {/* Producto manual rápido */}
+        </CardHeader>
+        <CardContent className="flex-grow overflow-auto">
+          {/* Producto manual rapido */}
           <div className="mb-3">
-            <div className="fw-semibold mb-2">Producto manuals</div>
-            <Row className="g-2">
-              <Col xs={12}>
-                <Form.Control
+            <div className="font-semibold mb-2">Producto manual</div>
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-12">
+                <Input
                   type="text"
                   placeholder="Nombre del producto"
                   value={currentProductName}
                   onChange={(e) => setCurrentProductName(e.target.value)}
                   className="py-2"
                 />
-              </Col>
-              <Col xs={6}>
-                <Form.Control
+              </div>
+              <div className="col-span-6">
+                <Input
                   type="number"
                   min="1"
                   value={currentItem.quantity}
@@ -154,9 +165,9 @@ const CartSection: React.FC<CartSectionProps> = ({
                   }
                   className="py-2 text-center"
                 />
-              </Col>
-              <Col xs={6}>
-                <Form.Control
+              </div>
+              <div className="col-span-6">
+                <Input
                   type="number"
                   min="0"
                   step="0.01"
@@ -170,69 +181,80 @@ const CartSection: React.FC<CartSectionProps> = ({
                   }
                   className="py-2"
                 />
-              </Col>
-              <Col xs={12}>
-                <Form.Select
+              </div>
+              <div className="col-span-12">
+                <Select
                   value={selectedProductCategory}
-                  onChange={(e) => setSelectedProductCategory(e.target.value)}
-                  className="py-2"
+                  onValueChange={setSelectedProductCategory}
                   disabled={loadingProductCategories}
                 >
-                  <option value="">
-                    {loadingProductCategories
-                      ? "Cargando categorías..."
-                      : "-- Categoría --"}
-                  </option>
-                  {productCategories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Col>
-              <Col xs={12} className="d-grid">
-                <Button variant="outline-primary" onClick={handleAddItem}>
-                  <Plus size={16} className="me-2" />
+                  <SelectTrigger className="py-2">
+                    <SelectValue
+                      placeholder={
+                        loadingProductCategories
+                          ? "Cargando categorias..."
+                          : "-- Categoria --"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {productCategories.map((category) => (
+                      <SelectItem key={category._id} value={category._id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-12">
+                <Button
+                  variant="outline"
+                  onClick={handleAddItem}
+                  className="w-full"
+                >
+                  <Plus size={16} className="mr-2" />
                   Agregar (${calculateItemAmount().toFixed(2)})
                 </Button>
-              </Col>
-            </Row>
+              </div>
+            </div>
           </div>
 
           {/* Lista de items */}
           {items.length === 0 ? (
-            <Alert variant="light" className="mb-0">
-              Aún no hay productos. Agrega desde el catálogo.
+            <Alert className="mb-0">
+              <AlertDescription>
+                Aun no hay productos. Agrega desde el catalogo.
+              </AlertDescription>
             </Alert>
           ) : (
             <div
-              className="table-responsive"
-              style={{ maxHeight: 340, overflow: "auto" }}
+              className="overflow-auto"
+              style={{ maxHeight: 340 }}
             >
-              <table className="table table-sm align-middle">
+              <table className="w-full text-sm">
                 <tbody>
                   {items.map((item, index) => (
                     <React.Fragment key={index}>
-                      <tr>
-                        <td>
-                          <div className="fw-semibold">{item.productName}</div>
-                          <div className="text-muted small">
-                            {item.quantity} × ${item.unitPrice.toFixed(2)}{" "}
+                      <tr className="border-b">
+                        <td className="py-2">
+                          <div className="font-semibold">{item.productName}</div>
+                          <div className="text-muted-foreground text-sm">
+                            {item.quantity} x ${item.unitPrice.toFixed(2)}{" "}
                             <Badge
-                              bg={item.isProduct ? "success" : "secondary"}
-                              className="ms-2"
+                              variant={item.isProduct ? "default" : "secondary"}
+                              className="ml-2"
                             >
-                              {item.isProduct ? "Catálogo" : "Manual"}
+                              {item.isProduct ? "Catalogo" : "Manual"}
                             </Badge>
                           </div>
                         </td>
-                        <td className="text-end fw-bold">
+                        <td className="text-right font-bold py-2">
                           ${item.amount.toFixed(2)}
                         </td>
-                        <td className="text-end" style={{ width: 96 }}>
-                          <div className="d-flex justify-content-end gap-1">
+                        <td className="text-right py-2" style={{ width: 96 }}>
+                          <div className="flex justify-end gap-1">
                             <Button
-                              variant="outline-primary"
+                              variant="outline"
                               size="sm"
                               onClick={() => onOpenExtrasModal(index)}
                               title="Agregar extras"
@@ -245,10 +267,11 @@ const CartSection: React.FC<CartSectionProps> = ({
                               <Plus size={16} />
                             </Button>
                             <Button
-                              variant="outline-danger"
+                              variant="outline"
                               size="sm"
                               onClick={() => onRemoveItem(index)}
                               title="Eliminar"
+                              className="text-red-500 hover:text-red-700"
                             >
                               <Trash2 size={16} />
                             </Button>
@@ -262,19 +285,18 @@ const CartSection: React.FC<CartSectionProps> = ({
                             key={`${index}-insumo-${idx}`}
                             className="border-0"
                           >
-                            <td className="py-1 ps-4 border-0 text-muted small">
+                            <td className="py-1 pl-4 border-0 text-muted-foreground text-sm">
                               {insumo.cantidad} {insumo.nombre}
                               {insumo.isExtra && (
                                 <Badge
-                                  bg="info"
-                                  className="ms-2 text-white"
-                                  style={{ fontSize: "0.65rem" }}
+                                  variant="secondary"
+                                  className="ml-2 text-xs"
                                 >
                                   Extra
                                 </Badge>
                               )}
                             </td>
-                            <td className="py-1 border-0 text-end text-muted small">
+                            <td className="py-1 border-0 text-right text-muted-foreground text-sm">
                               {insumo.isExtra
                                 ? `+$${insumo.importeVenta.toFixed(2)}`
                                 : ""}
@@ -289,16 +311,16 @@ const CartSection: React.FC<CartSectionProps> = ({
             </div>
           )}
 
-          <hr />
+          <hr className="my-4" />
 
           {/* Totales */}
-          <div className="d-flex justify-content-between mb-1">
-            <span className="text-muted">Subtotal</span>
-            <span className="fw-semibold">${subtotal.toFixed(2)}</span>
+          <div className="flex justify-between mb-1">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span className="font-semibold">${subtotal.toFixed(2)}</span>
           </div>
-          <div className="d-flex justify-content-between mb-1">
-            <span className="text-muted">Descuento</span>
-            <span className="text-danger fw-semibold">
+          <div className="flex justify-between mb-1">
+            <span className="text-muted-foreground">Descuento</span>
+            <span className="text-red-500 font-semibold">
               -$
               {(discountType === "porcentaje"
                 ? (subtotal * (discount || 0)) / 100
@@ -306,23 +328,22 @@ const CartSection: React.FC<CartSectionProps> = ({
               ).toFixed(2)}
             </span>
           </div>
-          <div className="d-flex justify-content-between mb-2">
-            <span className="text-muted">Envío</span>
-            <span className="text-success fw-semibold">
+          <div className="flex justify-between mb-2">
+            <span className="text-muted-foreground">Envio</span>
+            <span className="text-green-600 font-semibold">
               +${(deliveryPrice || 0).toFixed(2)}
             </span>
           </div>
-          <div className="d-flex justify-content-between align-items-center border-top pt-2">
-            <span className="fs-5 fw-bold">Total</span>
-            <span className="fs-4 fw-bold text-primary">
+          <div className="flex justify-between items-center border-t pt-2">
+            <span className="text-xl font-bold">Total</span>
+            <span className="text-2xl font-bold text-blue-600">
               ${total.toFixed(2)}
             </span>
           </div>
-        </Card.Body>
-        <Card.Footer className="bg-white border-0 p-3 flex-shrink-0">
-          <div className="d-grid gap-2">
+        </CardContent>
+        <CardFooter className="bg-white border-0 p-3 flex-shrink-0">
+          <div className="grid gap-2 w-full">
             <Button
-              variant="primary"
               size="lg"
               disabled={items.length === 0}
               onClick={() => {
@@ -332,19 +353,21 @@ const CartSection: React.FC<CartSectionProps> = ({
                 }
                 onContinueToCheckout();
               }}
+              className="w-full"
             >
               Datos del pedido / Cobrar
             </Button>
             <Button
-              variant="outline-secondary"
+              variant="outline"
               onClick={() => window.history.back()}
+              className="w-full"
             >
               Salir
             </Button>
           </div>
-        </Card.Footer>
+        </CardFooter>
       </Card>
-    </Col>
+    </div>
   );
 };
 

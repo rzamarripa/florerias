@@ -1,14 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Modal, Spinner, Alert, Form, Table } from 'react-bootstrap';
-import { CreditCard, Download, QrCode, Search, ScanLine, X } from 'lucide-react';
+import { CreditCard, Download, QrCode, Search, ScanLine, X, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import CardPreview from './components/CardPreview';
 import DownloadCard from './components/DownloadCard';
 import QRScanner from './components/QRScanner';
 import digitalCardService from './services/digitalCardService';
 import { clientsService } from '../clients/services/clients';
 import { branchesService } from '../branches/services/branches';
-import { companiesService } from '../companies/services/companies';
 import { uploadDigitalCardQR } from '@/services/firebaseStorage';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import { useUserRoleStore } from '@/stores/userRoleStore';
@@ -41,7 +58,7 @@ const DigitalCardsPage: React.FC = () => {
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentBranchId, setCurrentBranchId] = useState<string>('');
-  
+
   const { user } = useUserSessionStore();
   const { role } = useUserRoleStore();
   const { activeBranch } = useActiveBranchStore();
@@ -53,25 +70,25 @@ const DigitalCardsPage: React.FC = () => {
   const loadBranchAndClients = async () => {
     try {
       setLoading(true);
-      
+
       let currentBranchId = '';
-      
+
       // Si es Super Admin y tiene sucursal activa, usar esa
       if (role === 'Super Admin' && activeBranch) {
         currentBranchId = activeBranch._id;
-      } 
+      }
       // Si es Gerente, buscar su sucursal
       else if (role === 'Gerente' && user?._id) {
         try {
           // Buscar la sucursal donde este usuario es gerente
-          const branches = await branchesService.getAllBranches({ 
-            managerId: user._id 
+          const branches = await branchesService.getAllBranches({
+            managerId: user._id
           });
-          
+
           if (branches.data && branches.data.length > 0) {
             currentBranchId = branches.data[0]._id;
           } else {
-            toast.error('No se encontró una sucursal asignada a este gerente');
+            toast.error('No se encontro una sucursal asignada a este gerente');
             return;
           }
         } catch (error) {
@@ -84,25 +101,25 @@ const DigitalCardsPage: React.FC = () => {
       else if (activeBranch) {
         currentBranchId = activeBranch._id;
       }
-      
+
       if (!currentBranchId) {
         toast.warning('No se pudo determinar la sucursal');
         return;
       }
-      
+
       setCurrentBranchId(currentBranchId);
-      
+
       // Cargar clientes de la sucursal
-      const response = await clientsService.getAllClients({ 
+      const response = await clientsService.getAllClients({
         branchId: currentBranchId,
-        limit: 100 
+        limit: 100
       });
-      
+
       if (response.success && response.data) {
-        // Obtener información de la sucursal
+        // Obtener informacion de la sucursal
         const branchInfo = await branchesService.getBranchById(currentBranchId);
         const branch = branchInfo.data;
-        
+
         // Obtener el companyId de la sucursal
         let branchCompanyId = '';
         if (branch.companyId) {
@@ -112,20 +129,20 @@ const DigitalCardsPage: React.FC = () => {
             branchCompanyId = branch.companyId;
           }
         }
-        
+
         // Mapear los clientes para incluir el objeto branch completo con companyId
         const clientsWithBranch = response.data.map((client: any) => ({
           ...client,
           branch: {
             _id: branch._id || currentBranchId,
-            name: branch.branchName || branch.name || 'Sucursal',
+            name: branch.branchName || (branch as any).name || 'Sucursal',
             address: branch.address || '',
-            companyId: branchCompanyId // Incluir el companyId aquí
+            companyId: branchCompanyId // Incluir el companyId aqui
           }
         }));
-        
+
         setClients(clientsWithBranch);
-        
+
         // Load digital cards for all clients
         const cardsMap: Record<string, any> = {};
         for (const client of clientsWithBranch) {
@@ -136,7 +153,7 @@ const DigitalCardsPage: React.FC = () => {
             }
           } catch (error: any) {
             // Solo mostrar error si NO es un 404 (tarjeta no encontrada es normal)
-            if (!error.message?.toLowerCase().includes('no encontrada') && 
+            if (!error.message?.toLowerCase().includes('no encontrada') &&
                 !error.message?.toLowerCase().includes('not found')) {
               console.error(`Error cargando tarjeta para cliente ${client._id}:`, error);
             }
@@ -157,33 +174,33 @@ const DigitalCardsPage: React.FC = () => {
     try {
       setLoading(true);
       setSelectedClient(client);
-      
+
       // Check if we already have the card
       let card = digitalCards[client._id];
-      
+
       if (!card) {
         // Try to get existing card
         card = await digitalCardService.getDigitalCard(client._id);
-        
+
         if (!card) {
           // Generate new card if doesn't exist
           card = await digitalCardService.generateDigitalCard(client._id);
-          
+
           // Si la tarjeta viene con un QR temporal, subirlo a Firebase
           if (card.tempQrCode) {
             try {
-              toast.info('Subiendo código QR a la nube...');
-              
+              toast.info('Subiendo codigo QR a la nube...');
+
               // Primero intentar usar el companyId que ya viene en el cliente
               let companyId = (client.branch as any).companyId || '';
-              
-              // Si no está disponible en el cliente, obtenerlo de la API
+
+              // Si no esta disponible en el cliente, obtenerlo de la API
               if (!companyId) {
                 console.log('CompanyId no disponible en cliente, obteniendo de API...');
                 const branchInfo = await branchesService.getBranchById(client.branch._id);
-                
+
                 console.log('Branch info completa:', branchInfo.data);
-                
+
                 if (branchInfo.data?.companyId) {
                   // Si companyId existe, verificar si es objeto o string
                   if (typeof branchInfo.data.companyId === 'object' && branchInfo.data.companyId !== null) {
@@ -199,14 +216,14 @@ const DigitalCardsPage: React.FC = () => {
               } else {
                 console.log('Usando companyId del cliente:', companyId);
               }
-              
+
               if (!companyId) {
                 console.error('No se pudo obtener companyId. Cliente branch:', client.branch);
                 throw new Error('No se pudo determinar la empresa de la sucursal');
               }
-              
+
               console.log('Company ID final para Firebase:', companyId);
-              
+
               // Subir QR a Firebase
               const { url, path } = await uploadDigitalCardQR(
                 card.tempQrCode,
@@ -214,21 +231,21 @@ const DigitalCardsPage: React.FC = () => {
                 client.branch._id,
                 client._id
               );
-              
+
               // Actualizar la tarjeta con las URLs de Firebase
               const updatedCard = await digitalCardService.updateQRUrls(card._id, url, path);
-              
+
               // Actualizar el objeto local
               card = {
                 ...updatedCard,
                 qrCodeUrl: url,
                 qrCodePath: path
               };
-              
+
               // Limpiar el QR temporal
               delete card.tempQrCode;
               delete card.qrCode;
-              
+
               toast.success('Tarjeta digital generada exitosamente');
             } catch (uploadError) {
               console.error('Error subiendo QR a Firebase:', uploadError);
@@ -236,11 +253,11 @@ const DigitalCardsPage: React.FC = () => {
             }
           }
         }
-        
+
         // Update cards state
         setDigitalCards(prev => ({ ...prev, [client._id]: card }));
       }
-      
+
       setDigitalCard(card);
       setShowCardModal(true);
     } catch (error) {
@@ -259,7 +276,7 @@ const DigitalCardsPage: React.FC = () => {
 
 
   const handleScanSuccess = (scanData: any) => {
-    // El modal del scanner ya se cierra automáticamente
+    // El modal del scanner ya se cierra automaticamente
     // y el dashboard de puntos se abre desde el componente QRScanner
     // Este callback ahora es opcional y puede usarse para actualizar el estado local si es necesario
     console.log('Cliente escaneado:', scanData?.client?.fullName);
@@ -270,201 +287,183 @@ const DigitalCardsPage: React.FC = () => {
     const clientNumber = client.clientNumber.toLowerCase();
     const phone = client.phoneNumber.toLowerCase();
     const term = searchTerm.toLowerCase();
-    
-    return fullName.includes(term) || 
-           clientNumber.includes(term) || 
+
+    return fullName.includes(term) ||
+           clientNumber.includes(term) ||
            phone.includes(term);
   });
 
   return (
-    <Container fluid>
-      <Row className="mb-4">
-        <Col>
-          <h2 className="d-flex align-items-center gap-2">
-            <CreditCard size={24} />
-            Tarjetas Digitales
-          </h2>
-          <p className="text-muted">
-            Genera y gestiona tarjetas digitales con códigos QR para tus clientes
-          </p>
-        </Col>
-      </Row>
+    <div className="container-fluid px-4">
+      <div className="mb-6">
+        <h2 className="flex items-center gap-2 text-2xl font-semibold">
+          <CreditCard size={24} />
+          Tarjetas Digitales
+        </h2>
+        <p className="text-muted-foreground">
+          Genera y gestiona tarjetas digitales con codigos QR para tus clientes
+        </p>
+      </div>
 
-      {/* Barra de búsqueda */}
-      <Row className="mb-4">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Control
-              type="text"
-              placeholder="Buscar por nombre, número de cliente o teléfono..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="shadow-sm"
-            />
-          </Form.Group>
-        </Col>
-        <Col md={6} className="text-end">
-          <Button 
-            variant="success" 
+      {/* Barra de busqueda */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+          <Input
+            type="text"
+            placeholder="Buscar por nombre, numero de cliente o telefono..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="shadow-sm"
+          />
+        </div>
+        <div className="flex justify-end">
+          <Button
+            variant="default"
+            className="bg-green-600 hover:bg-green-700"
             onClick={() => setShowScannerModal(true)}
             disabled={loading}
           >
-            <ScanLine size={18} className="me-2" />
+            <ScanLine size={18} className="mr-2" />
             Escanear QR
           </Button>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       {/* Lista de clientes */}
       {loading ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-3">Cargando clientes...</p>
+        <div className="text-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-3 text-muted-foreground">Cargando clientes...</p>
         </div>
       ) : filteredClients.length === 0 ? (
-        <Alert variant="info">
-          <Search size={20} className="me-2" />
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg flex items-center gap-2">
+          <Search size={20} />
           {searchTerm ? 'No se encontraron clientes con ese criterio' : 'No hay clientes registrados en esta sucursal'}
-        </Alert>
+        </div>
       ) : (
         <Card>
-          <Card.Body className="p-0">
-            <Table responsive hover className="mb-0">
-              <thead className="bg-light">
-                <tr>
-                  <th>Cliente</th>
-                  <th>Número</th>
-                  <th>Teléfono</th>
-                  <th>Puntos</th>
-                  <th className="text-center">Tarjeta Digital</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Numero</TableHead>
+                  <TableHead>Telefono</TableHead>
+                  <TableHead>Puntos</TableHead>
+                  <TableHead className="text-center">Tarjeta Digital</TableHead>
+                  <TableHead className="text-center">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredClients.map((client) => {
                   const card = digitalCards[client._id];
                   return (
-                    <tr key={client._id}>
-                      <td>
+                    <TableRow key={client._id}>
+                      <TableCell>
                         <div>
                           <strong>{client.name} {client.lastName}</strong>
                           {client.email && (
-                            <div className="small text-muted">{client.email}</div>
+                            <div className="text-sm text-muted-foreground">{client.email}</div>
                           )}
                         </div>
-                      </td>
-                      <td>{client.clientNumber}</td>
-                      <td>{client.phoneNumber}</td>
-                      <td>
-                        <span className="badge bg-primary">
+                      </TableCell>
+                      <TableCell>{client.clientNumber}</TableCell>
+                      <TableCell>{client.phoneNumber}</TableCell>
+                      <TableCell>
+                        <Badge variant="default">
                           {client.points} pts
-                        </span>
-                      </td>
-                      <td className="text-center">
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
                         {card ? (
                           <div>
-                            <small className="text-muted d-block">Código:</small>
-                            <code className="text-dark">{card.barcode || card.passSerialNumber || 'N/A'}</code>
+                            <small className="text-muted-foreground block">Codigo:</small>
+                            <code className="text-foreground">{card.barcode || card.passSerialNumber || 'N/A'}</code>
                           </div>
                         ) : (
-                          <span className="text-muted">-</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
-                      </td>
-                      <td className="text-center">
+                      </TableCell>
+                      <TableCell className="text-center">
                         <Button
-                          variant={card ? "outline-primary" : "primary"}
+                          variant={card ? "outline" : "default"}
                           size="sm"
                           onClick={() => handleGenerateCard(client)}
                         >
-                          <QrCode size={16} className="me-1" />
+                          <QrCode size={16} className="mr-1" />
                           {card ? 'Ver' : 'Crear'} Tarjeta
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
+              </TableBody>
             </Table>
-          </Card.Body>
+          </CardContent>
         </Card>
       )}
 
       {/* Modal de vista previa de tarjeta */}
-      <Modal
-        show={showCardModal}
-        onHide={() => setShowCardModal(false)}
-        size="lg"
-        centered
-        contentClassName="p-0 overflow-hidden border-0"
-        dialogClassName="modal-dark-theme"
-      >
-        <div 
-          className="modal-content"
+      <Dialog open={showCardModal} onOpenChange={setShowCardModal}>
+        <DialogContent
+          className="max-w-3xl p-0 overflow-hidden border-0"
           style={{
             background: 'linear-gradient(to bottom right, rgb(15, 23, 42), rgb(30, 41, 59), rgb(15, 23, 42))',
             borderColor: 'rgb(51, 65, 85)',
             borderRadius: '0.75rem',
-            overflow: 'hidden'
           }}
         >
           {/* Custom Header */}
-          <div 
-            className="d-flex align-items-center justify-content-between px-4 py-3 border-bottom"
+          <DialogHeader
+            className="flex flex-row items-center justify-between px-4 py-3 border-b"
             style={{ borderColor: 'rgba(51, 65, 85, 0.5)' }}
           >
-            <div className="d-flex align-items-center gap-2">
+            <div className="flex items-center gap-2">
               <CreditCard size={20} style={{ color: '#06b6d4' }} />
-              <h5 className="mb-0 text-white">Tarjeta Digital</h5>
+              <DialogTitle className="text-white">Tarjeta Digital</DialogTitle>
             </div>
-            <button 
+            <button
               type="button"
-              className="btn btn-link p-0 text-decoration-none"
+              className="p-0 hover:opacity-80 transition-opacity"
               onClick={() => setShowCardModal(false)}
               style={{ color: '#94a3b8' }}
             >
               <X size={20} />
             </button>
-          </div>
+          </DialogHeader>
 
-          <Modal.Body className="p-0">
+          <div className="p-0">
             {digitalCard && selectedClient && (
-              <CardPreview 
-                digitalCard={digitalCard} 
+              <CardPreview
+                digitalCard={digitalCard}
                 client={selectedClient}
                 branch={selectedClient.branch}
               />
             )}
-          </Modal.Body>
+          </div>
 
           {/* Custom Footer */}
-          <div 
-            className="d-flex gap-3 px-4 py-3 border-top"
-            style={{ 
+          <DialogFooter
+            className="flex gap-3 px-4 py-3 border-t"
+            style={{
               backgroundColor: 'rgb(15, 23, 42)',
               borderColor: 'rgb(51, 65, 85)'
             }}
           >
-            <button 
-              className="btn flex-fill border"
+            <Button
+              variant="outline"
+              className="flex-1 border"
               onClick={() => setShowCardModal(false)}
               style={{
                 borderColor: 'rgb(71, 85, 105)',
                 color: '#cbd5e1',
                 backgroundColor: 'transparent'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(30, 41, 59)';
-                e.currentTarget.style.color = 'white';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = '#cbd5e1';
-              }}
             >
               Cerrar
-            </button>
-            <button 
-              className="btn flex-fill d-flex align-items-center justify-content-center gap-2"
+            </Button>
+            <Button
+              className="flex-1 flex items-center justify-center gap-2"
               onClick={handleDownload}
               style={{
                 background: 'linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))',
@@ -472,19 +471,13 @@ const DigitalCardsPage: React.FC = () => {
                 border: 'none',
                 boxShadow: '0 10px 15px -3px rgba(6, 182, 212, 0.2)'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, rgb(8, 145, 178), rgb(37, 99, 235))';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))';
-              }}
             >
               <Download size={16} />
               Descargar
-            </button>
-          </div>
-        </div>
-      </Modal>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de descarga */}
       {digitalCard && (
@@ -505,7 +498,7 @@ const DigitalCardsPage: React.FC = () => {
       />
 
       {/* El modal de puntos ahora se maneja directamente en QRScanner */}
-    </Container>
+    </div>
   );
 };
 

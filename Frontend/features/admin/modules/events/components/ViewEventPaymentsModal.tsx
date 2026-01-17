@@ -1,11 +1,28 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Table, Spinner, Badge, Alert } from "react-bootstrap";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2, Info } from "lucide-react";
 import { toast } from "react-toastify";
 import { eventPaymentsService } from "../services/eventPayments";
 import { EventPayment, Event } from "../types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface ViewEventPaymentsModalProps {
   show: boolean;
@@ -46,7 +63,7 @@ const ViewEventPaymentsModal: React.FC<ViewEventPaymentsModalProps> = ({
   }, [show, event._id]);
 
   const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm("¿Estás seguro de eliminar este pago? Esta acción actualizará los saldos del evento.")) {
+    if (!confirm("Estas seguro de eliminar este pago? Esta accion actualizara los saldos del evento.")) {
       return;
     }
 
@@ -80,173 +97,166 @@ const ViewEventPaymentsModal: React.FC<ViewEventPaymentsModalProps> = ({
   const totals = calculateTotals();
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered backdrop="static">
-      <Modal.Header closeButton className="border-0">
-        <Modal.Title className="fw-bold">Pagos del Evento</Modal.Title>
-      </Modal.Header>
-      <Modal.Body className="p-4">
-        <Alert variant="info" className="mb-3">
-          <div className="row">
-            <div className="col-md-6">
-              <div className="mb-2">
-                <strong>Folio:</strong> #{event.folio}
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="font-bold">Pagos del Evento</DialogTitle>
+        </DialogHeader>
+        <div className="p-4 space-y-4">
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div>
+                    <strong>Folio:</strong> #{event.folio}
+                  </div>
+                  <div>
+                    <strong>Cliente:</strong> {event.client.name} {event.client.lastName}
+                  </div>
+                  <div>
+                    <strong>Fecha del Evento:</strong>{" "}
+                    {new Date(event.eventDate).toLocaleDateString("es-MX")}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <strong>Total del Evento:</strong>{" "}
+                    <span className="font-bold">
+                      ${event.totalAmount.toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Total Pagado:</strong>{" "}
+                    <span className="font-bold text-green-600">
+                      ${event.totalPaid.toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Saldo Pendiente:</strong>{" "}
+                    <span className="font-bold text-red-600">
+                      ${event.balance.toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="mb-2">
-                <strong>Cliente:</strong> {event.client.name} {event.client.lastName}
-              </div>
-              <div className="mb-2">
-                <strong>Fecha del Evento:</strong>{" "}
-                {new Date(event.eventDate).toLocaleDateString("es-MX")}
-              </div>
-            </div>
-            <div className="col-md-6">
-              <div className="mb-2">
-                <strong>Total del Evento:</strong>{" "}
-                <span className="fw-bold">
-                  ${event.totalAmount.toLocaleString("es-MX", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="mb-2">
-                <strong>Total Pagado:</strong>{" "}
-                <span className="fw-bold text-success">
-                  ${event.totalPaid.toLocaleString("es-MX", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div>
-                <strong>Saldo Pendiente:</strong>{" "}
-                <span className="fw-bold text-danger">
-                  ${event.balance.toLocaleString("es-MX", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-            </div>
-          </div>
-        </Alert>
+            </AlertDescription>
+          </Alert>
 
-        {loading ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="text-muted mt-3">Cargando pagos...</p>
-          </div>
-        ) : payments.length === 0 ? (
-          <div className="text-center py-5">
-            <p className="text-muted">No hay pagos registrados para este evento</p>
-          </div>
-        ) : (
-          <>
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-3 py-2 fw-semibold text-muted">FECHA</th>
-                    <th className="px-3 py-2 fw-semibold text-muted">MÉTODO</th>
-                    <th className="px-3 py-2 fw-semibold text-muted text-end">MONTO</th>
-                    <th className="px-3 py-2 fw-semibold text-muted">REGISTRADO POR</th>
-                    <th className="px-3 py-2 fw-semibold text-muted">NOTAS</th>
-                    <th className="px-3 py-2 fw-semibold text-muted text-center">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {loading ? (
+            <div className="text-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground mt-3">Cargando pagos...</p>
+            </div>
+          ) : payments.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground">No hay pagos registrados para este evento</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground">FECHA</TableHead>
+                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground">METODO</TableHead>
+                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-right">MONTO</TableHead>
+                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground">REGISTRADO POR</TableHead>
+                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground">NOTAS</TableHead>
+                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {payments.map((payment) => (
-                    <tr key={payment._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                      <td className="px-3 py-2">
+                    <TableRow key={payment._id} className="border-b border-border/50">
+                      <TableCell className="px-3 py-2">
                         {new Date(payment.paymentDate).toLocaleDateString("es-MX")}
                         <br />
-                        <small className="text-muted">
+                        <small className="text-muted-foreground">
                           {new Date(payment.paymentDate).toLocaleTimeString("es-MX", {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
                         </small>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge bg="primary" className="px-2 py-1">
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <Badge className="px-2 py-1">
                           {payment.paymentMethod.name}
                         </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-end fw-bold text-success">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-right font-bold text-green-600">
                         ${payment.amount.toLocaleString("es-MX", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
-                      </td>
-                      <td className="px-3 py-2">
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
                         {payment.user.username}
                         <br />
-                        <small className="text-muted">{payment.branch.branchName}</small>
-                      </td>
-                      <td className="px-3 py-2">
+                        <small className="text-muted-foreground">{payment.branch.branchName}</small>
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
                         {payment.notes || "-"}
-                      </td>
-                      <td className="px-3 py-2 text-center">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-center">
                         <Button
-                          variant="light"
-                          size="sm"
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => handleDeletePayment(payment._id)}
                           disabled={deletingId === payment._id}
-                          className="border-0"
-                          style={{
-                            borderRadius: "50%",
-                            width: "32px",
-                            height: "32px",
-                            padding: "0",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "#fee",
-                          }}
+                          className="rounded-full bg-red-100 hover:bg-red-200"
                           title="Eliminar pago"
                         >
                           {deletingId === payment._id ? (
-                            <Spinner animation="border" size="sm" />
+                            <Loader2 size={16} className="animate-spin" />
                           ) : (
-                            <Trash2 size={16} className="text-danger" />
+                            <Trash2 size={16} className="text-red-500" />
                           )}
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
+                </TableBody>
               </Table>
-            </div>
 
-            <div className="mt-3 p-3 rounded" style={{ backgroundColor: "#f8f9fa" }}>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <strong>Total de pagos registrados:</strong> {totals.cantidadPagos}
-                </div>
-                <div>
-                  <strong>Suma de pagos:</strong>{" "}
-                  <span className="fs-5 fw-bold text-success">
-                    ${totals.totalPagos.toLocaleString("es-MX", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
+              <div className="mt-3 p-3 rounded-lg bg-muted/50">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <strong>Total de pagos registrados:</strong> {totals.cantidadPagos}
+                  </div>
+                  <div>
+                    <strong>Suma de pagos:</strong>{" "}
+                    <span className="text-lg font-bold text-green-600">
+                      ${totals.totalPagos.toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </>
-        )}
-      </Modal.Body>
-      <Modal.Footer className="border-0">
-        <Button
-          variant="light"
-          onClick={onHide}
-          style={{ borderRadius: "10px" }}
-        >
-          Cerrar
-        </Button>
-      </Modal.Footer>
-    </Modal>
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onHide}
+            className="rounded-[10px]"
+          >
+            Cerrar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Alert } from "react-bootstrap";
-import { X, Save, User, Eye, EyeOff, Building2 } from "lucide-react";
-import { toast } from "react-toastify";
+import { Save, User, Eye, EyeOff, Building2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Cashier, CreateCashierData, UpdateCashierData } from "../types";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CashierModalProps {
   show: boolean;
@@ -199,210 +218,211 @@ const CashierModal: React.FC<CashierModalProps> = ({
   const isEditing = !!cashier;
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header className="border-bottom-0 pb-0">
-        <Modal.Title className="d-flex align-items-center gap-2">
-          <User size={20} className="text-primary" />
-          {isEditing ? "Editar Cajero" : "Nuevo Cajero"}
-        </Modal.Title>
-        <Button
-          variant="link"
-          onClick={onHide}
-          className="text-muted p-0"
-          style={{ border: "none", background: "none" }}
-        >
-          <X size={20} />
-        </Button>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !loading && !open && onHide()}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5 text-primary" />
+            {isEditing ? "Editar Cajero" : "Nuevo Cajero"}
+          </DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Actualiza la información del cajero"
+              : "Completa los datos del nuevo cajero"}
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body>
         {isAdminOrManager && userCompany && (
-          <Alert variant="info" className="d-flex align-items-center gap-2 mb-3">
-            <Building2 size={18} />
-            <div>
-              <strong>Empresa:</strong> {userCompany.tradeName || userCompany.legalName}
-              <br />
-              <small className="text-muted">RFC: {userCompany.rfc}</small>
-            </div>
+          <Alert>
+            <Building2 className="h-4 w-4" />
+            <AlertDescription>
+              <div className="font-semibold">
+                {userCompany.tradeName || userCompany.legalName}
+              </div>
+              <div className="text-sm text-muted-foreground">RFC: {userCompany.rfc}</div>
+            </AlertDescription>
           </Alert>
         )}
 
-        <Form onSubmit={handleSubmit}>
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Nombre <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="profile.name">
+                  Nombre <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="profile.name"
                   type="text"
                   placeholder="Ingresa el nombre"
                   value={formData.profile.name}
                   onChange={(e) => handleChange("profile.name", e.target.value)}
-                  isInvalid={!!errors["profile.name"]}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors["profile.name"]}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
+                {errors["profile.name"] && (
+                  <p className="text-sm text-destructive">{errors["profile.name"]}</p>
+                )}
+              </div>
 
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Apellido <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+              <div className="space-y-2">
+                <Label htmlFor="profile.lastName">
+                  Apellido <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="profile.lastName"
                   type="text"
                   placeholder="Ingresa el apellido"
                   value={formData.profile.lastName}
                   onChange={(e) => handleChange("profile.lastName", e.target.value)}
-                  isInvalid={!!errors["profile.lastName"]}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors["profile.lastName"]}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
+                {errors["profile.lastName"] && (
+                  <p className="text-sm text-destructive">{errors["profile.lastName"]}</p>
+                )}
+              </div>
+            </div>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Nombre de Usuario <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">
+                  Nombre de Usuario <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="username"
                   type="text"
                   placeholder="Ingresa el nombre de usuario"
                   value={formData.username}
                   onChange={(e) => handleChange("username", e.target.value)}
-                  isInvalid={!!errors.username}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.username}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
+                {errors.username && (
+                  <p className="text-sm text-destructive">{errors.username}</p>
+                )}
+              </div>
 
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Teléfono <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+              <div className="space-y-2">
+                <Label htmlFor="phone">
+                  Teléfono <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="phone"
                   type="tel"
                   placeholder="Ingresa el número de teléfono"
                   value={formData.phone}
                   onChange={(e) => handleChange("phone", e.target.value)}
-                  isInvalid={!!errors.phone}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.phone}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Form.Group className="mb-3">
-            <Form.Label>
-              Correo Electrónico <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
-              type="email"
-              placeholder="Ingresa el correo electrónico"
-              value={formData.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-              isInvalid={!!errors.email}
-            />
-            <Form.Control.Feedback type="invalid">
-              {errors.email}
-            </Form.Control.Feedback>
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>
-              Contraseña {!isEditing && <span className="text-danger">*</span>}
-              {isEditing && <small className="text-muted"> (Dejar vacío para mantener actual)</small>}
-            </Form.Label>
-            <div className="position-relative">
-              <Form.Control
-                type={showPassword ? "text" : "password"}
-                placeholder="Ingresa la contraseña"
-                value={formData.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                isInvalid={!!errors.password}
-              />
-              <Button
-                variant="link"
-                className="position-absolute end-0 top-50 translate-middle-y pe-3"
-                style={{ border: "none", background: "none", zIndex: 10 }}
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </Button>
-              <Form.Control.Feedback type="invalid">
-                {errors.password}
-              </Form.Control.Feedback>
+                {errors.phone && (
+                  <p className="text-sm text-destructive">{errors.phone}</p>
+                )}
+              </div>
             </div>
-          </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>
-              Sucursal <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Select
-              value={formData.branch}
-              onChange={(e) => handleChange("branch", e.target.value)}
-              isInvalid={!!errors.branch}
-              disabled={loadingBranches || isEditing}
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                Correo Electrónico <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Ingresa el correo electrónico"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+              />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">
+                Contraseña {!isEditing && <span className="text-destructive">*</span>}
+                {isEditing && (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (Dejar vacío para mantener actual)
+                  </span>
+                )}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Ingresa la contraseña"
+                  value={formData.password}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="branch">
+                Sucursal <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.branch}
+                onValueChange={(value) => handleChange("branch", value)}
+                disabled={loadingBranches || isEditing}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loadingBranches ? "Cargando sucursales..." : "Selecciona una sucursal"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch._id} value={branch._id}>
+                      {branch.branchName} ({branch.branchCode})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.branch && (
+                <p className="text-sm text-destructive">{errors.branch}</p>
+              )}
+              {isEditing && (
+                <p className="text-sm text-muted-foreground">
+                  La sucursal no se puede cambiar al editar un cajero
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onHide} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading || loadingUserCompany || loadingBranches}
             >
-              <option value="">
-                {loadingBranches ? "Cargando sucursales..." : "Selecciona una sucursal"}
-              </option>
-              {branches.map((branch) => (
-                <option key={branch._id} value={branch._id}>
-                  {branch.branchName} ({branch.branchCode})
-                </option>
-              ))}
-            </Form.Select>
-            <Form.Control.Feedback type="invalid">
-              {errors.branch}
-            </Form.Control.Feedback>
-            {isEditing && (
-              <Form.Text className="text-muted">
-                La sucursal no se puede cambiar al editar un cajero
-              </Form.Text>
-            )}
-          </Form.Group>
-        </Form>
-      </Modal.Body>
-
-      <Modal.Footer className="border-top-0 pt-0">
-        <Button variant="outline-secondary" onClick={onHide} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={loading || loadingUserCompany || loadingBranches}
-          className="d-flex align-items-center gap-2"
-        >
-          {loading ? (
-            <>
-              <div className="spinner-border spinner-border-sm" role="status" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save size={16} />
-              {isEditing ? "Actualizar" : "Crear"} Cajero
-            </>
-          )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isEditing ? "Actualizar" : "Crear"} Cajero
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

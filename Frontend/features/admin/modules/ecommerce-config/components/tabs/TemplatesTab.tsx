@@ -1,5 +1,8 @@
 import React from 'react';
-import { Card, Row, Col, Button, Spinner } from 'react-bootstrap';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface TemplatesTabProps {
   selectedTemplate: 'classic' | 'modern' | 'minimalist' | 'elegant';
@@ -15,7 +18,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({
   onSave,
 }) => {
   const templates: Array<{ key: 'classic' | 'modern' | 'minimalist' | 'elegant'; name: string }> = [
-    { key: 'classic', name: 'Clásica' },
+    { key: 'classic', name: 'Clasica' },
     { key: 'modern', name: 'Moderna' },
     { key: 'minimalist', name: 'Minimalista' },
     { key: 'elegant', name: 'Elegante' }
@@ -23,37 +26,34 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({
 
   return (
     <div>
-      <h5 className="mb-4">Selecciona una plantilla</h5>
-      <Row className="g-3">
+      <h5 className="mb-4 text-lg font-semibold">Selecciona una plantilla</h5>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {templates.map((template) => (
-          <Col key={template.key} xs={12} sm={6} lg={3}>
-            <Card 
-              className={`cursor-pointer hover-shadow ${selectedTemplate === template.key ? 'border-primary' : ''}`}
-              onClick={() => setSelectedTemplate(template.key)}
-              style={{ cursor: 'pointer' }}
-            >
-              <Card.Body className="text-center p-3">
-                <div className="bg-light rounded mb-3" style={{ height: "150px" }}>
-                  <div className="d-flex align-items-center justify-content-center h-100">
-                    <span className="text-muted">{template.name}</span>
-                  </div>
-                </div>
-                <h6 className="mb-1">{template.name}</h6>
-                {selectedTemplate === template.key && (
-                  <span className="badge bg-primary">Seleccionada</span>
-                )}
-              </Card.Body>
-            </Card>
-          </Col>
+          <Card
+            key={template.key}
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedTemplate === template.key ? 'ring-2 ring-primary' : ''
+            }`}
+            onClick={() => setSelectedTemplate(template.key)}
+          >
+            <CardContent className="text-center p-3">
+              <div className="bg-muted rounded-lg mb-3 h-[150px] flex items-center justify-center">
+                <span className="text-muted-foreground">{template.name}</span>
+              </div>
+              <h6 className="font-semibold mb-1">{template.name}</h6>
+              {selectedTemplate === template.key && (
+                <Badge>Seleccionada</Badge>
+              )}
+            </CardContent>
+          </Card>
         ))}
-      </Row>
-      <div className="d-flex justify-content-end mt-4">
-        <Button 
-          variant="primary"
+      </div>
+      <div className="flex justify-end mt-4">
+        <Button
           onClick={onSave}
           disabled={saving}
         >
-          {saving ? <Spinner animation="border" size="sm" className="me-2" /> : null}
+          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Guardar cambios
         </Button>
       </div>

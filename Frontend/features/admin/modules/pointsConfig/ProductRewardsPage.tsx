@@ -2,17 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Card,
-  Row,
-  Col,
-  Button,
-  Spinner,
-  Alert,
-  Form,
-  Badge,
-  Modal,
-} from "react-bootstrap";
-import {
   Package,
   ArrowLeft,
   Search,
@@ -24,6 +13,7 @@ import {
   ShoppingBag,
   Edit2,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -37,6 +27,21 @@ import { useUserRoleStore } from "@/stores/userRoleStore";
 import PointsRewardModal from "./components/PointsRewardModal";
 import { branchesService } from "../branches/services/branches";
 import { Branch } from "../branches/types";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface ProductWithStock {
   _id: string;
@@ -95,13 +100,13 @@ const ProductRewardsPage: React.FC = () => {
     try {
       const response = await branchesService.getUserBranches();
       if (response.success && response.data && response.data.length > 0) {
-        const branch = response.data[0]; // El gerente solo debe tener una sucursal
+        const branch = response.data[0];
         setManagerBranch(branch);
         setCurrentBranchId(branch._id);
-        console.log("🔍 [ProductRewards] Sucursal del gerente cargada:", branch.branchName);
+        console.log("Sucursal del gerente cargada:", branch.branchName);
         return branch._id;
       } else {
-        toast.error("No se encontró una sucursal asignada para el gerente");
+        toast.error("No se encontro una sucursal asignada para el gerente");
         return null;
       }
     } catch (error: any) {
@@ -133,13 +138,11 @@ const ProductRewardsPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // Cargar storage de la sucursal
       const storageResponse = await storageService.getStorageByBranch(targetBranchId);
       if (storageResponse.data) {
         setStorage(storageResponse.data);
       }
 
-      // Cargar recompensas existentes de tipo producto (isProducto = true)
       const rewardsResponse = await pointsRewardService.getPointsRewardsByBranch(targetBranchId);
       const productRewards = rewardsResponse.data.filter(
         (reward) => reward.isProducto === true
@@ -156,7 +159,6 @@ const ProductRewardsPage: React.FC = () => {
   };
 
   const handleProductClick = (product: ProductWithStock) => {
-    // Verificar si ya existe una recompensa para este producto
     const existingReward = existingProductRewards.find((reward) => {
       const productId = typeof reward.productId === "string"
         ? reward.productId
@@ -189,13 +191,12 @@ const ProductRewardsPage: React.FC = () => {
   const handleCreateReward = async () => {
     if (!selectedProduct) return;
 
-    // Validar que hay una sucursal disponible
     const branchToUse = isManager ? managerBranch?._id : currentBranchId;
-    
+
     if (!branchToUse) {
       toast.error(
-        isManager 
-          ? "No se encontró una sucursal asignada para el gerente"
+        isManager
+          ? "No se encontro una sucursal asignada para el gerente"
           : "No se ha seleccionado una sucursal"
       );
       return;
@@ -296,79 +297,68 @@ const ProductRewardsPage: React.FC = () => {
     const product = typeof reward.productId === "object" ? reward.productId : null;
 
     return (
-      <Col key={reward._id}>
-        <Card className="border-0 shadow-sm h-100 overflow-hidden">
+      <div key={reward._id} className="col-span-1">
+        <Card className="border-0 shadow-sm h-full overflow-hidden">
           {/* Product Image */}
-          <div className="position-relative" style={{ height: "140px" }}>
+          <div className="relative h-[140px]">
             {product?.imagen ? (
               <img
                 src={product.imagen}
                 alt={product.nombre}
-                className="w-100 h-100"
-                style={{ objectFit: "cover" }}
+                className="w-full h-full object-cover"
               />
             ) : (
-              <div className="bg-light d-flex align-items-center justify-content-center h-100">
-                <Package size={32} className="text-muted opacity-50" />
+              <div className="bg-gray-100 flex items-center justify-center h-full">
+                <Package size={32} className="text-muted-foreground opacity-50" />
               </div>
             )}
             {/* Points Badge */}
-            <div
-              className="position-absolute"
-              style={{ top: "8px", left: "8px" }}
-            >
-              <span
-                className="badge bg-primary px-2 py-1"
-                style={{ fontSize: "0.75rem" }}
-              >
+            <div className="absolute top-2 left-2">
+              <Badge className="px-2 py-1 text-xs">
                 {reward.pointsRequired} pts
-              </span>
+              </Badge>
             </div>
             {/* Status Badge */}
-            <div
-              className="position-absolute"
-              style={{ top: "8px", right: "8px" }}
-            >
-              <span
-                className={`badge ${reward.status ? "bg-success" : "bg-secondary"} px-2 py-1`}
-                style={{ fontSize: "0.65rem" }}
+            <div className="absolute top-2 right-2">
+              <Badge
+                variant={reward.status ? "default" : "secondary"}
+                className="px-2 py-1 text-[10px]"
               >
                 {reward.status ? "Activo" : "Inactivo"}
-              </span>
+              </Badge>
             </div>
           </div>
-          <Card.Body className="p-3">
+          <CardContent className="p-3">
             <h6
-              className="fw-semibold mb-1 text-truncate"
-              style={{ fontSize: "0.85rem" }}
+              className="font-semibold mb-1 truncate text-sm"
               title={product?.nombre || reward.name}
             >
               {product?.nombre || reward.name}
             </h6>
-            <div className="d-flex justify-content-between align-items-center">
-              <small className="text-muted">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-sm">
                 x{reward.productQuantity || 1} unidad(es)
-              </small>
+              </span>
               <Button
-                variant="link"
+                variant="ghost"
                 size="sm"
-                className="p-0 text-muted"
+                className="p-0 h-auto text-muted-foreground hover:text-foreground"
                 onClick={() => handleEditReward(reward)}
                 title="Editar"
               >
                 <Edit2 size={14} />
               </Button>
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
-      </Col>
+      </div>
     );
   };
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center py-5">
-        <Spinner animation="border" variant="primary" />
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -377,174 +367,164 @@ const ProductRewardsPage: React.FC = () => {
     <div className="product-rewards-page">
       {/* Mensajes de advertencia para sucursal */}
       {!isManager && !activeBranch && (
-        <div className="alert alert-warning mb-3">
-          <strong>⚠️ Advertencia:</strong> No hay sucursal activa seleccionada.
-          Por favor, selecciona una sucursal desde el selector de sucursales en
-          la parte superior para poder configurar productos como recompensa.
-        </div>
+        <Alert variant="destructive" className="mb-4 bg-yellow-50 border-yellow-200 text-yellow-800">
+          <AlertDescription>
+            <strong>Advertencia:</strong> No hay sucursal activa seleccionada.
+            Por favor, selecciona una sucursal desde el selector de sucursales en
+            la parte superior para poder configurar productos como recompensa.
+          </AlertDescription>
+        </Alert>
       )}
 
       {isManager && !managerBranch && (
-        <div className="alert alert-warning mb-3">
-          <strong>⚠️ Advertencia:</strong> No se encontró una sucursal asignada para tu usuario.
-          Por favor, contacta al administrador.
-        </div>
+        <Alert variant="destructive" className="mb-4 bg-yellow-50 border-yellow-200 text-yellow-800">
+          <AlertDescription>
+            <strong>Advertencia:</strong> No se encontro una sucursal asignada para tu usuario.
+            Por favor, contacta al administrador.
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex align-items-center gap-3">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
           <Button
-            variant="outline-secondary"
+            variant="outline"
             size="sm"
             onClick={() => router.push("/panel/config-puntos")}
-            className="d-flex align-items-center gap-2"
+            className="flex items-center gap-2"
           >
             <ArrowLeft size={16} />
             Volver
           </Button>
           <div>
-            <h5 className="mb-0">Productos como Recompensa</h5>
-            <small className="text-muted">
-              {isManager 
+            <h5 className="text-lg font-semibold mb-0">Productos como Recompensa</h5>
+            <span className="text-muted-foreground text-sm">
+              {isManager
                 ? (managerBranch?.branchName || "Cargando sucursal...")
                 : (activeBranch?.branchName || "Sucursal")}
-            </small>
+            </span>
           </div>
         </div>
       </div>
 
       {/* Seccion: Recompensas de Productos Configuradas */}
-      <div className="mb-5">
-        <div className="d-flex align-items-center gap-2 mb-3">
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-4">
           <ShoppingBag size={20} className="text-primary" />
-          <h6 className="mb-0 text-uppercase text-muted fw-semibold" style={{ letterSpacing: "0.5px" }}>
+          <h6 className="text-sm uppercase text-muted-foreground font-semibold tracking-wide mb-0">
             Recompensas Configuradas
           </h6>
-          <Badge bg="secondary" className="ms-2">
+          <Badge variant="secondary" className="ml-2">
             {existingProductRewards.length}
           </Badge>
         </div>
 
         {existingProductRewards.length === 0 ? (
           <Card className="border-0 shadow-sm">
-            <Card.Body className="text-center py-4">
-              <ShoppingBag size={48} className="text-muted mb-3 opacity-50" />
-              <h6 className="text-muted">No hay productos configurados como recompensa</h6>
-              <p className="text-muted small mb-0">
+            <CardContent className="text-center py-8">
+              <ShoppingBag size={48} className="text-muted-foreground mb-4 opacity-50 mx-auto" />
+              <h6 className="text-muted-foreground font-medium">No hay productos configurados como recompensa</h6>
+              <p className="text-muted-foreground text-sm mb-0">
                 Selecciona productos del catalogo de abajo para agregarlos como recompensa
               </p>
-            </Card.Body>
+            </CardContent>
           </Card>
         ) : (
-          <Row xs={2} sm={3} md={4} lg={5} xl={6} className="g-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {existingProductRewards.map((reward) => renderProductRewardCard(reward))}
-          </Row>
+          </div>
         )}
       </div>
 
       {/* Seccion: Seleccionar Productos del Almacen */}
       <div>
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <div className="d-flex align-items-center gap-2">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
             <Package size={20} className="text-primary" />
-            <h6 className="mb-0 text-uppercase text-muted fw-semibold" style={{ letterSpacing: "0.5px" }}>
+            <h6 className="text-sm uppercase text-muted-foreground font-semibold tracking-wide mb-0">
               Catalogo de Productos
             </h6>
           </div>
-          <Badge bg="primary" className="px-3 py-2">
+          <Badge className="px-3 py-1.5">
             {filteredProducts.length} disponibles
           </Badge>
         </div>
 
         {/* Search */}
-        <Card className="border-0 shadow-sm mb-4">
-          <Card.Body className="py-3">
-            <div className="position-relative" style={{ maxWidth: "400px" }}>
+        <Card className="border-0 shadow-sm mb-6">
+          <CardContent className="py-4">
+            <div className="relative max-w-[400px]">
               <Search
                 size={18}
-                className="position-absolute text-muted"
-                style={{ left: "12px", top: "50%", transform: "translateY(-50%)" }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
-              <Form.Control
+              <Input
                 type="text"
                 placeholder="Buscar productos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="ps-5"
+                className="pl-10"
               />
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
 
         {/* Products Grid */}
         {!storage ? (
-          <Alert variant="warning">
-            <Package size={20} className="me-2" />
-            No hay almacen asignado a esta sucursal. Configura un almacen primero.
+          <Alert variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800">
+            <Package size={20} className="mr-2" />
+            <AlertDescription>
+              No hay almacen asignado a esta sucursal. Configura un almacen primero.
+            </AlertDescription>
           </Alert>
         ) : filteredProducts.length === 0 ? (
           <Card className="border-0 shadow-sm">
-            <Card.Body className="text-center py-5">
-              <Package size={64} className="text-muted opacity-50 mb-3" />
-              <h5 className="text-muted">No hay productos disponibles</h5>
-              <p className="text-muted mb-0">
+            <CardContent className="text-center py-12">
+              <Package size={64} className="text-muted-foreground opacity-50 mb-4 mx-auto" />
+              <h5 className="text-muted-foreground font-medium">No hay productos disponibles</h5>
+              <p className="text-muted-foreground mb-0">
                 {searchTerm
                   ? "No se encontraron productos con ese nombre"
                   : "Agrega productos al almacen de esta sucursal"}
               </p>
-            </Card.Body>
+            </CardContent>
           </Card>
         ) : (
-          <Row xs={1} sm={2} md={3} lg={4} className="g-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredProducts.map((item: any) => {
               const product = item.productId;
               const isReward = isProductAlreadyReward(product._id);
               const reward = getProductReward(product._id);
 
               return (
-                <Col key={item._id}>
+                <div key={item._id}>
                   <Card
-                    className={`product-card border-0 shadow-sm h-100 overflow-hidden ${
-                      isReward ? "reward-configured" : ""
-                    }`}
-                    style={{ cursor: isReward || (!isManager && !currentBranchId) || (isManager && !managerBranch) ? "default" : "pointer" }}
+                    className={`border-0 shadow-sm h-full overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
+                      isReward ? "opacity-85" : ""
+                    } ${!isReward && (isManager ? managerBranch : currentBranchId) ? "cursor-pointer" : ""}`}
                     onClick={() => !isReward && (isManager ? managerBranch : currentBranchId) && handleProductClick(item)}
                   >
                     {/* Product Image */}
-                    <div className="position-relative">
+                    <div className="relative">
                       {product.imagen ? (
-                        <div
-                          className="product-image-wrapper"
-                          style={{ height: "180px", overflow: "hidden" }}
-                        >
+                        <div className="h-[180px] overflow-hidden">
                           <img
                             src={product.imagen}
                             alt={product.nombre}
-                            className="w-100 h-100"
-                            style={{ objectFit: "cover" }}
+                            className="w-full h-full object-cover"
                           />
                         </div>
                       ) : (
-                        <div
-                          className="bg-light d-flex align-items-center justify-content-center"
-                          style={{ height: "180px" }}
-                        >
-                          <Package size={48} className="text-muted opacity-50" />
+                        <div className="bg-gray-100 flex items-center justify-center h-[180px]">
+                          <Package size={48} className="text-muted-foreground opacity-50" />
                         </div>
                       )}
 
                       {/* Badges */}
                       {isReward && (
-                        <div
-                          className="position-absolute"
-                          style={{ top: "10px", left: "10px" }}
-                        >
-                          <Badge
-                            bg="success"
-                            className="d-flex align-items-center gap-1 px-2 py-1"
-                            style={{ fontSize: "0.75rem" }}
-                          >
+                        <div className="absolute top-2.5 left-2.5">
+                          <Badge className="flex items-center gap-1 px-2 py-1 text-xs bg-green-500">
                             <Check size={12} />
                             {reward?.pointsRequired} pts
                           </Badge>
@@ -552,14 +532,10 @@ const ProductRewardsPage: React.FC = () => {
                       )}
 
                       {/* Stock Badge */}
-                      <div
-                        className="position-absolute"
-                        style={{ top: "10px", right: "10px" }}
-                      >
+                      <div className="absolute top-2.5 right-2.5">
                         <Badge
-                          bg={item.quantity > 0 ? "primary" : "danger"}
-                          className="px-2 py-1"
-                          style={{ fontSize: "0.7rem" }}
+                          variant={item.quantity > 0 ? "default" : "destructive"}
+                          className="px-2 py-1 text-[10px]"
                         >
                           Stock: {item.quantity}
                         </Badge>
@@ -568,17 +544,7 @@ const ProductRewardsPage: React.FC = () => {
                       {/* Quick Add Button */}
                       {!isReward && (isManager ? managerBranch : currentBranchId) && (
                         <div
-                          className="add-reward-btn position-absolute d-flex align-items-center justify-content-center"
-                          style={{
-                            bottom: "10px",
-                            right: "10px",
-                            width: "36px",
-                            height: "36px",
-                            borderRadius: "8px",
-                            backgroundColor: "#6366f1",
-                            boxShadow: "0 2px 8px rgba(99, 102, 241, 0.4)",
-                            transition: "transform 0.2s",
-                          }}
+                          className="absolute bottom-2.5 right-2.5 flex items-center justify-center w-9 h-9 rounded-lg bg-indigo-500 shadow-lg transition-transform hover:scale-110"
                         >
                           <Plus size={18} className="text-white" />
                         </div>
@@ -586,243 +552,206 @@ const ProductRewardsPage: React.FC = () => {
                     </div>
 
                     {/* Product Info */}
-                    <Card.Body className="p-3">
+                    <CardContent className="p-3">
                       <h6
-                        className="product-title fw-semibold mb-2 text-dark"
-                        style={{
-                          fontSize: "0.9rem",
-                          lineHeight: "1.3",
-                          height: "2.6em",
-                          overflow: "hidden",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                        }}
+                        className="font-semibold mb-2 text-foreground text-sm leading-tight h-[2.6em] overflow-hidden line-clamp-2"
                       >
                         {product.nombre}
                       </h6>
 
-                      {/* Rating placeholder (estilo Inspinia) */}
-                      <div className="d-flex align-items-center gap-1 mb-2">
+                      {/* Rating placeholder */}
+                      <div className="flex items-center gap-1 mb-2">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Star
                             key={star}
                             size={12}
-                            className={star <= 4 ? "text-warning" : "text-muted"}
-                            fill={star <= 4 ? "#ffc107" : "none"}
+                            className={star <= 4 ? "text-yellow-400" : "text-muted-foreground"}
+                            fill={star <= 4 ? "#facc15" : "none"}
                           />
                         ))}
-                        <span className="text-muted small ms-1">(--)</span>
+                        <span className="text-muted-foreground text-sm ml-1">(--)</span>
                       </div>
 
                       {/* Price */}
-                      <div className="d-flex justify-content-between align-items-center">
+                      <div className="flex justify-between items-center">
                         <div>
-                          <span className="text-danger fw-bold" style={{ fontSize: "1.1rem" }}>
+                          <span className="text-red-500 font-bold text-lg">
                             {formatPrice(product.totalVenta || 0)}
                           </span>
                         </div>
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
-                </Col>
+                </div>
               );
             })}
-          </Row>
+          </div>
         )}
       </div>
 
       {/* Modal para crear recompensa de producto */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header className="border-0 pb-0">
-          <Modal.Title className="d-flex align-items-center gap-2">
-            <Gift size={20} className="text-primary" />
-            Configurar Recompensa
-          </Modal.Title>
-          <Button
-            variant="link"
-            onClick={() => setShowModal(false)}
-            className="text-muted p-0"
-          >
-            <X size={20} />
-          </Button>
-        </Modal.Header>
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift size={20} className="text-primary" />
+              Configurar Recompensa
+            </DialogTitle>
+          </DialogHeader>
 
-        <Modal.Body>
           {selectedProduct && (
-            <>
+            <div className="space-y-4">
               {/* Product Preview */}
-              <Card className="mb-4 border">
-                <Card.Body className="d-flex align-items-center gap-3">
+              <Card className="border">
+                <CardContent className="flex items-center gap-3 p-4">
                   {selectedProduct.imagen ? (
                     <img
                       src={selectedProduct.imagen}
                       alt={selectedProduct.nombre}
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        objectFit: "cover",
-                        borderRadius: "8px",
-                      }}
+                      className="w-[60px] h-[60px] object-cover rounded-lg"
                     />
                   ) : (
-                    <div
-                      className="bg-light d-flex align-items-center justify-content-center"
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      <Package size={24} className="text-muted" />
+                    <div className="bg-gray-100 flex items-center justify-center w-[60px] h-[60px] rounded-lg">
+                      <Package size={24} className="text-muted-foreground" />
                     </div>
                   )}
                   <div>
-                    <h6 className="mb-1">{selectedProduct.nombre}</h6>
-                    <small className="text-muted">
+                    <h6 className="font-medium mb-1">{selectedProduct.nombre}</h6>
+                    <span className="text-muted-foreground text-sm">
                       Precio: {formatPrice(selectedProduct.precio)} | Stock: {selectedProduct.stock}
-                    </small>
+                    </span>
                   </div>
-                </Card.Body>
+                </CardContent>
               </Card>
 
-              <Form>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>
-                        Puntos Requeridos <span className="text-danger">*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="1"
-                        value={formData.pointsRequired}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsRequired: parseInt(e.target.value) || 1,
-                          })
-                        }
-                      />
-                      <Form.Text className="text-muted">
-                        Puntos que el cliente debe canjear
-                      </Form.Text>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>
-                        Cantidad del Producto <span className="text-danger">*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="1"
-                        max={selectedProduct.stock}
-                        value={formData.productQuantity}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            productQuantity: parseInt(e.target.value) || 1,
-                          })
-                        }
-                      />
-                      <Form.Text className="text-muted">
-                        Unidades a entregar por canje
-                      </Form.Text>
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Max. canjes por cliente</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        placeholder="0 = ilimitado"
-                        value={formData.maxRedemptionsPerClient}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            maxRedemptionsPerClient: parseInt(e.target.value) || 0,
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Max. canjes totales</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        placeholder="0 = ilimitado"
-                        value={formData.maxTotalRedemptions}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            maxTotalRedemptions: parseInt(e.target.value) || 0,
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <Form.Group className="mb-3">
-                  <Form.Check
-                    type="checkbox"
-                    label="Recompensa Activa"
-                    checked={formData.status}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>
+                    Puntos Requeridos <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.pointsRequired}
                     onChange={(e) =>
-                      setFormData({ ...formData, status: e.target.checked })
+                      setFormData({
+                        ...formData,
+                        pointsRequired: parseInt(e.target.value) || 1,
+                      })
                     }
                   />
-                </Form.Group>
-              </Form>
+                  <p className="text-muted-foreground text-xs">
+                    Puntos que el cliente debe canjear
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    Cantidad del Producto <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={selectedProduct.stock}
+                    value={formData.productQuantity}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        productQuantity: parseInt(e.target.value) || 1,
+                      })
+                    }
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Unidades a entregar por canje
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Max. canjes por cliente</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0 = ilimitado"
+                    value={formData.maxRedemptionsPerClient}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        maxRedemptionsPerClient: parseInt(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max. canjes totales</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0 = ilimitado"
+                    value={formData.maxTotalRedemptions}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        maxTotalRedemptions: parseInt(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="status"
+                  checked={formData.status}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, status: checked as boolean })
+                  }
+                />
+                <Label htmlFor="status" className="cursor-pointer">
+                  Recompensa Activa
+                </Label>
+              </div>
 
               {/* Preview de la recompensa */}
-              <Alert variant="info" className="mb-0">
-                <small>
+              <Alert className="bg-blue-50 border-blue-200 text-blue-800">
+                <AlertDescription>
                   <strong>Vista previa:</strong> Los clientes podran canjear{" "}
                   <strong>{formData.pointsRequired} puntos</strong> por{" "}
                   <strong>{formData.productQuantity} {selectedProduct.nombre}</strong>
                   {" "}(valor: {formatPrice(selectedProduct.precio * formData.productQuantity)})
-                </small>
+                </AlertDescription>
               </Alert>
-            </>
+            </div>
           )}
-        </Modal.Body>
 
-        <Modal.Footer className="border-0 pt-0">
-          <Button
-            variant="outline-secondary"
-            onClick={() => setShowModal(false)}
-            disabled={modalLoading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleCreateReward}
-            disabled={modalLoading}
-            className="d-flex align-items-center gap-2"
-          >
-            {modalLoading ? (
-              <>
-                <Spinner size="sm" animation="border" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save size={16} />
-                Crear Recompensa
-              </>
-            )}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowModal(false)}
+              disabled={modalLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateReward}
+              disabled={modalLoading}
+              className="flex items-center gap-2"
+            >
+              {modalLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  Crear Recompensa
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal para editar recompensa existente */}
       <PointsRewardModal
@@ -832,40 +761,6 @@ const ProductRewardsPage: React.FC = () => {
         onSave={handleSaveReward}
         loading={editModalLoading}
       />
-
-      <style jsx>{`
-        .product-card {
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .product-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
-        }
-
-        .product-card.reward-configured {
-          opacity: 0.85;
-        }
-
-        .product-card:hover .add-reward-btn {
-          transform: scale(1.1);
-        }
-
-        .product-image-wrapper::after {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(
-            to bottom,
-            transparent 60%,
-            rgba(0, 0, 0, 0.1)
-          );
-          pointer-events: none;
-        }
-      `}</style>
     </div>
   );
 };

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Spinner } from "react-bootstrap";
+import { Loader2 } from "lucide-react";
 import { ecommerceConfigService } from "./services/ecommerceConfig";
 import EcommerceView from "./components/EcommerceView";
 import type { EcommerceConfig } from "./types";
@@ -22,7 +22,7 @@ export default function EcommerceFullView() {
       setLoading(true);
       const response = await ecommerceConfigService.getManagerConfig();
       const { config: configData, branch } = response.data;
-      
+
       setConfig({
         ...configData,
         header: configData?.header || {
@@ -51,7 +51,7 @@ export default function EcommerceFullView() {
             text: "",
             imageUrl: "",
             imagePath: "",
-            button: { name: "Ver más", link: "#" }
+            button: { name: "Ver mas", link: "#" }
           },
           carousel: {
             enabled: false,
@@ -87,7 +87,7 @@ export default function EcommerceFullView() {
         }
       });
     } catch (error) {
-      console.error("Error al cargar configuración:", error);
+      console.error("Error al cargar configuracion:", error);
     } finally {
       setLoading(false);
     }
@@ -95,16 +95,16 @@ export default function EcommerceFullView() {
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" variant="primary" />
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!config) {
     return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <p>No se pudo cargar la configuración</p>
+      <div className="flex justify-center items-center h-screen">
+        <p>No se pudo cargar la configuracion</p>
       </div>
     );
   }
@@ -112,20 +112,15 @@ export default function EcommerceFullView() {
   // Si es preview mode, mostramos con indicador
   if (preview) {
     return (
-      <div className="position-relative vh-100">
+      <div className="relative h-screen">
         {/* Preview Badge */}
-        <div 
-          className="position-fixed top-0 start-50 translate-middle-x mt-3 px-4 py-2 rounded-pill shadow-lg"
+        <div
+          className="fixed top-0 left-1/2 -translate-x-1/2 mt-3 px-4 py-2 rounded-full shadow-lg z-[9999] font-semibold text-sm text-white backdrop-blur-sm"
           style={{
             backgroundColor: "rgba(99, 102, 241, 0.95)",
-            color: "white",
-            zIndex: 9999,
-            backdropFilter: "blur(10px)",
-            fontWeight: "600",
-            fontSize: "14px"
           }}
         >
-          🔍 Vista previa del E-commerce
+          Vista previa del E-commerce
         </div>
 
         <EcommerceView

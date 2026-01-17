@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dropdown } from "react-bootstrap";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { MoreVertical, Eye, Edit, X, DollarSign, Printer, CheckCircle } from "lucide-react";
 import { Sale } from "../types";
 import PaymentModal from "./PaymentModal";
@@ -105,55 +112,52 @@ const SaleActions: React.FC<SaleActionsProps> = ({
 
   return (
     <>
-      <Dropdown>
-        <Dropdown.Toggle
-          variant="light"
-          size="sm"
-          className="border-0"
-          style={{ background: "transparent" }}
-        >
-          <MoreVertical size={18} />
-        </Dropdown.Toggle>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
 
-        <Dropdown.Menu align="end">
-          <Dropdown.Item onClick={handleOpenDetailModal}>
-            <Eye size={16} className="me-2" />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={handleOpenDetailModal}>
+            <Eye className="h-4 w-4 mr-2" />
             Ver Detalles
-          </Dropdown.Item>
+          </DropdownMenuItem>
 
-          <Dropdown.Item onClick={handleOpenPaymentModal}>
-            <DollarSign size={16} className="me-2" />
+          <DropdownMenuItem onClick={handleOpenPaymentModal}>
+            <DollarSign className="h-4 w-4 mr-2" />
             Gestionar Pagos
-          </Dropdown.Item>
+          </DropdownMenuItem>
 
-          <Dropdown.Item onClick={handleReprintTicket}>
-            <Printer size={16} className="me-2" />
+          <DropdownMenuItem onClick={handleReprintTicket}>
+            <Printer className="h-4 w-4 mr-2" />
             Reimprimir Ticket
-          </Dropdown.Item>
+          </DropdownMenuItem>
 
           {showRedeemFolioAction && (
             <>
-              <Dropdown.Divider />
-              <Dropdown.Item onClick={handleOpenRedeemDialog} className="text-success">
-                <CheckCircle size={16} className="me-2" />
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleOpenRedeemDialog} className="text-green-600">
+                <CheckCircle className="h-4 w-4 mr-2" />
                 Canjear Folio
-              </Dropdown.Item>
+              </DropdownMenuItem>
             </>
           )}
 
-          <Dropdown.Divider />
+          <DropdownMenuSeparator />
 
-          <Dropdown.Item onClick={handleOpenEditModal}>
-            <Edit size={16} className="me-2" />
+          <DropdownMenuItem onClick={handleOpenEditModal}>
+            <Edit className="h-4 w-4 mr-2" />
             Editar
-          </Dropdown.Item>
+          </DropdownMenuItem>
 
-          <Dropdown.Item onClick={handleOpenCancelDialog} className="text-danger">
-            <X size={16} className="me-2" />
+          <DropdownMenuItem onClick={handleOpenCancelDialog} variant="destructive">
+            <X className="h-4 w-4 mr-2" />
             Cancelar Venta
-          </Dropdown.Item>
-        </Dropdown.Menu>
-      </Dropdown>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Payment Modal */}
       <PaymentModal

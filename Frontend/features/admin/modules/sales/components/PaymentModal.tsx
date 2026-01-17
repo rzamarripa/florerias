@@ -1,8 +1,35 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Modal, Button, Form, Table, Spinner, Alert, Badge } from "react-bootstrap";
-import { DollarSign, Trash2, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter,
+} from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DollarSign, Trash2, Plus, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "react-toastify";
 import { orderPaymentsService, OrderPayment } from "../services/orderPayments";
 import { cashRegistersService, CashRegister } from "../services/cashRegisters";
@@ -46,7 +73,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const userId = useUserSessionStore((state) => state.getUserId());
 
-  // Socket listener para actualizaciones en tiempo real de esta orden específica
+  // Socket listener para actualizaciones en tiempo real de esta orden especifica
   useOrderSocket({
     filters: {},
     onOrderCreated: () => {},
@@ -58,12 +85,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
         // Si hubo cambio en el pago, recargar la lista de pagos
         if (currentAdvance !== previousAdvance) {
-          console.log(`🔄 [PaymentModal] Detectado cambio en pagos de orden ${updatedOrder.orderNumber}`);
+          console.log(`[PaymentModal] Detectado cambio en pagos de orden ${updatedOrder.orderNumber}`);
           loadPayments();
           previousAdvanceRef.current = currentAdvance;
         }
 
-        // Actualizar la información de la venta mostrada
+        // Actualizar la informacion de la venta mostrada
         setCurrentSale(updatedOrder as Sale);
 
         // Notificar al componente padre para actualizar las tablas
@@ -128,11 +155,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       }
     } catch (error: any) {
       console.error("Error loading payment methods:", error);
-      toast.error(error.message || "Error al cargar los métodos de pago");
+      toast.error(error.message || "Error al cargar los metodos de pago");
     }
   };
 
-  // Verificar si el método de pago seleccionado es efectivo
+  // Verificar si el metodo de pago seleccionado es efectivo
   const isEffectivoSelected = () => {
     if (!selectedPaymentMethod) return false;
     const method = paymentMethods.find(pm => pm._id === selectedPaymentMethod);
@@ -142,7 +169,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar que la orden no esté cancelada
+    // Validar que la orden no este cancelada
     if (currentSale.status === "cancelado") {
       toast.error("No se pueden registrar pagos en una orden cancelada");
       return;
@@ -167,11 +194,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     }
 
     if (!selectedPaymentMethod) {
-      toast.error("Selecciona un método de pago");
+      toast.error("Selecciona un metodo de pago");
       return;
     }
 
-    // Solo validar caja si el método de pago es efectivo
+    // Solo validar caja si el metodo de pago es efectivo
     if (isEffectivoSelected() && !selectedCashRegister) {
       toast.error("Selecciona una caja registradora");
       return;
@@ -212,7 +239,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm("¿Estás seguro de eliminar este pago?")) return;
+    if (!confirm("Estas seguro de eliminar este pago?")) return;
 
     try {
       await orderPaymentsService.deleteOrderPayment(paymentId);
@@ -241,251 +268,262 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header closeButton className="border-0 pb-0">
-        <Modal.Title className="w-100">
-          <div className="d-flex align-items-center justify-content-between">
-            <div className="d-flex align-items-center gap-2">
-              <DollarSign size={24} className="text-primary" />
-              <span>Pagos de la Venta</span>
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-0">
+          <DialogTitle className="w-full">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-6 w-6 text-primary" />
+                <span>Pagos de la Venta</span>
+              </div>
+              <div className="text-muted-foreground text-sm font-normal">
+                {currentSale.orderNumber}
+              </div>
             </div>
-            <div className="text-muted" style={{ fontSize: "14px" }}>
-              {currentSale.orderNumber}
-            </div>
-          </div>
-        </Modal.Title>
-      </Modal.Header>
+          </DialogTitle>
+        </DialogHeader>
 
-      <Modal.Body>
-        {/* Información de la venta */}
-        <div className="mb-4 p-3 bg-light rounded">
-          <div className="row">
-            <div className="col-6">
-              <small className="text-muted">Cliente</small>
-              <div className="fw-semibold">{currentSale.clientInfo?.name || "N/A"}</div>
+        <div className="space-y-4">
+          {/* Informacion de la venta */}
+          <div className="p-3 bg-gray-100 rounded-lg">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <small className="text-muted-foreground block">Cliente</small>
+                <div className="font-semibold">{currentSale.clientInfo?.name || "N/A"}</div>
+              </div>
+              <div>
+                <small className="text-muted-foreground block">Total de la venta</small>
+                <div className="font-semibold">${currentSale.total.toFixed(2)}</div>
+              </div>
             </div>
-            <div className="col-6">
-              <small className="text-muted">Total de la venta</small>
-              <div className="fw-semibold">${currentSale.total.toFixed(2)}</div>
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <div>
+                <small className="text-muted-foreground block">Anticipo inicial</small>
+                <div className="font-semibold text-green-500">${(currentSale.advance - totalPaid).toFixed(2)}</div>
+              </div>
+              <div>
+                <small className="text-muted-foreground block">Saldo pendiente</small>
+                <div className="font-semibold text-red-500">${currentSale.remainingBalance.toFixed(2)}</div>
+              </div>
             </div>
           </div>
-          <div className="row mt-2">
-            <div className="col-6">
-              <small className="text-muted">Anticipo inicial</small>
-              <div className="fw-semibold text-success">${(currentSale.advance - totalPaid).toFixed(2)}</div>
-            </div>
-            <div className="col-6">
-              <small className="text-muted">Saldo pendiente</small>
-              <div className="fw-semibold text-danger">${currentSale.remainingBalance.toFixed(2)}</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Tabla de pagos realizados */}
-        <div className="mb-4">
-          <h6 className="fw-semibold mb-3">Pagos Realizados</h6>
-          {loadingPayments ? (
-            <div className="text-center py-3">
-              <Spinner animation="border" size="sm" variant="primary" />
-            </div>
-          ) : payments.length === 0 ? (
-            <Alert variant="info" className="mb-0">
-              No hay pagos adicionales registrados para esta venta.
-            </Alert>
-          ) : (
-            <div className="table-responsive">
-              <Table hover size="sm" className="mb-0">
-                <thead className="bg-light">
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Monto</th>
-                    <th>Método</th>
-                    <th>Caja</th>
-                    <th>Registrado por</th>
-                    <th className="text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
+          {/* Tabla de pagos realizados */}
+          <div>
+            <h6 className="font-semibold mb-3">Pagos Realizados</h6>
+            {loadingPayments ? (
+              <div className="text-center py-3">
+                <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
+              </div>
+            ) : payments.length === 0 ? (
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-700">
+                  No hay pagos adicionales registrados para esta venta.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Table>
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="font-semibold">Fecha</TableHead>
+                    <TableHead className="font-semibold">Monto</TableHead>
+                    <TableHead className="font-semibold">Metodo</TableHead>
+                    <TableHead className="font-semibold">Caja</TableHead>
+                    <TableHead className="font-semibold">Registrado por</TableHead>
+                    <TableHead className="font-semibold text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {payments.map((payment) => (
-                    <tr key={payment._id}>
-                      <td>
-                        {formatDate(payment.date)}
-                        {payment.isAdvance && (
-                          <Badge bg="info" className="ms-2">
-                            Anticipo
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="fw-semibold text-success">
+                    <TableRow key={payment._id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {formatDate(payment.date)}
+                          {payment.isAdvance && (
+                            <Badge variant="secondary">Anticipo</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-semibold text-green-500">
                         ${payment.amount.toFixed(2)}
-                      </td>
-                      <td>{payment.paymentMethod?.name || "N/A"}</td>
-                      <td>{payment.cashRegisterId?.name || "N/A"}</td>
-                      <td>{payment.registeredBy?.username || "N/A"}</td>
-                      <td className="text-center">
+                      </TableCell>
+                      <TableCell>{payment.paymentMethod?.name || "N/A"}</TableCell>
+                      <TableCell>{payment.cashRegisterId?.name || "N/A"}</TableCell>
+                      <TableCell>{payment.registeredBy?.username || "N/A"}</TableCell>
+                      <TableCell className="text-center">
                         <Button
-                          variant="light"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDeletePayment(payment._id)}
-                          className="border-0"
-                          title={currentSale.status === "cancelado" ? "No se pueden eliminar pagos de órdenes canceladas" : "Eliminar pago"}
+                          className="h-8 w-8"
+                          title={currentSale.status === "cancelado" ? "No se pueden eliminar pagos de ordenes canceladas" : "Eliminar pago"}
                           disabled={currentSale.status === "cancelado"}
                         >
-                          <Trash2 size={14} className={currentSale.status === "cancelado" ? "text-muted" : "text-danger"} />
+                          <Trash2 className={`h-4 w-4 ${currentSale.status === "cancelado" ? "text-muted-foreground" : "text-red-500"}`} />
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-                <tfoot className="bg-light">
-                  <tr>
-                    <td className="fw-bold">Total pagado adicional:</td>
-                    <td className="fw-bold text-success" colSpan={5}>
+                </TableBody>
+                <TableFooter className="bg-gray-50">
+                  <TableRow>
+                    <TableCell className="font-bold">Total pagado adicional:</TableCell>
+                    <TableCell className="font-bold text-green-500" colSpan={5}>
                       ${totalPaid.toFixed(2)}
-                    </td>
-                  </tr>
-                </tfoot>
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
               </Table>
-            </div>
+            )}
+          </div>
+
+          {/* Alerta si la orden esta cancelada */}
+          {currentSale.status === "cancelado" && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Orden Cancelada</AlertTitle>
+              <AlertDescription>
+                No se pueden registrar ni eliminar pagos en una orden cancelada.
+              </AlertDescription>
+            </Alert>
           )}
-        </div>
 
-        {/* Alerta si la orden está cancelada */}
-        {currentSale.status === "cancelado" && (
-          <Alert variant="danger" className="mb-0">
-            <Alert.Heading className="h6 mb-1">Orden Cancelada</Alert.Heading>
-            <p className="mb-0" style={{ fontSize: "14px" }}>
-              No se pueden registrar ni eliminar pagos en una orden cancelada.
-            </p>
-          </Alert>
-        )}
+          {/* Formulario para nuevo pago */}
+          {currentSale.remainingBalance > 0 && currentSale.status !== "cancelado" && (
+            <div className="border-t pt-4">
+              <h6 className="font-semibold mb-3 flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Registrar Nuevo Pago
+              </h6>
 
-        {/* Formulario para nuevo pago */}
-        {currentSale.remainingBalance > 0 && currentSale.status !== "cancelado" && (
-          <div className="border-top pt-4">
-            <h6 className="fw-semibold mb-3 d-flex align-items-center gap-2">
-              <Plus size={18} />
-              Registrar Nuevo Pago
-            </h6>
+              {cashRegisters.length === 0 && paymentMethods.some(pm => pm.name.toLowerCase() === 'efectivo') ? (
+                <Alert className="border-yellow-200 bg-yellow-50 mb-4">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-700">
+                    No hay cajas registradoras abiertas en esta sucursal. Las cajas solo son necesarias para pagos en efectivo.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
-            {cashRegisters.length === 0 && paymentMethods.some(pm => pm.name.toLowerCase() === 'efectivo') ? (
-              <Alert variant="warning">
-                No hay cajas registradoras abiertas en esta sucursal. Las cajas solo son necesarias para pagos en efectivo.
-              </Alert>
-            ) : null}
-
-            <Form onSubmit={handleSubmit}>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <Form.Group>
-                      <Form.Label>Monto *</Form.Label>
-                      <Form.Control
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        max={currentSale.remainingBalance}
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="0.00"
-                        required
-                      />
-                      <Form.Text className="text-muted">
-                        Máximo: ${currentSale.remainingBalance.toFixed(2)}
-                      </Form.Text>
-                    </Form.Group>
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount" className="font-semibold">
+                      Monto <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      max={currentSale.remainingBalance}
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Maximo: ${currentSale.remainingBalance.toFixed(2)}
+                    </p>
                   </div>
 
-                  <div className="col-md-6 mb-3">
-                    <Form.Group>
-                      <Form.Label>Método de Pago *</Form.Label>
-                      <Form.Select
-                        value={selectedPaymentMethod}
-                        onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                        required
-                      >
-                        <option value="">Selecciona un método</option>
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentMethod" className="font-semibold">
+                      Metodo de Pago <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={selectedPaymentMethod}
+                      onValueChange={setSelectedPaymentMethod}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un metodo" />
+                      </SelectTrigger>
+                      <SelectContent>
                         {paymentMethods.map((method) => (
-                          <option key={method._id} value={method._id}>
+                          <SelectItem key={method._id} value={method._id}>
                             {method.name}
-                          </option>
+                          </SelectItem>
                         ))}
-                      </Form.Select>
-                    </Form.Group>
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <div className="col-md-6 mb-3">
-                    <Form.Group>
-                      <Form.Label>
-                        Caja Registradora {isEffectivoSelected() ? "*" : "(solo para efectivo)"}
-                      </Form.Label>
-                      <Form.Select
-                        value={selectedCashRegister}
-                        onChange={(e) => setSelectedCashRegister(e.target.value)}
-                        required={isEffectivoSelected()}
-                        disabled={!isEffectivoSelected()}
-                        className={!isEffectivoSelected() ? "bg-light" : ""}
-                      >
-                        <option value="">Selecciona una caja</option>
+                  <div className="space-y-2">
+                    <Label htmlFor="cashRegister" className="font-semibold">
+                      Caja Registradora {isEffectivoSelected() ? <span className="text-red-500">*</span> : "(solo para efectivo)"}
+                    </Label>
+                    <Select
+                      value={selectedCashRegister}
+                      onValueChange={setSelectedCashRegister}
+                      disabled={!isEffectivoSelected()}
+                    >
+                      <SelectTrigger className={!isEffectivoSelected() ? "bg-gray-100" : ""}>
+                        <SelectValue placeholder="Selecciona una caja" />
+                      </SelectTrigger>
+                      <SelectContent>
                         {cashRegisters.map((cashRegister) => (
-                          <option key={cashRegister._id} value={cashRegister._id}>
+                          <SelectItem key={cashRegister._id} value={cashRegister._id}>
                             {cashRegister.name} - {cashRegister.branchId?.branchName || ""}
-                          </option>
+                          </SelectItem>
                         ))}
-                      </Form.Select>
-                      {!isEffectivoSelected() && (
-                        <Form.Text className="text-muted">
-                          La caja registradora solo se requiere para pagos en efectivo
-                        </Form.Text>
-                      )}
-                    </Form.Group>
+                      </SelectContent>
+                    </Select>
+                    {!isEffectivoSelected() && (
+                      <p className="text-xs text-muted-foreground">
+                        La caja registradora solo se requiere para pagos en efectivo
+                      </p>
+                    )}
                   </div>
 
-                  <div className="col-md-6 mb-3">
-                    <Form.Group>
-                      <Form.Label>Notas (opcional)</Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        rows={1}
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Agrega notas sobre este pago..."
-                      />
-                    </Form.Group>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes" className="font-semibold">
+                      Notas (opcional)
+                    </Label>
+                    <Textarea
+                      id="notes"
+                      rows={1}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Agrega notas sobre este pago..."
+                    />
                   </div>
                 </div>
 
-                <div className="d-flex justify-content-end gap-2 mt-3">
+                <div className="flex justify-end gap-2 mt-4">
                   <Button
-                    variant="secondary"
+                    type="button"
+                    variant="outline"
                     onClick={onHide}
                     disabled={submitting}
                   >
                     Cerrar
                   </Button>
                   <Button
-                    variant="primary"
                     type="submit"
                     disabled={submitting}
-                    className="d-flex align-items-center gap-2"
+                    className="flex items-center gap-2"
                   >
                     {submitting ? (
                       <>
-                        <Spinner animation="border" size="sm" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Registrando...
                       </>
                     ) : (
                       <>
-                        <Plus size={16} />
+                        <Plus className="h-4 w-4" />
                         Registrar Pago
                       </>
                     )}
                   </Button>
                 </div>
-              </Form>
-          </div>
-        )}
-      </Modal.Body>
-    </Modal>
+              </form>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

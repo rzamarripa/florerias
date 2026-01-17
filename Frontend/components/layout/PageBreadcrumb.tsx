@@ -8,13 +8,13 @@ type PageBreadcrumbProps = {
 
 const PageBreadcrumb = ({ title, subtitle, section }: PageBreadcrumbProps) => {
   return (
-    <div className="page-title-head d-flex justify-content-between align-items-center">
+    <div className="flex justify-between items-center mb-4">
       <div>
-        <h1 className="fs-sm text-uppercase fw-bold m-0">
+        <h1 className="text-sm uppercase font-bold m-0">
           {title.toUpperCase()}
         </h1>
       </div>
-      <div className="d-flex align-items-center gap-2 text-muted">
+      <div className="flex items-center gap-2 text-muted-foreground text-sm">
         {section && (
           <>
             <span>{section}</span>
@@ -27,7 +27,7 @@ const PageBreadcrumb = ({ title, subtitle, section }: PageBreadcrumbProps) => {
             <TbChevronRight size={16} />
           </>
         )}
-        <span className="text-secondary">{title}</span>
+        <span className="text-foreground">{title}</span>
       </div>
     </div>
   );

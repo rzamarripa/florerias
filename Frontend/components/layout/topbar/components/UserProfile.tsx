@@ -1,14 +1,15 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Dropdown,
-  DropdownDivider,
-  DropdownItem,
   DropdownMenu,
-  DropdownToggle,
-} from "react-bootstrap";
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { TbChevronDown, TbLogout, TbShoppingCart } from "react-icons/tb";
-
 import { useUserSessionStore } from "@/stores";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 
@@ -23,11 +24,8 @@ const UserProfile = () => {
 
   return (
     <div className="topbar-item nav-user">
-      <Dropdown align="end">
-        <DropdownToggle
-          as={"a"}
-          className="topbar-link dropdown-toggle drop-arrow-none px-2"
-        >
+      <DropdownMenu>
+        <DropdownMenuTrigger className="topbar-link flex items-center gap-1 px-2 outline-none">
           {typeof user?.profile?.image === "string" ? (
             <div
               style={{
@@ -51,7 +49,7 @@ const UserProfile = () => {
             </div>
           ) : (
             <div
-              className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+              className="bg-primary text-primary-foreground flex items-center justify-center font-bold"
               style={{
                 width: "40px",
                 height: "40px",
@@ -63,37 +61,39 @@ const UserProfile = () => {
             </div>
           )}
           <TbChevronDown className="align-middle" />
-        </DropdownToggle>
-        <DropdownMenu className="dropdown-menu-end">
-          <div className="dropdown-header noti-title">
-            <h6 className="text-overflow m-0">
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <div className="px-2 py-1.5">
+            <h6 className="font-semibold truncate">
               {user?.profile?.fullName || "Usuario"}
             </h6>
-            <p className="text-muted mb-0 fs-12">
+            <p className="text-muted-foreground text-xs mb-0">
               {user?.role?.name || "Rol desconocido"}
             </p>
             {user?.email && (
-              <p className="text-muted mb-0 fs-11">{user.email}</p>
+              <p className="text-muted-foreground text-xs mb-0">{user.email}</p>
             )}
           </div>
-          <DropdownDivider />
+          <DropdownMenuSeparator />
 
           {isManager && (
             <>
-              <DropdownItem as={Link} href="/ecommerce/configuracion">
-                <TbShoppingCart className="me-2 fs-17 align-middle" />
-                <span className="align-middle">Configuración e-commerce</span>
-              </DropdownItem>
-              <DropdownDivider />
+              <DropdownMenuItem asChild>
+                <Link href="/ecommerce/configuracion">
+                  <TbShoppingCart className="mr-2" size={17} />
+                  <span>Configuración e-commerce</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
             </>
           )}
 
-          <DropdownItem onClick={handleLogout} style={{ cursor: "pointer" }}>
-            <TbLogout className="me-2 fs-17 align-middle" />
-            <span className="align-middle">Cerrar Sesión</span>
-          </DropdownItem>
-        </DropdownMenu>
-      </Dropdown>
+          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+            <TbLogout className="mr-2" size={17} />
+            <span>Cerrar Sesión</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };

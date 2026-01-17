@@ -1,9 +1,26 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "react-toastify";
-import { X } from "lucide-react";
+import { Loader2, AlertCircle, Info } from "lucide-react";
 import { storageService } from "../services/storage";
 import { branchesService } from "../../branches/services/branches";
 import { Branch } from "../../branches/types";
@@ -41,14 +58,14 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
   useEffect(() => {
     if (show) {
       loadData();
-      // Si hay una sucursal activa, establecerla automáticamente
+      // Si hay una sucursal activa, establecerla automaticamente
       if (activeBranch?._id) {
         setSelectedBranch(activeBranch._id);
       }
     }
   }, [show, activeBranch]);
 
-  // Verificar si existe almacén cuando se selecciona una sucursal (para Gerente/Cajero)
+  // Verificar si existe almacen cuando se selecciona una sucursal (para Gerente/Cajero)
   useEffect(() => {
     if (show && (isManager || isCashier) && propBranches && propBranches.length > 0) {
       const userBranchId = propBranches[0]._id;
@@ -93,9 +110,9 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
   };
 
   const validateForm = (): boolean => {
-    // Validar nombre del almacén
+    // Validar nombre del almacen
     if (!storageName || storageName.trim() === "") {
-      toast.error("El nombre del almacén es requerido");
+      toast.error("El nombre del almacen es requerido");
       return false;
     }
 
@@ -130,11 +147,11 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
 
       await storageService.createStorage(storageData);
 
-      toast.success("Almacén creado exitosamente");
+      toast.success("Almacen creado exitosamente");
       onStorageSaved();
       handleClose();
     } catch (error: any) {
-      toast.error(error.message || "Error al crear almacén");
+      toast.error(error.message || "Error al crear almacen");
       console.error("Error creating storage:", error);
     } finally {
       setLoading(false);
@@ -150,145 +167,145 @@ const CreateStorageModal: React.FC<CreateStorageModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered scrollable>
-      <Modal.Header className="border-0 pb-0">
-        <div className="w-100">
-          <div className="d-flex justify-content-between align-items-center">
-            <h5 className="mb-0 fw-bold">Crear Nuevo Almacén</h5>
-            <Button
-              variant="link"
-              onClick={handleClose}
-              className="text-muted p-0"
-            >
-              <X size={24} />
-            </Button>
-          </div>
-        </div>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-0">
+          <DialogTitle className="text-lg font-bold">Crear Nuevo Almacen</DialogTitle>
+        </DialogHeader>
 
-      <Modal.Body>
-        {loadingData ? (
-          <div className="text-center py-4">
-            <Spinner animation="border" variant="primary" />
-            <p className="text-muted mt-2">Cargando datos...</p>
-          </div>
-        ) : (
-          <Form onSubmit={handleSubmit}>
-            {/* Información del Almacén */}
-            <div className="mb-4">
-              <h6 className="mb-3 fw-bold text-primary">
-                Información del Almacén
-              </h6>
-
-              {/* Nombre del Almacén */}
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Nombre del Almacén <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Ej: Almacén Principal"
-                  value={storageName}
-                  onChange={(e) => setStorageName(e.target.value)}
-                  required
-                />
-                <Form.Text className="text-muted">
-                  Ingresa un nombre descriptivo para el almacén
-                </Form.Text>
-              </Form.Group>
-
-              {/* Sucursal - Solo para Administradores */}
-              {isAdmin && (
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    Sucursal <span className="text-danger">*</span>
-                  </Form.Label>
-                  {activeBranch ? (
-                    <>
-                      <Form.Control
-                        type="text"
-                        value={`${activeBranch.branchName} ${
-                          activeBranch.branchCode
-                            ? `(${activeBranch.branchCode})`
-                            : ""
-                        }`}
-                        readOnly
-                        className="bg-light"
-                      />
-                      <Form.Text className="text-muted">
-                        Sucursal seleccionada automáticamente
-                      </Form.Text>
-                    </>
-                  ) : (
-                    <Form.Select
-                      value={selectedBranch}
-                      onChange={(e) => setSelectedBranch(e.target.value)}
-                      required
-                    >
-                      <option value="">Seleccionar sucursal...</option>
-                      {branches.map((branch) => (
-                        <option key={branch._id} value={branch._id}>
-                          {branch.branchName}{" "}
-                          {branch.branchCode ? `(${branch.branchCode})` : ""}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  )}
-                </Form.Group>
-              )}
-
-              {/* Mensaje informativo para Gerentes */}
-              {isManager && !storageExists && (
-                <div className="alert alert-info" role="alert">
-                  <small>
-                    El almacén se creará automáticamente para tu sucursal
-                    asignada.
-                  </small>
-                </div>
-              )}
-
-              {/* Mensaje informativo para Cajeros */}
-              {isCashier && !storageExists && (
-                <div className="alert alert-info" role="alert">
-                  <small>
-                    El almacén se creará automáticamente para tu sucursal
-                    asignada.
-                  </small>
-                </div>
-              )}
-
-              {/* Alerta cuando ya existe almacén */}
-              {(isManager || isCashier) && storageExists && (
-                <div className="alert alert-warning" role="alert">
-                  <strong>Atención:</strong> Ya existe un almacén para tu sucursal.
-                  Cada sucursal solo puede tener un almacén.
-                </div>
-              )}
+        <div className="py-4">
+          {loadingData ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground mt-2">Cargando datos...</p>
             </div>
-          </Form>
-        )}
-      </Modal.Body>
-
-      <Modal.Footer className="border-0">
-        <Button variant="secondary" onClick={handleClose} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={loading || loadingData || ((isManager || isCashier) && storageExists)}
-        >
-          {loading ? (
-            <>
-              <Spinner animation="border" size="sm" className="me-2" />
-              Creando...
-            </>
           ) : (
-            "Crear Almacén"
+            <form onSubmit={handleSubmit}>
+              {/* Informacion del Almacen */}
+              <div className="mb-4">
+                <h6 className="mb-3 font-bold text-primary">
+                  Informacion del Almacen
+                </h6>
+
+                {/* Nombre del Almacen */}
+                <div className="mb-3">
+                  <Label htmlFor="storageName">
+                    Nombre del Almacen <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="storageName"
+                    type="text"
+                    placeholder="Ej: Almacen Principal"
+                    value={storageName}
+                    onChange={(e) => setStorageName(e.target.value)}
+                    required
+                  />
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Ingresa un nombre descriptivo para el almacen
+                  </p>
+                </div>
+
+                {/* Sucursal - Solo para Administradores */}
+                {isAdmin && (
+                  <div className="mb-3">
+                    <Label htmlFor="branch">
+                      Sucursal <span className="text-destructive">*</span>
+                    </Label>
+                    {activeBranch ? (
+                      <>
+                        <Input
+                          type="text"
+                          value={`${activeBranch.branchName} ${
+                            activeBranch.branchCode
+                              ? `(${activeBranch.branchCode})`
+                              : ""
+                          }`}
+                          readOnly
+                          className="bg-muted"
+                        />
+                        <p className="text-muted-foreground text-sm mt-1">
+                          Sucursal seleccionada automaticamente
+                        </p>
+                      </>
+                    ) : (
+                      <Select
+                        value={selectedBranch}
+                        onValueChange={setSelectedBranch}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar sucursal..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branches.map((branch) => (
+                            <SelectItem key={branch._id} value={branch._id}>
+                              {branch.branchName}{" "}
+                              {branch.branchCode ? `(${branch.branchCode})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
+
+                {/* Mensaje informativo para Gerentes */}
+                {isManager && !storageExists && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-blue-500" />
+                    <AlertDescription className="text-sm">
+                      El almacen se creara automaticamente para tu sucursal
+                      asignada.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Mensaje informativo para Cajeros */}
+                {isCashier && !storageExists && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-blue-500" />
+                    <AlertDescription className="text-sm">
+                      El almacen se creara automaticamente para tu sucursal
+                      asignada.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Alerta cuando ya existe almacen */}
+                {(isManager || isCashier) && storageExists && (
+                  <Alert variant="destructive" className="bg-yellow-50 border-yellow-300 text-yellow-800">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Atencion:</strong> Ya existe un almacen para tu sucursal.
+                      Cada sucursal solo puede tener un almacen.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </form>
           )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        </div>
+
+        <DialogFooter className="border-t pt-3">
+          <Button variant="secondary" onClick={handleClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || loadingData || ((isManager || isCashier) && storageExists)}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Creando...
+              </>
+            ) : (
+              "Crear Almacen"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

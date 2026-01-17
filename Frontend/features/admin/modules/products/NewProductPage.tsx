@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col, Table, Alert } from "react-bootstrap";
 import {
   Package,
   Plus,
@@ -11,6 +10,8 @@ import {
   ArrowLeft,
   Edit2,
   X,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -20,6 +21,28 @@ import { materialsService } from "../materials/services/materials";
 import { Material } from "../materials/types";
 import { productCategoriesService } from "../productCategories/services/productCategories";
 import { ProductCategory } from "../productCategories/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const UNIDADES_OPTIONS: UnidadType[] = ["pieza", "paquete"];
 
@@ -71,7 +94,7 @@ const NewProductPage: React.FC = () => {
   const [labourType, setLabourType] = useState<"fixed" | "percentage">("fixed");
   const [labourPercentage, setLabourPercentage] = useState<number>(0);
 
-  // Cargar materiales activos y categorías
+  // Cargar materiales activos y categorias
   useEffect(() => {
     loadMaterials();
     loadProductCategories();
@@ -119,7 +142,7 @@ const NewProductPage: React.FC = () => {
       });
       setProductCategories(response.data);
     } catch (err: any) {
-      toast.error(err.message || "Error al cargar las categorías");
+      toast.error(err.message || "Error al cargar las categorias");
     }
   };
 
@@ -158,7 +181,7 @@ const NewProductPage: React.FC = () => {
         ) || 0;
       if (totalVentaInsumos > 0 && product.labour > 0) {
         const calculatedPercentage = (product.labour / totalVentaInsumos) * 100;
-        // Si el porcentaje es un número entero razonable (ej: 10%, 15%, 20%), asumimos que fue ingresado como porcentaje
+        // Si el porcentaje es un numero entero razonable (ej: 10%, 15%, 20%), asumimos que fue ingresado como porcentaje
         if (calculatedPercentage % 1 === 0 && calculatedPercentage <= 100) {
           setLabourType("percentage");
           setLabourPercentage(calculatedPercentage);
@@ -172,7 +195,7 @@ const NewProductPage: React.FC = () => {
     }
   };
 
-  // Función para formatear números con separación de miles
+  // Funcion para formatear numeros con separacion de miles
   const formatNumber = (num: number): string => {
     return num.toLocaleString("es-MX", {
       minimumFractionDigits: 2,
@@ -207,7 +230,7 @@ const NewProductPage: React.FC = () => {
     }
   };
 
-  // Cancelar edición de insumo
+  // Cancelar edicion de insumo
   const handleCancelEditInsumo = () => {
     if (materials.length > 0) {
       const firstMaterial = materials[0];
@@ -282,11 +305,11 @@ const NewProductPage: React.FC = () => {
     const newInsumos = formData.insumos?.filter((_, i) => i !== index) || [];
     setFormData({ ...formData, insumos: newInsumos });
 
-    // Si estamos eliminando el insumo que se está editando, cancelar edición
+    // Si estamos eliminando el insumo que se esta editando, cancelar edicion
     if (editingInsumoIndex === index) {
       handleCancelEditInsumo();
     } else if (editingInsumoIndex !== null && editingInsumoIndex > index) {
-      // Si el índice de edición es mayor, ajustarlo
+      // Si el indice de edicion es mayor, ajustarlo
       setEditingInsumoIndex(editingInsumoIndex - 1);
     }
   };
@@ -365,7 +388,7 @@ const NewProductPage: React.FC = () => {
   const { totalCosto, totalVenta, precioVentaFinal, precioVentaCalculado } =
     calculateTotals();
 
-  // Actualizar precio editable cuando cambien los cálculos
+  // Actualizar precio editable cuando cambien los calculos
   useEffect(() => {
     if (precioVentaEditable === 0) {
       setPrecioVentaEditable(precioVentaCalculado);
@@ -374,13 +397,8 @@ const NewProductPage: React.FC = () => {
 
   if (loading && isEditing) {
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "400px" }}
-      >
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -388,171 +406,168 @@ const NewProductPage: React.FC = () => {
   return (
     <div className="new-product-page">
       {error && (
-        <Alert variant="danger" onClose={() => setError(null)} dismissible>
-          {error}
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            {error}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setError(null)}
+              className="h-auto p-0 ml-2"
+            >
+              <X size={16} />
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
-      <Form onSubmit={handleSubmit}>
-        {/* Información Básica */}
+      <form onSubmit={handleSubmit}>
+        {/* Informacion Basica */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-background border-b-0 py-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Package size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Información del Producto</h5>
-            </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Nombre del producto"
-                    value={formData.nombre}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nombre: e.target.value })
-                    }
-                    required
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              Informacion del Producto
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Nombre <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Nombre del producto"
+                  value={formData.nombre}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nombre: e.target.value })
+                  }
+                  required
+                />
+              </div>
 
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Categoría de Producto
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.productCategory || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        productCategory: e.target.value || null,
-                      })
-                    }
-                    className="py-2"
-                  >
-                    <option value="">
-                      Selecciona una categoría (opcional)
-                    </option>
+              <div className="space-y-2">
+                <Label className="font-semibold">Categoria de Producto</Label>
+                <Select
+                  value={formData.productCategory || "none"}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      productCategory: value === "none" ? null : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona una categoria (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      Selecciona una categoria (opcional)
+                    </SelectItem>
                     {productCategories.map((category) => (
-                      <option key={category._id} value={category._id}>
+                      <SelectItem key={category._id} value={category._id}>
                         {category.name}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Unidad <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.unidad}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        unidad: e.target.value as UnidadType,
-                      })
-                    }
-                    required
-                    className="py-2"
-                  >
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Unidad <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.unidad}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      unidad: value as UnidadType,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                     {UNIDADES_OPTIONS.map((unidad) => (
-                      <option key={unidad} value={unidad}>
+                      <SelectItem key={unidad} value={unidad}>
                         {unidad.charAt(0).toUpperCase() + unidad.slice(1)}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Orden</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    value={formData.orden}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        orden: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="py-2"
-                  />
-                </Form.Group>
-              </Col>
+              <div className="space-y-2">
+                <Label className="font-semibold">Orden</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.orden}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      orden: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
 
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Descripción</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    placeholder="Descripción del producto"
-                    value={formData.descripcion}
-                    onChange={(e) =>
-                      setFormData({ ...formData, descripcion: e.target.value })
-                    }
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-          </Card.Body>
+              <div className="space-y-2 md:col-span-2">
+                <Label className="font-semibold">Descripcion</Label>
+                <Textarea
+                  rows={3}
+                  placeholder="Descripcion del producto"
+                  value={formData.descripcion}
+                  onChange={(e) =>
+                    setFormData({ ...formData, descripcion: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Imagen */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-background border-b-0 py-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Upload size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Imagen del Producto</h5>
-            </div>
-          </Card.Header>
-          <Card.Body>
-            <Row>
-              <Col md={8}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Subir Imagen</Form.Label>
-                  <Form.Control
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="py-2"
-                  />
-                  <Form.Text className="text-muted">
-                    Selecciona una imagen para el producto (JPG, PNG, etc.)
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+              Imagen del Producto
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2 space-y-2">
+                <Label className="font-semibold">Subir Imagen</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Selecciona una imagen para el producto (JPG, PNG, etc.)
+                </p>
+              </div>
 
-              <Col md={4}>
+              <div>
                 {imagePreview && (
-                  <div>
-                    <Form.Label className="fw-semibold d-block mb-2">
-                      Vista previa
-                    </Form.Label>
-                    <div className="position-relative d-inline-block">
+                  <div className="space-y-2">
+                    <Label className="font-semibold">Vista previa</Label>
+                    <div className="relative inline-block">
                       <img
                         src={imagePreview}
                         alt="Preview"
-                        className="rounded border border-2 shadow-sm"
-                        height="110"
-                        width="110"
+                        className="rounded border-2 shadow-sm w-28 h-28 object-cover"
                       />
                       <Button
-                        variant="danger"
-                        size="sm"
-                        className="position-absolute top-0 start-100 translate-middle"
+                        type="button"
+                        variant="destructive"
+                        size="icon-sm"
+                        className="absolute -top-2 -right-2 rounded-full"
                         onClick={handleRemoveImage}
                       >
                         <X size={16} />
@@ -560,176 +575,161 @@ const NewProductPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </Col>
-            </Row>
-          </Card.Body>
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Insumos */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-background border-b-0 py-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Package size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Insumos</h5>
-            </div>
-          </Card.Header>
-          <Card.Body>
-            {/* Mensaje informativo cuando se está editando */}
+              Insumos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Mensaje informativo cuando se esta editando */}
             {editingInsumoIndex !== null && (
-              <Alert
-                variant="info"
-                className="mb-3 d-flex align-items-center gap-2"
-              >
-                <Edit2 size={16} />
-                <span>
+              <Alert className="mb-4 border-blue-200 bg-blue-50">
+                <Edit2 size={16} className="text-blue-600" />
+                <AlertDescription className="text-blue-800">
                   Editando insumo #{editingInsumoIndex + 1}. Modifica los campos
                   y guarda los cambios.
-                </span>
+                </AlertDescription>
               </Alert>
             )}
 
             {/* Formulario para agregar insumos */}
-            <Row className="g-3 mb-3">
-              <Col md={editingInsumoIndex !== null ? 2 : 3}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold small">
-                    Material
-                  </Form.Label>
-                  <Form.Select
-                    value={currentInsumo.materialId}
-                    onChange={(e) => {
-                      const selectedMaterial = materials.find(
-                        (m) => m._id === e.target.value
-                      );
-                      if (selectedMaterial) {
-                        setCurrentInsumo({
-                          ...currentInsumo,
-                          materialId: selectedMaterial._id,
-                          nombre: selectedMaterial.name,
-                          unidad: selectedMaterial.unit.abbreviation,
-                          importeCosto: selectedMaterial.cost,
-                          importeVenta: selectedMaterial.price,
-                        });
-                        setUnitCost(selectedMaterial.cost);
-                        setUnitPrice(selectedMaterial.price);
-                      }
-                    }}
-                    size="sm"
-                  >
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
+              <div className={editingInsumoIndex !== null ? "md:col-span-2" : "md:col-span-3"}>
+                <Label className="font-semibold text-sm">Material</Label>
+                <Select
+                  value={currentInsumo.materialId || ""}
+                  onValueChange={(value) => {
+                    const selectedMaterial = materials.find(
+                      (m) => m._id === value
+                    );
+                    if (selectedMaterial) {
+                      setCurrentInsumo({
+                        ...currentInsumo,
+                        materialId: selectedMaterial._id,
+                        nombre: selectedMaterial.name,
+                        unidad: selectedMaterial.unit.abbreviation,
+                        importeCosto: selectedMaterial.cost,
+                        importeVenta: selectedMaterial.price,
+                      });
+                      setUnitCost(selectedMaterial.cost);
+                      setUnitPrice(selectedMaterial.price);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccionar material" />
+                  </SelectTrigger>
+                  <SelectContent>
                     {materials.length === 0 ? (
-                      <option value="">No hay materiales disponibles</option>
+                      <SelectItem value="none" disabled>
+                        No hay materiales disponibles
+                      </SelectItem>
                     ) : (
                       materials.map((material) => (
-                        <option key={material._id} value={material._id}>
+                        <SelectItem key={material._id} value={material._id}>
                           {material.name}
-                        </option>
+                        </SelectItem>
                       ))
                     )}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold small">
-                    Cantidad
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={currentInsumo.cantidad}
-                    onChange={(e) =>
-                      setCurrentInsumo({
-                        ...currentInsumo,
-                        cantidad: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    size="sm"
-                  />
-                </Form.Group>
-              </Col>
+              <div className="md:col-span-2">
+                <Label className="font-semibold text-sm">Cantidad</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={currentInsumo.cantidad}
+                  onChange={(e) =>
+                    setCurrentInsumo({
+                      ...currentInsumo,
+                      cantidad: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </div>
 
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold small">Unidad</Form.Label>
-                  <Form.Select
-                    value={currentInsumo.unidad}
-                    onChange={(e) =>
-                      setCurrentInsumo({
-                        ...currentInsumo,
-                        unidad: e.target.value,
-                      })
-                    }
-                    size="sm"
-                  >
+              <div className="md:col-span-2">
+                <Label className="font-semibold text-sm">Unidad</Label>
+                <Select
+                  value={currentInsumo.unidad || "pieza"}
+                  onValueChange={(value) =>
+                    setCurrentInsumo({
+                      ...currentInsumo,
+                      unidad: value,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                     {UNIDADES_OPTIONS.map((unidad) => (
-                      <option key={unidad} value={unidad}>
+                      <SelectItem key={unidad} value={unidad}>
                         {unidad}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold small">
-                    Costo Unit.
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={unitCost}
-                    onChange={(e) =>
-                      setUnitCost(parseFloat(e.target.value) || 0)
-                    }
-                    size="sm"
-                  />
-                </Form.Group>
-              </Col>
+              <div className="md:col-span-2">
+                <Label className="font-semibold text-sm">Costo Unit.</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={unitCost}
+                  onChange={(e) =>
+                    setUnitCost(parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
 
-              <Col md={2}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold small">
-                    Precio Unit.
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={unitPrice}
-                    onChange={(e) =>
-                      setUnitPrice(parseFloat(e.target.value) || 0)
-                    }
-                    size="sm"
-                  />
-                </Form.Group>
-              </Col>
+              <div className="md:col-span-2">
+                <Label className="font-semibold text-sm">Precio Unit.</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={unitPrice}
+                  onChange={(e) =>
+                    setUnitPrice(parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
 
-              <Col
-                md={editingInsumoIndex !== null ? 2 : 1}
-                className="d-flex align-items-end gap-1"
-              >
+              <div className={`flex items-end gap-1 ${editingInsumoIndex !== null ? "md:col-span-2" : "md:col-span-1"}`}>
                 {editingInsumoIndex !== null && (
                   <Button
-                    variant="outline-secondary"
+                    type="button"
+                    variant="outline"
                     size="sm"
                     onClick={handleCancelEditInsumo}
-                    className="w-100"
+                    className="flex-1"
                     title="Cancelar"
                   >
                     <X size={18} />
                   </Button>
                 )}
                 <Button
-                  variant={editingInsumoIndex !== null ? "primary" : "success"}
+                  type="button"
+                  variant={editingInsumoIndex !== null ? "default" : "default"}
                   size="sm"
                   onClick={handleAddInsumo}
-                  className="w-100"
+                  className={`flex-1 ${editingInsumoIndex === null ? "bg-green-600 hover:bg-green-700" : ""}`}
                   title={editingInsumoIndex !== null ? "Actualizar" : "Agregar"}
                 >
                   {editingInsumoIndex !== null ? (
@@ -738,229 +738,218 @@ const NewProductPage: React.FC = () => {
                     <Plus size={18} />
                   )}
                 </Button>
-              </Col>
-            </Row>
+              </div>
+            </div>
 
             {/* Tabla de insumos */}
             {formData.insumos && formData.insumos.length > 0 && (
-              <div className="table-responsive">
-                <Table className="table table-hover table-sm">
-                  <thead className="table-light">
-                    <tr>
-                      <th>No.</th>
-                      <th>Insumo</th>
-                      <th>Cantidad</th>
-                      <th>Unidad</th>
-                      <th>Importe costo</th>
-                      <th>Importe venta</th>
-                      <th className="text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {formData.insumos.map((insumo, index) => {
-                      return (
-                        <tr
-                          key={index}
-                          className={
-                            editingInsumoIndex === index ? "table-info" : ""
-                          }
-                        >
-                          <td>{index + 1}</td>
-                          <td>{insumo.nombre}</td>
-                          <td>{insumo.cantidad}</td>
-                          <td>{insumo.unidad}</td>
-                          <td className="text-success">
-                            ${formatNumber(insumo.importeCosto)}
-                          </td>
-                          <td className="text-primary">
-                            ${formatNumber(insumo.importeVenta)}
-                          </td>
-                          <td className="text-center">
-                            <div className="d-flex gap-1 justify-content-center">
-                              <Button
-                                variant="outline-primary"
-                                size="sm"
-                                onClick={() => handleEditInsumo(index)}
-                                disabled={editingInsumoIndex !== null}
-                                title="Editar"
-                              >
-                                <Edit2 size={14} />
-                              </Button>
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => handleRemoveInsumo(index)}
-                                disabled={editingInsumoIndex !== null}
-                                title="Eliminar"
-                              >
-                                <Trash2 size={14} />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="table-light fw-bold">
-                    <tr>
-                      <td colSpan={4} className="text-end">
-                        Totales:
-                      </td>
-                      <td className="text-success">
-                        ${formatNumber(totalCosto)}
-                      </td>
-                      <td className="text-primary">
-                        ${formatNumber(totalVenta)}
-                      </td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </Table>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>No.</TableHead>
+                    <TableHead>Insumo</TableHead>
+                    <TableHead>Cantidad</TableHead>
+                    <TableHead>Unidad</TableHead>
+                    <TableHead>Importe costo</TableHead>
+                    <TableHead>Importe venta</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {formData.insumos.map((insumo, index) => {
+                    return (
+                      <TableRow
+                        key={index}
+                        className={
+                          editingInsumoIndex === index ? "bg-blue-50" : ""
+                        }
+                      >
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{insumo.nombre}</TableCell>
+                        <TableCell>{insumo.cantidad}</TableCell>
+                        <TableCell>{insumo.unidad}</TableCell>
+                        <TableCell className="text-green-600">
+                          ${formatNumber(insumo.importeCosto)}
+                        </TableCell>
+                        <TableCell className="text-primary">
+                          ${formatNumber(insumo.importeVenta)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex gap-1 justify-center">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              onClick={() => handleEditInsumo(index)}
+                              disabled={editingInsumoIndex !== null}
+                              title="Editar"
+                            >
+                              <Edit2 size={14} />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon-sm"
+                              onClick={() => handleRemoveInsumo(index)}
+                              disabled={editingInsumoIndex !== null}
+                              title="Eliminar"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-right font-bold">
+                      Totales:
+                    </TableCell>
+                    <TableCell className="text-green-600 font-bold">
+                      ${formatNumber(totalCosto)}
+                    </TableCell>
+                    <TableCell className="text-primary font-bold">
+                      ${formatNumber(totalVenta)}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
             )}
-          </Card.Body>
+          </CardContent>
         </Card>
 
         {/* Mano de Obra */}
         <Card className="mb-4 border-0 shadow-sm">
-          <Card.Header className="bg-white border-0 py-3">
-            <div className="d-flex align-items-center gap-2">
+          <CardHeader className="bg-background border-b-0 py-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Package size={20} className="text-primary" />
-              <h5 className="mb-0 fw-bold">Mano de Obra</h5>
-            </div>
-          </Card.Header>
-          <Card.Body>
-            <Row className="g-3">
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Tipo de Cálculo
-                  </Form.Label>
-                  <Form.Select
-                    value={labourType}
-                    onChange={(e) => {
-                      const newType = e.target.value as "fixed" | "percentage";
-                      setLabourType(newType);
-                      // Si cambia a fijo, mantener el valor actual de labour
-                      // Si cambia a porcentaje, calcular el porcentaje basado en labour actual
-                      if (
-                        newType === "percentage" &&
-                        totalVenta > 0 &&
-                        formData.labour > 0
-                      ) {
-                        const percentage = (formData.labour / totalVenta) * 100;
-                        setLabourPercentage(parseFloat(percentage.toFixed(2)));
-                      }
-                    }}
-                    className="py-2"
-                  >
-                    <option value="fixed">Monto Fijo</option>
-                    <option value="percentage">Porcentaje</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+              Mano de Obra
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">Tipo de Calculo</Label>
+                <Select
+                  value={labourType}
+                  onValueChange={(value: "fixed" | "percentage") => {
+                    setLabourType(value);
+                    // Si cambia a fijo, mantener el valor actual de labour
+                    // Si cambia a porcentaje, calcular el porcentaje basado en labour actual
+                    if (
+                      value === "percentage" &&
+                      totalVenta > 0 &&
+                      formData.labour > 0
+                    ) {
+                      const percentage = (formData.labour / totalVenta) * 100;
+                      setLabourPercentage(parseFloat(percentage.toFixed(2)));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed">Monto Fijo</SelectItem>
+                    <SelectItem value="percentage">Porcentaje</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               {labourType === "fixed" ? (
-                <Col md={8}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
-                      Costo de Mano de Obra
-                    </Form.Label>
-                    <Form.Control
+                <div className="md:col-span-2 space-y-2">
+                  <Label className="font-semibold">Costo de Mano de Obra</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.labour}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        labour: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Ingresa el monto fijo de mano de obra
+                  </p>
+                </div>
+              ) : (
+                <div className="md:col-span-2 space-y-2">
+                  <Label className="font-semibold">Porcentaje de Mano de Obra</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
                       type="number"
                       min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={formData.labour}
-                      onChange={(e) =>
+                      max="100"
+                      step="0.1"
+                      placeholder="0"
+                      value={labourPercentage}
+                      onChange={(e) => {
+                        const percentage = parseFloat(e.target.value) || 0;
+                        setLabourPercentage(percentage);
+                        // Calcular labour basado en el porcentaje del total de venta
+                        const calculatedLabour =
+                          (totalVenta * percentage) / 100;
                         setFormData({
                           ...formData,
-                          labour: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      className="py-2"
+                          labour: parseFloat(calculatedLabour.toFixed(2)),
+                        });
+                      }}
                     />
-                    <Form.Text className="text-muted">
-                      Ingresa el monto fijo de mano de obra
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              ) : (
-                <Col md={8}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
-                      Porcentaje de Mano de Obra
-                    </Form.Label>
-                    <div className="d-flex gap-2 align-items-center">
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        placeholder="0"
-                        value={labourPercentage}
-                        onChange={(e) => {
-                          const percentage = parseFloat(e.target.value) || 0;
-                          setLabourPercentage(percentage);
-                          // Calcular labour basado en el porcentaje del total de venta
-                          const calculatedLabour =
-                            (totalVenta * percentage) / 100;
-                          setFormData({
-                            ...formData,
-                            labour: parseFloat(calculatedLabour.toFixed(2)),
-                          });
-                        }}
-                        className="py-2"
-                      />
-                      <span className="fw-bold">%</span>
+                    <span className="font-bold">%</span>
+                  </div>
+                  {labourPercentage > 0 ? (
+                    <div className="mt-2 p-2 bg-muted rounded">
+                      <span className="text-lg font-bold text-primary">
+                        {labourPercentage}% de ${formatNumber(totalVenta)} = $
+                        {formatNumber(formData.labour)}
+                      </span>
                     </div>
-                    {labourPercentage > 0 ? (
-                      <div className="mt-2 p-2 bg-light rounded">
-                        <span className="fs-5 fw-bold text-primary">
-                          {labourPercentage}% de ${formatNumber(totalVenta)} = $
-                          {formatNumber(formData.labour)}
-                        </span>
-                      </div>
-                    ) : (
-                      <Form.Text className="text-muted">
-                        Ingresa el porcentaje sobre el total de venta de insumos
-                      </Form.Text>
-                    )}
-                  </Form.Group>
-                </Col>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Ingresa el porcentaje sobre el total de venta de insumos
+                    </p>
+                  )}
+                </div>
               )}
-            </Row>
-          </Card.Body>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Precio de Venta Final */}
         <Card className="mb-4">
-          <Card.Header className="bg-success text-white">
-            <h5 className="mb-0">
-              <Package className="me-2" />
+          <CardHeader className="bg-green-600 text-white py-3 rounded-t-lg">
+            <CardTitle className="flex items-center gap-2">
+              <Package size={20} />
               Precio de Venta Final
-            </h5>
-          </Card.Header>
-          <Card.Body>
-            <Row className="align-items-center">
-              <Col md={6}>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="fw-semibold">Total Insumos:</span>
-                  <span className="fs-5 text-success">
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold">Total Insumos:</span>
+                  <span className="text-lg text-green-600">
                     ${formatNumber(totalCosto)}
                   </span>
                 </div>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="fw-semibold">Mano de Obra:</span>
-                  <span className="fs-5 text-warning">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold">Mano de Obra:</span>
+                  <span className="text-lg text-yellow-600">
                     ${formatNumber(formData.labour)}
                   </span>
                 </div>
-                <hr />
-                <div className="d-flex justify-content-between align-items-center">
-                  <span className="fw-bold fs-4">Precio de Venta Final:</span>
-                  <div className="d-flex align-items-center gap-2">
-                    <Form.Control
+                <hr className="my-2" />
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-xl">Precio de Venta Final:</span>
+                  <div className="flex items-center gap-2">
+                    <Input
                       type="number"
                       min="0"
                       step="0.01"
@@ -968,13 +957,13 @@ const NewProductPage: React.FC = () => {
                       onChange={(e) =>
                         setPrecioVentaEditable(parseFloat(e.target.value) || 0)
                       }
-                      className="fs-3 fw-bold text-success border-success"
-                      style={{ width: "150px", textAlign: "right" }}
+                      className="text-2xl font-bold text-green-600 w-36 text-right border-green-500"
                     />
-                    <span className="fs-3 fw-bold text-success">$</span>
+                    <span className="text-2xl font-bold text-green-600">$</span>
                     {precioVentaEditable !== precioVentaCalculado && (
                       <Button
-                        variant="outline-secondary"
+                        type="button"
+                        variant="outline"
                         size="sm"
                         onClick={() =>
                           setPrecioVentaEditable(precioVentaCalculado)
@@ -986,66 +975,67 @@ const NewProductPage: React.FC = () => {
                     )}
                   </div>
                 </div>
-              </Col>
-              <Col md={6}>
-                <div className="text-center">
-                  <div className="p-4 bg-light rounded">
-                    <h6 className="text-muted mb-2">Desglose del Precio</h6>
-                    <div className="fs-6">
-                      <div className="mb-1">
-                        <span className="text-success">Insumos:</span> $
-                        {formatNumber(totalCosto)}
-                      </div>
-                      <div className="mb-1">
-                        <span className="text-warning">Mano de Obra:</span> $
-                        {formatNumber(formData.labour)}
-                      </div>
-                      <hr className="my-2" />
-                      <div className="fw-bold text-success">
-                        <span>Total:</span> ${formatNumber(precioVentaFinal)}
-                      </div>
-                      {precioVentaEditable !== precioVentaCalculado && (
-                        <div className="mt-2 p-2 bg-warning bg-opacity-25 rounded">
-                          <small className="text-warning">
-                            <strong>Ajuste:</strong> +$
-                            {formatNumber(
-                              precioVentaEditable - precioVentaCalculado
-                            )}
-                          </small>
-                        </div>
-                      )}
+              </div>
+              <div className="text-center">
+                <div className="p-4 bg-muted rounded">
+                  <h6 className="text-muted-foreground mb-2">Desglose del Precio</h6>
+                  <div className="text-base">
+                    <div className="mb-1">
+                      <span className="text-green-600">Insumos:</span> $
+                      {formatNumber(totalCosto)}
                     </div>
+                    <div className="mb-1">
+                      <span className="text-yellow-600">Mano de Obra:</span> $
+                      {formatNumber(formData.labour)}
+                    </div>
+                    <hr className="my-2" />
+                    <div className="font-bold text-green-600">
+                      <span>Total:</span> ${formatNumber(precioVentaFinal)}
+                    </div>
+                    {precioVentaEditable !== precioVentaCalculado && (
+                      <div className="mt-2 p-2 bg-yellow-100 rounded">
+                        <small className="text-yellow-700">
+                          <strong>Ajuste:</strong> +$
+                          {formatNumber(
+                            precioVentaEditable - precioVentaCalculado
+                          )}
+                        </small>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </Col>
-            </Row>
-          </Card.Body>
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Botones */}
-        <div className="d-flex justify-content-between gap-2 mb-4">
+        <div className="flex justify-between gap-2 mb-4">
           <Button
             type="button"
-            variant="outline-secondary"
+            variant="outline"
             size="lg"
             onClick={() => router.back()}
-            className="d-flex align-items-center gap-2"
+            className="flex items-center gap-2"
           >
             <ArrowLeft size={18} />
             Volver
           </Button>
           <Button
             type="submit"
-            variant="primary"
             size="lg"
             disabled={loading}
-            className="d-flex align-items-center gap-2 px-5"
+            className="flex items-center gap-2 px-8"
           >
-            <Save size={18} />
+            {loading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Save size={18} />
+            )}
             {loading ? "Guardando..." : "Guardar"}
           </Button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 };

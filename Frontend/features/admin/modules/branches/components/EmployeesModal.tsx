@@ -1,22 +1,42 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Modal,
-  Button,
-  Form,
-  Table,
-  Row,
-  Col,
-  Spinner,
-  Alert,
-} from "react-bootstrap";
-import { X, Save, UserPlus, Trash2 } from "lucide-react";
-import { toast } from "react-toastify";
+import { X, Save, UserPlus, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import { Branch } from "../types";
 import { branchesService } from "../services/branches";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { apiCall } from "@/utils/api";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Role {
   _id: string;
@@ -274,266 +294,255 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          <UserPlus size={24} className="me-2" />
-          Agregar Empleados - {branch.branchName}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body style={{ maxHeight: "70vh", overflowY: "auto" }}>
-        {error && (
-          <Alert variant="danger" onClose={() => setError(null)} dismissible>
-            {error}
-          </Alert>
-        )}
+    <Dialog open={show} onOpenChange={(open) => !saving && !open && handleClose()}>
+      <DialogContent className="sm:max-w-[900px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary" />
+            Agregar Empleados - {branch.branchName}
+          </DialogTitle>
+          <DialogDescription>
+            Completa el formulario para agregar empleados a esta sucursal
+          </DialogDescription>
+        </DialogHeader>
 
-        {!hasPermission && (
-          <Alert variant="warning" className="d-flex align-items-center gap-2">
-            <X size={24} />
-            <div>
-              <strong>Permisos insuficientes</strong>
-              <p className="mb-0">
-                Solo los usuarios con rol <strong>Gerente</strong> o{" "}
-                <strong>Administrador</strong> pueden agregar empleados.
-              </p>
-            </div>
-          </Alert>
-        )}
+        <ScrollArea className="max-h-[60vh]">
+          <div className="space-y-4 p-1">
+            {error && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-        {loading ? (
-          <div className="d-flex justify-content-center align-items-center py-5">
-            <Spinner animation="border" variant="primary" />
-          </div>
-        ) : (
-          <>
-            {/* Formulario para agregar un empleado */}
-            <div
-              className="border rounded p-3 mb-4"
-              style={{ backgroundColor: "#f8f9fa" }}
-            >
-              <h6 className="fw-semibold mb-3">Agregar Nuevo Empleado</h6>
-              <Row className="g-3">
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>
-                      Nombre de Usuario <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Nombre de usuario"
-                      value={formData.username}
-                      onChange={(e) =>
-                        handleInputChange("username", e.target.value)
-                      }
-                      disabled={!hasPermission}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>
-                      Email <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="email"
-                      placeholder="Email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        handleInputChange("email", e.target.value)
-                      }
-                      disabled={!hasPermission}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>
-                      Teléfono <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="tel"
-                      placeholder="Teléfono"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        handleInputChange("phone", e.target.value)
-                      }
-                      disabled={!hasPermission}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>
-                      Nombre <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Nombre"
-                      value={formData.profile.name}
-                      onChange={(e) =>
-                        handleInputChange("profile.name", e.target.value)
-                      }
-                      disabled={!hasPermission}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>
-                      Apellido <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Apellido"
-                      value={formData.profile.lastName}
-                      onChange={(e) =>
-                        handleInputChange("profile.lastName", e.target.value)
-                      }
-                      disabled={!hasPermission}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>
-                      Contraseña <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="password"
-                      placeholder="Contraseña"
-                      value={formData.password}
-                      onChange={(e) =>
-                        handleInputChange("password", e.target.value)
-                      }
-                      disabled={!hasPermission}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={12}>
-                  <Form.Group>
-                    <Form.Label>
-                      Rol <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Select
-                      value={formData.role}
-                      onChange={(e) =>
-                        handleInputChange("role", e.target.value)
-                      }
+            {!hasPermission && (
+              <Alert variant="destructive">
+                <X className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Permisos insuficientes</strong>
+                  <p className="mt-1 mb-0">
+                    Solo los usuarios con rol <strong>Gerente</strong> o{" "}
+                    <strong>Administrador</strong> pueden agregar empleados.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-muted-foreground mt-3">Cargando roles...</p>
+              </div>
+            ) : (
+              <>
+                {/* Formulario para agregar un empleado */}
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <h6 className="font-semibold mb-4">Agregar Nuevo Empleado</h6>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">
+                        Nombre de Usuario <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="username"
+                        type="text"
+                        placeholder="Nombre de usuario"
+                        value={formData.username}
+                        onChange={(e) => handleInputChange("username", e.target.value)}
+                        disabled={!hasPermission}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">
+                        Email <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
+                        disabled={!hasPermission}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">
+                        Teléfono <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="Teléfono"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange("phone", e.target.value)}
+                        disabled={!hasPermission}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="name">
+                        Nombre <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Nombre"
+                        value={formData.profile.name}
+                        onChange={(e) => handleInputChange("profile.name", e.target.value)}
+                        disabled={!hasPermission}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">
+                        Apellido <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Apellido"
+                        value={formData.profile.lastName}
+                        onChange={(e) => handleInputChange("profile.lastName", e.target.value)}
+                        disabled={!hasPermission}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="password">
+                        Contraseña <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Contraseña"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange("password", e.target.value)}
+                        disabled={!hasPermission}
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-3">
+                      <Label htmlFor="role">
+                        Rol <span className="text-destructive">*</span>
+                      </Label>
+                      <Select
+                        value={formData.role}
+                        onValueChange={(value) => handleInputChange("role", value)}
+                        disabled={!hasPermission}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="-- Seleccione un rol --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles.map((role) => (
+                            <SelectItem key={role._id} value={role._id}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      onClick={handleAddEmployee}
                       disabled={!hasPermission}
                     >
-                      <option value="">-- Seleccione un rol --</option>
-                      {roles.map((role) => (
-                        <option key={role._id} value={role._id}>
-                          {role.name}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
-              <div className="text-end mt-3">
-                <Button
-                  variant="primary"
-                  onClick={handleAddEmployee}
-                  disabled={!hasPermission}
-                  className="d-flex align-items-center gap-2 ms-auto"
-                >
-                  <UserPlus size={18} />
-                  Agregar a la Lista
-                </Button>
-              </div>
-            </div>
-
-            {/* Tabla de empleados agregados */}
-            <div>
-              <h6 className="fw-semibold mb-3">
-                Empleados a Agregar ({employeesList.length})
-              </h6>
-              {employeesList.length === 0 ? (
-                <Alert variant="info">
-                  No hay empleados en la lista. Completa el formulario superior
-                  y haz clic en "Agregar a la Lista".
-                </Alert>
-              ) : (
-                <div className="table-responsive">
-                  <Table striped bordered hover>
-                    <thead className="table-light">
-                      <tr>
-                        <th>#</th>
-                        <th>Usuario</th>
-                        <th>Nombre Completo</th>
-                        <th>Email</th>
-                        <th>Teléfono</th>
-                        <th>Rol</th>
-                        <th style={{ width: "80px" }}>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {employeesList.map((employee, index) => (
-                        <tr key={index}>
-                          <td>{index + 1}</td>
-                          <td>{employee.username}</td>
-                          <td>
-                            {employee.profile.name} {employee.profile.lastName}
-                          </td>
-                          <td>{employee.email}</td>
-                          <td>{employee.phone}</td>
-                          <td>
-                            <span className="badge bg-info">
-                              {getRoleName(employee.role)}
-                            </span>
-                          </td>
-                          <td className="text-center">
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="p-0 text-danger"
-                              onClick={() => handleRemoveEmployee(index)}
-                              title="Quitar de la lista"
-                              disabled={!hasPermission}
-                            >
-                              <Trash2 size={18} />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Agregar a la Lista
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </div>
-          </>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose} disabled={saving}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSave}
-          disabled={saving || !hasPermission || employeesList.length === 0}
-          className="d-flex align-items-center gap-2"
-        >
-          {saving ? (
-            <>
-              <Spinner
-                animation="border"
-                size="sm"
-                style={{ width: "16px", height: "16px" }}
-              />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save size={18} />
-              Guardar ({employeesList.length})
-            </>
-          )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+
+                {/* Tabla de empleados agregados */}
+                <div>
+                  <h6 className="font-semibold mb-3">
+                    Empleados a Agregar ({employeesList.length})
+                  </h6>
+                  {employeesList.length === 0 ? (
+                    <Alert>
+                      <AlertDescription>
+                        No hay empleados en la lista. Completa el formulario superior
+                        y haz clic en "Agregar a la Lista".
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">#</TableHead>
+                          <TableHead>Usuario</TableHead>
+                          <TableHead>Nombre Completo</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Teléfono</TableHead>
+                          <TableHead>Rol</TableHead>
+                          <TableHead className="w-20 text-center">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {employeesList.map((employee, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell>{employee.username}</TableCell>
+                            <TableCell>
+                              {employee.profile.name} {employee.profile.lastName}
+                            </TableCell>
+                            <TableCell>{employee.email}</TableCell>
+                            <TableCell>{employee.phone}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {getRoleName(employee.role)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveEmployee(index)}
+                                title="Quitar de la lista"
+                                disabled={!hasPermission}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </ScrollArea>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving || !hasPermission || employeesList.length === 0}
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar ({employeesList.length})
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

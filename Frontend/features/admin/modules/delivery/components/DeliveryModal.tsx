@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col } from "react-bootstrap";
-import { X, Save, Truck, Eye, EyeOff } from "lucide-react";
+import { Save, Truck, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Delivery, CreateDeliveryData, UpdateDeliveryData } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface DeliveryModalProps {
   show: boolean;
@@ -116,244 +128,227 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
   const isEditing = !!delivery;
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header className="border-bottom-0 pb-0">
-        <Modal.Title className="d-flex align-items-center gap-2">
-          <Truck size={20} className="text-primary" />
-          {isEditing ? "Editar Repartidor" : "Nuevo Repartidor"}
-        </Modal.Title>
-        <Button
-          variant="link"
-          onClick={onHide}
-          className="text-muted p-0"
-          style={{ border: "none", background: "none" }}
-        >
-          <X size={20} />
-        </Button>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !loading && !open && onHide()}>
+      <DialogContent className="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Truck className="h-5 w-5 text-primary" />
+            {isEditing ? "Editar Repartidor" : "Nuevo Repartidor"}
+          </DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Actualiza la información del repartidor"
+              : "Completa los datos del nuevo repartidor"}
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body>
-        <Form onSubmit={handleSubmit}>
-          <Row>
-            <Col md={4}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Nombre <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nombre">
+                  Nombre <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="nombre"
                   type="text"
                   placeholder="Ingresa el nombre"
                   value={formData.nombre}
                   onChange={(e) => handleChange("nombre", e.target.value)}
-                  isInvalid={!!errors.nombre}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.nombre}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
+                {errors.nombre && (
+                  <p className="text-sm text-destructive">{errors.nombre}</p>
+                )}
+              </div>
 
-            <Col md={4}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Apellido Paterno <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+              <div className="space-y-2">
+                <Label htmlFor="apellidoPaterno">
+                  Apellido Paterno <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="apellidoPaterno"
                   type="text"
                   placeholder="Ingresa el apellido paterno"
                   value={formData.apellidoPaterno}
                   onChange={(e) => handleChange("apellidoPaterno", e.target.value)}
-                  isInvalid={!!errors.apellidoPaterno}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.apellidoPaterno}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
+                {errors.apellidoPaterno && (
+                  <p className="text-sm text-destructive">{errors.apellidoPaterno}</p>
+                )}
+              </div>
 
-            <Col md={4}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Apellido Materno <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+              <div className="space-y-2">
+                <Label htmlFor="apellidoMaterno">
+                  Apellido Materno <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="apellidoMaterno"
                   type="text"
                   placeholder="Ingresa el apellido materno"
                   value={formData.apellidoMaterno}
                   onChange={(e) => handleChange("apellidoMaterno", e.target.value)}
-                  isInvalid={!!errors.apellidoMaterno}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.apellidoMaterno}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
+                {errors.apellidoMaterno && (
+                  <p className="text-sm text-destructive">{errors.apellidoMaterno}</p>
+                )}
+              </div>
+            </div>
 
-          <Form.Group className="mb-3">
-            <Form.Label>
-              Dirección <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Ingresa la dirección completa"
-              value={formData.direccion}
-              onChange={(e) => handleChange("direccion", e.target.value)}
-              isInvalid={!!errors.direccion}
-            />
-            <Form.Control.Feedback type="invalid">
-              {errors.direccion}
-            </Form.Control.Feedback>
-          </Form.Group>
+            <div className="space-y-2">
+              <Label htmlFor="direccion">
+                Dirección <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="direccion"
+                type="text"
+                placeholder="Ingresa la dirección completa"
+                value={formData.direccion}
+                onChange={(e) => handleChange("direccion", e.target.value)}
+              />
+              {errors.direccion && (
+                <p className="text-sm text-destructive">{errors.direccion}</p>
+              )}
+            </div>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Teléfono <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="telefono">
+                  Teléfono <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="telefono"
                   type="tel"
                   placeholder="Ingresa el número de teléfono"
                   value={formData.telefono}
                   onChange={(e) => handleChange("telefono", e.target.value)}
-                  isInvalid={!!errors.telefono}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.telefono}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
+                {errors.telefono && (
+                  <p className="text-sm text-destructive">{errors.telefono}</p>
+                )}
+              </div>
 
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Correo Electrónico <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+              <div className="space-y-2">
+                <Label htmlFor="correo">
+                  Correo Electrónico <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="correo"
                   type="email"
                   placeholder="Ingresa el correo electrónico"
                   value={formData.correo}
                   onChange={(e) => handleChange("correo", e.target.value)}
-                  isInvalid={!!errors.correo}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.correo}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
+                {errors.correo && (
+                  <p className="text-sm text-destructive">{errors.correo}</p>
+                )}
+              </div>
+            </div>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Usuario <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="usuario">
+                  Usuario <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="usuario"
                   type="text"
                   placeholder="Ingresa el nombre de usuario"
                   value={formData.usuario}
                   onChange={(e) => handleChange("usuario", e.target.value)}
-                  isInvalid={!!errors.usuario}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.usuario}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
+                {errors.usuario && (
+                  <p className="text-sm text-destructive">{errors.usuario}</p>
+                )}
+              </div>
 
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Contraseña {!isEditing && <span className="text-danger">*</span>}
-                  {isEditing && <small className="text-muted">(Dejar vacío para mantener actual)</small>}
-                </Form.Label>
-                <div className="position-relative">
-                  <Form.Control
+              <div className="space-y-2">
+                <Label htmlFor="contrasena">
+                  Contraseña {!isEditing && <span className="text-destructive">*</span>}
+                  {isEditing && (
+                    <span className="text-muted-foreground text-xs ml-1">
+                      (Dejar vacío para mantener actual)
+                    </span>
+                  )}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="contrasena"
                     type={showPassword ? "text" : "password"}
                     placeholder="Ingresa la contraseña"
                     value={formData.contrasena}
                     onChange={(e) => handleChange("contrasena", e.target.value)}
-                    isInvalid={!!errors.contrasena}
+                    className="pr-10"
                   />
                   <Button
-                    variant="link"
-                    className="position-absolute end-0 top-50 translate-middle-y pe-3"
-                    style={{ border: "none", background: "none", zIndex: 10 }}
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3"
                     onClick={() => setShowPassword(!showPassword)}
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
-                  <Form.Control.Feedback type="invalid">
-                    {errors.contrasena}
-                  </Form.Control.Feedback>
                 </div>
-              </Form.Group>
-            </Col>
-          </Row>
+                {errors.contrasena && (
+                  <p className="text-sm text-destructive">{errors.contrasena}</p>
+                )}
+              </div>
+            </div>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Foto</Form.Label>
-            <Form.Control
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (file) {
-                  // Aquí podrías agregar lógica para subir el archivo
-                  // Por ahora guardamos el nombre del archivo
-                  handleChange("foto", file.name);
-                }
-              }}
-            />
-            {formData.foto && (
-              <Form.Text className="text-muted">
-                Archivo seleccionado: {formData.foto}
-              </Form.Text>
-            )}
-          </Form.Group>
+            <div className="space-y-2">
+              <Label htmlFor="foto">Foto</Label>
+              <Input
+                id="foto"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    handleChange("foto", file.name);
+                  }
+                }}
+              />
+              {formData.foto && (
+                <p className="text-sm text-muted-foreground">
+                  Archivo seleccionado: {formData.foto}
+                </p>
+              )}
+            </div>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Check
-                  type="checkbox"
-                  label="Activo"
-                  checked={formData.estatus}
-                  onChange={(e) => handleChange("estatus", e.target.checked)}
-                />
-              </Form.Group>
-            </Col>
-          </Row>
-        </Form>
-      </Modal.Body>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="estatus"
+                checked={formData.estatus}
+                onCheckedChange={(checked) => handleChange("estatus", checked)}
+              />
+              <Label htmlFor="estatus" className="cursor-pointer">
+                Activo
+              </Label>
+            </div>
+          </div>
 
-      <Modal.Footer className="border-top-0 pt-0">
-        <Button variant="outline-secondary" onClick={onHide} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={loading}
-          className="d-flex align-items-center gap-2"
-        >
-          {loading ? (
-            <>
-              <div className="spinner-border spinner-border-sm" role="status" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save size={16} />
-              {isEditing ? "Actualizar" : "Crear"} Repartidor
-            </>
-          )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onHide} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isEditing ? "Actualizar" : "Crear"} Repartidor
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

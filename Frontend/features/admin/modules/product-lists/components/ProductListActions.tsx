@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { Spinner, Button } from "react-bootstrap";
-import { Eye, Edit2, CheckCircle, XCircle } from "lucide-react";
+import { Eye, Edit2, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { productListsService } from "../services/productLists";
 import { ProductList } from "../types";
+import { Button } from "@/components/ui/button";
 
 interface ProductListActionsProps {
   productList: ProductList;
@@ -49,13 +49,12 @@ const ProductListActions: React.FC<ProductListActionsProps> = ({
   };
 
   return (
-    <div className="d-flex justify-content-center gap-2">
+    <div className="flex justify-center gap-2">
       {/* View Details Button */}
       <Button
-        variant="light"
+        variant="ghost"
         size="sm"
-        className="rounded-circle"
-        style={{ width: "32px", height: "32px", padding: "0" }}
+        className="rounded-full w-8 h-8 p-0"
         onClick={handleViewDetails}
         title="Ver detalles"
       >
@@ -64,36 +63,30 @@ const ProductListActions: React.FC<ProductListActionsProps> = ({
 
       {/* Edit Button */}
       <Button
-        variant="light"
+        variant="ghost"
         size="sm"
-        className="rounded-circle"
-        style={{ width: "32px", height: "32px", padding: "0" }}
+        className="rounded-full w-8 h-8 p-0"
         onClick={handleEdit}
         title="Editar lista"
       >
-        <Edit2 size={16} className="text-info" />
+        <Edit2 size={16} className="text-cyan-500" />
       </Button>
 
       {/* Toggle Status Button */}
       <Button
-        variant="light"
+        variant="ghost"
         size="sm"
-        className="rounded-circle"
-        style={{ width: "32px", height: "32px", padding: "0" }}
+        className="rounded-full w-8 h-8 p-0"
         onClick={handleToggleStatus}
         disabled={isToggling}
         title={productList.status ? "Desactivar lista" : "Activar lista"}
       >
         {isToggling ? (
-          <Spinner
-            animation="border"
-            size="sm"
-            style={{ width: "16px", height: "16px" }}
-          />
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : productList.status ? (
-          <XCircle size={16} className="text-danger" />
+          <XCircle size={16} className="text-red-500" />
         ) : (
-          <CheckCircle size={16} className="text-success" />
+          <CheckCircle size={16} className="text-green-500" />
         )}
       </Button>
     </div>

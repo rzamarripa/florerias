@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Form, Button, Row, Col, Card, Alert } from "react-bootstrap";
 import { Search } from "lucide-react";
 import Select from "react-select";
 import { clientsService } from "../../clients/services/clients";
@@ -11,6 +10,19 @@ import { Client } from "../../clients/types";
 import { PaymentMethod } from "../types";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select as ShadcnSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface FinanceFiltersProps {
   onSearch: (filters: {
@@ -200,188 +212,160 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
   };
 
   return (
-    <Card className="border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
-      <Card.Body className="p-3">
-        <Row className="g-3">
-          <Col md={3}>
-            <Form.Group>
-              <Form.Label className="fw-semibold text-muted small">
-                Fecha Inicial *
-              </Form.Label>
-              <Form.Control
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{
-                  borderRadius: "10px",
-                  border: "1px solid #dee2e6",
-                  padding: "10px 14px",
-                }}
-              />
-            </Form.Group>
-          </Col>
+    <Card className="border-0 shadow-sm mb-4 rounded-[15px]">
+      <CardContent className="p-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="space-y-2">
+            <Label className="font-semibold text-muted-foreground text-sm">
+              Fecha Inicial *
+            </Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="rounded-[10px] h-[42px]"
+            />
+          </div>
 
-          <Col md={3}>
-            <Form.Group>
-              <Form.Label className="fw-semibold text-muted small">
-                Fecha Final *
-              </Form.Label>
-              <Form.Control
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                style={{
-                  borderRadius: "10px",
-                  border: "1px solid #dee2e6",
-                  padding: "10px 14px",
-                }}
-              />
-            </Form.Group>
-          </Col>
+          <div className="space-y-2">
+            <Label className="font-semibold text-muted-foreground text-sm">
+              Fecha Final *
+            </Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="rounded-[10px] h-[42px]"
+            />
+          </div>
 
           {isAdmin && activeBranch ? (
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="fw-semibold text-muted small">
-                  Sucursal *
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  value={activeBranch.branchName}
-                  disabled
-                  readOnly
-                  style={{
-                    borderRadius: "10px",
-                    border: "1px solid #dee2e6",
-                    padding: "10px 14px",
-                    backgroundColor: "#f8f9fa",
-                  }}
-                />
-              </Form.Group>
-            </Col>
+            <div className="space-y-2">
+              <Label className="font-semibold text-muted-foreground text-sm">
+                Sucursal *
+              </Label>
+              <Input
+                type="text"
+                value={activeBranch.branchName}
+                disabled
+                readOnly
+                className="rounded-[10px] h-[42px] bg-muted"
+              />
+            </div>
           ) : isAdmin && !activeBranch ? (
-            <Col md={3}>
-              <Alert variant="warning" className="mb-0 p-2 small">
-                <strong>Sin sucursal:</strong> Los resultados incluirán todas las sucursales
+            <div className="flex items-end">
+              <Alert className="mb-0 p-2">
+                <AlertDescription className="text-sm">
+                  <strong>Sin sucursal:</strong> Los resultados incluirán todas las sucursales
+                </AlertDescription>
               </Alert>
-            </Col>
+            </div>
           ) : (
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="fw-semibold text-muted small">
-                  Sucursal *
-                </Form.Label>
-                <Form.Select
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  style={{
-                    borderRadius: "10px",
-                    border: "1px solid #dee2e6",
-                    padding: "10px 14px",
-                  }}
-                  disabled={loadingBranches}
-                >
-                  <option value="">
-                    {branches.length > 1
-                      ? "Selecciona una sucursal"
-                      : "Cargando..."}
-                  </option>
+            <div className="space-y-2">
+              <Label className="font-semibold text-muted-foreground text-sm">
+                Sucursal *
+              </Label>
+              <ShadcnSelect
+                value={branchId}
+                onValueChange={setBranchId}
+                disabled={loadingBranches}
+              >
+                <SelectTrigger className="rounded-[10px] h-[42px]">
+                  <SelectValue
+                    placeholder={
+                      branches.length > 1
+                        ? "Selecciona una sucursal"
+                        : "Cargando..."
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
                   {branches.map((branch) => (
-                    <option key={branch._id} value={branch._id}>
+                    <SelectItem key={branch._id} value={branch._id}>
                       {branch.branchName}
-                    </option>
+                    </SelectItem>
                   ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
+                </SelectContent>
+              </ShadcnSelect>
+            </div>
           )}
 
           {(isAdmin && activeBranch) || !isAdmin ? (
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="fw-semibold text-muted small">
-                  Cajero
-                </Form.Label>
-                <Form.Select
-                  value={cashierId}
-                  onChange={(e) => setCashierId(e.target.value)}
-                  style={{
-                    borderRadius: "10px",
-                    border: "1px solid #dee2e6",
-                    padding: "10px 14px",
-                  }}
-                  disabled={!branchId || loadingCashiers}
-                >
-                  <option value="">
-                    {!branchId
-                      ? "Selecciona una sucursal primero"
-                      : loadingCashiers
-                      ? "Cargando cajeros..."
-                      : "Todos los cajeros"}
-                  </option>
+            <div className="space-y-2">
+              <Label className="font-semibold text-muted-foreground text-sm">
+                Cajero
+              </Label>
+              <ShadcnSelect
+                value={cashierId}
+                onValueChange={setCashierId}
+                disabled={!branchId || loadingCashiers}
+              >
+                <SelectTrigger className="rounded-[10px] h-[42px]">
+                  <SelectValue
+                    placeholder={
+                      !branchId
+                        ? "Selecciona una sucursal primero"
+                        : loadingCashiers
+                        ? "Cargando cajeros..."
+                        : "Todos los cajeros"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los cajeros</SelectItem>
                   {cashiers.map((cashier) => (
-                    <option key={cashier._id} value={cashier._id}>
+                    <SelectItem key={cashier._id} value={cashier._id}>
                       {cashier.profile?.fullName || `${cashier.profile?.name} ${cashier.profile?.lastName}`}
-                    </option>
+                    </SelectItem>
                   ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
+                </SelectContent>
+              </ShadcnSelect>
+            </div>
           ) : null}
 
-          <Col md={3}>
-            <Form.Group>
-              <Form.Label className="fw-semibold text-muted small">
-                Cliente
-              </Form.Label>
-              <Select
-                isMulti
-                options={clientOptions}
-                value={selectedClients}
-                onChange={(selected) => setSelectedClients(selected as any[])}
-                placeholder="Selecciona cliente(s)"
-                styles={customStyles}
-                noOptionsMessage={() => "No hay clientes disponibles"}
-              />
-            </Form.Group>
-          </Col>
+          <div className="space-y-2">
+            <Label className="font-semibold text-muted-foreground text-sm">
+              Cliente
+            </Label>
+            <Select
+              isMulti
+              options={clientOptions}
+              value={selectedClients}
+              onChange={(selected) => setSelectedClients(selected as any[])}
+              placeholder="Selecciona cliente(s)"
+              styles={customStyles}
+              noOptionsMessage={() => "No hay clientes disponibles"}
+            />
+          </div>
 
-          <Col md={3}>
-            <Form.Group>
-              <Form.Label className="fw-semibold text-muted small">
-                Forma de Pago
-              </Form.Label>
-              <Select
-                isMulti
-                options={paymentMethodOptions}
-                value={selectedPaymentMethods}
-                onChange={(selected) =>
-                  setSelectedPaymentMethods(selected as any[])
-                }
-                placeholder="Selecciona método(s)"
-                styles={customStyles}
-                noOptionsMessage={() => "No hay métodos disponibles"}
-              />
-            </Form.Group>
-          </Col>
+          <div className="space-y-2">
+            <Label className="font-semibold text-muted-foreground text-sm">
+              Forma de Pago
+            </Label>
+            <Select
+              isMulti
+              options={paymentMethodOptions}
+              value={selectedPaymentMethods}
+              onChange={(selected) =>
+                setSelectedPaymentMethods(selected as any[])
+              }
+              placeholder="Selecciona método(s)"
+              styles={customStyles}
+              noOptionsMessage={() => "No hay métodos disponibles"}
+            />
+          </div>
 
-          <Col xs={12} className="d-flex justify-content-end mt-3">
+          <div className="col-span-full flex justify-end mt-3">
             <Button
-              variant="primary"
               onClick={handleSearch}
-              className="d-flex align-items-center gap-2 px-4"
-              style={{
-                borderRadius: "10px",
-                padding: "12px 32px",
-                fontWeight: "600",
-              }}
+              className="flex items-center gap-2 px-8 rounded-[10px] h-[48px] font-semibold"
             >
               <Search size={18} />
               Calcular
             </Button>
-          </Col>
-        </Row>
-      </Card.Body>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 };

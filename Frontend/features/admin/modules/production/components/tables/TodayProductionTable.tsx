@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from "react";
 import {
   Table,
-  Button,
-  Form,
-  Spinner,
-  Badge,
-  Pagination,
-} from "react-bootstrap";
-import { Package, Truck, Clock, CheckCircle } from "lucide-react";
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Package, Truck, Clock, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal, CheckCircle } from "lucide-react";
 import { productionOrdersService } from "../../services/productionOrders";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
@@ -84,7 +86,7 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
   useOrderSocket({
     filters: {},
     onOrderCreated: (newOrder) => {
-      // Si la orden es del día actual y tiene anticipo o está enviada a producción
+      // Si la orden es del dia actual y tiene anticipo o esta enviada a produccion
       const orderDate = new Date(newOrder.deliveryData?.deliveryDateTime);
       const today = new Date();
       if (
@@ -95,7 +97,7 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
       }
     },
     onOrderUpdated: (updatedOrder) => {
-      // Actualizar la orden en la lista si está presente
+      // Actualizar la orden en la lista si esta presente
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
           order._id === updatedOrder._id ? updatedOrder : order
@@ -119,17 +121,17 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
       setLoading(true);
       setError(null);
 
-      // Usar el servicio de producción que ya filtra correctamente
+      // Usar el servicio de produccion que ya filtra correctamente
       const response = await productionOrdersService.getTodayOrders({
         startDate: '', // No necesario, el servicio ya filtra por deliveryDateTime
         endDate: '',   // No necesario, el servicio ya filtra por deliveryDateTime
         branchId,
-        limit: 1000,   // Obtener todas las órdenes, la paginación se hace en el cliente
+        limit: 1000,   // Obtener todas las ordenes, la paginacion se hace en el cliente
         page: 1
       });
 
       if (response.data) {
-        // Las órdenes ya vienen filtradas por fecha de entrega = HOY
+        // Las ordenes ya vienen filtradas por fecha de entrega = HOY
         const allOrders = response.data;
 
         // Ordenar por hora de entrega
@@ -139,7 +141,7 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
           return dateA - dateB;
         });
 
-        // Aplicar paginación manualmente
+        // Aplicar paginacion manualmente
         const startIndex = (currentPage - 1) * limit;
         const endIndex = startIndex + limit;
         const paginatedOrders = allOrders.slice(startIndex, endIndex);
@@ -150,8 +152,8 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
       }
     } catch (err: any) {
       console.error("Error fetching today production:", err);
-      setError(err.message || "Error al cargar las órdenes de hoy");
-      toast.error("Error al cargar las órdenes de producción");
+      setError(err.message || "Error al cargar las ordenes de hoy");
+      toast.error("Error al cargar las ordenes de produccion");
     } finally {
       setLoading(false);
     }
@@ -175,18 +177,18 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
   const getShippingIcon = (shippingType: string) => {
     switch (shippingType) {
       case "envio":
-        return <Truck size={16} className="text-primary" />;
+        return <Truck size={16} className="text-blue-500" />;
       case "tienda":
-        return <Package size={16} className="text-success" />;
+        return <Package size={16} className="text-green-500" />;
       default:
-        return <Package size={16} className="text-secondary" />;
+        return <Package size={16} className="text-gray-500" />;
     }
   };
 
   const getShippingLabel = (shippingType: string) => {
     switch (shippingType) {
       case "envio":
-        return "Envío";
+        return "Envio";
       case "tienda":
         return "Tienda";
       case "redes_sociales":
@@ -207,18 +209,18 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="mt-3 text-muted">Cargando órdenes de hoy...</p>
+      <div className="text-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <p className="mt-3 text-muted-foreground">Cargando ordenes de hoy...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-5">
-        <p className="text-danger">{error}</p>
-        <Button variant="primary" size="sm" onClick={fetchTodayOrders}>
+      <div className="text-center py-12">
+        <p className="text-destructive">{error}</p>
+        <Button variant="default" size="sm" onClick={fetchTodayOrders} className="mt-2">
           Reintentar
         </Button>
       </div>
@@ -227,11 +229,11 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
 
   if (orders.length === 0) {
     return (
-      <div className="text-center py-5">
-        <Clock size={48} className="text-muted mb-3" />
-        <h5 className="text-muted">No hay órdenes programadas para hoy</h5>
-        <p className="text-muted">
-          Las órdenes con fecha de entrega para hoy aparecerán aquí
+      <div className="text-center py-12">
+        <Clock size={48} className="text-muted-foreground mb-3 mx-auto" />
+        <h5 className="text-muted-foreground font-medium">No hay ordenes programadas para hoy</h5>
+        <p className="text-muted-foreground">
+          Las ordenes con fecha de entrega para hoy apareceran aqui
         </p>
       </div>
     );
@@ -239,148 +241,176 @@ const TodayProductionTable: React.FC<TodayProductionTableProps> = ({
 
   return (
     <div>
-      <div className="mb-3 d-flex justify-content-between align-items-center">
+      <div className="mb-3 flex justify-between items-center">
         <div>
-          <h5 className="mb-0">Producción del Día</h5>
-          <small className="text-muted">
-            {orders.length} órden(es) para hoy
+          <h5 className="mb-0 font-medium">Produccion del Dia</h5>
+          <small className="text-muted-foreground">
+            {orders.length} orden(es) para hoy
           </small>
         </div>
       </div>
 
-      <Table responsive hover className="align-middle">
-        <thead>
-          <tr style={{ backgroundColor: "#f8f9fa" }}>
-            <th style={{ width: "40px" }}>No.</th>
-            <th>Folio</th>
-            <th>Hora Entrega</th>
-            <th>Cliente</th>
-            <th>Descripción</th>
-            <th className="text-center">Entregar En</th>
-            <th className="text-center">Forma Entrega</th>
-            <th>Comentario</th>
-            <th className="text-end">Precio</th>
-            <th>Vendedor</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order, index) => (
-            <tr key={order._id}>
-              <td className="text-muted">{index + 1}</td>
-              <td>
-                <span className="fw-semibold">{order.orderNumber}</span>
-              </td>
-              <td>
-                <Badge bg="info" className="text-white">
-                  <Clock size={12} className="me-1" />
-                  {formatDeliveryTime(order.deliveryData.deliveryDateTime)}
-                </Badge>
-              </td>
-              <td>
-                <div>
-                  <div className="fw-semibold">{order.clientInfo.name}</div>
-                  {order.clientInfo.phone && (
-                    <small className="text-muted">
-                      {order.clientInfo.phone}
-                    </small>
-                  )}
-                </div>
-              </td>
-              <td>
-                <div style={{ maxWidth: "300px" }}>
-                  <small>{formatDescription(order.items)}</small>
-                </div>
-              </td>
-              <td className="text-center">
-                <div className="d-flex align-items-center justify-content-center gap-1">
-                  {getShippingIcon(order.shippingType)}
-                  <span>{getShippingLabel(order.shippingType)}</span>
-                </div>
-              </td>
-              <td className="text-center">
-                {order.deliveryData.neighborhoodId ? (
-                  <span>
-                    {order.deliveryData.neighborhoodId.name || "Colonia"}
-                  </span>
-                ) : (
-                  <span className="text-muted">-</span>
-                )}
-              </td>
-              <td>
-                <div style={{ maxWidth: "200px" }}>
-                  <small className="text-muted">
-                    {order.deliveryData.message || "-"}
-                  </small>
-                </div>
-              </td>
-              <td className="text-end">
-                <div>
-                  <div className="fw-semibold">
-                    {formatCurrency(order.total)}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-[40px]">No.</TableHead>
+              <TableHead>Folio</TableHead>
+              <TableHead>Hora Entrega</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Descripcion</TableHead>
+              <TableHead className="text-center">Entregar En</TableHead>
+              <TableHead className="text-center">Forma Entrega</TableHead>
+              <TableHead>Comentario</TableHead>
+              <TableHead className="text-right">Precio</TableHead>
+              <TableHead>Vendedor</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {orders.map((order, index) => (
+              <TableRow key={order._id}>
+                <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+                <TableCell>
+                  <span className="font-semibold">{order.orderNumber}</span>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    <Clock size={12} className="mr-1" />
+                    {formatDeliveryTime(order.deliveryData.deliveryDateTime)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div>
+                    <div className="font-semibold">{order.clientInfo.name}</div>
+                    {order.clientInfo.phone && (
+                      <small className="text-muted-foreground">
+                        {order.clientInfo.phone}
+                      </small>
+                    )}
                   </div>
-                  {order.remainingBalance > 0 && (
-                    <small className="text-warning">
-                      Saldo: {formatCurrency(order.remainingBalance)}
-                    </small>
+                </TableCell>
+                <TableCell>
+                  <div className="max-w-[300px]">
+                    <small>{formatDescription(order.items)}</small>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    {getShippingIcon(order.shippingType)}
+                    <span>{getShippingLabel(order.shippingType)}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center">
+                  {order.deliveryData.neighborhoodId ? (
+                    <span>
+                      {order.deliveryData.neighborhoodId.name || "Colonia"}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
                   )}
-                </div>
-              </td>
-              <td>
-                {order.cashier ? (
-                  <small>{order.cashier.name || "Usuario"}</small>
-                ) : (
-                  <small className="text-muted">-</small>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+                </TableCell>
+                <TableCell>
+                  <div className="max-w-[200px]">
+                    <small className="text-muted-foreground">
+                      {order.deliveryData.message || "-"}
+                    </small>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div>
+                    <div className="font-semibold">
+                      {formatCurrency(order.total)}
+                    </div>
+                    {order.remainingBalance > 0 && (
+                      <small className="text-yellow-600">
+                        Saldo: {formatCurrency(order.remainingBalance)}
+                      </small>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {order.cashier ? (
+                    <small>{order.cashier.name || "Usuario"}</small>
+                  ) : (
+                    <small className="text-muted-foreground">-</small>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-      {/* Paginación */}
+      {/* Paginacion */}
       {totalPages > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="flex justify-between items-center mt-3">
           <div>
-            <small className="text-muted">
+            <small className="text-muted-foreground">
               Mostrando {(currentPage - 1) * limit + 1} a{" "}
               {Math.min(currentPage * limit, totalOrders)} de {totalOrders}{" "}
-              órdenes
+              ordenes
             </small>
           </div>
-          <Pagination className="mb-0">
-            <Pagination.First
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
-            />
-            <Pagination.Prev
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
-            />
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
 
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const pageNumber = i + 1;
               return (
-                <Pagination.Item
+                <Button
                   key={pageNumber}
-                  active={pageNumber === currentPage}
+                  variant={pageNumber === currentPage ? "default" : "outline"}
+                  size="icon"
+                  className="h-8 w-8"
                   onClick={() => setCurrentPage(pageNumber)}
                 >
                   {pageNumber}
-                </Pagination.Item>
+                </Button>
               );
             })}
 
-            {totalPages > 5 && <Pagination.Ellipsis />}
+            {totalPages > 5 && (
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            )}
 
-            <Pagination.Next
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-            />
-            <Pagination.Last
-              onClick={() => setTotalPages(totalPages)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentPage(totalPages)}
               disabled={currentPage === totalPages}
-            />
-          </Pagination>
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner, Alert } from "react-bootstrap";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "react-toastify";
 import { eventsService } from "../services/events";
 import { Event, CreateEventData, PaymentMethod } from "../types";
@@ -11,6 +11,24 @@ import { branchesService } from "../../branches/services/branches";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores/userSessionStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Client {
   _id: string;
@@ -51,11 +69,11 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
   // Para administradores: verificar si hay sucursal seleccionada
   const canCreate = !isAdministrator || (isAdministrator && activeBranch);
 
-  // Cargar clientes activos y métodos de pago
+  // Cargar clientes activos y metodos de pago
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Determinar el ID de la sucursal según el rol del usuario
+        // Determinar el ID de la sucursal segun el rol del usuario
         let branchId: string | undefined;
 
         if (isAdministrator) {
@@ -74,7 +92,7 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
           }
         }
 
-        // Cargar clientes filtrados por sucursal y métodos de pago
+        // Cargar clientes filtrados por sucursal y metodos de pago
         const [clientsResponse, paymentMethodsResponse] = await Promise.all([
           clientsService.getAllClients({
             status: true,
@@ -103,7 +121,7 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
     }
   }, [show, isAdministrator, isManager, activeBranch, user]);
 
-  // Cargar datos del evento si está editando
+  // Cargar datos del evento si esta editando
   useEffect(() => {
     if (event) {
       setFormData({
@@ -156,7 +174,7 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
     }
 
     if (formData.totalPaid && formData.totalPaid > 0 && !formData.paymentMethod) {
-      toast.error("Si registras un pago inicial, debes seleccionar el método de pago");
+      toast.error("Si registras un pago inicial, debes seleccionar el metodo de pago");
       return;
     }
 
@@ -204,146 +222,135 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered backdrop="static">
-      <Modal.Header closeButton className="border-0">
-        <Modal.Title className="fw-bold">
-          {isEditing ? "Editar Evento" : "Nuevo Evento"}
-        </Modal.Title>
-      </Modal.Header>
-      <Form onSubmit={handleSubmit}>
-        <Modal.Body className="p-4">
-          {/* Alerta para administradores sin sucursal seleccionada */}
-          {isAdministrator && !activeBranch && !isEditing && (
-            <Alert variant="warning" className="mb-3">
-              <Alert.Heading className="fs-6 fw-bold">Sucursal requerida</Alert.Heading>
-              <p className="mb-0 small">
-                Debes seleccionar una sucursal antes de crear un evento.
-                Ve a tu perfil y selecciona una sucursal activa.
-              </p>
-            </Alert>
-          )}
-
-          <Row className="g-3">
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Cliente <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Select
-                  value={formData.client}
-                  onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-                  required
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                >
-                  <option value="">Seleccionar cliente...</option>
-                  {clients.map((client) => (
-                    <option key={client._id} value={client._id}>
-                      {client.name} {client.lastName} - {client.phoneNumber}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Fecha del Evento <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={formData.eventDate}
-                  onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                  required
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                />
-              </Form.Group>
-            </Col>
-
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Fecha de Pedido</Form.Label>
-                <Form.Control
-                  type="date"
-                  value={formData.orderDate}
-                  onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                />
-              </Form.Group>
-            </Col>
-
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Total a Pagar <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.totalAmount || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, totalAmount: parseFloat(e.target.value) || 0 })
-                  }
-                  required
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                />
-              </Form.Group>
-            </Col>
-
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Total Pagado</Form.Label>
-                <Form.Control
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max={formData.totalAmount}
-                  placeholder="0.00"
-                  value={formData.totalPaid || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, totalPaid: parseFloat(e.target.value) || 0 })
-                  }
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                />
-              </Form.Group>
-            </Col>
-
-            {formData.totalPaid && formData.totalPaid > 0 && (
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Método de Pago</Form.Label>
-                  <Form.Select
-                    value={formData.paymentMethod}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="border-0 bg-light"
-                    style={{ borderRadius: "10px", padding: "12px 16px" }}
-                  >
-                    <option value="">Seleccionar método de pago...</option>
-                    {paymentMethods.map((method) => (
-                      <option key={method._id} value={method._id}>
-                        {method.name}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+    <Dialog open={show} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-bold">
+            {isEditing ? "Editar Evento" : "Nuevo Evento"}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="p-4 space-y-4">
+            {/* Alerta para administradores sin sucursal seleccionada */}
+            {isAdministrator && !activeBranch && !isEditing && (
+              <Alert className="mb-3 border-yellow-500 bg-yellow-50">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertTitle className="text-sm font-bold text-yellow-800">Sucursal requerida</AlertTitle>
+                <AlertDescription className="text-sm text-yellow-700">
+                  Debes seleccionar una sucursal antes de crear un evento.
+                  Ve a tu perfil y selecciona una sucursal activa.
+                </AlertDescription>
+              </Alert>
             )}
 
-            <Col md={12}>
-              <div
-                className="p-3 rounded"
-                style={{ backgroundColor: "#f8f9fa", border: "1px solid #e9ecef" }}
-              >
-                <div className="d-flex justify-content-between align-items-center">
-                  <span className="fw-semibold text-muted">Saldo Pendiente:</span>
-                  <span className="fw-bold fs-5 text-primary">
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Cliente <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.client}
+                  onValueChange={(value) => setFormData({ ...formData, client: value })}
+                >
+                  <SelectTrigger className="w-full bg-muted/50 rounded-[10px] h-11">
+                    <SelectValue placeholder="Seleccionar cliente..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client._id} value={client._id}>
+                        {client.name} {client.lastName} - {client.phoneNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-semibold">
+                    Fecha del Evento <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    value={formData.eventDate}
+                    onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+                    required
+                    className="bg-muted/50 rounded-[10px] h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="font-semibold">Fecha de Pedido</Label>
+                  <Input
+                    type="date"
+                    value={formData.orderDate}
+                    onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
+                    className="bg-muted/50 rounded-[10px] h-11"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-semibold">
+                    Total a Pagar <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={formData.totalAmount || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, totalAmount: parseFloat(e.target.value) || 0 })
+                    }
+                    required
+                    className="bg-muted/50 rounded-[10px] h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="font-semibold">Total Pagado</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={formData.totalAmount}
+                    placeholder="0.00"
+                    value={formData.totalPaid || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, totalPaid: parseFloat(e.target.value) || 0 })
+                    }
+                    className="bg-muted/50 rounded-[10px] h-11"
+                  />
+                </div>
+              </div>
+
+              {formData.totalPaid && formData.totalPaid > 0 && (
+                <div className="space-y-2">
+                  <Label className="font-semibold">Metodo de Pago</Label>
+                  <Select
+                    value={formData.paymentMethod}
+                    onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
+                  >
+                    <SelectTrigger className="w-full bg-muted/50 rounded-[10px] h-11">
+                      <SelectValue placeholder="Seleccionar metodo de pago..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {paymentMethods.map((method) => (
+                        <SelectItem key={method._id} value={method._id}>
+                          {method.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-muted-foreground">Saldo Pendiente:</span>
+                  <span className="font-bold text-lg text-primary">
                     ${calculateBalance().toLocaleString("es-MX", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
@@ -351,38 +358,35 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
                   </span>
                 </div>
               </div>
-            </Col>
-          </Row>
-        </Modal.Body>
-        <Modal.Footer className="border-0">
-          <Button
-            variant="light"
-            onClick={handleClose}
-            disabled={loading}
-            style={{ borderRadius: "10px" }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={loading || (!canCreate && !isEditing)}
-            style={{
-              borderRadius: "10px",
-              minWidth: "120px",
-            }}
-          >
-            {loading ? (
-              <Spinner animation="border" size="sm" />
-            ) : isEditing ? (
-              "Actualizar"
-            ) : (
-              "Guardar"
-            )}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={loading}
+              className="rounded-[10px]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading || (!canCreate && !isEditing)}
+              className="rounded-[10px] min-w-[120px]"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isEditing ? (
+                "Actualizar"
+              ) : (
+                "Guardar"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

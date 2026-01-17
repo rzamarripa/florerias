@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "@/app/globals.css";
 import AppWrapper from "@/components/layout/AppWrapper";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "jstree/dist/themes/default/style.min.css";
-import "@/assets/scss/app.scss";
-import "flatpickr/dist/flatpickr.css";
-import "jsvectormap/dist/css/jsvectormap.min.css";
-import "simplebar-react/dist/simplebar.min.css";
-import "@/assets/scss/custom-sidebar.scss";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "MaFlores",
@@ -24,20 +24,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      data-skin="modern"
-      data-menu-color="blue-dark"
-      data-topbar-color="light"
-      data-layout-position="fixed"
-      data-sidenav-size="default"
-      data-sidenav-user="true"
-    >
+    <html lang="es" suppressHydrationWarning className={inter.variable}>
       <head>
         <link rel="icon" href="/favicon-simple.svg" type="image/svg+xml" />
         <link rel="shortcut icon" href="/favicon-simple.svg" />
       </head>
-      <body>
+      <body className="font-sans antialiased">
         <AppWrapper>{children}</AppWrapper>
       </body>
     </html>

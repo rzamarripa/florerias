@@ -1,8 +1,10 @@
 "use client";
 
 import { Branch } from "@/stores/activeBranchStore";
-import { Card, Badge } from "react-bootstrap";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { TbBuilding, TbUser, TbMapPin, TbHash } from "react-icons/tb";
+import { cn } from "@/lib/utils";
 
 interface BranchCardProps {
   branch: Branch;
@@ -15,13 +17,11 @@ const BranchCard = ({
   isActive = false,
   onSelect,
 }: BranchCardProps) => {
-  // Manejar el caso donde companyId puede ser string u objeto
   const companyName =
     typeof branch.companyId === "object"
       ? branch.companyId.tradeName || branch.companyId.legalName
       : "";
 
-  // Manejar el caso donde manager puede ser string u objeto
   const managerName =
     typeof branch.manager === "object"
       ? branch.manager.profile?.fullName ||
@@ -41,35 +41,29 @@ const BranchCard = ({
 
   return (
     <Card
-      className={`branch-card h-100 ${isActive ? "border-success" : ""}`}
-      style={{ cursor: "pointer", transition: "all 0.3s" }}
+      className={cn(
+        "h-full cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
+        isActive && "border-green-500 border-2"
+      )}
       onClick={() => onSelect(branch)}
     >
-      <Card.Body>
-        <div className="d-flex justify-content-between align-items-start mb-3">
-          <div className="d-flex align-items-center gap-2">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex items-center gap-2">
             <div
-              className={`icon-circle ${
+              className={cn(
+                "w-12 h-12 rounded-full flex items-center justify-center",
                 isActive
-                  ? "bg-success-subtle text-success"
-                  : "bg-primary-subtle text-primary"
-              }`}
+                  ? "bg-green-100 text-green-600"
+                  : "bg-primary/10 text-primary"
+              )}
             >
               <TbBuilding size={24} />
             </div>
-            <div className="flex-grow-1">
-              <h5 className="mb-0">{branch.branchName}</h5>
+            <div className="flex-grow">
+              <h5 className="font-semibold mb-0">{branch.branchName}</h5>
               {isActive && (
-                <Badge
-                  bg="success"
-                  className="mt-1"
-                  style={{
-                    fontSize: "12px",
-                    padding: "4px 8px",
-                    fontWeight: "600",
-                    opacity: 1,
-                  }}
-                >
+                <Badge variant="default" className="mt-1 bg-green-500">
                   Sucursal Activa
                 </Badge>
               )}
@@ -77,63 +71,38 @@ const BranchCard = ({
           </div>
         </div>
 
-        <div className="branch-details">
-          <div className="detail-item mb-2">
-            <TbHash className="text-muted me-2" size={18} />
-            <span className="text-muted small">Código:</span>
-            <span className="ms-2 fw-medium">{branch.branchCode}</span>
+        <div className="space-y-2">
+          <div className="flex items-start">
+            <TbHash className="text-muted-foreground mr-2 mt-0.5" size={18} />
+            <span className="text-muted-foreground text-sm">Código:</span>
+            <span className="ml-2 font-medium">{branch.branchCode}</span>
           </div>
 
-          <div className="detail-item mb-2">
-            <TbHash className="text-muted me-2" size={18} />
-            <span className="text-muted small">RFC:</span>
-            <Badge bg="info" className="ms-2">{branch.rfc}</Badge>
+          <div className="flex items-start">
+            <TbHash className="text-muted-foreground mr-2 mt-0.5" size={18} />
+            <span className="text-muted-foreground text-sm">RFC:</span>
+            <Badge variant="secondary" className="ml-2">{branch.rfc}</Badge>
           </div>
 
-          <div className="detail-item mb-2">
-            <TbBuilding className="text-muted me-2" size={18} />
-            <span className="text-muted small">Empresa:</span>
-            <span className="ms-2 fw-medium">{companyName}</span>
+          <div className="flex items-start">
+            <TbBuilding className="text-muted-foreground mr-2 mt-0.5" size={18} />
+            <span className="text-muted-foreground text-sm">Empresa:</span>
+            <span className="ml-2 font-medium">{companyName}</span>
           </div>
 
-          <div className="detail-item mb-2">
-            <TbUser className="text-muted me-2" size={18} />
-            <span className="text-muted small">Gerente:</span>
-            <span className="ms-2 fw-medium">{managerName}</span>
+          <div className="flex items-start">
+            <TbUser className="text-muted-foreground mr-2 mt-0.5" size={18} />
+            <span className="text-muted-foreground text-sm">Gerente:</span>
+            <span className="ml-2 font-medium">{managerName}</span>
           </div>
 
-          <div className="detail-item">
-            <TbMapPin className="text-muted me-2" size={18} />
-            <span className="text-muted small">Dirección:</span>
-            <p className="ms-4 mb-0 mt-1 small">{fullAddress}</p>
+          <div className="flex items-start">
+            <TbMapPin className="text-muted-foreground mr-2 mt-0.5" size={18} />
+            <span className="text-muted-foreground text-sm">Dirección:</span>
+            <p className="ml-4 mb-0 mt-1 text-sm">{fullAddress}</p>
           </div>
         </div>
-      </Card.Body>
-
-      <style jsx>{`
-        .branch-card {
-          transition: all 0.3s ease;
-        }
-
-        .branch-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        }
-
-        .icon-circle {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .detail-item {
-          display: flex;
-          align-items: flex-start;
-        }
-      `}</style>
+      </CardContent>
     </Card>
   );
 };

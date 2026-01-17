@@ -1,10 +1,15 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import Image from "next/image";
 import React, { useEffect, useState } from "react";
-import { Button, Form, Table } from "react-bootstrap";
-import { toast } from "react-toastify";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Users,
+} from "lucide-react";
+import Image from "next/image";
+import { toast } from "sonner";
 import { Role } from "../roles/types";
 import UserActions from "./components/Actions";
 import UserModal from "./components/UserModal";
@@ -12,6 +17,28 @@ import { usersService } from "./services/users";
 import { User } from "./types";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const UsersPage: React.FC = () => {
   const { activeBranch } = useActiveBranchStore();
@@ -22,7 +49,7 @@ const UsersPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
@@ -55,21 +82,14 @@ const UsersPage: React.FC = () => {
         page,
         limit: pagination.limit,
         ...(searchTerm && { username: searchTerm }),
-        ...(statusFilter && { estatus: statusFilter }),
+        ...(statusFilter && statusFilter !== "all" && { estatus: statusFilter }),
       };
 
-      // Si es admin y tiene sucursal activa, filtrar por esa sucursal
       if (isAdmin && activeBranch) {
         params.branchId = activeBranch._id;
-        console.log("🔍 [Users] Filtrando por sucursal:", activeBranch.branchName, activeBranch._id);
-      } else {
-        console.log("🔍 [Users] Sin filtro de sucursal - isAdmin:", isAdmin, "activeBranch:", activeBranch);
       }
 
-      console.log("🔍 [Users] Filtros enviados:", params);
       const response = await usersService.getAllUsers(params);
-
-      console.log(response.data);
 
       if (response.data) {
         setUsers(response.data);
@@ -98,10 +118,8 @@ const UsersPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleStatusFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value);
   };
 
   const handlePageChange = (page: number) => {
@@ -112,241 +130,183 @@ const UsersPage: React.FC = () => {
     loadUsers(false);
   };
 
-  // Función para generar los números de página a mostrar
-  const getPageNumbers = () => {
-    const { page, pages } = pagination;
-    const delta = 2; // Número de páginas a mostrar antes y después de la página actual
-    const range = [];
-    const rangeWithDots = [];
-
-    for (
-      let i = Math.max(2, page - delta);
-      i <= Math.min(pages - 1, page + delta);
-      i++
-    ) {
-      range.push(i);
-    }
-
-    if (page - delta > 2) {
-      rangeWithDots.push(1, "...");
-    } else {
-      rangeWithDots.push(1);
-    }
-
-    rangeWithDots.push(...range);
-
-    if (page + delta < pages - 1) {
-      rangeWithDots.push("...", pages);
-    } else if (pages > 1) {
-      rangeWithDots.push(pages);
-    }
-
-    return rangeWithDots;
-  };
-
   return (
-    <div className="row">
-      <div className="col-12">
-        <div className="card">
-          <div className="card-header border-light d-flex justify-content-between align-items-center py-3">
-            <div className="d-flex gap-2">
-              <div className="position-relative" style={{ maxWidth: 400 }}>
-                <Form.Control
-                  type="search"
-                  placeholder="Buscar usuarios..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="shadow-none px-4"
-                  style={{ fontSize: 15, paddingLeft: "2.5rem" }}
-                />
-                <Search
-                  className="text-muted position-absolute"
-                  size={18}
-                  style={{
-                    left: "0.75rem",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              </div>
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="shadow-none"
-                style={{ maxWidth: 150 }}
-              >
-                <option value="">Todos</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
+    <div className="space-y-4">
+      {/* Header */}
+      <PageHeader
+        title="Usuarios"
+        description="Gestiona los usuarios del sistema"
+        badge={
+          activeBranch ? (
+            <Badge variant="secondary">Sucursal: {activeBranch.branchName}</Badge>
+          ) : undefined
+        }
+        action={{
+          label: "Agregar Usuario",
+          onClick: () => {},
+          customElement: <UserModal roles={roles} onSuccess={handleUserSaved} />,
+        }}
+      />
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar usuarios..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
-            <UserModal roles={roles} onSuccess={handleUserSaved} />
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="table-responsive shadow-sm">
-            <Table className="table table-custom table-centered table-hover w-100 mb-0">
-              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
-                <tr>
-                  <th>#</th>
-                  <th>Usuario</th>
-                  <th>Email</th>
-                  <th>Teléfono</th>
-                  <th>Rol</th>
-                  <th>Estado</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-4">
-                      <div className="d-flex flex-column align-items-center">
-                        <div
-                          className="spinner-border text-primary mb-2"
-                          role="status"
-                        >
-                          <span className="visually-hidden">Cargando...</span>
-                        </div>
-                        <p className="text-muted mb-0 small">
-                          Cargando usuarios...
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando usuarios...</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-center py-12 text-muted-foreground"
+                      >
+                        <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <div>No se encontraron usuarios</div>
+                        <p className="text-sm">
+                          Intenta ajustar los filtros de búsqueda
                         </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user, index) => (
-                    <tr key={user._id}>
-                      <td>
-                        {(pagination.page - 1) * pagination.limit + index + 1}
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center gap-2">
-                          {user?.profile?.image?.data ? (
-                            <div
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "50%",
-                                overflow: "hidden",
-                                border: "2px solid #e9ecef",
-                                position: "relative",
-                              }}
-                            >
-                              <Image
-                                src={`data:${user.profile.image.contentType};base64,${user.profile.image.data}`}
-                                alt={user.username}
-                                fill
-                                style={{
-                                  objectFit: "cover",
-                                }}
-                                sizes="32px"
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "50%",
-                                fontSize: "14px",
-                              }}
-                            >
-                              {user.profile?.name?.charAt(0)?.toUpperCase() ||
-                                user.username?.charAt(0)?.toUpperCase() ||
-                                "U"}
-                            </div>
-                          )}
-                          <div>
-                            <div className="fw-medium">
-                              {user.profile?.name || user.username}
-                            </div>
-                            <div className="text-muted small">
-                              {user.profile?.fullName}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    users.map((user, index) => (
+                      <TableRow key={user._id}>
+                        <TableCell>
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              {user?.profile?.image?.data ? (
+                                <AvatarImage
+                                  src={`data:${user.profile.image.contentType};base64,${user.profile.image.data}`}
+                                  alt={user.username}
+                                />
+                              ) : null}
+                              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                                {user.profile?.name?.charAt(0)?.toUpperCase() ||
+                                  user.username?.charAt(0)?.toUpperCase() ||
+                                  "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">
+                                {user.profile?.name || user.username}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {user.profile?.fullName}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>{user.email || "-"}</td>
-                      <td>{user.phone || "-"}</td>
-                      <td>
-                        {typeof user.role === "object"
-                          ? user.role.name
-                          : user.role || "-"}
-                      </td>
-                      <td>
-                        <span
-                          className={`badge fs-6 ${
-                            user.profile.estatus
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                          }`}
-                        >
-                          {user.profile.estatus ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td>
-                        <UserActions
-                          user={user}
-                          roles={roles}
-                          onUserSaved={handleUserSaved}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          </div>
-          <div className="d-flex justify-content-between align-items-center p-3 border-top">
-            <span className="text-muted">
-              Mostrando {users.length} de {pagination.total} registros
-            </span>
-            <div className="d-flex gap-1 align-items-center">
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === 1}
-                onClick={() => handlePageChange(pagination.page - 1)}
-                className="d-flex align-items-center"
-              >
-                <ChevronLeft size={16} />
-                Anterior
-              </Button>
-
-              {getPageNumbers().map((pageNum, index) => (
-                <React.Fragment key={index}>
-                  {pageNum === "..." ? (
-                    <span className="px-2 text-muted">...</span>
-                  ) : (
-                    <Button
-                      variant={
-                        pageNum === pagination.page
-                          ? "primary"
-                          : "outline-secondary"
-                      }
-                      size="sm"
-                      onClick={() => handlePageChange(pageNum as number)}
-                    >
-                      {pageNum}
-                    </Button>
+                        </TableCell>
+                        <TableCell>{user.email || "-"}</TableCell>
+                        <TableCell>{user.phone || "-"}</TableCell>
+                        <TableCell>
+                          {typeof user.role === "object"
+                            ? user.role.name
+                            : user.role || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              user.profile.estatus ? "default" : "destructive"
+                            }
+                          >
+                            {user.profile.estatus ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <UserActions
+                            user={user}
+                            roles={roles}
+                            onUserSaved={handleUserSaved}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
-                </React.Fragment>
-              ))}
+                </TableBody>
+              </Table>
 
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => handlePageChange(pagination.page + 1)}
-                className="d-flex align-items-center"
-              >
-                Siguiente
-                <ChevronRight size={16} />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+              {/* Pagination */}
+              {users.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {users.length} de {pagination.total} registros
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      Siguiente
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

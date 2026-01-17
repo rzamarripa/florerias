@@ -1,11 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Card, Col, Form, Row } from "react-bootstrap";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { usersService } from "../users/services/users";
 import { User } from "../users/types";
 import UserVisibilityTree from "./components/UserVisibilityTree";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface UserVisibilityProps {
   onUserChange?: (userId: string | null) => void;
@@ -43,44 +52,47 @@ const UserVisibility: React.FC<UserVisibilityProps> = ({ onUserChange }) => {
     }
   };
 
-  const handleUserChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const userId = e.target.value;
+  const handleUserChange = (value: string) => {
+    const userId = value === "none" ? "" : value;
     setSelectedUserId(userId);
     setKey((prev) => prev + 1);
     onUserChange?.(userId || null);
   };
 
   return (
-    <div>
-      <Card className="mb-4">
-        <Card.Header>
-          <h4 className="card-title">Seleccionar Usuario</h4>
-          <p className="text-muted mb-0">
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Seleccionar Usuario</CardTitle>
+          <CardDescription>
             Selecciona un usuario para configurar su visibilidad de acceso a
             razones sociales, marcas y sucursales.
-          </p>
-        </Card.Header>
-        <Card.Body>
-          <Row>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>Usuario</Form.Label>
-                <Form.Select
-                  value={selectedUserId}
-                  onChange={handleUserChange}
-                  disabled={loading}
-                >
-                  <option value="">Selecciona un usuario...</option>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-md">
+            <div className="space-y-2">
+              <Label htmlFor="user-select">Usuario</Label>
+              <Select
+                value={selectedUserId || "none"}
+                onValueChange={handleUserChange}
+                disabled={loading}
+              >
+                <SelectTrigger id="user-select">
+                  <SelectValue placeholder="Selecciona un usuario..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Selecciona un usuario...</SelectItem>
                   {users.map((user) => (
-                    <option key={user._id} value={user._id}>
+                    <SelectItem key={user._id} value={user._id}>
                       {user.profile.fullName} ({user.username})
-                    </option>
+                    </SelectItem>
                   ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-          </Row>
-        </Card.Body>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       {selectedUserId && (

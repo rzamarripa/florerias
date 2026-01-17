@@ -1,6 +1,13 @@
 import React from 'react';
-import { Form, Row, Col, Nav, Accordion } from 'react-bootstrap';
-import { TbTruck } from 'react-icons/tb';
+import { Truck } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 interface DeliverySectionProps {
   pickupEnabled: boolean;
@@ -40,124 +47,101 @@ const DeliverySection: React.FC<DeliverySectionProps> = ({
   setDeliveryTo,
 }) => {
   return (
-    <Accordion.Item eventKey="delivery" className="mb-3 border-0 shadow-sm rounded overflow-hidden">
-      <Accordion.Header className="bg-light">
-        <div className="d-flex align-items-center w-100">
-          <TbTruck size={20} className="text-success me-2" />
-          <span className="fw-semibold fs-6">Opciones de Entrega</span>
+    <AccordionItem value="delivery" className="border rounded-lg shadow-sm overflow-hidden">
+      <AccordionTrigger className="px-4 py-3 bg-muted/50 hover:no-underline">
+        <div className="flex items-center gap-2">
+          <Truck className="h-5 w-5 text-green-500" />
+          <span className="font-semibold">Opciones de Entrega</span>
         </div>
-      </Accordion.Header>
-      <Accordion.Body className="bg-white">
-        <Nav variant="pills" className="mb-3">
-          <Nav.Item className="me-2">
-            <Nav.Link active className="py-1 px-3">Retirar</Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link className="py-1 px-3">Delivery</Nav.Link>
-          </Nav.Item>
-        </Nav>
-
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4 pt-2 bg-background">
         {/* Retirar */}
-        <div className="mb-3 pb-3 border-bottom">
-          <Form.Check 
-            type="switch"
-            id="pickup-switch"
-            label="Habilitar retiro en tienda"
-            checked={pickupEnabled}
-            onChange={(e) => setPickupEnabled(e.target.checked)}
-            className="mb-2"
-          />
+        <div className="mb-4 pb-4 border-b">
+          <div className="flex items-center gap-3 mb-3">
+            <Switch
+              id="pickup-switch"
+              checked={pickupEnabled}
+              onCheckedChange={setPickupEnabled}
+            />
+            <Label htmlFor="pickup-switch" className="cursor-pointer">
+              Habilitar retiro en tienda
+            </Label>
+          </div>
           {pickupEnabled && (
-            <Row className="g-2">
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Tiempo de preparación</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="text" 
-                    placeholder="30 minutos"
-                    value={pickupTime}
-                    onChange={(e) => setPickupTime(e.target.value)}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Disponible desde</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="time"
-                    value={pickupFrom}
-                    onChange={(e) => setPickupFrom(e.target.value)}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Disponible hasta</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="time"
-                    value={pickupTo}
-                    onChange={(e) => setPickupTo(e.target.value)}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Tiempo de preparacion</Label>
+                <Input
+                  type="text"
+                  placeholder="30 minutos"
+                  value={pickupTime}
+                  onChange={(e) => setPickupTime(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Disponible desde</Label>
+                <Input
+                  type="time"
+                  value={pickupFrom}
+                  onChange={(e) => setPickupFrom(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Disponible hasta</Label>
+                <Input
+                  type="time"
+                  value={pickupTo}
+                  onChange={(e) => setPickupTo(e.target.value)}
+                />
+              </div>
+            </div>
           )}
         </div>
 
         {/* Delivery */}
         <div>
-          <Form.Check 
-            type="switch"
-            id="delivery-switch"
-            label="Habilitar delivery"
-            checked={deliveryEnabled}
-            onChange={(e) => setDeliveryEnabled(e.target.checked)}
-            className="mb-2"
-          />
+          <div className="flex items-center gap-3 mb-3">
+            <Switch
+              id="delivery-switch"
+              checked={deliveryEnabled}
+              onCheckedChange={setDeliveryEnabled}
+            />
+            <Label htmlFor="delivery-switch" className="cursor-pointer">
+              Habilitar delivery
+            </Label>
+          </div>
           {deliveryEnabled && (
-            <Row className="g-2">
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Tiempo de entrega</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="text" 
-                    placeholder="45 minutos"
-                    value={deliveryTime}
-                    onChange={(e) => setDeliveryTime(e.target.value)}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Disponible desde</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="time"
-                    value={deliveryFrom}
-                    onChange={(e) => setDeliveryFrom(e.target.value)}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Disponible hasta</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="time"
-                    value={deliveryTo}
-                    onChange={(e) => setDeliveryTo(e.target.value)}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Tiempo de entrega</Label>
+                <Input
+                  type="text"
+                  placeholder="45 minutos"
+                  value={deliveryTime}
+                  onChange={(e) => setDeliveryTime(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Disponible desde</Label>
+                <Input
+                  type="time"
+                  value={deliveryFrom}
+                  onChange={(e) => setDeliveryFrom(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Disponible hasta</Label>
+                <Input
+                  type="time"
+                  value={deliveryTo}
+                  onChange={(e) => setDeliveryTo(e.target.value)}
+                />
+              </div>
+            </div>
           )}
         </div>
-      </Accordion.Body>
-    </Accordion.Item>
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 

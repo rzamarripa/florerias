@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner } from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight, Building2 } from "lucide-react";
-import { toast } from "react-toastify";
+import { Plus, Search, ChevronLeft, ChevronRight, Building2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { branchesService } from "./services/branches";
 import { Branch } from "./types";
 import BranchActions from "./components/BranchActions";
@@ -11,6 +10,27 @@ import BranchModal from "./components/BranchModal";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "../companies/services/companies";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
 
 const BranchesPage: React.FC = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -31,17 +51,13 @@ const BranchesPage: React.FC = () => {
   const userId = getUserId();
   const isAdmin = getIsAdmin();
 
-  // Cargar la empresa del usuario administrador (solo para el modal de creación)
   const loadUserCompany = async () => {
     try {
       if (!userId || !isAdmin) return;
-
-      // Usar el nuevo endpoint que obtiene la empresa del usuario administrador autenticado
       const company = await companiesService.getMyCompany();
       setUserCompany(company || null);
     } catch (error: any) {
       console.error("Error al cargar empresa del usuario:", error);
-      // Si no hay empresa asignada, establecer null
       setUserCompany(null);
     }
   };
@@ -65,8 +81,6 @@ const BranchesPage: React.FC = () => {
         filters.isActive = statusFilter === "true";
       }
 
-      // El backend se encarga del filtrado automático según el rol del usuario
-      // No es necesario enviar companyId desde el frontend
       const response = await branchesService.getAllBranches(filters);
 
       if (response.data) {
@@ -84,12 +98,10 @@ const BranchesPage: React.FC = () => {
     }
   };
 
-  // Cargar empresa del usuario al montar el componente (solo para el modal)
   useEffect(() => {
     loadUserCompany();
   }, [userId]);
 
-  // Cargar sucursales cuando cambian los filtros
   useEffect(() => {
     loadBranches(true, 1);
   }, [searchTerm, statusFilter]);
@@ -98,8 +110,8 @@ const BranchesPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value === "all" ? "" : value);
   };
 
   const handlePageChange = (page: number) => {
@@ -122,190 +134,173 @@ const BranchesPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <h2 className="mb-1 fw-bold">Sucursales</h2>
-          <p className="text-muted mb-0">Gestiona las sucursales del sistema</p>
-        </div>
-        {isAdmin && (
-          <Button
-            variant="primary"
-            onClick={() => setShowCreateModal(true)}
-            className="d-flex align-items-center gap-2"
-          >
-            <Plus size={20} />
-            Nueva Sucursal
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Sucursales"
+        description="Gestiona las sucursales del sistema"
+        action={isAdmin ? {
+          label: "Nueva Sucursal",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: () => setShowCreateModal(true),
+        } : undefined}
+      />
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-2">
-          <div className="row g-2">
-            <div className="col-md-6">
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por nombre o código de sucursal..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre o código de sucursal..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
-            <div className="col-md-6">
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
-            </div>
+
+            <Select
+              value={statusFilter || "all"}
+              onValueChange={handleStatusFilterChange}
+            >
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card>
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando sucursales...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando sucursales...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">CÓDIGO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">RFC</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">EMPRESA</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">CIUDAD</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">GERENTE</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">EMPLEADOS</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Código</TableHead>
+                    <TableHead>RFC</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Ciudad</TableHead>
+                    <TableHead>Gerente</TableHead>
+                    <TableHead>Empleados</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {branches.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="text-center py-5 text-muted">
-                        <Building2 size={48} className="mb-3 opacity-50" />
-                        <p className="mb-0">No se encontraron sucursales</p>
-                      </td>
-                    </tr>
+                    <TableRow>
+                      <TableCell
+                        colSpan={10}
+                        className="text-center py-12 text-muted-foreground"
+                      >
+                        <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <div>No se encontraron sucursales</div>
+                        <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     branches.map((branch, index) => (
-                      <tr key={branch._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-2 py-2">
+                      <TableRow key={branch._id}>
+                        <TableCell>
                           {(pagination.page - 1) * pagination.limit + index + 1}
-                        </td>
-                        <td className="px-2 py-2 fw-semibold">{branch.branchName}</td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell className="font-semibold">{branch.branchName}</TableCell>
+                        <TableCell>
                           {branch.branchCode ? (
-                            <span className="badge bg-secondary">{branch.branchCode}</span>
+                            <Badge variant="secondary">{branch.branchCode}</Badge>
                           ) : (
                             "-"
                           )}
-                        </td>
-                        <td className="px-2 py-2">
-                          <span className="badge bg-info">{branch.rfc}</span>
-                        </td>
-                        <td className="px-2 py-2">{getCompanyName(branch)}</td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{branch.rfc}</Badge>
+                        </TableCell>
+                        <TableCell>{getCompanyName(branch)}</TableCell>
+                        <TableCell>
                           {branch.address.city}, {branch.address.state}
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>
                           {!branch.manager || typeof branch.manager === "string" ? (
-                            <span className="text-muted">Sin gerente</span>
+                            <span className="text-muted-foreground">Sin gerente</span>
                           ) : (
                             <div>
-                              <div className="fw-semibold">{branch.manager.profile.fullName}</div>
-                              <small className="text-muted">{branch.manager.email}</small>
+                              <div className="font-semibold">{branch.manager.profile.fullName}</div>
+                              <span className="text-sm text-muted-foreground">{branch.manager.email}</span>
                             </div>
                           )}
-                        </td>
-                        <td className="px-2 py-2">
-                          <Badge bg="info" pill>
-                            {getEmployeesCount(branch)}
-                          </Badge>
-                        </td>
-                        <td className="px-2 py-2">
-                          <Badge
-                            bg={branch.isActive ? "success" : "danger"}
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontWeight: "500",
-                            }}
-                          >
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{getEmployeesCount(branch)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={branch.isActive ? "default" : "destructive"}>
                             {branch.isActive ? "Activo" : "Inactivo"}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>
                           <BranchActions
                             branch={branch}
                             onBranchUpdated={handleBranchUpdated}
                             userCompany={userCompany}
                           />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
+                </TableBody>
               </Table>
-            </div>
-          )}
 
-          {/* Pagination */}
-          {!loading && branches.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
-                Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} sucursales
-              </p>
-              <div className="d-flex gap-2">
-                <Button
-                  variant="light"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <span className="px-3 py-1">
-                  Página {pagination.page} de {pagination.pages}
-                </span>
-                <Button
-                  variant="light"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
-                >
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
-            </div>
+              {/* Pagination */}
+              {branches.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} sucursales
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Create Modal */}
       {isAdmin && (

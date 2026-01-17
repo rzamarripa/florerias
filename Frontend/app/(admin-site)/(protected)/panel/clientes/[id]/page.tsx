@@ -5,7 +5,16 @@ import { clientsService } from "@/features/admin/modules/clients/services/client
 import { Client } from "@/features/admin/modules/clients/types";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge, Button, Table } from "react-bootstrap";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "react-toastify";
 import {
   Phone,
@@ -16,6 +25,7 @@ import {
   ChevronDown,
   MessageSquare,
   Plus,
+  Loader2,
 } from "lucide-react";
 
 export default function ClientDetailPage() {
@@ -27,7 +37,7 @@ export default function ClientDetailPage() {
   const [commentData, setCommentData] = useState({
     comentario: "",
     tipo: "" as "positive" | "negative" | "",
-    usuario: "Admin", // Aquí puedes obtener el usuario actual del contexto
+    usuario: "Admin",
   });
   const [addingComment, setAddingComment] = useState<boolean>(false);
 
@@ -114,272 +124,233 @@ export default function ClientDetailPage() {
   }, [params?.id]);
 
   return (
-    <div className="container-fluid">
+    <div className="w-full px-4">
       <PageBreadcrumb
         title="Detalle de Usuario"
         subtitle="Clientes"
         section="Admin"
       />
 
-      <div className="row">
-        <div className="col-12">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body p-4">
-              {loading && (
-                <div className="text-center py-4">
-                  <div
-                    className="spinner-border text-primary mb-2"
-                    role="status"
-                  />
-                  <div className="text-muted small">
-                    Cargando información...
-                  </div>
+      <div className="grid grid-cols-1 gap-4">
+        <div className="bg-card rounded-lg border shadow-sm">
+          <div className="p-6">
+            {loading && (
+              <div className="text-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
+                <div className="text-muted-foreground text-sm">
+                  Cargando información...
                 </div>
-              )}
+              </div>
+            )}
 
-              {!loading && client && (
-                <>
-                  <div className="d-flex align-items-start justify-content-between flex-wrap gap-3">
-                    <div className="d-flex align-items-center gap-3">
-                      <div
-                        className="position-relative"
-                        style={{ width: 72, height: 72 }}
-                      >
-                        {!avatarError ? (
-                          <img
-                            src={`/assets/images/clients/0${avatarIndex}.svg`}
-                            alt="avatar"
-                            width={72}
-                            height={72}
-                            className="rounded-circle border object-fit-cover"
-                            onError={() => setAvatarError(true)}
-                          />
-                        ) : (
-                          <div
-                            className="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle border"
-                            style={{ width: 72, height: 72, fontSize: 28 }}
-                          >
-                            {client.fullName?.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        {client.status && (
-                          <span
-                            className="position-absolute translate-middle p-1 bg-warning rounded-circle"
-                            style={{ left: 62, top: 10 }}
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <div className="d-flex align-items-center gap-2 flex-wrap">
-                          <h5 className="mb-0">{client.fullName}</h5>
-                          <Badge bg={client.status ? "success" : "secondary"}>
-                            {client.status ? "Activo" : "Inactivo"}
-                          </Badge>
+            {!loading && client && (
+              <>
+                <div className="flex items-start justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-[72px] h-[72px]">
+                      {!avatarError ? (
+                        <img
+                          src={`/assets/images/clients/0${avatarIndex}.svg`}
+                          alt="avatar"
+                          width={72}
+                          height={72}
+                          className="rounded-full border object-cover"
+                          onError={() => setAvatarError(true)}
+                        />
+                      ) : (
+                        <div className="bg-primary text-primary-foreground flex items-center justify-center rounded-full border w-[72px] h-[72px] text-2xl font-semibold">
+                          {client.fullName?.charAt(0).toUpperCase()}
                         </div>
-                        <div className="">Cliente</div>
-                      </div>
+                      )}
+                      {client.status && (
+                        <span className="absolute w-3 h-3 bg-yellow-500 rounded-full top-1 right-1" />
+                      )}
                     </div>
                     <div>
-                      <Button
-                        variant="outline-secondary"
-                        onClick={() => router.push("/panel/clientes")}
-                      >
-                        Volver a la lista
-                      </Button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h5 className="text-xl font-semibold">{client.fullName}</h5>
+                        <Badge variant={client.status ? "default" : "secondary"}>
+                          {client.status ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </div>
+                      <div className="text-muted-foreground">Cliente</div>
                     </div>
                   </div>
+                  <div>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push("/panel/clientes")}
+                    >
+                      Volver a la lista
+                    </Button>
+                  </div>
+                </div>
 
-                  <div className="row g-3 mt-4">
-                    <div className="col-12 col-sm-6 col-lg-3">
-                      <div className="d-flex align-items-center gap-2 h-100 p-3 border rounded-3 bg-light">
-                        <div className="btn btn-light btn-icon rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
-                          <Phone size={18} className="text-primary" />
-                        </div>
-                        <div>
-                          <div className="">Teléfono</div>
-                          <div className="fw-semibold">
-                            {client.phoneNumber || "Sin teléfono"}
-                          </div>
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                  <div className="flex items-center gap-3 h-full p-4 border rounded-lg bg-muted/50">
+                    <div className="p-2 rounded-full bg-background">
+                      <Phone size={18} className="text-primary" />
                     </div>
-
-                    <div className="col-12 col-sm-6 col-lg-3">
-                      <div className="d-flex align-items-center gap-2 h-100 p-3 border rounded-3 bg-light">
-                        <div className="btn btn-light btn-icon rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
-                          <CreditCard size={18} className="text-primary" />
-                        </div>
-                        <div>
-                          <div className="">Número de cliente</div>
-                          <Badge bg="secondary" className="fs-6">
-                            {client.clientNumber}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12 col-sm-6 col-lg-3">
-                      <div className="d-flex align-items-center gap-2 h-100 p-3 border rounded-3 bg-light">
-                        <div className="btn btn-light btn-icon rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
-                          <Award size={18} className="text-warning" />
-                        </div>
-                        <div>
-                          <div className="">Puntos</div>
-                          <div className="fw-semibold">{client.points}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="col-12 col-sm-6 col-lg-3">
-                      <div className="d-flex align-items-center gap-2 h-100 p-3 border rounded-3 bg-light">
-                        <div className="btn btn-light btn-icon rounded-circle p-2 d-inline-flex align-items-center justify-content-center">
-                          <ShoppingBag size={18} className="text-info" />
-                        </div>
-                        <div>
-                          <div className="">Compras realizadas</div>
-                          <div className="fw-semibold">
-                            {client.purchases.length}
-                          </div>
-                        </div>
+                    <div>
+                      <div className="text-muted-foreground text-sm">Teléfono</div>
+                      <div className="font-semibold">
+                        {client.phoneNumber || "Sin teléfono"}
                       </div>
                     </div>
                   </div>
 
-                  <div className="d-flex align-items-center justify-content-between pt-3 mt-2 border-top">
-                    <div className="text-muted small d-flex align-items-center gap-2">
-                      <RefreshCw size={14} /> Actualizado{" "}
-                      {timeAgo(client.updatedAt)} ago
+                  <div className="flex items-center gap-3 h-full p-4 border rounded-lg bg-muted/50">
+                    <div className="p-2 rounded-full bg-background">
+                      <CreditCard size={18} className="text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-sm">Número de cliente</div>
+                      <Badge variant="secondary">{client.clientNumber}</Badge>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
+
+                  <div className="flex items-center gap-3 h-full p-4 border rounded-lg bg-muted/50">
+                    <div className="p-2 rounded-full bg-background">
+                      <Award size={18} className="text-yellow-500" />
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-sm">Puntos</div>
+                      <div className="font-semibold">{client.points}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 h-full p-4 border rounded-lg bg-muted/50">
+                    <div className="p-2 rounded-full bg-background">
+                      <ShoppingBag size={18} className="text-blue-500" />
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-sm">Compras realizadas</div>
+                      <div className="font-semibold">{client.purchases.length}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 mt-4 border-t">
+                  <div className="text-muted-foreground text-sm flex items-center gap-2">
+                    <RefreshCw size={14} /> Actualizado {timeAgo(client.updatedAt)} ago
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {client && !loading && (
-        <div className="row mt-3">
-          <div className="col-12">
-            <div className="card border-0 shadow-sm">
-              <div className="card-body p-4">
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <h4 className="mb-0 md">Compras realizadas</h4>
-                  <div className="text-muted small">
-                    Total: {client.purchases.length}
-                  </div>
+        <div className="mt-4">
+          <div className="bg-card rounded-lg border shadow-sm">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold">Compras realizadas</h4>
+                <div className="text-muted-foreground text-sm">
+                  Total: {client.purchases.length}
                 </div>
-                <div className="table-responsive border rounded-3 shadow-sm">
-                  <Table
-                    className="table table-custom table-centered table-hover table-bordered border w-100 mb-0"
-                    style={{ fontSize: 14 }}
-                  >
-                    <thead className="bg-light align-middle bg-opacity-25">
-                      <tr>
-                        <th>No.</th>
-                        <th>Entregado a</th>
-                        <th>Fecha</th>
-                        <th>Estatus proceso</th>
-                        <th>Estatus pago</th>
-                        <th>Sucursal</th>
-                        <th className="text-end">Total</th>
-                        <th className="text-center">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {client.purchases.length === 0 && (
-                        <tr className="text-muted">
-                          <td>—</td>
-                          <td>Sin compras</td>
-                          <td>—</td>
-                          <td>
-                            <span className="badge bg-secondary bg-opacity-10 text-secondary">
-                              —
-                            </span>
-                          </td>
-                          <td>
-                            <span className="badge bg-secondary bg-opacity-10 text-secondary">
-                              —
-                            </span>
-                          </td>
-                          <td>—</td>
-                          <td className="text-end">—</td>
-                          <td className="text-center">
-                            <Button
-                              variant="outline-secondary"
-                              size="sm"
-                              disabled
-                              className="d-inline-flex align-items-center gap-1"
+              </div>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>No.</TableHead>
+                      <TableHead>Entregado a</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Estatus proceso</TableHead>
+                      <TableHead>Estatus pago</TableHead>
+                      <TableHead>Sucursal</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {client.purchases.length === 0 && (
+                      <TableRow className="text-muted-foreground">
+                        <TableCell>—</TableCell>
+                        <TableCell>Sin compras</TableCell>
+                        <TableCell>—</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">—</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">—</Badge>
+                        </TableCell>
+                        <TableCell>—</TableCell>
+                        <TableCell className="text-right">—</TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="outline" size="sm" disabled>
+                            <ChevronDown size={16} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {client.purchases.length > 0 &&
+                      client.purchases.map((p: any, idx: number) => (
+                        <TableRow key={p._id || idx}>
+                          <TableCell>{idx + 1}</TableCell>
+                          <TableCell className="font-medium">{p.addressee}</TableCell>
+                          <TableCell>{formatDateTime(p.date)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                p.processStatus === "completed"
+                                  ? "default"
+                                  : p.processStatus === "cancelled"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                              className={
+                                p.processStatus === "completed"
+                                  ? "bg-green-500"
+                                  : p.processStatus === "processing"
+                                  ? "bg-yellow-500"
+                                  : ""
+                              }
                             >
+                              {p.processStatus === "completed"
+                                ? "Entregado"
+                                : p.processStatus === "processing"
+                                ? "En proceso"
+                                : p.processStatus === "cancelled"
+                                ? "Cancelado"
+                                : "Pendiente"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                p.processPayment === "paid"
+                                  ? "default"
+                                  : p.processPayment === "failed"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                              className={
+                                p.processPayment === "paid" ? "bg-green-500" : ""
+                              }
+                            >
+                              {p.processPayment === "paid"
+                                ? "Pagado"
+                                : p.processPayment === "failed"
+                                ? "Fallido"
+                                : p.processPayment === "refunded"
+                                ? "Reembolsado"
+                                : "Pendiente"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{p.branch}</TableCell>
+                          <TableCell className="text-right">{formatMoney(p.total)}</TableCell>
+                          <TableCell className="text-center">
+                            <Button variant="outline" size="sm">
                               <ChevronDown size={16} />
                             </Button>
-                          </td>
-                        </tr>
-                      )}
-                      {client.purchases.length > 0 &&
-                        client.purchases.map((p: any, idx: number) => (
-                          <tr key={p._id || idx}>
-                            <td>{idx + 1}</td>
-                            <td className="fw-medium">{p.addressee}</td>
-                            <td>{formatDateTime(p.date)}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  p.processStatus === "completed"
-                                    ? "bg-success bg-opacity-10 text-success"
-                                    : p.processStatus === "processing"
-                                    ? "bg-warning bg-opacity-10 text-warning"
-                                    : p.processStatus === "cancelled"
-                                    ? "bg-danger bg-opacity-10 text-danger"
-                                    : "bg-secondary bg-opacity-10 text-secondary"
-                                }`}
-                              >
-                                {p.processStatus === "completed"
-                                  ? "Entregado"
-                                  : p.processStatus === "processing"
-                                  ? "En proceso"
-                                  : p.processStatus === "cancelled"
-                                  ? "Cancelado"
-                                  : "Pendiente"}
-                              </span>
-                            </td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  p.processPayment === "paid"
-                                    ? "bg-success bg-opacity-10 text-success"
-                                    : p.processPayment === "failed"
-                                    ? "bg-danger bg-opacity-10 text-danger"
-                                    : p.processPayment === "refunded"
-                                    ? "bg-info bg-opacity-10 text-info"
-                                    : "bg-secondary bg-opacity-10 text-secondary"
-                                }`}
-                              >
-                                {p.processPayment === "paid"
-                                  ? "Pagado"
-                                  : p.processPayment === "failed"
-                                  ? "Fallido"
-                                  : p.processPayment === "refunded"
-                                  ? "Reembolsado"
-                                  : "Pendiente"}
-                              </span>
-                            </td>
-                            <td>{p.branch}</td>
-                            <td className="text-end">{formatMoney(p.total)}</td>
-                            <td className="text-center">
-                              <Button
-                                variant="outline-secondary"
-                                size="sm"
-                                className="d-inline-flex align-items-center gap-1"
-                              >
-                                <ChevronDown size={16} />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </Table>
-                </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </div>
@@ -387,208 +358,168 @@ export default function ClientDetailPage() {
       )}
 
       {client && !loading && (
-        <div className="row mt-3">
-          <div className="col-12">
-            <div className="card border-0 shadow-sm">
-              <div className="card-body p-4">
-                <div className="d-flex align-items-center gap-2 mb-3">
-                  <MessageSquare size={20} className="text-primary" />
-                  <h4 className="mb-0">Comentarios de seguimiento</h4>
-                </div>
+        <div className="mt-4">
+          <div className="bg-card rounded-lg border shadow-sm">
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <MessageSquare size={20} className="text-primary" />
+                <h4 className="text-lg font-semibold">Comentarios de seguimiento</h4>
+              </div>
 
-                <div className="p-3 bg-light rounded-3 mb-4">
-                  <div className="d-flex align-items-start gap-3">
-                    <div
-                      className="bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                      style={{ width: "40px", height: "40px" }}
-                    >
-                      <MessageSquare size={20} className="text-white" />
-                    </div>
-                    <div className="flex-grow-1">
-                      <h6 className="mb-2">
-                        Agregar comentario de seguimiento
-                      </h6>
-                      <div className="row g-2">
-                        <div className="col-md-8">
-                          <textarea
-                            className="form-control"
-                            rows={3}
-                            placeholder="Escribe tu comentario de seguimiento aquí..."
-                            style={{ resize: "none" }}
-                            value={commentData.comentario}
-                            onChange={(e) =>
-                              setCommentData({
-                                ...commentData,
-                                comentario: e.target.value,
-                              })
-                            }
-                            maxLength={500}
-                          />
-                          <small className="text-muted">
-                            {commentData.comentario.length}/500 caracteres
-                          </small>
-                        </div>
-                        <div className="col-md-4">
-                          <select
-                            className="form-select mb-2"
-                            value={commentData.tipo}
-                            onChange={(e) =>
-                              setCommentData({
-                                ...commentData,
-                                tipo: e.target.value as "positive" | "negative",
-                              })
-                            }
-                          >
-                            <option value="">Seleccionar tipo</option>
-                            <option value="positive">Positivo</option>
-                            <option value="negative">Negativo</option>
-                          </select>
-                          <Button
-                            variant="primary"
-                            className="w-100 d-flex align-items-center justify-content-center gap-2"
-                            onClick={handleAddComment}
-                            disabled={
-                              addingComment ||
-                              !commentData.comentario.trim() ||
-                              !commentData.tipo
-                            }
-                          >
-                            {addingComment ? (
-                              <>
-                                <div
-                                  className="spinner-border spinner-border-sm"
-                                  role="status"
-                                />
-                                Guardando...
-                              </>
-                            ) : (
-                              <>
-                                <Plus size={16} />
-                                Guardar comentario
-                              </>
-                            )}
-                          </Button>
-                        </div>
+              <div className="p-4 bg-muted/50 rounded-lg mb-6">
+                <div className="flex items-start gap-4">
+                  <div className="bg-primary rounded-full flex items-center justify-center flex-shrink-0 w-10 h-10">
+                    <MessageSquare size={20} className="text-primary-foreground" />
+                  </div>
+                  <div className="flex-grow">
+                    <h6 className="font-semibold mb-2">Agregar comentario de seguimiento</h6>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <textarea
+                          className="w-full p-3 border rounded-lg resize-none bg-background"
+                          rows={3}
+                          placeholder="Escribe tu comentario de seguimiento aquí..."
+                          value={commentData.comentario}
+                          onChange={(e) =>
+                            setCommentData({
+                              ...commentData,
+                              comentario: e.target.value,
+                            })
+                          }
+                          maxLength={500}
+                        />
+                        <small className="text-muted-foreground">
+                          {commentData.comentario.length}/500 caracteres
+                        </small>
+                      </div>
+                      <div className="space-y-2">
+                        <select
+                          className="w-full p-2 border rounded-lg bg-background"
+                          value={commentData.tipo}
+                          onChange={(e) =>
+                            setCommentData({
+                              ...commentData,
+                              tipo: e.target.value as "positive" | "negative",
+                            })
+                          }
+                        >
+                          <option value="">Seleccionar tipo</option>
+                          <option value="positive">Positivo</option>
+                          <option value="negative">Negativo</option>
+                        </select>
+                        <Button
+                          className="w-full"
+                          onClick={handleAddComment}
+                          disabled={
+                            addingComment ||
+                            !commentData.comentario.trim() ||
+                            !commentData.tipo
+                          }
+                        >
+                          {addingComment ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              Guardando...
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={16} className="mr-2" />
+                              Guardar comentario
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="table-responsive border rounded-3 shadow-sm">
-                  <Table className="table table-custom table-centered table-hover table-bordered border w-100 mb-0">
-                    <thead className="bg-light align-middle bg-opacity-25">
-                      <tr>
-                        <th style={{ width: "60px" }}>#</th>
-                        <th>Comentario</th>
-                        <th style={{ width: "180px" }}>Usuario</th>
-                        <th style={{ width: "150px" }}>Fecha</th>
-                        <th style={{ width: "120px" }}>Tipo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {client.comentarios && client.comentarios.length === 0 ? (
-                        <tr className="text-muted">
-                          <td className="text-center">
-                            <div className="d-flex align-items-center justify-content-center">
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-16">#</TableHead>
+                      <TableHead>Comentario</TableHead>
+                      <TableHead className="w-44">Usuario</TableHead>
+                      <TableHead className="w-40">Fecha</TableHead>
+                      <TableHead className="w-28">Tipo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {client.comentarios && client.comentarios.length === 0 ? (
+                      <TableRow className="text-muted-foreground">
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center">
+                            <div className="bg-muted rounded-full flex items-center justify-center w-8 h-8">
+                              <MessageSquare size={16} className="text-muted-foreground" />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center py-8">
+                          <div className="text-muted-foreground">
+                            <MessageSquare size={24} className="mx-auto mb-2 opacity-50" />
+                            <div>No hay comentarios de seguimiento</div>
+                            <small className="text-muted-foreground">
+                              Agrega el primer comentario para comenzar el seguimiento
+                            </small>
+                          </div>
+                        </TableCell>
+                        <TableCell>—</TableCell>
+                        <TableCell>—</TableCell>
+                        <TableCell>—</TableCell>
+                      </TableRow>
+                    ) : (
+                      client.comentarios?.map((comment, index) => (
+                        <TableRow key={comment._id || index}>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center">
                               <div
-                                className="bg-light rounded-circle d-flex align-items-center justify-content-center"
-                                style={{ width: "32px", height: "32px" }}
+                                className={`rounded-full flex items-center justify-center w-8 h-8 ${
+                                  comment.tipo === "positive"
+                                    ? "bg-green-100"
+                                    : "bg-red-100"
+                                }`}
                               >
                                 <MessageSquare
                                   size={16}
-                                  className="text-muted"
+                                  className={
+                                    comment.tipo === "positive"
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }
                                 />
                               </div>
                             </div>
-                          </td>
-                          <td className="text-center py-4">
-                            <div className="text-muted">
-                              <MessageSquare
-                                size={24}
-                                className="mb-2 opacity-50"
-                              />
-                              <div>No hay comentarios de seguimiento</div>
-                              <small className="text-muted">
-                                Agrega el primer comentario para comenzar el
-                                seguimiento
-                              </small>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{comment.comentario}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="bg-primary text-primary-foreground flex items-center justify-center font-bold w-6 h-6 rounded-full text-xs">
+                                {comment.usuario.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-medium">{comment.usuario}</span>
                             </div>
-                          </td>
-                          <td>—</td>
-                          <td>—</td>
-                          <td>—</td>
-                        </tr>
-                      ) : (
-                        client.comentarios?.map((comment, index) => (
-                          <tr key={comment._id || index}>
-                            <td className="text-center">
-                              <div className="d-flex align-items-center justify-content-center">
-                                <div
-                                  className={`rounded-circle d-flex align-items-center justify-content-center ${
-                                    comment.tipo === "positive"
-                                      ? "bg-success bg-opacity-10"
-                                      : "bg-danger bg-opacity-10"
-                                  }`}
-                                  style={{ width: "32px", height: "32px" }}
-                                >
-                                  <MessageSquare
-                                    size={16}
-                                    className={
-                                      comment.tipo === "positive"
-                                        ? "text-success"
-                                        : "text-danger"
-                                    }
-                                  />
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="fw-medium mb-1">
-                                {comment.comentario}
-                              </div>
-                            </td>
-                            <td>
-                              <div className="d-flex align-items-center gap-2">
-                                <div
-                                  className="bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
-                                  style={{
-                                    width: "24px",
-                                    height: "24px",
-                                    borderRadius: "50%",
-                                    fontSize: "12px",
-                                  }}
-                                >
-                                  {comment.usuario.charAt(0).toUpperCase()}
-                                </div>
-                                <span className="fw-medium">
-                                  {comment.usuario}
-                                </span>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="text-muted small">
-                                {formatDateTime(comment.fechaCreacion)}
-                              </div>
-                            </td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  comment.tipo === "positive"
-                                    ? "bg-success bg-opacity-10 text-success"
-                                    : "bg-danger bg-opacity-10 text-danger"
-                                }`}
-                              >
-                                {comment.tipo === "positive"
-                                  ? "Positivo"
-                                  : "Negativo"}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </Table>
-                </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-muted-foreground text-sm">
+                              {formatDateTime(comment.fechaCreacion)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={comment.tipo === "positive" ? "default" : "destructive"}
+                              className={comment.tipo === "positive" ? "bg-green-500" : ""}
+                            >
+                              {comment.tipo === "positive" ? "Positivo" : "Negativo"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </div>

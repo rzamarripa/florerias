@@ -1,7 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Spinner } from "react-bootstrap";
+import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { expensesService } from "../services/expenses";
 import { Expense, CreateExpenseData, UpdateExpenseData } from "../types";
 import { cashRegistersService } from "../../cash-registers/services/cashRegisters";
@@ -44,7 +62,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   const isAdmin = hasRole("Administrador") || hasRole("Admin");
   const isManager = hasRole("Gerente") || hasRole("Manager");
 
-  // Si es administrador con sucursal activa, usarla automáticamente
+  // Si es administrador con sucursal activa, usarla automaticamente
   useEffect(() => {
     if (show && isAdmin && activeBranch) {
       setFormData((prev) => ({ ...prev, branchId: activeBranch._id }));
@@ -58,7 +76,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         // Si es gerente, cargar sus cajas directamente
         loadCashRegistersByManager();
       } else if (isAdmin && (formData.branchId || activeBranch)) {
-        // Si es admin y ya seleccionó una sucursal o tiene sucursal activa, cargar las cajas de esa sucursal
+        // Si es admin y ya selecciono una sucursal o tiene sucursal activa, cargar las cajas de esa sucursal
         const branchIdToUse = formData.branchId || activeBranch?._id;
         if (branchIdToUse) {
           loadCashRegistersByBranch(branchIdToUse);
@@ -152,9 +170,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   };
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -173,7 +189,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
     const totalValue = parseFloat(formData.total);
     if (isNaN(totalValue) || totalValue <= 0) {
-      toast.error("El total debe ser un número mayor a 0");
+      toast.error("El total debe ser un numero mayor a 0");
       return;
     }
 
@@ -249,192 +265,168 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      backdrop="static"
-      keyboard={!loading}
-    >
-      <Modal.Header
-        closeButton
-        className="bg-primary text-white"
-        style={{
-          border: "none",
-          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
-          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
-        }}
-      >
-        <Modal.Title className="fw-bold">
-          {expense ? "Editar Gasto" : "Nuevo Gasto"}
-        </Modal.Title>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !open && !loading && onHide()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader className="bg-primary text-primary-foreground -m-6 mb-0 p-6 rounded-t-lg">
+          <DialogTitle className="font-bold text-white">
+            {expense ? "Editar Gasto" : "Nuevo Gasto"}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Form onSubmit={handleSubmit}>
-        <Modal.Body className="p-4">
-          <div className="row g-3">
-            {/* Tipo de Gasto */}
-            <div className="col-md-6">
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Tipo de Gasto <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Select
-                  name="expenseType"
+        <form onSubmit={handleSubmit}>
+          <div className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Tipo de Gasto */}
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Tipo de Gasto <span className="text-destructive">*</span>
+                </Label>
+                <Select
                   value={formData.expenseType}
-                  onChange={(e) => {
-                    handleChange(e);
-                    // Resetear campos de caja al cambiar tipo
-                    if (e.target.value !== "petty_cash") {
-                      setFormData((prev) => ({
-                        ...prev,
+                  onValueChange={(value: "check_transfer" | "petty_cash") => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      expenseType: value,
+                      ...(value !== "petty_cash" && {
                         cashRegisterId: "",
                         branchId: "",
-                      }));
+                      }),
+                    }));
+                    if (value !== "petty_cash") {
                       setCashRegisters([]);
                     }
                   }}
-                  required
-                  style={{
-                    borderRadius: "8px",
-                    border: "2px solid #e9ecef",
-                  }}
                 >
-                  <option value="check_transfer">Cheque / Transferencia</option>
-                  <option value="petty_cash">Caja Chica</option>
-                </Form.Select>
-              </Form.Group>
-            </div>
+                  <SelectTrigger className="w-full rounded-lg border-2 border-gray-200">
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="check_transfer">Cheque / Transferencia</SelectItem>
+                    <SelectItem value="petty_cash">Caja Chica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Sucursal (solo para Admin con petty_cash) */}
-            {formData.expenseType === "petty_cash" && isAdmin && activeBranch && (
-              <div className="col-md-6">
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Sucursal <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
+              {/* Sucursal (solo para Admin con petty_cash) */}
+              {formData.expenseType === "petty_cash" && isAdmin && activeBranch && (
+                <div className="space-y-2">
+                  <Label className="font-semibold">
+                    Sucursal <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     type="text"
                     value={activeBranch.branchName}
                     disabled
                     readOnly
-                    style={{
-                      borderRadius: "8px",
-                      border: "2px solid #e9ecef",
-                      backgroundColor: "#f8f9fa",
-                    }}
+                    className="rounded-lg border-2 border-gray-200 bg-gray-50"
                   />
-                  <Form.Text className="text-muted">
+                  <p className="text-sm text-muted-foreground">
                     Sucursal activa asignada
-                  </Form.Text>
-                </Form.Group>
-              </div>
-            )}
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Alerta si no tiene sucursal seleccionada */}
             {formData.expenseType === "petty_cash" && isAdmin && !activeBranch && (
-              <div className="col-12">
-                <div className="alert alert-warning mb-0" role="alert">
-                  <strong>Sucursal no seleccionada:</strong> Debes seleccionar una sucursal desde el menú lateral antes de crear un gasto de caja chica.
-                </div>
-              </div>
+              <Alert variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800">
+                <AlertDescription>
+                  <strong>Sucursal no seleccionada:</strong> Debes seleccionar una sucursal desde el menu lateral antes de crear un gasto de caja chica.
+                </AlertDescription>
+              </Alert>
             )}
 
-            {/* Caja Registradora (para petty_cash) */}
-            {formData.expenseType === "petty_cash" &&
-              ((isManager) || (isAdmin && (formData.branchId || activeBranch))) && (
-                <div className="col-md-6">
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
-                      Caja Registradora <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Select
-                      name="cashRegisterId"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Caja Registradora (para petty_cash) */}
+              {formData.expenseType === "petty_cash" &&
+                ((isManager) || (isAdmin && (formData.branchId || activeBranch))) && (
+                  <div className="space-y-2">
+                    <Label className="font-semibold">
+                      Caja Registradora <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
                       value={formData.cashRegisterId}
-                      onChange={handleChange}
-                      required
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({ ...prev, cashRegisterId: value }))
+                      }
                       disabled={loadingCashRegisters}
-                      style={{
-                        borderRadius: "8px",
-                        border: "2px solid #e9ecef",
-                      }}
                     >
-                      <option value="">
-                        {loadingCashRegisters
-                          ? "Cargando cajas..."
-                          : "Selecciona una caja"}
-                      </option>
-                      {cashRegisters.map((cashRegister) => (
-                        <option key={cashRegister._id} value={cashRegister._id}>
-                          {cashRegister.name} - Saldo: $
-                          {cashRegister.currentBalance.toFixed(2)}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                </div>
-              )}
+                      <SelectTrigger className="w-full rounded-lg border-2 border-gray-200">
+                        <SelectValue
+                          placeholder={
+                            loadingCashRegisters
+                              ? "Cargando cajas..."
+                              : "Selecciona una caja"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cashRegisters.map((cashRegister) => (
+                          <SelectItem key={cashRegister._id} value={cashRegister._id}>
+                            {cashRegister.name} - Saldo: $
+                            {cashRegister.currentBalance.toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-            {/* Fecha de Pago */}
-            <div className="col-md-6">
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Fecha de Pago <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+              {/* Fecha de Pago */}
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Fecha de Pago <span className="text-destructive">*</span>
+                </Label>
+                <Input
                   type="date"
                   name="paymentDate"
                   value={formData.paymentDate}
                   onChange={handleChange}
                   required
-                  style={{
-                    borderRadius: "8px",
-                    border: "2px solid #e9ecef",
-                  }}
+                  className="rounded-lg border-2 border-gray-200"
                 />
-              </Form.Group>
+              </div>
             </div>
 
             {/* Concepto */}
-            <div className="col-12">
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Concepto <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Select
-                  name="concept"
-                  value={formData.concept}
-                  onChange={handleChange}
-                  required
-                  disabled={loadingConcepts}
-                  style={{
-                    borderRadius: "8px",
-                    border: "2px solid #e9ecef",
-                  }}
-                >
-                  <option value="">
-                    {loadingConcepts
-                      ? "Cargando conceptos..."
-                      : "Selecciona un concepto"}
-                  </option>
+            <div className="space-y-2">
+              <Label className="font-semibold">
+                Concepto <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.concept}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, concept: value }))
+                }
+                disabled={loadingConcepts}
+              >
+                <SelectTrigger className="w-full rounded-lg border-2 border-gray-200">
+                  <SelectValue
+                    placeholder={
+                      loadingConcepts
+                        ? "Cargando conceptos..."
+                        : "Selecciona un concepto"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
                   {expenseConcepts.map((concept) => (
-                    <option key={concept._id} value={concept._id}>
+                    <SelectItem key={concept._id} value={concept._id}>
                       {concept.name}
                       {concept.description && ` - ${concept.description}`}
-                    </option>
+                    </SelectItem>
                   ))}
-                </Form.Select>
-              </Form.Group>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Total */}
-            <div className="col-md-6">
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Total <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Total */}
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Total <span className="text-destructive">*</span>
+                </Label>
+                <Input
                   type="number"
                   step="0.01"
                   min="0.01"
@@ -443,86 +435,55 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                   onChange={handleChange}
                   placeholder="0.00"
                   required
-                  style={{
-                    borderRadius: "8px",
-                    border: "2px solid #e9ecef",
-                  }}
+                  className="rounded-lg border-2 border-gray-200"
                 />
-              </Form.Group>
-            </div>
+              </div>
 
-            {expense && (
-              <>
-                {/* Folio (solo lectura en edición) */}
-                <div className="col-md-6">
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Folio</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={expense.folio}
-                      disabled
-                      style={{
-                        borderRadius: "8px",
-                        border: "2px solid #e9ecef",
-                        backgroundColor: "#f8f9fa",
-                      }}
-                    />
-                  </Form.Group>
+              {expense && (
+                /* Folio (solo lectura en edicion) */
+                <div className="space-y-2">
+                  <Label className="font-semibold">Folio</Label>
+                  <Input
+                    type="text"
+                    value={expense.folio}
+                    disabled
+                    className="rounded-lg border-2 border-gray-200 bg-gray-50"
+                  />
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
-        </Modal.Body>
 
-        <Modal.Footer
-          style={{
-            borderTop: "2px solid #f1f3f5",
-            padding: "1rem 1.5rem",
-          }}
-        >
-          <Button
-            variant="light"
-            onClick={onHide}
-            disabled={loading}
-            style={{
-              borderRadius: "8px",
-              padding: "8px 20px",
-              fontWeight: "600",
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={loading || (isAdmin && !activeBranch && formData.expenseType === "petty_cash")}
-            style={{
-              borderRadius: "8px",
-              padding: "8px 20px",
-              fontWeight: "600",
-            }}
-          >
-            {loading ? (
-              <>
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                  className="me-2"
-                />
-                Guardando...
-              </>
-            ) : expense ? (
-              "Actualizar Gasto"
-            ) : (
-              "Crear Gasto"
-            )}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+          <DialogFooter className="border-t-2 border-gray-100 p-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onHide}
+              disabled={loading}
+              className="rounded-lg px-5 py-2 font-semibold"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading || (isAdmin && !activeBranch && formData.expenseType === "petty_cash")}
+              className="rounded-lg px-5 py-2 font-semibold"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : expense ? (
+                "Actualizar Gasto"
+              ) : (
+                "Crear Gasto"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

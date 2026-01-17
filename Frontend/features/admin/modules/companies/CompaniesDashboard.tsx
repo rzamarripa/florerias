@@ -1,19 +1,28 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  Row,
-  Col,
-  Badge,
   Table,
-  ProgressBar,
-  ListGroup,
-  Button,
-  Spinner,
-  Alert,
-  Form,
-} from "react-bootstrap";
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import {
   FileText,
   MessageSquare,
@@ -31,6 +40,7 @@ import {
   DollarSign,
   Search,
   Filter,
+  Loader2,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { companiesService } from "./services/companies";
@@ -472,11 +482,11 @@ const CompaniesDashboard: React.FC = () => {
   if (loading) {
     return (
       <div
-        className="d-flex justify-content-center align-items-center"
+        className="flex justify-center items-center"
         style={{ minHeight: "400px" }}
       >
-        <Spinner animation="border" variant="primary" />
-        <p className="ms-3 text-muted">Cargando estadísticas...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-3 text-muted-foreground">Cargando estadísticas...</p>
       </div>
     );
   }
@@ -484,12 +494,12 @@ const CompaniesDashboard: React.FC = () => {
   if (error) {
     return (
       <div className="container-fluid py-4">
-        <Alert variant="danger">
-          <div>
+        <Alert variant="destructive">
+          <AlertDescription>
             <strong>Error:</strong> {error}
-          </div>
+          </AlertDescription>
         </Alert>
-        <Button variant="primary" onClick={() => router.back()}>
+        <Button variant="default" onClick={() => router.back()} className="mt-4">
           Volver
         </Button>
       </div>
@@ -499,7 +509,9 @@ const CompaniesDashboard: React.FC = () => {
   if (!stats) {
     return (
       <div className="container-fluid py-4">
-        <Alert variant="warning">No se pudieron cargar las estadísticas</Alert>
+        <Alert>
+          <AlertDescription>No se pudieron cargar las estadísticas</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -507,328 +519,312 @@ const CompaniesDashboard: React.FC = () => {
   return (
     <div className="container-fluid py-2">
       {/* Filters Section */}
-      <Card
-        className="border-0 shadow-sm mb-2"
-        style={{ borderRadius: "10px" }}
-      >
-        <Card.Body className="p-2">
-          <Row className="g-2">
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-semibold text-muted">
+      <Card className="border-0 shadow-sm mb-2 rounded-[10px]">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+            <div className="md:col-span-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-muted-foreground">
                   Fecha Inicial
-                </Form.Label>
-                <Form.Control
+                </Label>
+                <Input
                   type="date"
                   value={filters.startDate}
                   onChange={(e) =>
                     handleFilterChange("startDate", e.target.value)
                   }
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 />
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-semibold text-muted">
+              </div>
+            </div>
+            <div className="md:col-span-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-muted-foreground">
                   Fecha Final
-                </Form.Label>
-                <Form.Control
+                </Label>
+                <Input
                   type="date"
                   value={filters.endDate}
                   onChange={(e) =>
                     handleFilterChange("endDate", e.target.value)
                   }
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 />
-              </Form.Group>
-            </Col>
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label className="small fw-semibold text-muted">
+              </div>
+            </div>
+            <div className="md:col-span-4">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-muted-foreground">
                   Empresa
-                </Form.Label>
-                <Form.Select
+                </Label>
+                <Select
                   value={filters.companyId}
-                  onChange={(e) =>
-                    handleFilterChange("companyId", e.target.value)
+                  onValueChange={(value) =>
+                    handleFilterChange("companyId", value)
                   }
                   disabled={loadingCompanies}
-                  style={{ borderRadius: "8px" }}
                 >
-                  <option value="">Todas las empresas</option>
-                  {companies.map((company) => (
-                    <option key={company._id} value={company._id}>
-                      {company.tradeName || company.legalName}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={2} className="d-flex align-items-end gap-2">
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue placeholder="Todas las empresas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas las empresas</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company._id} value={company._id}>
+                        {company.tradeName || company.legalName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="md:col-span-2 flex items-end gap-2">
               <Button
-                variant="primary"
+                variant="default"
                 onClick={handleSearch}
                 disabled={loading}
-                className="w-100"
-                style={{ borderRadius: "8px" }}
+                className="w-full rounded-lg"
               >
-                <Search size={16} className="me-1" />
+                <Search size={16} className="mr-1" />
                 Buscar
               </Button>
-            </Col>
-          </Row>
-          <Row className="mt-1">
-            <Col md={12}>
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={handleClearFilters}
-                disabled={loading}
-                style={{ borderRadius: "8px" }}
-              >
-                <RefreshCw size={14} className="me-1" />
-                Limpiar Filtros
-              </Button>
-            </Col>
-          </Row>
-        </Card.Body>
+            </div>
+          </div>
+          <div className="mt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearFilters}
+              disabled={loading}
+              className="rounded-lg"
+            >
+              <RefreshCw size={14} className="mr-1" />
+              Limpiar Filtros
+            </Button>
+          </div>
+        </CardContent>
       </Card>
 
       {/* Top 5 Metrics Cards - Con datos reales */}
-      <Row className="g-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
         {/* Empresas Card */}
-        <Col lg={2} md={6} sm={6}>
-          <Card className="border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-            <Card.Body className="text-center p-3">
-              <div className="mb-3">
-                <div
-                  className="d-inline-flex p-3 rounded-circle"
-                  style={{ backgroundColor: "#e3f2fd" }}
-                >
-                  <Building2 size={24} style={{ color: "#4A90E2" }} />
-                </div>
+        <Card className="border-0 shadow-sm rounded-xl">
+          <CardContent className="text-center p-3">
+            <div className="mb-3">
+              <div
+                className="inline-flex p-3 rounded-full"
+                style={{ backgroundColor: "#e3f2fd" }}
+              >
+                <Building2 size={24} style={{ color: "#4A90E2" }} />
               </div>
-              <h2 className="fw-bold mb-2" style={{ fontSize: "2rem" }}>
-                {stats.companies}
-              </h2>
-              <div className="text-muted small">
-                <span>Empresas</span>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+            </div>
+            <h2 className="font-bold mb-2 text-3xl">
+              {stats.companies}
+            </h2>
+            <div className="text-muted-foreground text-sm">
+              <span>Empresas</span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Sucursales Card */}
-        <Col lg={2} md={6} sm={6}>
-          <Card className="border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-            <Card.Body className="text-center p-3">
-              <div className="mb-3">
-                <div
-                  className="d-inline-flex p-3 rounded-circle"
-                  style={{ backgroundColor: "#e8f5e9" }}
-                >
-                  <Store size={24} style={{ color: "#1ab394" }} />
-                </div>
+        <Card className="border-0 shadow-sm rounded-xl">
+          <CardContent className="text-center p-3">
+            <div className="mb-3">
+              <div
+                className="inline-flex p-3 rounded-full"
+                style={{ backgroundColor: "#e8f5e9" }}
+              >
+                <Store size={24} style={{ color: "#1ab394" }} />
               </div>
-              <h2 className="fw-bold mb-2" style={{ fontSize: "2rem" }}>
-                {stats.branches}
-              </h2>
-              <div className="text-muted small">
-                <span>Sucursales</span>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+            </div>
+            <h2 className="font-bold mb-2 text-3xl">
+              {stats.branches}
+            </h2>
+            <div className="text-muted-foreground text-sm">
+              <span>Sucursales</span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Clientes Card */}
-        <Col lg={2} md={6} sm={6}>
-          <Card className="border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-            <Card.Body className="text-center p-3">
-              <div className="mb-3">
-                <div
-                  className="d-inline-flex p-3 rounded-circle"
-                  style={{ backgroundColor: "#fff3e0" }}
-                >
-                  <UserCheck size={24} style={{ color: "#f8ac59" }} />
-                </div>
+        <Card className="border-0 shadow-sm rounded-xl">
+          <CardContent className="text-center p-3">
+            <div className="mb-3">
+              <div
+                className="inline-flex p-3 rounded-full"
+                style={{ backgroundColor: "#fff3e0" }}
+              >
+                <UserCheck size={24} style={{ color: "#f8ac59" }} />
               </div>
-              <h2 className="fw-bold mb-2" style={{ fontSize: "2rem" }}>
-                {formatNumber(stats.clients)}
-              </h2>
-              <div className="text-muted small">
-                <span>Clientes</span>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+            </div>
+            <h2 className="font-bold mb-2 text-3xl">
+              {formatNumber(stats.clients)}
+            </h2>
+            <div className="text-muted-foreground text-sm">
+              <span>Clientes</span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Ventas Card */}
-        <Col lg={2} md={6} sm={6}>
-          <Card className="border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-            <Card.Body className="text-center p-3">
-              <div className="mb-3">
-                <div
-                  className="d-inline-flex p-3 rounded-circle"
-                  style={{ backgroundColor: "#fce4ec" }}
-                >
-                  <ShoppingCart size={24} style={{ color: "#e91e63" }} />
-                </div>
+        <Card className="border-0 shadow-sm rounded-xl">
+          <CardContent className="text-center p-3">
+            <div className="mb-3">
+              <div
+                className="inline-flex p-3 rounded-full"
+                style={{ backgroundColor: "#fce4ec" }}
+              >
+                <ShoppingCart size={24} style={{ color: "#e91e63" }} />
               </div>
-              <h2 className="fw-bold mb-2" style={{ fontSize: "2rem" }}>
-                {formatNumber(stats.orders)}
-              </h2>
-              <div className="text-muted small">
-                <span>Órdenes</span>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+            </div>
+            <h2 className="font-bold mb-2 text-3xl">
+              {formatNumber(stats.orders)}
+            </h2>
+            <div className="text-muted-foreground text-sm">
+              <span>Órdenes</span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Revenue Card */}
-        <Col lg={4} md={12}>
-          <Card className="border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-            <Card.Body className="p-3">
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <div>
-                  <h6 className="text-muted mb-1 small">Ingresos Totales</h6>
-                  <h2 className="fw-bold mb-0" style={{ fontSize: "1.75rem" }}>
-                    {formatCurrency(stats.totalSales)}
-                  </h2>
-                </div>
-                <div
-                  className="p-2 rounded-circle"
-                  style={{ backgroundColor: "#e8f5e9" }}
-                >
-                  <DollarSign size={24} style={{ color: "#1ab394" }} />
+        <Card className="border-0 shadow-sm rounded-xl lg:col-span-2">
+          <CardContent className="p-3">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h6 className="text-muted-foreground mb-1 text-sm">Ingresos Totales</h6>
+                <h2 className="font-bold mb-0 text-2xl">
+                  {formatCurrency(stats.totalSales)}
+                </h2>
+              </div>
+              <div
+                className="p-2 rounded-full"
+                style={{ backgroundColor: "#e8f5e9" }}
+              >
+                <DollarSign size={24} style={{ color: "#1ab394" }} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge
+                variant="default"
+                className="px-2 py-1 flex items-center gap-1 rounded-md text-xs bg-green-500"
+              >
+                <TrendingUp size={12} />
+                Total
+              </Badge>
+              <span className="text-muted-foreground text-sm">De todas las empresas</span>
+            </div>
+            <div className="flex justify-between text-center mt-3 pt-2 border-t">
+              <div>
+                <div className="text-muted-foreground text-sm">Empresas</div>
+                <div className="font-semibold">{stats.companies}</div>
+              </div>
+              <div className="border-l pl-3">
+                <div className="text-muted-foreground text-sm">Sucursales</div>
+                <div className="font-semibold">{stats.branches}</div>
+              </div>
+              <div className="border-l pl-3">
+                <div className="text-muted-foreground text-sm">Ventas</div>
+                <div className="font-semibold">
+                  {formatNumber(stats.orders)}
                 </div>
               </div>
-              <div className="d-flex align-items-center gap-2 mb-2">
-                <Badge
-                  bg="success"
-                  className="px-2 py-1 d-flex align-items-center gap-1"
-                  style={{ borderRadius: "6px", fontSize: "11px" }}
-                >
-                  <TrendingUp size={12} />
-                  Total
-                </Badge>
-                <span className="text-muted small">De todas las empresas</span>
-              </div>
-              <div className="d-flex justify-content-between text-center mt-3 pt-2 border-top">
-                <div>
-                  <div className="text-muted small">Empresas</div>
-                  <div className="fw-semibold">{stats.companies}</div>
-                </div>
-                <div className="border-start ps-3">
-                  <div className="text-muted small">Sucursales</div>
-                  <div className="fw-semibold">{stats.branches}</div>
-                </div>
-                <div className="border-start ps-3">
-                  <div className="text-muted small">Ventas</div>
-                  <div className="fw-semibold">
-                    {formatNumber(stats.orders)}
-                  </div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Gráfica de Ingresos y Reportes Trimestrales */}
-      <Row className="g-3 mb-4">
-        <Col lg={8}>
-          <Card className="border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-            <Card.Header className="bg-white border-0 py-3 px-4">
-              <div className="d-flex justify-content-between align-items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-4">
+        <div className="lg:col-span-8">
+          <Card className="border-0 shadow-sm rounded-xl">
+            <CardHeader className="bg-white border-0 py-3 px-4">
+              <div className="flex justify-between items-center">
                 <div>
-                  <h5 className="fw-bold mb-0">Ingresos Diarios</h5>
-                  <p className="text-muted small mb-0 mt-1">Últimos 30 días</p>
+                  <h5 className="font-bold mb-0">Ingresos Diarios</h5>
+                  <p className="text-muted-foreground text-sm mb-0 mt-1">Últimos 30 días</p>
                 </div>
-                <div className="text-end">
-                  <div className="d-flex align-items-center gap-2">
+                <div className="text-right">
+                  <div className="flex items-center gap-2">
                     <div>
-                      <p className="mb-0 small text-muted">Ingresos Totales</p>
-                      <h4 className="fw-bold mb-0">
+                      <p className="mb-0 text-sm text-muted-foreground">Ingresos Totales</p>
+                      <h4 className="font-bold mb-0">
                         {formatCurrency(stats.totalSales)}
                       </h4>
                     </div>
                     <Badge
-                      bg={revenueTrend.isPositive ? "success" : "danger"}
-                      className="ms-2"
+                      variant={revenueTrend.isPositive ? "default" : "destructive"}
+                      className="ml-2"
                     >
                       {revenueTrend.isPositive ? (
-                        <TrendingUp size={12} className="me-1" />
+                        <TrendingUp size={12} className="mr-1" />
                       ) : (
-                        <TrendingDown size={12} className="me-1" />
+                        <TrendingDown size={12} className="mr-1" />
                       )}
                       {revenueTrend.percentage.toFixed(1)}%
                     </Badge>
                   </div>
-                  <p className="text-muted small mb-0 mt-1">
+                  <p className="text-muted-foreground text-sm mb-0 mt-1">
                     {revenueTrend.isPositive ? "AUMENTO" : "DISMINUCIÓN"} VS
                     SEMANA ANTERIOR
                   </p>
                 </div>
               </div>
-            </Card.Header>
-            <Card.Body className="px-4 pb-4">
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
               <Chart
                 options={revenueChartOptions}
                 series={revenueChartSeries}
                 type="area"
                 height={350}
               />
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
-        <Col lg={4}>
-          <Card
-            className="border-0 shadow-sm h-100"
-            style={{ borderRadius: "12px" }}
-          >
-            <Card.Header className="bg-white border-0 py-3 px-4">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="fw-bold mb-0">Ventas Semanales</h5>
-                <div className="d-flex gap-2">
-                  <Badge bg="primary" className="px-2 py-1">
+        <div className="lg:col-span-4">
+          <Card className="border-0 shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white border-0 py-3 px-4">
+              <div className="flex justify-between items-center">
+                <h5 className="font-bold mb-0">Ventas Semanales</h5>
+                <div className="flex gap-2">
+                  <Badge variant="default" className="px-2 py-1">
                     MES ACTUAL
                   </Badge>
                   <Button
                     variant="link"
-                    className="p-0 text-muted"
-                    onClick={loadDashboardData}
+                    className="p-0 text-muted-foreground"
+                    onClick={() => loadDashboardData()}
                   >
                     <RefreshCw size={14} />
                   </Button>
-                  <Button variant="link" className="p-0 text-muted">
+                  <Button variant="link" className="p-0 text-muted-foreground">
                     <MoreHorizontal size={14} />
                   </Button>
                 </div>
               </div>
-            </Card.Header>
-            <Card.Body className="p-4">
+            </CardHeader>
+            <CardContent className="p-4">
               {weeklySalesData.length > 0 ? (
-                <Table borderless size="sm" className="mb-0">
-                  <thead>
-                    <tr>
-                      <th className="text-muted small fw-normal ps-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-muted-foreground text-sm font-normal pl-0">
                         SEMANA
-                      </th>
-                      <th className="text-muted small fw-normal text-end">
+                      </TableHead>
+                      <TableHead className="text-muted-foreground text-sm font-normal text-right">
                         VENTAS
-                      </th>
-                      <th className="text-muted small fw-normal text-end pe-0">
+                      </TableHead>
+                      <TableHead className="text-muted-foreground text-sm font-normal text-right pr-0">
                         INGRESOS
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {weeklySalesData.map((week, index) => (
-                      <tr key={index}>
-                        <td className="ps-0">
-                          <div className="d-flex align-items-center gap-2">
+                      <TableRow key={index}>
+                        <TableCell className="pl-0">
+                          <div className="flex items-center gap-2">
                             <div
                               style={{
                                 width: "36px",
@@ -847,13 +843,13 @@ const CompaniesDashboard: React.FC = () => {
                             </div>
                             <div>
                               <div
-                                className="fw-semibold"
+                                className="font-semibold"
                                 style={{ fontSize: "13px" }}
                               >
                                 {week.weekLabel}
                               </div>
                               <div
-                                className="text-muted"
+                                className="text-muted-foreground"
                                 style={{ fontSize: "10px" }}
                               >
                                 {week.orderCount}{" "}
@@ -861,59 +857,56 @@ const CompaniesDashboard: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                        </td>
-                        <td
-                          className="text-end fw-semibold"
+                        </TableCell>
+                        <TableCell
+                          className="text-right font-semibold"
                           style={{ fontSize: "13px" }}
                         >
                           {week.orderCount}
-                        </td>
-                        <td
-                          className="text-end pe-0"
+                        </TableCell>
+                        <TableCell
+                          className="text-right pr-0"
                           style={{ fontSize: "13px" }}
                         >
-                          <Badge bg="success" style={{ borderRadius: "6px" }}>
+                          <Badge variant="default" className="rounded-md bg-green-500">
                             {formatCurrency(week.revenue)}
                           </Badge>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
+                  </TableBody>
                 </Table>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-muted mb-0">
+                  <p className="text-muted-foreground mb-0">
                     No hay datos de ventas semanales disponibles
                   </p>
                 </div>
               )}
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       {/* Rendimiento de Ventas y Últimas Actualizaciones */}
-      <Row className="g-3 mb-4">
-        <Col lg={5}>
-          <Card
-            className="border-0 shadow-sm h-100"
-            style={{ borderRadius: "12px" }}
-          >
-            <Card.Header className="bg-white border-0 py-3 px-4">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="fw-bold mb-0">Rendimiento de Ventas</h5>
-                <div className="d-flex gap-2">
-                  <Button variant="link" className="p-0 text-muted">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-4">
+        <div className="lg:col-span-5">
+          <Card className="border-0 shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white border-0 py-3 px-4">
+              <div className="flex justify-between items-center">
+                <h5 className="font-bold mb-0">Rendimiento de Ventas</h5>
+                <div className="flex gap-2">
+                  <Button variant="link" className="p-0 text-muted-foreground">
                     <RefreshCw size={14} />
                   </Button>
-                  <Button variant="link" className="p-0 text-muted">
+                  <Button variant="link" className="p-0 text-muted-foreground">
                     <MoreHorizontal size={14} />
                   </Button>
                 </div>
               </div>
-            </Card.Header>
-            <Card.Body className="p-4">
-              <div className="d-flex justify-content-center mb-4">
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="flex justify-center mb-4">
                 <Chart
                   options={salesPerformanceOptions}
                   series={salesPerformanceSeries}
@@ -923,8 +916,8 @@ const CompaniesDashboard: React.FC = () => {
               </div>
               <div>
                 <div className="mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="d-flex align-items-center gap-2">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
                       <div
                         style={{
                           width: "10px",
@@ -933,33 +926,32 @@ const CompaniesDashboard: React.FC = () => {
                           backgroundColor: "#1ab394",
                         }}
                       />
-                      <span className="small">Órdenes Completadas</span>
+                      <span className="text-sm">Órdenes Completadas</span>
                     </div>
-                    <span className="small text-muted fw-semibold">
+                    <span className="text-sm text-muted-foreground font-semibold">
                       {stats?.salesPerformance?.completed.count || 0}
                     </span>
                   </div>
-                  <ProgressBar
-                    now={
+                  <Progress
+                    value={
                       stats?.salesPerformance?.completed.percentage
                         ? parseFloat(
                             stats.salesPerformance.completed.percentage
                           )
                         : 0
                     }
-                    style={{ height: "6px", borderRadius: "8px" }}
-                    variant="success"
+                    className="h-1.5"
                   />
-                  <div className="text-end mt-1">
-                    <small className="text-muted">
+                  <div className="text-right mt-1">
+                    <small className="text-muted-foreground">
                       {stats?.salesPerformance?.completed.percentage || "0"}%
                     </small>
                   </div>
                 </div>
 
                 <div className="mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="d-flex align-items-center gap-2">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
                       <div
                         style={{
                           width: "10px",
@@ -968,33 +960,32 @@ const CompaniesDashboard: React.FC = () => {
                           backgroundColor: "#4A90E2",
                         }}
                       />
-                      <span className="small">Órdenes en Proceso</span>
+                      <span className="text-sm">Órdenes en Proceso</span>
                     </div>
-                    <span className="small text-muted fw-semibold">
+                    <span className="text-sm text-muted-foreground font-semibold">
                       {stats?.salesPerformance?.inProcess.count || 0}
                     </span>
                   </div>
-                  <ProgressBar
-                    now={
+                  <Progress
+                    value={
                       stats?.salesPerformance?.inProcess.percentage
                         ? parseFloat(
                             stats.salesPerformance.inProcess.percentage
                           )
                         : 0
                     }
-                    style={{ height: "6px", borderRadius: "8px" }}
-                    variant="primary"
+                    className="h-1.5"
                   />
-                  <div className="text-end mt-1">
-                    <small className="text-muted">
+                  <div className="text-right mt-1">
+                    <small className="text-muted-foreground">
                       {stats?.salesPerformance?.inProcess.percentage || "0"}%
                     </small>
                   </div>
                 </div>
 
                 <div>
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="d-flex align-items-center gap-2">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
                       <div
                         style={{
                           width: "10px",
@@ -1003,245 +994,233 @@ const CompaniesDashboard: React.FC = () => {
                           backgroundColor: "#f8ac59",
                         }}
                       />
-                      <span className="small">Órdenes Pendientes</span>
+                      <span className="text-sm">Órdenes Pendientes</span>
                     </div>
-                    <span className="small text-muted fw-semibold">
+                    <span className="text-sm text-muted-foreground font-semibold">
                       {stats?.salesPerformance?.pending.count || 0}
                     </span>
                   </div>
-                  <ProgressBar
-                    now={
+                  <Progress
+                    value={
                       stats?.salesPerformance?.pending.percentage
                         ? parseFloat(stats.salesPerformance.pending.percentage)
                         : 0
                     }
-                    style={{ height: "6px", borderRadius: "8px" }}
-                    variant="warning"
+                    className="h-1.5"
                   />
-                  <div className="text-end mt-1">
-                    <small className="text-muted">
+                  <div className="text-right mt-1">
+                    <small className="text-muted-foreground">
                       {stats?.salesPerformance?.pending.percentage || "0"}%
                     </small>
                   </div>
                 </div>
               </div>
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
-        <Col lg={7}>
-          <Card
-            className="border-0 shadow-sm h-100"
-            style={{ borderRadius: "12px" }}
-          >
-            <Card.Header className="bg-white border-0 py-3 px-4">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="fw-bold mb-0">Últimas Órdenes</h5>
-                <Badge bg="warning" text="dark" className="px-3 py-2">
+        <div className="lg:col-span-7">
+          <Card className="border-0 shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white border-0 py-3 px-4">
+              <div className="flex justify-between items-center">
+                <h5 className="font-bold mb-0">Últimas Órdenes</h5>
+                <Badge variant="secondary" className="px-3 py-2">
                   Recientes
                 </Badge>
               </div>
-            </Card.Header>
-            <Card.Body
+            </CardHeader>
+            <CardContent
               className="p-4"
               style={{ maxHeight: "400px", overflowY: "auto" }}
             >
               {stats?.recentOrders && stats.recentOrders.length > 0 ? (
-                <>
-                  <ListGroup variant="flush">
-                    {stats.recentOrders.map((order, idx) => {
-                      // Función auxiliar para obtener color según el status
-                      const getStatusColor = (status: string) => {
-                        switch (status) {
-                          case "completado":
-                            return "#1ab394";
-                          case "pendiente":
-                            return "#4A90E2";
-                          case "en-proceso":
-                            return "#f8ac59";
-                          case "cancelado":
-                            return "#e91e63";
-                          default:
-                            return "#9c27b0";
-                        }
-                      };
+                <div className="space-y-0">
+                  {stats.recentOrders.map((order, idx) => {
+                    // Función auxiliar para obtener color según el status
+                    const getStatusColor = (status: string) => {
+                      switch (status) {
+                        case "completado":
+                          return "#1ab394";
+                        case "pendiente":
+                          return "#4A90E2";
+                        case "en-proceso":
+                          return "#f8ac59";
+                        case "cancelado":
+                          return "#e91e63";
+                        default:
+                          return "#9c27b0";
+                      }
+                    };
 
-                      // Función auxiliar para obtener background color según el status
-                      const getStatusBgColor = (status: string) => {
-                        switch (status) {
-                          case "completado":
-                            return "#e8f5e9";
-                          case "pendiente":
-                            return "#e3f2fd";
-                          case "en-proceso":
-                            return "#fff3e0";
-                          case "cancelado":
-                            return "#fce4ec";
-                          default:
-                            return "#f3e5f5";
-                        }
-                      };
+                    // Función auxiliar para obtener background color según el status
+                    const getStatusBgColor = (status: string) => {
+                      switch (status) {
+                        case "completado":
+                          return "#e8f5e9";
+                        case "pendiente":
+                          return "#e3f2fd";
+                        case "en-proceso":
+                          return "#fff3e0";
+                        case "cancelado":
+                          return "#fce4ec";
+                        default:
+                          return "#f3e5f5";
+                      }
+                    };
 
-                      // Función auxiliar para obtener texto del status
-                      const getStatusText = (status: string) => {
-                        switch (status) {
-                          case "completado":
-                            return "Completada";
-                          case "pendiente":
-                            return "Pendiente";
-                          case "en-proceso":
-                            return "En Proceso";
-                          case "cancelado":
-                            return "Cancelada";
-                          case "sinAnticipo":
-                            return "Sin Anticipo";
-                          default:
-                            return status;
-                        }
-                      };
+                    // Función auxiliar para obtener texto del status
+                    const getStatusText = (status: string) => {
+                      switch (status) {
+                        case "completado":
+                          return "Completada";
+                        case "pendiente":
+                          return "Pendiente";
+                        case "en-proceso":
+                          return "En Proceso";
+                        case "cancelado":
+                          return "Cancelada";
+                        case "sinAnticipo":
+                          return "Sin Anticipo";
+                        default:
+                          return status;
+                      }
+                    };
 
-                      // Obtener nombre del cliente
-                      const clientName = order.clientInfo.clientId
-                        ? `${order.clientInfo.clientId.name} ${
-                            order.clientInfo.clientId.lastName || ""
-                          }`
-                        : `${order.clientInfo.name} ${
-                            order.clientInfo.lastName || ""
-                          }`;
+                    // Obtener nombre del cliente
+                    const clientName = order.clientInfo.clientId
+                      ? `${order.clientInfo.clientId.name} ${
+                          order.clientInfo.clientId.lastName || ""
+                        }`
+                      : `${order.clientInfo.name} ${
+                          order.clientInfo.lastName || ""
+                        }`;
 
-                      // Obtener nombre del cajero
-                      const cashierName =
-                        order.cashier?.profile?.fullName ||
-                        `${order.cashier?.profile?.name || ""} ${
-                          order.cashier?.profile?.lastName || ""
-                        }`.trim() ||
-                        order.cashier?.username ||
-                        "Usuario";
+                    // Obtener nombre del cajero
+                    const cashierName =
+                      order.cashier?.profile?.fullName ||
+                      `${order.cashier?.profile?.name || ""} ${
+                        order.cashier?.profile?.lastName || ""
+                      }`.trim() ||
+                      order.cashier?.username ||
+                      "Usuario";
 
-                      // Formatear fecha
-                      const orderDate = new Date(order.createdAt);
-                      const timeAgo = getTimeAgo(orderDate);
+                    // Formatear fecha
+                    const orderDate = new Date(order.createdAt);
+                    const timeAgo = getTimeAgo(orderDate);
 
-                      return (
-                        <ListGroup.Item
-                          key={order._id}
-                          className="border-0 px-0 py-3"
-                        >
-                          <div className="d-flex gap-3">
-                            <div
-                              className="rounded d-flex align-items-center justify-content-center"
-                              style={{
-                                width: "40px",
-                                height: "40px",
-                                backgroundColor: getStatusBgColor(order.status),
-                                flexShrink: 0,
-                              }}
-                            >
-                              <ShoppingCart
-                                size={18}
-                                style={{ color: getStatusColor(order.status) }}
-                              />
-                            </div>
-                            <div className="flex-grow-1">
-                              <div className="d-flex justify-content-between align-items-start">
-                                <div>
-                                  <h6
-                                    className="mb-1 fw-semibold"
-                                    style={{ fontSize: "14px" }}
-                                  >
-                                    Orden #{order.orderNumber}
-                                  </h6>
-                                  <p
-                                    className="mb-2 small text-muted"
-                                    style={{ fontSize: "12px" }}
-                                  >
-                                    Cliente: {clientName} •{" "}
-                                    {order.branchId.branchName}
-                                  </p>
-                                  <div className="d-flex align-items-center gap-2">
-                                    <Badge
-                                      bg={
-                                        order.status === "completado"
-                                          ? "success"
-                                          : order.status === "pendiente"
-                                          ? "primary"
-                                          : order.status === "cancelado"
-                                          ? "danger"
-                                          : "warning"
-                                      }
-                                      style={{
-                                        borderRadius: "6px",
-                                        fontSize: "10px",
-                                      }}
-                                    >
-                                      {getStatusText(order.status)}
-                                    </Badge>
-                                    <span
-                                      className="text-muted"
-                                      style={{ fontSize: "11px" }}
-                                    >
-                                      {cashierName}
-                                    </span>
-                                    <span
-                                      className="text-muted"
-                                      style={{ fontSize: "11px" }}
-                                    >
-                                      • {formatCurrency(order.total)}
-                                    </span>
-                                  </div>
-                                </div>
-                                <span
-                                  className="text-muted"
-                                  style={{ fontSize: "11px" }}
+                    return (
+                      <div
+                        key={order._id}
+                        className="border-0 px-0 py-3 border-b last:border-b-0"
+                      >
+                        <div className="flex gap-3">
+                          <div
+                            className="rounded flex items-center justify-center"
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              backgroundColor: getStatusBgColor(order.status),
+                              flexShrink: 0,
+                            }}
+                          >
+                            <ShoppingCart
+                              size={18}
+                              style={{ color: getStatusColor(order.status) }}
+                            />
+                          </div>
+                          <div className="flex-grow">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h6
+                                  className="mb-1 font-semibold"
+                                  style={{ fontSize: "14px" }}
                                 >
-                                  {timeAgo}
-                                </span>
+                                  Orden #{order.orderNumber}
+                                </h6>
+                                <p
+                                  className="mb-2 text-sm text-muted-foreground"
+                                  style={{ fontSize: "12px" }}
+                                >
+                                  Cliente: {clientName} •{" "}
+                                  {order.branchId.branchName}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant={
+                                      order.status === "completado"
+                                        ? "default"
+                                        : order.status === "pendiente"
+                                        ? "default"
+                                        : order.status === "cancelado"
+                                        ? "destructive"
+                                        : "secondary"
+                                    }
+                                    className="rounded-md text-[10px]"
+                                  >
+                                    {getStatusText(order.status)}
+                                  </Badge>
+                                  <span
+                                    className="text-muted-foreground"
+                                    style={{ fontSize: "11px" }}
+                                  >
+                                    {cashierName}
+                                  </span>
+                                  <span
+                                    className="text-muted-foreground"
+                                    style={{ fontSize: "11px" }}
+                                  >
+                                    • {formatCurrency(order.total)}
+                                  </span>
+                                </div>
                               </div>
+                              <span
+                                className="text-muted-foreground"
+                                style={{ fontSize: "11px" }}
+                              >
+                                {timeAgo}
+                              </span>
                             </div>
                           </div>
-                        </ListGroup.Item>
-                      );
-                    })}
-                  </ListGroup>
-                </>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-muted mb-0">
+                  <p className="text-muted-foreground mb-0">
                     No hay órdenes recientes disponibles
                   </p>
                 </div>
               )}
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       {/* Mensajes y Discusiones */}
-      <Row className="g-3">
-        <Col lg={5}>
-          <Card
-            className="border-0 shadow-sm h-100"
-            style={{ borderRadius: "12px" }}
-          >
-            <Card.Header className="bg-white border-0 py-3 px-4">
-              <div className="d-flex justify-content-between align-items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div className="lg:col-span-5">
+          <Card className="border-0 shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white border-0 py-3 px-4">
+              <div className="flex justify-between items-center">
                 <div>
-                  <h5 className="fw-bold mb-1">Top 10 Clientes</h5>
-                  <p className="text-muted small mb-0">
+                  <h5 className="font-bold mb-1">Top 10 Clientes</h5>
+                  <p className="text-muted-foreground text-sm mb-0">
                     Clientes que más han gastado
                   </p>
                 </div>
-                <Badge bg="success" className="px-2 py-1">
+                <Badge variant="default" className="px-2 py-1 bg-green-500">
                   TOP
                 </Badge>
               </div>
-            </Card.Header>
-            <Card.Body
+            </CardHeader>
+            <CardContent
               className="p-4"
               style={{ maxHeight: "450px", overflowY: "auto" }}
             >
               {stats?.topClients && stats.topClients.length > 0 ? (
-                <ListGroup variant="flush">
+                <div className="space-y-0">
                   {stats.topClients.map((client, idx) => {
                     // Colores para los avatares
                     const colors = [
@@ -1277,40 +1256,33 @@ const CompaniesDashboard: React.FC = () => {
                     const lastOrderTime = getTimeAgo(lastOrderDate);
 
                     return (
-                      <ListGroup.Item key={idx} className="border-0 px-0 py-3">
-                        <div className="d-flex gap-3 align-items-center">
+                      <div key={idx} className="border-0 px-0 py-3 border-b last:border-b-0">
+                        <div className="flex gap-3 items-center">
                           <div
-                            className="d-flex align-items-center gap-2"
+                            className="flex items-center gap-2"
                             style={{ minWidth: "50px" }}
                           >
                             {/* Ranking badge */}
                             <Badge
-                              bg={
+                              variant={
                                 idx === 0
-                                  ? "warning"
+                                  ? "default"
                                   : idx === 1
                                   ? "secondary"
                                   : idx === 2
-                                  ? "danger"
-                                  : "light"
+                                  ? "destructive"
+                                  : "outline"
                               }
-                              text={idx >= 3 ? "dark" : "white"}
-                              className="fw-bold"
+                              className="font-bold w-7 h-7 flex items-center justify-center rounded-full text-xs"
                               style={{
-                                fontSize: "12px",
-                                width: "28px",
-                                height: "28px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                borderRadius: "50%",
+                                backgroundColor: idx === 0 ? "#ffc107" : idx === 1 ? "#6c757d" : idx === 2 ? "#dc3545" : undefined,
                               }}
                             >
                               {idx + 1}
                             </Badge>
                             {/* Avatar */}
                             <div
-                              className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                              className="rounded-full flex items-center justify-center font-bold text-white"
                               style={{
                                 width: "44px",
                                 height: "44px",
@@ -1322,17 +1294,17 @@ const CompaniesDashboard: React.FC = () => {
                               {initials}
                             </div>
                           </div>
-                          <div className="flex-grow-1">
-                            <div className="d-flex justify-content-between align-items-start mb-1">
+                          <div className="flex-grow">
+                            <div className="flex justify-between items-start mb-1">
                               <div>
                                 <h6
-                                  className="mb-0 fw-semibold"
+                                  className="mb-0 font-semibold"
                                   style={{ fontSize: "14px" }}
                                 >
                                   {fullName}
                                 </h6>
                                 <p
-                                  className="mb-0 text-muted"
+                                  className="mb-0 text-muted-foreground"
                                   style={{ fontSize: "11px" }}
                                 >
                                   {client.orderCount}{" "}
@@ -1341,15 +1313,15 @@ const CompaniesDashboard: React.FC = () => {
                                     : "órdenes"}
                                 </p>
                               </div>
-                              <div className="text-end">
+                              <div className="text-right">
                                 <div
-                                  className="fw-bold"
+                                  className="font-bold"
                                   style={{ fontSize: "14px", color: "#1ab394" }}
                                 >
                                   {formatCurrency(client.totalSpent)}
                                 </div>
                                 <span
-                                  className="text-muted"
+                                  className="text-muted-foreground"
                                   style={{ fontSize: "10px" }}
                                 >
                                   {lastOrderTime}
@@ -1358,78 +1330,75 @@ const CompaniesDashboard: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                      </ListGroup.Item>
+                      </div>
                     );
                   })}
-                </ListGroup>
+                </div>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-muted mb-0">No hay clientes disponibles</p>
+                  <p className="text-muted-foreground mb-0">No hay clientes disponibles</p>
                 </div>
               )}
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
-        <Col lg={7}>
-          <Card
-            className="border-0 shadow-sm h-100"
-            style={{ borderRadius: "12px" }}
-          >
-            <Card.Header className="bg-white border-0 py-3 px-4">
-              <div className="d-flex justify-content-between align-items-center">
+        <div className="lg:col-span-7">
+          <Card className="border-0 shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white border-0 py-3 px-4">
+              <div className="flex justify-between items-center">
                 <div>
-                  <h5 className="fw-bold mb-1">Top 5 Sucursales del Mes</h5>
-                  <p className="text-muted small mb-0">
+                  <h5 className="font-bold mb-1">Top 5 Sucursales del Mes</h5>
+                  <p className="text-muted-foreground text-sm mb-0">
                     Sucursales con más ventas
                   </p>
                 </div>
-                <Badge bg="primary" className="px-2 py-1">
+                <Badge variant="default" className="px-2 py-1">
                   MES ACTUAL
                 </Badge>
               </div>
-            </Card.Header>
-            <Card.Body
+            </CardHeader>
+            <CardContent
               className="p-4"
               style={{ maxHeight: "450px", overflowY: "auto" }}
             >
               {stats?.topBranches && stats.topBranches.length > 0 ? (
-                <Table hover responsive className="mb-0">
-                  <thead>
-                    <tr>
-                      <th
-                        className="border-0 text-muted small"
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead
+                        className="border-0 text-muted-foreground text-sm"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         #
-                      </th>
-                      <th
-                        className="border-0 text-muted small"
+                      </TableHead>
+                      <TableHead
+                        className="border-0 text-muted-foreground text-sm"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         SUCURSAL
-                      </th>
-                      <th
-                        className="border-0 text-muted small text-center"
+                      </TableHead>
+                      <TableHead
+                        className="border-0 text-muted-foreground text-sm text-center"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         EMPRESA
-                      </th>
-                      <th
-                        className="border-0 text-muted small text-center"
+                      </TableHead>
+                      <TableHead
+                        className="border-0 text-muted-foreground text-sm text-center"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         ÓRDENES
-                      </th>
-                      <th
-                        className="border-0 text-muted small text-end"
+                      </TableHead>
+                      <TableHead
+                        className="border-0 text-muted-foreground text-sm text-right"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         TOTAL VENTAS
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {stats.topBranches.map((branch, idx) => {
                       const branchName =
                         branch.branchInfo?.branchName || "Sucursal";
@@ -1452,13 +1421,12 @@ const CompaniesDashboard: React.FC = () => {
                       };
 
                       return (
-                        <tr key={branch._id}>
-                          <td
+                        <TableRow key={branch._id}>
+                          <TableCell
                             className="align-middle"
                             style={{ width: "50px" }}
                           >
                             <Badge
-                              bg=""
                               style={{
                                 backgroundColor: getRankingColor(idx),
                                 color:
@@ -1477,66 +1445,65 @@ const CompaniesDashboard: React.FC = () => {
                             >
                               {idx + 1}
                             </Badge>
-                          </td>
-                          <td className="align-middle">
+                          </TableCell>
+                          <TableCell className="align-middle">
                             <div>
                               <div
-                                className="fw-semibold"
+                                className="font-semibold"
                                 style={{ fontSize: "14px" }}
                               >
                                 {branchName}
                               </div>
                               {branchCode && (
                                 <div
-                                  className="text-muted"
+                                  className="text-muted-foreground"
                                   style={{ fontSize: "11px" }}
                                 >
                                   {branchCode}
                                 </div>
                               )}
                             </div>
-                          </td>
-                          <td className="align-middle text-center">
+                          </TableCell>
+                          <TableCell className="align-middle text-center">
                             <Badge
-                              bg="light"
-                              text="dark"
+                              variant="outline"
                               style={{ fontSize: "11px", fontWeight: "normal" }}
                             >
                               {companyName}
                             </Badge>
-                          </td>
-                          <td className="align-middle text-center">
+                          </TableCell>
+                          <TableCell className="align-middle text-center">
                             <span
-                              className="fw-semibold"
+                              className="font-semibold"
                               style={{ fontSize: "14px" }}
                             >
                               {branch.orderCount}
                             </span>
-                          </td>
-                          <td className="align-middle text-end">
+                          </TableCell>
+                          <TableCell className="align-middle text-right">
                             <div
-                              className="fw-bold"
+                              className="font-bold"
                               style={{ fontSize: "15px", color: "#1ab394" }}
                             >
                               {formatCurrency(branch.totalSales)}
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
+                  </TableBody>
                 </Table>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-muted mb-0">
+                  <p className="text-muted-foreground mb-0">
                     No hay ventas de sucursales en el mes actual
                   </p>
                 </div>
               )}
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from "react";
-import { Card } from "react-bootstrap";
+import { Card, CardContent } from "@/components/ui/card";
 import { useDrop } from "react-dnd";
 import { Order } from "../types";
 import KanbanCard from "./KanbanCard";
@@ -55,40 +55,27 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   }), [status, onChangeStatus]);
 
   // Estilos para feedback visual del drop zone
-  const getDropZoneStyle = () => {
+  const getDropZoneClasses = () => {
     if (isOver && canDrop) {
-      return {
-        backgroundColor: `${color}15`,
-        border: `2px dashed ${color}`,
-      };
+      return "border-2 border-dashed";
     }
     if (canDrop && !isOver) {
-      return {
-        border: `2px dashed transparent`,
-      };
+      return "border-2 border-transparent";
     }
-    return {};
+    return "";
   };
 
   return (
-    <div className="h-100">
+    <div className="h-full">
       {/* Column Header */}
-      <div className="d-flex align-items-center justify-content-between mb-3">
-        <div className="d-flex align-items-center gap-2">
-          <h5 className="mb-0 fw-bold" style={{ fontSize: "1rem", color: "#2c3e50" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <h5 className="mb-0 font-bold text-base text-[#2c3e50]">
             {title}
           </h5>
           <div
-            className="d-flex align-items-center justify-content-center"
-            style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "50%",
-              backgroundColor: color,
-              color: "#fff",
-              fontSize: "0.75rem",
-              fontWeight: "600",
-            }}
+            className="flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-semibold"
+            style={{ backgroundColor: color }}
           >
             {count}
           </div>
@@ -98,30 +85,20 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
       {/* Column Content - Drop Zone */}
       <div
         ref={drop}
-        className="kanban-column-content"
+        className={`kanban-column-content overflow-y-auto overflow-x-hidden pr-2 rounded-xl p-3 transition-all duration-300 ${getDropZoneClasses()}`}
         style={{
           height: "calc(100vh - 280px)",
-          overflowY: "auto",
-          overflowX: "hidden",
-          paddingRight: "8px",
-          borderRadius: "12px",
-          padding: "12px",
-          transition: "all 0.3s ease",
-          ...getDropZoneStyle(),
+          backgroundColor: isOver && canDrop ? `${color}15` : undefined,
+          borderColor: isOver && canDrop ? color : undefined,
         }}
       >
         {orders.length === 0 ? (
-          <Card
-            className="border-0 text-center"
-            style={{
-              borderRadius: "12px",
-              backgroundColor: "#f8f9fa",
-              padding: "2rem 1rem",
-            }}
-          >
-            <p className="mb-0 text-muted" style={{ fontSize: "0.85rem" }}>
-              No hay órdenes en esta etapa
-            </p>
+          <Card className="border-0 text-center rounded-xl bg-muted/50">
+            <CardContent className="py-8 px-4">
+              <p className="mb-0 text-muted-foreground text-sm">
+                No hay ordenes en esta etapa
+              </p>
+            </CardContent>
           </Card>
         ) : (
           orders.map((order) => (

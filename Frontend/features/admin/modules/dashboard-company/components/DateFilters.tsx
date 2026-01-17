@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Form, Button, ButtonGroup } from "react-bootstrap";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface DateFiltersProps {
   onSearch: (filters: {
@@ -82,110 +84,79 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
       style={{ borderRadius: "10px" }}
     >
       <div className="card-body p-2">
-        <div className="row g-2 align-items-end">
-          <div className="col-md-4">
-            <Form.Group className="mb-0">
-              <Form.Label
-                className="fw-semibold text-muted mb-1"
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+          <div className="md:col-span-4">
+            <div className="space-y-1">
+              <Label
+                className="font-semibold text-muted-foreground mb-1"
                 style={{ fontSize: "13px" }}
               >
-                Fecha Inicial <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Control
+                Fecha Inicial <span className="text-red-500">*</span>
+              </Label>
+              <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="border-0 bg-light"
-                style={{
-                  borderRadius: "8px",
-                  padding: "8px 12px",
-                  fontSize: "14px",
-                }}
+                className="border-0 bg-muted rounded-lg py-2 px-3 text-sm"
               />
-            </Form.Group>
+            </div>
           </div>
 
-          <div className="col-md-4">
-            <Form.Group className="mb-0">
-              <Form.Label
-                className="fw-semibold text-muted mb-1"
+          <div className="md:col-span-4">
+            <div className="space-y-1">
+              <Label
+                className="font-semibold text-muted-foreground mb-1"
                 style={{ fontSize: "13px" }}
               >
-                Fecha Final <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Control
+                Fecha Final <span className="text-red-500">*</span>
+              </Label>
+              <Input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="border-0 bg-light"
-                style={{
-                  borderRadius: "8px",
-                  padding: "8px 12px",
-                  fontSize: "14px",
-                }}
+                className="border-0 bg-muted rounded-lg py-2 px-3 text-sm"
               />
-            </Form.Group>
+            </div>
           </div>
 
-          <div className="col-md-4">
+          <div className="md:col-span-4">
             <Button
               onClick={handleSearch}
-              variant="primary"
-              className="w-100"
-              style={{
-                borderRadius: "8px",
-                padding: "8px 16px",
-                fontWeight: "600",
-                fontSize: "14px",
-              }}
+              variant="default"
+              className="w-full rounded-lg py-2 px-4 font-semibold text-sm"
             >
               Buscar
             </Button>
           </div>
         </div>
 
-        <div className="row mt-1">
-          <div className="col-12">
-            <div className="d-flex justify-content-end">
-              <ButtonGroup size="sm">
-                <Button
-                  variant={viewMode === "dia" ? "primary" : "outline-secondary"}
-                  onClick={() => handleViewModeChange("dia")}
-                  style={{
-                    borderRadius: "8px 0 0 8px",
-                    fontWeight: "600",
-                    fontSize: "13px",
-                    padding: "6px 12px",
-                  }}
-                >
-                  Día
-                </Button>
-                <Button
-                  variant={
-                    viewMode === "semana" ? "primary" : "outline-secondary"
-                  }
-                  onClick={() => handleViewModeChange("semana")}
-                  style={{
-                    fontWeight: "600",
-                    fontSize: "13px",
-                    padding: "6px 12px",
-                  }}
-                >
-                  Semana
-                </Button>
-                <Button
-                  variant={viewMode === "mes" ? "primary" : "outline-secondary"}
-                  onClick={() => handleViewModeChange("mes")}
-                  style={{
-                    borderRadius: "0 8px 8px 0",
-                    fontWeight: "600",
-                    fontSize: "13px",
-                    padding: "6px 12px",
-                  }}
-                >
-                  Mes
-                </Button>
-              </ButtonGroup>
+        <div className="mt-1">
+          <div className="flex justify-end">
+            <div className="inline-flex rounded-lg overflow-hidden border">
+              <Button
+                variant={viewMode === "dia" ? "default" : "outline"}
+                onClick={() => handleViewModeChange("dia")}
+                className="rounded-none rounded-l-lg font-semibold text-xs py-1.5 px-3"
+                size="sm"
+              >
+                Dia
+              </Button>
+              <Button
+                variant={viewMode === "semana" ? "default" : "outline"}
+                onClick={() => handleViewModeChange("semana")}
+                className="rounded-none border-l-0 border-r-0 font-semibold text-xs py-1.5 px-3"
+                size="sm"
+              >
+                Semana
+              </Button>
+              <Button
+                variant={viewMode === "mes" ? "default" : "outline"}
+                onClick={() => handleViewModeChange("mes")}
+                className="rounded-none rounded-r-lg font-semibold text-xs py-1.5 px-3"
+                size="sm"
+              >
+                Mes
+              </Button>
             </div>
           </div>
         </div>

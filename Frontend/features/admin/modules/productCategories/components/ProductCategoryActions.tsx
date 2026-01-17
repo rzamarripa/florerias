@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Spinner, Button } from "react-bootstrap";
-import { Edit2, CheckCircle, XCircle } from "lucide-react";
-import { toast } from "react-toastify";
+import { Edit2, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { productCategoriesService } from "../services/productCategories";
 import { ProductCategory } from "../types";
+
+import { Button } from "@/components/ui/button";
 
 interface ProductCategoryActionsProps {
   category: ProductCategory;
@@ -45,39 +46,31 @@ const ProductCategoryActions: React.FC<ProductCategoryActionsProps> = ({
   };
 
   return (
-    <div className="d-flex justify-content-center gap-2">
-      {/* Edit Button */}
+    <div className="flex justify-center gap-2">
       <Button
-        variant="light"
-        size="sm"
-        className="rounded-circle"
-        style={{ width: "32px", height: "32px", padding: "0" }}
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
         onClick={handleEdit}
         title="Editar categoría"
       >
-        <Edit2 size={16} />
+        <Edit2 className="h-4 w-4" />
       </Button>
 
-      {/* Toggle Status Button */}
       <Button
-        variant={category.isActive ? "light" : "light"}
-        size="sm"
-        className="rounded-circle"
-        style={{ width: "32px", height: "32px", padding: "0" }}
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
         onClick={handleToggleStatus}
         disabled={isToggling}
         title={category.isActive ? "Desactivar categoría" : "Activar categoría"}
       >
         {isToggling ? (
-          <Spinner
-            animation="border"
-            size="sm"
-            style={{ width: "16px", height: "16px" }}
-          />
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : category.isActive ? (
-          <XCircle size={16} className="text-danger" />
+          <XCircle className="h-4 w-4 text-destructive" />
         ) : (
-          <CheckCircle size={16} className="text-success" />
+          <CheckCircle className="h-4 w-4 text-green-600" />
         )}
       </Button>
     </div>

@@ -2,15 +2,27 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Card,
-  Form,
-  Button,
-  Row,
-  Col,
-  Badge,
-  Alert,
-  Modal,
-} from "react-bootstrap";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   User,
   Phone,
@@ -105,7 +117,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
   const [arregloFile, setArregloFile] = useState<File | null>(null);
 
-  // Estado interno para datos que antes venían como props
+  // Estado interno para datos que antes venian como props
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
@@ -119,7 +131,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [showRedeemedRewardsModal, setShowRedeemedRewardsModal] = useState(false);
   const [appliedReward, setAppliedReward] = useState<AppliedRewardInfo | null>(null);
   const [selectedClientForRewards, setSelectedClientForRewards] = useState<Client | null>(null);
-  
+
   // Estado para pago con Stripe
   const [showStripeModal, setShowStripeModal] = useState(false);
   const [stripePaymentData, setStripePaymentData] = useState<any>(null);
@@ -147,7 +159,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   };
 
-  // Cargar métodos de pago filtrados por sucursal si hay una seleccionada
+  // Cargar metodos de pago filtrados por sucursal si hay una seleccionada
   const fetchPaymentMethods = async (branchId?: string) => {
     setLoadingPaymentMethods(true);
     try {
@@ -155,16 +167,16 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         limit: 1000,
         status: true,
       };
-      
-      // Si hay un branchId (del formulario o pasado como parámetro), usarlo como filtro
+
+      // Si hay un branchId (del formulario o pasado como parametro), usarlo como filtro
       const branchToUse = branchId || formData.branchId;
       if (branchToUse) {
         filters.branchId = branchToUse;
       }
-      
+
       const response = await paymentMethodsService.getAllPaymentMethods(filters);
       setPaymentMethods(response.data);
-      // Establecer el primer método de pago si no hay uno seleccionado
+      // Establecer el primer metodo de pago si no hay uno seleccionado
       if (response.data.length > 0 && !formData.paymentMethod) {
         setFormData((prev) => ({
           ...prev,
@@ -172,8 +184,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         }));
       }
     } catch (err) {
-      console.error("Error al cargar métodos de pago:", err);
-      toast.error("Error al cargar los métodos de pago");
+      console.error("Error al cargar metodos de pago:", err);
+      toast.error("Error al cargar los metodos de pago");
     } finally {
       setLoadingPaymentMethods(false);
     }
@@ -199,7 +211,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   // Cargar datos al montar o cuando se abre el modal
   useEffect(() => {
     if (show) {
-      // Pasar el branchId del formulario para filtrar métodos de pago
+      // Pasar el branchId del formulario para filtrar metodos de pago
       fetchPaymentMethods(formData.branchId);
       fetchNeighborhoods();
       if (formData.branchId) {
@@ -211,10 +223,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   // Efecto para actualizar el cliente seleccionado cuando se escanea un QR
   useEffect(() => {
     if (show && scannedClientId && clients.length > 0) {
-      // Buscar si el cliente escaneado está en la lista de clientes
+      // Buscar si el cliente escaneado esta en la lista de clientes
       const clientExists = clients.find(c => c._id === scannedClientId);
       if (clientExists) {
-        // Seleccionar automáticamente el cliente en el select
+        // Seleccionar automaticamente el cliente en el select
         setSelectedClientId(scannedClientId);
         handleClientSelect(scannedClientId);
       }
@@ -246,7 +258,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   }, [show, scannedClientId]);
 
-  // Efecto para manejar el envío de la orden después del pago con Stripe
+  // Efecto para manejar el envio de la orden despues del pago con Stripe
   useEffect(() => {
     if (shouldSubmitOrder && pendingFiles && stripePaymentData) {
       // Asegurar que el formData tenga los datos de Stripe antes de enviar
@@ -255,14 +267,14 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         stripePaymentMethodId: formData.stripePaymentMethodId,
         stripePaymentStatus: formData.stripePaymentStatus,
       });
-      
+
       const fakeEvent = new Event('submit') as any;
       onSubmit(fakeEvent, pendingFiles);
       setShouldSubmitOrder(false);
     }
   }, [shouldSubmitOrder, formData.stripePaymentIntentId]);
 
-  // Manejar selección de cliente
+  // Manejar seleccion de cliente
   const handleClientSelect = (clientId: string) => {
     setSelectedClientId(clientId);
 
@@ -271,7 +283,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     setSelectedClientForRewards(null);
 
     if (!clientId) {
-      // Recalcular total sin recompensa si había una aplicada
+      // Recalcular total sin recompensa si habia una aplicada
       const manualDiscountAmount =
         formData.discountType === "porcentaje"
           ? (formData.subtotal * (formData.discount || 0)) / 100
@@ -298,7 +310,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     const selectedClient = clients.find((c) => c._id === clientId);
     if (selectedClient) {
       setSelectedClientForRewards(selectedClient);
-      // Recalcular total sin recompensa si había una aplicada
+      // Recalcular total sin recompensa si habia una aplicada
       const manualDiscountAmount =
         formData.discountType === "porcentaje"
           ? (formData.subtotal * (formData.discount || 0)) / 100
@@ -352,7 +364,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }));
   };
 
-  // Manejar cambio de tipo de envío
+  // Manejar cambio de tipo de envio
   const handleShippingTypeChange = (shippingType: ShippingType) => {
     const deliveryPrice = shippingType === "tienda" ? 0 : formData.deliveryData.deliveryPrice || 0;
     const discountAmount =
@@ -401,7 +413,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }));
   };
 
-  // Manejar selección de recompensa desde el modal
+  // Manejar seleccion de recompensa desde el modal
   const handleSelectReward = (rewardItem: AvailableRewardItem) => {
     console.log("Reward seleccionado:", {
       isProducto: rewardItem.reward.isProducto,
@@ -532,8 +544,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Verificar si el método de pago seleccionado es tarjeta
+
+    // Verificar si el metodo de pago seleccionado es tarjeta
     const selectedMethod = paymentMethods.find(m => m._id === formData.paymentMethod);
     if (selectedMethod && isCardPaymentMethod(selectedMethod.name)) {
       // Si es pago con tarjeta, guardar datos y abrir modal de Stripe
@@ -545,15 +557,15 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       onSubmit(e, { comprobante: comprobanteFile, arreglo: arregloFile });
     }
   };
-  
-  // Manejar éxito del pago con Stripe
+
+  // Manejar exito del pago con Stripe
   const handleStripePaymentSuccess = (paymentData: any) => {
     console.log("Pago exitoso con Stripe, datos recibidos:", paymentData);
-    
+
     setStripePaymentData(paymentData);
     setShowStripeModal(false);
-    
-    // Actualizar el formData con la información del pago
+
+    // Actualizar el formData con la informacion del pago
     const updatedFormData = {
       ...pendingOrderData,
       stripePaymentIntentId: paymentData.paymentIntentId,
@@ -561,18 +573,18 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       stripePaymentStatus: paymentData.status,
       stripeCustomerId: paymentData.stripeCustomerId,
     };
-    
+
     console.log("Actualizando formData con datos de Stripe:", updatedFormData);
-    
+
     // IMPORTANTE: Actualizar el estado formData del componente padre con los datos de Stripe
     setFormData(updatedFormData);
-    
-    // Activar el flag para que el useEffect envíe la orden
+
+    // Activar el flag para que el useEffect envie la orden
     setShouldSubmitOrder(true);
-    
+
     toast.success("Pago procesado exitosamente. Creando orden...");
   };
-  
+
   // Manejar error del pago con Stripe
   const handleStripePaymentError = (error: string) => {
     toast.error(`Error en el pago: ${error}`);
@@ -580,242 +592,245 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" centered backdrop="static">
-      <Form onSubmit={handleSubmit}>
-        <Modal.Header closeButton>
-          <Modal.Title className="d-flex align-items-center gap-2">
-            <CreditCard size={20} />
-            Datos del pedido
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {error && (
-            <Alert
-              variant="danger"
-              onClose={() => setError(null)}
-              dismissible
-              className="mb-3"
-            >
-              {error}
-            </Alert>
-          )}
-          {success && (
-            <Alert
-              variant="success"
-              onClose={() => setSuccess(false)}
-              dismissible
-              className="mb-3"
-            >
-              ¡Pedido creado exitosamente!
-            </Alert>
-          )}
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="!w-[80vw] !max-w-none max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard size={20} />
+              Datos del pedido
+            </DialogTitle>
+          </DialogHeader>
 
-          <Row className="g-3">
-            {/* Cliente */}
-            <Col lg={6}>
-              <Card className="border-0 shadow-sm h-100">
-                <Card.Header className="bg-white border-0 py-3">
-                  <div className="d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center gap-2">
-                      <User size={18} className="text-primary" />
-                      <h6 className="mb-0 fw-bold">Cliente</h6>
+          <div className="py-4">
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription className="flex justify-between items-center">
+                  {error}
+                  <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+                    <X size={14} />
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+            {success && (
+              <Alert className="mb-4 bg-green-50 border-green-200">
+                <AlertDescription className="flex justify-between items-center">
+                  Pedido creado exitosamente!
+                  <Button variant="ghost" size="sm" onClick={() => setSuccess(false)}>
+                    <X size={14} />
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Main 2-column layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column: Cliente + Tipo de Envio */}
+              <div className="space-y-6">
+                {/* Cliente Card */}
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <User size={18} className="text-primary" />
+                        <h6 className="font-bold text-base">Cliente</h6>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => setShowClientInfo(!showClientInfo)}
+                        className="flex items-center gap-2"
+                      >
+                        {showClientInfo ? (
+                          <>
+                            <EyeOff size={16} />
+                            Ocultar
+                          </>
+                        ) : (
+                          <>
+                            <Eye size={16} />
+                            Ver
+                          </>
+                        )}
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={() => setShowClientInfo(!showClientInfo)}
-                      className="d-flex align-items-center gap-2"
-                    >
-                      {showClientInfo ? (
-                        <>
-                          <EyeOff size={16} />
-                          Ocultar
-                        </>
-                      ) : (
-                        <>
-                          <Eye size={16} />
-                          Ver
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </Card.Header>
-                <Card.Body>
-                  <Row className="g-3">
-                    <Col md={12}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">
-                          <Search size={16} className="me-2" />
-                          Buscar cliente existente
-                        </Form.Label>
-                        <Form.Select
-                          value={selectedClientId}
-                          onChange={(e) => handleClientSelect(e.target.value)}
-                          className="py-2"
-                          disabled={loadingClients}
-                        >
-                          <option value="">
-                            Seleccionar cliente o ingresar nuevo...
-                          </option>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Buscar cliente */}
+                    <div>
+                      <Label className="font-semibold flex items-center gap-1 mb-2">
+                        <Search size={16} />
+                        Buscar cliente existente
+                      </Label>
+                      <Select
+                        value={selectedClientId}
+                        onValueChange={(value) => handleClientSelect(value)}
+                        disabled={loadingClients}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar cliente o ingresar nuevo..." />
+                        </SelectTrigger>
+                        <SelectContent>
                           {clients.map((client) => (
-                            <option key={client._id} value={client._id}>
+                            <SelectItem key={client._id} value={client._id}>
                               {client.name} {client.lastName} - {client.phoneNumber}
-                            </option>
+                            </SelectItem>
                           ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     {/* Recompensa - Solo mostrar si hay cliente seleccionado */}
                     {selectedClientId && (
-                      <Col md={12}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            <Gift size={16} className="me-2" />
-                            Recompensa
-                          </Form.Label>
-                          {appliedReward ? (
-                            <Alert variant="success" className="mb-0 py-2 px-3 d-flex align-items-center justify-content-between">
-                              <div className="d-flex align-items-center gap-2">
-                                <Check size={16} />
-                                <span>
-                                  <strong>{appliedReward.name}</strong>
-                                  {" - "}
-                                  {appliedReward.rewardValue === 0
-                                    ? "Producto gratis"
-                                    : appliedReward.isPercentage
-                                    ? `${appliedReward.rewardValue}% descuento`
-                                    : `$${appliedReward.rewardValue.toFixed(2)} de valor`}
-                                </span>
-                              </div>
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={handleRemoveReward}
-                                className="ms-2 py-0 px-2"
-                              >
-                                <X size={14} />
-                              </Button>
-                            </Alert>
-                          ) : (
-                            <div className="d-flex gap-2">
-                              <Button
-                                variant="outline-primary"
-                                onClick={() => setShowRewardsModal(true)}
-                                className="flex-fill py-2 d-flex align-items-center justify-content-center gap-2"
-                              >
-                                <Gift size={16} />
-                                Usar recompensa
-                              </Button>
-                              <Button
-                                variant="outline-success"
-                                onClick={() => setShowRedeemedRewardsModal(true)}
-                                className="flex-fill py-2 d-flex align-items-center justify-content-center gap-2"
-                                title="Ver todas las recompensas reclamadas del cliente"
-                              >
-                                <Eye size={16} />
-                                Ver recompensas
-                              </Button>
+                      <div>
+                        <Label className="font-semibold flex items-center gap-1 mb-2">
+                          <Gift size={16} />
+                          Recompensa
+                        </Label>
+                        {appliedReward ? (
+                          <Alert className="py-2 px-3 flex items-center justify-between bg-green-50 border-green-200">
+                            <div className="flex items-center gap-2">
+                              <Check size={16} className="text-green-600" />
+                              <span className="text-sm">
+                                <strong>{appliedReward.name}</strong>
+                                {" - "}
+                                {appliedReward.rewardValue === 0
+                                  ? "Producto gratis"
+                                  : appliedReward.isPercentage
+                                  ? `${appliedReward.rewardValue}% descuento`
+                                  : `$${appliedReward.rewardValue.toFixed(2)} de valor`}
+                              </span>
                             </div>
-                          )}
-                        </Form.Group>
-                      </Col>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              type="button"
+                              onClick={handleRemoveReward}
+                              className="ml-2 py-0 px-2 text-red-600 border-red-300 hover:bg-red-50"
+                            >
+                              <X size={14} />
+                            </Button>
+                          </Alert>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              type="button"
+                              onClick={() => setShowRewardsModal(true)}
+                              className="flex items-center justify-center gap-2"
+                            >
+                              <Gift size={16} />
+                              Usar recompensa
+                            </Button>
+                            <Button
+                              variant="outline"
+                              type="button"
+                              onClick={() => setShowRedeemedRewardsModal(true)}
+                              className="flex items-center justify-center gap-2 text-green-600 border-green-300 hover:bg-green-50"
+                              title="Ver todas las recompensas reclamadas del cliente"
+                            >
+                              <Eye size={16} />
+                              Ver recompensas
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     )}
 
+                    {/* Caja registradora */}
                     {!isSocialMedia && (
-                      <Col md={12}>
-                        <Form.Group>
-                          <Form.Label className="fw-semibold">
-                            <CreditCard size={16} className="me-2" />
-                            Caja registradora
-                          </Form.Label>
-                          <div className="d-flex gap-2">
-                            <Form.Control
-                              type="text"
-                              value={
-                                loadingCashRegister
-                                  ? "Cargando..."
-                                  : cashRegister
-                                  ? cashRegister.name
-                                  : "No hay caja asignada"
-                              }
-                              readOnly
-                              disabled
-                              className="py-2 bg-light"
-                            />
-                            {cashRegister ? (
-                              <Badge
-                                bg={cashRegister.isOpen ? "success" : "secondary"}
-                                className="d-flex align-items-center justify-content-center py-2 px-3"
-                                style={{ minWidth: "120px", fontSize: "0.9rem" }}
+                      <div>
+                        <Label className="font-semibold flex items-center gap-1 mb-2">
+                          <CreditCard size={16} />
+                          Caja registradora
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="text"
+                            value={
+                              loadingCashRegister
+                                ? "Cargando..."
+                                : cashRegister
+                                ? cashRegister.name
+                                : "No hay caja asignada"
+                            }
+                            readOnly
+                            disabled
+                            className="bg-gray-50 flex-1"
+                          />
+                          {cashRegister ? (
+                            <Badge
+                              variant={cashRegister.isOpen ? "default" : "secondary"}
+                              className={`flex items-center justify-center px-3 min-w-[100px] ${
+                                cashRegister.isOpen ? "bg-green-500" : ""
+                              }`}
+                            >
+                              {cashRegister.isOpen ? "Abierta" : "Cerrada"}
+                            </Badge>
+                          ) : (
+                            !loadingCashRegister && (
+                              <Button
+                                variant="default"
+                                type="button"
+                                onClick={() => router.push("/ventas/cajas")}
+                                className="flex items-center gap-2"
                               >
-                                {cashRegister.isOpen ? "🟢 Abierta" : "🔴 Cerrada"}
-                              </Badge>
-                            ) : (
-                              !loadingCashRegister && (
-                                <Button
-                                  variant="primary"
-                                  onClick={() => router.push("/ventas/cajas")}
-                                  className="d-flex align-items-center gap-2"
-                                  style={{ minWidth: "160px" }}
-                                >
-                                  <ExternalLink size={16} />
-                                  Ir a Cajas
-                                </Button>
-                              )
-                            )}
-                          </div>
-                        </Form.Group>
-                      </Col>
+                                <ExternalLink size={16} />
+                                Ir a Cajas
+                              </Button>
+                            )
+                          )}
+                        </div>
+                      </div>
                     )}
 
                     {showClientInfo && (
                       <>
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="fw-semibold d-flex justify-content-between align-items-center">
-                              <span>
-                                <User size={16} className="me-2" />
-                                Cliente
+                        {/* Nombre y Telefono - paired fields */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="font-semibold flex justify-between items-center mb-2">
+                              <span className="flex items-center gap-1">
+                                <User size={16} />
+                                Nombre
                               </span>
                               {onScanQR && (
                                 <Button
-                                  variant="outline-primary"
+                                  variant="outline"
                                   size="sm"
+                                  type="button"
                                   onClick={onScanQR}
-                                  className="ms-2"
                                 >
-                                  <ScanLine size={14} className="me-1" />
-                                  Escanear QR
+                                  <ScanLine size={14} className="mr-1" />
+                                  QR
                                 </Button>
                               )}
-                            </Form.Label>
-                            <Form.Control
+                            </Label>
+                            <Input
                               type="text"
                               placeholder="Nombre del cliente"
                               value={formData.clientInfo.name}
                               onChange={(e) => {
-                                resetCustomValidationMessage(e);
+                                resetCustomValidationMessage(e as any);
                                 setFormData((prev) => ({
                                   ...prev,
                                   clientInfo: { ...prev.clientInfo, name: e.target.value },
                                 }));
                               }}
-                              onInvalid={setCustomValidationMessage}
+                              onInvalid={(e) => setCustomValidationMessage(e as any)}
                               required
-                              className="py-2"
                             />
-                          </Form.Group>
-                        </Col>
-                        <Col md={3}>
-                          <Form.Group>
-                            <Form.Label className="fw-semibold">
-                              <Phone size={16} className="me-2" />
-                              Teléfono
-                            </Form.Label>
-                            <Form.Control
+                          </div>
+                          <div>
+                            <Label className="font-semibold flex items-center gap-1 mb-2">
+                              <Phone size={16} />
+                              Telefono
+                            </Label>
+                            <Input
                               type="tel"
-                              placeholder="Teléfono"
+                              placeholder="Telefono"
                               value={formData.clientInfo.phone}
                               onChange={(e) =>
                                 setFormData((prev) => ({
@@ -823,586 +838,599 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                   clientInfo: { ...prev.clientInfo, phone: e.target.value },
                                 }))
                               }
-                              className="py-2"
                             />
-                          </Form.Group>
-                        </Col>
-                        <Col md={3}>
-                          <Form.Group>
-                            <Form.Label className="fw-semibold">
-                              <Mail size={16} className="me-2" />
-                              Correo
-                            </Form.Label>
-                            <Form.Control
-                              type="email"
-                              placeholder="Correo electrónico"
-                              value={formData.clientInfo.email}
-                              onChange={(e) =>
+                          </div>
+                        </div>
+
+                        {/* Correo - full width */}
+                        <div>
+                          <Label className="font-semibold flex items-center gap-1 mb-2">
+                            <Mail size={16} />
+                            Correo
+                          </Label>
+                          <Input
+                            type="email"
+                            placeholder="Correo electronico"
+                            value={formData.clientInfo.email}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                clientInfo: { ...prev.clientInfo, email: e.target.value },
+                              }))
+                            }
+                          />
+                        </div>
+
+                        {/* Canal de venta */}
+                        {!isSocialMedia && !isCashier && (
+                          <div>
+                            <Label className="font-semibold flex items-center gap-1 mb-2">
+                              <Store size={16} />
+                              Canal de venta
+                            </Label>
+                            <Select
+                              value={formData.salesChannel}
+                              onValueChange={(value) =>
                                 setFormData((prev) => ({
                                   ...prev,
-                                  clientInfo: { ...prev.clientInfo, email: e.target.value },
+                                  salesChannel: value as "tienda" | "whatsapp" | "facebook" | "instagram",
                                 }))
                               }
-                              className="py-2"
-                            />
-                          </Form.Group>
-                        </Col>
-
-                        {!isSocialMedia && !isCashier && (
-                          <Col md={12}>
-                            <Form.Group>
-                              <Form.Label className="fw-semibold">
-                                <Store size={16} className="me-2" />
-                                Canal de venta
-                              </Form.Label>
-                              <Form.Select
-                                value={formData.salesChannel}
-                                onChange={(e) =>
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    salesChannel: e.target.value as "tienda" | "whatsapp" | "facebook" | "instagram",
-                                  }))
-                                }
-                                required
-                                className="py-2"
-                              >
-                                <option value="tienda">Tienda</option>
-                                <option value="whatsapp">WhatsApp</option>
-                                <option value="facebook">Facebook</option>
-                                <option value="instagram">Instagram</option>
-                              </Form.Select>
-                            </Form.Group>
-                          </Col>
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="tienda">Tienda</SelectItem>
+                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                <SelectItem value="facebook">Facebook</SelectItem>
+                                <SelectItem value="instagram">Instagram</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         )}
                       </>
                     )}
-                  </Row>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
+                  </CardContent>
+                </Card>
 
-          {/* Tipo de Envío */}
-          <Card className="mb-4 border-0 shadow-sm">
-            <Card.Header className="bg-white border-0 py-3">
-              <div className="d-flex align-items-center gap-2">
-                <Send size={20} className="text-primary" />
-                <h5 className="mb-0 fw-bold">Tipo de Envío</h5>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row className="g-3">
-                {isSocialMedia ? (
-                  <>
-                    <Col md={12}>
-                      <Alert variant="info" className="mb-3">
-                        Como usuario de Redes Sociales, solo puedes crear órdenes de tipo "Redes Sociales"
-                      </Alert>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">
-                          <Store size={16} className="me-2" />
-                          Tipo de Envío
-                        </Form.Label>
-                        <Form.Control type="text" value="Redes Sociales" disabled className="py-2 bg-light" />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">
-                          <Store size={16} className="me-2" />
-                          Plataforma de Redes Sociales
-                        </Form.Label>
-                        <Form.Select
-                          value={formData.socialMedia || "whatsapp"}
+                {/* Tipo de Envio Card */}
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <Send size={18} className="text-primary" />
+                      <h6 className="font-bold text-base">Tipo de Envio</h6>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {isSocialMedia ? (
+                      <>
+                        <Alert className="bg-blue-50 border-blue-200">
+                          <AlertDescription>
+                            Como usuario de Redes Sociales, solo puedes crear ordenes de tipo "Redes Sociales"
+                          </AlertDescription>
+                        </Alert>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="font-semibold flex items-center gap-1 mb-2">
+                              <Store size={16} />
+                              Tipo de Envio
+                            </Label>
+                            <Input type="text" value="Redes Sociales" disabled className="bg-gray-50" />
+                          </div>
+                          <div>
+                            <Label className="font-semibold flex items-center gap-1 mb-2">
+                              <Store size={16} />
+                              Plataforma
+                            </Label>
+                            <Select
+                              value={formData.socialMedia || "whatsapp"}
+                              onValueChange={(value) => {
+                                const platform = value as "whatsapp" | "facebook" | "instagram";
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  socialMedia: platform,
+                                  salesChannel: platform,
+                                }));
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                <SelectItem value="facebook">Facebook</SelectItem>
+                                <SelectItem value="instagram">Instagram</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-wrap gap-4 items-center">
+                        {["envio", "tienda"].map((tipo) => (
+                          <div key={tipo} className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id={`envio-${tipo}`}
+                              name="envio"
+                              value={tipo}
+                              checked={formData.shippingType === tipo}
+                              onChange={(e) => handleShippingTypeChange(e.target.value as ShippingType)}
+                              className="h-4 w-4"
+                            />
+                            <label htmlFor={`envio-${tipo}`} className="text-sm font-medium">
+                              {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                            </label>
+                          </div>
+                        ))}
+                        <div className="border-l pl-4 flex gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="anonimo-check"
+                              checked={formData.anonymous}
+                              onCheckedChange={(checked) =>
+                                setFormData((prev) => ({ ...prev, anonymous: checked as boolean }))
+                              }
+                            />
+                            <label htmlFor="anonimo-check" className="text-sm font-medium">
+                              Anonimo
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="venta-rapida-check"
+                              checked={formData.quickSale}
+                              onCheckedChange={(checked) =>
+                                setFormData((prev) => ({ ...prev, quickSale: checked as boolean }))
+                              }
+                            />
+                            <label htmlFor="venta-rapida-check" className="text-sm font-medium">
+                              Venta Rapida
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Nombre receptor y Fecha - paired */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="font-semibold mb-2 block">Nombre de quien recibe</Label>
+                        <Input
+                          type="text"
+                          placeholder="Nombre del receptor"
+                          value={formData.deliveryData.recipientName}
                           onChange={(e) => {
-                            const platform = e.target.value as "whatsapp" | "facebook" | "instagram";
+                            resetCustomValidationMessage(e as any);
                             setFormData((prev) => ({
                               ...prev,
-                              socialMedia: platform,
-                              salesChannel: platform,
+                              deliveryData: { ...prev.deliveryData, recipientName: e.target.value },
                             }));
                           }}
+                          onInvalid={(e) => setCustomValidationMessage(e as any)}
                           required
-                          className="py-2"
-                        >
-                          <option value="whatsapp">WhatsApp</option>
-                          <option value="facebook">Facebook</option>
-                          <option value="instagram">Instagram</option>
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </>
-                ) : (
-                  <Col md={12}>
-                    <div className="d-flex gap-4 flex-wrap align-items-center">
-                      {["envio", "tienda"].map((tipo) => (
-                        <Form.Check
-                          key={tipo}
-                          type="radio"
-                          id={`envio-${tipo}`}
-                          name="envio"
-                          label={tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-                          value={tipo}
-                          checked={formData.shippingType === tipo}
-                          onChange={(e) => handleShippingTypeChange(e.target.value as ShippingType)}
-                          className="custom-radio"
                         />
-                      ))}
-                      <div className="border-start ps-3 d-flex gap-3">
-                        <Form.Check
-                          type="checkbox"
-                          id="anonimo-check"
-                          label="Anónimo"
-                          checked={formData.anonymous}
-                          onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, anonymous: e.target.checked }))
-                          }
-                        />
-                        <Form.Check
-                          type="checkbox"
-                          id="venta-rapida-check"
-                          label="Venta Rápida"
-                          checked={formData.quickSale}
-                          onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, quickSale: e.target.checked }))
-                          }
+                      </div>
+                      <div>
+                        <Label className="font-semibold mb-2 block">Fecha y hora de entrega</Label>
+                        <Input
+                          type="datetime-local"
+                          value={formData.deliveryData.deliveryDateTime}
+                          onChange={(e) => {
+                            resetCustomValidationMessage(e as any);
+                            setFormData((prev) => ({
+                              ...prev,
+                              deliveryData: { ...prev.deliveryData, deliveryDateTime: e.target.value },
+                            }));
+                          }}
+                          onInvalid={(e) => setCustomValidationMessage(e as any)}
+                          min={new Date().toISOString().slice(0, 16)}
+                          required
                         />
                       </div>
                     </div>
-                  </Col>
-                )}
 
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Nombre de quien recibe</Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Nombre del receptor"
-                      value={formData.deliveryData.recipientName}
-                      onChange={(e) => {
-                        resetCustomValidationMessage(e);
-                        setFormData((prev) => ({
-                          ...prev,
-                          deliveryData: { ...prev.deliveryData, recipientName: e.target.value },
-                        }));
-                      }}
-                      onInvalid={setCustomValidationMessage}
-                      required
-                      className="py-2"
-                    />
-                  </Form.Group>
-                </Col>
-
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Fecha y hora de entrega</Form.Label>
-                    <Form.Control
-                      type="datetime-local"
-                      value={formData.deliveryData.deliveryDateTime}
-                      onChange={(e) => {
-                        resetCustomValidationMessage(e);
-                        setFormData((prev) => ({
-                          ...prev,
-                          deliveryData: { ...prev.deliveryData, deliveryDateTime: e.target.value },
-                        }));
-                      }}
-                      onInvalid={setCustomValidationMessage}
-                      min={new Date().toISOString().slice(0, 16)}
-                      required
-                      className="py-2"
-                    />
-                  </Form.Group>
-                </Col>
-
-                <Col md={12}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Mensaje / Comentario</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      placeholder="Mensaje para la tarjeta o comentario"
-                      value={formData.deliveryData.message}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          deliveryData: { ...prev.deliveryData, message: e.target.value },
-                        }))
-                      }
-                    />
-                  </Form.Group>
-                </Col>
-
-                {formData.shippingType === "envio" && (
-                  <>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">Calle y número</Form.Label>
-                        <Form.Control
-                          type="text"
-                          placeholder="Ej: Av. Principal #123"
-                          value={formData.deliveryData.street}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              deliveryData: { ...prev.deliveryData, street: e.target.value },
-                            }))
-                          }
-                          className="py-2"
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">Colonia</Form.Label>
-                        <Form.Select
-                          value={formData.deliveryData.neighborhoodId}
-                          onChange={(e) => handleNeighborhoodChange(e.target.value)}
-                          className="py-2"
-                          disabled={loadingNeighborhoods}
-                        >
-                          <option value="">Seleccionar colonia...</option>
-                          {neighborhoods.map((neighborhood) => (
-                            <option key={neighborhood._id} value={neighborhood._id}>
-                              {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                    <Col md={12}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold">Señas o referencias</Form.Label>
-                        <Form.Control
-                          as="textarea"
-                          rows={2}
-                          placeholder="Ej: Casa blanca con portón negro..."
-                          value={formData.deliveryData.reference}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              deliveryData: { ...prev.deliveryData, reference: e.target.value },
-                            }))
-                          }
-                        />
-                      </Form.Group>
-                    </Col>
-                  </>
-                )}
-
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
-                      <Upload size={16} className="me-2" />
-                      Comprobante
-                    </Form.Label>
-                    <Form.Control
-                      type="file"
-                      className="py-2"
-                      accept="image/*,.pdf"
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        const file = e.target.files?.[0];
-                        if (file) setComprobanteFile(file);
-                      }}
-                    />
-                    {comprobanteFile && (
-                      <Form.Text className="text-success">✓ {comprobanteFile.name}</Form.Text>
-                    )}
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
-                      <Upload size={16} className="me-2" />
-                      Arreglo
-                    </Form.Label>
-                    <Form.Control
-                      type="file"
-                      className="py-2"
-                      accept="image/*"
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        const file = e.target.files?.[0];
-                        if (file) setArregloFile(file);
-                      }}
-                    />
-                    {arregloFile && (
-                      <Form.Text className="text-success">✓ {arregloFile.name}</Form.Text>
-                    )}
-                  </Form.Group>
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-
-          {/* Forma de Pago y Resumen */}
-          <Card className="mb-4 border-0 shadow-sm">
-            <Card.Header className="bg-white border-0 py-3">
-              <div className="d-flex align-items-center gap-2">
-                <CreditCard size={20} className="text-primary" />
-                <h5 className="mb-0 fw-bold">Forma de Pago</h5>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row className="g-3">
-                <Col md={12}>
-                  <Form.Label className="fw-semibold">Método de Pago</Form.Label>
-                  <div className="d-flex gap-2 flex-wrap">
-                    {loadingPaymentMethods ? (
-                      <div className="text-muted">Cargando métodos de pago...</div>
-                    ) : paymentMethods.length === 0 ? (
-                      <Alert variant="danger" className="mb-0 w-100">
-                        No hay métodos de pago disponibles.
-                      </Alert>
-                    ) : (
-                      paymentMethods.map((method) => {
-                        const isDisabled =
-                          isSocialMedia && method.name.toLowerCase() === "efectivo";
-                        return (
-                          <Button
-                            key={method._id}
-                            variant={
-                              formData.paymentMethod === method._id
-                                ? "primary"
-                                : "outline-secondary"
-                            }
-                            size="sm"
-                            onClick={() =>
-                              setFormData((prev) => ({ ...prev, paymentMethod: method._id }))
-                            }
-                            disabled={isDisabled}
-                            className="px-3"
-                            title={
-                              isDisabled
-                                ? "Los usuarios de Redes Sociales no pueden usar efectivo"
-                                : ""
-                            }
-                          >
-                            {method.name}
-                          </Button>
-                        );
-                      })
-                    )}
-                  </div>
-                  {isSocialMedia && (
-                    <Alert variant="warning" className="mt-2 mb-0 py-2">
-                      <small>
-                        ℹ️ Los usuarios de Redes Sociales no pueden usar el método de pago "Efectivo"
-                      </small>
-                    </Alert>
-                  )}
-                </Col>
-
-                <Col md={12}>
-                  <hr />
-                </Col>
-
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Descuento</Form.Label>
-                    <div className="input-group">
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.discount}
+                    {/* Mensaje - full width */}
+                    <div>
+                      <Label className="font-semibold mb-2 block">Mensaje / Comentario</Label>
+                      <Textarea
+                        rows={2}
+                        placeholder="Mensaje para la tarjeta o comentario"
+                        value={formData.deliveryData.message}
                         onChange={(e) =>
-                          onDiscountChange(
-                            parseFloat(e.target.value) || 0,
-                            formData.discountType || "porcentaje"
-                          )
+                          setFormData((prev) => ({
+                            ...prev,
+                            deliveryData: { ...prev.deliveryData, message: e.target.value },
+                          }))
                         }
-                        className="py-2"
-                        placeholder="Ingresa el descuento"
                       />
-                      <Form.Select
-                        value={formData.discountType}
-                        onChange={(e) =>
-                          onDiscountChange(
-                            formData.discount || 0,
-                            e.target.value as "porcentaje" | "cantidad"
-                          )
-                        }
-                        style={{ maxWidth: "100px" }}
-                      >
-                        <option value="porcentaje">%</option>
-                        <option value="cantidad">$</option>
-                      </Form.Select>
+                    </div>
+
+                    {formData.shippingType === "envio" && (
+                      <>
+                        {/* Calle y Colonia - paired */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="font-semibold mb-2 block">Calle y numero</Label>
+                            <Input
+                              type="text"
+                              placeholder="Ej: Av. Principal #123"
+                              value={formData.deliveryData.street}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  deliveryData: { ...prev.deliveryData, street: e.target.value },
+                                }))
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label className="font-semibold mb-2 block">Colonia</Label>
+                            <Select
+                              value={formData.deliveryData.neighborhoodId}
+                              onValueChange={(value) => handleNeighborhoodChange(value)}
+                              disabled={loadingNeighborhoods}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar colonia..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {neighborhoods.map((neighborhood) => (
+                                  <SelectItem key={neighborhood._id} value={neighborhood._id}>
+                                    {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Referencias - full width */}
+                        <div>
+                          <Label className="font-semibold mb-2 block">Senas o referencias</Label>
+                          <Textarea
+                            rows={2}
+                            placeholder="Ej: Casa blanca con porton negro..."
+                            value={formData.deliveryData.reference}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                deliveryData: { ...prev.deliveryData, reference: e.target.value },
+                              }))
+                            }
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Archivos - paired */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="font-semibold flex items-center gap-1 mb-2">
+                          <Upload size={16} />
+                          Comprobante
+                        </Label>
+                        <Input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            const file = e.target.files?.[0];
+                            if (file) setComprobanteFile(file);
+                          }}
+                        />
+                        {comprobanteFile && (
+                          <p className="text-sm text-green-600 mt-1 truncate">
+                            Archivo: {comprobanteFile.name}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="font-semibold flex items-center gap-1 mb-2">
+                          <Upload size={16} />
+                          Arreglo
+                        </Label>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            const file = e.target.files?.[0];
+                            if (file) setArregloFile(file);
+                          }}
+                        />
+                        {arregloFile && (
+                          <p className="text-sm text-green-600 mt-1 truncate">
+                            Archivo: {arregloFile.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column: Forma de Pago */}
+              <div>
+                <Card className="border shadow-sm h-full">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <CreditCard size={18} className="text-primary" />
+                      <h6 className="font-bold text-base">Forma de Pago</h6>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Metodo de Pago */}
+                    <div>
+                      <Label className="font-semibold mb-2 block">Metodo de Pago</Label>
+                      <div className="flex gap-2 flex-wrap">
+                        {loadingPaymentMethods ? (
+                          <div className="text-muted-foreground">Cargando metodos de pago...</div>
+                        ) : paymentMethods.length === 0 ? (
+                          <Alert variant="destructive" className="w-full">
+                            <AlertDescription>No hay metodos de pago disponibles.</AlertDescription>
+                          </Alert>
+                        ) : (
+                          paymentMethods.map((method) => {
+                            const isDisabled =
+                              isSocialMedia && method.name.toLowerCase() === "efectivo";
+                            return (
+                              <Button
+                                key={method._id}
+                                type="button"
+                                variant={
+                                  formData.paymentMethod === method._id
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() =>
+                                  setFormData((prev) => ({ ...prev, paymentMethod: method._id }))
+                                }
+                                disabled={isDisabled}
+                                className="px-4"
+                                title={
+                                  isDisabled
+                                    ? "Los usuarios de Redes Sociales no pueden usar efectivo"
+                                    : ""
+                                }
+                              >
+                                {method.name}
+                              </Button>
+                            );
+                          })
+                        )}
+                      </div>
+                      {isSocialMedia && (
+                        <Alert className="mt-2 py-2 bg-yellow-50 border-yellow-200">
+                          <AlertDescription>
+                            <small>
+                              Los usuarios de Redes Sociales no pueden usar el metodo de pago "Efectivo"
+                            </small>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+
+                    <hr className="my-4" />
+
+                    {/* Descuento - full width */}
+                    <div>
+                      <Label className="font-semibold mb-2 block">Descuento</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.discount}
+                          onChange={(e) =>
+                            onDiscountChange(
+                              parseFloat(e.target.value) || 0,
+                              formData.discountType || "porcentaje"
+                            )
+                          }
+                          placeholder="Ingresa el descuento"
+                          className="flex-1"
+                        />
+                        <Select
+                          value={formData.discountType}
+                          onValueChange={(value) =>
+                            onDiscountChange(
+                              formData.discount || 0,
+                              value as "porcentaje" | "cantidad"
+                            )
+                          }
+                        >
+                          <SelectTrigger className="w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="porcentaje">%</SelectItem>
+                            <SelectItem value="cantidad">$</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       {(formData.discount || 0) > 0 && (
-                        <>
+                        <div className="flex gap-2 mt-3">
                           <Button
-                            variant="warning"
+                            variant="outline"
+                            type="button"
+                            size="sm"
                             onClick={onShowDiscountRequestDialog}
-                            className="d-flex align-items-center gap-2"
-                            style={{ whiteSpace: "nowrap" }}
+                            className="flex items-center gap-2 text-yellow-600 border-yellow-300 hover:bg-yellow-50"
                           >
                             <Shield size={16} />
-                            {hasPendingDiscountAuth ? "Modificar Solicitud" : "Solicitar Autorización"}
+                            {hasPendingDiscountAuth ? "Modificar" : "Solicitar Auth"}
                           </Button>
                           <Button
-                            variant="danger"
+                            variant="outline"
+                            type="button"
+                            size="sm"
                             onClick={onCancelDiscount}
-                            className="d-flex align-items-center gap-2 mt-1"
-                            style={{ whiteSpace: "nowrap" }}
+                            className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
                             title="Cancelar descuento"
                           >
                             <Trash2 size={16} />
-                            Cancelar Descuento
+                            Cancelar
                           </Button>
-                        </>
+                        </div>
                       )}
+                      <Alert
+                        className={`mt-3 py-2 ${
+                          hasPendingDiscountAuth
+                            ? "bg-yellow-50 border-yellow-200"
+                            : "bg-blue-50 border-blue-200"
+                        }`}
+                      >
+                        <AlertDescription>
+                          <small>
+                            {hasPendingDiscountAuth
+                              ? "Descuento pendiente de autorizacion."
+                              : "Ingresa el descuento y solicita autorizacion antes de crear la orden."}
+                          </small>
+                        </AlertDescription>
+                      </Alert>
                     </div>
-                    <Alert
-                      variant={hasPendingDiscountAuth ? "warning" : "info"}
-                      className="mt-2 mb-0 py-2"
-                    >
-                      <small>
-                        {hasPendingDiscountAuth
-                          ? "⚠️ Descuento pendiente de autorización."
-                          : "ℹ️ Ingresa el descuento y solicita autorización antes de crear la orden."}
-                      </small>
-                    </Alert>
-                  </Form.Group>
-                </Col>
 
-                <Col md={6}>
-                  <div className="d-flex justify-content-between mb-1">
-                    <span className="text-muted">Subtotal</span>
-                    <span className="fw-semibold">${formData.subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="d-flex justify-content-between mb-1">
-                    <span className="text-muted">Descuento</span>
-                    <span className="text-danger fw-semibold">
-                      -$
-                      {(formData.discountType === "porcentaje"
-                        ? (formData.subtotal * (formData.discount || 0)) / 100
-                        : formData.discount || 0
-                      ).toFixed(2)}
-                    </span>
-                  </div>
-                  {appliedReward && appliedReward.rewardValue > 0 && (
-                    <div className="d-flex justify-content-between mb-1">
-                      <span className="text-muted d-flex align-items-center gap-1">
-                        <Gift size={12} />
-                        Recompensa
-                      </span>
-                      <span className="text-success fw-semibold">
-                        -$
-                        {(appliedReward.isPercentage
-                          ? (formData.subtotal * appliedReward.rewardValue) / 100
-                          : appliedReward.rewardValue
-                        ).toFixed(2)}
-                      </span>
+                    {/* Price Summary */}
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="font-semibold">${formData.subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Descuento</span>
+                        <span className="text-red-500 font-semibold">
+                          -$
+                          {(formData.discountType === "porcentaje"
+                            ? (formData.subtotal * (formData.discount || 0)) / 100
+                            : formData.discount || 0
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                      {appliedReward && appliedReward.rewardValue > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <Gift size={12} />
+                            Recompensa
+                          </span>
+                          <span className="text-green-500 font-semibold">
+                            -$
+                            {(appliedReward.isPercentage
+                              ? (formData.subtotal * appliedReward.rewardValue) / 100
+                              : appliedReward.rewardValue
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Envio</span>
+                        <span className="text-green-500 font-semibold">
+                          +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center border-t pt-3 mt-2">
+                        <span className="text-lg font-bold">Total</span>
+                        <span className="text-2xl font-bold text-primary">${formData.total.toFixed(2)}</span>
+                      </div>
                     </div>
-                  )}
-                  <div className="d-flex justify-content-between mb-1">
-                    <span className="text-muted">Envío</span>
-                    <span className="text-success fw-semibold">
-                      +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="d-flex justify-content-between align-items-center border-top pt-2">
-                    <span className="fs-5 fw-bold">Total</span>
-                    <span className="fs-4 fw-bold text-primary">${formData.total.toFixed(2)}</span>
-                  </div>
-                </Col>
 
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Anticipo</Form.Label>
-                    <Form.Control
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.advance}
-                      onChange={(e) => handleAdvanceChange(parseFloat(e.target.value) || 0)}
-                      className="py-2"
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Pagó con</Form.Label>
-                    <Form.Control
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.paidWith}
-                      onChange={(e) => handlePaidWithChange(parseFloat(e.target.value) || 0)}
-                      className="py-2"
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Cambio</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={`$${(formData.change || 0).toFixed(2)}`}
-                      disabled
-                      className="py-2 bg-light"
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">Saldo</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={`$${(formData.remainingBalance || 0).toFixed(2)}`}
-                      disabled
-                      className="py-2 bg-light fw-bold"
-                    />
-                  </Form.Group>
-                </Col>
+                    {/* Anticipo y Pago - paired */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="font-semibold mb-2 block">Anticipo</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.advance}
+                          onChange={(e) => handleAdvanceChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="font-semibold mb-2 block">Pago con</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.paidWith}
+                          onChange={(e) => handlePaidWithChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
 
-                <Col md={12}>
-                  <Form.Check
-                    type="checkbox"
-                    id="enviar-produccion"
-                    label="Enviar a producción"
-                    checked={formData.sendToProduction}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, sendToProduction: e.target.checked }))
-                    }
-                    className="mt-1"
-                  />
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            variant="outline-secondary"
-            onClick={onHide}
-            disabled={loading || uploadingFiles}
-          >
-            Seguir agregando
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={
-              loading ||
-              uploadingFiles ||
-              formData.items.length === 0 ||
-              !formData.paymentMethod ||
-              !cashRegister ||
-              (formData.items.some((item) => item.isProduct === true) && !selectedStorageId) ||
-              (isSocialMedia && !formData.branchId)
-            }
-          >
-            {uploadingFiles
-              ? "Subiendo archivos..."
-              : loading
-              ? "Procesando..."
-              : "Confirmar venta"}
-          </Button>
-        </Modal.Footer>
-      </Form>
-      
+                    {/* Cambio y Saldo - paired */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="font-semibold mb-2 block">Cambio</Label>
+                        <Input
+                          type="text"
+                          value={`$${(formData.change || 0).toFixed(2)}`}
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      </div>
+                      <div>
+                        <Label className="font-semibold mb-2 block">Saldo</Label>
+                        <Input
+                          type="text"
+                          value={`$${(formData.remainingBalance || 0).toFixed(2)}`}
+                          disabled
+                          className="bg-gray-50 font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Enviar a produccion */}
+                    <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox
+                        id="enviar-produccion"
+                        checked={formData.sendToProduction}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({ ...prev, sendToProduction: checked as boolean }))
+                        }
+                      />
+                      <label htmlFor="enviar-produccion" className="text-sm font-medium">
+                        Enviar a produccion
+                      </label>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={onHide}
+              disabled={loading || uploadingFiles}
+            >
+              Seguir agregando
+            </Button>
+            <Button
+              type="submit"
+              size="lg"
+              disabled={
+                loading ||
+                uploadingFiles ||
+                formData.items.length === 0 ||
+                !formData.paymentMethod ||
+                !cashRegister ||
+                (formData.items.some((item) => item.isProduct === true) && !selectedStorageId) ||
+                (isSocialMedia && !formData.branchId)
+              }
+            >
+              {uploadingFiles
+                ? "Subiendo archivos..."
+                : loading
+                ? "Procesando..."
+                : "Confirmar venta"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+
       {/* Modal de pago con Stripe */}
       {showStripeModal && (
         <StripePaymentModal
@@ -1414,7 +1442,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
             setStripePaymentData(null);
           }}
           amount={pendingOrderData?.advance > 0 ? pendingOrderData.advance : pendingOrderData?.total || formData.total}
-          orderId={undefined} // Se asignará después de crear la orden
+          orderId={undefined} // Se asignara despues de crear la orden
           customerInfo={{
             clientId: pendingOrderData?.clientInfo.clientId || formData.clientInfo.clientId,
             name: pendingOrderData?.clientInfo.name || formData.clientInfo.name,
@@ -1427,7 +1455,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         />
       )}
 
-      {/* Modal de selección de recompensas */}
+      {/* Modal de seleccion de recompensas */}
       {formData.clientInfo.clientId && (
         <ClientRewardsModal
           show={showRewardsModal}
@@ -1445,7 +1473,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           client={selectedClientForRewards}
         />
       )}
-    </Modal>
+    </Dialog>
   );
 };
 

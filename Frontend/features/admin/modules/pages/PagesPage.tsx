@@ -1,12 +1,33 @@
-import { FileText, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+"use client";
+
+import { FileText, Plus, Search, ChevronLeft, ChevronRight, Edit2, XCircle, CheckCircle, Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Alert, Button, Form, Table, Spinner } from "react-bootstrap";
-import { BsCheck2, BsPencil } from "react-icons/bs";
-import { FiTrash2 } from "react-icons/fi";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import CreatePageModal from "./components/AddPageModal";
 import EditPageModal from "./components/EditPagesModal";
 import { Page, pagesService } from "./services/pages";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
 
 const PaginasTable: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -17,6 +38,7 @@ const PaginasTable: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  const [togglingPages, setTogglingPages] = useState<Set<string>>(new Set());
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 15,
@@ -73,8 +95,8 @@ const PaginasTable: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-    setSelectedType(e.target.value);
+  const handleTypeChange = (value: string): void => {
+    setSelectedType(value);
   };
 
   const handleNewPageClick = (): void => {
@@ -107,8 +129,9 @@ const PaginasTable: React.FC = () => {
     setError(null);
   };
 
-  const handleTooglePage = async (id: string) => {
+  const handleTogglePage = async (id: string) => {
     try {
+      setTogglingPages(prev => new Set(prev).add(id));
       const currentPage = pages.find((page) => page._id === id);
 
       if (!currentPage) {
@@ -144,6 +167,12 @@ const PaginasTable: React.FC = () => {
 
       console.error("Error toggling page status:", err);
       toast.error(`Error al ${action} ${pageName}: ${errorMessage}`);
+    } finally {
+      setTogglingPages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
@@ -151,248 +180,199 @@ const PaginasTable: React.FC = () => {
     setPagination({ ...pagination, page: newPage });
   };
 
-  // Función para generar los números de página a mostrar
-  const getPageNumbers = () => {
-    const { page, pages } = pagination;
-    const delta = 2; // Número de páginas a mostrar antes y después de la página actual
-    const range = [];
-    const rangeWithDots = [];
-
-    for (let i = Math.max(2, page - delta); i <= Math.min(pages - 1, page + delta); i++) {
-      range.push(i);
-    }
-
-    if (page - delta > 2) {
-      rangeWithDots.push(1, '...');
-    } else {
-      rangeWithDots.push(1);
-    }
-
-    rangeWithDots.push(...range);
-
-    if (page + delta < pages - 1) {
-      rangeWithDots.push('...', pages);
-    } else if (pages > 1) {
-      rangeWithDots.push(pages);
-    }
-
-    return rangeWithDots;
-  };
-
   return (
-    <div className="row">
-      <div className="col-12">
-        {error && (
-          <Alert
-            variant="danger"
-            dismissible
-            onClose={clearError}
-            className="mb-4"
-          >
+    <div className="space-y-4">
+      {/* Header */}
+      <PageHeader
+        title="Páginas"
+        description="Gestiona las páginas del sistema"
+        action={{
+          label: "Nueva Página",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleNewPageClick,
+        }}
+      />
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>
             <strong>Error:</strong> {error}
-          </Alert>
-        )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-2"
+              onClick={clearError}
+            >
+              Cerrar
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <div className="card">
-          <div className="card-header border-light d-flex justify-content-between align-items-center py-3">
-            <div className="d-flex gap-2">
-              <div className="position-relative" style={{ maxWidth: 400 }}>
-                <Form.Control
-                  type="search"
-                  placeholder="Buscar páginas..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="shadow-none px-4"
-                  style={{
-                    fontSize: 15,
-                    paddingLeft: "2.5rem",
-                  }}
-                />
-                <Search
-                  className="text-muted position-absolute"
-                  size={18}
-                  style={{
-                    left: "0.75rem",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              </div>
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar páginas..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
 
-            <div className="d-flex align-items-center gap-2">
-              <Form.Select
-                value={selectedType}
-                onChange={handleTypeChange}
-                style={{ minWidth: "150px" }}
-              >
-                <option value="todos">Todos los estados</option>
-                <option value="activos">Páginas activas</option>
-                <option value="inactivos">Páginas inactivas</option>
-              </Form.Select>
-
-              <Button
-                variant="primary"
-                className="d-flex align-items-center gap-2 text-nowrap px-3"
-                onClick={handleNewPageClick}
-              >
-                <Plus size={18} />
-                Nueva Página
-              </Button>
-            </div>
+            <Select value={selectedType} onValueChange={handleTypeChange}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los estados</SelectItem>
+                <SelectItem value="activos">Páginas activas</SelectItem>
+                <SelectItem value="inactivos">Páginas inactivas</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="table-responsive shadow-sm">
-            {loading ? (
-              <div className="text-center my-5">
-                <Spinner animation="border" variant="primary" />
-              </div>
-            ) : pages.length === 0 ? (
-              <div className="text-center my-5">
-                <FileText size={48} className="text-muted mb-2" />
-                <p className="text-muted">No hay páginas registradas</p>
-              </div>
-            ) : (
-              <>
-                <Table className="table table-custom table-centered table-select table-hover w-100 mb-0">
-                  <thead className="bg-light align-middle bg-opacity-25 thead-sm">
-                    <tr>
-                      <th className="text-center">#</th>
-                      <th>Nombre</th>
-                      <th>Ruta</th>
-                      <th>Descripción</th>
-                      <th className="text-center">Estatus</th>
-                      <th className="text-center text-nowrap">Fecha creación</th>
-                      <th className="text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pages.map((pagina, index) => (
-                      <tr key={pagina._id}>
-                        <td className="text-center">
-                          <span className="text-muted">
-                            {(pagination.page - 1) * pagination.limit + index + 1}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="fw-medium">{pagina.name}</span>
-                        </td>
-                        <td>
-                          <span>{pagina.path}</span>
-                        </td>
-                        <td>
-                          <span>{pagina.description || "-"}</span>
-                        </td>
-                        <td className="text-center">
-                          <span
-                            className={`badge fs-6 ${pagina.status
-                              ? "bg-success bg-opacity-10 text-success"
-                              : "bg-danger bg-opacity-10 text-danger"
-                              }`}
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando páginas...</p>
+            </div>
+          ) : pages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mb-3 opacity-50" />
+              <div>No hay páginas registradas</div>
+              <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12 text-center">#</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Ruta</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead className="text-center">Estatus</TableHead>
+                    <TableHead className="text-center">Fecha creación</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pages.map((pagina, index) => (
+                    <TableRow key={pagina._id}>
+                      <TableCell className="text-center text-muted-foreground">
+                        {(pagination.page - 1) * pagination.limit + index + 1}
+                      </TableCell>
+                      <TableCell className="font-medium">{pagina.name}</TableCell>
+                      <TableCell>{pagina.path}</TableCell>
+                      <TableCell>{pagina.description || "-"}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={pagina.status ? "default" : "destructive"}>
+                          {pagina.status ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {new Date(pagina.createdAt).toLocaleDateString("es-ES", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Editar página"
+                            onClick={() => handleEditPageClick(pagina._id)}
                           >
-                            {pagina.status ? "Activo" : "Inactivo"}
-                          </span>
-                        </td>
-                        <td className="text-center">
-                          <span>
-                            {new Date(pagina.createdAt).toLocaleDateString("es-ES", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </span>
-                        </td>
-                        <td className="text-center">
-                          <div className="d-flex justify-content-center gap-1">
-                            <button
-                              className="btn btn-light btn-icon btn-sm rounded-circle"
-                              title="Editar página"
-                              onClick={() => handleEditPageClick(pagina._id)}
-                            >
-                              <BsPencil size={16} />
-                            </button>
-                            <button
-                              className="btn btn-light btn-icon btn-sm rounded-circle"
-                              title={
-                                getPageStatus(pagina._id)
-                                  ? "Desactivar página"
-                                  : "Activar página"
-                              }
-                              onClick={() => handleTooglePage(pagina._id)}
-                            >
-                              {getPageStatus(pagina._id) ? (
-                                <FiTrash2 size={16} />
-                              ) : (
-                                <BsCheck2 size={16} />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={
+                              getPageStatus(pagina._id)
+                                ? "Desactivar página"
+                                : "Activar página"
+                            }
+                            onClick={() => handleTogglePage(pagina._id)}
+                            disabled={togglingPages.has(pagina._id)}
+                          >
+                            {togglingPages.has(pagina._id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : getPageStatus(pagina._id) ? (
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-                <div className="d-flex justify-content-between align-items-center p-3 border-top">
-                  <span className="text-muted">
+              {/* Pagination */}
+              {pages.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
                     Mostrando {pages.length} de {pagination.total} registros
-                  </span>
-                  <div className="d-flex gap-1 align-items-center">
-                    <button
-                      className="btn btn-outline-secondary btn-sm d-flex align-items-center"
-                      disabled={pagination.page === 1}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
                     >
-                      <ChevronLeft size={16} />
+                      <ChevronLeft className="h-4 w-4" />
                       Anterior
-                    </button>
-
-                    {getPageNumbers().map((pageNum, index) => (
-                      <React.Fragment key={index}>
-                        {pageNum === '...' ? (
-                          <span className="px-2 text-muted">...</span>
-                        ) : (
-                          <button
-                            className={`btn btn-sm ${pageNum === pagination.page
-                              ? 'btn-primary'
-                              : 'btn-outline-secondary'
-                              }`}
-                            onClick={() => handlePageChange(pageNum as number)}
-                          >
-                            {pageNum}
-                          </button>
-                        )}
-                      </React.Fragment>
-                    ))}
-
-                    <button
-                      className="btn btn-outline-secondary btn-sm d-flex align-items-center"
-                      disabled={pagination.page === pagination.pages}
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
                     >
                       Siguiente
-                      <ChevronRight size={16} />
-                    </button>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              </>
-            )}
-          </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-          <CreatePageModal
-            show={showCreateModal}
-            onHide={handleCloseModal}
-            onPageCreated={handlePageCreated}
-          />
+      <CreatePageModal
+        show={showCreateModal}
+        onHide={handleCloseModal}
+        onPageCreated={handlePageCreated}
+      />
 
-          <EditPageModal
-            show={showEditModal}
-            onHide={handleCloseEditModal}
-            onPageUpdated={handlePageUpdated}
-            pageId={selectedPageId}
-          />
-        </div>
-      </div>
+      <EditPageModal
+        show={showEditModal}
+        onHide={handleCloseEditModal}
+        onPageUpdated={handlePageUpdated}
+        pageId={selectedPageId}
+      />
     </div>
   );
 };

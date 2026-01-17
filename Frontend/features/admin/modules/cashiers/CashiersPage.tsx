@@ -1,9 +1,8 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, Plus, User } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Plus, User, Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Button, Form, Table, Badge } from "react-bootstrap";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { cashiersService } from "./services/cashiers";
 import {
   Cashier,
@@ -13,6 +12,27 @@ import {
 } from "./types";
 import Actions from "./components/Actions";
 import CashierModal from "./components/CashierModal";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
 
 const CashiersPage: React.FC = () => {
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
@@ -76,10 +96,8 @@ const CashiersPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleStatusFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value);
   };
 
   const handlePageChange = (page: number) => {
@@ -172,211 +190,170 @@ const CashiersPage: React.FC = () => {
   };
 
   return (
-    <div className="row">
-      <div className="col-12">
-        <div className="card">
-          <div className="card-header border-light d-flex justify-content-between align-items-center py-2">
-            <div className="d-flex gap-2">
-              <div className="position-relative" style={{ maxWidth: 400 }}>
-                <Form.Control
-                  type="search"
-                  placeholder="Buscar cajeros..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="shadow-none px-4"
-                  style={{ fontSize: 15, paddingLeft: "2.5rem" }}
-                />
-                <Search
-                  className="text-muted position-absolute"
-                  size={18}
-                  style={{
-                    left: "0.75rem",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                />
-              </div>
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="shadow-none"
-                style={{ maxWidth: 150 }}
-              >
-                <option value="">Todos</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
+    <div className="space-y-4">
+      {/* Header */}
+      <PageHeader
+        title="Cajeros"
+        description="Gestiona los cajeros del sistema"
+        action={{
+          label: "Nuevo Cajero",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleCreateCashier,
+        }}
+      />
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar cajeros..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
-            <Button
-              variant="primary"
-              onClick={handleCreateCashier}
-              className="d-flex align-items-center gap-2"
+            <Select
+              value={statusFilter || "all"}
+              onValueChange={(value) => handleStatusFilterChange(value === "all" ? "" : value)}
             >
-              <Plus size={16} />
-              Nuevo Cajero
-            </Button>
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="table-responsive shadow-sm">
-            <Table className="table table-custom table-centered table-hover w-100 mb-0">
-              <thead className="bg-light align-middle bg-opacity-25 thead-sm">
-                <tr>
-                  <th>#</th>
-                  <th>Nombre Completo</th>
-                  <th>Usuario</th>
-                  <th>Email</th>
-                  <th>Teléfono</th>
-                  <th>Sucursal</th>
-                  <th>Estatus</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-4">
-                      <div className="d-flex flex-column align-items-center">
-                        <div
-                          className="spinner-border text-primary mb-2"
-                          role="status"
-                        >
-                          <span className="visually-hidden">Cargando...</span>
-                        </div>
-                        <p className="text-muted mb-0 small">
-                          Cargando cajeros...
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : cashiers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-4">
-                      <div className="text-muted">
-                        <User size={48} className="mb-3 opacity-50" />
-                        <div>No se encontraron cajeros</div>
-                        <small>Intenta ajustar los filtros de búsqueda</small>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  cashiers.map((cashier, index) => (
-                    <tr key={cashier._id}>
-                      <td>
-                        {(pagination.page - 1) * pagination.limit + index + 1}
-                      </td>
-                      <td>
-                        <div>
-                          <div className="fw-medium">
-                            {cashier.profile.fullName}
-                          </div>
-                          <div className="text-muted small">
-                            {formatDate(cashier.createdAt)}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge bg-secondary bg-opacity-10 text-secondary">
-                          @{cashier.username}
-                        </span>
-                      </td>
-                      <td>
-                        <div
-                          className="text-truncate"
-                          style={{ maxWidth: "200px" }}
-                        >
-                          {cashier.email}
-                        </div>
-                      </td>
-                      <td>{cashier.phone}</td>
-                      <td>
-                        {cashier.branch ? (
-                          <div>
-                            <div className="fw-medium">
-                              {cashier.branch.branchName}
-                            </div>
-                            <div className="text-muted small">
-                              {cashier.branch.branchCode}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-muted">Sin sucursal</span>
-                        )}
-                      </td>
-                      <td>
-                        <Badge
-                          bg={cashier.profile.estatus ? "success" : "danger"}
-                          className="bg-opacity-10"
-                          style={{
-                            color: cashier.profile.estatus
-                              ? "#198754"
-                              : "#dc3545",
-                          }}
-                        >
-                          {cashier.profile.estatus ? "Activo" : "Inactivo"}
-                        </Badge>
-                      </td>
-                      <td className="text-center">
-                        <Actions
-                          cashier={cashier}
-                          onEdit={handleEditCashier}
-                          onToggleStatus={handleToggleStatus}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          </div>
-          <div className="d-flex justify-content-between align-items-center p-2 border-top">
-            <span className="text-muted">
-              Mostrando {cashiers.length} de {pagination.total} registros
-            </span>
-            <div className="d-flex gap-1 align-items-center">
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === 1}
-                onClick={() => handlePageChange(pagination.page - 1)}
-                className="d-flex align-items-center"
-              >
-                <ChevronLeft size={16} />
-                Anterior
-              </Button>
+        </CardContent>
+      </Card>
 
-              {getPageNumbers().map((pageNum, index) => (
-                <React.Fragment key={index}>
-                  {pageNum === "..." ? (
-                    <span className="px-2 text-muted">...</span>
-                  ) : (
-                    <Button
-                      variant={
-                        pageNum === pagination.page
-                          ? "primary"
-                          : "outline-secondary"
-                      }
-                      size="sm"
-                      onClick={() => handlePageChange(pageNum as number)}
-                    >
-                      {pageNum}
-                    </Button>
-                  )}
-                </React.Fragment>
-              ))}
-
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={pagination.page === pagination.pages}
-                onClick={() => handlePageChange(pagination.page + 1)}
-                className="d-flex align-items-center"
-              >
-                Siguiente
-                <ChevronRight size={16} />
-              </Button>
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando cajeros...</p>
             </div>
-          </div>
-        </div>
-      </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Nombre Completo</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Sucursal</TableHead>
+                    <TableHead>Estatus</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cashiers.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="text-center py-12 text-muted-foreground"
+                      >
+                        <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <div>No se encontraron cajeros</div>
+                        <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    cashiers.map((cashier, index) => (
+                      <TableRow key={cashier._id}>
+                        <TableCell>
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{cashier.profile.fullName}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatDate(cashier.createdAt)}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">@{cashier.username}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="truncate max-w-[200px]">{cashier.email}</div>
+                        </TableCell>
+                        <TableCell>{cashier.phone}</TableCell>
+                        <TableCell>
+                          {cashier.branch ? (
+                            <div>
+                              <div className="font-medium">{cashier.branch.branchName}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {cashier.branch.branchCode}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Sin sucursal</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={cashier.profile.estatus ? "default" : "destructive"}>
+                            {cashier.profile.estatus ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Actions
+                            cashier={cashier}
+                            onEdit={handleEditCashier}
+                            onToggleStatus={handleToggleStatus}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {cashiers.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {cashiers.length} de {pagination.total} registros
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      Siguiente
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <CashierModal
         show={showModal}

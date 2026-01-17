@@ -1,20 +1,6 @@
 "use client";
 
-import { toggleAttribute } from "@/helpers/layout";
 import { ChildrenType } from "@/types";
-import {
-  LayoutOffcanvasStatesType,
-  LayoutOrientationType,
-  LayoutPositionType,
-  LayoutSkinType,
-  LayoutState,
-  LayoutThemeType,
-  LayoutType,
-  LayoutWidthType,
-  OffcanvasControlType,
-  SideNavType,
-  TopBarType,
-} from "@/types/layout";
 import {
   createContext,
   use,
@@ -25,24 +11,39 @@ import {
 } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
+type Theme = "light" | "dark" | "system";
+
+type SideNavSize = "default" | "compact" | "condensed" | "on-hover" | "on-hover-active" | "offcanvas";
+
+interface SideNavType {
+  size: SideNavSize;
+  user: boolean;
+  isMobileMenuOpen: boolean;
+}
+
+interface LayoutState {
+  theme: Theme;
+  sidenav: SideNavType;
+}
+
+interface LayoutContextType extends LayoutState {
+  changeTheme: (theme: Theme) => void;
+  changeSideNavSize: (size: SideNavSize, persist?: boolean) => void;
+  toggleMobileMenu: () => void;
+  showBackdrop: () => void;
+  hideBackdrop: () => void;
+}
+
 const INIT_STATE: LayoutState = {
-  skin: "modern",
-  theme: "system",
-  orientation: "vertical",
+  theme: "light",
   sidenav: {
     size: "default",
-    color: "blue-dark",
     user: true,
     isMobileMenuOpen: false,
   },
-  topBar: {
-    color: "light",
-  },
-  position: "fixed",
-  width: "fluid",
 };
 
-const LayoutContext = createContext<LayoutType | undefined>(undefined);
+const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
 
 const useLayoutContext = () => {
   const context = use(LayoutContext);
@@ -54,211 +55,108 @@ const useLayoutContext = () => {
 
 const LayoutProvider = ({ children }: ChildrenType) => {
   const [settings, setSettings] = useLocalStorage<LayoutState>(
-    "__INSPINIA_NEXT_CONFIG__",
+    "__LAYOUT_CONFIG__",
     INIT_STATE
   );
 
-  const [offcanvasStates, setOffcanvasStates] =
-    useState<LayoutOffcanvasStatesType>({
-      showCustomizer: false,
-    });
-
   const updateSettings = useCallback(
-    (_newSettings: Partial<LayoutState>) => {
-      setSettings((prevSettings) => ({
-        ...prevSettings,
-        ..._newSettings,
+    (newSettings: Partial<LayoutState>) => {
+      setSettings((prev) => ({
+        ...prev,
+        ...newSettings,
         sidenav: {
-          ...prevSettings.sidenav,
-          ...(_newSettings.sidenav || {}),
-        },
-        topBar: {
-          ...prevSettings.topBar,
-          ...(_newSettings.topBar || {}),
+          ...prev.sidenav,
+          ...(newSettings.sidenav || {}),
         },
       }));
     },
     [setSettings]
   );
 
-  const changeSkin = useCallback(
-    (nSkin: LayoutSkinType, persist = true) => {
-      toggleAttribute("data-skin", nSkin);
-      if (persist) updateSettings({ skin: nSkin });
-    },
-    [updateSettings]
-  );
-
   const changeTheme = useCallback(
-    (nTheme: LayoutThemeType, persist = true) => {
-      toggleAttribute("data-bs-theme", nTheme);
-      if (persist) updateSettings({ theme: nTheme });
-    },
-    [updateSettings]
-  );
-
-  const changeOrientation = useCallback(
-    (nOrientation: LayoutOrientationType, persist = true) => {
-      toggleAttribute(
-        "data-layout",
-        nOrientation === "horizontal" ? "topnav" : ""
-      );
-      if (persist) updateSettings({ orientation: nOrientation });
-    },
-    [updateSettings]
-  );
-
-  const changeTopBarColor = useCallback(
-    (nColor: TopBarType["color"], persist = true) => {
-      toggleAttribute("data-topbar-color", nColor);
-      if (persist) updateSettings({ topBar: { color: nColor } });
+    (nTheme: Theme) => {
+      updateSettings({ theme: nTheme });
     },
     [updateSettings]
   );
 
   const changeSideNavSize = useCallback(
-    (nSize: SideNavType["size"], persist = true) => {
-      toggleAttribute("data-sidenav-size", nSize);
-      if (persist)
+    (nSize: SideNavSize, persist = true) => {
+      document.documentElement.setAttribute("data-sidenav-size", nSize);
+      if (persist) {
         updateSettings({ sidenav: { ...settings.sidenav, size: nSize } });
+      }
     },
     [settings.sidenav, updateSettings]
   );
 
-  const changeSideNavColor = useCallback(
-    (nColor: SideNavType["color"], persist = true) => {
-      toggleAttribute("data-menu-color", nColor);
-      if (persist)
-        updateSettings({ sidenav: { ...settings.sidenav, color: nColor } });
-    },
-    [settings.sidenav, updateSettings]
-  );
-
-  const toggleSideNavUser = () => {
-    toggleAttribute("data-sidenav-user", (!settings.sidenav.user).toString());
-    updateSettings({
-      sidenav: { ...settings.sidenav, user: !settings.sidenav.user },
-    });
-  };
-
-  const toggleMobileMenu = () => {
+  const toggleMobileMenu = useCallback(() => {
     updateSettings({
       sidenav: {
         ...settings.sidenav,
         isMobileMenuOpen: !settings.sidenav.isMobileMenuOpen,
       },
     });
-  };
+  }, [settings.sidenav, updateSettings]);
 
-  const changeLayoutPosition = useCallback(
-    (nPosition: LayoutPositionType, persist = true) => {
-      toggleAttribute("data-layout-position", nPosition);
-      if (persist) updateSettings({ position: nPosition });
-    },
-    [updateSettings]
-  );
-
-  const changeLayoutWidth = useCallback(
-    (nWidth: LayoutWidthType, persist = true) => {
-      toggleAttribute("data-layout-width", nWidth);
-      if (persist) updateSettings({ width: nWidth });
-    },
-    [updateSettings]
-  );
-
-  const toggleCustomizer: OffcanvasControlType["toggle"] = () => {
-    setOffcanvasStates({
-      ...offcanvasStates,
-      showCustomizer: !offcanvasStates.showCustomizer,
-    });
-  };
-
-  const customizer: LayoutType["customizer"] = {
-    isOpen: offcanvasStates.showCustomizer,
-    toggle: toggleCustomizer,
-  };
-
-  const reset = useCallback(() => {
-    setSettings(INIT_STATE);
-  }, [setSettings]);
-
-  const showBackdrop = () => {
+  const showBackdrop = useCallback(() => {
     const backdrop = document.createElement("div");
     backdrop.id = "custom-backdrop";
-    backdrop.className = "offcanvas-backdrop fade show";
+    backdrop.className = "fixed inset-0 bg-black/50 z-40";
     document.body.appendChild(backdrop);
     document.body.style.overflow = "hidden";
-    if (window.innerWidth > 767) {
-      document.body.style.paddingRight = "15px";
-    }
     backdrop.addEventListener("click", () => {
       const html = document.documentElement;
       html.classList.remove("sidebar-enable");
       hideBackdrop();
     });
-  };
+  }, []);
 
-  const hideBackdrop = () => {
+  const hideBackdrop = useCallback(() => {
     const backdrop = document.getElementById("custom-backdrop");
     if (backdrop) {
       document.body.removeChild(backdrop);
       document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
     }
-  };
+  }, []);
 
+  // Apply theme on mount and changes
   useEffect(() => {
-    const getSystemTheme = (): "light" | "dark" => {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+
+    if (settings.theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
+      root.classList.add(systemTheme);
+    } else {
+      root.classList.add(settings.theme);
+    }
+  }, [settings.theme]);
+
+  // Apply sidenav size on mount
+  useEffect(() => {
+    document.documentElement.setAttribute("data-sidenav-size", settings.sidenav.size);
+  }, [settings.sidenav.size]);
+
+  // Handle responsive sidenav
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width <= 767.98) {
+        changeSideNavSize("offcanvas", false);
+      } else if (width <= 1140 && settings.sidenav.size !== "offcanvas") {
+        changeSideNavSize("condensed", false);
+      } else if (width > 1140) {
+        changeSideNavSize(settings.sidenav.size);
+      }
     };
 
-    toggleAttribute("data-skin", settings.skin);
-    toggleAttribute(
-      "data-bs-theme",
-      settings.theme === "system" ? getSystemTheme() : settings.theme
-    );
-    toggleAttribute("data-topbar-color", settings.topBar.color);
-    toggleAttribute("data-menu-color", settings.sidenav.color);
-    toggleAttribute("data-sidenav-size", settings.sidenav.size);
-    toggleAttribute("data-sidenav-user", settings.sidenav.user.toString());
-    toggleAttribute("data-layout-position", settings.position);
-    toggleAttribute("data-layout-width", settings.width);
-    toggleAttribute(
-      "data-layout",
-      settings.orientation === "horizontal" ? "topnav" : ""
-    );
-  }, [settings]);
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Initial check
 
-  useEffect(() => {
-    if (settings.orientation === "vertical") {
-      window.addEventListener("resize", () => {
-        const width = window.innerWidth;
-
-        if (width <= 767.98) {
-          changeSideNavSize("offcanvas", false);
-        } else if (width <= 1140 && settings.sidenav.size !== "offcanvas") {
-          changeSideNavSize(
-            settings.sidenav.size === "on-hover" ? "condensed" : "condensed",
-            false
-          );
-        } else {
-          changeSideNavSize(settings.sidenav.size);
-        }
-      });
-    }
-
-    if (settings.orientation === "horizontal") {
-      window.addEventListener("resize", () => {
-        const width = window.innerWidth;
-        if (width < 992) {
-          changeSideNavSize("offcanvas");
-        } else {
-          changeSideNavSize("default");
-        }
-      });
-    }
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return (
@@ -266,37 +164,18 @@ const LayoutProvider = ({ children }: ChildrenType) => {
       value={useMemo(
         () => ({
           ...settings,
-          changeSkin,
           changeTheme,
-          changeOrientation,
-          changeTopBarColor,
           changeSideNavSize,
-          changeSideNavColor,
-          toggleSideNavUser,
           toggleMobileMenu,
-          changeLayoutPosition,
-          changeLayoutWidth,
-          customizer,
-          reset,
           showBackdrop,
           hideBackdrop,
         }),
-        [
-          settings,
-          changeSkin,
-          changeTheme,
-          changeOrientation,
-          changeTopBarColor,
-          changeSideNavSize,
-          changeSideNavColor,
-          changeLayoutPosition,
-          changeLayoutWidth,
-          customizer,
-        ]
+        [settings, changeTheme, changeSideNavSize, toggleMobileMenu, showBackdrop, hideBackdrop]
       )}
     >
       {children}
     </LayoutContext.Provider>
   );
 };
+
 export { LayoutProvider, useLayoutContext };

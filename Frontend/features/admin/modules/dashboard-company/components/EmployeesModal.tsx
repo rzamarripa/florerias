@@ -1,7 +1,22 @@
 "use client";
 
 import React from "react";
-import { Modal, Table, Badge } from "react-bootstrap";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Employee } from "../types";
 import { User, Mail, Phone, CheckCircle, XCircle } from "lucide-react";
 
@@ -42,157 +57,149 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header
-        closeButton
-        className="bg-primary text-white"
-        style={{
-          borderTopLeftRadius: "var(--bs-modal-inner-border-radius)",
-          borderTopRightRadius: "var(--bs-modal-inner-border-radius)",
-        }}
-      >
-        <Modal.Title className="d-flex align-items-center">
-          <User size={24} className="me-2" />
-          Empleados de {branchName}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body style={{ maxHeight: "600px", overflowY: "auto" }}>
-        {employees.length === 0 ? (
-          <div className="text-center py-5">
-            <User size={48} className="text-muted mb-3" />
-            <p className="text-muted">
-              No hay empleados registrados en esta sucursal
-            </p>
-          </div>
-        ) : (
-          <Table hover responsive className="mb-0">
-            <thead>
-              <tr style={{ borderBottom: "2px solid #dee2e6" }}>
-                <th style={{ fontSize: "13px", fontWeight: "600" }}>
-                  Empleado
-                </th>
-                <th style={{ fontSize: "13px", fontWeight: "600" }}>Rol</th>
-                <th style={{ fontSize: "13px", fontWeight: "600" }}>
-                  Contacto
-                </th>
-                <th style={{ fontSize: "13px", fontWeight: "600" }}>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((employee) => (
-                <tr key={employee._id}>
-                  <td>
-                    <div className="d-flex align-items-center">
-                      <div
-                        className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-3"
+    <Dialog open={show} onOpenChange={onHide}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader className="bg-primary text-primary-foreground p-4 -m-6 mb-0 rounded-t-lg">
+          <DialogTitle className="flex items-center text-white">
+            <User size={24} className="mr-2" />
+            Empleados de {branchName}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[600px] overflow-y-auto mt-4">
+          {employees.length === 0 ? (
+            <div className="text-center py-12">
+              <User size={48} className="text-muted-foreground mb-3 mx-auto" />
+              <p className="text-muted-foreground">
+                No hay empleados registrados en esta sucursal
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow style={{ borderBottom: "2px solid #dee2e6" }}>
+                  <TableHead style={{ fontSize: "13px", fontWeight: "600" }}>
+                    Empleado
+                  </TableHead>
+                  <TableHead style={{ fontSize: "13px", fontWeight: "600" }}>Rol</TableHead>
+                  <TableHead style={{ fontSize: "13px", fontWeight: "600" }}>
+                    Contacto
+                  </TableHead>
+                  <TableHead style={{ fontSize: "13px", fontWeight: "600" }}>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {employees.map((employee) => (
+                  <TableRow key={employee._id}>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div
+                          className="rounded-full flex items-center justify-center text-white font-bold mr-3"
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            background: getAvatarColor(
+                              employee.profile.fullName
+                            ),
+                            fontSize: "14px",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {employee.profile.image ? (
+                            <img
+                              src={employee.profile.image}
+                              alt={employee.profile.fullName}
+                              className="rounded-full"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            getInitials(employee.profile.fullName)
+                          )}
+                        </div>
+                        <div>
+                          <p className="mb-0 font-semibold" style={{ fontSize: "14px" }}>
+                            {employee.profile.fullName}
+                          </p>
+                          <p className="mb-0 text-muted-foreground" style={{ fontSize: "12px" }}>
+                            @{employee.username}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-middle">
+                      <Badge
+                        variant="secondary"
+                        className="px-3 py-2"
                         style={{
-                          width: "40px",
-                          height: "40px",
-                          background: getAvatarColor(
-                            employee.profile.fullName
-                          ),
-                          fontSize: "14px",
-                          flexShrink: 0,
+                          fontSize: "12px",
+                          fontWeight: "600",
+                          borderRadius: "8px",
                         }}
                       >
-                        {employee.profile.image ? (
-                          <img
-                            src={employee.profile.image}
-                            alt={employee.profile.fullName}
-                            className="rounded-circle"
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                          />
-                        ) : (
-                          getInitials(employee.profile.fullName)
-                        )}
-                      </div>
+                        {employee.role.name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="align-middle">
                       <div>
-                        <p className="mb-0 fw-semibold" style={{ fontSize: "14px" }}>
-                          {employee.profile.fullName}
-                        </p>
-                        <p className="mb-0 text-muted" style={{ fontSize: "12px" }}>
-                          @{employee.username}
-                        </p>
+                        <div className="flex items-center mb-1">
+                          <Mail size={14} className="mr-2 text-muted-foreground" />
+                          <span style={{ fontSize: "13px" }}>
+                            {employee.email}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <Phone size={14} className="mr-2 text-muted-foreground" />
+                          <span style={{ fontSize: "13px" }}>
+                            {employee.phone}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="align-middle">
-                    <Badge
-                      bg="light"
-                      text="dark"
-                      className="px-3 py-2"
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: "600",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      {employee.role.name}
-                    </Badge>
-                  </td>
-                  <td className="align-middle">
-                    <div>
-                      <div className="d-flex align-items-center mb-1">
-                        <Mail size={14} className="me-2 text-muted" />
-                        <span style={{ fontSize: "13px" }}>
-                          {employee.email}
-                        </span>
-                      </div>
-                      <div className="d-flex align-items-center">
-                        <Phone size={14} className="me-2 text-muted" />
-                        <span style={{ fontSize: "13px" }}>
-                          {employee.phone}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="align-middle">
-                    {employee.profile.estatus ? (
-                      <Badge
-                        bg="success"
-                        className="px-3 py-2 d-flex align-items-center justify-content-center"
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          borderRadius: "8px",
-                          width: "fit-content",
-                        }}
-                      >
-                        <CheckCircle size={14} className="me-1" />
-                        Activo
-                      </Badge>
-                    ) : (
-                      <Badge
-                        bg="danger"
-                        className="px-3 py-2 d-flex align-items-center justify-content-center"
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          borderRadius: "8px",
-                          width: "fit-content",
-                        }}
-                      >
-                        <XCircle size={14} className="me-1" />
-                        Inactivo
-                      </Badge>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <p className="text-muted mb-0 me-auto" style={{ fontSize: "13px" }}>
-          Total: {employees.length} empleado{employees.length !== 1 ? "s" : ""}
-        </p>
-      </Modal.Footer>
-    </Modal>
+                    </TableCell>
+                    <TableCell className="align-middle">
+                      {employee.profile.estatus ? (
+                        <Badge
+                          variant="default"
+                          className="px-3 py-2 flex items-center justify-center w-fit bg-green-500"
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            borderRadius: "8px",
+                          }}
+                        >
+                          <CheckCircle size={14} className="mr-1" />
+                          Activo
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="destructive"
+                          className="px-3 py-2 flex items-center justify-center w-fit"
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            borderRadius: "8px",
+                          }}
+                        >
+                          <XCircle size={14} className="mr-1" />
+                          Inactivo
+                        </Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+        <DialogFooter>
+          <p className="text-muted-foreground mb-0 mr-auto" style={{ fontSize: "13px" }}>
+            Total: {employees.length} empleado{employees.length !== 1 ? "s" : ""}
+          </p>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

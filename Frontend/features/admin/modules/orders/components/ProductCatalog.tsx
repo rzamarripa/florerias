@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  Button,
-  Spinner,
-  Alert,
-} from "react-bootstrap";
-import { Package, AlertTriangle, Warehouse } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Package, AlertTriangle, Warehouse, Loader2 } from "lucide-react";
 import { productListsService } from "@/features/admin/modules/product-lists/services/productLists";
 import { EmbeddedProductWithStock } from "@/features/admin/modules/product-lists/types";
 import { OrderItem } from "../types";
@@ -69,7 +66,7 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
         branchId
       );
       setProducts(response.data.products);
-      console.log("🔍 Productos cargados:", response.data.products);
+      console.log("Productos cargados:", response.data.products);
     } catch (error: any) {
       console.error("Error al cargar productos:", error);
       if (
@@ -157,189 +154,129 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
   };
 
   return (
-    <div className="product-catalog">
-          {!storage && branchId && (
-            <Alert variant="info" className="mb-3">
-              <AlertTriangle size={16} className="me-2" />
-              <strong>Sin almacén disponible</strong>
-              <p className="mb-0 small mt-1">
-                No hay almacén asignado a esta sucursal. Todos los productos se
-                muestran con stock en 0.
-              </p>
-            </Alert>
+    <div className="product-catalog sticky top-0">
+      {!storage && branchId && (
+        <Alert variant="default" className="mb-3 border-blue-200 bg-blue-50">
+          <AlertTriangle size={16} className="text-blue-500" />
+          <AlertTitle className="font-semibold">Sin almacén disponible</AlertTitle>
+          <AlertDescription className="text-sm mt-1">
+            No hay almacén asignado a esta sucursal. Todos los productos se
+            muestran con stock en 0.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {loading ? (
+        <div className="text-center py-10">
+          <Loader2 className="animate-spin text-primary mb-3 mx-auto" size={32} />
+          <p className="text-muted-foreground mb-0">Cargando productos...</p>
+        </div>
+      ) : !branchId ? (
+        <div className="text-center py-10">
+          <Package size={64} className="text-muted-foreground opacity-25 mb-3 mx-auto" />
+          <p className="text-muted-foreground mb-0">
+            Selecciona una sucursal para ver productos
+          </p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="text-center py-10">
+          <Package size={64} className="text-muted-foreground opacity-25 mb-3 mx-auto" />
+          <p className="text-muted-foreground mb-0">
+            {searchTerm
+              ? "No se encontraron productos"
+              : "No hay productos disponibles para esta sucursal"}
+          </p>
+          {searchTerm && (
+            <small className="text-muted-foreground">
+              Intenta con otro término de búsqueda
+            </small>
           )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
+          {filteredProducts.map((product) => {
+            const precio = calculateFinalPrice(product);
+            const availableStock = getAvailableStock(product);
+            const isOutOfStock = availableStock <= 0;
 
-          {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" className="mb-3" />
-              <p className="text-muted mb-0">Cargando productos...</p>
-            </div>
-          ) : !branchId ? (
-            <div className="text-center py-5">
-              <Package size={64} className="text-muted opacity-25 mb-3" />
-              <p className="text-muted mb-0">
-                Selecciona una sucursal para ver productos
-              </p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-5">
-              <Package size={64} className="text-muted opacity-25 mb-3" />
-              <p className="text-muted mb-0">
-                {searchTerm
-                  ? "No se encontraron productos"
-                  : "No hay productos disponibles para esta sucursal"}
-              </p>
-              {searchTerm && (
-                <small className="text-muted">
-                  Intenta con otro término de búsqueda
-                </small>
-              )}
-            </div>
-          ) : (
-            <div className="row g-2">
-              {filteredProducts.map((product) => {
-                const precio = calculateFinalPrice(product);
-                const availableStock = getAvailableStock(product);
-                const isOutOfStock = availableStock <= 0;
-
-                return (
-                  <div key={product.productId} className="col-6 col-xl-4">
-                    <Card
-                      className="shadow-sm product-card h-100 overflow-hidden"
-                      style={{
-                        border: "1px solid #a8c5e8",
-                        cursor: isOutOfStock ? "not-allowed" : "pointer"
-                      }}
-                      onClick={() => {
-                        if (!isOutOfStock) {
-                          handleAddToOrder(product);
-                        }
-                      }}
-                    >
-                      <div className="position-relative">
-                        {product.imagen ? (
-                          <img
-                            src={product.imagen}
-                            alt={product.nombre}
-                            className="card-img-top"
-                            style={{
-                              width: "100%",
-                              height: "100px",
-                              objectFit: "cover",
-                            }}
-                          />
-                        ) : (
-                          <div
-                            className="bg-light d-flex align-items-center justify-content-center"
-                            style={{ width: "100%", height: "100px" }}
-                          >
-                            <Package size={28} className="text-muted" />
-                          </div>
-                        )}
-                        {/* Badge de stock tipo banderín */}
-                        <div
-                          className={`stock-ribbon ${
-                            isOutOfStock
-                              ? "bg-danger"
-                              : availableStock < 5
-                              ? "bg-warning"
-                              : "bg-success"
-                          }`}
-                        >
-                          {availableStock}
-                        </div>
-                      </div>
-                      <Card.Body className="p-2 d-flex flex-column">
-                        <h6
-                          className="fw-bold mb-1 text-dark"
-                          style={{
-                            fontSize: "0.8rem",
-                            lineHeight: "1.15",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            minHeight: "1.8rem"
-                          }}
-                        >
-                          {product.nombre}
-                        </h6>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span
-                            className="text-success fw-bold"
-                            style={{ fontSize: "0.95rem" }}
-                          >
-                            ${formatNumber(precio)}
-                          </span>
-                        </div>
-                      </Card.Body>
-                      {isOutOfStock && (
-                        <Button
-                          variant="warning"
-                          className="rounded-0 border-0 w-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleManageStock(product);
-                          }}
-                          style={{ padding: "6px 8px", fontSize: "0.8rem" }}
-                        >
-                          <Warehouse size={14} className="me-1" />
-                          Sin stock
-                        </Button>
-                      )}
-                    </Card>
+            return (
+              <Card
+                key={product.productId}
+                className={`shadow-sm overflow-hidden h-full border-[#a8c5e8] ${
+                  isOutOfStock ? "cursor-not-allowed" : "cursor-pointer hover:-translate-y-0.5 hover:shadow-lg"
+                } transition-all duration-200`}
+                onClick={() => {
+                  if (!isOutOfStock) {
+                    handleAddToOrder(product);
+                  }
+                }}
+              >
+                <div className="relative">
+                  {product.imagen ? (
+                    <img
+                      src={product.imagen}
+                      alt={product.nombre}
+                      className="w-full h-[100px] object-cover"
+                    />
+                  ) : (
+                    <div className="bg-muted flex items-center justify-center w-full h-[100px]">
+                      <Package size={28} className="text-muted-foreground" />
+                    </div>
+                  )}
+                  {/* Badge de stock tipo banderín */}
+                  <div
+                    className={`absolute top-0 right-0 text-white font-bold text-xs px-3 py-1 rounded-bl-lg shadow-md min-w-[28px] text-center ${
+                      isOutOfStock
+                        ? "bg-red-500"
+                        : availableStock < 5
+                        ? "bg-yellow-500"
+                        : "bg-green-500"
+                    }`}
+                  >
+                    {availableStock}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+                <CardContent className="p-2 flex flex-col">
+                  <h6
+                    className="font-bold mb-1 text-foreground text-xs leading-tight overflow-hidden text-ellipsis"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      minHeight: "1.8rem"
+                    }}
+                  >
+                    {product.nombre}
+                  </h6>
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-600 font-bold text-sm">
+                      ${formatNumber(precio)}
+                    </span>
+                  </div>
+                </CardContent>
+                {isOutOfStock && (
+                  <Button
+                    variant="default"
+                    className="rounded-none w-full bg-yellow-500 hover:bg-yellow-600 text-white py-1.5 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleManageStock(product);
+                    }}
+                  >
+                    <Warehouse size={14} className="mr-1" />
+                    Sin stock
+                  </Button>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       <style jsx>{`
         .product-catalog {
           position: sticky;
           top: 0;
-        }
-
-        .product-card {
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .product-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-        }
-
-        .stock-ribbon {
-          position: absolute;
-          top: 0;
-          right: 0;
-          color: white;
-          font-weight: bold;
-          font-size: 0.75rem;
-          padding: 4px 12px 4px 8px;
-          border-radius: 0 0 0 8px;
-          box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.2);
-          min-width: 28px;
-          text-align: center;
-        }
-
-        .overflow-auto::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .overflow-auto::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-
-        .overflow-auto::-webkit-scrollbar-thumb {
-          background: #888;
-          border-radius: 10px;
-        }
-
-        .overflow-auto::-webkit-scrollbar-thumb:hover {
-          background: #555;
         }
       `}</style>
     </div>

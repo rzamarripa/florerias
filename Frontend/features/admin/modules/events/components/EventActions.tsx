@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Spinner } from "react-bootstrap";
-import { Edit, Trash2, DollarSign, Eye } from "lucide-react";
+import { Edit, Trash2, DollarSign, Eye, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { eventsService } from "../services/events";
 import { Event } from "../types";
 import EventModal from "./EventModal";
 import AddEventPaymentModal from "./AddEventPaymentModal";
 import ViewEventPaymentsModal from "./ViewEventPaymentsModal";
+import { Button } from "@/components/ui/button";
 
 interface EventActionsProps {
   event: Event;
@@ -22,7 +22,7 @@ const EventActions: React.FC<EventActionsProps> = ({ event, onEventSaved }) => {
   const [showViewPaymentsModal, setShowViewPaymentsModal] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm("¿Estás seguro de eliminar este evento?")) return;
+    if (!confirm("Estas seguro de eliminar este evento?")) return;
 
     try {
       setIsDeleting(true);
@@ -38,91 +38,51 @@ const EventActions: React.FC<EventActionsProps> = ({ event, onEventSaved }) => {
 
   return (
     <>
-      <div className="d-flex justify-content-center gap-1">
+      <div className="flex justify-center gap-1">
         <Button
-          variant="light"
-          size="sm"
+          variant="ghost"
+          size="icon-sm"
           onClick={() => setShowViewPaymentsModal(true)}
-          className="border-0"
-          style={{
-            borderRadius: "50%",
-            width: "32px",
-            height: "32px",
-            padding: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#e7f3ff",
-          }}
+          className="rounded-full bg-blue-100 hover:bg-blue-200"
           title="Ver pagos"
         >
-          <Eye size={16} className="text-info" />
+          <Eye size={16} className="text-blue-500" />
         </Button>
 
         {event.balance > 0 && (
           <Button
-            variant="light"
-            size="sm"
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setShowAddPaymentModal(true)}
-            className="border-0"
-            style={{
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              padding: "0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#d4edda",
-            }}
+            className="rounded-full bg-green-100 hover:bg-green-200"
             title="Agregar pago"
           >
-            <DollarSign size={16} className="text-success" />
+            <DollarSign size={16} className="text-green-600" />
           </Button>
         )}
 
         <Button
-          variant="light"
-          size="sm"
+          variant="ghost"
+          size="icon-sm"
           onClick={() => setShowEditModal(true)}
-          className="border-0"
-          style={{
-            borderRadius: "50%",
-            width: "32px",
-            height: "32px",
-            padding: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#fff3cd",
-          }}
+          className="rounded-full bg-yellow-100 hover:bg-yellow-200"
           title="Editar"
         >
-          <Edit size={16} className="text-warning" />
+          <Edit size={16} className="text-yellow-600" />
         </Button>
 
         <Button
-          variant="light"
-          size="sm"
+          variant="ghost"
+          size="icon-sm"
           onClick={() => handleDelete()}
           disabled={isDeleting}
-          className="border-0"
-          style={{
-            borderRadius: "50%",
-            width: "32px",
-            height: "32px",
-            padding: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#fee",
-          }}
+          className="rounded-full bg-red-100 hover:bg-red-200"
           title="Eliminar"
         >
           {isDeleting ? (
-            <Spinner animation="border" size="sm" />
+            <Loader2 size={16} className="animate-spin" />
           ) : (
-            <Trash2 size={16} className="text-danger" />
+            <Trash2 size={16} className="text-red-500" />
           )}
         </Button>
       </div>

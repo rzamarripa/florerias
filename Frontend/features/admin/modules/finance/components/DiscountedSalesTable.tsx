@@ -1,10 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Table, Spinner, Badge } from "react-bootstrap";
+import { Loader2 } from "lucide-react";
 import { financeService } from "../services/finance";
 import { FinanceFilters, DiscountedSale } from "../types";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface DiscountedSalesTableProps {
   filters: FinanceFilters;
@@ -58,17 +69,17 @@ const DiscountedSalesTable: React.FC<DiscountedSalesTableProps> = ({ filters }) 
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { variant: string; text: string }> = {
-      pending: { variant: "warning", text: "Pendiente" },
-      completed: { variant: "success", text: "Completada" },
-      cancelled: { variant: "danger", text: "Cancelada" },
-      in_progress: { variant: "info", text: "En Proceso" },
+    const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; className?: string; text: string }> = {
+      pending: { variant: "secondary", className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100", text: "Pendiente" },
+      completed: { variant: "secondary", className: "bg-green-100 text-green-800 hover:bg-green-100", text: "Completada" },
+      cancelled: { variant: "destructive", text: "Cancelada" },
+      in_progress: { variant: "secondary", className: "bg-blue-100 text-blue-800 hover:bg-blue-100", text: "En Proceso" },
     };
 
-    const statusInfo = statusMap[status] || { variant: "secondary", text: status };
+    const statusInfo = statusMap[status] || { variant: "outline" as const, text: status };
 
     return (
-      <Badge bg={statusInfo.variant} className="px-2 py-1">
+      <Badge variant={statusInfo.variant} className={`px-2 py-1 ${statusInfo.className || ""}`}>
         {statusInfo.text}
       </Badge>
     );
@@ -80,94 +91,91 @@ const DiscountedSalesTable: React.FC<DiscountedSalesTableProps> = ({ filters }) 
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="text-muted mt-3">Cargando ventas con descuento...</p>
+      <div className="text-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <p className="text-muted-foreground mt-3">Cargando ventas con descuento...</p>
       </div>
     );
   }
 
   return (
     <div className="mb-4">
-      <div
-        className="card border-0 shadow-sm"
-        style={{ borderRadius: "15px" }}
-      >
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <Table hover className="mb-0">
-              <thead style={{ background: "#f8f9fa" }}>
-                <tr>
-                  <th className="px-4 py-3 fw-semibold text-muted">No.</th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+      <Card className="border-0 shadow-sm rounded-[15px]">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">No.</TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     NO. ORDEN
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">CLIENTE</th>
-                  <th className="px-4 py-3 fw-semibold text-muted">SUCURSAL</th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">CLIENTE</TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">SUCURSAL</TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     FECHA
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     SUBTOTAL
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     DESCUENTO
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted text-end">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
                     TOTAL
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     ESTADO
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sales.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="text-center py-5 text-muted">
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       No se encontraron ventas con descuento
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   sales.map((sale, index) => (
-                    <tr
+                    <TableRow
                       key={sale._id}
-                      style={{ borderBottom: "1px solid #f1f3f5" }}
+                      className="border-b border-muted/50 hover:bg-muted/30"
                     >
-                      <td className="px-4 py-3">{index + 1}</td>
-                      <td className="px-4 py-3 fw-semibold">
+                      <TableCell className="px-4 py-3">{index + 1}</TableCell>
+                      <TableCell className="px-4 py-3 font-semibold">
                         {sale.orderNumber}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
                         {sale.clientName}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
                         {sale.branchName}
-                      </td>
-                      <td className="px-4 py-3">{formatDate(sale.createdAt)}</td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">{formatDate(sale.createdAt)}</TableCell>
+                      <TableCell className="px-4 py-3">
                         {formatCurrency(sale.subtotal)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-danger fw-semibold">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <span className="text-destructive font-semibold">
                           -{formatCurrency(sale.discount)}{" "}
                           {sale.discountType && `(${formatDiscountType(sale.discountType)})`}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-end fw-semibold">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right font-semibold">
                         {formatCurrency(sale.total)}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
                         {getStatusBadge(sale.status)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
+              </TableBody>
             </Table>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

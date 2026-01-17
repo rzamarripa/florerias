@@ -1,9 +1,12 @@
 "use client";
 
-import { ReactNode, Fragment } from "react";
-import Topbar from "@/components/layout/topbar";
-import EcommerceSidenav from "./components/EcommerceSidenav";
-import { LayoutProvider } from "@/context/useLayoutContext";
+import { ReactNode } from "react";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { EcommerceSidebar } from "./components/EcommerceSidebar";
+import { Separator } from "@/components/ui/separator";
+import NotificationDropdown from "@/components/layout/topbar/components/NotificationDropdown";
+import ThemeToggler from "@/components/layout/topbar/components/ThemeToggler";
+import UserProfileDropdown from "@/components/layout/topbar/components/UserProfile";
 
 interface EcommerceLayoutProps {
   children: ReactNode;
@@ -11,16 +14,23 @@ interface EcommerceLayoutProps {
 
 export default function EcommerceLayout({ children }: EcommerceLayoutProps) {
   return (
-    <LayoutProvider>
-      <Fragment>
-        <div className="wrapper">
-          <Topbar />
-          <EcommerceSidenav />
-          <div className="content-page">
-            {children}
+    <SidebarProvider>
+      <EcommerceSidebar />
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            <NotificationDropdown />
+            <ThemeToggler />
+            <UserProfileDropdown />
           </div>
-        </div>
-      </Fragment>
-    </LayoutProvider>
+        </header>
+        <main className="flex-1 p-4 md:p-6">
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

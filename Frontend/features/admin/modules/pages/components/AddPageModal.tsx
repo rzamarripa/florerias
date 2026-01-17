@@ -1,10 +1,31 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, FileText, Loader2 } from "lucide-react";
 import React, { useState } from "react";
-import { Alert, Button, Col, Form, Modal, Row, Table } from "react-bootstrap";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { z } from "zod";
 import { CreateModuleData, modulesService } from "../services/modules";
 import { CreatePageData, pagesService } from "../services/pages";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const createPageSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -208,98 +229,83 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={handleClose}
-      size="lg"
-      centered
-      backdrop="static"
-    >
-      <Modal.Header closeButton className="border-0 pb-2">
-        <Modal.Title className="h4 fw-semibold mb-0">
-          Crear nueva página
-        </Modal.Title>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !loading && !open && handleClose()}>
+      <DialogContent className="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Crear nueva página
+          </DialogTitle>
+          <DialogDescription>
+            Completa los datos para crear una nueva página en el sistema
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body className="px-4">
         {errors.general && (
-          <Alert variant="danger" className="mb-3">
-            {errors.general}
+          <Alert variant="destructive">
+            <AlertDescription>{errors.general}</AlertDescription>
           </Alert>
         )}
 
-        <Form onSubmit={handleSubmit}>
-          <Row className="mb-3">
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-medium mb-2 small">
-                  Nombre de la página
-                </Form.Label>
-                <Form.Control
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Nombre de la página <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
                   type="text"
                   placeholder="Nombre de la página"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
-                  isInvalid={!!errors.name}
-                  className="shadow-none"
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.name}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-medium mb-2 small">
-                  Ruta de la página
-                </Form.Label>
-                <Form.Control
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="path">
+                  Ruta de la página <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="path"
                   type="text"
                   placeholder="Ruta de la página"
                   value={formData.path}
                   onChange={(e) => handleInputChange("path", e.target.value)}
-                  isInvalid={!!errors.path}
-                  className="shadow-none"
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.path}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
+                {errors.path && (
+                  <p className="text-sm text-destructive">{errors.path}</p>
+                )}
+              </div>
+            </div>
 
-          <Row className="mb-4">
-            <Col>
-              <Form.Group>
-                <Form.Label className="fw-medium mb-2 small">
-                  Descripción (opcional)
-                </Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  placeholder="Descripción de la página"
-                  value={formData.description}
-                  onChange={(e) =>
-                    handleInputChange("description", e.target.value)
-                  }
-                  className="shadow-none"
-                />
-              </Form.Group>
-            </Col>
-          </Row>
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción (opcional)</Label>
+              <Textarea
+                id="description"
+                rows={3}
+                placeholder="Descripción de la página"
+                value={formData.description}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
+              />
+            </div>
 
-          <div className="mb-4">
-            <h5 className="fw-semibold mb-3 pb-2 border-bottom">
-              Módulos de la página
-            </h5>
+            <div className="space-y-4">
+              <h4 className="font-semibold border-b pb-2">
+                Módulos de la página
+              </h4>
 
-            <Row className="mb-3">
-              <Col md={5}>
-                <Form.Group>
-                  <Form.Label className="fw-medium mb-2 small">
-                    Nombre del módulo
-                  </Form.Label>
-                  <Form.Control
+              <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="moduleName">Nombre del módulo</Label>
+                  <Input
+                    id="moduleName"
                     type="text"
                     placeholder="Nombre del módulo"
                     value={currentModule.nombre}
@@ -309,16 +315,13 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
                         nombre: e.target.value,
                       }))
                     }
-                    className="shadow-none"
                   />
-                </Form.Group>
-              </Col>
-              <Col md={5}>
-                <Form.Group>
-                  <Form.Label className="fw-medium mb-2 small">
-                    Descripción del módulo
-                  </Form.Label>
-                  <Form.Control
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="moduleDescription">Descripción del módulo</Label>
+                  <Input
+                    id="moduleDescription"
                     type="text"
                     placeholder="Descripción del módulo"
                     value={currentModule.description}
@@ -328,100 +331,87 @@ const CreatePageModal: React.FC<CreatePageModalProps> = ({
                         description: e.target.value,
                       }))
                     }
-                    className="shadow-none"
                   />
-                </Form.Group>
-              </Col>
-              <Col md={2} className="d-flex align-items-end">
+                </div>
+
                 <Button
-                  variant="primary"
+                  type="button"
                   onClick={handleAddModule}
                   disabled={!currentModule.nombre.trim() || loading}
-                  className="fw-medium w-100"
                 >
-                  <Plus size={16} className="me-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Agregar
                 </Button>
-              </Col>
-            </Row>
-
-            {modules.length > 0 && (
-              <div className="border rounded overflow-hidden">
-                <Table responsive className="mb-0">
-                  <thead>
-                    <tr>
-                      <th className="fw-semibold small text-center">ID</th>
-                      <th className="fw-semibold small text-center">
-                        Nombre del módulo
-                      </th>
-                      <th className="fw-semibold small text-center">
-                        Descripción del módulo
-                      </th>
-                      <th className="fw-semibold small text-center">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modules.map((module, index) => (
-                      <tr key={module.id}>
-                        <td className="align-middle text-center">
-                          <small className="text-muted font-monospace">
-                            {index + 1}
-                          </small>
-                        </td>
-                        <td className="align-middle text-center small">
-                          {module.nombre || "Sin nombre"}
-                        </td>
-                        <td className="align-middle text-center small">
-                          {module.description || "Sin descripción"}
-                        </td>
-                        <td className="align-middle text-center">
-                          <button
-                            className="btn btn-light btn-icon btn-sm rounded-circle"
-                            title="Eliminar módulo"
-                            onClick={() => handleRemoveModule(module.id)}
-                            disabled={loading}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
               </div>
-            )}
-          </div>
-        </Form>
-      </Modal.Body>
 
-      <Modal.Footer className="border-0">
-        <Button
-          variant="light"
-          onClick={handleClose}
-          className="fw-medium px-4"
-          disabled={loading}
-        >
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={loading}
-          className="fw-medium px-4"
-        >
-          {loading ? (
-            <>
-              <span className="spinner-border spinner-border-sm me-2" />
-              Guardando...
-            </>
-          ) : (
-            "Guardar"
-          )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+              {modules.length > 0 && (
+                <div className="border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 text-center">#</TableHead>
+                        <TableHead className="text-center">Nombre del módulo</TableHead>
+                        <TableHead className="text-center">Descripción del módulo</TableHead>
+                        <TableHead className="w-20 text-center">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {modules.map((module, index) => (
+                        <TableRow key={module.id}>
+                          <TableCell className="text-center text-muted-foreground font-mono text-sm">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell className="text-center text-sm">
+                            {module.nombre || "Sin nombre"}
+                          </TableCell>
+                          <TableCell className="text-center text-sm">
+                            {module.description || "Sin descripción"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Eliminar módulo"
+                              onClick={() => handleRemoveModule(module.id)}
+                              disabled={loading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                "Guardar"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

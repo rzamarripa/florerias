@@ -1,8 +1,18 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Badge, Button, Spinner } from "react-bootstrap";
-import { ArrowLeft, Edit, Trash2, Star, Package } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ArrowLeft, Edit, Trash2, Package, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { productsService } from "./services/products";
@@ -47,7 +57,7 @@ const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({
       const response = await productsService.getProductStats(productId);
       setStats(response.data);
     } catch (error: any) {
-      console.error("Error al cargar estadísticas:", error);
+      console.error("Error al cargar estadisticas:", error);
     }
   };
 
@@ -56,7 +66,7 @@ const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({
   };
 
   const handleDelete = async () => {
-    if (window.confirm("¿Estás seguro de eliminar este producto?")) {
+    if (window.confirm("Estas seguro de eliminar este producto?")) {
       try {
         await productsService.deleteProduct(productId);
         toast.success("Producto eliminado exitosamente");
@@ -73,11 +83,8 @@ const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({
 
   if (loading) {
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "400px" }}
-      >
-        <Spinner animation="border" variant="primary" />
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -107,89 +114,88 @@ const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({
       <Button
         variant="link"
         onClick={handleBack}
-        className="mb-3 text-decoration-none d-flex align-items-center gap-2"
+        className="mb-3 no-underline flex items-center gap-2 p-0"
       >
         <ArrowLeft size={18} />
         Volver a productos
       </Button>
 
       <Card className="border-0 shadow-sm">
-        <Card.Body className="p-4">
-          <Row>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Product Images */}
-            <Col lg={5}>
+            <div className="lg:col-span-5">
               <div className="mb-3">
                 {selectedImage ? (
                   <img
                     src={selectedImage}
                     alt={product.nombre}
-                    className="w-100 rounded border"
-                    style={{ height: "400px", objectFit: "cover" }}
+                    className="w-full rounded-lg border object-cover"
+                    style={{ height: "400px" }}
                   />
                 ) : (
                   <div
-                    className="w-100 rounded border bg-light d-flex align-items-center justify-content-center"
+                    className="w-full rounded-lg border bg-muted flex items-center justify-center"
                     style={{ height: "400px" }}
                   >
-                    <Package size={80} className="text-muted" />
+                    <Package size={80} className="text-muted-foreground" />
                   </div>
                 )}
               </div>
 
               {/* Thumbnail (single image) */}
               {product.imagen && (
-                <div className="d-flex gap-2">
+                <div className="flex gap-2">
                   <img
                     src={product.imagen}
                     alt={product.nombre}
-                    className="rounded border"
+                    className="rounded-lg border cursor-pointer"
                     style={{
                       width: "80px",
                       height: "80px",
                       objectFit: "cover",
-                      cursor: "pointer",
                       opacity: selectedImage === product.imagen ? 1 : 0.6,
                     }}
                     onClick={() => setSelectedImage(product.imagen)}
                   />
                 </div>
               )}
-            </Col>
+            </div>
 
             {/* Product Info */}
-            <Col lg={7}>
+            <div className="lg:col-span-7">
               {/* Stock Badge */}
               <Badge
-                bg={product.estatus ? "success" : "danger"}
-                className="mb-3"
+                variant={product.estatus ? "default" : "destructive"}
+                className={`mb-3 ${product.estatus ? "bg-green-500 hover:bg-green-600" : ""}`}
               >
                 {product.estatus ? "In Stock" : "Out of Stock"}
               </Badge>
 
               {/* Product Title */}
-              <h2 className="mb-3">{product.nombre}</h2>
+              <h2 className="text-2xl font-bold mb-3">{product.nombre}</h2>
 
               {/* Product Details Grid */}
-              <Row className="mb-4">
-                <Col md={6} className="mb-3">
-                  <div className="text-muted small">UUID:</div>
-                  <div className="fw-semibold">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="mb-3">
+                  <div className="text-muted-foreground text-sm">UUID:</div>
+                  <div className="font-semibold">
                     {product._id}
                   </div>
-                </Col>
-                <Col md={6} className="mb-3">
-                  <div className="text-muted small">UNIDAD DE MEDIDA:</div>
-                  <div className="fw-semibold">{product.unidad}</div>
-                </Col>
-                <Col md={6} className="mb-3">
-                  <div className="text-muted small">STOCK:</div>
-                  <div className="fw-semibold">
+                </div>
+                <div className="mb-3">
+                  <div className="text-muted-foreground text-sm">UNIDAD DE MEDIDA:</div>
+                  <div className="font-semibold">{product.unidad}</div>
+                </div>
+                <div className="mb-3">
+                  <div className="text-muted-foreground text-sm">STOCK:</div>
+                  <div className="font-semibold">
                     {product.insumos?.length || 0}
                   </div>
-                </Col>
-                <Col md={6} className="mb-3">
-                  <div className="text-muted small">PUBLISHED:</div>
-                  <div className="fw-semibold">
+                </div>
+                <div className="mb-3">
+                  <div className="text-muted-foreground text-sm">PUBLISHED:</div>
+                  <div className="font-semibold">
                     {new Date(product.createdAt).toLocaleDateString("es-MX", {
                       day: "numeric",
                       month: "short",
@@ -201,35 +207,32 @@ const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({
                       hour12: true,
                     })}
                   </div>
-                </Col>
-                <Col md={6} className="mb-3">
-                  <div className="text-muted small">VENTAS:</div>
-                  <div className="fw-semibold">
-                    {stats?.orderCount || 0} órdenes ({stats?.totalQuantitySold || 0} unidades)
+                </div>
+                <div className="mb-3">
+                  <div className="text-muted-foreground text-sm">VENTAS:</div>
+                  <div className="font-semibold">
+                    {stats?.orderCount || 0} ordenes ({stats?.totalQuantitySold || 0} unidades)
                   </div>
-                </Col>
-                <Col md={6} className="mb-3">
-                  <div className="text-muted small">INGRESOS:</div>
-                  <div className="fw-semibold">
+                </div>
+                <div className="mb-3">
+                  <div className="text-muted-foreground text-sm">INGRESOS:</div>
+                  <div className="font-semibold">
                     $
                     {(stats?.totalRevenue || 0).toLocaleString("es-MX", {
                       minimumFractionDigits: 2,
                     })}
                   </div>
-                </Col>
-              </Row>
+                </div>
+              </div>
 
               {/* Price */}
               <div className="mb-4">
-                <div className="d-flex align-items-center gap-3">
-                  <span
-                    className="text-danger fw-bold"
-                    style={{ fontSize: "2rem" }}
-                  >
+                <div className="flex items-center gap-3">
+                  <span className="text-red-500 font-bold text-3xl">
                     ${totalVenta.toFixed(2)}
                   </span>
                   {discount > 0 && (
-                    <Badge bg="danger" className="fs-6">
+                    <Badge variant="destructive" className="text-base">
                       {discount}%
                     </Badge>
                   )}
@@ -239,68 +242,67 @@ const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({
               {/* Product Info Section */}
               {product.descripcion && (
                 <div className="mb-4">
-                  <h5 className="fw-bold mb-3">PRODUCT INFO:</h5>
-                  <p className="text-muted">{product.descripcion}</p>
+                  <h5 className="font-bold mb-3">PRODUCT INFO:</h5>
+                  <p className="text-muted-foreground">{product.descripcion}</p>
                 </div>
               )}
 
               {/* Insumos Section */}
               {product.insumos && product.insumos.length > 0 && (
                 <div className="mb-4">
-                  <h5 className="fw-bold mb-3">INSUMOS:</h5>
-                  <div className="table-responsive">
-                    <table className="table table-sm">
-                      <thead>
-                        <tr>
-                          <th>Nombre</th>
-                          <th>Cantidad</th>
-                          <th>Unidad</th>
-                          <th>Costo</th>
-                          <th>Venta</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                  <h5 className="font-bold mb-3">INSUMOS:</h5>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Cantidad</TableHead>
+                          <TableHead>Unidad</TableHead>
+                          <TableHead>Costo</TableHead>
+                          <TableHead>Venta</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {product.insumos.map((insumo, index) => (
-                          <tr key={index}>
-                            <td>{insumo.nombre}</td>
-                            <td>{insumo.cantidad}</td>
-                            <td>{insumo.unidad}</td>
-                            <td className="text-success">
+                          <TableRow key={index}>
+                            <TableCell>{insumo.nombre}</TableCell>
+                            <TableCell>{insumo.cantidad}</TableCell>
+                            <TableCell>{insumo.unidad}</TableCell>
+                            <TableCell className="text-green-600">
                               ${insumo.importeCosto.toFixed(2)}
-                            </td>
-                            <td className="text-primary">
+                            </TableCell>
+                            <TableCell className="text-primary">
                               ${insumo.importeVenta.toFixed(2)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="d-flex gap-2">
+              <div className="flex gap-2">
                 <Button
-                  variant="primary"
-                  className="d-flex align-items-center gap-2"
+                  className="flex items-center gap-2"
                   onClick={handleEdit}
                 >
                   <Edit size={18} />
                   Edit
                 </Button>
                 <Button
-                  variant="danger"
-                  className="d-flex align-items-center gap-2"
+                  variant="destructive"
+                  className="flex items-center gap-2"
                   onClick={handleDelete}
                 >
                   <Trash2 size={18} />
                   Delisting
                 </Button>
               </div>
-            </Col>
-          </Row>
-        </Card.Body>
+            </div>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { TbChevronDown, TbRefresh, TbX } from "react-icons/tb";
-import { Card, CardHeader, CardBody, CardTitle } from "react-bootstrap";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 
 import type { ChildrenType } from "@/types";
 
@@ -41,36 +41,46 @@ const CardWithActions = ({
   if (!isVisible) return null;
 
   return (
-    <Card className="position-relative">
+    <Card className="relative">
       {isRefreshing && (
-        <div className="card-overlay">
-          <div className="spinner-border text-primary" />
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       )}
 
-      <CardHeader className="justify-content-between align-items-center">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{title}</CardTitle>
-        <div className="card-action">
+        <div className="flex items-center gap-2">
           {isCollapsible && (
-            <span className="card-action-item" onClick={handleToggle}>
+            <button
+              className="p-1 hover:bg-muted rounded"
+              onClick={handleToggle}
+            >
               <TbChevronDown
-                style={{ rotate: isCollapsed ? "0deg" : "180deg" }}
+                className="transition-transform"
+                style={{ transform: isCollapsed ? "rotate(0deg)" : "rotate(180deg)" }}
               />
-            </span>
+            </button>
           )}
           {isRefreshable && (
-            <span className="card-action-item" onClick={handleRefresh}>
+            <button
+              className="p-1 hover:bg-muted rounded"
+              onClick={handleRefresh}
+            >
               <TbRefresh />
-            </span>
+            </button>
           )}
           {isCloseable && (
-            <span className="card-action-item" onClick={handleClose}>
+            <button
+              className="p-1 hover:bg-muted rounded"
+              onClick={handleClose}
+            >
               <TbX />
-            </span>
+            </button>
           )}
         </div>
       </CardHeader>
-      <CardBody
+      <CardContent
         className="pt-2"
         style={{
           display: isCollapsed ? "none" : "block",
@@ -78,7 +88,7 @@ const CardWithActions = ({
         }}
       >
         {children}
-      </CardBody>
+      </CardContent>
     </Card>
   );
 };

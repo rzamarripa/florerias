@@ -1,20 +1,32 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
   Table,
-  Badge,
-  Form,
-  InputGroup,
-  Spinner,
-} from "react-bootstrap";
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Plus,
   Search,
   ChevronLeft,
   ChevronRight,
   Warehouse,
+  Loader2,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { storageService } from "./services/storage";
@@ -116,17 +128,17 @@ const StoragePage: React.FC = () => {
           setShowAddProductsModal(true);
         }
       } else {
-        toast.error("No se encontró almacén para esta sucursal");
+        toast.error("No se encontro almacen para esta sucursal");
       }
     } catch (error: any) {
       console.error("Error loading storage for order:", error);
-      toast.error("Error al cargar el almacén");
+      toast.error("Error al cargar el almacen");
     } finally {
       setLoading(false);
     }
   };
 
-  // Cargar las sucursales del usuario según su rol
+  // Cargar las sucursales del usuario segun su rol
   const loadUserBranches = async () => {
     try {
       if (!userId) return;
@@ -193,7 +205,7 @@ const StoragePage: React.FC = () => {
       const response = await storageService.getAllStorages(filters);
 
       if (response.data) {
-        // Filtrar los storages según las sucursales del usuario
+        // Filtrar los storages segun las sucursales del usuario
         const branchIds = userBranches.map((b) => b._id);
         const filteredStorages = response.data.filter((storage) => {
           const storageBranchId =
@@ -205,7 +217,7 @@ const StoragePage: React.FC = () => {
 
         setStorages(filteredStorages);
 
-        // Ajustar la paginación
+        // Ajustar la paginacion
         setPagination({
           ...response.pagination,
           total: filteredStorages.length,
@@ -223,16 +235,12 @@ const StoragePage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleBranchFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setBranchFilter(e.target.value);
+  const handleBranchFilterChange = (value: string): void => {
+    setBranchFilter(value === "all" ? "" : value);
   };
 
-  const handleStatusFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value === "all" ? "" : value);
   };
 
   const handlePageChange = (page: number) => {
@@ -285,225 +293,214 @@ const StoragePage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="container mx-auto py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h2 className="mb-1 fw-bold">Almacenes</h2>
-          <p className="text-muted mb-0">
+          <h2 className="mb-1 font-bold text-2xl">Almacenes</h2>
+          <p className="text-muted-foreground mb-0">
             Gestiona los almacenes y su inventario
           </p>
         </div>
         {(isAdmin || isManager || isCashier) && (
           <Button
-            variant="primary"
             onClick={() => setShowCreateModal(true)}
-            className="d-flex align-items-center gap-2 px-4"
+            className="flex items-center gap-2 px-4"
           >
             <Plus size={20} />
-            Nuevo Almacén
+            Nuevo Almacen
           </Button>
         )}
       </div>
 
       {/* Filters */}
-      <div
-        className="card border-0 shadow-sm mb-2"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body p-2">
-          <div className="row g-2">
-            <div className="col-md-4">
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por sucursal..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
+      <Card className="border-0 shadow-sm mb-2 rounded-lg">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por sucursal..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10 bg-muted/50 border-0"
+              />
             </div>
 
             {/* Filtro de sucursal solo para NO administradores (gerentes, etc.) */}
             {!isAdmin && (
-              <div className="col-md-4">
-                <Form.Select
-                  value={branchFilter}
-                  onChange={handleBranchFilterChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px" }}
-                >
-                  <option value="">Todas las sucursales</option>
+              <Select
+                value={branchFilter || "all"}
+                onValueChange={handleBranchFilterChange}
+              >
+                <SelectTrigger className="bg-muted/50 border-0">
+                  <SelectValue placeholder="Todas las sucursales" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las sucursales</SelectItem>
                   {userBranches.map((branch) => (
-                    <option key={branch._id} value={branch._id}>
+                    <SelectItem key={branch._id} value={branch._id}>
                       {branch.branchName}{" "}
                       {branch.branchCode ? `(${branch.branchCode})` : ""}
-                    </option>
+                    </SelectItem>
                   ))}
-                </Form.Select>
-              </div>
+                </SelectContent>
+              </Select>
             )}
 
-            <div className={!isAdmin ? "col-md-4" : "col-md-8"}>
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
-            </div>
+            <Select
+              value={statusFilter || "all"}
+              onValueChange={handleStatusFilterChange}
+            >
+              <SelectTrigger className={`bg-muted/50 border-0 ${!isAdmin ? "" : "md:col-span-2"}`}>
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card className="border-0 shadow-sm rounded-lg">
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando almacenes...</p>
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground mt-3">Cargando almacenes...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
+            <div className="rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">#</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
                       SUCURSAL
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
+                    </TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
                       GERENTE
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
+                    </TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
                       PRODUCTOS
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
+                    </TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
                       CANTIDAD TOTAL
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      ÚLTIMO INGRESO
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-center">
+                    </TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
+                      ULTIMO INGRESO
+                    </TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ESTADO</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-center">
                       ACCIONES
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {storages.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-5 text-muted">
-                        <Warehouse size={48} className="mb-3 opacity-50" />
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                        <Warehouse size={48} className="mb-3 opacity-50 mx-auto" />
                         <p className="mb-0">No se encontraron almacenes</p>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     storages.map((storage, index) => (
-                      <tr
+                      <TableRow
                         key={storage._id}
-                        style={{ borderBottom: "1px solid #f1f3f5" }}
+                        className="border-b border-muted/30"
                       >
-                        <td className="px-2 py-2">
+                        <TableCell className="px-2 py-2">
                           {(pagination.page - 1) * pagination.limit + index + 1}
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell className="px-2 py-2">
                           <div>
-                            <div className="fw-semibold">
+                            <div className="font-semibold">
                               {getBranchName(storage)}
                             </div>
                             {getBranchCode(storage) && (
-                              <small className="text-muted">
+                              <small className="text-muted-foreground">
                                 {getBranchCode(storage)}
                               </small>
                             )}
                           </div>
-                        </td>
-                        <td className="px-2 py-2">{getManagerName(storage)}</td>
-                        <td className="px-2 py-2">
-                          <Badge bg="info" pill>
+                        </TableCell>
+                        <TableCell className="px-2 py-2">{getManagerName(storage)}</TableCell>
+                        <TableCell className="px-2 py-2">
+                          <Badge variant="secondary" className="rounded-full">
                             {getProductsCount(storage)}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
-                          <Badge bg="primary" pill>
+                        </TableCell>
+                        <TableCell className="px-2 py-2">
+                          <Badge className="rounded-full">
                             {getTotalQuantity(storage)}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell className="px-2 py-2">
                           <small>{formatDate(storage.lastIncome)}</small>
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell className="px-2 py-2">
                           <Badge
-                            bg={storage.isActive ? "success" : "danger"}
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontWeight: "500",
-                            }}
+                            variant={storage.isActive ? "default" : "destructive"}
+                            className="px-2.5 py-0.5 rounded-xl font-medium"
                           >
                             {storage.isActive ? "Activo" : "Inactivo"}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell className="px-2 py-2">
                           <StorageActions
                             storage={storage}
                             onStorageUpdated={handleStorageUpdated}
                           />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
+                </TableBody>
               </Table>
             </div>
           )}
 
           {/* Pagination */}
           {!loading && storages.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
+            <div className="flex justify-between items-center px-2 py-2 border-t">
+              <p className="text-muted-foreground mb-0 text-sm">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
                 de {pagination.total} almacenes
               </p>
-              <div className="d-flex gap-2">
+              <div className="flex gap-2">
                 <Button
-                  variant="light"
+                  variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 >
                   <ChevronLeft size={16} />
                 </Button>
-                <span className="px-3 py-1">
-                  Página {pagination.page} de {pagination.pages}
+                <span className="px-3 py-1 text-sm">
+                  Pagina {pagination.page} de {pagination.pages}
                 </span>
                 <Button
-                  variant="light"
+                  variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 >
                   <ChevronRight size={16} />
                 </Button>
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Create Modal */}
       {(isAdmin || isManager || isCashier) && (

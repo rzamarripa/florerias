@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Modal, Button, Form, Alert, Spinner } from "react-bootstrap";
-import { Camera, Upload, X, CheckCircle } from "lucide-react";
+import { Camera, Upload, X, CheckCircle, Loader2 } from "lucide-react";
 import QrScanner from "qr-scanner";
 import { toast } from "react-toastify";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import digitalCardService from "../services/digitalCardService";
 import ClientPointsDashboardModal from "../../clients/components/ClientPointsDashboardModal";
 
@@ -47,7 +54,7 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
 
       await scannerRef.current.start();
     } catch (err) {
-      setError("No se pudo acceder a la cámara");
+      setError("No se pudo acceder a la camara");
       setScanning(false);
     }
   }, []);
@@ -67,35 +74,35 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
       stopScanner();
 
       const response = await digitalCardService.scanQRCode(qrData, branchId);
-      
+
       // Verificar si la respuesta fue exitosa
-      if (!response.success) {
-        throw new Error(response.message || "Error al procesar el código QR");
+      if (!response.success || !response.data) {
+        throw new Error((response as any).message || "Error al procesar el codigo QR");
       }
 
       setScanResult(response.data);
       setScannedClientData(response.data);
-      
-      // Mostrar toast de éxito
+
+      // Mostrar toast de exito
       toast.success(
-        `✓ Código QR verificado correctamente para ${response.data.client.fullName}`,
+        `Codigo QR verificado correctamente para ${response.data.client.fullName}`,
         { position: "top-center" }
       );
-      
-      // Cerrar el modal del scanner y abrir el dashboard después de un breve delay
+
+      // Cerrar el modal del scanner y abrir el dashboard despues de un breve delay
       setTimeout(() => {
         // Primero cerrar el scanner
         stopScanner();
         setError(null);
         setScanResult(null);
         onHide(); // Cerrar el modal del scanner
-        
-        // Luego notificar el éxito y abrir el dashboard
+
+        // Luego notificar el exito y abrir el dashboard
         onScanSuccess(response.data);
         setShowPointsDashboard(true);
       }, 1500);
     } catch (err: any) {
-      const errorMessage = err.message || err.response?.data?.message || "Error al procesar el código QR";
+      const errorMessage = err.message || err.response?.data?.message || "Error al procesar el codigo QR";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -117,7 +124,7 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
 
       await handleQRCode(result.data);
     } catch (err) {
-      setError("No se pudo leer el código QR de la imagen");
+      setError("No se pudo leer el codigo QR de la imagen");
     } finally {
       setProcessing(false);
     }
@@ -137,118 +144,131 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
 
   return (
     <>
-    <Modal show={show} onHide={handleClose} size="lg" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>Escanear Código QR</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {error && (
-          <Alert variant="danger" dismissible onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+    <Dialog open={show} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Escanear Codigo QR</DialogTitle>
+        </DialogHeader>
 
-        {!scanning && !scanResult && (
-          <div className="text-center py-4">
-            <div className="d-grid gap-3">
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={startScanner}
-                disabled={processing}
+        <div className="py-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center justify-between">
+              <span>{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-600 hover:text-red-800"
               >
-                <Camera className="me-2" size={20} />
-                Escanear con Cámara
-              </Button>
+                <X size={16} />
+              </button>
+            </div>
+          )}
 
-              <Button
-                variant="outline-primary"
-                size="lg"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={processing}
-              >
-                <Upload className="me-2" size={20} />
-                Subir Imagen con QR
-              </Button>
+          {!scanning && !scanResult && (
+            <div className="text-center py-4">
+              <div className="grid gap-3">
+                <Button
+                  variant="default"
+                  size="lg"
+                  onClick={startScanner}
+                  disabled={processing}
+                  className="w-full"
+                >
+                  <Camera className="mr-2" size={20} />
+                  Escanear con Camara
+                </Button>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={handleFileUpload}
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={processing}
+                  className="w-full"
+                >
+                  <Upload className="mr-2" size={20} />
+                  Subir Imagen con QR
+                </Button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleFileUpload}
+                />
+              </div>
+            </div>
+          )}
+
+          {scanning && (
+            <div className="relative">
+              <video
+                ref={videoRef}
+                style={{ width: "100%", maxHeight: "400px" }}
+                className="rounded-lg"
               />
+              <Button
+                variant="destructive"
+                className="absolute top-0 right-0 m-3"
+                onClick={stopScanner}
+              >
+                <X size={20} />
+              </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        {scanning && (
-          <div className="position-relative">
-            <video
-              ref={videoRef}
-              style={{ width: "100%", maxHeight: "400px" }}
-              className="rounded"
-            />
-            <Button
-              variant="danger"
-              className="position-absolute top-0 end-0 m-3"
-              onClick={stopScanner}
-            >
-              <X size={20} />
-            </Button>
-          </div>
-        )}
+          {processing && (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="mt-3 text-muted-foreground">Procesando codigo QR...</p>
+            </div>
+          )}
 
-        {processing && (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="mt-3">Procesando código QR...</p>
-          </div>
-        )}
+          {scanResult && (
+            <div className="text-center py-4">
+              <CheckCircle size={64} className="text-green-500 mb-3 mx-auto" />
+              <div className="mb-4">
+                <h5 className="text-green-600 font-semibold text-lg">Codigo QR Verificado!</h5>
+                <div className="bg-muted rounded-lg p-4 mt-3">
+                  <p className="mb-2">
+                    <strong>Cliente:</strong> {scanResult.client.fullName}
+                  </p>
+                  <p className="mb-2">
+                    <strong>Numero:</strong> {scanResult.client.clientNumber}
+                  </p>
+                  <p className="mb-0">
+                    <strong>Puntos Disponibles:</strong>{" "}
+                    <span className="text-primary font-bold">{scanResult.client.points}</span>
+                  </p>
+                </div>
+              </div>
 
-        {scanResult && (
-          <div className="text-center py-4">
-            <CheckCircle size={64} className="text-success mb-3" />
-            <div className="mb-4">
-              <h5 className="text-success">¡Código QR Verificado!</h5>
-              <div className="bg-light rounded p-3 mt-3">
-                <p className="mb-2">
-                  <strong>Cliente:</strong> {scanResult.client.fullName}
-                </p>
-                <p className="mb-2">
-                  <strong>Número:</strong> {scanResult.client.clientNumber}
-                </p>
-                <p className="mb-0">
-                  <strong>Puntos Disponibles:</strong> <span className="text-primary fw-bold">{scanResult.client.points}</span>
-                </p>
+              {scanResult.rewards?.available > 0 && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded-lg mb-4">
+                  <small>
+                    El cliente tiene <strong>{scanResult.rewards.available}</strong> recompensa(s) disponible(s)
+                  </small>
+                </div>
+              )}
+
+              <div className="text-muted-foreground text-sm">
+                Abriendo dashboard de puntos...
               </div>
             </div>
+          )}
+        </div>
 
-            {scanResult.rewards?.available > 0 && (
-              <div className="alert alert-info">
-                <small>
-                  El cliente tiene <strong>{scanResult.rewards.available}</strong> recompensa(s) disponible(s)
-                </small>
-              </div>
-            )}
-
-            <div className="text-muted small">
-              Abriendo dashboard de puntos...
-            </div>
-          </div>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose}>
-          Cerrar
-        </Button>
-        {scanResult && (
-          <Button variant="primary" onClick={() => handleClose()}>
-            Confirmar
+        <DialogFooter className="gap-2">
+          <Button variant="secondary" onClick={handleClose}>
+            Cerrar
           </Button>
-        )}
-      </Modal.Footer>
-    </Modal>
+          {scanResult && (
+            <Button variant="default" onClick={() => handleClose()}>
+              Confirmar
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     {/* Modal del Dashboard de Puntos */}
     {scannedClientData && (

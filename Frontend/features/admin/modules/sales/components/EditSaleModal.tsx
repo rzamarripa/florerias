@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Spinner } from "react-bootstrap";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { Sale } from "../types";
 import { salesService } from "../services/sales";
@@ -55,7 +66,7 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
         deliveryDateTime: formData.deliveryDateTime,
       });
 
-      toast.success("Información de entrega actualizada exitosamente");
+      toast.success("Informacion de entrega actualizada exitosamente");
       onSaleUpdated();
       onHide();
     } catch (error: any) {
@@ -67,26 +78,24 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>
-          <div className="d-flex align-items-center gap-2">
-            <span>Editar Venta - {sale.orderNumber}</span>
-          </div>
-        </Modal.Title>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-bold">
+            Editar Venta - {sale.orderNumber}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Form onSubmit={handleSubmit}>
-        <Modal.Body>
-          <div className="mb-3">
-            <div className="bg-light p-3 rounded mb-4">
-              <h6 className="fw-semibold mb-2">Información del Cliente</h6>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div className="bg-gray-100 p-3 rounded-lg">
+              <h6 className="font-semibold mb-2">Informacion del Cliente</h6>
               <p className="mb-1">
                 <strong>Cliente:</strong> {sale.clientInfo?.name || "N/A"}
               </p>
               {sale.clientInfo?.phone && (
                 <p className="mb-1">
-                  <strong>Teléfono:</strong> {sale.clientInfo.phone}
+                  <strong>Telefono:</strong> {sale.clientInfo.phone}
                 </p>
               )}
               <p className="mb-0">
@@ -94,11 +103,12 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
               </p>
             </div>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">
-                Fecha y Hora de Entrega <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Control
+            <div className="space-y-2">
+              <Label htmlFor="deliveryDateTime" className="font-semibold">
+                Fecha y Hora de Entrega <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="deliveryDateTime"
                 type="datetime-local"
                 value={formData.deliveryDateTime}
                 onChange={(e) =>
@@ -106,17 +116,17 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
                 }
                 required
               />
-              <Form.Text className="text-muted">
+              <p className="text-xs text-muted-foreground">
                 Actualiza la fecha y hora de entrega del pedido
-              </Form.Text>
-            </Form.Group>
+              </p>
+            </div>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">
+            <div className="space-y-2">
+              <Label htmlFor="deliveryMessage" className="font-semibold">
                 Comentarios / Mensaje de Entrega
-              </Form.Label>
-              <Form.Control
-                as="textarea"
+              </Label>
+              <Textarea
+                id="deliveryMessage"
                 rows={4}
                 value={formData.deliveryMessage}
                 onChange={(e) =>
@@ -124,45 +134,39 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
                 }
                 placeholder="Escribe instrucciones especiales, comentarios sobre la entrega, etc."
               />
-              <Form.Text className="text-muted">
+              <p className="text-xs text-muted-foreground">
                 Instrucciones especiales o comentarios para la entrega
-              </Form.Text>
-            </Form.Group>
+              </p>
+            </div>
           </div>
-        </Modal.Body>
 
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onHide} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={loading}
-            style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
-            }}
-          >
-            {loading ? (
-              <>
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                  className="me-2"
-                />
-                Guardando...
-              </>
-            ) : (
-              "Guardar Cambios"
-            )}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onHide}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                "Guardar Cambios"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

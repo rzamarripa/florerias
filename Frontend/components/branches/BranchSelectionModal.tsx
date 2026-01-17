@@ -1,17 +1,28 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Modal, Button, Form, Row, Col, Spinner, Alert } from "react-bootstrap";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Branch, useActiveBranchStore } from "@/stores/activeBranchStore";
 import BranchCard from "./BranchCard";
-import { TbSearch, TbX } from "react-icons/tb";
+import { TbSearch, TbX, TbAlertTriangle } from "react-icons/tb";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
+import { Loader2 } from "lucide-react";
 
 interface BranchSelectionModalProps {
   show: boolean;
   onHide: () => void;
-  isRequired?: boolean; // Si es true, el modal no se puede cerrar sin seleccionar una sucursal
-  onNoBranchesFound?: () => void; // Callback cuando no se encuentran sucursales
+  isRequired?: boolean;
+  onNoBranchesFound?: () => void;
 }
 
 const BranchSelectionModal = ({
@@ -28,7 +39,6 @@ const BranchSelectionModal = ({
 
   const { activeBranch, setActiveBranch } = useActiveBranchStore();
 
-  // Cargar sucursales del usuario
   useEffect(() => {
     const fetchBranches = async () => {
       if (!show) return;
@@ -41,19 +51,15 @@ const BranchSelectionModal = ({
         if (result.success) {
           setBranches(result.data);
 
-          // Si no hay sucursales, notificar al componente padre
           if (result.data.length === 0) {
             setLoading(false);
-            // Notificar al componente padre que no hay sucursales
             if (onNoBranchesFound) {
               onNoBranchesFound();
             }
-            // Cerrar el modal
             onHide();
             return;
           }
 
-          // Preseleccionar la sucursal activa si existe
           if (activeBranch) {
             setSelectedBranch(activeBranch);
           }
@@ -70,7 +76,6 @@ const BranchSelectionModal = ({
     fetchBranches();
   }, [show, activeBranch]);
 
-  // Filtrar sucursales por nombre
   const filteredBranches = useMemo(() => {
     if (!searchTerm.trim()) return branches;
 
@@ -91,125 +96,117 @@ const BranchSelectionModal = ({
   };
 
   const handleCancel = () => {
-    // Si el modal es obligatorio y no hay sucursal activa, no permitir cerrar
     if (isRequired && !activeBranch && branches.length > 0) {
-      console.log("branches", branches);
       return;
     }
-    console.log("branches");
     setSelectedBranch(activeBranch);
     setSearchTerm("");
     onHide();
   };
 
+  const canClose = !(isRequired && !activeBranch);
+
   return (
-    <Modal
-      show={show}
-      size="xl"
-      centered
-      backdrop={isRequired && !activeBranch ? "static" : true}
-      keyboard={!(isRequired && !activeBranch)}
-    >
-      <Modal.Header closeButton={!(isRequired && !activeBranch)}>
-        <Modal.Title>
-          {isRequired && !activeBranch
-            ? "⚠️ Selección Obligatoria de Sucursal"
-            : "Seleccionar Sucursal"}
-        </Modal.Title>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !open && canClose && onHide()}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {isRequired && !activeBranch
+              ? "⚠️ Selección Obligatoria de Sucursal"
+              : "Seleccionar Sucursal"}
+          </DialogTitle>
+          {!canClose && (
+            <DialogDescription>
+              Es obligatorio seleccionar una sucursal para continuar.
+            </DialogDescription>
+          )}
+        </DialogHeader>
 
-      <Modal.Body>
-        {/* Mensaje de obligatoriedad */}
-        {isRequired && !activeBranch && (
-          <Alert variant="warning" className="mb-4">
-            <Alert.Heading className="h6 fw-bold">
-              ⚠️ Acción Requerida
-            </Alert.Heading>
-            <p className="mb-0">
-              Es <strong>obligatorio</strong> seleccionar una sucursal para
-              poder acceder a las funcionalidades del sistema con el usuario
-              Administrador.
-            </p>
-          </Alert>
-        )}
+        <div className="py-4">
+          {isRequired && !activeBranch && (
+            <Alert variant="default" className="mb-4 border-yellow-500 bg-yellow-50">
+              <TbAlertTriangle className="h-5 w-5 text-yellow-500" />
+              <AlertTitle className="font-bold">Acción Requerida</AlertTitle>
+              <AlertDescription>
+                Es <strong>obligatorio</strong> seleccionar una sucursal para
+                poder acceder a las funcionalidades del sistema con el usuario
+                Administrador.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Buscador */}
-        <div className="mb-4">
-          <Form.Group>
-            <div className="position-relative">
-              <Form.Control
+          <div className="mb-4">
+            <div className="relative">
+              <TbSearch
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={20}
+              />
+              <Input
                 type="text"
                 placeholder="Buscar sucursal por nombre..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="ps-5"
-              />
-              <TbSearch
-                className="position-absolute top-50 translate-middle-y ms-3"
-                size={20}
-                style={{ left: 0 }}
+                className="pl-10 pr-10"
               />
               {searchTerm && (
-                <Button
-                  variant="link"
-                  className="position-absolute top-50 translate-middle-y end-0 me-2 p-0"
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => setSearchTerm("")}
                 >
                   <TbX size={20} />
-                </Button>
+                </button>
               )}
             </div>
-          </Form.Group>
-        </div>
-
-        {/* Contenido */}
-        {loading ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="mt-3 text-muted">Cargando sucursales...</p>
           </div>
-        ) : error ? (
-          <Alert variant="danger">
-            <Alert.Heading>Error</Alert.Heading>
-            <p>{error}</p>
-          </Alert>
-        ) : filteredBranches.length === 0 ? (
-          <Alert variant="info">
-            {searchTerm
-              ? "No se encontraron sucursales que coincidan con la búsqueda"
-              : "No tienes sucursales asignadas"}
-          </Alert>
-        ) : (
-          <Row className="g-3">
-            {filteredBranches.map((branch) => (
-              <Col key={branch._id} xs={12} md={6} lg={4}>
+
+          {loading ? (
+            <div className="text-center py-10">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              <p className="mt-3 text-muted-foreground">Cargando sucursales...</p>
+            </div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : filteredBranches.length === 0 ? (
+            <Alert>
+              <AlertDescription>
+                {searchTerm
+                  ? "No se encontraron sucursales que coincidan con la búsqueda"
+                  : "No tienes sucursales asignadas"}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredBranches.map((branch) => (
                 <BranchCard
+                  key={branch._id}
                   branch={branch}
                   isActive={selectedBranch?._id === branch._id}
                   onSelect={handleSelectBranch}
                 />
-              </Col>
-            ))}
-          </Row>
-        )}
-      </Modal.Body>
+              ))}
+            </div>
+          )}
+        </div>
 
-      <Modal.Footer>
-        {/* Solo mostrar botón cancelar si no es obligatorio o ya hay sucursal activa */}
-        {!(isRequired && !activeBranch) && (
-          <Button variant="secondary" onClick={handleCancel}>
-            Cancelar
+        <DialogFooter>
+          {canClose && (
+            <Button variant="outline" onClick={handleCancel}>
+              Cancelar
+            </Button>
+          )}
+          <Button
+            onClick={handleConfirm}
+            disabled={!selectedBranch || loading}
+          >
+            Confirmar Selección
           </Button>
-        )}
-        <Button
-          variant="primary"
-          onClick={handleConfirm}
-          disabled={!selectedBranch || loading}
-        >
-          Confirmar Selección
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

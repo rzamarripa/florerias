@@ -1,8 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Tabs, Tab, Alert, Button } from "react-bootstrap";
-import { Factory, CalendarDays, Calendar, Clock, Cuboid, FileSpreadsheet } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Factory, CalendarDays, Calendar, Clock, Cuboid, FileSpreadsheet, Loader2 } from "lucide-react";
 import TodayProductionTable from "./components/tables/TodayProductionTable";
 import TomorrowProductionTable from "./components/tables/TomorrowProductionTable";
 import LaterProductionTable from "./components/tables/LaterProductionTable";
@@ -36,7 +45,7 @@ const ProductionListPage: React.FC = () => {
       const response = await branchesService.getUserBranches();
       if (response.success && response.data) {
         setBranches(response.data);
-        // Si solo hay una sucursal, seleccionarla automáticamente
+        // Si solo hay una sucursal, seleccionarla automaticamente
         if (response.data.length === 1) {
           setSelectedBranchId(response.data[0]._id);
         }
@@ -49,47 +58,47 @@ const ProductionListPage: React.FC = () => {
     }
   };
 
-  // Socket listener para detectar nuevas órdenes y actualizaciones
+  // Socket listener para detectar nuevas ordenes y actualizaciones
   useOrderSocket({
     filters: {
       branchId: selectedBranchId,
     },
     onOrderCreated: (newOrder) => {
-      // Verificar si la orden es para producción y tiene fecha de entrega
+      // Verificar si la orden es para produccion y tiene fecha de entrega
       if (newOrder.sendToProduction && newOrder.deliveryData?.deliveryDateTime) {
-        const orderBranchId = typeof newOrder.branchId === 'object' 
-          ? newOrder.branchId._id 
+        const orderBranchId = typeof newOrder.branchId === 'object'
+          ? newOrder.branchId._id
           : newOrder.branchId;
-        
+
         // Solo actualizar si es de la sucursal seleccionada o no hay sucursal seleccionada
         if (!selectedBranchId || orderBranchId === selectedBranchId) {
           const deliveryDate = new Date(newOrder.deliveryData.deliveryDateTime);
           const today = new Date();
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
-          
-          // Resetear las horas para comparación de fechas
+
+          // Resetear las horas para comparacion de fechas
           today.setHours(0, 0, 0, 0);
           tomorrow.setHours(0, 0, 0, 0);
           deliveryDate.setHours(0, 0, 0, 0);
-          
+
           let tabToNotify = "";
           if (deliveryDate.getTime() === today.getTime()) {
             tabToNotify = "hoy";
           } else if (deliveryDate.getTime() === tomorrow.getTime()) {
-            tabToNotify = "mañana";
+            tabToNotify = "manana";
           } else if (deliveryDate > tomorrow) {
             tabToNotify = "posteriores";
           }
-          
+
           if (tabToNotify) {
             // Notificar sobre la nueva orden
             toast.info(
-              `Nueva orden #${newOrder.orderNumber} agregada a producción (${tabToNotify})`,
+              `Nueva orden #${newOrder.orderNumber} agregada a produccion (${tabToNotify})`,
               { autoClose: 5000 }
             );
-            
-            // Forzar actualización de las tablas
+
+            // Forzar actualizacion de las tablas
             setRefreshKey((prev) => prev + 1);
           }
         }
@@ -97,24 +106,24 @@ const ProductionListPage: React.FC = () => {
     },
     onOrderUpdated: (updatedOrder) => {
       const orderId = updatedOrder._id;
-      
-      // Si la orden fue enviada a producción y no estaba antes
+
+      // Si la orden fue enviada a produccion y no estaba antes
       if (updatedOrder.sendToProduction && !ordersStateRef.current.has(orderId)) {
-        const orderBranchId = typeof updatedOrder.branchId === 'object' 
-          ? updatedOrder.branchId._id 
+        const orderBranchId = typeof updatedOrder.branchId === 'object'
+          ? updatedOrder.branchId._id
           : updatedOrder.branchId;
-        
+
         if (!selectedBranchId || orderBranchId === selectedBranchId) {
           toast.success(
-            `Orden #${updatedOrder.orderNumber} fue enviada a producción`,
+            `Orden #${updatedOrder.orderNumber} fue enviada a produccion`,
             { autoClose: 5000 }
           );
-          
-          // Forzar actualización de las tablas
+
+          // Forzar actualizacion de las tablas
           setRefreshKey((prev) => prev + 1);
         }
       }
-      
+
       // Actualizar el estado de seguimiento
       if (updatedOrder.sendToProduction) {
         ordersStateRef.current.add(orderId);
@@ -123,12 +132,12 @@ const ProductionListPage: React.FC = () => {
       }
     },
     onOrderDeleted: () => {
-      // Forzar actualización de las tablas
+      // Forzar actualizacion de las tablas
       setRefreshKey((prev) => prev + 1);
     },
   });
 
-  // Función para obtener la fecha actual formateada
+  // Funcion para obtener la fecha actual formateada
   const getTodayDate = () => {
     const today = new Date();
     return today.toLocaleDateString("es-MX", {
@@ -139,7 +148,7 @@ const ProductionListPage: React.FC = () => {
     });
   };
 
-  // Función para obtener la fecha de mañana formateada
+  // Funcion para obtener la fecha de manana formateada
   const getTomorrowDate = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -151,32 +160,32 @@ const ProductionListPage: React.FC = () => {
     });
   };
 
-  // Función para exportar a Excel
+  // Funcion para exportar a Excel
   const handleExportExcel = async () => {
     try {
       setExportingExcel(true);
-      
-      // Obtener todas las órdenes de producción
+
+      // Obtener todas las ordenes de produccion
       const allOrders = await productionOrdersService.getAllProductionOrders(selectedBranchId);
-      
-      // Verificar si hay órdenes para exportar
-      const totalOrders = allOrders.todayOrders.length + 
-                         allOrders.tomorrowOrders.length + 
+
+      // Verificar si hay ordenes para exportar
+      const totalOrders = allOrders.todayOrders.length +
+                         allOrders.tomorrowOrders.length +
                          allOrders.laterOrders.length;
-      
+
       if (totalOrders === 0) {
-        toast.warning("No hay órdenes de producción para exportar");
+        toast.warning("No hay ordenes de produccion para exportar");
         return;
       }
-      
+
       // Obtener el nombre de la sucursal seleccionada
       const selectedBranch = branches.find(b => b._id === selectedBranchId);
       const branchName = selectedBranch?.branchName;
-      
+
       // Generar el reporte Excel
       generateProductionExcelReport(allOrders, branchName);
-      
-      toast.success(`Reporte Excel generado con ${totalOrders} órdenes`);
+
+      toast.success(`Reporte Excel generado con ${totalOrders} ordenes`);
     } catch (error) {
       console.error("Error al exportar a Excel:", error);
       toast.error("Error al generar el reporte Excel");
@@ -186,63 +195,56 @@ const ProductionListPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="container mx-auto py-2">
       {/* Header */}
       <div className="mb-3">
-        <div className="d-flex justify-content-between align-items-start">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="mb-1 fw-bold d-flex align-items-center gap-2">
+            <h2 className="mb-1 font-bold text-2xl flex items-center gap-2">
               <Cuboid size={28} />
-              Listado de Producción
+              Listado de Produccion
             </h2>
-            <p className="text-muted mb-0">
-              Gestiona las órdenes programadas para producción
+            <p className="text-muted-foreground mb-0">
+              Gestiona las ordenes programadas para produccion
             </p>
           </div>
 
-          <div className="d-flex align-items-center gap-3">
-            {/* Selector de sucursal si hay múltiples */}
+          <div className="flex items-center gap-3">
+            {/* Selector de sucursal si hay multiples */}
             {branches.length > 1 && (
-              <div className="d-flex align-items-center gap-2">
-                <label className="text-muted small">Sucursal:</label>
-                <select
-                  className="form-select form-select-sm"
-                  value={selectedBranchId || ""}
-                  onChange={(e) =>
-                    setSelectedBranchId(e.target.value || undefined)
+              <div className="flex items-center gap-2">
+                <label className="text-muted-foreground text-sm">Sucursal:</label>
+                <Select
+                  value={selectedBranchId || "all"}
+                  onValueChange={(value) =>
+                    setSelectedBranchId(value === "all" ? undefined : value)
                   }
-                  style={{ minWidth: "200px" }}
                 >
-                  <option value="">Todas las sucursales</option>
-                  {branches.map((branch) => (
-                    <option key={branch._id} value={branch._id}>
-                      {branch.branchName}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Todas las sucursales" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las sucursales</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch._id} value={branch._id}>
+                        {branch.branchName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
-            
-            {/* Botón de exportar Excel */}
+
+            {/* Boton de exportar Excel */}
             <Button
-              variant="success"
+              variant="default"
               onClick={handleExportExcel}
               disabled={exportingExcel || loadingBranches}
-              className="d-flex align-items-center gap-2"
-              style={{ 
-                paddingLeft: "20px",
-                paddingRight: "20px",
-                paddingTop: "8px",
-                paddingBottom: "8px"
-              }}
+              className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700"
             >
               {exportingExcel ? (
                 <>
-                  <span 
-                    className="spinner-border spinner-border-sm" 
-                    role="status" 
-                    aria-hidden="true"
-                  ></span>
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Exportando...
                 </>
               ) : (
@@ -256,86 +258,70 @@ const ProductionListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs con diseño más compacto */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
-          {/* Header con pestañas más pequeñas */}
-          <div
-            className="px-3 pt-2"
-            style={{
-              borderBottom: "1px solid #e0e0e0",
-            }}
-          >
-            <Tabs
-              activeKey={activeTab}
-              onSelect={(k) => setActiveTab(k || "hoy")}
-              className="border-0 small"
-            >
-              <Tab
-                eventKey="hoy"
-                title={
-                  <span className="px-2 py-1 fw-semibold d-flex align-items-center gap-1">
-                    <CalendarDays size={14} />
-                    Hoy
-                  </span>
-                }
-              >
-                <div className="p-3">
-                  <TodayProductionTable
-                    key={`today-${refreshKey}`}
-                    branchId={selectedBranchId}
-                    onProductionUpdate={() => setRefreshKey((prev) => prev + 1)}
-                  />
-                </div>
-              </Tab>
+      {/* Tabs con diseno mas compacto */}
+      <Card className="border-0 shadow-sm rounded-lg">
+        <CardContent className="p-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="px-3 pt-2 border-b">
+              <TabsList className="bg-transparent">
+                <TabsTrigger
+                  value="hoy"
+                  className="px-4 py-2 font-semibold flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <CalendarDays size={14} />
+                  Hoy
+                </TabsTrigger>
+                <TabsTrigger
+                  value="manana"
+                  className="px-4 py-2 font-semibold flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <Calendar size={14} />
+                  Manana
+                </TabsTrigger>
+                <TabsTrigger
+                  value="posteriores"
+                  className="px-4 py-2 font-semibold flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <CalendarDays size={14} />
+                  Posteriores
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-              <Tab
-                eventKey="manana"
-                title={
-                  <span className="px-2 py-1 fw-semibold d-flex align-items-center gap-1">
-                    <Calendar size={14} />
-                    Mañana
-                  </span>
-                }
-              >
-                <div className="p-3">
-                  <TomorrowProductionTable
-                    key={`tomorrow-${refreshKey}`}
-                    branchId={selectedBranchId}
-                    onProductionUpdate={() => setRefreshKey((prev) => prev + 1)}
-                  />
-                </div>
-              </Tab>
+            <TabsContent value="hoy" className="p-3 mt-0">
+              <TodayProductionTable
+                key={`today-${refreshKey}`}
+                branchId={selectedBranchId}
+                onProductionUpdate={() => setRefreshKey((prev) => prev + 1)}
+              />
+            </TabsContent>
 
-              <Tab
-                eventKey="posteriores"
-                title={
-                  <span className="px-2 py-1 fw-semibold d-flex align-items-center gap-1">
-                    <CalendarDays size={14} />
-                    Posteriores
-                  </span>
-                }
-              >
-                <div className="p-3">
-                  <LaterProductionTable
-                    key={`later-${refreshKey}`}
-                    branchId={selectedBranchId}
-                    onProductionUpdate={() => setRefreshKey((prev) => prev + 1)}
-                  />
-                </div>
-              </Tab>
-            </Tabs>
-          </div>
-        </div>
-      </div>
+            <TabsContent value="manana" className="p-3 mt-0">
+              <TomorrowProductionTable
+                key={`tomorrow-${refreshKey}`}
+                branchId={selectedBranchId}
+                onProductionUpdate={() => setRefreshKey((prev) => prev + 1)}
+              />
+            </TabsContent>
 
-      {/* Footer con información adicional */}
-      <div className="mt-3 text-center text-muted small">
+            <TabsContent value="posteriores" className="p-3 mt-0">
+              <LaterProductionTable
+                key={`later-${refreshKey}`}
+                branchId={selectedBranchId}
+                onProductionUpdate={() => setRefreshKey((prev) => prev + 1)}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Footer con informacion adicional */}
+      <div className="mt-3 text-center text-muted-foreground text-sm">
         <p className="mb-1">
-          Solo se muestran órdenes con anticipo o enviadas a producción
+          Solo se muestran ordenes con anticipo o enviadas a produccion
         </p>
         <p className="mb-0">
-          Las órdenes se organizan por fecha y hora de entrega
+          Las ordenes se organizan por fecha y hora de entrega
           (deliveryDateTime)
         </p>
       </div>

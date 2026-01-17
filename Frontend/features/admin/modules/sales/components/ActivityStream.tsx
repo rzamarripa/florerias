@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Spinner, Alert } from "react-bootstrap";
 import {
   Package,
   DollarSign,
@@ -16,9 +15,12 @@ import {
   ThumbsDown,
   Award,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { OrderLog, OrderEventType } from "../types/orderLog";
 import { orderLogsService } from "../services/orderLogs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ActivityStreamProps {
   orderId: string;
@@ -38,7 +40,7 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
       setLoading(true);
       setError(null);
       const response = await orderLogsService.getOrderLogs(orderId, {
-        limit: 100, // Cargar todos los logs sin paginación
+        limit: 100, // Cargar todos los logs sin paginacion
       });
       setLogs(response.data);
     } catch (err: any) {
@@ -129,7 +131,7 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
 
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) {
-      return `Hace ${diffInDays} día${diffInDays > 1 ? "s" : ""}`;
+      return `Hace ${diffInDays} dia${diffInDays > 1 ? "s" : ""}`;
     }
 
     const diffInWeeks = Math.floor(diffInDays / 7);
@@ -162,20 +164,19 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
   if (loading) {
     return (
       <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "200px" }}
+        className="flex justify-center items-center min-h-[200px]"
       >
-        <Spinner animation="border" variant="primary" />
-        <span className="ms-2">Cargando historial...</span>
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <span className="ml-2">Cargando historial...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <Alert variant="danger" className="m-3">
-        <Alert.Heading>Error</Alert.Heading>
-        <p>{error}</p>
+      <Alert variant="destructive" className="m-3">
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
       </Alert>
     );
   }
@@ -183,26 +184,23 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
   if (logs.length === 0) {
     return (
       <div
-        className="text-center text-muted p-5"
-        style={{ background: "#f8f9fa", borderRadius: "12px" }}
+        className="text-center text-muted-foreground p-12 bg-muted/50 rounded-xl"
       >
-        <Clock size={48} className="mb-3" style={{ opacity: 0.3 }} />
+        <Clock size={48} className="mb-3 mx-auto opacity-30" />
         <p className="mb-0">No hay movimientos registrados para esta orden</p>
       </div>
     );
   }
 
   return (
-    <div
-      className="card border-0 shadow-sm"
-      style={{ borderRadius: "12px", background: "#f8f9fa" }}
-    >
-      <div className="card-body p-4">
-        <h5 className="fw-bold mb-4 d-flex align-items-center gap-2">
+    <Card className="border-0 shadow-sm bg-muted/30">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-lg">
           <Clock size={20} className="text-primary" />
           Historial de Movimientos
-        </h5>
-
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="activity-stream">
           {logs.map((log, index) => {
             const eventColor = getEventColor(log.eventType);
@@ -211,16 +209,16 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
             return (
               <div
                 key={log._id}
-                className="activity-item d-flex gap-3 position-relative"
+                className="flex gap-3 relative"
                 style={{
                   paddingBottom: isLastItem ? "0" : "24px",
                 }}
               >
-                {/* Línea vertical conectora */}
+                {/* Linea vertical conectora */}
                 {!isLastItem && (
                   <div
+                    className="absolute"
                     style={{
-                      position: "absolute",
                       left: "19px",
                       top: "40px",
                       bottom: "0",
@@ -232,7 +230,7 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
 
                 {/* Icono del evento */}
                 <div
-                  className="activity-icon d-flex align-items-center justify-content-center flex-shrink-0"
+                  className="flex items-center justify-center shrink-0"
                   style={{
                     width: "40px",
                     height: "40px",
@@ -247,24 +245,18 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
                 </div>
 
                 {/* Contenido del evento */}
-                <div className="activity-content flex-grow-1">
-                  <div
-                    className="card border-0 shadow-sm"
-                    style={{
-                      borderRadius: "8px",
-                      background: "white",
-                    }}
-                  >
-                    <div className="card-body p-3">
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <div className="flex-grow-1">
-                          <p className="mb-1 fw-semibold" style={{ fontSize: "14px" }}>
+                <div className="flex-grow">
+                  <Card className="border-0 shadow-sm">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-grow">
+                          <p className="mb-1 font-semibold text-sm">
                             {log.description}
                           </p>
-                          <div className="d-flex align-items-center gap-2">
+                          <div className="flex items-center gap-2">
                             {/* Avatar/Inicial del usuario */}
                             <div
-                              className="d-flex align-items-center justify-content-center"
+                              className="flex items-center justify-center"
                               style={{
                                 width: "24px",
                                 height: "24px",
@@ -277,22 +269,21 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
                             >
                               {getUserInitials(log.userName)}
                             </div>
-                            <span className="text-muted" style={{ fontSize: "12px" }}>
+                            <span className="text-muted-foreground text-xs">
                               {log.userName}
                             </span>
-                            <span className="text-muted" style={{ fontSize: "12px" }}>
-                              •
+                            <span className="text-muted-foreground text-xs">
+                              -
                             </span>
-                            <span className="text-muted" style={{ fontSize: "12px" }}>
+                            <span className="text-muted-foreground text-xs">
                               {log.userRole}
                             </span>
                           </div>
                         </div>
 
-                        <div className="text-end">
+                        <div className="text-right">
                           <small
-                            className="text-muted"
-                            style={{ fontSize: "11px" }}
+                            className="text-muted-foreground text-[11px]"
                             title={formatAbsoluteTime(log.timestamp)}
                           >
                             {formatRelativeTime(log.timestamp)}
@@ -303,11 +294,10 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
                       {/* Metadata adicional si existe */}
                       {log.metadata && Object.keys(log.metadata).length > 0 && (
                         <div
-                          className="mt-2 pt-2"
-                          style={{ borderTop: "1px solid #f1f3f5" }}
+                          className="mt-2 pt-2 border-t"
                         >
-                          <small className="text-muted">
-                            {/* Mostrar información específica según el tipo de evento */}
+                          <small className="text-muted-foreground">
+                            {/* Mostrar informacion especifica segun el tipo de evento */}
                             {log.eventType === "payment_received" && log.metadata.amount && (
                               <div>
                                 <strong>Monto:</strong>{" "}
@@ -317,7 +307,7 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
                                 }).format(log.metadata.amount)}
                                 {log.metadata.remainingBalance !== undefined && (
                                   <>
-                                    {" • "}
+                                    {" - "}
                                     <strong>Saldo pendiente:</strong>{" "}
                                     {new Intl.NumberFormat("es-MX", {
                                       style: "currency",
@@ -350,7 +340,7 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
                                       }).format(log.metadata.discountValue)}
                                   {log.metadata.authFolio && (
                                     <>
-                                      {" • "}
+                                      {" - "}
                                       <strong>Folio:</strong> {log.metadata.authFolio}
                                     </>
                                   )}
@@ -359,15 +349,15 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
                           </small>
                         </div>
                       )}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             );
           })}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

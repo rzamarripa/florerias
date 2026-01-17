@@ -1,10 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Table, Spinner } from "react-bootstrap";
+import { Loader2 } from "lucide-react";
 import { financeService } from "../services/finance";
 import { FinanceFilters, OrderPayment } from "../types";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
+
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface OrderPaymentsTableProps {
   filters: FinanceFilters;
@@ -61,90 +71,87 @@ const OrderPaymentsTable: React.FC<OrderPaymentsTableProps> = ({ filters }) => {
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="text-muted mt-3">Cargando pagos realizados...</p>
+      <div className="text-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <p className="text-muted-foreground mt-3">Cargando pagos realizados...</p>
       </div>
     );
   }
 
   return (
     <div className="mb-4">
-      <div
-        className="card border-0 shadow-sm"
-        style={{ borderRadius: "15px" }}
-      >
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <Table hover className="mb-0">
-              <thead style={{ background: "#f8f9fa" }}>
-                <tr>
-                  <th className="px-4 py-3 fw-semibold text-muted">No.</th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+      <Card className="border-0 shadow-sm rounded-[15px]">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">No.</TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     FOLIO ORDEN
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     NO. ORDEN
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">CLIENTE</th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">CLIENTE</TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     FECHA PAGO
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     FORMA PAGO
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                     REGISTRADO POR
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted text-end">
+                  </TableHead>
+                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
                     MONTO
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {payments.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-5 text-muted">
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       No se encontraron pagos realizados
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   payments.map((payment, index) => (
-                    <tr
+                    <TableRow
                       key={payment._id}
-                      style={{ borderBottom: "1px solid #f1f3f5" }}
+                      className="border-b border-muted/50 hover:bg-muted/30"
                     >
-                      <td className="px-4 py-3">{index + 1}</td>
-                      <td className="px-4 py-3 fw-semibold">
+                      <TableCell className="px-4 py-3">{index + 1}</TableCell>
+                      <TableCell className="px-4 py-3 font-semibold">
                         {payment.orderId?.orderNumber || "N/A"}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
                         {payment.orderId?.orderNumber || "N/A"}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
                         {payment.orderId?.clientInfo?.name || "Sin nombre"}
-                      </td>
-                      <td className="px-4 py-3">{formatDate(payment.date)}</td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">{formatDate(payment.date)}</TableCell>
+                      <TableCell className="px-4 py-3">
                         {payment.paymentMethod?.name || "N/A"}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
                         {payment.registeredBy?.profile?.fullName ||
                          (payment.registeredBy?.profile?.name && payment.registeredBy?.profile?.lastName
                            ? `${payment.registeredBy.profile.name} ${payment.registeredBy.profile.lastName}`
                            : "N/A")}
-                      </td>
-                      <td className="px-4 py-3 text-end fw-semibold">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right font-semibold">
                         {formatCurrency(payment.amount)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
+              </TableBody>
             </Table>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,12 +1,13 @@
+"use client";
+
 import React, { useState } from "react";
-import { Spinner } from "react-bootstrap";
-import { BsCheck2 } from "react-icons/bs";
-import { FiTrash2 } from "react-icons/fi";
-import { toast } from "react-toastify";
+import { Check, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Role } from "../../roles/types";
 import { usersService } from "../services/users";
 import { User } from "../types";
 import UserModal from "./UserModal";
+import { Button } from "@/components/ui/button";
 
 interface UserActionsProps {
   user: User;
@@ -62,36 +63,26 @@ const UserActions: React.FC<UserActionsProps> = ({
     return user.profile.estatus ? "Desactivar usuario" : "Activar usuario";
   };
 
-  const getToggleButtonClass = () => {
-    let baseClass = "btn btn-light btn-icon btn-sm rounded-circle";
-    if (isToggling) {
-      baseClass += " disabled";
-    }
-    return baseClass;
-  };
-
   return (
-    <div className="d-flex justify-content-center gap-1">
+    <div className="flex justify-center gap-1">
       <UserModal user={user} roles={roles} onSuccess={onUserSaved} />
 
-      <button
-        className={getToggleButtonClass()}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-full"
         title={getToggleButtonTitle()}
         onClick={() => handleToggleUser(user._id, user.profile.estatus)}
         disabled={isToggling}
       >
         {isToggling ? (
-          <Spinner
-            animation="border"
-            size="sm"
-            style={{ width: "16px", height: "16px" }}
-          />
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : user.profile.estatus ? (
-          <FiTrash2 size={16} />
+          <Trash2 className="h-4 w-4 text-destructive" />
         ) : (
-          <BsCheck2 size={16} />
+          <Check className="h-4 w-4 text-green-600" />
         )}
-      </button>
+      </Button>
     </div>
   );
 };

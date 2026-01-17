@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Tabs, Tab, Button } from "react-bootstrap";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import DateFilters from "./components/DateFilters";
 import SalesStats from "./components/SalesStats";
 import NewSalesTable from "./components/tables/NewSalesTable";
@@ -573,32 +575,31 @@ const SalesPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="container mx-auto py-2 px-4">
       {/* Header */}
       <div className="mb-2">
-        <div className="d-flex justify-content-between align-items-start">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="mb-1 fw-bold">Listado de Ventas</h2>
-            <p className="text-muted mb-0">
+            <h2 className="mb-1 font-bold text-2xl">Listado de Ventas</h2>
+            <p className="text-muted-foreground mb-0">
               Gestiona y consulta todas las ventas
             </p>
           </div>
 
-          {/* Botón de exportar en el header */}
+          {/* Boton de exportar en el header */}
           {hasSearched && (
             <Button
-              variant="success"
+              variant="default"
               size="sm"
               onClick={handleExportExcel}
               disabled={exporting}
-              className="d-flex align-items-center gap-2"
-              style={{
-                border: "none",
-                padding: "8px 16px",
-                fontWeight: "600",
-              }}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
             >
-              <Download size={16} />
+              {exporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
               {exporting ? "Exportando..." : "Exportar Excel"}
             </Button>
           )}
@@ -608,135 +609,115 @@ const SalesPage: React.FC = () => {
       {/* Filtros de Fecha */}
       <DateFilters onSearch={handleSearch} />
 
-      {/* Estadísticas de Ventas - Solo se muestran después de hacer una búsqueda */}
+      {/* Estadisticas de Ventas - Solo se muestran después de hacer una búsqueda */}
       {hasSearched && (
         <SalesStats key={statsRefreshKey} filters={dateFilters} />
       )}
 
       {/* Tabs - Solo se muestran después de hacer una búsqueda */}
       {hasSearched ? (
-        <div
-          className="card border-0 shadow-sm"
-          style={{ borderRadius: "10px" }}
-        >
-          <div className="card-body p-0">
-            {/* Header con pestañas */}
-            <div
-              className="px-4 pt-3"
-              style={{
-                borderBottom: "2px solid #f1f3f5",
-              }}
-            >
-              <Tabs
-                activeKey={activeTab}
-                onSelect={(k) => setActiveTab(k || "nuevas")}
-                className="border-0"
-              >
-                <Tab
-                  eventKey="nuevas"
-                  title={
-                    <span className="px-3 py-2 fw-semibold">Nuevas Ventas</span>
-                  }
-                >
-                  <div className="p-4">
-                    <NewSalesTable
-                      filters={dateFilters}
-                      onStatsUpdate={handleSaleUpdated}
-                    />
-                  </div>
-                </Tab>
-
-                {/* Tab de Ventas a Crédito - Solo mostrar si existe el método de pago */}
-                {creditPaymentMethodId && (
-                  <Tab
-                    eventKey="credito"
-                    title={
-                      <span className="px-3 py-2 fw-semibold">
-                        Ventas a Crédito
-                      </span>
-                    }
+        <Card className="border-0 shadow-sm rounded-xl">
+          <CardContent className="p-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="px-4 pt-3 border-b">
+                <TabsList className="bg-transparent h-auto p-0 gap-0">
+                  <TabsTrigger
+                    value="nuevas"
+                    className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
-                    <div className="p-4">
-                      <CreditSalesTable
-                        filters={dateFilters}
-                        creditPaymentMethodId={creditPaymentMethodId}
-                        onStatsUpdate={handleSaleUpdated}
-                      />
-                    </div>
-                  </Tab>
-                )}
+                    Nuevas Ventas
+                  </TabsTrigger>
 
-                {/* Tab de Ventas de Intercambio - Solo mostrar si existe el método de pago */}
-                {exchangePaymentMethodId && (
-                  <Tab
-                    eventKey="intercambio"
-                    title={
-                      <span className="px-3 py-2 fw-semibold">
-                        Ventas de Intercambio
-                      </span>
-                    }
+                  {creditPaymentMethodId && (
+                    <TabsTrigger
+                      value="credito"
+                      className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    >
+                      Ventas a Credito
+                    </TabsTrigger>
+                  )}
+
+                  {exchangePaymentMethodId && (
+                    <TabsTrigger
+                      value="intercambio"
+                      className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    >
+                      Ventas de Intercambio
+                    </TabsTrigger>
+                  )}
+
+                  <TabsTrigger
+                    value="canceladas"
+                    className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
-                    <div className="p-4">
-                      <ExchangeSalesTable
-                        filters={dateFilters}
-                        exchangePaymentMethodId={exchangePaymentMethodId}
-                      />
-                    </div>
-                  </Tab>
-                )}
+                    Ventas Canceladas
+                  </TabsTrigger>
 
-                <Tab
-                  eventKey="canceladas"
-                  title={
-                    <span className="px-3 py-2 fw-semibold">
-                      Ventas Canceladas
-                    </span>
-                  }
-                >
-                  <div className="p-4">
-                    <CancelledSalesTable filters={dateFilters} />
-                  </div>
-                </Tab>
+                  <TabsTrigger
+                    value="pendientes"
+                    className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Pendientes de Pago
+                  </TabsTrigger>
 
-                <Tab
-                  eventKey="pendientes"
-                  title={
-                    <span className="px-3 py-2 fw-semibold">
-                      Pendientes de Pago
-                    </span>
-                  }
-                >
-                  <div className="p-4">
-                    <PendingPaymentsTable
-                      filters={dateFilters}
-                      onStatsUpdate={handleSaleUpdated}
-                    />
-                  </div>
-                </Tab>
+                  <TabsTrigger
+                    value="sin-autorizar"
+                    className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Por Autorizar
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-                <Tab
-                  eventKey="sin-autorizar"
-                  title={
-                    <span className="px-3 py-2 fw-semibold">Por Autorizar</span>
-                  }
-                >
-                  <div className="p-4">
-                    <UnauthorizedSalesTable
-                      filters={dateFilters}
-                      onStatsUpdate={handleSaleUpdated}
-                    />
-                  </div>
-                </Tab>
-              </Tabs>
-            </div>
-          </div>
-        </div>
+              <TabsContent value="nuevas" className="p-4 mt-0">
+                <NewSalesTable
+                  filters={dateFilters}
+                  onStatsUpdate={handleSaleUpdated}
+                />
+              </TabsContent>
+
+              {creditPaymentMethodId && (
+                <TabsContent value="credito" className="p-4 mt-0">
+                  <CreditSalesTable
+                    filters={dateFilters}
+                    creditPaymentMethodId={creditPaymentMethodId}
+                    onStatsUpdate={handleSaleUpdated}
+                  />
+                </TabsContent>
+              )}
+
+              {exchangePaymentMethodId && (
+                <TabsContent value="intercambio" className="p-4 mt-0">
+                  <ExchangeSalesTable
+                    filters={dateFilters}
+                    exchangePaymentMethodId={exchangePaymentMethodId}
+                  />
+                </TabsContent>
+              )}
+
+              <TabsContent value="canceladas" className="p-4 mt-0">
+                <CancelledSalesTable filters={dateFilters} />
+              </TabsContent>
+
+              <TabsContent value="pendientes" className="p-4 mt-0">
+                <PendingPaymentsTable
+                  filters={dateFilters}
+                  onStatsUpdate={handleSaleUpdated}
+                />
+              </TabsContent>
+
+              <TabsContent value="sin-autorizar" className="p-4 mt-0">
+                <UnauthorizedSalesTable
+                  filters={dateFilters}
+                  onStatsUpdate={handleSaleUpdated}
+                />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       ) : (
-        <div
-          className="card border-0 shadow-sm"
-          style={{ borderRadius: "10px" }}
-        >
-          <div className="card-body p-4 text-center">
+        <Card className="border-0 shadow-sm rounded-xl">
+          <CardContent className="p-4 text-center">
             <div className="mb-3">
               <svg
                 width="80"
@@ -745,19 +726,19 @@ const SalesPage: React.FC = () => {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
-                className="text-muted"
+                className="text-muted-foreground mx-auto"
               >
                 <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h5 className="text-muted mb-2">
+            <h5 className="text-muted-foreground mb-2 font-medium">
               Selecciona los filtros y presiona "Buscar"
             </h5>
-            <p className="text-muted mb-0" style={{ fontSize: "14px" }}>
+            <p className="text-muted-foreground mb-0 text-sm">
               Usa los filtros de fecha y sucursal para ver las ventas
             </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

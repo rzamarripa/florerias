@@ -1,10 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Alert, Spinner, Card, Badge, Form, Image } from "react-bootstrap";
-import { Gift, Check, Calendar, Percent, DollarSign, ArrowLeft, Key, Package } from "lucide-react";
+import { Gift, Check, Calendar, Percent, DollarSign, ArrowLeft, Key, Package, Loader2 } from "lucide-react";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
 import { AvailableRewardItem } from "@/features/admin/modules/clients/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ClientRewardsModalProps {
   show: boolean;
@@ -24,7 +35,7 @@ const ClientRewardsModal: React.FC<ClientRewardsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedReward, setSelectedReward] = useState<AvailableRewardItem | null>(null);
 
-  // Estado para validación de código
+  // Estado para validacion de codigo
   const [showCodeValidation, setShowCodeValidation] = useState(false);
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -63,7 +74,7 @@ const ClientRewardsModal: React.FC<ClientRewardsModalProps> = ({
     }
   };
 
-  // Mostrar paso de validación de código
+  // Mostrar paso de validacion de codigo
   const handleProceedToValidation = () => {
     if (selectedReward) {
       setShowCodeValidation(true);
@@ -79,17 +90,17 @@ const ClientRewardsModal: React.FC<ClientRewardsModalProps> = ({
     setCodeError(null);
   };
 
-  // Validar código y confirmar
+  // Validar codigo y confirmar
   const handleConfirm = () => {
     if (!selectedReward) return;
 
-    // Validar que el código ingresado coincida con el de la recompensa
+    // Validar que el codigo ingresado coincida con el de la recompensa
     if (codeInput.toUpperCase().trim() !== selectedReward.code.toUpperCase()) {
-      setCodeError("El código ingresado no es correcto");
+      setCodeError("El codigo ingresado no es correcto");
       return;
     }
 
-    // Código válido, aplicar recompensa
+    // Codigo valido, aplicar recompensa
     onSelectReward(selectedReward);
     onHide();
   };
@@ -109,229 +120,227 @@ const ClientRewardsModal: React.FC<ClientRewardsModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header closeButton>
-        <Modal.Title className="d-flex align-items-center gap-2">
-          <Gift size={20} className="text-primary" />
-          Seleccionar Recompensa
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {showCodeValidation && selectedReward ? (
-          // Vista de validación de código
-          <div className="py-3">
-            <div className="text-center mb-4">
-              <div className="bg-primary bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
-                <Key size={32} className="text-primary" />
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Gift size={20} className="text-blue-600" />
+            Seleccionar Recompensa
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="py-4">
+          {showCodeValidation && selectedReward ? (
+            // Vista de validacion de codigo
+            <div className="py-3">
+              <div className="text-center mb-4">
+                <div className="bg-blue-100 rounded-full p-3 inline-flex mb-3">
+                  <Key size={32} className="text-blue-600" />
+                </div>
+                <h5 className="font-bold mb-2">Ingresa el codigo de la recompensa</h5>
+                <p className="text-muted-foreground mb-0">
+                  Para aplicar <strong>{selectedReward.reward.name}</strong>
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  {selectedReward.reward.isProducto && selectedReward.reward.productId
+                    ? `${selectedReward.reward.productQuantity}x ${selectedReward.reward.productId.nombre}`
+                    : selectedReward.reward.isPercentage
+                    ? `${selectedReward.reward.rewardValue}% de descuento`
+                    : `$${selectedReward.reward.rewardValue.toFixed(2)} de valor`}
+                </p>
               </div>
-              <h5 className="fw-bold mb-2">Ingresa el código de la recompensa</h5>
-              <p className="text-muted mb-0">
-                Para aplicar <strong>{selectedReward.reward.name}</strong>
-              </p>
-              <p className="text-muted small">
-                {selectedReward.reward.isProducto && selectedReward.reward.productId
-                  ? `${selectedReward.reward.productQuantity}x ${selectedReward.reward.productId.nombre}`
-                  : selectedReward.reward.isPercentage
-                  ? `${selectedReward.reward.rewardValue}% de descuento`
-                  : `$${selectedReward.reward.rewardValue.toFixed(2)} de valor`}
-              </p>
+
+              <div className="mb-3">
+                <Input
+                  type="text"
+                  placeholder="Ingresa el codigo"
+                  value={codeInput}
+                  onChange={(e) => {
+                    setCodeInput(e.target.value.toUpperCase());
+                    setCodeError(null);
+                  }}
+                  className={`text-center py-3 text-lg uppercase ${codeError ? 'border-red-500' : ''}`}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleConfirm();
+                    }
+                  }}
+                />
+                {codeError && (
+                  <p className="text-red-500 text-sm mt-1">{codeError}</p>
+                )}
+              </div>
             </div>
+          ) : loading ? (
+            <div className="text-center py-10">
+              <Loader2 className="animate-spin mx-auto text-blue-600" size={32} />
+              <p className="mt-2 text-muted-foreground">Cargando recompensas...</p>
+            </div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : rewards.length === 0 ? (
+            <Alert>
+              <Gift size={18} className="mr-2" />
+              <AlertDescription>No hay recompensas disponibles para usar</AlertDescription>
+            </Alert>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {rewards.map((rewardItem) => {
+                const expired = isExpired(rewardItem.reward.validUntil);
+                const isSelected = selectedReward?._id === rewardItem._id;
 
-            <Form.Group className="mb-3">
-              <Form.Control
-                type="text"
-                placeholder="Ingresa el código"
-                value={codeInput}
-                onChange={(e) => {
-                  setCodeInput(e.target.value.toUpperCase());
-                  setCodeError(null);
-                }}
-                isInvalid={!!codeError}
-                className="text-center py-3 fs-5 text-uppercase"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleConfirm();
-                  }
-                }}
-              />
-              {codeError && (
-                <Form.Control.Feedback type="invalid">
-                  {codeError}
-                </Form.Control.Feedback>
-              )}
-            </Form.Group>
-          </div>
-        ) : loading ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="mt-2 text-muted">Cargando recompensas...</p>
-          </div>
-        ) : error ? (
-          <Alert variant="danger">{error}</Alert>
-        ) : rewards.length === 0 ? (
-          <Alert variant="info" className="d-flex align-items-center gap-2">
-            <Gift size={18} />
-            No hay recompensas disponibles para usar
-          </Alert>
-        ) : (
-          <div className="d-flex flex-column gap-3">
-            {rewards.map((rewardItem) => {
-              const expired = isExpired(rewardItem.reward.validUntil);
-              const isSelected = selectedReward?._id === rewardItem._id;
-
-              return (
-                <Card
-                  key={rewardItem._id}
-                  className={`border ${isSelected ? "border-primary border-2" : ""} ${expired ? "opacity-50" : "cursor-pointer"}`}
-                  onClick={() => !expired && setSelectedReward(rewardItem)}
-                  style={{ cursor: expired ? "not-allowed" : "pointer" }}
-                >
-                  <Card.Body className="d-flex justify-content-between align-items-center">
-                    <div className="d-flex align-items-start gap-3">
-                      {/* Icono o imagen del producto */}
-                      {rewardItem.reward.isProducto && rewardItem.reward.productId?.imagen ? (
-                        <Image
-                          src={rewardItem.reward.productId.imagen}
-                          alt={rewardItem.reward.productId.nombre}
-                          rounded
-                          style={{ width: "60px", height: "60px", objectFit: "cover" }}
-                          className={isSelected ? "border border-primary border-2" : ""}
-                        />
-                      ) : (
-                        <div
-                          className={`rounded-circle p-2 ${isSelected ? "bg-primary" : "bg-light"}`}
-                          style={{ minWidth: "40px", height: "40px" }}
-                        >
-                          {isSelected ? (
-                            <Check size={24} className="text-white" />
-                          ) : rewardItem.reward.isProducto ? (
-                            <Package size={24} className={expired ? "text-muted" : "text-primary"} />
-                          ) : (
-                            <Gift size={24} className={expired ? "text-muted" : "text-primary"} />
-                          )}
-                        </div>
-                      )}
-                      <div>
-                        <h6 className="mb-1 fw-bold">
-                          {rewardItem.reward.name}
-                          {rewardItem.reward.isProducto && (
-                            <Badge bg="info" className="ms-2">
-                              Producto
-                            </Badge>
-                          )}
-                          {expired && (
-                            <Badge bg="danger" className="ms-2">
-                              Expirada
-                            </Badge>
-                          )}
-                        </h6>
-                        {rewardItem.reward.description && (
-                          <p className="text-muted mb-1 small">
-                            {rewardItem.reward.description}
-                          </p>
-                        )}
-                        <div className="d-flex flex-wrap gap-2 mt-2">
-                          {rewardItem.reward.validFrom && (
-                            <Badge bg="light" text="dark" className="d-flex align-items-center gap-1">
-                              <Calendar size={12} />
-                              Desde: {formatDate(rewardItem.reward.validFrom)}
-                            </Badge>
-                          )}
-                          {rewardItem.reward.validUntil && (
-                            <Badge
-                              bg={expired ? "danger" : "light"}
-                              text={expired ? "white" : "dark"}
-                              className="d-flex align-items-center gap-1"
-                            >
-                              <Calendar size={12} />
-                              Hasta: {formatDate(rewardItem.reward.validUntil)}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-end">
-                      {rewardItem.reward.isProducto && rewardItem.reward.productId ? (
-                        // Mostrar información del producto
-                        <>
-                          <div className="fs-5 fw-bold text-primary">
-                            {rewardItem.reward.productQuantity}x
-                          </div>
-                          <small className="text-muted d-block" style={{ maxWidth: "120px" }}>
-                            {rewardItem.reward.productId.nombre}
-                          </small>
-                          <small className="text-success">
-                            Gratis
-                          </small>
-                        </>
-                      ) : (
-                        // Mostrar descuento
-                        <>
-                          <div className="d-flex align-items-center gap-1 justify-content-end">
-                            {rewardItem.reward.isPercentage ? (
-                              <>
-                                <Percent size={18} className="text-success" />
-                                <span className="fs-4 fw-bold text-success">
-                                  {rewardItem.reward.rewardValue}%
-                                </span>
-                              </>
+                return (
+                  <Card
+                    key={rewardItem._id}
+                    className={`border ${isSelected ? "border-blue-600 border-2" : ""} ${expired ? "opacity-50" : "cursor-pointer hover:border-blue-400"}`}
+                    onClick={() => !expired && setSelectedReward(rewardItem)}
+                    style={{ cursor: expired ? "not-allowed" : "pointer" }}
+                  >
+                    <CardContent className="flex justify-between items-center p-4">
+                      <div className="flex items-start gap-3">
+                        {/* Icono o imagen del producto */}
+                        {rewardItem.reward.isProducto && rewardItem.reward.productId?.imagen ? (
+                          <img
+                            src={rewardItem.reward.productId.imagen}
+                            alt={rewardItem.reward.productId.nombre}
+                            className={`rounded w-[60px] h-[60px] object-cover ${isSelected ? "border border-blue-600 border-2" : ""}`}
+                          />
+                        ) : (
+                          <div
+                            className={`rounded-full p-2 ${isSelected ? "bg-blue-600" : "bg-gray-100"}`}
+                            style={{ minWidth: "40px", height: "40px" }}
+                          >
+                            {isSelected ? (
+                              <Check size={24} className="text-white" />
+                            ) : rewardItem.reward.isProducto ? (
+                              <Package size={24} className={expired ? "text-muted-foreground" : "text-blue-600"} />
                             ) : (
-                              <>
-                                <DollarSign size={18} className="text-success" />
-                                <span className="fs-4 fw-bold text-success">
-                                  ${rewardItem.reward.rewardValue.toFixed(2)}
-                                </span>
-                              </>
+                              <Gift size={24} className={expired ? "text-muted-foreground" : "text-blue-600"} />
                             )}
                           </div>
-                          <small className="text-muted">
-                            {rewardItem.reward.isPercentage ? "descuento" : "de valor"}
-                          </small>
-                        </>
-                      )}
-                    </div>
-                  </Card.Body>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        {showCodeValidation ? (
-          <>
-            <Button variant="outline-secondary" onClick={handleBackToList}>
-              <ArrowLeft size={16} className="me-1" />
-              Volver
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleConfirm}
-              disabled={!codeInput.trim()}
-            >
-              <Check size={16} className="me-1" />
-              Validar y Aplicar
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="outline-secondary" onClick={onHide}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleProceedToValidation}
-              disabled={!selectedReward || isExpired(selectedReward?.reward.validUntil || null)}
-            >
-              <Check size={16} className="me-1" />
-              Continuar
-            </Button>
-          </>
-        )}
-      </Modal.Footer>
-    </Modal>
+                        )}
+                        <div>
+                          <h6 className="mb-1 font-bold flex items-center gap-2">
+                            {rewardItem.reward.name}
+                            {rewardItem.reward.isProducto && (
+                              <Badge variant="secondary">
+                                Producto
+                              </Badge>
+                            )}
+                            {expired && (
+                              <Badge variant="destructive">
+                                Expirada
+                              </Badge>
+                            )}
+                          </h6>
+                          {rewardItem.reward.description && (
+                            <p className="text-muted-foreground mb-1 text-sm">
+                              {rewardItem.reward.description}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {rewardItem.reward.validFrom && (
+                              <Badge variant="outline" className="flex items-center gap-1">
+                                <Calendar size={12} />
+                                Desde: {formatDate(rewardItem.reward.validFrom)}
+                              </Badge>
+                            )}
+                            {rewardItem.reward.validUntil && (
+                              <Badge
+                                variant={expired ? "destructive" : "outline"}
+                                className="flex items-center gap-1"
+                              >
+                                <Calendar size={12} />
+                                Hasta: {formatDate(rewardItem.reward.validUntil)}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-end">
+                        {rewardItem.reward.isProducto && rewardItem.reward.productId ? (
+                          // Mostrar informacion del producto
+                          <>
+                            <div className="text-xl font-bold text-blue-600">
+                              {rewardItem.reward.productQuantity}x
+                            </div>
+                            <small className="text-muted-foreground block max-w-[120px]">
+                              {rewardItem.reward.productId.nombre}
+                            </small>
+                            <small className="text-green-600">
+                              Gratis
+                            </small>
+                          </>
+                        ) : (
+                          // Mostrar descuento
+                          <>
+                            <div className="flex items-center gap-1 justify-end">
+                              {rewardItem.reward.isPercentage ? (
+                                <>
+                                  <Percent size={18} className="text-green-600" />
+                                  <span className="text-2xl font-bold text-green-600">
+                                    {rewardItem.reward.rewardValue}%
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <DollarSign size={18} className="text-green-600" />
+                                  <span className="text-2xl font-bold text-green-600">
+                                    ${rewardItem.reward.rewardValue.toFixed(2)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <small className="text-muted-foreground">
+                              {rewardItem.reward.isPercentage ? "descuento" : "de valor"}
+                            </small>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          {showCodeValidation ? (
+            <>
+              <Button variant="outline" onClick={handleBackToList}>
+                <ArrowLeft size={16} className="mr-1" />
+                Volver
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                disabled={!codeInput.trim()}
+              >
+                <Check size={16} className="mr-1" />
+                Validar y Aplicar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={onHide}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleProceedToValidation}
+                disabled={!selectedReward || isExpired(selectedReward?.reward.validUntil || null)}
+              >
+                <Check size={16} className="mr-1" />
+                Continuar
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

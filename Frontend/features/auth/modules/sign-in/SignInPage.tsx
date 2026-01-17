@@ -7,17 +7,12 @@ import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Form,
-  FormControl,
-  FormLabel,
-  Row,
-  Spinner,
-} from "react-bootstrap";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { TbLockPassword, TbMail } from "react-icons/tb";
 import { AuthError, loginService } from "./services/auth";
 import PasswordResetModal from "./components/PasswordResetModal";
@@ -38,7 +33,7 @@ const SignInPage = () => {
   const { setAllowedModules } = useUserModulesStore();
   const { setUserRole } = useUserRoleStore();
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -47,7 +42,7 @@ const SignInPage = () => {
     if (error) setError("");
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -77,14 +72,12 @@ const SignInPage = () => {
         setUserRole(response.data.role);
         setAllowedModules(response.data.allowedModules);
 
-        // Verificar que el token se guardó correctamente
         const storedToken = useUserSessionStore.getState().token;
         console.debug(
           "Token almacenado en el store:",
           storedToken ? "Presente" : "Ausente"
         );
 
-        // Redirigir según el rol del usuario
         const userRole = response.data.role;
         const roleLower = userRole?.toLowerCase();
 
@@ -97,7 +90,7 @@ const SignInPage = () => {
         }
       } else {
         setError(response.message || "Error en el inicio de sesión");
-        setLoginAttempts(prev => prev + 1);
+        setLoginAttempts((prev) => prev + 1);
       }
     } catch (err) {
       if (err instanceof AuthError) {
@@ -105,7 +98,7 @@ const SignInPage = () => {
       } else {
         setError("Error inesperado. Intenta nuevamente.");
       }
-      setLoginAttempts(prev => prev + 1);
+      setLoginAttempts((prev) => prev + 1);
       console.error("Login error:", err);
     } finally {
       setIsSubmitting(false);
@@ -114,144 +107,116 @@ const SignInPage = () => {
   };
 
   return (
-    <div className="auth-box d-flex align-items-center">
-      <div className="container-xxl">
-        <Row className="align-items-center justify-content-center">
-          <Col xl={10}>
-            <Card className="rounded-4">
-              <Row className="justify-content-between g-0">
-                <Col lg={6}>
-                  <div className="card-body">
-                    <div className="auth-brand text-center mb-4">
-                      <AppLogo />
-                      <h4 className="fw-bold mt-4">Bienvenido a MaFlores</h4>
-                      <p className="text-muted w-lg-75 mx-auto">
-                        Inicia sesión para acceder al panel de administración.
-                      </p>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl">
+        <Card className="rounded-2xl overflow-hidden">
+          <div className="grid lg:grid-cols-2">
+            <CardContent className="p-8">
+              <div className="text-center mb-6">
+                <AppLogo />
+                <h4 className="font-bold mt-4 text-xl">Bienvenido a MaFlores</h4>
+                <p className="text-muted-foreground lg:w-3/4 mx-auto">
+                  Inicia sesión para acceder al panel de administración.
+                </p>
+              </div>
+
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <div className="mb-4">
+                  <Label htmlFor="username">
+                    Nombre de Usuario <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex mt-1">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                      <TbMail className="text-muted-foreground text-lg" />
+                    </span>
+                    <Input
+                      type="text"
+                      id="username"
+                      name="username"
+                      placeholder="Tu nombre de usuario"
+                      value={formData.username}
+                      onChange={handleChange}
+                      required
+                      disabled={isSubmitting}
+                      className="rounded-l-none"
+                    />
+                  </div>
+                  {loginAttempts > 0 && (
+                    <div className="text-right mt-2">
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="p-0 h-auto text-primary"
+                        onClick={() => setShowPasswordReset(true)}
+                      >
+                        ¿Has olvidado tu contraseña? Recuperar
+                      </Button>
                     </div>
+                  )}
+                </div>
 
-                    {error && (
-                      <Alert variant="danger" className="mb-3">
-                        <div className="d-flex align-items-center">
-                          <div className="flex-shrink-0 me-2">
-                            <i className="text-danger fs-5">⚠️</i>
-                          </div>
-                          <div>{error}</div>
-                        </div>
-                      </Alert>
-                    )}
-
-                    <Form onSubmit={handleSubmit}>
-                      <div className="mb-3">
-                        <FormLabel htmlFor="username" className="form-label">
-                          Nombre de Usuario{" "}
-                          <span className="text-danger">*</span>
-                        </FormLabel>
-                        <div className="input-group">
-                          <span className="input-group-text bg-light">
-                            <TbMail className="text-muted fs-xl" />
-                          </span>
-                          <FormControl
-                            type="text"
-                            id="username"
-                            name="username"
-                            placeholder="Tu nombre de usuario"
-                            value={formData.username}
-                            onChange={handleChange}
-                            required
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                        {loginAttempts > 0 && (
-                          <div className="text-end mt-2 mb-2">
-                            <Button 
-                              variant="link" 
-                              className="p-0 text-decoration-none text-primary"
-                              onClick={() => setShowPasswordReset(true)}
-                            >
-                              ¿Has olvidado tu contraseña? Recuperar
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mb-3">
-                        <FormLabel htmlFor="password" className="form-label">
-                          Contraseña <span className="text-danger">*</span>
-                        </FormLabel>
-                        <div className="input-group">
-                          <span className="input-group-text bg-light">
-                            <TbLockPassword className="text-muted fs-xl" />
-                          </span>
-                          <FormControl
-                            type="password"
-                            id="password"
-                            name="password"
-                            placeholder="••••••••"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="d-grid">
-                        <Button
-                          type="submit"
-                          variant="primary"
-                          style={{
-                            borderRadius: "10px",
-                            padding: "12px 24px",
-                            fontWeight: "600",
-                          }}
-                          className="fw-semibold py-2"
-                          disabled={
-                            isSubmitting ||
-                            !formData.username ||
-                            !formData.password
-                          }
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Spinner
-                                as="span"
-                                animation="border"
-                                size="sm"
-                                role="status"
-                                aria-hidden="true"
-                                className="me-2"
-                              />
-                              Iniciando sesión...
-                            </>
-                          ) : (
-                            "Iniciar Sesión"
-                          )}
-                        </Button>
-                      </div>
-                    </Form>
-
-                    <p className="text-center text-muted mt-4 mb-0">
-                      © 2014 - {currentYear} MaFlores — by{" "}
-                      <span className="fw-semibold">Masoft</span>
-                    </p>
+                <div className="mb-4">
+                  <Label htmlFor="password">
+                    Contraseña <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex mt-1">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                      <TbLockPassword className="text-muted-foreground text-lg" />
+                    </span>
+                    <Input
+                      type="password"
+                      id="password"
+                      name="password"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      disabled={isSubmitting}
+                      className="rounded-l-none"
+                    />
                   </div>
-                </Col>
-                <Col lg={6} className="d-none d-lg-block">
-                  <div className="h-100 position-relative card-side-img rounded-end-4 rounded-end rounded-0 overflow-hidden">
-                    <div className="p-4 card-img-overlay rounded-4 rounded-start-0 d-flex align-items-end justify-content-center"></div>
-                  </div>
-                </Col>
-              </Row>
-            </Card>
-          </Col>
-        </Row>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full rounded-lg py-5 font-semibold"
+                  disabled={
+                    isSubmitting || !formData.username || !formData.password
+                  }
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Iniciando sesión...
+                    </>
+                  ) : (
+                    "Iniciar Sesión"
+                  )}
+                </Button>
+              </form>
+
+              <p className="text-center text-muted-foreground mt-6">
+                © 2014 - {currentYear} MaFlores — by{" "}
+                <span className="font-semibold">Masoft</span>
+              </p>
+            </CardContent>
+
+            <div className="hidden lg:block bg-gradient-to-br from-primary/20 to-primary/5 min-h-[500px]" />
+          </div>
+        </Card>
       </div>
 
       <PasswordResetModal
         show={showPasswordReset}
         onClose={() => setShowPasswordReset(false)}
-        userEmail={formData.username.includes('@') ? formData.username : ''}
+        userEmail={formData.username.includes("@") ? formData.username : ""}
       />
     </div>
   );

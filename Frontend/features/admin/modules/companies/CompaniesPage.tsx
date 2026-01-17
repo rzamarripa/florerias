@@ -2,25 +2,39 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Button,
-  Table,
-  Badge,
-  Form,
-  InputGroup,
-  Spinner,
-} from "react-bootstrap";
-import {
   Plus,
   Search,
   ChevronLeft,
   ChevronRight,
   Building2,
+  Loader2,
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { companiesService } from "./services/companies";
 import { Company } from "./types";
 import CompanyActions from "./components/CompanyActions";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
 
 const CompaniesPage: React.FC = () => {
   const router = useRouter();
@@ -82,10 +96,8 @@ const CompaniesPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleStatusFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value === "all" ? "" : value);
   };
 
   const handlePageChange = (page: number) => {
@@ -101,218 +113,181 @@ const CompaniesPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <h2 className="mb-1 fw-bold">Empresas</h2>
-          <p className="text-muted mb-0">Gestiona las empresas del sistema</p>
-        </div>
-        <Button
-          variant="primary"
-          onClick={handleNewCompany}
-          className="d-flex align-items-center gap-2 px-4"
-        >
-          <Plus size={20} />
-          Nueva Empresa
-        </Button>
-      </div>
+      <PageHeader
+        title="Empresas"
+        description="Gestiona las empresas del sistema"
+        action={{
+          label: "Nueva Empresa",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleNewCompany,
+        }}
+      />
 
       {/* Filters */}
-      <div
-        className="card border-0 shadow-sm mb-2"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body p-2">
-          <div className="row g-2">
-            <div className="col-md-6">
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por razón social, RFC o nombre comercial..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por razón social, RFC o nombre comercial..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
             </div>
-            <div className="col-md-6">
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
-            </div>
+
+            <Select
+              value={statusFilter || "all"}
+              onValueChange={handleStatusFilterChange}
+            >
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card>
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando empresas...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando empresas...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      RAZÓN SOCIAL
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">RFC</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      NOMBRE COMERCIAL
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      ADMINISTRADOR
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      USUARIOS REDES
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-center">
-                      ACCIONES
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Razón Social</TableHead>
+                    <TableHead>RFC</TableHead>
+                    <TableHead>Nombre Comercial</TableHead>
+                    <TableHead>Administrador</TableHead>
+                    <TableHead>Usuarios Redes</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {companies.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-5 text-muted">
-                        <Building2 size={48} className="mb-3 opacity-50" />
-                        <p className="mb-0">No se encontraron empresas</p>
-                      </td>
-                    </tr>
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="text-center py-12 text-muted-foreground"
+                      >
+                        <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <div>No se encontraron empresas</div>
+                        <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     companies.map((company, index) => (
-                      <tr
-                        key={company._id}
-                        style={{ borderBottom: "1px solid #f1f3f5" }}
-                      >
-                        <td className="px-2 py-2">
+                      <TableRow key={company._id}>
+                        <TableCell>
                           {(pagination.page - 1) * pagination.limit + index + 1}
-                        </td>
-                        <td className="px-2 py-2 fw-semibold">
+                        </TableCell>
+                        <TableCell className="font-semibold">
                           {company.legalName}
-                        </td>
-                        <td className="px-2 py-2">{company.rfc}</td>
-                        <td className="px-2 py-2">
-                          {company.tradeName || "-"}
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>{company.rfc}</TableCell>
+                        <TableCell>{company.tradeName || "-"}</TableCell>
+                        <TableCell>
                           {company.administrator ? (
                             <div>
-                              <div className="fw-semibold">
+                              <div className="font-semibold">
                                 {company.administrator.profile.fullName}
                               </div>
-                              <small className="text-muted">
+                              <span className="text-sm text-muted-foreground">
                                 {company.administrator.email}
-                              </small>
+                              </span>
                             </div>
                           ) : (
-                            <span className="text-muted">
+                            <span className="text-muted-foreground">
                               Sin administrador
                             </span>
                           )}
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>
                           {company.redes && company.redes.length > 0 ? (
-                            <div>
-                              {company.redes.map((redesUser, idx) => (
+                            <div className="space-y-1">
+                              {company.redes.map((redesUser) => (
                                 <div key={redesUser._id}>
-                                  <div
-                                    className="fw-semibold"
-                                    style={{ fontSize: "0.9rem" }}
-                                  >
+                                  <div className="text-sm font-semibold">
                                     {redesUser.profile.fullName}
                                   </div>
-                                  {idx < company.redes!.length - 1 && (
-                                    <hr className="my-1" />
-                                  )}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <span className="text-muted">
+                            <span className="text-muted-foreground">
                               Sin usuarios redes
                             </span>
                           )}
-                        </td>
-                        <td className="px-2 py-2">
-                          <Badge
-                            bg={company.isActive ? "success" : "danger"}
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontWeight: "500",
-                            }}
-                          >
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={company.isActive ? "default" : "destructive"}>
                             {company.isActive ? "Activo" : "Inactivo"}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>
                           <CompanyActions
                             company={company}
                             onCompanyUpdated={handleCompanyUpdated}
                           />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
+                </TableBody>
               </Table>
-            </div>
-          )}
 
-          {/* Pagination */}
-          {!loading && companies.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
-                Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-                de {pagination.total} empresas
-              </p>
-              <div className="d-flex gap-2">
-                <Button
-                  variant="light"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <span className="px-2 py-1">
-                  Página {pagination.page} de {pagination.pages}
-                </span>
-                <Button
-                  variant="light"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
-                >
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
-            </div>
+              {/* Pagination */}
+              {companies.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                    de {pagination.total} empresas
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

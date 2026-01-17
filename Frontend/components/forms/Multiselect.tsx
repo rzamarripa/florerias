@@ -1,5 +1,5 @@
 import React from "react";
-import { Form } from "react-bootstrap";
+import { Label } from "@/components/ui/label";
 import Select, { MultiValue, StylesConfig } from "react-select";
 
 export interface SelectOption {
@@ -56,38 +56,38 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     control: (base, state) => ({
       ...base,
       minHeight: "38px",
-      borderColor: error ? "#dc3545" : state.isFocused ? "#86b7fe" : "var(--bs-border-color, #ced4da)",
+      borderColor: error ? "#dc3545" : state.isFocused ? "#86b7fe" : "hsl(var(--border))",
       boxShadow: state.isFocused
         ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
         : undefined,
       borderRadius: "0.375rem",
-      backgroundColor: disabled ? "var(--bs-secondary-bg, #e9ecef)" : "var(--bs-body-bg, white)",
+      backgroundColor: disabled ? "hsl(var(--muted))" : "hsl(var(--background))",
       "&:hover": {
         borderColor: error
           ? "#dc3545"
           : state.isFocused
           ? "#86b7fe"
-          : "var(--bs-border-color, #ced4da)",
+          : "hsl(var(--border))",
       },
     }),
 
     multiValue: (base) => ({
       ...base,
-      backgroundColor: "var(--bs-body-bg, transparent)",
+      backgroundColor: "hsl(var(--background))",
       borderRadius: "0.25rem",
-      border: "1px solid var(--bs-border-color, #dee2e6)",
+      border: "1px solid hsl(var(--border))",
     }),
 
     multiValueLabel: (base) => ({
       ...base,
-      color: "var(--bs-body-color, #212529)",
+      color: "hsl(var(--foreground))",
       fontSize: "0.875rem",
       fontWeight: "500",
     }),
 
     multiValueRemove: (base) => ({
       ...base,
-      color: "var(--bs-secondary, #6c757d)",
+      color: "hsl(var(--muted-foreground))",
       ":hover": {
         backgroundColor: "#dc3545",
         color: "white",
@@ -96,7 +96,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
     placeholder: (base) => ({
       ...base,
-      color: "#6c757d",
+      color: "hsl(var(--muted-foreground))",
     }),
 
     menu: (base) => ({
@@ -104,8 +104,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       zIndex: 99999,
       borderRadius: "0.375rem",
       boxShadow: "0 0.5rem 1rem rgba(0, 0, 0, 0.15)",
-      border: "1px solid var(--bs-border-color, #dee2e6)",
-      backgroundColor: "var(--bs-body-bg, white)",
+      border: "1px solid hsl(var(--border))",
+      backgroundColor: "hsl(var(--background))",
     }),
 
     menuList: (base) => ({
@@ -116,25 +116,25 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     option: (base, state) => ({
       ...base,
       backgroundColor: state.isFocused
-        ? "var(--bs-secondary-bg, #f8f9fa)"
+        ? "hsl(var(--muted))"
         : state.isSelected
-        ? "var(--bs-primary-bg-subtle, #e7f1ff)"
-        : "var(--bs-body-bg, white)",
-      color: state.isSelected ? "var(--bs-primary, #0d6efd)" : "var(--bs-body-color, #212529)",
+        ? "hsl(var(--primary) / 0.1)"
+        : "hsl(var(--background))",
+      color: state.isSelected ? "hsl(var(--primary))" : "hsl(var(--foreground))",
       ":active": {
-        backgroundColor: "var(--bs-primary-bg-subtle, #e7f1ff)",
+        backgroundColor: "hsl(var(--primary) / 0.1)",
       },
     }),
 
     noOptionsMessage: (base) => ({
       ...base,
-      color: "#6c757d",
+      color: "hsl(var(--muted-foreground))",
       fontSize: "0.875rem",
     }),
 
     loadingMessage: (base) => ({
       ...base,
-      color: "#6c757d",
+      color: "hsl(var(--muted-foreground))",
       fontSize: "0.875rem",
     }),
   };
@@ -142,10 +142,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   return (
     <div className={className}>
       {label && (
-        <Form.Label className="mb-2">
+        <Label className="mb-2 block">
           {label}
-          {required && <span className="text-danger ms-1">*</span>}
-        </Form.Label>
+          {required && <span className="text-destructive ml-1">*</span>}
+        </Label>
       )}
 
       <Select<SelectOption, true>
@@ -171,7 +171,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         classNamePrefix="custom-select"
       />
 
-      {error && <div className="invalid-feedback d-block">{error}</div>}
+      {error && <div className="text-destructive text-sm mt-1">{error}</div>}
     </div>
   );
 };

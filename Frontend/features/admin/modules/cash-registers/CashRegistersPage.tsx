@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Spinner } from "react-bootstrap";
-import { Plus, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Wallet, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "./services/cashRegisters";
 import { CashRegister } from "./types";
@@ -10,6 +9,17 @@ import CashRegisterActions from "./components/CashRegisterActions";
 import CashRegisterModal from "./components/CashRegisterModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const CashRegistersPage: React.FC = () => {
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
@@ -43,7 +53,7 @@ const CashRegistersPage: React.FC = () => {
       };
 
       // Para administradores: usar activeBranch del store
-      // Para cajeros y gerentes: el backend filtra automáticamente según el usuario
+      // Para cajeros y gerentes: el backend filtra automaticamente segun el usuario
       if (isAdmin && activeBranch) {
         filters.branchId = activeBranch._id;
       }
@@ -121,14 +131,14 @@ const CashRegistersPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="container mx-auto py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h2 className="mb-1 fw-bold">
+          <h2 className="mb-1 font-bold text-2xl">
             {isAdmin || isManager ? "Cajas Registradoras" : "Mis Cajas Registradoras"}
           </h2>
-          <p className="text-muted mb-0">
+          <p className="text-muted-foreground mb-0">
             {isAdmin
               ? "Gestiona las cajas registradoras del sistema"
               : isManager
@@ -140,9 +150,8 @@ const CashRegistersPage: React.FC = () => {
         </div>
         {(isAdmin || isManager) && (
           <Button
-            variant="primary"
             onClick={() => setShowCreateModal(true)}
-            className="d-flex align-items-center gap-2 px-4"
+            className="flex items-center gap-2 px-4"
           >
             <Plus size={20} />
             Nueva Caja
@@ -151,170 +160,147 @@ const CashRegistersPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card className="border-0 shadow-sm rounded-[10px]">
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando cajas registradoras...</p>
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground mt-3">Cargando cajas registradoras...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      SUCURSAL
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">CAJERO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      GERENTE
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      SALDO ACTUAL
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">
-                      ÚLTIMO CIERRE
-                    </th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-center">
-                      ACCIONES
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cashRegisters.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="text-center py-5 text-muted">
-                        <Wallet size={48} className="mb-3 opacity-50" />
-                        <p className="mb-0">
-                          No se encontraron cajas registradoras
-                        </p>
-                      </td>
-                    </tr>
-                  ) : (
-                    cashRegisters.map((cashRegister, index) => (
-                      <tr
-                        key={cashRegister._id}
-                        style={{ borderBottom: "1px solid #f1f3f5" }}
-                      >
-                        <td className="px-2 py-2">
-                          {(pagination.page - 1) * pagination.limit + index + 1}
-                        </td>
-                        <td className="px-2 py-2 fw-semibold">
-                          {cashRegister.name}
-                        </td>
-                        <td className="px-2 py-2">
-                          {getBranchName(cashRegister)}
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="fw-semibold">
-                            {getCashierName(cashRegister)}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="fw-semibold">
-                            {getManagerName(cashRegister)}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2">
-                          <span className="fw-bold text-success">
-                            {formatCurrency(cashRegister.currentBalance)}
-                          </span>
-                        </td>
-                        <td className="px-2 py-2">
-                          <small className="text-muted">
-                            {formatDate(cashRegister.lastOpen)}
-                          </small>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="d-flex flex-column gap-1">
-                            <Badge
-                              bg={cashRegister.isOpen ? "success" : "secondary"}
-                              style={{
-                                padding: "4px 8px",
-                                borderRadius: "15px",
-                                fontWeight: "500",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              {cashRegister.isOpen ? "Abierta" : "Cerrada"}
-                            </Badge>
-                            <Badge
-                              bg={cashRegister.isActive ? "primary" : "danger"}
-                              style={{
-                                padding: "4px 8px",
-                                borderRadius: "15px",
-                                fontWeight: "500",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              {cashRegister.isActive ? "Activa" : "Inactiva"}
-                            </Badge>
-                            <Badge
-                              bg={cashRegister.isSocialMediaBox ? "warning" : "info"}
-                              style={{
-                                padding: "4px 8px",
-                                borderRadius: "15px",
-                                fontWeight: "500",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              {cashRegister.isSocialMediaBox ? "Redes" : "Tienda"}
-                            </Badge>
-                          </div>
-                        </td>
-                        <td className="px-2 py-2">
-                          <CashRegisterActions
-                            cashRegister={cashRegister}
-                            onCashRegisterUpdated={handleCashRegisterUpdated}
-                          />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            </div>
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">#</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">NOMBRE</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">SUCURSAL</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">CAJERO</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">GERENTE</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">SALDO ACTUAL</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ULTIMO CIERRE</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ESTADO</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cashRegisters.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                      <Wallet size={48} className="mb-3 opacity-50 mx-auto" />
+                      <p className="mb-0">No se encontraron cajas registradoras</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  cashRegisters.map((cashRegister, index) => (
+                    <TableRow key={cashRegister._id}>
+                      <TableCell className="px-2 py-2">
+                        {(pagination.page - 1) * pagination.limit + index + 1}
+                      </TableCell>
+                      <TableCell className="px-2 py-2 font-semibold">
+                        {cashRegister.name}
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        {getBranchName(cashRegister)}
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        <div className="font-semibold">
+                          {getCashierName(cashRegister)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        <div className="font-semibold">
+                          {getManagerName(cashRegister)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        <span className="font-bold text-green-600">
+                          {formatCurrency(cashRegister.currentBalance)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        <small className="text-muted-foreground">
+                          {formatDate(cashRegister.lastOpen)}
+                        </small>
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        <div className="flex flex-col gap-1">
+                          <Badge
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              cashRegister.isOpen
+                                ? "bg-green-500 text-white hover:bg-green-500"
+                                : "bg-gray-500 text-white hover:bg-gray-500"
+                            }`}
+                          >
+                            {cashRegister.isOpen ? "Abierta" : "Cerrada"}
+                          </Badge>
+                          <Badge
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              cashRegister.isActive
+                                ? "bg-primary text-primary-foreground hover:bg-primary"
+                                : "bg-destructive text-white hover:bg-destructive"
+                            }`}
+                          >
+                            {cashRegister.isActive ? "Activa" : "Inactiva"}
+                          </Badge>
+                          <Badge
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              cashRegister.isSocialMediaBox
+                                ? "bg-yellow-500 text-white hover:bg-yellow-500"
+                                : "bg-cyan-500 text-white hover:bg-cyan-500"
+                            }`}
+                          >
+                            {cashRegister.isSocialMediaBox ? "Redes" : "Tienda"}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        <CashRegisterActions
+                          cashRegister={cashRegister}
+                          onCashRegisterUpdated={handleCashRegisterUpdated}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           )}
 
           {/* Pagination */}
           {!loading && cashRegisters.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
+            <div className="flex justify-between items-center px-2 py-2 border-t">
+              <p className="text-muted-foreground mb-0">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
                 de {pagination.total} cajas
               </p>
-              <div className="d-flex gap-2">
+              <div className="flex gap-2">
                 <Button
-                  variant="light"
+                  variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 >
                   <ChevronLeft size={16} />
                 </Button>
                 <span className="px-3 py-1">
-                  Página {pagination.page} de {pagination.pages}
+                  Pagina {pagination.page} de {pagination.pages}
                 </span>
                 <Button
-                  variant="light"
+                  variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 >
                   <ChevronRight size={16} />
                 </Button>
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Create Modal */}
       {(isAdmin || isManager) && (

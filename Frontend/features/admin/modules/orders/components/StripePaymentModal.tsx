@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Alert, Spinner, Form, Row, Col } from "react-bootstrap";
-import { CreditCard, Lock, Check, AlertCircle, X } from "lucide-react";
+import { CreditCard, Lock, Check, AlertCircle, X, Loader2 } from "lucide-react";
 import {
   Elements,
   CardElement,
@@ -18,6 +17,17 @@ import {
   formatAmount,
 } from "@/services/stripeService";
 import { toast } from "react-toastify";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Estilos personalizados para el CardElement
 const CARD_ELEMENT_OPTIONS = {
@@ -36,7 +46,7 @@ const CARD_ELEMENT_OPTIONS = {
       iconColor: "#fa755a",
     },
   },
-  hidePostalCode: true, // Ocultar código postal ya que no es común en México
+  hidePostalCode: true, // Ocultar codigo postal ya que no es comun en Mexico
 };
 
 interface StripePaymentModalProps {
@@ -98,7 +108,7 @@ const PaymentForm: React.FC<{
           setClientSecret(response.clientSecret);
           setStripeCustomerId(response.stripeCustomerId || null);
         } else {
-          throw new Error("No se pudo crear la intención de pago");
+          throw new Error("No se pudo crear la intencion de pago");
         }
       } catch (err: any) {
         console.error("Error creando Payment Intent:", err);
@@ -118,7 +128,7 @@ const PaymentForm: React.FC<{
       // Solo cancelar si el Payment Intent no fue exitoso
       // No intentar cancelar si succeeded = true
       if (paymentIntentId && !succeeded && !processing) {
-        // Silenciosamente ignorar errores de cancelación
+        // Silenciosamente ignorar errores de cancelacion
         cancelPaymentIntent(paymentIntentId).catch(() => {
           // Ignorar error silenciosamente - probablemente ya fue procesado
         });
@@ -130,13 +140,13 @@ const PaymentForm: React.FC<{
     event.preventDefault();
 
     if (!stripe || !elements || !clientSecret) {
-      setError("El sistema de pago no está listo. Por favor, espera un momento.");
+      setError("El sistema de pago no esta listo. Por favor, espera un momento.");
       return;
     }
 
     const cardElement = elements.getElement(CardElement);
     if (!cardElement) {
-      setError("Error al obtener información de la tarjeta");
+      setError("Error al obtener informacion de la tarjeta");
       return;
     }
 
@@ -165,7 +175,7 @@ const PaymentForm: React.FC<{
         // Pago exitoso
         if (result.paymentIntent.status === "succeeded") {
           setSucceeded(true);
-          
+
           // Notificar al backend sobre el pago exitoso
           if (paymentIntentId) {
             await confirmPayment({
@@ -182,7 +192,7 @@ const PaymentForm: React.FC<{
             stripeCustomerId: stripeCustomerId,
           });
 
-          toast.success("¡Pago procesado exitosamente!");
+          toast.success("Pago procesado exitosamente!");
         } else {
           // Estado inesperado
           setError(`Estado del pago: ${result.paymentIntent.status}`);
@@ -201,7 +211,7 @@ const PaymentForm: React.FC<{
   const handleCancel = () => {
     // Solo cancelar si el Payment Intent no fue exitoso
     if (paymentIntentId && !succeeded && !processing) {
-      // Silenciosamente ignorar errores de cancelación
+      // Silenciosamente ignorar errores de cancelacion
       cancelPaymentIntent(paymentIntentId).catch(() => {
         // Ignorar error silenciosamente - probablemente ya fue procesado
       });
@@ -210,26 +220,26 @@ const PaymentForm: React.FC<{
   };
 
   return (
-    <Form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit}>
       {error && (
-        <Alert variant="danger" className="mb-3">
-          <AlertCircle size={16} className="me-2" />
-          {error}
+        <Alert variant="destructive" className="mb-3">
+          <AlertCircle size={16} className="mr-2" />
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {succeeded ? (
-        <Alert variant="success" className="mb-3">
-          <Check size={20} className="me-2" />
-          ¡Pago procesado exitosamente!
+        <Alert className="mb-3 bg-green-50 border-green-200">
+          <Check size={20} className="mr-2 text-green-600" />
+          <AlertDescription className="text-green-800">Pago procesado exitosamente!</AlertDescription>
         </Alert>
       ) : (
         <>
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-semibold">
+          <div className="mb-3 space-y-2">
+            <Label className="font-semibold">
               Nombre del titular de la tarjeta
-            </Form.Label>
-            <Form.Control
+            </Label>
+            <Input
               type="text"
               placeholder="Como aparece en la tarjeta"
               value={cardholderName}
@@ -237,14 +247,14 @@ const PaymentForm: React.FC<{
               required
               disabled={processing || !clientSecret}
             />
-          </Form.Group>
+          </div>
 
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-semibold">
-              Información de la tarjeta
-            </Form.Label>
+          <div className="mb-3 space-y-2">
+            <Label className="font-semibold">
+              Informacion de la tarjeta
+            </Label>
             <div
-              className="form-control py-3"
+              className="border rounded-md p-3"
               style={{
                 backgroundColor: processing || !clientSecret ? "#f8f9fa" : "white",
               }}
@@ -257,84 +267,81 @@ const PaymentForm: React.FC<{
                   }}
                 />
               ) : (
-                <div className="text-center text-muted">
-                  <Spinner animation="border" size="sm" className="me-2" />
+                <div className="text-center text-muted-foreground">
+                  <Loader2 className="animate-spin inline-block mr-2" size={16} />
                   Preparando formulario de pago...
                 </div>
               )}
             </div>
-            <Form.Text className="text-muted">
-              <Lock size={12} className="me-1" />
-              Tu información está protegida con encriptación SSL
-            </Form.Text>
-          </Form.Group>
+            <p className="text-sm text-muted-foreground flex items-center">
+              <Lock size={12} className="mr-1" />
+              Tu informacion esta protegida con encriptacion SSL
+            </p>
+          </div>
 
           {customerInfo?.clientId && (
-            <Form.Group className="mb-3">
-              <Form.Check
-                type="checkbox"
+            <div className="mb-3 flex items-center space-x-2">
+              <Checkbox
                 id="save-card"
-                label="Guardar tarjeta para futuras compras (próximamente)"
                 checked={saveCard}
-                onChange={(e) => setSaveCard(e.target.checked)}
+                onCheckedChange={(checked) => setSaveCard(checked as boolean)}
                 disabled={processing || !clientSecret}
               />
-            </Form.Group>
+              <Label htmlFor="save-card" className="text-sm cursor-pointer">
+                Guardar tarjeta para futuras compras (proximamente)
+              </Label>
+            </div>
           )}
 
           <hr className="my-4" />
 
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <span className="fs-5">Total a pagar:</span>
-            <span className="fs-3 fw-bold text-primary">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-lg">Total a pagar:</span>
+            <span className="text-2xl font-bold text-blue-600">
               {formatAmount(amount, "mxn")}
             </span>
           </div>
 
-          <Row className="g-2">
-            <Col xs={6}>
-              <Button
-                variant="outline-secondary"
-                size="lg"
-                className="w-100"
-                onClick={handleCancel}
-                disabled={processing}
-              >
-                Cancelar
-              </Button>
-            </Col>
-            <Col xs={6}>
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-100"
-                disabled={!stripe || processing || !clientSecret || succeeded}
-              >
-                {processing ? (
-                  <>
-                    <Spinner animation="border" size="sm" className="me-2" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard size={20} className="me-2" />
-                    Pagar {formatAmount(amount, "mxn")}
-                  </>
-                )}
-              </Button>
-            </Col>
-          </Row>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={handleCancel}
+              disabled={processing}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={!stripe || processing || !clientSecret || succeeded}
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <CreditCard size={20} className="mr-2" />
+                  Pagar {formatAmount(amount, "mxn")}
+                </>
+              )}
+            </Button>
+          </div>
 
           <div className="text-center mt-3">
-            <small className="text-muted">
+            <small className="text-muted-foreground">
               Procesado de forma segura por{" "}
-              <strong className="text-primary">Stripe</strong>
+              <strong className="text-blue-600">Stripe</strong>
             </small>
           </div>
         </>
       )}
-    </Form>
+    </form>
   );
 };
 
@@ -365,7 +372,7 @@ const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
           const stripe = await loadStripe(config.publishableKey);
           setStripePromise(stripe);
         } else {
-          throw new Error("No se pudo obtener la configuración de Stripe");
+          throw new Error("No se pudo obtener la configuracion de Stripe");
         }
       } catch (error: any) {
         console.error("Error cargando Stripe:", error);
@@ -382,7 +389,7 @@ const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
 
   const handlePaymentSuccess = (paymentData: any) => {
     onPaymentSuccess(paymentData);
-    // Cerrar modal después de un breve delay para mostrar el mensaje de éxito
+    // Cerrar modal despues de un breve delay para mostrar el mensaje de exito
     setTimeout(() => {
       onHide();
     }, 2000);
@@ -393,55 +400,53 @@ const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      size="lg"
-      centered
-      backdrop="static"
-      keyboard={false}
-    >
-      <Modal.Header closeButton={false}>
-        <Modal.Title className="d-flex align-items-center gap-2">
-          <CreditCard size={24} />
-          Pago con Tarjeta
-        </Modal.Title>
-        <Button
-          variant="link"
-          className="text-muted ms-auto p-0"
-          onClick={onHide}
-          aria-label="Cerrar"
-        >
-          <X size={24} />
-        </Button>
-      </Modal.Header>
-      <Modal.Body className="py-4">
-        {loadingStripe ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="mt-3">Cargando sistema de pago...</p>
-          </div>
-        ) : stripePromise ? (
-          <Elements stripe={stripePromise} options={elementsOptions}>
-            <PaymentForm
-              amount={amount}
-              orderId={orderId}
-              customerInfo={customerInfo}
-              branchId={branchId}
-              onSuccess={handlePaymentSuccess}
-              onError={onPaymentError}
-              onCancel={onHide}
-              isTestMode={isTestMode}
-            />
-          </Elements>
-        ) : (
-          <Alert variant="danger">
-            <AlertCircle size={16} className="me-2" />
-            No se pudo cargar el sistema de pago. Por favor, recarga la página e intenta nuevamente.
-          </Alert>
-        )}
-      </Modal.Body>
-    </Modal>
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle className="flex items-center gap-2">
+            <CreditCard size={24} />
+            Pago con Tarjeta
+          </DialogTitle>
+          <Button
+            variant="ghost"
+            className="text-muted-foreground p-0 h-auto"
+            onClick={onHide}
+            aria-label="Cerrar"
+          >
+            <X size={24} />
+          </Button>
+        </DialogHeader>
+
+        <div className="py-4">
+          {loadingStripe ? (
+            <div className="text-center py-10">
+              <Loader2 className="animate-spin mx-auto text-blue-600" size={32} />
+              <p className="mt-3">Cargando sistema de pago...</p>
+            </div>
+          ) : stripePromise ? (
+            <Elements stripe={stripePromise} options={elementsOptions}>
+              <PaymentForm
+                amount={amount}
+                orderId={orderId}
+                customerInfo={customerInfo}
+                branchId={branchId}
+                onSuccess={handlePaymentSuccess}
+                onError={onPaymentError}
+                onCancel={onHide}
+                isTestMode={isTestMode}
+              />
+            </Elements>
+          ) : (
+            <Alert variant="destructive">
+              <AlertCircle size={16} className="mr-2" />
+              <AlertDescription>
+                No se pudo cargar el sistema de pago. Por favor, recarga la pagina e intenta nuevamente.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

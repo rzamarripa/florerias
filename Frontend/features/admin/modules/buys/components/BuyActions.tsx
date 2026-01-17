@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Spinner } from "react-bootstrap";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { buysService } from "../services/buys";
 import { Buy } from "../types";
 import BuyModal from "./BuyModal";
+import { Button } from "@/components/ui/button";
 
 interface BuyActionsProps {
   buy: Buy;
@@ -18,7 +18,7 @@ const BuyActions: React.FC<BuyActionsProps> = ({ buy, onBuySaved }) => {
   const [showEditModal, setShowEditModal] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm("¿Estás seguro de eliminar esta compra?")) return;
+    if (!confirm("Estas seguro de eliminar esta compra?")) return;
 
     try {
       setIsDeleting(true);
@@ -34,36 +34,26 @@ const BuyActions: React.FC<BuyActionsProps> = ({ buy, onBuySaved }) => {
 
   return (
     <>
-      <div className="d-flex justify-content-center gap-1">
+      <div className="flex justify-center gap-1">
         <Button
-          variant="light"
-          size="sm"
+          variant="ghost"
+          size="icon"
           onClick={() => handleDelete()}
           disabled={isDeleting}
-          className="border-0"
-          style={{
-            borderRadius: "50%",
-            width: "32px",
-            height: "32px",
-            padding: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#fee",
-          }}
+          className="h-8 w-8 rounded-full bg-red-50 hover:bg-red-100"
           title="Eliminar"
         >
           {isDeleting ? (
-            <Spinner animation="border" size="sm" />
+            <Loader2 size={16} className="animate-spin" />
           ) : (
-            <Trash2 size={16} className="text-danger" />
+            <Trash2 size={16} className="text-destructive" />
           )}
         </Button>
       </div>
 
       <BuyModal
-        show={showEditModal}
-        onHide={() => setShowEditModal(false)}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
         onSuccess={onBuySaved}
         buy={buy}
       />

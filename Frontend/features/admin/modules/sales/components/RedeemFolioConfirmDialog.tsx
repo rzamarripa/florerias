@@ -1,9 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
-import { Modal, Button, Form } from "react-bootstrap";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface RedeemFolioConfirmDialogProps {
   show: boolean;
@@ -27,11 +37,11 @@ const RedeemFolioConfirmDialog: React.FC<RedeemFolioConfirmDialogProps> = ({
     try {
       setIsSubmitting(true);
       await onConfirm(folio.trim());
-      // Si llega aquí, fue exitoso
+      // Si llega aqui, fue exitoso
       handleClose();
     } catch (error: any) {
       // Mostrar el error en un toast
-      const errorMessage = error?.message || error?.error?.message || "Error al canjear el folio de autorización";
+      const errorMessage = error?.message || error?.error?.message || "Error al canjear el folio de autorizacion";
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -43,28 +53,37 @@ const RedeemFolioConfirmDialog: React.FC<RedeemFolioConfirmDialogProps> = ({
     onHide();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && folio.trim() && !isSubmitting) {
+      handleConfirm();
+    }
+  };
+
   return (
-    <Modal show={show} onHide={handleClose} centered>
-      <Modal.Header closeButton>
-        <Modal.Title className="d-flex align-items-center gap-2">
-          <CheckCircle size={24} className="text-success" />
-          Canjear Folio de Autorización
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <div className="mb-3">
-          <p className="mb-3">
-            ¿Estás seguro de que deseas canjear el folio de autorización para la orden{" "}
+    <Dialog open={show} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle size={24} className="text-green-500" />
+            Canjear Folio de Autorizacion
+          </DialogTitle>
+          <DialogDescription>
+            Estas seguro de que deseas canjear el folio de autorizacion para la orden{" "}
             <strong>{saleOrderNumber}</strong>?
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Al canjear el folio, la orden sera enviada automaticamente a produccion.
           </p>
-          <p className="text-muted mb-3">
-            Al canjear el folio, la orden será enviada automáticamente a producción.
-          </p>
-          <Form.Group>
-            <Form.Label className="fw-semibold">
-              Folio de Autorización <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
+
+          <div className="space-y-2">
+            <Label htmlFor="folio" className="font-semibold">
+              Folio de Autorizacion <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="folio"
               type="text"
               placeholder="Ej: 12345"
               value={folio}
@@ -72,35 +91,39 @@ const RedeemFolioConfirmDialog: React.FC<RedeemFolioConfirmDialogProps> = ({
               disabled={isSubmitting}
               autoFocus
               maxLength={5}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && folio.trim() && !isSubmitting) {
-                  handleConfirm();
-                }
-              }}
+              onKeyDown={handleKeyDown}
             />
-            <Form.Text className="text-muted">
-              Ingresa el folio de 5 dígitos generado al aprobar el descuento
-            </Form.Text>
-          </Form.Group>
+            <p className="text-xs text-muted-foreground">
+              Ingresa el folio de 5 digitos generado al aprobar el descuento
+            </p>
+          </div>
         </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button
-          variant="secondary"
-          onClick={handleClose}
-          disabled={isSubmitting}
-        >
-          Cancelar
-        </Button>
-        <Button
-          variant="success"
-          onClick={handleConfirm}
-          disabled={isSubmitting || !folio.trim()}
-        >
-          {isSubmitting ? "Canjeando..." : "Canjear Folio"}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={isSubmitting || !folio.trim()}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Canjeando...
+              </>
+            ) : (
+              "Canjear Folio"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -3,7 +3,6 @@
 import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { SalesByPaymentMethod } from "../types";
-import { Row, Col } from "react-bootstrap";
 import { DollarSign, CreditCard, ArrowLeftRight } from "lucide-react";
 
 interface PaymentMethodChartProps {
@@ -48,8 +47,8 @@ const PaymentMethodChart: React.FC<PaymentMethodChartProps> = ({ data }) => {
   };
 
   return (
-    <div className="d-flex flex-column h-100">
-      <div className="flex-grow-1" style={{ minHeight: "180px" }}>
+    <div className="flex flex-col h-full">
+      <div className="flex-grow" style={{ minHeight: "180px" }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -82,30 +81,29 @@ const PaymentMethodChart: React.FC<PaymentMethodChartProps> = ({ data }) => {
         </ResponsiveContainer>
       </div>
 
-      <Row className="g-2 mt-2">
+      <div className="grid grid-cols-3 gap-2 mt-2">
         {data.map((item) => {
           const Icon = getIcon(item.method);
           const color = getColor(item.method);
           const bgColor = color + "15";
 
           return (
-            <Col xs={4} key={item.method}>
-              <div
-                className="p-2 rounded text-center"
-                style={{ backgroundColor: bgColor }}
-              >
-                <Icon size={20} color={color} className="mb-1" />
-                <div className="small text-muted text-truncate">
-                  {item.method}
-                </div>
-                <strong style={{ color, fontSize: "0.875rem" }}>
-                  {formatCurrency(item.amount)}
-                </strong>
+            <div
+              key={item.method}
+              className="p-2 rounded text-center"
+              style={{ backgroundColor: bgColor }}
+            >
+              <Icon size={20} color={color} className="mb-1 mx-auto" />
+              <div className="text-sm text-muted-foreground truncate">
+                {item.method}
               </div>
-            </Col>
+              <strong style={{ color, fontSize: "0.875rem" }}>
+                {formatCurrency(item.amount)}
+              </strong>
+            </div>
           );
         })}
-      </Row>
+      </div>
     </div>
   );
 };

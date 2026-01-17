@@ -1,22 +1,19 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import { FileText, Settings, Users } from "lucide-react";
+import { FileText, Settings, Users, Pencil, Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  Col,
-  Container,
-  ListGroup,
-  Row,
-} from "react-bootstrap";
-import { BsPencil } from "react-icons/bs";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import CreateRoleModal from "./components/CreateRolModal";
 import { rolesService } from "./services/roles";
 import { Module, Page, Role, SelectedModules } from "./types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 const RolesPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -198,7 +195,7 @@ const RolesPage: React.FC = () => {
 
   const getStatusIndicator = (page: Page) => {
     if (page.modules.length === 0) {
-      return <span className="ms-2 text-danger">○</span>;
+      return <span className="ml-2 text-destructive">○</span>;
     }
 
     const hasSelectedModules = page.modules.some(
@@ -206,9 +203,9 @@ const RolesPage: React.FC = () => {
     );
 
     if (hasSelectedModules) {
-      return <span className="ms-2 text-success">●</span>;
+      return <span className="ml-2 text-green-600">●</span>;
     }
-    return <span className="ms-2 text-warning">○</span>;
+    return <span className="ml-2 text-yellow-600">○</span>;
   };
 
   const getModuleCountForRole = (roleId: string): number => {
@@ -216,61 +213,55 @@ const RolesPage: React.FC = () => {
   };
 
   return (
-    <Container fluid className="p-4 min-vh-100">
-      <Row className="mb-3">
-        <Col>
-          <CreateRoleModal pages={pages} reloadData={loadInitialData} />
-        </Col>
-      </Row>
+    <div className="space-y-4">
+      {/* Header with action */}
+      <div className="flex justify-end">
+        <CreateRoleModal pages={pages} reloadData={loadInitialData} />
+      </div>
 
-      <Row>
-        <Col md={4}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Roles List */}
+        <div className="md:col-span-1">
           <Card>
-            <Card.Body className="p-0">
-              <ListGroup variant="flush">
+            <CardContent className="p-0">
+              <div className="divide-y">
                 {roles.map((role: Role) => (
-                  <ListGroup.Item
+                  <button
                     key={role._id + role.name}
-                    action
-                    active={selectedRole?._id === role._id}
                     onClick={() => handleRoleSelect(role)}
-                    className="cursor-pointer border-start-0 border-end-0 border-top-0"
-                    style={{
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      borderLeft:
-                        selectedRole?._id === role._id
-                          ? "3px solid #007bff"
-                          : "3px solid transparent",
-                    }}
+                    className={cn(
+                      "w-full px-4 py-3 text-left transition-colors hover:bg-muted/50",
+                      selectedRole?._id === role._id && "bg-muted border-l-2 border-l-primary"
+                    )}
                   >
-                    <div className="d-flex align-items-center justify-content-between">
-                      <div className="d-flex align-items-center">
-                        <Settings size={16} className="me-2" />
-                        <span>{role.name}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{role.name}</span>
                       </div>
-                      <div className=" d-flex align-items-between gap-2">
-                        <Badge bg="secondary" pill>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">
                           {getModuleCountForRole(role._id)}
                         </Badge>
-                        <BsPencil size={12} />
+                        <Pencil className="h-3 w-3 text-muted-foreground" />
                       </div>
                     </div>
-                  </ListGroup.Item>
+                  </button>
                 ))}
-              </ListGroup>
-            </Card.Body>
+              </div>
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
-        <Col md={8}>
+        {/* Module Configuration */}
+        <div className="md:col-span-2">
           {selectedRole ? (
             <Card>
-              <Card.Header className="d-flex justify-content-between align-items-center">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div>
-                  <div className="d-flex align-items-center gap-1">
+                  <div className="flex items-center gap-2">
                     {isEditingName ? (
-                      <input
+                      <Input
                         type="text"
                         value={editedName}
                         autoFocus
@@ -280,56 +271,47 @@ const RolesPage: React.FC = () => {
                           if (e.key === "Enter") handleNameSave();
                           if (e.key === "Escape") setIsEditingName(false);
                         }}
-                        className="form-control form-control-sm"
+                        className="h-8 w-auto"
                       />
                     ) : (
                       <>
-                        <h5
+                        <CardTitle
                           onClick={() => {
                             setEditedName(selectedRole.name);
                             setIsEditingName(true);
                           }}
-                          title="Editar nombre"
-                          className="mb-0 d-inline-block cursor-pointer fw-bold"
+                          className="cursor-pointer hover:text-muted-foreground"
                         >
                           {selectedRole.name}
-                        </h5>
-                        <button
-                          type="button"
-                          className="btn btn-link p-0"
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
                           onClick={() => {
                             setEditedName(selectedRole.name);
                             setIsEditingName(true);
                           }}
-                          tabIndex={-1}
-                          aria-label="Editar nombre"
                         >
-                          <BsPencil size={14} />
-                        </button>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                       </>
                     )}
                   </div>
-                  <div>
-                    <small className="text-muted">
-                      Módulos (
-                      {Object.values(selectedModules).filter(Boolean).length}{" "}
-                      seleccionados)
-                    </small>
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Módulos ({Object.values(selectedModules).filter(Boolean).length}{" "}
+                    seleccionados)
+                  </p>
                 </div>
                 <div>
                   {!isEditing ? (
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={handleEdit}
-                    >
+                    <Button variant="outline" size="sm" onClick={handleEdit}>
                       Editar
                     </Button>
                   ) : (
-                    <div className="d-flex gap-2">
+                    <div className="flex gap-2">
                       <Button
-                        variant="outline-secondary"
+                        variant="outline"
                         size="sm"
                         onClick={handleCancel}
                         disabled={loading}
@@ -337,48 +319,40 @@ const RolesPage: React.FC = () => {
                         Cancelar
                       </Button>
                       <Button
-                        variant="primary"
                         size="sm"
                         onClick={handleSubmit}
                         disabled={loading}
                       >
-                        {loading ? "Guardando..." : "Guardar"}
+                        {loading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Guardando...
+                          </>
+                        ) : (
+                          "Guardar"
+                        )}
                       </Button>
                     </div>
                   )}
                 </div>
-              </Card.Header>
-              <Card.Body>
+              </CardHeader>
+              <CardContent>
                 {loading && !isEditing ? (
-                  <div className="text-center py-4">
-                    <div
-                      className="spinner-border text-primary mb-2"
-                      role="status"
-                    >
-                      <span className="visually-hidden">Cargando...</span>
-                    </div>
-                    <p className="text-muted mb-0">Cargando módulos...</p>
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-muted-foreground mt-3">Cargando módulos...</p>
                   </div>
                 ) : (
-                  <div
-                    className="pe-2"
-                    style={{
-                      maxHeight: "600px",
-                      overflowY: "auto",
-                    }}
-                  >
+                  <ScrollArea className="h-[500px] pr-4">
                     {pages.map((page: Page) => (
                       <div
                         key={page._id}
-                        className="mb-2 border rounded overflow-hidden"
+                        className="mb-2 border rounded-md overflow-hidden"
                       >
-                        <div
-                          className="bg-light px-3 py-2 border-bottom"
-                          style={{ fontSize: "13px", color: "#495057" }}
-                        >
-                          <div className="d-flex align-items-center">
-                            <FileText size={14} />
-                            <strong className="ms-2">{page.name}</strong>
+                        <div className="bg-muted px-3 py-2 text-sm">
+                          <div className="flex items-center">
+                            <FileText className="h-4 w-4" />
+                            <span className="font-semibold ml-2">{page.name}</span>
                             {getStatusIndicator(page)}
                           </div>
                         </div>
@@ -386,70 +360,55 @@ const RolesPage: React.FC = () => {
                         {page.modules.map((module: Module) => (
                           <div
                             key={module._id}
-                            className="px-3 py-2 border-bottom"
-                            style={{
-                              transition: "background-color 0.2s ease",
-                            }}
+                            className="flex items-center justify-between px-3 py-2 border-b last:border-b-0"
                           >
-                            <div className="d-flex align-items-center justify-content-between">
-                              <label
-                                htmlFor={module._id}
-                                className="mb-0 flex-grow-1 text-dark"
-                                style={{
-                                  cursor: isEditing ? "pointer" : "default",
-                                  fontSize: "13px",
-                                }}
-                              >
-                                {module.name}
-                              </label>
-                              <input
-                                type="checkbox"
-                                id={module._id}
-                                checked={selectedModules[module._id] || false}
-                                onChange={(e) =>
-                                  handleModuleChange(
-                                    module._id,
-                                    e.target.checked
-                                  )
-                                }
-                                disabled={!isEditing}
-                                className="form-check-input"
-                                style={{ margin: 0 }}
-                              />
-                            </div>
+                            <label
+                              htmlFor={module._id}
+                              className={cn(
+                                "text-sm flex-1",
+                                isEditing ? "cursor-pointer" : "cursor-default"
+                              )}
+                            >
+                              {module.name}
+                            </label>
+                            <Checkbox
+                              id={module._id}
+                              checked={selectedModules[module._id] || false}
+                              onCheckedChange={(checked) =>
+                                handleModuleChange(module._id, checked as boolean)
+                              }
+                              disabled={!isEditing}
+                            />
                           </div>
                         ))}
 
                         {page.modules.length === 0 && (
                           <div className="px-3 py-3 text-center">
-                            <span
-                              className="text-muted fst-italic"
-                              style={{ fontSize: "12px" }}
-                            >
+                            <span className="text-muted-foreground text-sm italic">
                               Sin módulos disponibles
                             </span>
                           </div>
                         )}
                       </div>
                     ))}
-                  </div>
+                  </ScrollArea>
                 )}
-              </Card.Body>
+              </CardContent>
             </Card>
           ) : (
             <Card>
-              <Card.Body className="text-center py-5">
-                <Users size={48} className="text-muted mb-3" />
-                <h5>Selecciona un rol</h5>
-                <p className="text-muted">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground mb-3" />
+                <h3 className="text-lg font-semibold">Selecciona un rol</h3>
+                <p className="text-muted-foreground text-center">
                   Selecciona un rol de la lista para ver y editar sus módulos
                 </p>
-              </Card.Body>
+              </CardContent>
             </Card>
           )}
-        </Col>
-      </Row>
-    </Container>
+        </div>
+      </div>
+    </div>
   );
 };
 

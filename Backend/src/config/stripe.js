@@ -3,11 +3,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Inicializar Stripe con la clave secreta
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-12-18.acacia', // Usar la versión más reciente de la API
-  typescript: false,
-});
+// Inicializar Stripe con la clave secreta (solo si está configurada)
+let stripe = null;
+
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-12-18.acacia',
+    typescript: false,
+  });
+} else {
+  console.warn('⚠️  STRIPE_SECRET_KEY no configurada - funcionalidades de pago deshabilitadas');
+}
 
 // Configuración de moneda y otros parámetros
 export const STRIPE_CONFIG = {
@@ -27,8 +33,16 @@ export const convertFromStripeAmount = (amount) => {
   return amount / 100;
 };
 
+// Helper para verificar si Stripe está configurado
+const ensureStripeConfigured = () => {
+  if (!stripe) {
+    throw new Error('Stripe no está configurado. Verifica STRIPE_SECRET_KEY en variables de entorno.');
+  }
+};
+
 // Función para crear un Payment Intent
 export const createPaymentIntent = async ({ amount, orderId, customerId, metadata = {} }) => {
+  ensureStripeConfigured();
   try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: convertToStripeAmount(amount),
@@ -52,6 +66,7 @@ export const createPaymentIntent = async ({ amount, orderId, customerId, metadat
 
 // Función para confirmar un Payment Intent
 export const confirmPaymentIntent = async (paymentIntentId, paymentMethodId) => {
+  ensureStripeConfigured();
   try {
     const paymentIntent = await stripe.paymentIntents.confirm(paymentIntentId, {
       payment_method: paymentMethodId,
@@ -66,6 +81,7 @@ export const confirmPaymentIntent = async (paymentIntentId, paymentMethodId) => 
 
 // Función para recuperar un Payment Intent
 export const retrievePaymentIntent = async (paymentIntentId) => {
+  ensureStripeConfigured();
   try {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     return paymentIntent;
@@ -77,6 +93,7 @@ export const retrievePaymentIntent = async (paymentIntentId) => {
 
 // Función para cancelar un Payment Intent
 export const cancelPaymentIntent = async (paymentIntentId) => {
+  ensureStripeConfigured();
   try {
     // Primero verificar el estado del Payment Intent
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
@@ -113,6 +130,7 @@ export const cancelPaymentIntent = async (paymentIntentId) => {
 
 // Función para crear/obtener un cliente de Stripe
 export const createOrGetStripeCustomer = async ({ email, name, phone, metadata = {} }) => {
+  ensureStripeConfigured();
   try {
     // Buscar si el cliente ya existe por email
     const existingCustomers = await stripe.customers.list({
@@ -142,6 +160,7 @@ export const createOrGetStripeCustomer = async ({ email, name, phone, metadata =
 
 // Función para procesar reembolsos
 export const createRefund = async (paymentIntentId, amount = null) => {
+  ensureStripeConfigured();
   try {
     const refundData = {
       payment_intent: paymentIntentId,
@@ -181,6 +200,7 @@ export const verifyPaymentStatus = async (paymentIntentId) => {
 
 // Función para construir el webhook endpoint handler
 export const constructWebhookEvent = (payload, signature, webhookSecret) => {
+  ensureStripeConfigured();
   try {
     return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch (error) {

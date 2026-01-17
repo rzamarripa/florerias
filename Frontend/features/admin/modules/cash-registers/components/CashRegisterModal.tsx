@@ -1,14 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner, Alert } from "react-bootstrap";
-import { Save, X } from "lucide-react";
+import { Save, X, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { CashRegister, CreateCashRegisterData, Branch } from "../types";
 import { cashRegistersService } from "../services/cashRegisters";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface CashRegisterModalProps {
   show: boolean;
@@ -62,7 +79,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     if (show && userId) {
       loadEmployeesByRole();
       if (cashRegister) {
-        // Cuando está editando, extraer el nombre del gerente
+        // Cuando esta editando, extraer el nombre del gerente
         const managerInfo = typeof cashRegister.managerId === "object"
           ? cashRegister.managerId?.profile?.fullName || "No disponible"
           : "Cargando...";
@@ -188,13 +205,11 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value } = e.target;
 
-    // Si es el campo initialBalance, convertir a número
+    // Si es el campo initialBalance, convertir a numero
     if (name === "initialBalance") {
       setFormData((prev) => ({
         ...prev,
@@ -209,12 +224,19 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   };
 
   // Cuando se selecciona el tipo de caja
-  const handleBoxTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const type = e.target.value as "normal" | "social";
+  const handleBoxTypeChange = (value: string) => {
+    const type = value as "normal" | "social";
     setBoxType(type);
     setFormData((prev) => ({
       ...prev,
       isSocialMediaBox: type === "social",
+    }));
+  };
+
+  const handleBranchChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      branchId: value,
     }));
   };
 
@@ -247,8 +269,8 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
         );
         toast.success("Caja registradora actualizada exitosamente");
       } else {
-        // Al crear, enviar los datos con isSocialMediaBox según el tipo seleccionado
-        // El cashierId siempre será null, se asignará cuando se abra la caja
+        // Al crear, enviar los datos con isSocialMediaBox segun el tipo seleccionado
+        // El cashierId siempre sera null, se asignara cuando se abra la caja
         await cashRegistersService.createCashRegister(formData);
         toast.success("Caja registradora creada exitosamente");
       }
@@ -273,203 +295,188 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={handleClose}
-      size="lg"
-      backdrop="static"
-      centered
-    >
-      <Modal.Header closeButton style={{ borderBottom: "2px solid #f1f3f5" }}>
-        <Modal.Title className="fw-bold">
-          {isEditing ? "Editar Caja Registradora" : "Nueva Caja Registradora"}
-        </Modal.Title>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader className="border-b pb-4">
+          <DialogTitle className="font-bold">
+            {isEditing ? "Editar Caja Registradora" : "Nueva Caja Registradora"}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Form onSubmit={handleSubmit}>
-        <Modal.Body className="p-4">
-          {/* Alerta para administradores sin sucursal seleccionada */}
-          {isAdministrator && !activeBranch && !isEditing && (
-            <Alert variant="warning" className="mb-3">
-              <Alert.Heading className="fs-6 fw-bold">
-                Sucursal requerida
-              </Alert.Heading>
-              <p className="mb-0 small">
-                Debes seleccionar una sucursal antes de crear una caja
-                registradora. Ve a tu perfil y selecciona una sucursal activa.
-              </p>
-            </Alert>
-          )}
+        <form onSubmit={handleSubmit}>
+          <div className="py-4 space-y-4">
+            {/* Alerta para administradores sin sucursal seleccionada */}
+            {isAdministrator && !activeBranch && !isEditing && (
+              <Alert className="bg-yellow-50 border-yellow-200">
+                <AlertTitle className="text-sm font-bold">
+                  Sucursal requerida
+                </AlertTitle>
+                <AlertDescription className="text-sm">
+                  Debes seleccionar una sucursal antes de crear una caja
+                  registradora. Ve a tu perfil y selecciona una sucursal activa.
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {error && (
-            <Alert variant="danger" onClose={() => setError(null)} dismissible>
-              {error}
-            </Alert>
-          )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando datos...</p>
-            </div>
-          ) : (
-            <Row className="g-3">
-              {/* Nombre de la Caja */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Nombre de la Caja <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
+            {loading ? (
+              <div className="text-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                <p className="text-muted-foreground mt-3">Cargando datos...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Nombre de la Caja */}
+                <div className="space-y-2">
+                  <Label className="font-semibold">
+                    Nombre de la Caja <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
                     placeholder="Ej: Caja 1, Caja Principal"
                     required
-                    style={{ borderRadius: "8px" }}
+                    className="rounded-lg"
                   />
-                </Form.Group>
-              </Col>
+                </div>
 
-              {/* Tipo de Caja - Solo en creación */}
-              {!isEditing && (
-                <Col md={12}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
-                      Tipo de Caja <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Select
+                {/* Tipo de Caja - Solo en creacion */}
+                {!isEditing && (
+                  <div className="space-y-2">
+                    <Label className="font-semibold">
+                      Tipo de Caja <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
                       value={boxType}
-                      onChange={handleBoxTypeChange}
-                      required
+                      onValueChange={handleBoxTypeChange}
                       disabled={isSocialMediaBox}
-                      style={{ borderRadius: "8px" }}
                     >
-                      <option value="normal">Caja Normal (Tienda)</option>
-                      <option value="social">Caja Redes Sociales</option>
-                    </Form.Select>
-                    <Form.Text className="text-muted">
-                      Este campo no puede modificarse después de crear la caja
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              )}
+                      <SelectTrigger className="w-full rounded-lg">
+                        <SelectValue placeholder="Seleccione tipo de caja" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="normal">Caja Normal (Tienda)</SelectItem>
+                        <SelectItem value="social">Caja Redes Sociales</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Este campo no puede modificarse despues de crear la caja
+                    </p>
+                  </div>
+                )}
 
-              {/* Mostrar tipo de caja cuando está editando */}
-              {isEditing && (
-                <Col md={12}>
-                  <Alert
-                    variant={cashRegister?.isSocialMediaBox ? "warning" : "info"}
-                    className="d-flex align-items-center"
-                  >
-                    <strong className="me-2">Tipo de Caja:</strong>
-                    {cashRegister?.isSocialMediaBox ? "Caja Redes Sociales" : "Caja Normal (Tienda)"}
+                {/* Mostrar tipo de caja cuando esta editando */}
+                {isEditing && (
+                  <Alert className={cashRegister?.isSocialMediaBox ? "bg-yellow-50 border-yellow-200" : "bg-blue-50 border-blue-200"}>
+                    <AlertDescription className="flex items-center">
+                      <strong className="mr-2">Tipo de Caja:</strong>
+                      {cashRegister?.isSocialMediaBox ? "Caja Redes Sociales" : "Caja Normal (Tienda)"}
+                    </AlertDescription>
                   </Alert>
-                </Col>
-              )}
+                )}
 
-              {/* Sucursal - Solo mostrar select para NO administradores/gerentes o cuando está editando */}
-              {!isAdministrator && !isManager && !isEditing && (
-                <Col md={12}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
-                      Sucursal <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Select
-                      name="branchId"
+                {/* Sucursal - Solo mostrar select para NO administradores/gerentes o cuando esta editando */}
+                {!isAdministrator && !isManager && !isEditing && (
+                  <div className="space-y-2">
+                    <Label className="font-semibold">
+                      Sucursal <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
                       value={formData.branchId}
-                      onChange={handleInputChange}
-                      required
+                      onValueChange={handleBranchChange}
                       disabled={isEditing}
-                      style={{ borderRadius: "8px" }}
                     >
-                      <option value="">Seleccione una sucursal</option>
-                      {branches.map((branch) => (
-                        <option key={branch._id} value={branch._id}>
-                          {branch.branchName}
-                        </option>
-                      ))}
-                    </Form.Select>
+                      <SelectTrigger className="w-full rounded-lg">
+                        <SelectValue placeholder="Seleccione una sucursal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map((branch) => (
+                          <SelectItem key={branch._id} value={branch._id}>
+                            {branch.branchName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {isEditing && (
-                      <Form.Text className="text-muted">
+                      <p className="text-sm text-muted-foreground">
                         La sucursal no puede modificarse al editar
-                      </Form.Text>
+                      </p>
                     )}
-                  </Form.Group>
-                </Col>
-              )}
+                  </div>
+                )}
 
-              {/* Mostrar nombre de sucursal seleccionada para administradores en modo creación */}
-              {isAdministrator && !isEditing && activeBranch && (
-                <Col md={12}>
-                  <Alert variant="info" className="d-flex align-items-center">
-                    <strong className="me-2">Sucursal:</strong>
-                    {activeBranch.branchName}
+                {/* Mostrar nombre de sucursal seleccionada para administradores en modo creacion */}
+                {isAdministrator && !isEditing && activeBranch && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <AlertDescription className="flex items-center">
+                      <strong className="mr-2">Sucursal:</strong>
+                      {activeBranch.branchName}
+                    </AlertDescription>
                   </Alert>
-                </Col>
-              )}
+                )}
 
-              {/* Mostrar nombre de sucursal para gerentes en modo creación */}
-              {isManager && !isEditing && managerBranch && (
-                <Col md={12}>
-                  <Alert variant="info" className="d-flex align-items-center">
-                    <strong className="me-2">Sucursal:</strong>
-                    {managerBranch.branchName}
+                {/* Mostrar nombre de sucursal para gerentes en modo creacion */}
+                {isManager && !isEditing && managerBranch && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <AlertDescription className="flex items-center">
+                      <strong className="mr-2">Sucursal:</strong>
+                      {managerBranch.branchName}
+                    </AlertDescription>
                   </Alert>
-                </Col>
-              )}
+                )}
 
-              {/* Gerente - Campo de solo lectura */}
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    Gerente <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Alert variant="success" className="d-flex align-items-center mb-0">
-                    <strong className="me-2">Gerente asignado:</strong>
-                    {managerName || "Cargando..."}
+                {/* Gerente - Campo de solo lectura */}
+                <div className="space-y-2">
+                  <Label className="font-semibold">
+                    Gerente <span className="text-red-500">*</span>
+                  </Label>
+                  <Alert className="bg-green-50 border-green-200">
+                    <AlertDescription className="flex items-center">
+                      <strong className="mr-2">Gerente asignado:</strong>
+                      {managerName || "Cargando..."}
+                    </AlertDescription>
                   </Alert>
-                  <Form.Text className="text-muted d-block mt-2">
-                    El gerente se obtiene automáticamente de la sucursal seleccionada
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+                  <p className="text-sm text-muted-foreground">
+                    El gerente se obtiene automaticamente de la sucursal seleccionada
+                  </p>
+                </div>
 
-              {/* Nota sobre el cajero - Solo para cajas normales */}
-              {boxType === "normal" && !isEditing && (
-                <Col md={12}>
-                  <Alert variant="info" className="mb-0">
-                    <small>
-                      <strong>Nota:</strong> El cajero se asignará automáticamente
+                {/* Nota sobre el cajero - Solo para cajas normales */}
+                {boxType === "normal" && !isEditing && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <AlertDescription className="text-sm">
+                      <strong>Nota:</strong> El cajero se asignara automaticamente
                       cuando un usuario con rol "Cajero" abra la caja
                       registradora.
-                    </small>
+                    </AlertDescription>
                   </Alert>
-                </Col>
-              )}
+                )}
 
-              {/* Nota para cajas de redes sociales */}
-              {boxType === "social" && !isEditing && (
-                <Col md={12}>
-                  <Alert variant="warning" className="mb-0">
-                    <small>
-                      <strong>Importante:</strong> Esta caja solo podrá ser abierta
+                {/* Nota para cajas de redes sociales */}
+                {boxType === "social" && !isEditing && (
+                  <Alert className="bg-yellow-50 border-yellow-200">
+                    <AlertDescription className="text-sm">
+                      <strong>Importante:</strong> Esta caja solo podra ser abierta
                       y cerrada por usuarios con rol "Redes". El usuario de redes
-                      se asignará automáticamente cuando abra la caja.
-                    </small>
+                      se asignara automaticamente cuando abra la caja.
+                    </AlertDescription>
                   </Alert>
-                </Col>
-              )}
+                )}
 
-              {/* Saldo Inicial */}
-              {!isEditing && (
-                <Col md={12}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
+                {/* Saldo Inicial */}
+                {!isEditing && (
+                  <div className="space-y-2">
+                    <Label className="font-semibold">
                       Saldo Inicial
-                    </Form.Label>
-                    <Form.Control
+                    </Label>
+                    <Input
                       type="number"
                       name="initialBalance"
                       value={formData.initialBalance || 0}
@@ -477,54 +484,50 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      style={{ borderRadius: "8px" }}
+                      className="rounded-lg"
                     />
-                    <Form.Text className="text-muted">
+                    <p className="text-sm text-muted-foreground">
                       El saldo inicial con el que abre la caja (opcional, por
                       defecto 0)
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              )}
-            </Row>
-          )}
-        </Modal.Body>
-
-        <Modal.Footer style={{ borderTop: "2px solid #f1f3f5" }}>
-          <Button
-            variant="light"
-            onClick={handleClose}
-            disabled={saving}
-            className="px-4"
-            style={{ borderRadius: "8px" }}
-          >
-            <X size={18} className="me-2" />
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={saving || loading || !canCreate}
-            className="px-4"
-            style={{
-              borderRadius: "8px",
-            }}
-          >
-            {saving ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save size={18} className="me-2" />
-                {isEditing ? "Actualizar" : "Crear"}
-              </>
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={saving}
+              className="px-4 rounded-lg"
+            >
+              <X size={18} className="mr-2" />
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || loading || !canCreate}
+              className="px-4 rounded-lg"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save size={18} className="mr-2" />
+                  {isEditing ? "Actualizar" : "Crear"}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

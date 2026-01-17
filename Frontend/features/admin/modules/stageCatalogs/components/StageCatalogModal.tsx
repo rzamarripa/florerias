@@ -1,15 +1,38 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-toastify";
-import { X } from "lucide-react";
+import { toast } from "sonner";
+import { X, Loader2 } from "lucide-react";
 import { ChromePicker, ColorResult } from "react-color";
 import { stageCatalogSchema, StageCatalogFormData } from "../schemas/stageCatalogSchema";
 import { stageCatalogsService } from "../services/stageCatalogs";
 import { StageCatalog, RGBColor } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface StageCatalogModalProps {
   show: boolean;
@@ -41,7 +64,7 @@ const StageCatalogModal: React.FC<StageCatalogModalProps> = ({
       abreviation: "",
       stageNumber: 1,
       boardType: "Produccion" as "Produccion" | "Envio",
-      color: { r: 102, g: 126, b: 234, a: 1 }, // Color por defecto (púrpura)
+      color: { r: 102, g: 126, b: 234, a: 1 },
     },
   });
 
@@ -111,236 +134,176 @@ const StageCatalogModal: React.FC<StageCatalogModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header className="border-0 pb-0">
-        <div>
-          <Modal.Title className="fw-bold">
-            {stage ? "Editar Etapa" : "Nueva Etapa"}
-          </Modal.Title>
-          <p className="text-muted mb-0 small">
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{stage ? "Editar Etapa" : "Nueva Etapa"}</DialogTitle>
+          <DialogDescription>
             {stage
               ? "Actualiza la información de la etapa"
               : "Completa los datos de la nueva etapa"}
-          </p>
-        </div>
-        <Button
-          variant="link"
-          onClick={onHide}
-          className="text-muted p-0"
-          style={{ fontSize: "1.5rem" }}
-        >
-          <X size={24} />
-        </Button>
-      </Modal.Header>
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body className="pt-3">
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Row className="g-3">
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid gap-4 py-4">
             {/* Nombre */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Nombre de la Etapa <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="name"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Control
-                      {...field}
-                      type="text"
-                      placeholder="Ej: En Proceso, Completado, Pendiente"
-                      isInvalid={!!errors.name}
-                      style={{ borderRadius: "8px" }}
-                    />
-                  )}
-                />
-                {errors.name && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.name.message}
-                  </Form.Control.Feedback>
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Nombre de la Etapa <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                name="name"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="name"
+                    type="text"
+                    placeholder="Ej: En Proceso, Completado, Pendiente"
+                    className={errors.name ? "border-destructive" : ""}
+                  />
                 )}
-              </Form.Group>
-            </Col>
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
 
-            {/* Abreviación */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Abreviación <span className="text-danger">*</span>
-                </Form.Label>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Abreviación */}
+              <div className="space-y-2">
+                <Label htmlFor="abreviation">
+                  Abreviación <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="abreviation"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
+                      id="abreviation"
                       type="text"
                       placeholder="Ej: EP, COM, PEN"
-                      isInvalid={!!errors.abreviation}
-                      style={{ borderRadius: "8px", textTransform: "uppercase" }}
+                      className={`uppercase ${errors.abreviation ? "border-destructive" : ""}`}
                       onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                     />
                   )}
                 />
                 {errors.abreviation && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.abreviation.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.abreviation.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
 
-            {/* Número de Etapa */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Número de Etapa <span className="text-danger">*</span>
-                </Form.Label>
+              {/* Número de Etapa */}
+              <div className="space-y-2">
+                <Label htmlFor="stageNumber">
+                  Número de Etapa <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="stageNumber"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
+                      id="stageNumber"
                       type="number"
                       min="1"
                       placeholder="Ej: 1, 2, 3"
-                      isInvalid={!!errors.stageNumber}
-                      style={{ borderRadius: "8px" }}
+                      className={errors.stageNumber ? "border-destructive" : ""}
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
                     />
                   )}
                 />
                 {errors.stageNumber && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.stageNumber.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.stageNumber.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
+            </div>
 
             {/* Tipo de Tablero */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Tipo de Tablero <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="boardType"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Select
-                      {...field}
-                      isInvalid={!!errors.boardType}
-                      style={{ borderRadius: "8px" }}
-                    >
-                      <option value="Produccion">Producción</option>
-                      <option value="Envio">Envío</option>
-                    </Form.Select>
-                  )}
-                />
-                {errors.boardType && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.boardType.message}
-                  </Form.Control.Feedback>
+            <div className="space-y-2">
+              <Label htmlFor="boardType">
+                Tipo de Tablero <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                name="boardType"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger className={errors.boardType ? "border-destructive" : ""}>
+                      <SelectValue placeholder="Selecciona el tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Produccion">Producción</SelectItem>
+                      <SelectItem value="Envio">Envío</SelectItem>
+                    </SelectContent>
+                  </Select>
                 )}
-              </Form.Group>
-            </Col>
+              />
+              {errors.boardType && (
+                <p className="text-sm text-destructive">{errors.boardType.message}</p>
+              )}
+            </div>
 
             {/* Color */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Color <span className="text-danger">*</span>
-                </Form.Label>
-                <div className="position-relative">
-                  <div
-                    onClick={() => setShowColorPicker(!showColorPicker)}
-                    className="d-flex align-items-center gap-3 p-3 border rounded"
-                    style={{
-                      cursor: "pointer",
-                      borderRadius: "8px",
-                      backgroundColor: "#f8f9fa",
-                    }}
+            <div className="space-y-2">
+              <Label>
+                Color <span className="text-destructive">*</span>
+              </Label>
+              <Popover open={showColorPicker} onOpenChange={setShowColorPicker}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 w-full p-3 border rounded-md bg-muted/50 hover:bg-muted transition-colors"
                   >
                     <div
+                      className="w-10 h-10 rounded-md border-2 border-border"
                       style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "8px",
-                        backgroundColor: currentColor ? rgbaToString(currentColor) : "var(--bs-primary)",
-                        border: "2px solid #dee2e6",
+                        backgroundColor: currentColor
+                          ? rgbaToString(currentColor)
+                          : "hsl(var(--primary))",
                       }}
                     />
-                    <div>
-                      <div className="fw-semibold">
+                    <div className="text-left">
+                      <div className="font-medium">
                         {currentColor
                           ? `RGB(${currentColor.r}, ${currentColor.g}, ${currentColor.b})`
                           : "Selecciona un color"}
                       </div>
-                      <small className="text-muted">
+                      <p className="text-sm text-muted-foreground">
                         Haz clic para cambiar el color
-                      </small>
+                      </p>
                     </div>
-                  </div>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <ChromePicker
+                    color={currentColor}
+                    onChange={handleColorChange}
+                    disableAlpha={false}
+                  />
+                </PopoverContent>
+              </Popover>
+              {errors.color && (
+                <p className="text-sm text-destructive">{errors.color.message}</p>
+              )}
+            </div>
+          </div>
 
-                  {showColorPicker && (
-                    <div
-                      className="position-absolute mt-2"
-                      style={{ zIndex: 1000 }}
-                    >
-                      <div
-                        className="position-fixed top-0 start-0 w-100 h-100"
-                        onClick={() => setShowColorPicker(false)}
-                        style={{ zIndex: 999 }}
-                      />
-                      <div style={{ position: "relative", zIndex: 1000 }}>
-                        <ChromePicker
-                          color={currentColor}
-                          onChange={handleColorChange}
-                          disableAlpha={false}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {errors.color && (
-                  <Form.Text className="text-danger">
-                    {errors.color.message}
-                  </Form.Text>
-                )}
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <div className="d-flex justify-content-end gap-2 mt-4">
+          <DialogFooter>
             <Button
-              variant="light"
+              type="button"
+              variant="outline"
               onClick={onHide}
               disabled={loading}
-              style={{ borderRadius: "8px" }}
             >
               Cancelar
             </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={loading}
-              style={{
-                borderRadius: "8px",
-              }}
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Guardando...
                 </>
               ) : stage ? (
@@ -349,10 +312,10 @@ const StageCatalogModal: React.FC<StageCatalogModalProps> = ({
                 "Crear Etapa"
               )}
             </Button>
-          </div>
-        </Form>
-      </Modal.Body>
-    </Modal>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

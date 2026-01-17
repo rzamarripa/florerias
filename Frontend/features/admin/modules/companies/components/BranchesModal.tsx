@@ -1,12 +1,33 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Table, Spinner, Alert } from "react-bootstrap";
 import Select from "react-select";
-import { X, Save } from "lucide-react";
-import { toast } from "react-toastify";
+import { X, Save, Loader2, Building2 } from "lucide-react";
+import { toast } from "sonner";
 import { Company } from "../types";
 import { companiesService } from "../services/companies";
+
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Branch {
   _id: string;
@@ -145,135 +166,141 @@ const BranchesModal: React.FC<BranchesModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>Agregar Sucursales - {company.legalName}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {error && (
-          <Alert variant="danger" onClose={() => setError(null)} dismissible>
-            {error}
-          </Alert>
-        )}
+    <Dialog open={show} onOpenChange={(open) => !saving && !open && handleClose()}>
+      <DialogContent className="sm:max-w-[800px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            Agregar Sucursales - {company.legalName}
+          </DialogTitle>
+          <DialogDescription>
+            Selecciona las sucursales que deseas asignar a esta empresa
+          </DialogDescription>
+        </DialogHeader>
 
-        {loading ? (
-          <div className="d-flex justify-content-center align-items-center py-5">
-            <Spinner animation="border" variant="primary" />
-          </div>
-        ) : (
-          <>
-            {/* Multiselect de Sucursales con React-Select */}
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-semibold">
-                Seleccionar Sucursales
-              </Form.Label>
-              <Select
-                isMulti
-                options={getBranchOptions()}
-                value={selectedOptions}
-                onChange={handleBranchSelection}
-                placeholder="Selecciona sucursales..."
-                noOptionsMessage={() => "No hay sucursales disponibles"}
-                className="react-select-container"
-                classNamePrefix="react-select"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    minHeight: "42px",
-                  }),
-                  menuPortal: (base) => ({
-                    ...base,
-                    zIndex: 9999,
-                  }),
-                }}
-                menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-              />
-            </Form.Group>
+        <ScrollArea className="max-h-[60vh]">
+          <div className="space-y-4 p-1">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-            {/* Tabla de Sucursales Seleccionadas */}
-            <div className="mt-4">
-              <h6 className="fw-semibold mb-3">
-                Sucursales Asignadas ({getSelectedBranches().length})
-              </h6>
-              {getSelectedBranches().length === 0 ? (
-                <Alert variant="info">
-                  No hay sucursales asignadas. Selecciona sucursales del listado
-                  superior.
-                </Alert>
-              ) : (
-                <div className="table-responsive">
-                  <Table striped bordered hover size="sm">
-                    <thead>
-                      <tr>
-                        <th>Nombre</th>
-                        <th>Código</th>
-                        <th>RFC</th>
-                        <th>Ciudad</th>
-                        <th>Gerente</th>
-                        <th style={{ width: "60px" }}>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getSelectedBranches().map((branch) => (
-                        <tr key={branch._id}>
-                          <td>{branch.branchName}</td>
-                          <td>{branch.branchCode || "N/A"}</td>
-                          <td>
-                            <span className="badge bg-info">{branch.rfc}</span>
-                          </td>
-                          <td>
-                            {branch.address.city}, {branch.address.state}
-                          </td>
-                          <td>{branch.manager.name}</td>
-                          <td className="text-center">
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="p-0 text-danger"
-                              onClick={() => handleRemoveBranch(branch._id)}
-                              title="Quitar sucursal"
-                            >
-                              <X size={18} />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-muted-foreground mt-3">Cargando sucursales...</p>
+              </div>
+            ) : (
+              <>
+                {/* Multiselect de Sucursales con React-Select */}
+                <div className="space-y-2">
+                  <Label className="font-semibold">Seleccionar Sucursales</Label>
+                  <Select
+                    isMulti
+                    options={getBranchOptions()}
+                    value={selectedOptions}
+                    onChange={handleBranchSelection}
+                    placeholder="Selecciona sucursales..."
+                    noOptionsMessage={() => "No hay sucursales disponibles"}
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: "42px",
+                        borderColor: "hsl(var(--border))",
+                        "&:hover": {
+                          borderColor: "hsl(var(--border))",
+                        },
+                      }),
+                      menuPortal: (base) => ({
+                        ...base,
+                        zIndex: 9999,
+                      }),
+                    }}
+                    menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                  />
                 </div>
-              )}
-            </div>
-          </>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose} disabled={saving}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSave}
-          disabled={saving || loading}
-          className="d-flex align-items-center gap-2"
-        >
-          {saving ? (
-            <>
-              <Spinner
-                animation="border"
-                size="sm"
-                style={{ width: "16px", height: "16px" }}
-              />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save size={18} />
-              Guardar
-            </>
-          )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+
+                {/* Tabla de Sucursales Seleccionadas */}
+                <div>
+                  <h6 className="font-semibold mb-3">
+                    Sucursales Asignadas ({getSelectedBranches().length})
+                  </h6>
+                  {getSelectedBranches().length === 0 ? (
+                    <Alert>
+                      <AlertDescription>
+                        No hay sucursales asignadas. Selecciona sucursales del listado
+                        superior.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Código</TableHead>
+                          <TableHead>RFC</TableHead>
+                          <TableHead>Ciudad</TableHead>
+                          <TableHead>Gerente</TableHead>
+                          <TableHead className="w-16 text-center">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {getSelectedBranches().map((branch) => (
+                          <TableRow key={branch._id}>
+                            <TableCell className="font-medium">{branch.branchName}</TableCell>
+                            <TableCell>{branch.branchCode || "N/A"}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{branch.rfc}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {branch.address.city}, {branch.address.state}
+                            </TableCell>
+                            <TableCell>{branch.manager.name}</TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveBranch(branch._id)}
+                                title="Quitar sucursal"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </ScrollArea>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving || loading}>
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

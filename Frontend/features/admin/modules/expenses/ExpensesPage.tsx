@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Tabs, Tab, Button } from "react-bootstrap";
 import { Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import CheckTransferTable from "./components/CheckTransferTable";
 import PettyCashTable from "./components/PettyCashTable";
 import ExpenseModal from "./components/ExpenseModal";
@@ -32,19 +34,18 @@ const ExpensesPage: React.FC = () => {
     <div className="container-fluid py-2">
       {/* Header */}
       <div className="mb-2">
-        <div className="d-flex justify-content-between align-items-start">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="mb-1 fw-bold">Gastos</h2>
-            <p className="text-muted mb-0">
+            <h2 className="mb-1 font-bold text-2xl">Gastos</h2>
+            <p className="text-muted-foreground mb-0">
               Gestiona los gastos de tu sucursal
             </p>
           </div>
 
-          {/* Botón de nuevo gasto */}
+          {/* Boton de nuevo gasto */}
           <Button
-            variant="primary"
             onClick={() => handleOpenModal()}
-            className="d-flex align-items-center gap-2"
+            className="flex items-center gap-2"
           >
             <Plus size={18} />
             Nuevo Gasto
@@ -53,58 +54,48 @@ const ExpensesPage: React.FC = () => {
       </div>
 
       {/* Tabs con Tablas */}
-      <div
-        className="card border-0 shadow-sm"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body p-0">
-          {/* Header con pestañas */}
-          <div
-            className="px-4 pt-3"
-            style={{
-              borderBottom: "2px solid #f1f3f5",
-            }}
-          >
+      <Card className="border-0 shadow-sm rounded-[10px]">
+        <CardContent className="p-0">
+          {/* Header con pestanas */}
+          <div className="px-4 pt-3 border-b-2 border-gray-100">
             <Tabs
-              activeKey={activeTab}
-              onSelect={(k) => setActiveTab(k || "check_transfer")}
-              className="border-0"
+              value={activeTab}
+              onValueChange={(value) => setActiveTab(value)}
             >
-              <Tab
-                eventKey="check_transfer"
-                title={
-                  <span className="px-3 py-2 fw-semibold">
-                    Cheque / Transferencia
-                  </span>
-                }
-              >
-                <div className="p-4">
-                  <CheckTransferTable
-                    onEdit={handleOpenModal}
-                    refreshTrigger={refreshTrigger}
-                  />
-                </div>
-              </Tab>
+              <TabsList className="bg-transparent border-0 h-auto p-0 gap-0">
+                <TabsTrigger
+                  value="check_transfer"
+                  className="px-3 py-2 font-semibold data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none"
+                >
+                  Cheque / Transferencia
+                </TabsTrigger>
+                <TabsTrigger
+                  value="petty_cash"
+                  className="px-3 py-2 font-semibold data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none"
+                >
+                  Caja Chica
+                </TabsTrigger>
+              </TabsList>
 
-              <Tab
-                eventKey="petty_cash"
-                title={
-                  <span className="px-3 py-2 fw-semibold">Caja Chica</span>
-                }
-              >
-                <div className="p-4">
-                  <PettyCashTable
-                    onEdit={handleOpenModal}
-                    refreshTrigger={refreshTrigger}
-                  />
-                </div>
-              </Tab>
+              <TabsContent value="check_transfer" className="p-4">
+                <CheckTransferTable
+                  onEdit={handleOpenModal}
+                  refreshTrigger={refreshTrigger}
+                />
+              </TabsContent>
+
+              <TabsContent value="petty_cash" className="p-4">
+                <PettyCashTable
+                  onEdit={handleOpenModal}
+                  refreshTrigger={refreshTrigger}
+                />
+              </TabsContent>
             </Tabs>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Modal de Creación/Edición */}
+      {/* Modal de Creacion/Edicion */}
       <ExpenseModal
         show={showModal}
         onHide={handleCloseModal}

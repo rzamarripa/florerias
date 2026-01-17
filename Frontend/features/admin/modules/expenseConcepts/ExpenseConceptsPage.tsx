@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner } from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight, PackageSearch } from "lucide-react";
-import { toast } from "react-toastify";
+import { Plus, Search, ChevronLeft, ChevronRight, PackageSearch, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { expenseConceptsService } from "./services/expenseConcepts";
 import { branchesService } from "../branches/services/branches";
 import { ExpenseConcept } from "./types";
@@ -11,6 +10,20 @@ import ExpenseConceptActions from "./components/ExpenseConceptActions";
 import ExpenseConceptModal from "./components/ExpenseConceptModal";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PageHeader } from "@/components/ui/page-header";
 
 const DEPARTMENT_LABELS: Record<string, string> = {
   sales: "Ventas",
@@ -38,7 +51,6 @@ const ExpenseConceptsPage: React.FC = () => {
   const { user } = useUserSessionStore();
   const { activeBranch } = useActiveBranchStore();
 
-  // Determinar el branchId según el rol del usuario
   useEffect(() => {
     const determineBranchId = async () => {
       if (!user) return;
@@ -46,12 +58,10 @@ const ExpenseConceptsPage: React.FC = () => {
       const userRole = user.role?.name;
 
       if (userRole === "Administrador") {
-        // Para Administrador, usar el activeBranch del store
         if (activeBranch) {
           setBranchId(activeBranch._id);
         }
       } else if (userRole === "Gerente") {
-        // Para Gerente, buscar su sucursal por el campo manager
         try {
           const response = await branchesService.getAllBranches({ limit: 1000 });
           const managerBranch = response.data.find(
@@ -85,7 +95,6 @@ const ExpenseConceptsPage: React.FC = () => {
         filters.search = searchTerm;
       }
 
-      // Agregar el branchId a los filtros si está disponible
       if (branchId) {
         filters.branch = branchId;
       }
@@ -141,169 +150,146 @@ const ExpenseConceptsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <h2 className="mb-1 fw-bold">Conceptos de Gastos</h2>
-          <p className="text-muted mb-0">Gestiona los conceptos de gastos del sistema</p>
-        </div>
-        <Button
-          variant="primary"
-          onClick={handleNewConcept}
-          className="d-flex align-items-center gap-2 px-4"
-        >
-          <Plus size={20} />
-          Nuevo Concepto
-        </Button>
-      </div>
+      <PageHeader
+        title="Conceptos de Gastos"
+        description="Gestiona los conceptos de gastos del sistema"
+        action={{
+          label: "Nuevo Concepto",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleNewConcept,
+        }}
+      />
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-2">
-          <div className="row g-2">
-            <div className="col-md-12">
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por nombre o descripción..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
-            </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Buscar por nombre o descripción..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="pl-10"
+            />
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card>
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando conceptos...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando conceptos...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">#</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">DESCRIPCIÓN</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">DEPARTAMENTO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">SUCURSAL</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ESTADO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead>Departamento</TableHead>
+                    <TableHead>Sucursal</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {concepts.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-5 text-muted">
-                        <PackageSearch size={48} className="mb-3 opacity-50" />
-                        <p className="mb-0">No se encontraron conceptos de gastos</p>
-                      </td>
-                    </tr>
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <PackageSearch className="h-12 w-12 opacity-50" />
+                          <p>No se encontraron conceptos de gastos</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     concepts.map((concept, index) => (
-                      <tr key={concept._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-2 py-2">
+                      <TableRow key={concept._id}>
+                        <TableCell>
                           {(pagination.page - 1) * pagination.limit + index + 1}
-                        </td>
-                        <td className="px-2 py-2 fw-semibold">{concept.name}</td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell className="font-medium">{concept.name}</TableCell>
+                        <TableCell>
                           {concept.description || (
-                            <span className="text-muted fst-italic">Sin descripción</span>
+                            <span className="text-muted-foreground italic">Sin descripción</span>
                           )}
-                        </td>
-                        <td className="px-2 py-2">
-                          <Badge
-                            bg="info"
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontWeight: "500",
-                            }}
-                          >
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-info text-info-foreground">
                             {DEPARTMENT_LABELS[concept.department] || concept.department}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>
                           <div>
-                            <div className="fw-semibold">{concept.branch.branchName}</div>
+                            <div className="font-medium">{concept.branch.branchName}</div>
                             {concept.branch.branchCode && (
-                              <small className="text-muted">{concept.branch.branchCode}</small>
+                              <p className="text-sm text-muted-foreground">
+                                {concept.branch.branchCode}
+                              </p>
                             )}
                           </div>
-                        </td>
-                        <td className="px-2 py-2">
-                          <Badge
-                            bg={concept.isActive ? "success" : "danger"}
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontWeight: "500",
-                            }}
-                          >
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={concept.isActive ? "default" : "destructive"}>
                             {concept.isActive ? "Activo" : "Inactivo"}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
+                        </TableCell>
+                        <TableCell>
                           <ExpenseConceptActions
                             concept={concept}
                             onEdit={handleEditConcept}
                             onConceptUpdated={handleConceptUpdated}
                           />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
+                </TableBody>
               </Table>
-            </div>
-          )}
 
-          {/* Pagination */}
-          {!loading && concepts.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
-                Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} conceptos
-              </p>
-              <div className="d-flex gap-2">
-                <Button
-                  variant="light"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <span className="px-3 py-1">
-                  Página {pagination.page} de {pagination.pages}
-                </span>
-                <Button
-                  variant="light"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
-                >
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
-            </div>
+              {/* Pagination */}
+              {concepts.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
+                    {pagination.total} conceptos
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm px-2">
+                      Página {pagination.page} de {pagination.pages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Concept Modal */}
       <ExpenseConceptModal

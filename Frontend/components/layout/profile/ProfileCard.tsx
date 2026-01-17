@@ -1,4 +1,5 @@
-import { Card } from "react-bootstrap";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface ProfileCardProps {
   coverUrl: string;
@@ -17,48 +18,36 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   memberSince,
   onChangeCover,
 }) => (
-  <Card
-    className="border-0 shadow-sm mb-3"
-    style={{ maxWidth: 500, margin: "0 auto" }}
-  >
+  <Card className="border-0 shadow-sm mb-3 max-w-[500px] mx-auto overflow-hidden">
     <div
-      style={{
-        height: 180,
-        background: `url(${coverUrl}) center/cover no-repeat`,
-        borderTopLeftRadius: 5,
-        borderTopRightRadius: 5,
-        position: "relative",
-      }}
+      className="h-[180px] bg-cover bg-center relative rounded-t-md"
+      style={{ backgroundImage: `url(${coverUrl})` }}
     >
       {onChangeCover && (
-        <button
-          className="btn btn-light btn-sm"
-          style={{ position: "absolute", top: 12, right: 12, zIndex: 2 }}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="absolute top-3 right-3 z-10"
           onClick={onChangeCover}
         >
           Cambiar portada
-        </button>
+        </Button>
       )}
     </div>
-    <div style={{ position: "relative", top: -40, textAlign: "center" }}>
+    <div className="relative -top-10 text-center">
       <img
         src={userImage}
         alt="Avatar"
-        style={{
-          width: 80,
-          height: 80,
-          borderRadius: "50%",
-          border: "4px solid #fff",
-          objectFit: "cover",
-          background: "#eee",
-        }}
+        className="w-20 h-20 rounded-full border-4 border-white object-cover bg-muted"
       />
     </div>
-    <Card.Body style={{ marginTop: -20, textAlign: "center" }}>
-      <h4 className="fw-bold mb-1">{fullName}</h4>
-      <div className="text-primary fw-medium mb-0">{role}</div>
-      <div className="text-muted mb-0 fs-6">Miembro desde {memberSince}</div>
-    </Card.Body>
+    <CardContent className="-mt-5 text-center pb-6">
+      <h4 className="font-bold mb-1">{fullName}</h4>
+      <div className="text-primary font-medium mb-0">{role}</div>
+      <div className="text-muted-foreground text-sm">
+        Miembro desde {memberSince}
+      </div>
+    </CardContent>
   </Card>
 );
 

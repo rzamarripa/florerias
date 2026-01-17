@@ -1,9 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
-import { Users, X } from "lucide-react";
-import { toast } from "react-toastify";
+import { Users, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { companiesService } from "../services/companies";
 import { Company, RedesUser } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AssignRedesModalProps {
   show: boolean;
@@ -105,10 +124,8 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
   };
 
   // Manejar selección de usuario redes
-  const handleRedesChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedId = e.target.value;
-
-    if (selectedId === "") {
+  const handleRedesChange = (selectedId: string) => {
+    if (selectedId === "" || selectedId === "new") {
       // Limpiar selección
       setFormData({
         redesId: "",
@@ -265,296 +282,283 @@ const AssignRedesModal: React.FC<AssignRedesModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header closeButton className="border-0 pb-0">
-        <Modal.Title className="d-flex align-items-center gap-2">
-          <Users size={24} className="text-primary" />
-          <div>
-            <h5 className="mb-0">Asignar Usuario Redes</h5>
-            <small className="text-muted fw-normal">
-              {company.legalName}
-            </small>
-          </div>
-        </Modal.Title>
-      </Modal.Header>
-
-      <Modal.Body>
-        {loading ? (
-          <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="text-muted mt-3">Cargando...</p>
-          </div>
-        ) : (
-          <Row className="g-3">
-            {/* Selector de Usuario Redes */}
-            <Col md={12}>
-              <div className="d-flex align-items-center justify-content-between mb-2">
-                <Form.Label className="fw-semibold mb-0">
-                  Seleccionar Usuario Redes (Opcional)
-                </Form.Label>
-                {formData.redesId && (
-                  <Button
-                    variant="outline-secondary"
-                    size="sm"
-                    onClick={handleClearRedes}
-                    className="d-flex align-items-center gap-1"
-                  >
-                    <X size={16} />
-                    Limpiar
-                  </Button>
-                )}
+    <Dialog open={show} onOpenChange={(open) => !saving && !open && onHide()}>
+      <DialogContent className="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <div>
+              <div>Asignar Usuario Redes</div>
+              <div className="text-sm font-normal text-muted-foreground">
+                {company.legalName}
               </div>
-              <Form.Select
-                value={formData.redesId || ""}
-                onChange={handleRedesChange}
-                className="py-2"
-              >
-                <option value="">
-                  -- Seleccione un usuario redes existente o cree uno nuevo --
-                </option>
-                {redesUsers.map((redesUser) => (
-                  <option key={redesUser._id} value={redesUser._id}>
-                    {redesUser.profile.fullName} ({redesUser.email})
-                  </option>
-                ))}
-              </Form.Select>
-              <Form.Text className="text-muted">
-                {formData.redesId
-                  ? "Usuario redes seleccionado. Edite los datos abajo y guarde los cambios."
-                  : "Puede seleccionar un usuario redes existente o crear uno nuevo llenando los campos."}
-              </Form.Text>
-            </Col>
+            </div>
+          </DialogTitle>
+          <DialogDescription>
+            Selecciona un usuario redes existente o crea uno nuevo
+          </DialogDescription>
+        </DialogHeader>
 
-            {/* Campos del Usuario Redes - Siempre habilitados */}
-            {/* Nombre */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Nombre</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Ingresa el nombre"
-                  value={formData.redesData?.profile.name || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      redesData: formData.redesData
-                        ? {
-                            ...formData.redesData,
-                            profile: {
-                              ...formData.redesData.profile,
-                              name: e.target.value,
-                            },
-                          }
-                        : undefined,
-                    })
-                  }
-                  className="py-2"
-                />
-              </Form.Group>
-            </Col>
-
-            {/* Apellido */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Apellido</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Ingresa el apellido"
-                  value={formData.redesData?.profile.lastName || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      redesData: formData.redesData
-                        ? {
-                            ...formData.redesData,
-                            profile: {
-                              ...formData.redesData.profile,
-                              lastName: e.target.value,
-                            },
-                          }
-                        : undefined,
-                    })
-                  }
-                  className="py-2"
-                />
-              </Form.Group>
-            </Col>
-
-            {/* Teléfono */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Teléfono</Form.Label>
-                <Form.Control
-                  type="tel"
-                  placeholder="Ingresa el teléfono"
-                  value={formData.redesData?.phone || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      redesData: formData.redesData
-                        ? {
-                            ...formData.redesData,
-                            phone: e.target.value,
-                          }
-                        : undefined,
-                    })
-                  }
-                  className="py-2"
-                />
-              </Form.Group>
-            </Col>
-
-            {/* Email */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Email</Form.Label>
-                <Form.Control
-                  type="email"
-                  placeholder="Ingresa el email"
-                  value={formData.redesData?.email || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      redesData: formData.redesData
-                        ? {
-                            ...formData.redesData,
-                            email: e.target.value,
-                          }
-                        : undefined,
-                    })
-                  }
-                  className="py-2"
-                />
-              </Form.Group>
-            </Col>
-
-            {/* Nombre de Usuario */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Nombre de Usuario
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Ingresa el nombre de usuario"
-                  value={formData.redesData?.username || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      redesData: formData.redesData
-                        ? {
-                            ...formData.redesData,
-                            username: e.target.value,
-                          }
-                        : undefined,
-                    })
-                  }
-                  className="py-2"
-                />
-              </Form.Group>
-            </Col>
-
-            {/* Rol - Siempre Redes por defecto */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Rol</Form.Label>
-                <Form.Control
-                  type="text"
-                  value="Redes"
-                  disabled
-                  className="py-2"
-                />
-                <Form.Text className="text-muted">
-                  Los usuarios redes siempre tienen rol Redes
-                </Form.Text>
-              </Form.Group>
-            </Col>
-
-            {/* Contraseña */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Contraseña</Form.Label>
-                <Form.Control
-                  type="password"
-                  placeholder={
-                    formData.redesId
-                      ? "●●●●●●●● (Sin cambios)"
-                      : "Ingresa la contraseña"
-                  }
-                  value={formData.redesData?.password || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      redesData: formData.redesData
-                        ? {
-                            ...formData.redesData,
-                            password: e.target.value,
-                          }
-                        : undefined,
-                    })
-                  }
-                  className="py-2"
-                />
-                <Form.Text className="text-muted">
-                  {formData.redesId
-                    ? "Dejar en blanco para mantener la contraseña actual"
-                    : "Requerida para crear nuevo usuario"}
-                </Form.Text>
-              </Form.Group>
-            </Col>
-
-            {/* Confirmar Contraseña */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Confirmar Contraseña
-                </Form.Label>
-                <Form.Control
-                  type="password"
-                  placeholder={
-                    formData.redesId
-                      ? "●●●●●●●● (Sin cambios)"
-                      : "Confirma la contraseña"
-                  }
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="py-2"
-                />
-                <Form.Text className="text-muted">
-                  {formData.redesId && "Solo si desea cambiar la contraseña"}
-                </Form.Text>
-              </Form.Group>
-            </Col>
-          </Row>
-        )}
-      </Modal.Body>
-
-      <Modal.Footer className="border-0">
-        <Button variant="light" onClick={onHide} disabled={saving}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSave}
-          disabled={loading || saving}
-          className="px-4"
-        >
-          {saving ? (
-            <>
-              <Spinner
-                animation="border"
-                size="sm"
-                className="me-2"
-                style={{ width: "16px", height: "16px" }}
-              />
-              Guardando...
-            </>
+        <ScrollArea className="max-h-[60vh]">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando...</p>
+            </div>
           ) : (
-            "Guardar"
+            <div className="grid gap-4 py-4 px-1">
+              {/* Selector de Usuario Redes */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold">
+                    Seleccionar Usuario Redes (Opcional)
+                  </Label>
+                  {formData.redesId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearRedes}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+                <Select
+                  value={formData.redesId || "new"}
+                  onValueChange={handleRedesChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="-- Seleccione un usuario redes existente o cree uno nuevo --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">
+                      -- Crear nuevo usuario redes --
+                    </SelectItem>
+                    {redesUsers.map((redesUser) => (
+                      <SelectItem key={redesUser._id} value={redesUser._id}>
+                        {redesUser.profile.fullName} ({redesUser.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {formData.redesId
+                    ? "Usuario redes seleccionado. Edite los datos abajo y guarde los cambios."
+                    : "Puede seleccionar un usuario redes existente o crear uno nuevo llenando los campos."}
+                </p>
+              </div>
+
+              {/* Campos del Usuario Redes - Siempre habilitados */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Nombre */}
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="font-semibold">Nombre</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Ingresa el nombre"
+                    value={formData.redesData?.profile.name || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        redesData: formData.redesData
+                          ? {
+                              ...formData.redesData,
+                              profile: {
+                                ...formData.redesData.profile,
+                                name: e.target.value,
+                              },
+                            }
+                          : undefined,
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Apellido */}
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="font-semibold">Apellido</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Ingresa el apellido"
+                    value={formData.redesData?.profile.lastName || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        redesData: formData.redesData
+                          ? {
+                              ...formData.redesData,
+                              profile: {
+                                ...formData.redesData.profile,
+                                lastName: e.target.value,
+                              },
+                            }
+                          : undefined,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Teléfono */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="font-semibold">Teléfono</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="Ingresa el teléfono"
+                    value={formData.redesData?.phone || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        redesData: formData.redesData
+                          ? {
+                              ...formData.redesData,
+                              phone: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="font-semibold">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Ingresa el email"
+                    value={formData.redesData?.email || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        redesData: formData.redesData
+                          ? {
+                              ...formData.redesData,
+                              email: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Nombre de Usuario */}
+                <div className="space-y-2">
+                  <Label htmlFor="username" className="font-semibold">Nombre de Usuario</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Ingresa el nombre de usuario"
+                    value={formData.redesData?.username || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        redesData: formData.redesData
+                          ? {
+                              ...formData.redesData,
+                              username: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Rol - Siempre Redes por defecto */}
+                <div className="space-y-2">
+                  <Label className="font-semibold">Rol</Label>
+                  <Input
+                    type="text"
+                    value="Redes"
+                    disabled
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Los usuarios redes siempre tienen rol Redes
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Contraseña */}
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="font-semibold">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder={
+                      formData.redesId
+                        ? "●●●●●●●● (Sin cambios)"
+                        : "Ingresa la contraseña"
+                    }
+                    value={formData.redesData?.password || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        redesData: formData.redesData
+                          ? {
+                              ...formData.redesData,
+                              password: e.target.value,
+                            }
+                          : undefined,
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {formData.redesId
+                      ? "Dejar en blanco para mantener la contraseña actual"
+                      : "Requerida para crear nuevo usuario"}
+                  </p>
+                </div>
+
+                {/* Confirmar Contraseña */}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="font-semibold">Confirmar Contraseña</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder={
+                      formData.redesId
+                        ? "●●●●●●●● (Sin cambios)"
+                        : "Confirma la contraseña"
+                    }
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  {formData.redesId && (
+                    <p className="text-xs text-muted-foreground">
+                      Solo si desea cambiar la contraseña
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        </ScrollArea>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onHide} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={loading || saving}>
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              "Guardar"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

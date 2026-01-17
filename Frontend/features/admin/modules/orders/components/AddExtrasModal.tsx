@@ -1,11 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Badge } from "react-bootstrap";
 import { Package, Save, X } from "lucide-react";
 import { Storage, MaterialItem, Material } from "@/features/admin/modules/storage/types";
 import MultiSelect, { SelectOption } from "@/components/forms/Multiselect";
 import { toast } from "react-toastify";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 interface AddExtrasModalProps {
   show: boolean;
@@ -110,137 +120,138 @@ const AddExtrasModal: React.FC<AddExtrasModalProps> = ({
     .filter((opt): opt is SelectOption => opt !== undefined);
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered>
-      <Modal.Header className="border-0 pb-0">
-        <div className="w-100">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h5 className="mb-1 fw-bold">Agregar Extras</h5>
-              <p className="text-muted mb-0 small">
-                Selecciona materiales del almacén para agregar como extras
-              </p>
-            </div>
-            <Button
-              variant="link"
-              onClick={handleClose}
-              className="text-muted p-0"
-            >
-              <X size={24} />
-            </Button>
-          </div>
-        </div>
-      </Modal.Header>
-
-      <Modal.Body>
-        {materialOptions.length === 0 ? (
-          <div className="text-center py-5 text-muted">
-            <Package size={48} className="mb-3 opacity-50" />
-            <p className="mb-0">No hay materiales disponibles en el almacén</p>
-            <small>Agrega materiales al almacén primero</small>
-          </div>
-        ) : (
-          <>
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-semibold">
-                Materiales Disponibles
-              </Form.Label>
-              <MultiSelect
-                value={selectedMaterialIds}
-                options={materialOptions}
-                onChange={setSelectedMaterialIds}
-                placeholder="Selecciona materiales..."
-                noOptionsMessage="No hay materiales disponibles"
-                isSearchable={true}
-              />
-              <Form.Text className="text-muted">
-                Solo se muestran materiales con stock disponible
-              </Form.Text>
-            </Form.Group>
-
-            {selectedMaterials.length > 0 && (
+    <Dialog open={show} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader className="border-0 pb-0">
+          <div className="w-full">
+            <div className="flex justify-between items-center">
               <div>
-                <h6 className="mb-3 fw-semibold">Cantidades</h6>
-                <div className="d-flex flex-column gap-3">
-                  {selectedMaterials.map((option) => {
-                    const quantity = materialQuantities[option.value] || 1;
-                    const material = option.material;
-                    const maxQuantity = option.availableQuantity || 0;
+                <DialogTitle className="mb-1 font-bold">Agregar Extras</DialogTitle>
+                <p className="text-muted-foreground mb-0 text-sm">
+                  Selecciona materiales del almacen para agregar como extras
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={handleClose}
+                className="text-muted-foreground p-0 h-auto"
+              >
+                <X size={24} />
+              </Button>
+            </div>
+          </div>
+        </DialogHeader>
 
-                    return (
-                      <div
-                        key={option.value}
-                        className="d-flex align-items-center justify-content-between p-3 border rounded"
-                      >
-                        <div className="flex-grow-1">
-                          <div className="fw-semibold">{material.name}</div>
-                          <div className="small text-muted">
-                            Precio: ${material.price?.toFixed(2) || "0.00"} |
-                            Disponible: {maxQuantity}
+        <div className="py-4">
+          {materialOptions.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              <Package size={48} className="mb-3 opacity-50 mx-auto" />
+              <p className="mb-0">No hay materiales disponibles en el almacen</p>
+              <small>Agrega materiales al almacen primero</small>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4">
+                <Label className="font-semibold mb-2 block">
+                  Materiales Disponibles
+                </Label>
+                <MultiSelect
+                  value={selectedMaterialIds}
+                  options={materialOptions}
+                  onChange={setSelectedMaterialIds}
+                  placeholder="Selecciona materiales..."
+                  noOptionsMessage="No hay materiales disponibles"
+                  isSearchable={true}
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Solo se muestran materiales con stock disponible
+                </p>
+              </div>
+
+              {selectedMaterials.length > 0 && (
+                <div>
+                  <h6 className="mb-3 font-semibold">Cantidades</h6>
+                  <div className="flex flex-col gap-3">
+                    {selectedMaterials.map((option) => {
+                      const quantity = materialQuantities[option.value] || 1;
+                      const material = option.material;
+                      const maxQuantity = option.availableQuantity || 0;
+
+                      return (
+                        <div
+                          key={option.value}
+                          className="flex items-center justify-between p-3 border rounded"
+                        >
+                          <div className="flex-grow">
+                            <div className="font-semibold">{material.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Precio: ${material.price?.toFixed(2) || "0.00"} |
+                              Disponible: {maxQuantity}
+                            </div>
+                          </div>
+                          <div className="w-[120px]">
+                            <Input
+                              type="number"
+                              min="1"
+                              max={maxQuantity}
+                              value={quantity}
+                              onChange={(e) =>
+                                handleQuantityChange(
+                                  option.value,
+                                  parseInt(e.target.value) || 1
+                                )
+                              }
+                              className="h-8"
+                            />
+                          </div>
+                          <div className="text-end w-[100px]">
+                            <Badge variant="default" className="rounded-full">
+                              ${(material.price * quantity).toFixed(2)}
+                            </Badge>
                           </div>
                         </div>
-                        <div style={{ width: "120px" }}>
-                          <Form.Control
-                            type="number"
-                            min="1"
-                            max={maxQuantity}
-                            value={quantity}
-                            onChange={(e) =>
-                              handleQuantityChange(
-                                option.value,
-                                parseInt(e.target.value) || 1
-                              )
-                            }
-                            size="sm"
-                          />
-                        </div>
-                        <div className="text-end" style={{ width: "100px" }}>
-                          <Badge bg="primary" pill>
-                            ${(material.price * quantity).toFixed(2)}
-                          </Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
 
-                <div className="mt-3 p-3 bg-light rounded">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <span className="fw-semibold">Total Extras:</span>
-                    <span className="fs-5 fw-bold text-primary">
-                      $
-                      {selectedMaterials
-                        .reduce((total, option) => {
-                          const quantity = materialQuantities[option.value] || 1;
-                          const price = option.material.price || 0;
-                          return total + price * quantity;
-                        }, 0)
-                        .toFixed(2)}
-                    </span>
+                  <div className="mt-3 p-3 bg-gray-100 rounded">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">Total Extras:</span>
+                      <span className="text-xl font-bold text-blue-600">
+                        $
+                        {selectedMaterials
+                          .reduce((total, option) => {
+                            const quantity = materialQuantities[option.value] || 1;
+                            const price = option.material.price || 0;
+                            return total + price * quantity;
+                          }, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
-      </Modal.Body>
-
-      <Modal.Footer className="border-0">
-        <div className="d-flex gap-2 w-100 justify-content-end">
-          <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={loading || selectedMaterialIds.length === 0}
-            className="d-flex align-items-center gap-2"
-          >
-            <Save size={18} />
-            Agregar Extras
-          </Button>
+              )}
+            </>
+          )}
         </div>
-      </Modal.Footer>
-    </Modal>
+
+        <DialogFooter className="border-0">
+          <div className="flex gap-2 w-full justify-end">
+            <Button variant="secondary" onClick={handleClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || selectedMaterialIds.length === 0}
+              className="flex items-center gap-2"
+            >
+              <Save size={18} />
+              Agregar Extras
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

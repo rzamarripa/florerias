@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { Spinner, Button } from "react-bootstrap";
-import { Edit2, CheckCircle, XCircle, UserPlus, Users } from "lucide-react";
-import { toast } from "react-toastify";
+import { Edit2, CheckCircle, XCircle, UserPlus, Users, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { branchesService } from "../services/branches";
 import { Branch } from "../types";
 import BranchModal from "./BranchModal";
 import EmployeesModal from "./EmployeesModal";
 import ViewEmployeesModal from "./ViewEmployeesModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+
+import { Button } from "@/components/ui/button";
 
 interface BranchActionsProps {
   branch: Branch;
@@ -51,68 +52,60 @@ const BranchActions: React.FC<BranchActionsProps> = ({
 
   return (
     <>
-      <div className="d-flex justify-content-center gap-2">
+      <div className="flex justify-center gap-2">
         {/* Edit Button - Solo visible para Administradores */}
         {isAdmin && (
           <Button
-            variant="light"
-            size="sm"
-            className="rounded-circle"
-            style={{ width: "32px", height: "32px", padding: "0" }}
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
             onClick={() => setShowEditModal(true)}
             title="Editar sucursal"
           >
-            <Edit2 size={16} />
+            <Edit2 className="h-4 w-4" />
           </Button>
         )}
 
         {/* Toggle Status Button - Solo visible para Administradores */}
         {isAdmin && (
           <Button
-            variant={branch.isActive ? "light" : "light"}
-            size="sm"
-            className="rounded-circle"
-            style={{ width: "32px", height: "32px", padding: "0" }}
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
             onClick={handleToggleStatus}
             disabled={isToggling}
             title={branch.isActive ? "Desactivar sucursal" : "Activar sucursal"}
           >
             {isToggling ? (
-              <Spinner
-                animation="border"
-                size="sm"
-                style={{ width: "16px", height: "16px" }}
-              />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : branch.isActive ? (
-              <XCircle size={16} className="text-danger" />
+              <XCircle className="h-4 w-4 text-destructive" />
             ) : (
-              <CheckCircle size={16} className="text-success" />
+              <CheckCircle className="h-4 w-4 text-green-600" />
             )}
           </Button>
         )}
 
         {/* View Employees Button */}
         <Button
-          variant="light"
-          size="sm"
-          className="rounded-circle"
-          style={{ width: "32px", height: "32px", padding: "0" }}
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
           onClick={() => setShowViewEmployeesModal(true)}
           title="Ver empleados"
         >
-          <Users size={16} className="text-info" />
+          <Users className="h-4 w-4 text-blue-500" />
         </Button>
 
         {/* Add Employees Button */}
         <Button
-          variant="light"
-          size="sm"
-          className="rounded-circle"
-          style={{ width: "32px", height: "32px", padding: "0" }}
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
           onClick={() => setShowEmployeesModal(true)}
           title="Agregar empleados"
         >
-          <UserPlus size={16} className="text-primary" />
+          <UserPlus className="h-4 w-4 text-primary" />
         </Button>
       </div>
 

@@ -1,16 +1,34 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-toastify";
-import { X } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { providerSchema, ProviderFormData } from "../schemas/providerSchema";
 import { providersService } from "../services/providers";
 import { companiesService } from "../../companies/services/companies";
 import { Provider } from "../types";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProviderFormProps {
   show: boolean;
@@ -166,386 +184,307 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header className="border-0 pb-0">
-        <div>
-          <Modal.Title className="fw-bold">
+    <Dialog open={show} onOpenChange={(open) => !loading && !open && onHide()}>
+      <DialogContent className="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle>
             {provider ? "Editar Proveedor" : "Nuevo Proveedor"}
-          </Modal.Title>
-          <p className="text-muted mb-0 small">
+          </DialogTitle>
+          <DialogDescription>
             {provider
               ? "Actualiza la información del proveedor"
               : "Completa los datos del nuevo proveedor"}
-          </p>
-        </div>
-        <Button
-          variant="link"
-          onClick={onHide}
-          className="text-muted p-0"
-          style={{ fontSize: "1.5rem" }}
-        >
-          <X size={24} />
-        </Button>
-      </Modal.Header>
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body className="pt-3">
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Row className="g-3">
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid gap-4 py-4">
             {/* Empresa */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Empresa <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="company"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Select
-                      {...field}
-                      isInvalid={!!errors.company}
-                      disabled={
-                        loadingCompanies ||
-                        loadingUserCompany ||
-                        !!provider ||
-                        isAdminOrManager
-                      }
-                      style={{ borderRadius: "8px" }}
-                    >
+            <div className="space-y-2">
+              <Label htmlFor="company">
+                Empresa <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                name="company"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={
+                      loadingCompanies ||
+                      loadingUserCompany ||
+                      !!provider ||
+                      isAdminOrManager
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
                       {isSuperAdmin ? (
-                        <>
-                          <option value="">Selecciona una empresa</option>
-                          {companies.map((company) => (
-                            <option key={company._id} value={company._id}>
-                              {company.legalName} - {company.rfc}
-                            </option>
-                          ))}
-                        </>
+                        companies.map((company) => (
+                          <SelectItem key={company._id} value={company._id}>
+                            {company.legalName} - {company.rfc}
+                          </SelectItem>
+                        ))
                       ) : isAdminOrManager && userCompany ? (
-                        <option value={userCompany._id}>
+                        <SelectItem value={userCompany._id}>
                           {userCompany.legalName} - {userCompany.rfc}
-                        </option>
+                        </SelectItem>
                       ) : (
-                        <option value="">Cargando empresa...</option>
+                        <SelectItem value="">Cargando empresa...</SelectItem>
                       )}
-                    </Form.Select>
-                  )}
-                />
-                {errors.company && (
-                  <Form.Control.Feedback type="invalid" className="d-block">
-                    {errors.company.message}
-                  </Form.Control.Feedback>
+                    </SelectContent>
+                  </Select>
                 )}
-              </Form.Group>
-            </Col>
+              />
+              {errors.company && (
+                <p className="text-sm text-destructive">{errors.company.message}</p>
+              )}
+            </div>
 
-            {/* Nombre de Contacto */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Nombre de Contacto <span className="text-danger">*</span>
-                </Form.Label>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Nombre de Contacto */}
+              <div className="space-y-2">
+                <Label htmlFor="contactName">
+                  Nombre de Contacto <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="contactName"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
                       type="text"
                       placeholder="Juan Pérez"
-                      isInvalid={!!errors.contactName}
-                      style={{ borderRadius: "8px" }}
                     />
                   )}
                 />
                 {errors.contactName && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.contactName.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.contactName.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
 
-            {/* Teléfono */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Teléfono <span className="text-danger">*</span>
-                </Form.Label>
+              {/* Teléfono */}
+              <div className="space-y-2">
+                <Label htmlFor="phone">
+                  Teléfono <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="phone"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
                       type="text"
                       placeholder="5512345678"
-                      isInvalid={!!errors.phone}
-                      style={{ borderRadius: "8px" }}
                     />
                   )}
                 />
                 {errors.phone && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.phone.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.phone.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
+            </div>
 
-            {/* Nombre Comercial */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Nombre Comercial <span className="text-danger">*</span>
-                </Form.Label>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Nombre Comercial */}
+              <div className="space-y-2">
+                <Label htmlFor="tradeName">
+                  Nombre Comercial <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="tradeName"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
                       type="text"
                       placeholder="Mi Empresa S.A."
-                      isInvalid={!!errors.tradeName}
-                      style={{ borderRadius: "8px" }}
                     />
                   )}
                 />
                 {errors.tradeName && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.tradeName.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.tradeName.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
 
-            {/* Nombre Fiscal */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Nombre Fiscal <span className="text-danger">*</span>
-                </Form.Label>
+              {/* Nombre Fiscal */}
+              <div className="space-y-2">
+                <Label htmlFor="legalName">
+                  Nombre Fiscal <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="legalName"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
                       type="text"
                       placeholder="Mi Empresa S.A. de C.V."
-                      isInvalid={!!errors.legalName}
-                      style={{ borderRadius: "8px" }}
                     />
                   )}
                 />
                 {errors.legalName && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.legalName.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.legalName.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
+            </div>
 
-            {/* RFC */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  RFC <span className="text-danger">*</span>
-                </Form.Label>
+            <div className="grid grid-cols-2 gap-4">
+              {/* RFC */}
+              <div className="space-y-2">
+                <Label htmlFor="rfc">
+                  RFC <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="rfc"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
                       type="text"
                       placeholder="ABC123456XYZ"
                       maxLength={13}
-                      isInvalid={!!errors.rfc}
-                      style={{ borderRadius: "8px", textTransform: "uppercase" }}
+                      className="uppercase"
                       onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                     />
                   )}
                 />
                 {errors.rfc && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.rfc.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.rfc.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
 
-            {/* Email */}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Email <span className="text-danger">*</span>
-                </Form.Label>
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  Email <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="email"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
                       type="email"
                       placeholder="contacto@ejemplo.com"
-                      isInvalid={!!errors.email}
-                      style={{ borderRadius: "8px" }}
                     />
                   )}
                 />
                 {errors.email && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.email.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
+            </div>
 
             {/* Dirección Section */}
-            <Col md={12}>
-              <hr className="my-3" />
-              <h6 className="fw-bold mb-3">Dirección</h6>
-            </Col>
+            <div className="border-t pt-4 mt-2">
+              <h4 className="font-semibold mb-4">Dirección</h4>
 
-            {/* Calle */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Calle <span className="text-danger">*</span>
-                </Form.Label>
+              {/* Calle */}
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="address.street">
+                  Calle <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="address.street"
                   control={control}
                   render={({ field }) => (
-                    <Form.Control
+                    <Input
                       {...field}
                       type="text"
                       placeholder="Av. Principal #123"
-                      isInvalid={!!errors.address?.street}
-                      style={{ borderRadius: "8px" }}
                     />
                   )}
                 />
                 {errors.address?.street && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.address.street.message}
-                  </Form.Control.Feedback>
+                  <p className="text-sm text-destructive">{errors.address.street.message}</p>
                 )}
-              </Form.Group>
-            </Col>
+              </div>
 
-            {/* Ciudad */}
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Ciudad <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="address.city"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Control
-                      {...field}
-                      type="text"
-                      placeholder="Ciudad de México"
-                      isInvalid={!!errors.address?.city}
-                      style={{ borderRadius: "8px" }}
-                    />
+              <div className="grid grid-cols-3 gap-4">
+                {/* Ciudad */}
+                <div className="space-y-2">
+                  <Label htmlFor="address.city">
+                    Ciudad <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="address.city"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        type="text"
+                        placeholder="Ciudad de México"
+                      />
+                    )}
+                  />
+                  {errors.address?.city && (
+                    <p className="text-sm text-destructive">{errors.address.city.message}</p>
                   )}
-                />
-                {errors.address?.city && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.address.city.message}
-                  </Form.Control.Feedback>
-                )}
-              </Form.Group>
-            </Col>
+                </div>
 
-            {/* Estado */}
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Estado <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="address.state"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Control
-                      {...field}
-                      type="text"
-                      placeholder="CDMX"
-                      isInvalid={!!errors.address?.state}
-                      style={{ borderRadius: "8px" }}
-                    />
+                {/* Estado */}
+                <div className="space-y-2">
+                  <Label htmlFor="address.state">
+                    Estado <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="address.state"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        type="text"
+                        placeholder="CDMX"
+                      />
+                    )}
+                  />
+                  {errors.address?.state && (
+                    <p className="text-sm text-destructive">{errors.address.state.message}</p>
                   )}
-                />
-                {errors.address?.state && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.address.state.message}
-                  </Form.Control.Feedback>
-                )}
-              </Form.Group>
-            </Col>
+                </div>
 
-            {/* Código Postal */}
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Código Postal <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="address.postalCode"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Control
-                      {...field}
-                      type="text"
-                      placeholder="01234"
-                      maxLength={5}
-                      isInvalid={!!errors.address?.postalCode}
-                      style={{ borderRadius: "8px" }}
-                    />
+                {/* Código Postal */}
+                <div className="space-y-2">
+                  <Label htmlFor="address.postalCode">
+                    Código Postal <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="address.postalCode"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        type="text"
+                        placeholder="01234"
+                        maxLength={5}
+                      />
+                    )}
+                  />
+                  {errors.address?.postalCode && (
+                    <p className="text-sm text-destructive">{errors.address.postalCode.message}</p>
                   )}
-                />
-                {errors.address?.postalCode && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.address.postalCode.message}
-                  </Form.Control.Feedback>
-                )}
-              </Form.Group>
-            </Col>
-          </Row>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <div className="d-flex justify-content-end gap-2 mt-4">
+          <DialogFooter>
             <Button
-              variant="light"
+              type="button"
+              variant="outline"
               onClick={onHide}
               disabled={loading}
-              style={{ borderRadius: "8px" }}
             >
               Cancelar
             </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={loading}
-              style={{
-                borderRadius: "8px",
-              }}
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Guardando...
                 </>
               ) : provider ? (
@@ -554,10 +493,10 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
                 "Crear Proveedor"
               )}
             </Button>
-          </div>
-        </Form>
-      </Modal.Body>
-    </Modal>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

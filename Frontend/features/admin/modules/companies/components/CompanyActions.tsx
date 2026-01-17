@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { Spinner, Button } from "react-bootstrap";
-import { Edit2, CheckCircle, XCircle, Building2, Users } from "lucide-react";
-import { toast } from "react-toastify";
+import { Edit2, CheckCircle, XCircle, Building2, Users, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { companiesService } from "../services/companies";
 import { Company } from "../types";
 import BranchesModal from "./BranchesModal";
 import AssignRedesModal from "./AssignRedesModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+
+import { Button } from "@/components/ui/button";
 
 interface CompanyActionsProps {
   company: Company;
@@ -77,69 +78,63 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
   };
 
   return (
-    <div className="d-flex justify-content-center gap-2">
-      {/* Edit Button */}
-      <Button
-        variant="light"
-        size="sm"
-        className="rounded-circle"
-        style={{ width: "32px", height: "32px", padding: "0" }}
-        onClick={handleEdit}
-        title="Editar empresa"
-      >
-        <Edit2 size={16} />
-      </Button>
+    <>
+      <div className="flex justify-center gap-2">
+        {/* Edit Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleEdit}
+          title="Editar empresa"
+        >
+          <Edit2 className="h-4 w-4" />
+        </Button>
 
-      {/* Toggle Status Button */}
-      <Button
-        variant={company.isActive ? "light" : "light"}
-        size="sm"
-        className="rounded-circle"
-        style={{ width: "32px", height: "32px", padding: "0" }}
-        onClick={handleToggleStatus}
-        disabled={isToggling}
-        title={company.isActive ? "Desactivar empresa" : "Activar empresa"}
-      >
-        {isToggling ? (
-          <Spinner
-            animation="border"
-            size="sm"
-            style={{ width: "16px", height: "16px" }}
-          />
-        ) : company.isActive ? (
-          <XCircle size={16} className="text-danger" />
-        ) : (
-          <CheckCircle size={16} className="text-success" />
+        {/* Toggle Status Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleToggleStatus}
+          disabled={isToggling}
+          title={company.isActive ? "Desactivar empresa" : "Activar empresa"}
+        >
+          {isToggling ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : company.isActive ? (
+            <XCircle className="h-4 w-4 text-destructive" />
+          ) : (
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          )}
+        </Button>
+
+        {/* Branches Button - Solo visible para Administradores */}
+        {getIsAdmin() && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleOpenBranchesModal}
+            title="Agregar sucursales"
+          >
+            <Building2 className="h-4 w-4 text-primary" />
+          </Button>
         )}
-      </Button>
 
-      {/* Branches Button - Solo visible para Administradores */}
-      {getIsAdmin() && (
-        <Button
-          variant="light"
-          size="sm"
-          className="rounded-circle"
-          style={{ width: "32px", height: "32px", padding: "0" }}
-          onClick={handleOpenBranchesModal}
-          title="Agregar sucursales"
-        >
-          <Building2 size={16} className="text-primary" />
-        </Button>
-      )}
-
-      {/* Assign Redes Button - Solo visible para Administradores */}
-      {getIsAdmin() && (
-        <Button
-          variant="light"
-          size="sm"
-          className="rounded-circle"
-          style={{ width: "32px", height: "32px", padding: "0" }}
-          onClick={handleOpenRedesModal}
-          title="Asignar usuarios redes"
-        >
-          <Users size={16} className="text-info" />
-        </Button>
-      )}
+        {/* Assign Redes Button - Solo visible para Administradores */}
+        {getIsAdmin() && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleOpenRedesModal}
+            title="Asignar usuarios redes"
+          >
+            <Users className="h-4 w-4 text-blue-500" />
+          </Button>
+        )}
+      </div>
 
       {/* Branches Modal */}
       {getIsAdmin() && (
@@ -160,7 +155,7 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
           onRedesUpdated={onCompanyUpdated}
         />
       )}
-    </div>
+    </>
   );
 };
 

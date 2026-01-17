@@ -1,18 +1,25 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Form,
-  InputGroup,
-  Spinner,
-  Row,
-  Col,
-  Modal,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
-  Badge,
-  Alert,
-} from "react-bootstrap";
-import { Search, Package } from "lucide-react";
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Search, Package, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -43,7 +50,7 @@ const PizarronVentasPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [orderPayments, setOrderPayments] = useState<OrderPayment[]>([]);
 
-  // Stages dinámicos
+  // Stages dinamicos
   const [productionStages, setProductionStages] = useState<StageCatalog[]>([]);
   const [shippingStages, setShippingStages] = useState<StageCatalog[]>([]);
 
@@ -57,26 +64,26 @@ const PizarronVentasPage: React.FC = () => {
     try {
       setLoadingStages(true);
 
-      // Cargar stages de Producción
+      // Cargar stages de Produccion
       const productionResponse = await stageCatalogsService.getUserStages(
         "Produccion"
       );
       setProductionStages(productionResponse.data || []);
 
-      // Cargar stages de Envío para verificar si existen
+      // Cargar stages de Envio para verificar si existen
       const shippingResponse = await stageCatalogsService.getUserStages(
         "Envio"
       );
       setShippingStages(shippingResponse.data || []);
     } catch (error: any) {
       console.error("Error loading stages:", error);
-      toast.error(error.message || "Error al cargar las etapas del pizarrón");
+      toast.error(error.message || "Error al cargar las etapas del pizarron");
     } finally {
       setLoadingStages(false);
     }
   };
 
-  // Cargar órdenes
+  // Cargar ordenes
   const loadOrders = async () => {
     try {
       setLoading(true);
@@ -90,14 +97,14 @@ const PizarronVentasPage: React.FC = () => {
       });
 
       if (response.data) {
-        // Filtrar solo las órdenes no canceladas y válidas
+        // Filtrar solo las ordenes no canceladas y validas
         const validOrders = response.data.filter(
           (order) => order && order.status !== "cancelado"
         );
         setOrders(validOrders);
       }
     } catch (error: any) {
-      toast.error(error.message || "Error al cargar las órdenes");
+      toast.error(error.message || "Error al cargar las ordenes");
       console.error("Error loading orders:", error);
     } finally {
       setLoading(false);
@@ -124,10 +131,10 @@ const PizarronVentasPage: React.FC = () => {
     }
   }, [orders]);
 
-  // Usar el hook especializado para escuchar cambios en órdenes
+  // Usar el hook especializado para escuchar cambios en ordenes
   useOrderSocket({
     onOrderCreated: (newOrder) => {
-      console.log("📩 [PizarronVentas] Nueva orden recibida:", newOrder);
+      console.log("[PizarronVentas] Nueva orden recibida:", newOrder);
 
       if (newOrder && newOrder.status !== "cancelado") {
         setOrders((prevOrders) => {
@@ -139,10 +146,10 @@ const PizarronVentasPage: React.FC = () => {
       }
     },
     onOrderUpdated: (updatedOrder) => {
-      console.log("📝 [PizarronVentas] Orden actualizada:", updatedOrder);
+      console.log("[PizarronVentas] Orden actualizada:", updatedOrder);
       if (!updatedOrder) return;
 
-      // Verificar si la orden fue enviada a producción (descuento canjeado)
+      // Verificar si la orden fue enviada a produccion (descuento canjeado)
       const wasSentToProduction = updatedOrder.sendToProduction === true;
       const hasStage =
         updatedOrder.stage !== null && updatedOrder.stage !== undefined;
@@ -162,9 +169,9 @@ const PizarronVentasPage: React.FC = () => {
           const previousStatus = previousOrder.status;
           const currentStatus = updatedOrder.status;
 
-          // Usar setTimeout para mostrar toasts después de la actualización del estado
+          // Usar setTimeout para mostrar toasts despues de la actualizacion del estado
           setTimeout(() => {
-            // Detectar cancelación
+            // Detectar cancelacion
             if (
               previousStatus !== "cancelado" &&
               currentStatus === "cancelado"
@@ -177,7 +184,7 @@ const PizarronVentasPage: React.FC = () => {
 
             // Detectar cambios en pago
             if (currentAdvance > previousAdvance) {
-              // Se agregó un pago
+              // Se agrego un pago
               const paymentAmount = currentAdvance - previousAdvance;
               const userName =
                 updatedOrder.payments && updatedOrder.payments.length > 0
@@ -192,7 +199,7 @@ const PizarronVentasPage: React.FC = () => {
                 { autoClose: 5000 }
               );
             } else if (currentAdvance < previousAdvance) {
-              // Se eliminó un pago
+              // Se elimino un pago
               const paymentAmount = previousAdvance - currentAdvance;
               toast.warning(
                 `Se ha eliminado un pago de $${paymentAmount.toFixed(
@@ -204,19 +211,19 @@ const PizarronVentasPage: React.FC = () => {
           }, 0);
         }
 
-        // Si la orden fue enviada a producción, tiene stage y no está cancelada
+        // Si la orden fue enviada a produccion, tiene stage y no esta cancelada
         if (wasSentToProduction && hasStage && isNotCancelled) {
           if (!exists) {
-            // Nueva orden llegando al pizarrón
+            // Nueva orden llegando al pizarron
             console.log(
-              "✨ [PizarronVentas] Orden enviada a producción - Agregando:",
+              "[PizarronVentas] Orden enviada a produccion - Agregando:",
               updatedOrder.orderNumber
             );
 
-            // Verificar si tiene descuento para mostrar mensaje específico
+            // Verificar si tiene descuento para mostrar mensaje especifico
             const hasDiscount =
               updatedOrder.discount && updatedOrder.discount > 0;
-            // Verificar si se envió automáticamente por recibir primer pago
+            // Verificar si se envio automaticamente por recibir primer pago
             const wasAutoSentByPayment =
               previousOrder &&
               (previousOrder.advance || 0) === 0 &&
@@ -224,11 +231,11 @@ const PizarronVentasPage: React.FC = () => {
 
             let toastMessage;
             if (hasDiscount) {
-              toastMessage = `Se ha autorizado el descuento de la orden ${updatedOrder.orderNumber}. Entrando a producción`;
+              toastMessage = `Se ha autorizado el descuento de la orden ${updatedOrder.orderNumber}. Entrando a produccion`;
             } else if (wasAutoSentByPayment) {
-              toastMessage = `La orden ${updatedOrder.orderNumber} ha recibido su primer pago y se envió automáticamente a producción`;
+              toastMessage = `La orden ${updatedOrder.orderNumber} ha recibido su primer pago y se envio automaticamente a produccion`;
             } else {
-              toastMessage = `Orden ${updatedOrder.orderNumber} enviada a producción`;
+              toastMessage = `Orden ${updatedOrder.orderNumber} enviada a produccion`;
             }
 
             setTimeout(() => {
@@ -240,7 +247,7 @@ const PizarronVentasPage: React.FC = () => {
           } else {
             // Orden ya existe, actualizar
             console.log(
-              "🔄 [PizarronVentas] Actualizando orden existente:",
+              "[PizarronVentas] Actualizando orden existente:",
               updatedOrder.orderNumber
             );
             return prevOrders.map((o) =>
@@ -248,10 +255,10 @@ const PizarronVentasPage: React.FC = () => {
             );
           }
         } else if (exists) {
-          // Si la orden está en el pizarrón pero fue cancelada o removida
+          // Si la orden esta en el pizarron pero fue cancelada o removida
           if (!isNotCancelled) {
             console.log(
-              "❌ [PizarronVentas] Orden cancelada - Removiendo del pizarrón:",
+              "[PizarronVentas] Orden cancelada - Removiendo del pizarron:",
               updatedOrder.orderNumber
             );
             return prevOrders.filter((o) => o && o._id !== updatedOrder._id);
@@ -267,7 +274,7 @@ const PizarronVentasPage: React.FC = () => {
       });
     },
     onOrderDeleted: (data: { orderId: string }) => {
-      console.log("🗑️ [PizarronVentas] Orden eliminada:", data.orderId);
+      console.log("[PizarronVentas] Orden eliminada:", data.orderId);
       setOrders((prevOrders) =>
         prevOrders.filter((o) => o && o._id !== data.orderId)
       );
@@ -324,29 +331,29 @@ const PizarronVentasPage: React.FC = () => {
   };
 
   const handleSendToShipping = async (order: Order) => {
-    // Verificar que haya etapas de Envío configuradas ANTES de enviar
+    // Verificar que haya etapas de Envio configuradas ANTES de enviar
     if (!shippingStages || shippingStages.length === 0) {
-      toast.warning("Todavía no hay etapas en el pizarrón de envío");
+      toast.warning("Todavia no hay etapas en el pizarron de envio");
       return;
     }
 
     try {
       await ordersService.sendToShipping(order._id);
 
-      toast.success("Orden enviada al pizarrón de Envío exitosamente");
+      toast.success("Orden enviada al pizarron de Envio exitosamente");
 
-      // Recargar las órdenes para reflejar el cambio
+      // Recargar las ordenes para reflejar el cambio
       await loadOrders();
     } catch (error: any) {
       const errorMessage = error.message || "";
       if (
-        errorMessage.includes("No se encontró una etapa inicial de Envío") ||
+        errorMessage.includes("No se encontro una etapa inicial de Envio") ||
         errorMessage.includes("stageNumber = 1") ||
         errorMessage.includes("boardType = Envio")
       ) {
-        toast.warning("Todavía no hay etapas en el pizarrón de envío");
+        toast.warning("Todavia no hay etapas en el pizarron de envio");
       } else {
-        toast.error(errorMessage || "Error al enviar la orden a Envío");
+        toast.error(errorMessage || "Error al enviar la orden a Envio");
       }
       console.error("Error sending order to shipping:", error);
     }
@@ -367,13 +374,13 @@ const PizarronVentasPage: React.FC = () => {
     }));
   };
 
-  // Obtener órdenes por stage (solo Producción)
+  // Obtener ordenes por stage (solo Produccion)
   const getOrdersByStage = (stageId: string): Order[] => {
     return orders.filter((order) => {
       // Validar que la orden existe
       if (!order) return false;
 
-      // No mostrar órdenes canceladas
+      // No mostrar ordenes canceladas
       if (order.status === "cancelado") return false;
 
       // Obtener el ID del stage de la orden
@@ -383,7 +390,7 @@ const PizarronVentasPage: React.FC = () => {
       // Verificar que la orden tenga el stage correcto
       if (orderStageId !== stageId) return false;
 
-      // Producción: mostrar solo órdenes con sentToShipping = false o undefined
+      // Produccion: mostrar solo ordenes con sentToShipping = false o undefined
       return !order.sentToShipping;
     });
   };
@@ -412,92 +419,81 @@ const PizarronVentasPage: React.FC = () => {
 
   const productionColumns = createColumnsFromStages(productionStages);
 
-  // Obtener el máximo stageNumber de Producción para identificar el último stage
+  // Obtener el maximo stageNumber de Produccion para identificar el ultimo stage
   const maxProductionStageNumber =
     productionStages.length > 0
       ? Math.max(...productionStages.map((s) => s.stageNumber))
       : 0;
 
-  // Verificar si hay etapas de Envío configuradas
+  // Verificar si hay etapas de Envio configuradas
   const hasShippingStages = shippingStages && shippingStages.length > 0;
 
   return (
-    <div className="container-fluid py-1">
+    <div className="container mx-auto py-1">
       {/* Header */}
       <div className="mb-2">
-        <h2 className="fw-bold mb-1">Pizarrón de Producción</h2>
-        <p className="text-muted">
-          Gestiona las órdenes en las diferentes etapas de producción
+        <h2 className="font-bold mb-1 text-xl">Pizarron de Produccion</h2>
+        <p className="text-muted-foreground">
+          Gestiona las ordenes en las diferentes etapas de produccion
         </p>
       </div>
 
       {/* Filters */}
-      <div
-        className="card border-0 shadow-sm mb-2"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body p-2">
-          <Row className="g-2">
-            <Col md={6}>
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por orden, cliente..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
-            </Col>
-            <Col md={6}>
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Filtrar por producto..."
-                  value={productFilter}
-                  onChange={handleProductFilterChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
-            </Col>
-          </Row>
-        </div>
-      </div>
+      <Card className="border-0 shadow-sm mb-2 rounded-xl">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por orden, cliente..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10 border-0 bg-muted/50 rounded-xl"
+              />
+            </div>
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Filtrar por producto..."
+                value={productFilter}
+                onChange={handleProductFilterChange}
+                className="pl-10 border-0 bg-muted/50 rounded-xl"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Pizarrón de Producción */}
+      {/* Pizarron de Produccion */}
       {loadingStages ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-3 text-muted">Cargando pizarrón...</p>
+        <div className="text-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-3 text-muted-foreground">Cargando pizarron...</p>
         </div>
       ) : loading ? (
-        <div className="text-center py-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-3 text-muted">Cargando órdenes...</p>
+        <div className="text-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-3 text-muted-foreground">Cargando ordenes...</p>
         </div>
       ) : productionColumns.length === 0 ? (
-        <Alert variant="warning" className="mt-3">
-          <Package size={20} className="me-2" />
-          No hay etapas configuradas para el pizarrón de Producción.
-          <br />
-          <small>
-            Crea etapas en el catálogo de etapas para poder visualizar las
-            órdenes aquí.
-          </small>
+        <Alert className="mt-3 bg-yellow-50 border-yellow-200">
+          <Package size={20} className="mr-2" />
+          <AlertDescription>
+            No hay etapas configuradas para el pizarron de Produccion.
+            <br />
+            <small>
+              Crea etapas en el catalogo de etapas para poder visualizar las
+              ordenes aqui.
+            </small>
+          </AlertDescription>
         </Alert>
       ) : (
         <DndProvider backend={HTML5Backend}>
-          <Row className="g-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {productionColumns.map((column) => (
-              <Col key={column.id} lg={3} md={4} sm={6} xs={12}>
+              <div key={column.id}>
                 <KanbanColumn
                   title={column.title}
                   count={getOrdersByStage(column.id).length}
@@ -512,240 +508,202 @@ const PizarronVentasPage: React.FC = () => {
                   onChangeStatus={handleChangeStage}
                   onSendToShipping={handleSendToShipping}
                 />
-              </Col>
+              </div>
             ))}
-          </Row>
+          </div>
         </DndProvider>
       )}
 
       {/* Order Detail Modal */}
-      <Modal
-        show={showDetailModal}
-        onHide={() => setShowDetailModal(false)}
-        size="lg"
-        centered
-      >
-        <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title className="fw-bold">Detalle de Orden</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="px-4 pb-4">
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-bold">Detalle de Orden</DialogTitle>
+          </DialogHeader>
+
           {selectedOrder && (
-            <>
+            <div className="space-y-6">
               {/* Order Info */}
-              <div className="mb-4">
-                <Row className="g-3">
-                  <Col md={6}>
-                    <div className="mb-3">
-                      <label className="text-muted small mb-1">
-                        Número de Orden
-                      </label>
-                      <div className="fw-bold">{selectedOrder.orderNumber}</div>
-                    </div>
-                  </Col>
-                  <Col md={6}>
-                    <div className="mb-3">
-                      <label className="text-muted small mb-1">Estado</label>
-                      <div className="fw-bold text-capitalize">
-                        <Badge
-                          bg={
-                            selectedOrder.status === "sinAnticipo"
-                              ? "warning"
-                              : "primary"
-                          }
-                        >
-                          {selectedOrder.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </Col>
-                </Row>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-muted-foreground text-sm">
+                    Numero de Orden
+                  </label>
+                  <div className="font-bold">{selectedOrder.orderNumber}</div>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-sm">Estado</label>
+                  <div className="font-bold capitalize">
+                    <Badge
+                      variant={
+                        selectedOrder.status === "sinAnticipo"
+                          ? "secondary"
+                          : "default"
+                      }
+                      className={
+                        selectedOrder.status === "sinAnticipo"
+                          ? "bg-yellow-500 text-white"
+                          : ""
+                      }
+                    >
+                      {selectedOrder.status}
+                    </Badge>
+                  </div>
+                </div>
               </div>
 
               {/* Client Info */}
-              <div className="mb-4">
-                <h6 className="fw-bold mb-3">Información del Cliente</h6>
-                <Row className="g-3">
-                  <Col md={selectedOrder.arregloUrl ? 6 : 12}>
+              <div>
+                <h6 className="font-bold mb-3">Informacion del Cliente</h6>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={selectedOrder.arregloUrl ? "" : "md:col-span-2"}>
                     <div className="mb-3">
-                      <label className="text-muted small mb-1">Nombre</label>
+                      <label className="text-muted-foreground text-sm">Nombre</label>
                       <div>{selectedOrder.clientInfo.name}</div>
                     </div>
                     <div className="mb-3">
-                      <label className="text-muted small mb-1">Teléfono</label>
+                      <label className="text-muted-foreground text-sm">Telefono</label>
                       <div>{selectedOrder.clientInfo.phone || "N/A"}</div>
                     </div>
                     <div className="mb-2">
-                      <label className="text-muted small mb-1">Email</label>
+                      <label className="text-muted-foreground text-sm">Email</label>
                       <div>{selectedOrder.clientInfo.email || "N/A"}</div>
                     </div>
-                  </Col>
+                  </div>
                   {selectedOrder.arregloUrl && (
-                    <Col md={6}>
-                      <div className="mb-2">
-                        <label className="text-muted small mb-1">
-                          Imagen del Arreglo
-                        </label>
-                        <div className="mt-2 d-flex justify-content-center">
-                          <img
-                            src={selectedOrder.arregloUrl}
-                            alt="Arreglo"
-                            className="img-fluid rounded shadow-sm"
-                            style={{
-                              maxHeight: "300px",
-                              objectFit: "contain",
-                              cursor: "pointer",
-                            }}
-                            onClick={() =>
-                              window.open(selectedOrder.arregloUrl!, "_blank")
-                            }
-                          />
-                        </div>
+                    <div>
+                      <label className="text-muted-foreground text-sm">
+                        Imagen del Arreglo
+                      </label>
+                      <div className="mt-2 flex justify-center">
+                        <img
+                          src={selectedOrder.arregloUrl}
+                          alt="Arreglo"
+                          className="max-h-[300px] object-contain rounded shadow-sm cursor-pointer"
+                          onClick={() =>
+                            window.open(selectedOrder.arregloUrl!, "_blank")
+                          }
+                        />
                       </div>
-                    </Col>
+                    </div>
                   )}
-                </Row>
+                </div>
               </div>
 
               {/* Delivery Info */}
               {selectedOrder.deliveryData && (
-                <div className="mb-4">
-                  <h6 className="fw-bold mb-3">Información de Entrega</h6>
-                  <Row className="g-3">
-                    <Col md={6}>
-                      <div className="mb-2">
-                        <label className="text-muted small mb-1">
-                          Destinatario
-                        </label>
-                        <div>
-                          {selectedOrder.deliveryData.recipientName || "N/A"}
-                        </div>
+                <div>
+                  <h6 className="font-bold mb-3">Informacion de Entrega</h6>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-muted-foreground text-sm">
+                        Destinatario
+                      </label>
+                      <div>
+                        {selectedOrder.deliveryData.recipientName || "N/A"}
                       </div>
-                    </Col>
-                    <Col md={6}>
-                      <div className="mb-2">
-                        <label className="text-muted small mb-1">
-                          Fecha de Entrega
-                        </label>
-                        <div>
-                          {selectedOrder.deliveryData.deliveryDateTime
-                            ? formatDate(
-                                selectedOrder.deliveryData.deliveryDateTime
-                              )
-                            : "N/A"}
-                        </div>
+                    </div>
+                    <div>
+                      <label className="text-muted-foreground text-sm">
+                        Fecha de Entrega
+                      </label>
+                      <div>
+                        {selectedOrder.deliveryData.deliveryDateTime
+                          ? formatDate(
+                              selectedOrder.deliveryData.deliveryDateTime
+                            )
+                          : "N/A"}
                       </div>
-                    </Col>
+                    </div>
                     {selectedOrder.deliveryData.message && (
-                      <Col md={12}>
-                        <div className="mb-2">
-                          <label className="text-muted small mb-1">
-                            Mensaje
-                          </label>
-                          <div>{selectedOrder.deliveryData.message}</div>
-                        </div>
-                      </Col>
+                      <div className="md:col-span-2">
+                        <label className="text-muted-foreground text-sm">
+                          Mensaje
+                        </label>
+                        <div>{selectedOrder.deliveryData.message}</div>
+                      </div>
                     )}
-                  </Row>
+                  </div>
                 </div>
               )}
 
               {/* Items */}
-              <div className="mb-4">
-                <h6 className="fw-bold mb-3">Productos</h6>
-                <Table responsive bordered hover>
-                  <thead className="table-light">
-                    <tr>
-                      <th>Producto</th>
-                      <th className="text-center">Cantidad</th>
-                      <th className="text-end">Precio Unitario</th>
-                      <th className="text-end">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div>
+                <h6 className="font-bold mb-3">Productos</h6>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="text-center">Cantidad</TableHead>
+                      <TableHead className="text-right">Precio Unitario</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {selectedOrder.items.map((item) => (
-                      <tr key={item._id}>
-                        <td>{item.productName}</td>
-                        <td className="text-center">{item.quantity}</td>
-                        <td className="text-end">
+                      <TableRow key={item._id}>
+                        <TableCell>{item.productName}</TableCell>
+                        <TableCell className="text-center">{item.quantity}</TableCell>
+                        <TableCell className="text-right">
                           {formatCurrency(item.unitPrice)}
-                        </td>
-                        <td className="text-end fw-semibold">
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
                           {formatCurrency(item.amount)}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
+                  </TableBody>
                 </Table>
               </div>
 
               {/* Financial Summary */}
-              <div className="bg-light p-3 rounded">
-                <Row className="g-2">
-                  <Col xs={6}>
-                    <div className="text-muted small">Subtotal:</div>
-                  </Col>
-                  <Col xs={6} className="text-end">
-                    <div className="fw-semibold">
-                      {formatCurrency(selectedOrder.subtotal)}
-                    </div>
-                  </Col>
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="text-muted-foreground text-sm">Subtotal:</div>
+                  <div className="text-right font-semibold">
+                    {formatCurrency(selectedOrder.subtotal)}
+                  </div>
                   {selectedOrder.discount > 0 && (
                     <>
-                      <Col xs={6}>
-                        <div className="text-muted small">Descuento:</div>
-                      </Col>
-                      <Col xs={6} className="text-end">
-                        <div className="text-danger">
-                          -{formatCurrency(selectedOrder.discount)}
-                        </div>
-                      </Col>
+                      <div className="text-muted-foreground text-sm">Descuento:</div>
+                      <div className="text-right text-red-500">
+                        -{formatCurrency(selectedOrder.discount)}
+                      </div>
                     </>
                   )}
-                  <Col xs={6}>
-                    <div className="fw-bold">Total:</div>
-                  </Col>
-                  <Col xs={6} className="text-end">
-                    <div className="fw-bold fs-5">
-                      {formatCurrency(selectedOrder.total)}
-                    </div>
-                  </Col>
+                  <div className="font-bold">Total:</div>
+                  <div className="text-right font-bold text-lg">
+                    {formatCurrency(selectedOrder.total)}
+                  </div>
                   {(() => {
                     const advancePayment = orderPayments.find(
                       (p) => p.isAdvance
                     );
                     return advancePayment ? (
                       <>
-                        <Col xs={6}>
-                          <div className="text-muted small">Anticipo:</div>
-                        </Col>
-                        <Col xs={6} className="text-end">
-                          <div className="text-success">
-                            {formatCurrency(advancePayment.amount)}
-                          </div>
-                        </Col>
+                        <div className="text-muted-foreground text-sm">Anticipo:</div>
+                        <div className="text-right text-green-600">
+                          {formatCurrency(advancePayment.amount)}
+                        </div>
                       </>
                     ) : null;
                   })()}
                   {selectedOrder.remainingBalance > 0 && (
                     <>
-                      <Col xs={6}>
-                        <div className="text-danger small fw-bold">
-                          Saldo Pendiente:
-                        </div>
-                      </Col>
-                      <Col xs={6} className="text-end">
-                        <div className="text-danger fw-bold">
-                          {formatCurrency(selectedOrder.remainingBalance)}
-                        </div>
-                      </Col>
+                      <div className="text-red-500 text-sm font-bold">
+                        Saldo Pendiente:
+                      </div>
+                      <div className="text-right text-red-500 font-bold">
+                        {formatCurrency(selectedOrder.remainingBalance)}
+                      </div>
                     </>
                   )}
-                </Row>
+                </div>
               </div>
-            </>
+            </div>
           )}
-        </Modal.Body>
-      </Modal>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

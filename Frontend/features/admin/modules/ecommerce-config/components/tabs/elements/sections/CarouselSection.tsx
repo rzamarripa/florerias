@@ -1,7 +1,14 @@
 import React from 'react';
-import { Form, Row, Col, Button, Accordion } from 'react-bootstrap';
-import { TbPhoto, TbUpload, TbTrash } from 'react-icons/tb';
-import { toast } from 'react-toastify';
+import { Image, Upload, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import {
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 interface CarouselImage {
   url: string;
@@ -26,79 +33,71 @@ const CarouselSection: React.FC<CarouselSectionProps> = ({
   removeCarouselImage,
 }) => {
   return (
-    <Accordion.Item eventKey="carousel" className="mb-3 border-0 shadow-sm rounded overflow-hidden">
-      <Accordion.Header className="bg-light">
-        <div className="d-flex align-items-center w-100">
-          <TbPhoto size={20} className="text-info me-2" />
-          <span className="fw-semibold fs-6">Carrusel de Imágenes</span>
-          <Form.Check 
-            type="switch"
+    <AccordionItem value="carousel" className="border rounded-lg shadow-sm overflow-hidden">
+      <AccordionTrigger className="px-4 py-3 bg-muted/50 hover:no-underline">
+        <div className="flex items-center justify-between w-full pr-2">
+          <div className="flex items-center gap-2">
+            <Image className="h-5 w-5 text-cyan-500" />
+            <span className="font-semibold">Carrusel de Imagenes</span>
+          </div>
+          <Switch
             id="carousel-switch"
             checked={carouselEnabled}
-            onChange={(e) => setCarouselEnabled(e.target.checked)}
-            className="ms-auto me-2"
+            onCheckedChange={setCarouselEnabled}
             onClick={(e) => e.stopPropagation()}
           />
         </div>
-      </Accordion.Header>
-      <Accordion.Body className="bg-white">
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4 pt-2 bg-background">
         {carouselEnabled ? (
           <div>
-            <Row className="g-2">
-              {/* Imágenes existentes */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              {/* Imagenes existentes */}
               {carouselImages.map((image, index) => (
-                <Col key={`existing-${index}`} xs={6} md={3} lg={2}>
-                  <div className="position-relative">
-                    <img 
-                      src={image.url} 
-                      alt={`Imagen ${index + 1}`}
-                      className="img-fluid rounded"
-                      style={{ height: "80px", width: "100%", objectFit: "cover" }}
-                    />
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      className="position-absolute top-0 end-0 m-1 p-1"
-                      onClick={() => removeCarouselImage(index)}
-                    >
-                      <TbTrash size={12} />
-                    </Button>
-                  </div>
-                </Col>
+                <div key={`existing-${index}`} className="relative">
+                  <img
+                    src={image.url}
+                    alt={`Imagen ${index + 1}`}
+                    className="w-full h-20 object-cover rounded"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon-sm"
+                    className="absolute top-1 right-1 h-6 w-6"
+                    onClick={() => removeCarouselImage(index)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               ))}
-              
+
               {/* Archivos pendientes */}
               {carouselFiles.map((file, index) => (
-                <Col key={`pending-${index}`} xs={6} md={3} lg={2}>
-                  <div className="position-relative">
-                    <div 
-                      className="bg-secondary bg-opacity-10 rounded d-flex flex-column align-items-center justify-content-center"
-                      style={{ height: "80px", width: "100%" }}
-                    >
-                      <TbUpload size={20} className="text-muted" />
-                      <small className="text-truncate px-1" style={{ maxWidth: "90%", fontSize: "10px" }}>
-                        {file.name}
-                      </small>
-                    </div>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      className="position-absolute top-0 end-0 m-1 p-1"
-                      onClick={() => {
-                        const newFiles = carouselFiles.filter((_, i) => i !== index);
-                        setCarouselFiles(newFiles);
-                      }}
-                    >
-                      <TbTrash size={12} />
-                    </Button>
+                <div key={`pending-${index}`} className="relative">
+                  <div className="w-full h-20 bg-muted/50 rounded flex flex-col items-center justify-center">
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground truncate px-1 max-w-full">
+                      {file.name}
+                    </span>
                   </div>
-                </Col>
+                  <Button
+                    variant="destructive"
+                    size="icon-sm"
+                    className="absolute top-1 right-1 h-6 w-6"
+                    onClick={() => {
+                      const newFiles = carouselFiles.filter((_, i) => i !== index);
+                      setCarouselFiles(newFiles);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               ))}
-            </Row>
-            
+            </div>
+
             {(carouselImages.length + carouselFiles.length) < 5 && (
-              <div className="mt-3">
-                <Form.Control
+              <div className="mt-3 flex items-center gap-2">
+                <Input
                   type="file"
                   accept="image/*"
                   multiple
@@ -107,41 +106,45 @@ const CarouselSection: React.FC<CarouselSectionProps> = ({
                     const validFiles = files.filter(file => file.size <= 5 * 1024 * 1024);
                     const remainingSlots = 5 - carouselImages.length - carouselFiles.length;
                     const filesToAdd = validFiles.slice(0, remainingSlots);
-                    
+
                     if (validFiles.length !== files.length) {
                       toast.error("Algunos archivos exceden 5MB");
                     }
-                    
+
                     if (filesToAdd.length > 0) {
                       setCarouselFiles([...carouselFiles, ...filesToAdd]);
                     }
-                    
+
                     if (filesToAdd.length < validFiles.length) {
-                      toast.warning(`Solo se agregaron ${filesToAdd.length} imágenes. Máximo 5.`);
+                      toast.warning(`Solo se agregaron ${filesToAdd.length} imagenes. Maximo 5.`);
                     }
                   }}
-                  className="d-none"
+                  className="hidden"
                   id="carousel-upload"
                 />
-                <label htmlFor="carousel-upload" className="btn btn-outline-primary btn-sm">
-                  <TbUpload className="me-1" size={14} />
-                  Agregar imágenes
+                <label htmlFor="carousel-upload">
+                  <Button variant="outline" size="sm" asChild>
+                    <span className="cursor-pointer">
+                      <Upload className="mr-1 h-3.5 w-3.5" />
+                      Agregar imagenes
+                    </span>
+                  </Button>
                 </label>
-                <span className="ms-2 text-muted small">
+                <span className="text-sm text-muted-foreground">
                   {5 - carouselImages.length - carouselFiles.length} espacios disponibles
                 </span>
               </div>
             )}
-            
-            <p className="text-muted small mt-2 mb-0">
-              Máximo 5 imágenes. Tamaño recomendado: 800x600px
+
+            <p className="text-sm text-muted-foreground mt-2">
+              Maximo 5 imagenes. Tamano recomendado: 800x600px
             </p>
           </div>
         ) : (
-          <p className="text-muted text-center my-3">Carrusel deshabilitado</p>
+          <p className="text-muted-foreground text-center py-3">Carrusel deshabilitado</p>
         )}
-      </Accordion.Body>
-    </Accordion.Item>
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 

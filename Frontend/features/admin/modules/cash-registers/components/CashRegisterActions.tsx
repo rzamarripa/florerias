@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { Spinner, Button } from "react-bootstrap";
-import { Edit2, CheckCircle, XCircle, DoorOpen, DoorClosed } from "lucide-react";
+import { Edit2, CheckCircle, XCircle, DoorOpen, DoorClosed, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "../services/cashRegisters";
 import { CashRegister } from "../types";
 import CashRegisterModal from "./CashRegisterModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { Button } from "@/components/ui/button";
 
 interface CashRegisterActionsProps {
   cashRegister: CashRegister;
@@ -62,13 +62,13 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
 
   const handleToggleOpen = async () => {
     try {
-      // Si la caja está abierta y se quiere cerrar, navegar a la página de resumen
+      // Si la caja esta abierta y se quiere cerrar, navegar a la pagina de resumen
       if (cashRegister.isOpen) {
         router.push(`/ventas/cajas/cerrar?id=${cashRegister._id}`);
         return;
       }
 
-      // Si la caja está cerrada, abrirla normalmente
+      // Si la caja esta cerrada, abrirla normalmente
       setIsTogglingOpen(true);
       await cashRegistersService.toggleOpen(cashRegister._id, true);
       toast.success("Caja registradora abierta correctamente");
@@ -84,14 +84,13 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
 
   return (
     <>
-      <div className="d-flex justify-content-center gap-2">
+      <div className="flex justify-center gap-2">
         {/* Edit Button - Solo visible para Administradores */}
         {isAdmin && (
           <Button
-            variant="light"
-            size="sm"
-            className="rounded-circle"
-            style={{ width: "32px", height: "32px", padding: "0" }}
+            variant="outline"
+            size="icon"
+            className="rounded-full w-8 h-8"
             onClick={() => setShowEditModal(true)}
             title="Editar caja registradora"
           >
@@ -102,24 +101,19 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
         {/* Toggle Active Button - Solo visible para Administradores */}
         {isAdmin && (
           <Button
-            variant="light"
-            size="sm"
-            className="rounded-circle"
-            style={{ width: "32px", height: "32px", padding: "0" }}
+            variant="outline"
+            size="icon"
+            className="rounded-full w-8 h-8"
             onClick={handleToggleActive}
             disabled={isToggling}
             title={cashRegister.isActive ? "Desactivar caja" : "Activar caja"}
           >
             {isToggling ? (
-              <Spinner
-                animation="border"
-                size="sm"
-                style={{ width: "16px", height: "16px" }}
-              />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : cashRegister.isActive ? (
-              <XCircle size={16} className="text-danger" />
+              <XCircle size={16} className="text-red-500" />
             ) : (
-              <CheckCircle size={16} className="text-success" />
+              <CheckCircle size={16} className="text-green-500" />
             )}
           </Button>
         )}
@@ -127,24 +121,19 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
         {/* Toggle Open/Close Button - Visible para admin, cajeros y gerentes de esta caja */}
         {canToggleOpen() && (
           <Button
-            variant="light"
-            size="sm"
-            className="rounded-circle"
-            style={{ width: "32px", height: "32px", padding: "0" }}
+            variant="outline"
+            size="icon"
+            className="rounded-full w-8 h-8"
             onClick={handleToggleOpen}
             disabled={isTogglingOpen || !cashRegister.isActive}
             title={cashRegister.isOpen ? "Cerrar caja" : "Abrir caja"}
           >
             {isTogglingOpen ? (
-              <Spinner
-                animation="border"
-                size="sm"
-                style={{ width: "16px", height: "16px" }}
-              />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : cashRegister.isOpen ? (
-              <DoorClosed size={16} className="text-warning" />
+              <DoorClosed size={16} className="text-yellow-500" />
             ) : (
-              <DoorOpen size={16} className="text-info" />
+              <DoorOpen size={16} className="text-cyan-500" />
             )}
           </Button>
         )}

@@ -1,15 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Button,
-  Table,
-  Badge,
-  Form,
-  InputGroup,
-  Spinner,
-} from "react-bootstrap";
-import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { productListsService } from "./services/productLists";
@@ -19,6 +11,18 @@ import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { branchesService } from "../branches/services/branches";
 import { Branch } from "../branches/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 
 const ProductListsPage: React.FC = () => {
   const [productLists, setProductLists] = useState<ProductList[]>([]);
@@ -37,7 +41,7 @@ const ProductListsPage: React.FC = () => {
   const isManager = hasRole("Gerente");
   const [managerBranch, setManagerBranch] = useState<Branch | null>(null);
 
-  // Función para formatear números con separación de miles
+  // Funcion para formatear numeros con separacion de miles
   const formatNumber = (num: number): string => {
     return num.toLocaleString("es-MX", {
       minimumFractionDigits: 2,
@@ -63,7 +67,7 @@ const ProductListsPage: React.FC = () => {
         filters.name = searchTerm;
       }
 
-      // Filtrar por sucursal según el rol
+      // Filtrar por sucursal segun el rol
       if (isManager && managerBranch) {
         filters.branchId = managerBranch._id;
         console.log("🔍 [ProductLists] Filtrando por sucursal del gerente:", managerBranch.branchName, managerBranch._id);
@@ -113,7 +117,7 @@ const ProductListsPage: React.FC = () => {
   }, [isManager]);
 
   useEffect(() => {
-    // Solo cargar si tenemos la sucursal correspondiente según el rol
+    // Solo cargar si tenemos la sucursal correspondiente segun el rol
     if (isManager && !managerBranch) {
       return; // Esperar a que se cargue la sucursal del gerente
     }
@@ -132,7 +136,7 @@ const ProductListsPage: React.FC = () => {
     router.push("/catalogos/listas-productos/nuevo");
   };
 
-  // Cálculos para cada lista
+  // Calculos para cada lista
   const calculateTotals = (productList: ProductList) => {
     let totalProducts = productList.products.length;
     let totalGastado = 0;
@@ -160,15 +164,14 @@ const ProductListsPage: React.FC = () => {
   return (
     <div className="container-fluid py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h2 className="mb-1 fw-bold">Listas de Productos</h2>
-          <p className="text-muted mb-0">Gestiona las listas de productos</p>
+          <h2 className="mb-1 font-bold text-2xl">Listas de Productos</h2>
+          <p className="text-muted-foreground mb-0">Gestiona las listas de productos</p>
         </div>
         <Button
-          variant="primary"
           onClick={handleNewProductList}
-          className="d-flex align-items-center gap-2 px-4"
+          className="flex items-center gap-2 px-4"
         >
           <Plus size={20} />
           Nueva Lista
@@ -176,92 +179,86 @@ const ProductListsPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div
-        className="card border-0 shadow-sm mb-2"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body p-2">
-          <div className="row g-2">
-            <div className="col-md-6">
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por nombre de lista..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
+      <Card className="border-0 shadow-sm mb-2 rounded-[10px]">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="flex items-center bg-muted rounded-[10px]">
+              <div className="px-3">
+                <Search size={18} className="text-muted-foreground" />
+              </div>
+              <Input
+                type="text"
+                placeholder="Buscar por nombre de lista..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="border-0 bg-transparent"
+              />
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card className="border-0 shadow-sm rounded-[10px]">
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-3 text-muted">Cargando listas...</p>
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="mt-3 text-muted-foreground">Cargando listas...</p>
             </div>
           ) : productLists.length === 0 ? (
-            <div className="text-center py-5">
-              <p className="text-muted mb-0">
+            <div className="text-center py-12">
+              <p className="text-muted-foreground mb-0">
                 No se encontraron listas de productos
               </p>
             </div>
           ) : (
             <>
-              <div className="table-responsive">
-                <Table hover className="mb-0">
-                  <thead className="bg-light">
-                    <tr>
-                      <th className="border-0 px-2 py-2">Nombre</th>
-                      <th className="border-0 px-2 py-2">Sucursal</th>
-                      <th className="border-0 px-2 py-2">Fecha Creación</th>
-                      <th className="border-0 px-2 py-2">Fecha Expiración</th>
-                      <th className="border-0 px-2 py-2 text-end">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="px-2 py-2">Nombre</TableHead>
+                      <TableHead className="px-2 py-2">Sucursal</TableHead>
+                      <TableHead className="px-2 py-2">Fecha Creacion</TableHead>
+                      <TableHead className="px-2 py-2">Fecha Expiracion</TableHead>
+                      <TableHead className="px-2 py-2 text-right">
                         Total Gastado
-                      </th>
-                      <th className="border-0 px-2 py-2 text-end">
+                      </TableHead>
+                      <TableHead className="px-2 py-2 text-right">
                         Ganancias Brutas
-                      </th>
-                      <th className="border-0 px-2 py-2 text-end">
+                      </TableHead>
+                      <TableHead className="px-2 py-2 text-right">
                         Ganancias Netas
-                      </th>
-                      <th className="border-0 px-2 py-2 text-center">Estado</th>
-                      <th className="border-0 px-2 py-2 text-center">
+                      </TableHead>
+                      <TableHead className="px-2 py-2 text-center">Estado</TableHead>
+                      <TableHead className="px-2 py-2 text-center">
                         Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {productLists.map((productList) => {
                       const totals = calculateTotals(productList);
                       return (
-                        <tr key={productList._id}>
-                          <td className="px-2 py-2">
-                            <div className="fw-semibold">
+                        <TableRow key={productList._id} className="hover:bg-muted/50">
+                          <TableCell className="px-2 py-2">
+                            <div className="font-semibold">
                               {productList.name}
                             </div>
-                            <small className="text-muted">
+                            <small className="text-muted-foreground">
                               {productList.company?.tradeName ||
                                 productList.company?.legalName}
                             </small>
-                          </td>
-                          <td className="px-2 py-2">
-                            <div className="fw-semibold">
+                          </TableCell>
+                          <TableCell className="px-2 py-2">
+                            <div className="font-semibold">
                               {productList.branch && typeof productList.branch === 'object'
                                 ? (productList.branch as any).branchName || 'Sin nombre'
                                 : 'Sin sucursal'}
                             </div>
-                          </td>
-                          <td className="px-2 py-2">
+                          </TableCell>
+                          <TableCell className="px-2 py-2">
                             {new Date(productList.createdAt).toLocaleDateString(
                               "es-MX",
                               {
@@ -270,8 +267,8 @@ const ProductListsPage: React.FC = () => {
                                 day: "numeric",
                               }
                             )}
-                          </td>
-                          <td className="px-2 py-2">
+                          </TableCell>
+                          <TableCell className="px-2 py-2">
                             {new Date(
                               productList.expirationDate
                             ).toLocaleDateString("es-MX", {
@@ -279,48 +276,49 @@ const ProductListsPage: React.FC = () => {
                               month: "short",
                               day: "numeric",
                             })}
-                          </td>
-                          <td className="px-2 py-2 text-end text-danger fw-semibold">
+                          </TableCell>
+                          <TableCell className="px-2 py-2 text-right text-red-600 font-semibold">
                             ${formatNumber(totals.totalGastado)}
-                          </td>
-                          <td className="px-2 py-2 text-end text-primary fw-semibold">
+                          </TableCell>
+                          <TableCell className="px-2 py-2 text-right text-primary font-semibold">
                             ${formatNumber(totals.gananciasBrutas)}
-                          </td>
-                          <td className="px-2 py-2 text-end fw-bold">
+                          </TableCell>
+                          <TableCell className="px-2 py-2 text-right font-bold">
                             <span
                               className={
                                 totals.gananciasNetas >= 0
-                                  ? "text-success"
-                                  : "text-danger"
+                                  ? "text-green-600"
+                                  : "text-red-600"
                               }
                             >
                               ${formatNumber(totals.gananciasNetas)}
                             </span>
-                          </td>
-                          <td className="px-2 py-2 text-center">
+                          </TableCell>
+                          <TableCell className="px-2 py-2 text-center">
                             <Badge
-                              bg={productList.status ? "success" : "secondary"}
+                              variant={productList.status ? "default" : "secondary"}
+                              className={productList.status ? "bg-green-600" : ""}
                             >
                               {productList.status ? "Activo" : "Inactivo"}
                             </Badge>
-                          </td>
-                          <td className="px-2 py-2">
+                          </TableCell>
+                          <TableCell className="px-2 py-2">
                             <ProductListActions
                               productList={productList}
                               onStatusChange={() => loadProductLists(false)}
                             />
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
+                  </TableBody>
                 </Table>
               </div>
 
               {/* Pagination */}
               {pagination.pages > 1 && (
-                <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-                  <div className="text-muted small">
+                <div className="flex justify-between items-center px-2 py-2 border-t">
+                  <div className="text-muted-foreground text-sm">
                     Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                     {Math.min(
                       pagination.page * pagination.limit,
@@ -328,20 +326,20 @@ const ProductListsPage: React.FC = () => {
                     )}{" "}
                     de {pagination.total} resultados
                   </div>
-                  <div className="d-flex gap-2">
+                  <div className="flex gap-2">
                     <Button
-                      variant="outline-secondary"
+                      variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(pagination.page - 1)}
                       disabled={pagination.page === 1}
                     >
                       <ChevronLeft size={16} />
                     </Button>
-                    <div className="d-flex align-items-center px-3">
-                      Página {pagination.page} de {pagination.pages}
+                    <div className="flex items-center px-3">
+                      Pagina {pagination.page} de {pagination.pages}
                     </div>
                     <Button
-                      variant="outline-secondary"
+                      variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(pagination.page + 1)}
                       disabled={pagination.page === pagination.pages}
@@ -353,8 +351,8 @@ const ProductListsPage: React.FC = () => {
               )}
             </>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

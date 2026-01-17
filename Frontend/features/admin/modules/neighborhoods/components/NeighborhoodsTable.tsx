@@ -1,11 +1,29 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Table, Button, Spinner, Badge, Form, InputGroup } from "react-bootstrap";
-import { Pencil, Trash2, Search } from "lucide-react";
+import { Pencil, Trash2, Search, ChevronLeft, ChevronRight, Loader2, MapPin } from "lucide-react";
+import { toast } from "sonner";
 import { neighborhoodsService } from "../services/neighborhoods";
 import { Neighborhood } from "../types";
-import { toast } from "react-toastify";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface NeighborhoodsTableProps {
   onEdit: (neighborhood: Neighborhood) => void;
@@ -22,7 +40,7 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
   const [totalPages, setTotalPages] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "">("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const fetchNeighborhoods = async () => {
     try {
@@ -30,7 +48,7 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
       const response = await neighborhoodsService.getAllNeighborhoods({
         page: currentPage,
         limit: 10,
-        status: statusFilter || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter as "active" | "inactive",
         search: searchTerm || undefined,
       });
 
@@ -77,178 +95,139 @@ const NeighborhoodsTable: React.FC<NeighborhoodsTableProps> = ({
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    return status === "active" ? (
-      <Badge bg="success" className="px-2 py-1">
-        Activo
-      </Badge>
-    ) : (
-      <Badge bg="secondary" className="px-2 py-1">
-        Inactivo
-      </Badge>
-    );
-  };
-
   if (loading && neighborhoods.length === 0) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="mt-2 text-muted">Cargando colonias...</p>
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground mt-3">Cargando colonias...</p>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Filtros */}
-      <div className="row mb-2 g-2">
-        <div className="col-md-8">
-          <InputGroup>
-            <InputGroup.Text
-              style={{
-                backgroundColor: "white",
-                border: "2px solid #e9ecef",
-                borderRight: "none",
-              }}
-            >
-              <Search size={18} />
-            </InputGroup.Text>
-            <Form.Control
-              type="text"
-              placeholder="Buscar por nombre de colonia..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                border: "2px solid #e9ecef",
-                borderLeft: "none",
-                borderRadius: "0 8px 8px 0",
-              }}
-            />
-          </InputGroup>
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar por nombre de colonia..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
-        <div className="col-md-4">
-          <Form.Select
+        <div className="w-full md:w-48">
+          <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as "active" | "inactive" | "")}
-            style={{
-              border: "2px solid #e9ecef",
-              borderRadius: "8px",
-            }}
+            onValueChange={setStatusFilter}
           >
-            <option value="">Todos los estatus</option>
-            <option value="active">Activo</option>
-            <option value="inactive">Inactivo</option>
-          </Form.Select>
+            <SelectTrigger>
+              <SelectValue placeholder="Todos los estatus" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los estatus</SelectItem>
+              <SelectItem value="active">Activo</SelectItem>
+              <SelectItem value="inactive">Inactivo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Tabla */}
-      <div
-        className="table-responsive"
-        style={{
-          borderRadius: "12px",
-          overflow: "hidden",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        }}
-      >
-        <Table hover className="mb-0">
-          <thead style={{ backgroundColor: "#f8f9fa" }}>
-            <tr>
-              <th className="py-2 px-2 fw-semibold text-muted">No.</th>
-              <th className="py-2 px-2 fw-semibold text-muted">Colonia</th>
-              <th className="py-2 px-2 fw-semibold text-muted text-end">
-                Precio Entrega
-              </th>
-              <th className="py-2 px-2 fw-semibold text-muted text-center">
-                Estatus
-              </th>
-              <th className="py-2 px-2 fw-semibold text-muted text-center">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {neighborhoods.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-4 text-muted">
-                  {searchTerm || statusFilter
-                    ? "No se encontraron colonias con los filtros aplicados"
-                    : "No hay colonias registradas"}
-                </td>
-              </tr>
-            ) : (
-              neighborhoods.map((neighborhood, index) => (
-                <tr key={neighborhood._id}>
-                  <td className="py-2 px-2">
-                    {(currentPage - 1) * 10 + index + 1}
-                  </td>
-                  <td className="py-2 px-2 fw-semibold">{neighborhood.name}</td>
-                  <td className="py-2 px-2 text-end fw-semibold">
-                    ${neighborhood.priceDelivery.toFixed(2)}
-                  </td>
-                  <td className="py-2 px-2 text-center">
-                    {getStatusBadge(neighborhood.status)}
-                  </td>
-                  <td className="py-2 px-2">
-                    <div className="d-flex gap-2 justify-content-center">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => onEdit(neighborhood)}
-                        className="d-flex align-items-center gap-1"
-                        style={{
-                          borderRadius: "6px",
-                          padding: "4px 8px",
-                        }}
-                      >
-                        <Pencil size={14} />
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={() => handleDelete(neighborhood._id, neighborhood.name)}
-                        className="d-flex align-items-center gap-1"
-                        style={{
-                          borderRadius: "6px",
-                          padding: "4px 8px",
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12">#</TableHead>
+            <TableHead>Colonia</TableHead>
+            <TableHead className="text-right">Precio Entrega</TableHead>
+            <TableHead className="text-center">Estatus</TableHead>
+            <TableHead className="text-center">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {neighborhoods.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-12">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-12 w-12 opacity-50" />
+                  <p>
+                    {searchTerm || statusFilter !== "all"
+                      ? "No se encontraron colonias con los filtros aplicados"
+                      : "No hay colonias registradas"}
+                  </p>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : (
+            neighborhoods.map((neighborhood, index) => (
+              <TableRow key={neighborhood._id}>
+                <TableCell>
+                  {(currentPage - 1) * 10 + index + 1}
+                </TableCell>
+                <TableCell className="font-medium">{neighborhood.name}</TableCell>
+                <TableCell className="text-right font-medium">
+                  ${neighborhood.priceDelivery.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant={neighborhood.status === "active" ? "default" : "secondary"}>
+                    {neighborhood.status === "active" ? "Activo" : "Inactivo"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onEdit(neighborhood)}
+                      title="Editar colonia"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(neighborhood._id, neighborhood.name)}
+                      title="Eliminar colonia"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-2">
-          <span className="text-muted">
+        <div className="flex items-center justify-between border-t pt-4">
+          <p className="text-sm text-muted-foreground">
             Mostrando {neighborhoods.length} de {total} colonias
-          </span>
-          <div className="d-flex gap-2">
+          </p>
+          <div className="flex items-center gap-2">
             <Button
-              variant="outline-primary"
+              variant="outline"
               size="sm"
-              disabled={currentPage === 1 || loading}
               onClick={() => setCurrentPage((prev) => prev - 1)}
+              disabled={currentPage === 1 || loading}
             >
-              Anterior
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="d-flex align-items-center px-3">
+            <span className="text-sm px-2">
               Página {currentPage} de {totalPages}
             </span>
             <Button
-              variant="outline-primary"
+              variant="outline"
               size="sm"
-              disabled={currentPage === totalPages || loading}
               onClick={() => setCurrentPage((prev) => prev + 1)}
+              disabled={currentPage === totalPages || loading}
             >
-              Siguiente
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>

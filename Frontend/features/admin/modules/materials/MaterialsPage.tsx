@@ -1,8 +1,26 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, InputGroup, Spinner } from "react-bootstrap";
-import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { materialsService } from "./services/materials";
@@ -26,7 +44,7 @@ const MaterialsPage: React.FC = () => {
     pages: 0,
   });
   const router = useRouter();
-  
+
   const { hasRole } = useUserRoleStore();
   const { activeBranch } = useActiveBranchStore();
   const isManager = hasRole("Gerente");
@@ -40,9 +58,9 @@ const MaterialsPage: React.FC = () => {
         const branch = response.data[0]; // El gerente solo debe tener una sucursal
         setManagerBranch(branch);
         setBranchId(branch._id);
-        console.log("🔍 [Materials] Sucursal del gerente cargada:", branch.branchName);
+        console.log("[Materials] Sucursal del gerente cargada:", branch.branchName);
       } else {
-        toast.error("No se encontró una sucursal asignada para el gerente");
+        toast.error("No se encontro una sucursal asignada para el gerente");
       }
     } catch (error: any) {
       console.error("Error al cargar sucursal del gerente:", error);
@@ -50,13 +68,13 @@ const MaterialsPage: React.FC = () => {
     }
   };
 
-  // Determinar el branchId según el rol del usuario
+  // Determinar el branchId segun el rol del usuario
   useEffect(() => {
     if (isManager) {
       loadManagerBranch();
     } else if (isAdmin && activeBranch) {
       setBranchId(activeBranch._id);
-      console.log("🔍 [Materials] Usando sucursal activa del admin:", activeBranch.branchName);
+      console.log("[Materials] Usando sucursal activa del admin:", activeBranch.branchName);
     }
   }, [isManager, isAdmin, activeBranch]);
 
@@ -104,8 +122,8 @@ const MaterialsPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value === "all" ? "" : value);
   };
 
   const handlePageChange = (page: number) => {
@@ -115,10 +133,10 @@ const MaterialsPage: React.FC = () => {
   const handleNewMaterial = () => {
     // Para gerentes, verificar que tienen una sucursal asignada
     if (isManager && !branchId) {
-      toast.error("No se encontró una sucursal asignada para el gerente");
+      toast.error("No se encontro una sucursal asignada para el gerente");
       return;
     }
-    
+
     // Pasar el branchId como query param si es gerente
     if (isManager && branchId) {
       router.push(`/catalogos/materiales/nuevo?branchId=${branchId}`);
@@ -147,7 +165,7 @@ const MaterialsPage: React.FC = () => {
   };
 
   const handleDelete = async (materialId: string) => {
-    if (!confirm("¿Estás seguro de eliminar este material?")) return;
+    if (!confirm("Estas seguro de eliminar este material?")) return;
 
     try {
       await materialsService.deleteMaterial(materialId);
@@ -159,24 +177,25 @@ const MaterialsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="container mx-auto py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h2 className="mb-1 fw-bold">Materiales</h2>
-          <p className="text-muted mb-0">
-            Gestiona los materiales del catálogo
+          <h2 className="mb-1 font-bold text-2xl">Materiales</h2>
+          <p className="text-muted-foreground mb-0">
+            Gestiona los materiales del catalogo
             {isManager && managerBranch && (
-              <span className="ms-2 badge bg-info">Sucursal: {managerBranch.branchName}</span>
+              <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">
+                Sucursal: {managerBranch.branchName}
+              </Badge>
             )}
           </p>
         </div>
-        {/* Mostrar botón de nuevo material para Admin y Gerente */}
+        {/* Mostrar boton de nuevo material para Admin y Gerente */}
         {(isAdmin || isManager) && (
           <Button
-            variant="primary"
             onClick={handleNewMaterial}
-            className="d-flex align-items-center gap-2 px-4"
+            className="flex items-center gap-2 px-4"
           >
             <Plus size={20} />
             Nuevo Material
@@ -185,166 +204,153 @@ const MaterialsPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-2">
-          <div className="row g-2">
-            <div className="col-md-6">
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por nombre..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
+      <Card className="border-0 shadow-sm mb-2 rounded-[10px]">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10 border-0 bg-muted rounded-[10px]"
+              />
             </div>
-            <div className="col-md-6">
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
-            </div>
+            <Select value={statusFilter || "all"} onValueChange={handleStatusFilterChange}>
+              <SelectTrigger className="border-0 bg-muted rounded-[10px]">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card className="border-0 shadow-sm rounded-[10px]">
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="text-muted mt-3">Cargando materiales...</p>
+            <div className="text-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground mt-3">Cargando materiales...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">No.</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">UNIDAD</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">COSTO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">PRECIO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">DESCRIPCIÓN</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ESTATUS</th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">No.</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">NOMBRE</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">UNIDAD</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">COSTO</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">PRECIO</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">DESCRIPCION</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ESTATUS</TableHead>
+                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {materials.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-4 text-muted">
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
                         No se encontraron materiales
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     materials.map((material, index) => (
-                      <tr key={material._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-2 py-2">{(pagination.page - 1) * pagination.limit + index + 1}</td>
-                        <td className="px-2 py-2 fw-semibold">{material.name}</td>
-                        <td className="px-2 py-2">{material.unit?.name || "N/A"}</td>
-                        <td className="px-2 py-2">${material.cost.toFixed(2)}</td>
-                        <td className="px-2 py-2 fw-semibold text-success">${material.price.toFixed(2)}</td>
-                        <td className="px-2 py-2 text-muted" style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {material.description || "Sin descripción"}
-                        </td>
-                        <td className="px-2 py-2">
+                      <TableRow key={material._id} className="border-b border-muted">
+                        <TableCell className="px-2 py-2">{(pagination.page - 1) * pagination.limit + index + 1}</TableCell>
+                        <TableCell className="px-2 py-2 font-semibold">{material.name}</TableCell>
+                        <TableCell className="px-2 py-2">{material.unit?.name || "N/A"}</TableCell>
+                        <TableCell className="px-2 py-2">${material.cost.toFixed(2)}</TableCell>
+                        <TableCell className="px-2 py-2 font-semibold text-green-600">${material.price.toFixed(2)}</TableCell>
+                        <TableCell className="px-2 py-2 text-muted-foreground max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
+                          {material.description || "Sin descripcion"}
+                        </TableCell>
+                        <TableCell className="px-2 py-2">
                           <Badge
-                            bg={material.status ? "success" : "danger"}
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontWeight: "500",
-                            }}
+                            variant={material.status ? "default" : "destructive"}
+                            className={`px-2.5 py-0.5 rounded-xl font-medium ${material.status ? "bg-green-500 hover:bg-green-600" : ""}`}
                           >
                             {material.status ? "Activo" : "Inactivo"}
                           </Badge>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="d-flex justify-content-center gap-2">
+                        </TableCell>
+                        <TableCell className="px-2 py-2">
+                          <div className="flex justify-center gap-2">
                             {(isAdmin || isManager) && (
                               <>
                                 <Button
-                                  variant="light"
+                                  variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditMaterial(material._id)}
-                                  className="border-0"
-                                  style={{ borderRadius: "8px" }}
+                                  className="border-0 rounded-lg"
                                   title="Editar"
                                 >
-                                  <Edit size={16} className="text-warning" />
+                                  <Edit size={16} className="text-yellow-500" />
                                 </Button>
                                 <Button
-                                  variant="light"
+                                  variant="ghost"
                                   size="sm"
                                   onClick={() => handleDelete(material._id)}
-                                  className="border-0"
-                                  style={{ borderRadius: "8px" }}
+                                  className="border-0 rounded-lg"
                                   title="Eliminar"
                                 >
-                                  <Trash2 size={16} className="text-danger" />
+                                  <Trash2 size={16} className="text-red-500" />
                                 </Button>
                               </>
                             )}
                             {!isAdmin && !isManager && (
-                              <span className="text-muted">-</span>
+                              <span className="text-muted-foreground">-</span>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
+                </TableBody>
               </Table>
             </div>
           )}
 
           {/* Pagination */}
           {!loading && materials.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
+            <div className="flex justify-between items-center px-2 py-2 border-t">
+              <p className="text-muted-foreground mb-0 text-sm">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} materiales
               </p>
-              <div className="d-flex gap-2">
+              <div className="flex gap-2 items-center">
                 <Button
-                  variant="light"
+                  variant="ghost"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 >
                   <ChevronLeft size={16} />
                 </Button>
-                <span className="px-3 py-1">
-                  Página {pagination.page} de {pagination.pages}
+                <span className="px-3 py-1 text-sm">
+                  Pagina {pagination.page} de {pagination.pages}
                 </span>
                 <Button
-                  variant="light"
+                  variant="ghost"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
+                  className="rounded-lg"
                 >
                   <ChevronRight size={16} />
                 </Button>
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

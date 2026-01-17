@@ -1,21 +1,18 @@
 'use client'
-import {useEffect, useState} from "react";
-import {LuMoon, LuSun} from "react-icons/lu";
-
-import {useLayoutContext} from "@/context/useLayoutContext";
+import { useEffect, useState } from "react";
+import { LuMoon, LuSun } from "react-icons/lu";
+import { useLayoutContext } from "@/context/useLayoutContext";
 
 const ThemeToggler = () => {
-
-    const {theme, changeTheme} = useLayoutContext()
+    const { theme, changeTheme } = useLayoutContext();
 
     const toggleTheme = () => {
         if (theme === "dark") {
-            changeTheme('light')
+            changeTheme('light');
             return;
         }
         changeTheme('dark');
-        return;
-    }
+    };
 
     const [mounted, setMounted] = useState(false);
 
@@ -26,16 +23,16 @@ const ThemeToggler = () => {
     if (!mounted) return null;
 
     return (
-        <div className="topbar-item d-none d-sm-flex">
+        <div className="topbar-item hidden sm:flex">
             <button onClick={toggleTheme} className="topbar-link" type="button">
-                {
-                    theme === "dark" ?
-                        <LuSun className="fs-xxl mode-light-sun"/> :
-                        <LuMoon className="fs-xxl mode-light-moon"/>
-                }
+                {theme === "dark" ? (
+                    <LuSun className="text-xl" />
+                ) : (
+                    <LuMoon className="text-xl" />
+                )}
             </button>
         </div>
-    )
-}
+    );
+};
 
 export default ThemeToggler;

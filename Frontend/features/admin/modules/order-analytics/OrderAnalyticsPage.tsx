@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Card, Row, Col, Button, Form, Badge, Spinner } from "react-bootstrap";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   ShoppingCart,
   DollarSign,
@@ -12,6 +23,7 @@ import {
   Filter,
   AlertTriangle,
   Award,
+  Loader2,
 } from "lucide-react";
 import { orderAnalyticsService } from "./services/orderAnalytics";
 import { AnalyticsDashboardData, AnalyticsFilters } from "./types";
@@ -187,22 +199,23 @@ const OrderAnalyticsPage: React.FC = () => {
     bgColor: string;
     trend?: number;
   }> = ({ title, value, icon: Icon, color, bgColor, trend }) => (
-    <Card className="border-0 shadow-sm h-100" style={{ overflow: "hidden" }}>
-      <Card.Body>
-        <div className="d-flex justify-content-between align-items-start">
-          <div className="flex-grow-1">
-            <p className="text-muted mb-2 fw-medium small">{title}</p>
-            <h3 className="mb-0 fw-bold">{value}</h3>
+    <Card className="border-0 shadow-sm h-full overflow-hidden">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start">
+          <div className="flex-grow">
+            <p className="text-muted-foreground mb-2 font-medium text-sm">{title}</p>
+            <h3 className="mb-0 font-bold text-2xl">{value}</h3>
             {trend !== undefined && (
               <div className="mt-2">
                 <Badge
-                  bg={trend >= 0 ? "success" : "danger"}
+                  variant={trend >= 0 ? "default" : "destructive"}
                   className="bg-opacity-10"
                   style={{
+                    backgroundColor: trend >= 0 ? "#dcfce7" : "#fee2e2",
                     color: trend >= 0 ? "#10b981" : "#ef4444",
                   }}
                 >
-                  <TrendingUp size={12} className="me-1" />
+                  <TrendingUp className="w-3 h-3 mr-1" />
                   {trend >= 0 ? "+" : ""}
                   {trend.toFixed(1)}%
                 </Badge>
@@ -210,7 +223,7 @@ const OrderAnalyticsPage: React.FC = () => {
             )}
           </div>
           <div
-            className="d-flex align-items-center justify-content-center rounded-3"
+            className="flex items-center justify-center rounded-lg"
             style={{
               width: "56px",
               height: "56px",
@@ -220,19 +233,19 @@ const OrderAnalyticsPage: React.FC = () => {
             <Icon size={28} color={color} strokeWidth={2} />
           </div>
         </div>
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 
   // Loading Skeleton
   if (loading && !dashboardData) {
     return (
-      <div className="container-fluid py-4">
+      <div className="container mx-auto py-4">
         <div
-          className="d-flex justify-content-center align-items-center"
+          className="flex justify-center items-center"
           style={{ minHeight: "400px" }}
         >
-          <Spinner animation="border" variant="primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -251,89 +264,89 @@ const OrderAnalyticsPage: React.FC = () => {
     dashboardData?.monthlyComparison?.percentageChange?.revenue || 0;
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container mx-auto py-4 px-4">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="fw-bold mb-1">Dashboard Analítico</h2>
-          <p className="text-muted mb-0">
-            Análisis completo de ventas y rendimiento
+          <h2 className="font-bold text-2xl mb-1">Dashboard Analitico</h2>
+          <p className="text-muted-foreground mb-0">
+            Analisis completo de ventas y rendimiento
           </p>
         </div>
-        <Button variant="primary" className="d-flex align-items-center gap-2">
-          <Download size={18} />
+        <Button className="flex items-center gap-2">
+          <Download className="w-4 h-4" />
           Exportar Reporte
         </Button>
       </div>
 
       {/* Filters */}
       <Card className="border-0 shadow-sm mb-4">
-        <Card.Body>
-          <Row className="g-3 align-items-end">
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-medium">
-                  <Calendar size={14} className="me-1" />
-                  Fecha Inicio
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) =>
-                    setFilters({ ...filters, startDate: e.target.value })
-                  }
-                />
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="small fw-medium">
-                  <Calendar size={14} className="me-1" />
-                  Fecha Fin
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) =>
-                    setFilters({ ...filters, endDate: e.target.value })
-                  }
-                />
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Form.Group>
-                <Form.Label className="small fw-medium">Período</Form.Label>
-                <Form.Select
-                  value={filters.period}
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      period: e.target.value as any,
-                    })
-                  }
-                >
-                  <option value="day">Día</option>
-                  <option value="week">Semana</option>
-                  <option value="month">Mes</option>
-                  <option value="year">Año</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={2}>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+            <div>
+              <Label className="text-sm font-medium flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                Fecha Inicio
+              </Label>
+              <Input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, startDate: e.target.value })
+                }
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                Fecha Fin
+              </Label>
+              <Input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, endDate: e.target.value })
+                }
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Periodo</Label>
+              <Select
+                value={filters.period}
+                onValueChange={(value) =>
+                  setFilters({
+                    ...filters,
+                    period: value as any,
+                  })
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Seleccionar periodo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Dia</SelectItem>
+                  <SelectItem value="week">Semana</SelectItem>
+                  <SelectItem value="month">Mes</SelectItem>
+                  <SelectItem value="year">Ano</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Button
-                variant="primary"
-                className="w-100"
+                className="w-full"
                 onClick={handleApplyFilters}
                 disabled={loading}
               >
-                <Filter size={16} className="me-1" />
+                <Filter className="w-4 h-4 mr-1" />
                 {loading ? "Cargando..." : "Aplicar"}
               </Button>
-            </Col>
-            <Col md={2}>
+            </div>
+            <div>
               <Button
-                variant="outline-secondary"
-                className="w-100"
+                variant="outline"
+                className="w-full"
                 onClick={() => {
                   const now = new Date();
                   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -347,458 +360,389 @@ const OrderAnalyticsPage: React.FC = () => {
               >
                 Mes Actual
               </Button>
-            </Col>
-          </Row>
-        </Card.Body>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       {/* Stats Cards */}
-      <Row className="g-3 mb-4">
-        <Col
-          lg={20}
-          md={6}
-          sm={12}
-          style={{ flex: "0 0 20%", maxWidth: "20%" }}
-        >
-          <StatCard
-            title="Total Ventas"
-            value={summary.totalSales}
-            icon={ShoppingCart}
-            color="#3b82f6"
-            bgColor="#dbeafe"
-            trend={dashboardData?.monthlyComparison?.percentageChange?.sales}
-          />
-        </Col>
-        <Col
-          lg={20}
-          md={6}
-          sm={12}
-          style={{ flex: "0 0 20%", maxWidth: "20%" }}
-        >
-          <StatCard
-            title="Ingresos"
-            value={formatCurrency(summary.totalRevenue)}
-            icon={DollarSign}
-            color="#10b981"
-            bgColor="#d1fae5"
-            trend={monthlyRevenueChange}
-          />
-        </Col>
-        <Col
-          lg={20}
-          md={6}
-          sm={12}
-          style={{ flex: "0 0 20%", maxWidth: "20%" }}
-        >
-          <StatCard
-            title="Ticket Promedio"
-            value={formatCurrency(summary.averageTicket)}
-            icon={TrendingUp}
-            color="#8b5cf6"
-            bgColor="#ede9fe"
-          />
-        </Col>
-        <Col
-          lg={20}
-          md={6}
-          sm={12}
-          style={{ flex: "0 0 20%", maxWidth: "20%" }}
-        >
-          <StatCard
-            title="Productos Vendidos"
-            value={summary.totalProducts}
-            icon={Package}
-            color="#f59e0b"
-            bgColor="#fef3c7"
-          />
-        </Col>
-        <Col
-          lg={20}
-          md={6}
-          sm={12}
-          style={{ flex: "0 0 20%", maxWidth: "20%" }}
-        >
-          <Card
-            className="border-0 shadow-sm h-100"
-            style={{ overflow: "hidden" }}
-          >
-            <Card.Body>
-              <div className="d-flex justify-content-between align-items-start">
-                <div className="flex-grow-1">
-                  <p className="text-muted mb-2 fw-medium small">
-                    vs Mes Anterior
-                  </p>
-                  <h3 className="mb-0 fw-bold">
-                    {monthlyRevenueChange >= 0 ? "+" : ""}
-                    {monthlyRevenueChange.toFixed(1)}%
-                  </h3>
-                  <div className="mt-2">
-                    <Badge
-                      bg={monthlyRevenueChange >= 0 ? "success" : "danger"}
-                      className="bg-opacity-10"
-                      style={{
-                        color:
-                          monthlyRevenueChange >= 0 ? "#10b981" : "#ef4444",
-                      }}
-                    >
-                      <TrendingUp size={12} className="me-1" />
-                      {monthlyRevenueChange >= 0
-                        ? "Crecimiento"
-                        : "Disminución"}
-                    </Badge>
-                  </div>
-                </div>
-                <div
-                  className="d-flex align-items-center justify-content-center rounded-3"
-                  style={{
-                    width: "56px",
-                    height: "56px",
-                    backgroundColor:
-                      monthlyRevenueChange >= 0 ? "#d1fae5" : "#fee2e2",
-                  }}
-                >
-                  <TrendingUp
-                    size={28}
-                    color={monthlyRevenueChange >= 0 ? "#10b981" : "#ef4444"}
-                    strokeWidth={2}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+        <StatCard
+          title="Total Ventas"
+          value={summary.totalSales}
+          icon={ShoppingCart}
+          color="#3b82f6"
+          bgColor="#dbeafe"
+          trend={dashboardData?.monthlyComparison?.percentageChange?.sales}
+        />
+        <StatCard
+          title="Ingresos"
+          value={formatCurrency(summary.totalRevenue)}
+          icon={DollarSign}
+          color="#10b981"
+          bgColor="#d1fae5"
+          trend={monthlyRevenueChange}
+        />
+        <StatCard
+          title="Ticket Promedio"
+          value={formatCurrency(summary.averageTicket)}
+          icon={TrendingUp}
+          color="#8b5cf6"
+          bgColor="#ede9fe"
+        />
+        <StatCard
+          title="Productos Vendidos"
+          value={summary.totalProducts}
+          icon={Package}
+          color="#f59e0b"
+          bgColor="#fef3c7"
+        />
+        <Card className="border-0 shadow-sm h-full overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start">
+              <div className="flex-grow">
+                <p className="text-muted-foreground mb-2 font-medium text-sm">
+                  vs Mes Anterior
+                </p>
+                <h3 className="mb-0 font-bold text-2xl">
+                  {monthlyRevenueChange >= 0 ? "+" : ""}
+                  {monthlyRevenueChange.toFixed(1)}%
+                </h3>
+                <div className="mt-2">
+                  <Badge
+                    variant={monthlyRevenueChange >= 0 ? "default" : "destructive"}
+                    className="bg-opacity-10"
                     style={{
-                      transform:
-                        monthlyRevenueChange >= 0
-                          ? "rotate(0deg)"
-                          : "rotate(180deg)",
-                      transition: "transform 0.3s ease",
+                      backgroundColor: monthlyRevenueChange >= 0 ? "#dcfce7" : "#fee2e2",
+                      color: monthlyRevenueChange >= 0 ? "#10b981" : "#ef4444",
                     }}
-                  />
+                  >
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                    {monthlyRevenueChange >= 0 ? "Crecimiento" : "Disminucion"}
+                  </Badge>
                 </div>
               </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      <style jsx>{`
-        @media (max-width: 991px) {
-          [style*="flex: 0 0 20%"] {
-            flex: 0 0 50% !important;
-            max-width: 50% !important;
-          }
-        }
-        @media (max-width: 575px) {
-          [style*="flex: 0 0 20%"] {
-            flex: 0 0 100% !important;
-            max-width: 100% !important;
-          }
-        }
-      `}</style>
+              <div
+                className="flex items-center justify-center rounded-lg"
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  backgroundColor:
+                    monthlyRevenueChange >= 0 ? "#d1fae5" : "#fee2e2",
+                }}
+              >
+                <TrendingUp
+                  size={28}
+                  color={monthlyRevenueChange >= 0 ? "#10b981" : "#ef4444"}
+                  strokeWidth={2}
+                  style={{
+                    transform:
+                      monthlyRevenueChange >= 0
+                        ? "rotate(0deg)"
+                        : "rotate(180deg)",
+                    transition: "transform 0.3s ease",
+                  }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Charts Row 1 */}
-      <Row className="g-3 mb-4">
-        <Col lg={8}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="fw-bold mb-0">Ventas Últimos 7 Días</h5>
-                <div className="d-flex gap-3">
-                  <div className="d-flex align-items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+        <div className="lg:col-span-2">
+          <Card className="border-0 shadow-sm h-full">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h5 className="font-bold mb-0">Ventas Ultimos 7 Dias</h5>
+                <div className="flex gap-3">
+                  <div className="flex items-center">
                     <div
-                      className="rounded-circle me-2"
+                      className="rounded-full mr-2"
                       style={{
                         width: "12px",
                         height: "12px",
                         backgroundColor: "#3b82f6",
                       }}
                     />
-                    <small className="text-muted">Actual</small>
+                    <small className="text-muted-foreground">Actual</small>
                   </div>
-                  <div className="d-flex align-items-center">
+                  <div className="flex items-center">
                     <div
-                      className="rounded-circle me-2"
+                      className="rounded-full mr-2"
                       style={{
                         width: "12px",
                         height: "12px",
                         backgroundColor: "#93c5fd",
                       }}
                     />
-                    <small className="text-muted">Anterior</small>
+                    <small className="text-muted-foreground">Anterior</small>
                   </div>
                 </div>
               </div>
-              <div className="position-relative" style={{ height: "300px" }}>
+              <div className="relative" style={{ height: "300px" }}>
                 {dashboardData?.salesTrend &&
                 dashboardData.salesTrend.length > 0 ? (
                   <SalesTrendChart data={dashboardData.salesTrend} />
                 ) : (
-                  <div className="d-flex align-items-center justify-content-center h-100 text-muted">
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
                     <div className="text-center">
-                      <TrendingUp size={48} className="mb-3 opacity-50" />
+                      <TrendingUp size={48} className="mb-3 opacity-50 mx-auto" />
                       <p>No hay datos de ventas disponibles</p>
                     </div>
                   </div>
                 )}
               </div>
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
-        <Col lg={4}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <h5 className="fw-bold mb-3">Mes Actual vs Anterior</h5>
-              <div className="position-relative" style={{ height: "300px" }}>
+        <div>
+          <Card className="border-0 shadow-sm h-full">
+            <CardContent className="p-4">
+              <h5 className="font-bold mb-3">Mes Actual vs Anterior</h5>
+              <div className="relative" style={{ height: "300px" }}>
                 {dashboardData?.monthlyComparison ? (
                   <MonthComparisonChart
                     data={dashboardData.monthlyComparison}
                   />
                 ) : (
-                  <div className="d-flex align-items-center justify-content-center h-100 text-muted">
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
                     <div className="text-center">
-                      <Package size={48} className="mb-3 opacity-50" />
+                      <Package size={48} className="mb-3 opacity-50 mx-auto" />
                       <p>No hay datos disponibles</p>
                     </div>
                   </div>
                 )}
               </div>
-            </Card.Body>
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       {/* Charts Row 2 */}
-      <Row className="g-3 mb-4">
-        <Col lg={4}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <h5 className="fw-bold mb-3">Ventas por Categoría</h5>
-              <div className="position-relative" style={{ height: "300px" }}>
-                {dashboardData?.salesByCategory &&
-                dashboardData.salesByCategory.length > 0 ? (
-                  <CategoryPieChart data={dashboardData.salesByCategory} />
-                ) : (
-                  <div className="d-flex align-items-center justify-content-center h-100 text-muted">
-                    <div className="text-center">
-                      <Package size={48} className="mb-3 opacity-50" />
-                      <p>No hay datos disponibles</p>
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+        <Card className="border-0 shadow-sm h-full">
+          <CardContent className="p-4">
+            <h5 className="font-bold mb-3">Ventas por Categoria</h5>
+            <div className="relative" style={{ height: "300px" }}>
+              {dashboardData?.salesByCategory &&
+              dashboardData.salesByCategory.length > 0 ? (
+                <CategoryPieChart data={dashboardData.salesByCategory} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="text-center">
+                    <Package size={48} className="mb-3 opacity-50 mx-auto" />
+                    <p>No hay datos disponibles</p>
                   </div>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        <Col lg={4}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <h5 className="fw-bold mb-3">Métodos de Pago</h5>
-              <div className="position-relative" style={{ height: "300px" }}>
-                {dashboardData?.salesByPaymentMethod &&
-                dashboardData.salesByPaymentMethod.length > 0 ? (
-                  <PaymentMethodChart
-                    data={dashboardData.salesByPaymentMethod}
-                  />
-                ) : (
-                  <div className="d-flex align-items-center justify-content-center h-100 text-muted">
-                    <div className="text-center">
-                      <DollarSign size={48} className="mb-3 opacity-50" />
-                      <p>No hay datos disponibles</p>
-                    </div>
+        <Card className="border-0 shadow-sm h-full">
+          <CardContent className="p-4">
+            <h5 className="font-bold mb-3">Metodos de Pago</h5>
+            <div className="relative" style={{ height: "300px" }}>
+              {dashboardData?.salesByPaymentMethod &&
+              dashboardData.salesByPaymentMethod.length > 0 ? (
+                <PaymentMethodChart
+                  data={dashboardData.salesByPaymentMethod}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="text-center">
+                    <DollarSign size={48} className="mb-3 opacity-50 mx-auto" />
+                    <p>No hay datos disponibles</p>
                   </div>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        <Col lg={4}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <div className="d-flex align-items-center mb-3">
-                <AlertTriangle size={20} className="text-warning me-2" />
-                <h5 className="fw-bold mb-0">Stock Bajo</h5>
-              </div>
-              <div style={{ maxHeight: "280px", overflowY: "auto" }}>
-                {dashboardData?.lowStockProducts?.length ? (
-                  dashboardData.lowStockProducts.map((product, index) => (
-                    <div
-                      key={`low-stock-${index}-${product._id}`}
-                      className="d-flex justify-content-between align-items-center py-2 border-bottom"
-                    >
-                      <div className="flex-grow-1">
-                        <div className="fw-medium">{product.name}</div>
-                        <small className="text-muted">
-                          Mínimo: {product.minStock}
-                        </small>
-                      </div>
-                      <Badge bg="warning" text="dark">
-                        {product.currentStock}
-                      </Badge>
+        <Card className="border-0 shadow-sm h-full">
+          <CardContent className="p-4">
+            <div className="flex items-center mb-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-500 mr-2" />
+              <h5 className="font-bold mb-0">Stock Bajo</h5>
+            </div>
+            <div style={{ maxHeight: "280px", overflowY: "auto" }}>
+              {dashboardData?.lowStockProducts?.length ? (
+                dashboardData.lowStockProducts.map((product, index) => (
+                  <div
+                    key={`low-stock-${index}-${product._id}`}
+                    className="flex justify-between items-center py-2 border-b"
+                  >
+                    <div className="flex-grow">
+                      <div className="font-medium">{product.name}</div>
+                      <small className="text-muted-foreground">
+                        Minimo: {product.minStock}
+                      </small>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center text-muted py-5">
-                    <Package size={48} className="mb-2 opacity-50" />
-                    <p className="mb-0">Sin productos con stock bajo</p>
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                      {product.currentStock}
+                    </Badge>
                   </div>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground py-5">
+                  <Package size={48} className="mb-2 opacity-50 mx-auto" />
+                  <p className="mb-0">Sin productos con stock bajo</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Charts Row 3 */}
-      <Row className="g-3 mb-4">
-        <Col lg={6}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <h5 className="fw-bold mb-3">Ventas por Hora del Día</h5>
-              <div className="position-relative" style={{ height: "280px" }}>
-                {dashboardData?.salesByHour &&
-                dashboardData.salesByHour.length > 0 ? (
-                  <SalesByHourChart data={dashboardData.salesByHour} />
-                ) : (
-                  <div className="d-flex align-items-center justify-content-center h-100 text-muted">
-                    <div className="text-center">
-                      <Calendar size={48} className="mb-3 opacity-50" />
-                      <p>No hay datos disponibles</p>
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+        <Card className="border-0 shadow-sm h-full">
+          <CardContent className="p-4">
+            <h5 className="font-bold mb-3">Ventas por Hora del Dia</h5>
+            <div className="relative" style={{ height: "280px" }}>
+              {dashboardData?.salesByHour &&
+              dashboardData.salesByHour.length > 0 ? (
+                <SalesByHourChart data={dashboardData.salesByHour} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="text-center">
+                    <Calendar size={48} className="mb-3 opacity-50 mx-auto" />
+                    <p>No hay datos disponibles</p>
                   </div>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        <Col lg={6}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <h5 className="fw-bold mb-3">Ventas por Día de la Semana</h5>
-              <div className="position-relative" style={{ height: "280px" }}>
-                {dashboardData?.salesByDayOfWeek &&
-                dashboardData.salesByDayOfWeek.length > 0 ? (
-                  <SalesByDayChart data={dashboardData.salesByDayOfWeek} />
-                ) : (
-                  <div className="d-flex align-items-center justify-content-center h-100 text-muted">
-                    <div className="text-center">
-                      <Calendar size={48} className="mb-3 opacity-50" />
-                      <p>No hay datos disponibles</p>
-                    </div>
+        <Card className="border-0 shadow-sm h-full">
+          <CardContent className="p-4">
+            <h5 className="font-bold mb-3">Ventas por Dia de la Semana</h5>
+            <div className="relative" style={{ height: "280px" }}>
+              {dashboardData?.salesByDayOfWeek &&
+              dashboardData.salesByDayOfWeek.length > 0 ? (
+                <SalesByDayChart data={dashboardData.salesByDayOfWeek} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="text-center">
+                    <Calendar size={48} className="mb-3 opacity-50 mx-auto" />
+                    <p>No hay datos disponibles</p>
                   </div>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Bottom Row */}
-      <Row className="g-3">
-        <Col lg={6}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <h5 className="fw-bold mb-3">Top Productos Más Vendidos</h5>
-              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-                {dashboardData?.topProducts?.length ? (
-                  dashboardData.topProducts
-                    .slice(0, 5)
-                    .map((product, index) => (
-                      <div
-                        key={`top-product-${index}-${product._id}`}
-                        className="d-flex justify-content-between align-items-center py-3 border-bottom"
-                      >
-                        <div className="d-flex align-items-center gap-3">
-                          <div
-                            className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center fw-bold text-primary"
-                            style={{ width: "40px", height: "40px" }}
-                          >
-                            {index + 1}
-                          </div>
-                          <div>
-                            <div className="fw-medium">{product.name}</div>
-                            <small className="text-muted">
-                              Cantidad: {product.quantity}
-                            </small>
-                          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Card className="border-0 shadow-sm h-full">
+          <CardContent className="p-4">
+            <h5 className="font-bold mb-3">Top Productos Mas Vendidos</h5>
+            <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+              {dashboardData?.topProducts?.length ? (
+                dashboardData.topProducts
+                  .slice(0, 5)
+                  .map((product, index) => (
+                    <div
+                      key={`top-product-${index}-${product._id}`}
+                      className="flex justify-between items-center py-3 border-b"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="rounded-full bg-primary/10 flex items-center justify-content-center font-bold text-primary"
+                          style={{ width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          {index + 1}
                         </div>
-                        <div className="text-end">
-                          <div className="fw-bold">
-                            {formatCurrency(product.revenue)}
-                          </div>
+                        <div>
+                          <div className="font-medium">{product.name}</div>
+                          <small className="text-muted-foreground">
+                            Cantidad: {product.quantity}
+                          </small>
                         </div>
                       </div>
-                    ))
-                ) : (
-                  <div className="text-center text-muted py-5">
-                    <Package size={48} className="mb-2 opacity-50" />
-                    <p className="mb-0">No hay datos disponibles</p>
-                  </div>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col lg={6}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Body>
-              <div className="d-flex align-items-center mb-3">
-                <Award size={20} className="text-primary me-2" />
-                <h5 className="fw-bold mb-0">Ranking de Cajeros</h5>
-              </div>
-              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-                {dashboardData?.cashierRanking?.length ? (
-                  dashboardData.cashierRanking
-                    .slice(0, 5)
-                    .map((cashier, index) => (
-                      <div
-                        key={`cashier-ranking-${index}-${cashier._id}`}
-                        className="d-flex justify-content-between align-items-center py-3 border-bottom"
-                      >
-                        <div className="d-flex align-items-center gap-3">
-                          <div
-                            className={`rounded-circle d-flex align-items-center justify-content-center fw-bold text-white`}
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              backgroundColor:
-                                index === 0
-                                  ? "#f59e0b"
-                                  : index === 1
-                                  ? "#9ca3af"
-                                  : index === 2
-                                  ? "#cd7f32"
-                                  : "#6b7280",
-                            }}
-                          >
-                            {index + 1}
-                          </div>
-                          <div>
-                            <div className="fw-medium">{cashier.name}</div>
-                            <small className="text-muted">
-                              {cashier.salesCount} ventas
-                            </small>
-                          </div>
-                        </div>
-                        <div className="text-end">
-                          <div className="fw-bold text-success">
-                            {formatCurrency(cashier.totalRevenue)}
-                          </div>
+                      <div className="text-end">
+                        <div className="font-bold">
+                          {formatCurrency(product.revenue)}
                         </div>
                       </div>
-                    ))
-                ) : (
-                  <div className="text-center text-muted py-5">
-                    <Award size={48} className="mb-2 opacity-50" />
-                    <p className="mb-0">No hay datos disponibles</p>
-                  </div>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center text-muted-foreground py-5">
+                  <Package size={48} className="mb-2 opacity-50 mx-auto" />
+                  <p className="mb-0">No hay datos disponibles</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Modal de Selección de Sucursal */}
+        <Card className="border-0 shadow-sm h-full">
+          <CardContent className="p-4">
+            <div className="flex items-center mb-3">
+              <Award className="w-5 h-5 text-primary mr-2" />
+              <h5 className="font-bold mb-0">Ranking de Cajeros</h5>
+            </div>
+            <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+              {dashboardData?.cashierRanking?.length ? (
+                dashboardData.cashierRanking
+                  .slice(0, 5)
+                  .map((cashier, index) => (
+                    <div
+                      key={`cashier-ranking-${index}-${cashier._id}`}
+                      className="flex justify-between items-center py-3 border-b"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="rounded-full flex items-center justify-center font-bold text-white"
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            backgroundColor:
+                              index === 0
+                                ? "#f59e0b"
+                                : index === 1
+                                ? "#9ca3af"
+                                : index === 2
+                                ? "#cd7f32"
+                                : "#6b7280",
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+                        <div>
+                          <div className="font-medium">{cashier.name}</div>
+                          <small className="text-muted-foreground">
+                            {cashier.salesCount} ventas
+                          </small>
+                        </div>
+                      </div>
+                      <div className="text-end">
+                        <div className="font-bold text-green-600">
+                          {formatCurrency(cashier.totalRevenue)}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center text-muted-foreground py-5">
+                  <Award size={48} className="mb-2 opacity-50 mx-auto" />
+                  <p className="mb-0">No hay datos disponibles</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Modal de Seleccion de Sucursal */}
       <BranchSelectionModal
         show={showBranchSelectionModal}
         onHide={closeBranchSelectionModal}
@@ -806,14 +750,14 @@ const OrderAnalyticsPage: React.FC = () => {
         onNoBranchesFound={handleNoBranchesFound}
       />
 
-      {/* Modal de Creación de Sucursal */}
+      {/* Modal de Creacion de Sucursal */}
       <BranchModal
         show={showCreateBranchModal}
         onHide={closeCreateBranchModal}
         userCompany={userCompany}
         onBranchSaved={() => {
-          // El modal se cerrará automáticamente y reabrirá el de selección
-          // gracias a la lógica en BranchModal (reopenBranchSelectionAfterCreate)
+          // El modal se cerrara automaticamente y reabrira el de seleccion
+          // gracias a la logica en BranchModal (reopenBranchSelectionAfterCreate)
         }}
       />
     </div>

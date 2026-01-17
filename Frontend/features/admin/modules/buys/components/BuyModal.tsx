@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
+import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { buysService } from "../services/buys";
 import { Buy, CreateBuyData } from "../types";
@@ -14,16 +14,34 @@ import { ExpenseConcept } from "../../expenseConcepts/types";
 import { cashRegistersService } from "../../cash-registers/services/cashRegisters";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface BuyModalProps {
-  show: boolean;
-  onHide: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   buy?: Buy;
   branchId?: string;
 }
 
-const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branchId }) => {
+const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy, branchId }) => {
   const [loading, setLoading] = useState(false);
   const [loadingConcepts, setLoadingConcepts] = useState(false);
   const [loadingCashRegisters, setLoadingCashRegisters] = useState(false);
@@ -48,7 +66,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
   const isAdmin = hasRole("Administrador") || hasRole("Admin");
   const isManager = hasRole("Gerente") || hasRole("Manager");
 
-  // Cargar métodos de pago, proveedores y conceptos
+  // Cargar metodos de pago, proveedores y conceptos
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -78,15 +96,15 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
       }
     };
 
-    if (show) {
+    if (open) {
       loadData();
     }
-  }, [show]);
+  }, [open]);
 
-  // Cargar cajas cuando el método de pago sea efectivo
+  // Cargar cajas cuando el metodo de pago sea efectivo
   useEffect(() => {
     const loadCashRegisters = async () => {
-      if (!show || !formData.paymentMethod) return;
+      if (!open || !formData.paymentMethod) return;
 
       const selectedPaymentMethod = paymentMethods.find(pm => pm._id === formData.paymentMethod);
       const isEffectivo = selectedPaymentMethod?.name?.toLowerCase().includes('efectivo') || false;
@@ -95,7 +113,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
         try {
           setLoadingCashRegisters(true);
 
-          // Si es gerente, buscar por managerId (sin filtro, el backend filtrará por usuario)
+          // Si es gerente, buscar por managerId (sin filtro, el backend filtrara por usuario)
           if (isManager) {
             const response = await cashRegistersService.getAllCashRegisters({
               isActive: true,
@@ -135,9 +153,9 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
     };
 
     loadCashRegisters();
-  }, [show, formData.paymentMethod, paymentMethods, branchId, activeBranch, isManager, isAdmin]);
+  }, [open, formData.paymentMethod, paymentMethods, branchId, activeBranch, isManager, isAdmin]);
 
-  // Cargar datos del buy si está editando
+  // Cargar datos del buy si esta editando
   useEffect(() => {
     if (buy) {
       setFormData({
@@ -189,7 +207,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
         await buysService.updateBuy(buy._id, formData);
         toast.success("Compra actualizada exitosamente");
       } else {
-        // Incluir el branchId en la creación si se proporciona
+        // Incluir el branchId en la creacion si se proporciona
         const createData = branchId ? { ...formData, branch: branchId } : formData;
         await buysService.createBuy(createData);
         toast.success("Compra creada exitosamente");
@@ -215,222 +233,209 @@ const BuyModal: React.FC<BuyModalProps> = ({ show, onHide, onSuccess, buy, branc
       cashRegister: "",
     });
     setCashRegisters([]);
-    onHide();
+    onOpenChange(false);
   };
 
+  const selectedPaymentMethod = paymentMethods.find(pm => pm._id === formData.paymentMethod);
+  const isEffectivo = selectedPaymentMethod?.name?.toLowerCase().includes('efectivo') || false;
+
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered backdrop="static">
-      <Modal.Header closeButton className="border-0">
-        <Modal.Title className="fw-bold">
-          {isEditing ? "Editar Compra" : "Nueva Compra"}
-        </Modal.Title>
-      </Modal.Header>
-      <Form onSubmit={handleSubmit}>
-        <Modal.Body className="p-4">
-          <Row className="g-3">
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Fecha de Pago <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-bold">
+            {isEditing ? "Editar Compra" : "Nueva Compra"}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Fecha de Pago <span className="text-destructive">*</span>
+                </Label>
+                <Input
                   type="date"
                   value={formData.paymentDate}
                   onChange={(e) =>
                     setFormData({ ...formData, paymentDate: e.target.value })
                   }
                   required
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
+                  className="bg-muted/50 border-0"
                 />
-              </Form.Group>
-            </Col>
+              </div>
 
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Forma de Pago <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Select
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Forma de Pago <span className="text-destructive">*</span>
+                </Label>
+                <Select
                   value={formData.paymentMethod}
-                  onChange={(e) =>
-                    setFormData({ ...formData, paymentMethod: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, paymentMethod: value })
                   }
-                  required
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
                 >
-                  <option value="">Seleccionar...</option>
-                  {paymentMethods.map((pm) => (
-                    <option key={pm._id} value={pm._id}>
-                      {pm.name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
+                  <SelectTrigger className="bg-muted/50 border-0 w-full">
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((pm) => (
+                      <SelectItem key={pm._id} value={pm._id}>
+                        {pm.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* Caja Registradora (solo para efectivo) */}
-            {(() => {
-              const selectedPaymentMethod = paymentMethods.find(pm => pm._id === formData.paymentMethod);
-              const isEffectivo = selectedPaymentMethod?.name?.toLowerCase().includes('efectivo') || false;
-
-              return isEffectivo && (
-                <Col md={12}>
-                  <Form.Group>
-                    <Form.Label className="fw-semibold">
-                      Caja Registradora (Opcional)
-                    </Form.Label>
-                    <Form.Select
-                      value={formData.cashRegister}
-                      onChange={(e) =>
-                        setFormData({ ...formData, cashRegister: e.target.value })
-                      }
-                      disabled={loadingCashRegisters || cashRegisters.length === 0}
-                      className="border-0 bg-light"
-                      style={{ borderRadius: "10px", padding: "12px 16px" }}
-                    >
-                      <option value="">
-                        {loadingCashRegisters
+            {isEffectivo && (
+              <div className="space-y-2">
+                <Label className="font-semibold">
+                  Caja Registradora (Opcional)
+                </Label>
+                <Select
+                  value={formData.cashRegister}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, cashRegister: value })
+                  }
+                  disabled={loadingCashRegisters || cashRegisters.length === 0}
+                >
+                  <SelectTrigger className="bg-muted/50 border-0 w-full">
+                    <SelectValue
+                      placeholder={
+                        loadingCashRegisters
                           ? "Cargando cajas..."
                           : cashRegisters.length === 0
                           ? "No hay cajas disponibles"
-                          : "Seleccionar caja (opcional)..."}
-                      </option>
-                      {cashRegisters.map((cashRegister) => (
-                        <option key={cashRegister._id} value={cashRegister._id}>
-                          {cashRegister.name} - Saldo: $
-                          {cashRegister.currentBalance.toFixed(2)}
-                        </option>
-                      ))}
-                    </Form.Select>
-                    <Form.Text className="text-muted">
-                      Si seleccionas una caja, el monto se descontará automáticamente
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              );
-            })()}
+                          : "Seleccionar caja (opcional)..."
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cashRegisters.map((cashRegister) => (
+                      <SelectItem key={cashRegister._id} value={cashRegister._id}>
+                        {cashRegister.name} - Saldo: $
+                        {cashRegister.currentBalance.toFixed(2)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Si seleccionas una caja, el monto se descontara automaticamente
+                </p>
+              </div>
+            )}
 
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Proveedor
-                </Form.Label>
-                <Form.Select
-                  value={formData.provider}
-                  onChange={(e) =>
-                    setFormData({ ...formData, provider: e.target.value })
-                  }
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                >
-                  <option value="">Seleccionar proveedor (opcional)...</option>
+            <div className="space-y-2">
+              <Label className="font-semibold">Proveedor</Label>
+              <Select
+                value={formData.provider}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, provider: value })
+                }
+              >
+                <SelectTrigger className="bg-muted/50 border-0 w-full">
+                  <SelectValue placeholder="Seleccionar proveedor (opcional)..." />
+                </SelectTrigger>
+                <SelectContent>
                   {providers.map((provider) => (
-                    <option key={provider._id} value={provider._id}>
+                    <SelectItem key={provider._id} value={provider._id}>
                       {provider.tradeName} - {provider.rfc}
-                    </option>
+                    </SelectItem>
                   ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Concepto <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Select
-                  value={formData.concept}
-                  onChange={(e) =>
-                    setFormData({ ...formData, concept: e.target.value })
-                  }
-                  required
-                  disabled={loadingConcepts}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                >
-                  <option value="">
-                    {loadingConcepts ? "Cargando conceptos..." : "Seleccionar concepto..."}
-                  </option>
+            <div className="space-y-2">
+              <Label className="font-semibold">
+                Concepto <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.concept}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, concept: value })
+                }
+                disabled={loadingConcepts}
+              >
+                <SelectTrigger className="bg-muted/50 border-0 w-full">
+                  <SelectValue
+                    placeholder={
+                      loadingConcepts ? "Cargando conceptos..." : "Seleccionar concepto..."
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
                   {expenseConcepts.map((concept) => (
-                    <option key={concept._id} value={concept._id}>
+                    <SelectItem key={concept._id} value={concept._id}>
                       {concept.name}
                       {concept.description && ` - ${concept.description}`}
-                    </option>
+                    </SelectItem>
                   ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Importe <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.amount || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
-                  }
-                  required
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                />
-              </Form.Group>
-            </Col>
+            <div className="space-y-2">
+              <Label className="font-semibold">
+                Importe <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={formData.amount || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
+                }
+                required
+                className="bg-muted/50 border-0"
+              />
+            </div>
 
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Descripción</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  placeholder="Descripción adicional de la compra..."
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "10px", padding: "12px 16px" }}
-                />
-              </Form.Group>
-            </Col>
-          </Row>
-        </Modal.Body>
-        <Modal.Footer className="border-0">
-          <Button
-            variant="light"
-            onClick={handleClose}
-            disabled={loading}
-            style={{ borderRadius: "10px" }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={loading}
-            style={{
-              borderRadius: "10px",
-              minWidth: "120px",
-            }}
-          >
-            {loading ? (
-              <Spinner animation="border" size="sm" />
-            ) : isEditing ? (
-              "Actualizar"
-            ) : (
-              "Guardar"
-            )}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+            <div className="space-y-2">
+              <Label className="font-semibold">Descripcion</Label>
+              <Textarea
+                rows={3}
+                placeholder="Descripcion adicional de la compra..."
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                className="bg-muted/50 border-0"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="min-w-[120px]"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isEditing ? (
+                "Actualizar"
+              ) : (
+                "Guardar"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

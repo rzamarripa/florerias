@@ -1,7 +1,24 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Badge, Table, Button, Spinner } from "react-bootstrap";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter,
+} from "@/components/ui/table";
 import {
   User,
   Phone,
@@ -19,6 +36,7 @@ import {
   Clock,
   FileText,
   XCircle,
+  Loader2,
 } from "lucide-react";
 import { Sale } from "../types";
 import ActivityStream from "./ActivityStream";
@@ -77,34 +95,18 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
     });
   };
 
-  const formatShortDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString("es-MX", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { bg: string; text: string }> = {
-      pendiente: { bg: "warning", text: "Pendiente" },
-      "en-proceso": { bg: "info", text: "En Proceso" },
-      completado: { bg: "success", text: "Completado" },
-      cancelado: { bg: "danger", text: "Cancelado" },
+    const statusMap: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; text: string }> = {
+      pendiente: { variant: "secondary", text: "Pendiente" },
+      "en-proceso": { variant: "default", text: "En Proceso" },
+      completado: { variant: "default", text: "Completado" },
+      cancelado: { variant: "destructive", text: "Cancelado" },
     };
 
-    const statusInfo = statusMap[status] || { bg: "secondary", text: status };
+    const statusInfo = statusMap[status] || { variant: "secondary" as const, text: status };
 
     return (
-      <Badge
-        bg={statusInfo.bg}
-        style={{
-          padding: "8px 16px",
-          borderRadius: "20px",
-          fontWeight: "600",
-          fontSize: "14px",
-        }}
-      >
+      <Badge variant={statusInfo.variant} className="px-4 py-1.5 rounded-full font-semibold text-sm">
         {statusInfo.text}
       </Badge>
     );
@@ -116,288 +118,201 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
       : sale.discount || 0;
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      size="xl"
-      centered
-      contentClassName="border-0 shadow-lg"
-    >
-      <Modal.Header
-        closeButton
-        className="border-0 pb-0"
-        style={{ background: "#f8f9fa" }}
-      >
-        <Modal.Title className="w-100">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h4 className="mb-1 fw-bold">
-                Detalle de Venta #{sale.orderNumber || sale._id.slice(-8)}
-              </h4>
-              <p className="text-muted mb-0" style={{ fontSize: "14px" }}>
-                {formatDate(sale.createdAt)}
-              </p>
-            </div>
-            <div className="d-flex align-items-center gap-2">
-              <Button
-                variant={showActivity ? "primary" : "outline-primary"}
-                size="sm"
-                onClick={() => setShowActivity(!showActivity)}
-                className="d-flex align-items-center gap-2"
-                style={{
-                  borderRadius: "8px",
-                  fontWeight: "600",
-                }}
-              >
-                {showActivity ? <FileText size={16} /> : <Clock size={16} />}
-                {showActivity ? "Ver Detalle" : "Ver Historial"}
-              </Button>
-            </div>
-          </div>
-        </Modal.Title>
-      </Modal.Header>
-
-      <Modal.Body className="p-4" style={{ background: "#f8f9fa" }}>
-        {showActivity ? (
-          /* Mostrar Activity Stream */
-          <ActivityStream orderId={sale._id} />
-        ) : (
-          <>
-            {/* Banner de Cancelación */}
-            {sale.status === "cancelado" && (
-              <div
-                className="alert alert-danger d-flex align-items-start mb-4"
-                role="alert"
-                style={{
-                  borderRadius: "12px",
-                  border: "none",
-                  backgroundColor: "rgba(220, 53, 69, 0.1)",
-                }}
-              >
-                <div
-                  className="d-flex align-items-center justify-content-center me-3 flex-shrink-0"
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "12px",
-                    backgroundColor: "rgba(220, 53, 69, 0.2)",
-                  }}
-                >
-                  <XCircle size={24} className="text-danger" />
-                </div>
-                <div className="flex-grow-1">
-                  <h6 className="alert-heading fw-bold mb-1 text-danger">
-                    Orden Cancelada
-                  </h6>
-                  <p className="mb-1 fw-semibold" style={{ color: "#721c24" }}>
-                    Motivo: {sale.cancellationReason || "No especificado"}
-                  </p>
-                  {sale.cancelledAt && (
-                    <small className="text-muted">
-                      Cancelada el {formatDate(sale.cancelledAt)}
-                      {sale.cancelledBy &&
-                        typeof sale.cancelledBy === "object" &&
-                        ` por ${sale.cancelledBy.name}`}
-                    </small>
-                  )}
-                </div>
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-50">
+        <DialogHeader className="pb-0">
+          <DialogTitle className="w-full">
+            <div className="flex justify-between items-center">
+              <div>
+                <h4 className="mb-1 font-bold text-xl">
+                  Detalle de Venta #{sale.orderNumber || sale._id.slice(-8)}
+                </h4>
+                <p className="text-muted-foreground mb-0 text-sm font-normal">
+                  {formatDate(sale.createdAt)}
+                </p>
               </div>
-            )}
-
-            {/* Resumen Financiero - Cards */}
-            <div className="row g-3 mb-4">
-              {/* Card Subtotal */}
-              <div className="col-lg-3 col-md-6">
-                <div
-                  className="card border-0 shadow-sm"
-                  style={{ borderRadius: "12px" }}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={showActivity ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowActivity(!showActivity)}
+                  className="flex items-center gap-2 rounded-lg font-semibold"
                 >
-                  <div className="card-body p-3">
-                    <div className="d-flex align-items-center justify-content-between mb-2">
-                      <h6
-                        className="text-muted mb-0 fw-normal"
-                        style={{ fontSize: "13px" }}
-                      >
+                  {showActivity ? <FileText className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                  {showActivity ? "Ver Detalle" : "Ver Historial"}
+                </Button>
+              </div>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="p-4">
+          {showActivity ? (
+            /* Mostrar Activity Stream */
+            <ActivityStream orderId={sale._id} />
+          ) : (
+            <>
+              {/* Banner de Cancelacion */}
+              {sale.status === "cancelado" && (
+                <div
+                  className="flex items-start mb-4 p-4 rounded-xl bg-red-50 text-red-800"
+                  role="alert"
+                >
+                  <div
+                    className="flex items-center justify-center mr-3 flex-shrink-0 w-12 h-12 rounded-xl bg-red-100"
+                  >
+                    <XCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <h6 className="font-bold mb-1 text-red-700">
+                      Orden Cancelada
+                    </h6>
+                    <p className="mb-1 font-semibold text-red-700">
+                      Motivo: {sale.cancellationReason || "No especificado"}
+                    </p>
+                    {sale.cancelledAt && (
+                      <small className="text-muted-foreground">
+                        Cancelada el {formatDate(sale.cancelledAt)}
+                        {sale.cancelledBy &&
+                          typeof sale.cancelledBy === "object" &&
+                          ` por ${sale.cancelledBy.name}`}
+                      </small>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Resumen Financiero - Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                {/* Card Subtotal */}
+                <Card className="border-0 shadow-sm rounded-xl">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h6 className="text-muted-foreground mb-0 font-normal text-xs">
                         Subtotal
                       </h6>
                       <div
-                        className="d-flex align-items-center justify-content-center"
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "10px",
-                          background: "rgba(52, 152, 219, 0.1)",
-                        }}
+                        className="flex items-center justify-center w-10 h-10 rounded-lg"
+                        style={{ background: "rgba(52, 152, 219, 0.1)" }}
                       >
-                        <Receipt size={20} style={{ color: "#3498DB" }} />
+                        <Receipt className="h-5 w-5" style={{ color: "#3498DB" }} />
                       </div>
                     </div>
-                    <h3 className="mb-0 fw-bold" style={{ fontSize: "24px" }}>
+                    <h3 className="mb-0 font-bold text-2xl">
                       {formatCurrency(sale.subtotal || 0)}
                     </h3>
-                  </div>
-                </div>
-              </div>
+                  </CardContent>
+                </Card>
 
-              {/* Card Descuento */}
-              <div className="col-lg-3 col-md-6">
-                <div
-                  className="card border-0 shadow-sm"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div className="card-body p-3">
-                    <div className="d-flex align-items-center justify-content-between mb-2">
-                      <h6
-                        className="text-muted mb-0 fw-normal"
-                        style={{ fontSize: "13px" }}
-                      >
+                {/* Card Descuento */}
+                <Card className="border-0 shadow-sm rounded-xl">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h6 className="text-muted-foreground mb-0 font-normal text-xs">
                         Descuento
                       </h6>
                       <div
-                        className="d-flex align-items-center justify-content-center"
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "10px",
-                          background: "rgba(231, 76, 60, 0.1)",
-                        }}
+                        className="flex items-center justify-center w-10 h-10 rounded-lg"
+                        style={{ background: "rgba(231, 76, 60, 0.1)" }}
                       >
-                        <TrendingDown size={20} style={{ color: "#E74C3C" }} />
+                        <TrendingDown className="h-5 w-5" style={{ color: "#E74C3C" }} />
                       </div>
                     </div>
-                    <h3
-                      className="mb-0 fw-bold text-danger"
-                      style={{ fontSize: "24px" }}
-                    >
+                    <h3 className="mb-0 font-bold text-2xl text-red-500">
                       -{formatCurrency(discountAmount)}
                     </h3>
                     {sale.discount > 0 && (
-                      <small className="text-muted">
+                      <small className="text-muted-foreground">
                         {sale.discountType === "porcentaje"
                           ? `${sale.discount}%`
                           : "Cantidad fija"}
                       </small>
                     )}
-                  </div>
-                </div>
-              </div>
+                  </CardContent>
+                </Card>
 
-              {/* Card Total */}
-              <div className="col-lg-3 col-md-6">
-                <div
-                  className="card border-0 shadow-sm"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div className="card-body p-3">
-                    <div className="d-flex align-items-center justify-content-between mb-2">
-                      <h6
-                        className="text-muted mb-0 fw-normal"
-                        style={{ fontSize: "13px" }}
-                      >
+                {/* Card Total */}
+                <Card className="border-0 shadow-sm rounded-xl">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h6 className="text-muted-foreground mb-0 font-normal text-xs">
                         Total
                       </h6>
                       <div
-                        className="d-flex align-items-center justify-content-center"
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "10px",
-                          background: "rgba(26, 188, 156, 0.1)",
-                        }}
+                        className="flex items-center justify-center w-10 h-10 rounded-lg"
+                        style={{ background: "rgba(26, 188, 156, 0.1)" }}
                       >
-                        <DollarSign size={20} style={{ color: "#1ABC9C" }} />
+                        <DollarSign className="h-5 w-5" style={{ color: "#1ABC9C" }} />
                       </div>
                     </div>
-                    <h3
-                      className="mb-0 fw-bold text-success"
-                      style={{ fontSize: "24px" }}
-                    >
+                    <h3 className="mb-0 font-bold text-2xl text-green-500">
                       {formatCurrency(sale.total || 0)}
                     </h3>
-                  </div>
-                </div>
-              </div>
+                  </CardContent>
+                </Card>
 
-              {/* Card Saldo Pendiente */}
-              <div className="col-lg-3 col-md-6">
-                <div
-                  className="card border-0 shadow-sm"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div className="card-body p-3">
-                    <div className="d-flex align-items-center justify-content-between mb-2">
-                      <h6
-                        className="text-muted mb-0 fw-normal"
-                        style={{ fontSize: "13px" }}
-                      >
+                {/* Card Saldo Pendiente */}
+                <Card className="border-0 shadow-sm rounded-xl">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h6 className="text-muted-foreground mb-0 font-normal text-xs">
                         Saldo Pendiente
                       </h6>
                       <div
-                        className="d-flex align-items-center justify-content-center"
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          borderRadius: "10px",
-                          background: "rgba(243, 156, 18, 0.1)",
-                        }}
+                        className="flex items-center justify-center w-10 h-10 rounded-lg"
+                        style={{ background: "rgba(243, 156, 18, 0.1)" }}
                       >
-                        <CreditCard size={20} style={{ color: "#F39C12" }} />
+                        <CreditCard className="h-5 w-5" style={{ color: "#F39C12" }} />
                       </div>
                     </div>
                     <h3
-                      className="mb-0 fw-bold"
+                      className="mb-0 font-bold text-2xl"
                       style={{
-                        fontSize: "24px",
                         color: sale.remainingBalance > 0 ? "#F39C12" : "#1ABC9C",
                       }}
                     >
                       {formatCurrency(sale.remainingBalance || 0)}
                     </h3>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
 
-            {/* Información del Cliente y Entrega */}
-            <div className="row g-3 mb-4">
-              {/* Cliente */}
-              <div className="col-md-6">
-                <div
-                  className="card border-0 shadow-sm h-100"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div className="card-body p-4">
-                    <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                      <User size={20} className="text-primary" />
-                      Información del Cliente
+              {/* Informacion del Cliente y Entrega */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                {/* Cliente */}
+                <Card className="border-0 shadow-sm h-full rounded-xl">
+                  <CardContent className="p-4">
+                    <h5 className="font-bold mb-3 flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
+                      Informacion del Cliente
                     </h5>
                     <div className="mb-3">
-                      <div className="d-flex align-items-start gap-2 mb-2">
-                        <User size={16} className="text-muted mt-1" />
+                      <div className="flex items-start gap-2 mb-2">
+                        <User className="h-4 w-4 text-muted-foreground mt-1" />
                         <div>
-                          <small className="text-muted d-block">Cliente</small>
-                          <span className="fw-semibold">
+                          <small className="text-muted-foreground block">Cliente</small>
+                          <span className="font-semibold">
                             {sale.clientInfo?.name || "N/A"}
                           </span>
                         </div>
                       </div>
                       {sale.clientInfo?.phone && (
-                        <div className="d-flex align-items-start gap-2 mb-2">
-                          <Phone size={16} className="text-muted mt-1" />
+                        <div className="flex items-start gap-2 mb-2">
+                          <Phone className="h-4 w-4 text-muted-foreground mt-1" />
                           <div>
-                            <small className="text-muted d-block">Teléfono</small>
-                            <span className="fw-semibold">
+                            <small className="text-muted-foreground block">Telefono</small>
+                            <span className="font-semibold">
                               {sale.clientInfo.phone}
                             </span>
                           </div>
                         </div>
                       )}
                       {sale.clientInfo?.email && (
-                        <div className="d-flex align-items-start gap-2">
-                          <Mail size={16} className="text-muted mt-1" />
+                        <div className="flex items-start gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground mt-1" />
                           <div>
-                            <small className="text-muted d-block">Email</small>
-                            <span className="fw-semibold">
+                            <small className="text-muted-foreground block">Email</small>
+                            <span className="font-semibold">
                               {sale.clientInfo.email}
                             </span>
                           </div>
@@ -405,23 +320,23 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                       )}
                     </div>
 
-                    <div className="mt-3 pt-3 border-top">
-                      <div className="d-flex align-items-center gap-2 mb-2">
-                        <Building size={16} className="text-muted" />
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Building className="h-4 w-4 text-muted-foreground" />
                         <div>
-                          <small className="text-muted d-block">Canal</small>
-                          <Badge bg="secondary" className="text-capitalize">
+                          <small className="text-muted-foreground block">Canal</small>
+                          <Badge variant="secondary" className="capitalize">
                             {sale.salesChannel || "tienda"}
                           </Badge>
                         </div>
                       </div>
-                      <div className="d-flex align-items-center gap-2">
-                        <CreditCard size={16} className="text-muted" />
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
                         <div>
-                          <small className="text-muted d-block">
-                            Método de Pago
+                          <small className="text-muted-foreground block">
+                            Metodo de Pago
                           </small>
-                          <Badge bg="primary">
+                          <Badge>
                             {typeof sale.paymentMethod === "string"
                               ? sale.paymentMethod
                               : sale.paymentMethod?.name || "N/A"}
@@ -429,63 +344,56 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
+                  </CardContent>
+                </Card>
 
-              {/* Entrega */}
-              <div className="col-md-6">
-                <div
-                  className="card border-0 shadow-sm h-100"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div className="card-body p-4">
-                    <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                      <Truck size={20} className="text-primary" />
+                {/* Entrega */}
+                <Card className="border-0 shadow-sm h-full rounded-xl">
+                  <CardContent className="p-4">
+                    <h5 className="font-bold mb-3 flex items-center gap-2">
+                      <Truck className="h-5 w-5 text-primary" />
                       Datos de Entrega
                     </h5>
                     <div className="mb-3">
-                      <div className="d-flex align-items-start gap-2 mb-2">
-                        <User size={16} className="text-muted mt-1" />
+                      <div className="flex items-start gap-2 mb-2">
+                        <User className="h-4 w-4 text-muted-foreground mt-1" />
                         <div>
-                          <small className="text-muted d-block">
+                          <small className="text-muted-foreground block">
                             Recibe
                           </small>
-                          <span className="fw-semibold">
+                          <span className="font-semibold">
                             {sale.deliveryData?.recipientName || "N/A"}
                           </span>
                         </div>
                       </div>
-                      <div className="d-flex align-items-start gap-2 mb-2">
-                        <Calendar size={16} className="text-muted mt-1" />
+                      <div className="flex items-start gap-2 mb-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground mt-1" />
                         <div>
-                          <small className="text-muted d-block">
+                          <small className="text-muted-foreground block">
                             Fecha de Entrega
                           </small>
-                          <span className="fw-semibold">
+                          <span className="font-semibold">
                             {sale.deliveryData?.deliveryDateTime
                               ? formatDate(sale.deliveryData.deliveryDateTime)
                               : "N/A"}
                           </span>
                         </div>
                       </div>
-                      <div className="d-flex align-items-start gap-2 mb-2">
-                        <Package size={16} className="text-muted mt-1" />
+                      <div className="flex items-start gap-2 mb-2">
+                        <Package className="h-4 w-4 text-muted-foreground mt-1" />
                         <div>
-                          <small className="text-muted d-block">
-                            Tipo de Envío
+                          <small className="text-muted-foreground block">
+                            Tipo de Envio
                           </small>
                           <Badge
-                            bg={
-                              sale.shippingType === "envio" ? "info" : "secondary"
-                            }
-                            className="text-capitalize"
+                            variant={sale.shippingType === "envio" ? "default" : "secondary"}
+                            className="capitalize"
                           >
                             {sale.shippingType}
                           </Badge>
                           {sale.shippingType === "envio" &&
                             sale.deliveryData?.deliveryPrice > 0 && (
-                              <span className="ms-2 text-muted">
+                              <span className="ml-2 text-muted-foreground">
                                 (
                                 {formatCurrency(
                                   sale.deliveryData.deliveryPrice
@@ -498,17 +406,17 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
 
                       {sale.shippingType === "envio" &&
                         sale.deliveryData?.street && (
-                          <div className="d-flex align-items-start gap-2">
-                            <MapPin size={16} className="text-muted mt-1" />
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
                             <div>
-                              <small className="text-muted d-block">
-                                Dirección
+                              <small className="text-muted-foreground block">
+                                Direccion
                               </small>
-                              <span className="fw-semibold">
+                              <span className="font-semibold">
                                 {sale.deliveryData.street}
                               </span>
                               {sale.deliveryData.reference && (
-                                <small className="d-block text-muted mt-1">
+                                <small className="block text-muted-foreground mt-1">
                                   {sale.deliveryData.reference}
                                 </small>
                               )}
@@ -518,151 +426,133 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                     </div>
 
                     {sale.deliveryData?.message && (
-                      <div className="mt-3 pt-3 border-top">
-                        <div className="d-flex align-items-start gap-2">
-                          <MessageSquare size={16} className="text-muted mt-1" />
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex items-start gap-2">
+                          <MessageSquare className="h-4 w-4 text-muted-foreground mt-1" />
                           <div>
-                            <small className="text-muted d-block">Mensaje</small>
-                            <p className="mb-0 fst-italic">
+                            <small className="text-muted-foreground block">Mensaje</small>
+                            <p className="mb-0 italic">
                               {sale.deliveryData.message}
                             </p>
                           </div>
                         </div>
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
 
-            {/* Productos */}
-            <div
-              className="card border-0 shadow-sm mb-4"
-              style={{ borderRadius: "12px" }}
-            >
-              <div className="card-body p-0">
-                <div className="p-4 border-bottom">
-                  <h5 className="fw-bold mb-0 d-flex align-items-center gap-2">
-                    <Package size={20} className="text-primary" />
+              {/* Productos */}
+              <Card className="border-0 shadow-sm mb-4 rounded-xl">
+                <CardHeader className="p-4 border-b">
+                  <CardTitle className="font-bold mb-0 flex items-center gap-2">
+                    <Package className="h-5 w-5 text-primary" />
                     Productos
-                  </h5>
-                </div>
-
-                <div className="table-responsive">
-                  <Table hover className="mb-0">
-                    <thead style={{ background: "#f8f9fa" }}>
-                      <tr>
-                        <th className="px-4 py-3 fw-semibold text-muted">
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-gray-50">
+                      <TableRow>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                           CANTIDAD
-                        </th>
-                        <th className="px-4 py-3 fw-semibold text-muted">
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                           PRODUCTO
-                        </th>
-                        <th className="px-4 py-3 fw-semibold text-muted">TIPO</th>
-                        <th className="px-4 py-3 fw-semibold text-muted text-end">
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">TIPO</TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
                           PRECIO UNIT.
-                        </th>
-                        <th className="px-4 py-3 fw-semibold text-muted text-end">
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
                           IMPORTE
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {sale.items && sale.items.length > 0 ? (
                         sale.items.map((item, index) => (
-                          <tr
-                            key={index}
-                            style={{ borderBottom: "1px solid #f1f3f5" }}
-                          >
-                            <td className="px-4 py-3 fw-semibold">
+                          <TableRow key={index}>
+                            <TableCell className="px-4 py-3 font-semibold">
                               {item.quantity}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="fw-semibold">{item.productName}</div>
-                            </td>
-                            <td className="px-4 py-3">
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="font-semibold">{item.productName}</div>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
                               <Badge
-                                bg={item.isProduct ? "success" : "secondary"}
+                                variant={item.isProduct ? "default" : "secondary"}
                                 className="text-white"
                               >
-                                {item.isProduct ? "Catálogo" : "Manual"}
+                                {item.isProduct ? "Catalogo" : "Manual"}
                               </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-end">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-right">
                               {formatCurrency(item.unitPrice)}
-                            </td>
-                            <td className="px-4 py-3 text-end fw-bold">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-right font-bold">
                               {formatCurrency(item.amount)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))
                       ) : (
-                        <tr>
-                          <td colSpan={5} className="text-center py-5 text-muted">
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-5 text-muted-foreground">
                             No hay productos en esta venta
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </tbody>
+                    </TableBody>
                   </Table>
-                </div>
-              </div>
-            </div>
+                </CardContent>
+              </Card>
 
-            {/* Historial de Pagos */}
-            <div
-              className="card border-0 shadow-sm mb-4"
-              style={{ borderRadius: "12px" }}
-            >
-              <div className="card-body p-0">
-                <div className="p-4 border-bottom">
-                  <h5 className="fw-bold mb-0 d-flex align-items-center gap-2">
-                    <CreditCard size={20} className="text-primary" />
+              {/* Historial de Pagos */}
+              <Card className="border-0 shadow-sm mb-4 rounded-xl">
+                <CardHeader className="p-4 border-b">
+                  <CardTitle className="font-bold mb-0 flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
                     Historial de Pagos
-                  </h5>
-                </div>
-
-                {loadingPayments ? (
-                  <div className="text-center py-4">
-                    <Spinner animation="border" size="sm" variant="primary" />
-                    <p className="text-muted mt-2 mb-0">Cargando pagos...</p>
-                  </div>
-                ) : payments.length === 0 ? (
-                  <div className="text-center py-4 text-muted">
-                    <p className="mb-0">No hay pagos adicionales registrados</p>
-                  </div>
-                ) : (
-                  <div className="table-responsive">
-                    <Table hover className="mb-0">
-                      <thead style={{ background: "#f8f9fa" }}>
-                        <tr>
-                          <th className="px-4 py-3 fw-semibold text-muted">
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {loadingPayments ? (
+                    <div className="text-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto" />
+                      <p className="text-muted-foreground mt-2 mb-0">Cargando pagos...</p>
+                    </div>
+                  ) : payments.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground">
+                      <p className="mb-0">No hay pagos adicionales registrados</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader className="bg-gray-50">
+                        <TableRow>
+                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                             FECHA
-                          </th>
-                          <th className="px-4 py-3 fw-semibold text-muted">
-                            MÉTODO
-                          </th>
-                          <th className="px-4 py-3 fw-semibold text-muted">
+                          </TableHead>
+                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                            METODO
+                          </TableHead>
+                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                             CAJA
-                          </th>
-                          <th className="px-4 py-3 fw-semibold text-muted">
+                          </TableHead>
+                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                             REGISTRADO POR
-                          </th>
-                          <th className="px-4 py-3 fw-semibold text-muted">
+                          </TableHead>
+                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                             NOTAS
-                          </th>
-                          <th className="px-4 py-3 fw-semibold text-muted text-end">
+                          </TableHead>
+                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
                             MONTO
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {payments.map((payment) => (
-                          <tr
-                            key={payment._id}
-                            style={{ borderBottom: "1px solid #f1f3f5" }}
-                          >
-                            <td className="px-4 py-3">
+                          <TableRow key={payment._id}>
+                            <TableCell className="px-4 py-3">
                               {new Date(payment.date).toLocaleString("es-MX", {
                                 year: "numeric",
                                 month: "2-digit",
@@ -670,138 +560,135 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge bg="primary">
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <Badge>
                                 {payment.paymentMethod?.name || "N/A"}
                               </Badge>
-                            </td>
-                            <td className="px-4 py-3">
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
                               {payment.cashRegisterId?.name || "N/A"}
-                            </td>
-                            <td className="px-4 py-3">
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
                               {payment.registeredBy?.username || "N/A"}
-                            </td>
-                            <td className="px-4 py-3 text-muted">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-muted-foreground">
                               {payment.notes || "-"}
-                            </td>
-                            <td className="px-4 py-3 fw-bold text-success text-end">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 font-bold text-green-500 text-right">
                               {formatCurrency(payment.amount)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                      <tfoot style={{ background: "#f8f9fa" }}>
-                        <tr>
-                          <td colSpan={5} className="px-4 py-3 fw-bold text-end">
+                      </TableBody>
+                      <TableFooter className="bg-gray-50">
+                        <TableRow>
+                          <TableCell colSpan={5} className="px-4 py-3 font-bold text-right">
                             Total pagos adicionales:
-                          </td>
-                          <td className="px-4 py-3 fw-bold text-success text-end">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 font-bold text-green-500 text-right">
                             {formatCurrency(
                               payments.reduce((sum, p) => sum + p.amount, 0)
                             )}
-                          </td>
-                        </tr>
-                      </tfoot>
+                          </TableCell>
+                        </TableRow>
+                      </TableFooter>
                     </Table>
-                  </div>
-                )}
-              </div>
-            </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            {/* Resumen de Pago */}
-            <div
-              className="card border-0 shadow-sm"
-              style={{ borderRadius: "12px" }}
-            >
-              <div className="card-body p-4">
-                <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                  <DollarSign size={20} className="text-primary" />
-                  Resumen de Pago
-                </h5>
-                <div className="row">
-                  <div className="col-md-6 offset-md-6">
-                    <div className="d-flex justify-content-between mb-2">
-                      <span className="text-muted">Subtotal:</span>
-                      <span className="fw-semibold">
-                        {formatCurrency(sale.subtotal || 0)}
-                      </span>
-                    </div>
-                    {sale.discount > 0 && (
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="text-muted">
-                          Descuento (
-                          {sale.discountType === "porcentaje"
-                            ? `${sale.discount}%`
-                            : "Fijo"}
-                          ):
-                        </span>
-                        <span className="fw-semibold text-danger">
-                          -{formatCurrency(discountAmount)}
+              {/* Resumen de Pago */}
+              <Card className="border-0 shadow-sm rounded-xl">
+                <CardContent className="p-4">
+                  <h5 className="font-bold mb-3 flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                    Resumen de Pago
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2">
+                    <div className="md:col-start-2">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-muted-foreground">Subtotal:</span>
+                        <span className="font-semibold">
+                          {formatCurrency(sale.subtotal || 0)}
                         </span>
                       </div>
-                    )}
-                    {sale.shippingType === "envio" &&
-                      sale.deliveryData?.deliveryPrice > 0 && (
-                        <div className="d-flex justify-content-between mb-2">
-                          <span className="text-muted">Costo de Envío:</span>
-                          <span className="fw-semibold text-success">
-                            +
-                            {formatCurrency(
-                              sale.deliveryData.deliveryPrice
-                            )}
+                      {sale.discount > 0 && (
+                        <div className="flex justify-between mb-2">
+                          <span className="text-muted-foreground">
+                            Descuento (
+                            {sale.discountType === "porcentaje"
+                              ? `${sale.discount}%`
+                              : "Fijo"}
+                            ):
+                          </span>
+                          <span className="font-semibold text-red-500">
+                            -{formatCurrency(discountAmount)}
                           </span>
                         </div>
                       )}
-                    <div className="d-flex justify-content-between mb-2 pt-2 border-top">
-                      <span className="fw-bold">Total:</span>
-                      <span className="fw-bold fs-5 text-primary">
-                        {formatCurrency(sale.total || 0)}
-                      </span>
-                    </div>
-                    <div className="d-flex justify-content-between mb-2">
-                      <span className="text-muted">Anticipo:</span>
-                      <span className="fw-semibold text-success">
-                        {formatCurrency(
-                          payments.find((p) => p.isAdvance)?.amount || 0
+                      {sale.shippingType === "envio" &&
+                        sale.deliveryData?.deliveryPrice > 0 && (
+                          <div className="flex justify-between mb-2">
+                            <span className="text-muted-foreground">Costo de Envio:</span>
+                            <span className="font-semibold text-green-500">
+                              +
+                              {formatCurrency(
+                                sale.deliveryData.deliveryPrice
+                              )}
+                            </span>
+                          </div>
                         )}
-                      </span>
-                    </div>
-                    {sale.paidWith > 0 && (
-                      <>
-                        <div className="d-flex justify-content-between mb-2">
-                          <span className="text-muted">Pagó con:</span>
-                          <span className="fw-semibold">
-                            {formatCurrency(sale.paidWith)}
-                          </span>
-                        </div>
-                        <div className="d-flex justify-content-between mb-2">
-                          <span className="text-muted">Cambio:</span>
-                          <span className="fw-semibold">
-                            {formatCurrency(sale.change || 0)}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                    <div className="d-flex justify-content-between pt-2 border-top">
-                      <span className="fw-bold">Saldo Pendiente:</span>
-                      <span
-                        className="fw-bold fs-5"
-                        style={{
-                          color: sale.remainingBalance > 0 ? "#F39C12" : "#1ABC9C",
-                        }}
-                      >
-                        {formatCurrency(sale.remainingBalance || 0)}
-                      </span>
+                      <div className="flex justify-between mb-2 pt-2 border-t">
+                        <span className="font-bold">Total:</span>
+                        <span className="font-bold text-lg text-primary">
+                          {formatCurrency(sale.total || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-muted-foreground">Anticipo:</span>
+                        <span className="font-semibold text-green-500">
+                          {formatCurrency(
+                            payments.find((p) => p.isAdvance)?.amount || 0
+                          )}
+                        </span>
+                      </div>
+                      {sale.paidWith > 0 && (
+                        <>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-muted-foreground">Pago con:</span>
+                            <span className="font-semibold">
+                              {formatCurrency(sale.paidWith)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-muted-foreground">Cambio:</span>
+                            <span className="font-semibold">
+                              {formatCurrency(sale.change || 0)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      <div className="flex justify-between pt-2 border-t">
+                        <span className="font-bold">Saldo Pendiente:</span>
+                        <span
+                          className="font-bold text-lg"
+                          style={{
+                            color: sale.remainingBalance > 0 ? "#F39C12" : "#1ABC9C",
+                          }}
+                        >
+                          {formatCurrency(sale.remainingBalance || 0)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </Modal.Body>
-    </Modal>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,7 +1,14 @@
 import React from "react";
-import { Button, Dropdown } from "react-bootstrap";
 import { Edit, Power, PowerOff, MoreVertical } from "lucide-react";
 import { Manager } from "../types";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ActionsProps {
   manager: Manager;
@@ -11,47 +18,39 @@ interface ActionsProps {
 
 const Actions: React.FC<ActionsProps> = ({ manager, onEdit, onToggleStatus }) => {
   return (
-    <Dropdown>
-      <Dropdown.Toggle
-        variant="outline-secondary"
-        size="sm"
-        className="d-flex align-items-center gap-1 border-0"
-        style={{ boxShadow: "none" }}
-      >
-        <MoreVertical size={16} />
-      </Dropdown.Toggle>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
 
-      <Dropdown.Menu align="end">
-        <Dropdown.Item
-          onClick={() => onEdit(manager)}
-          className="d-flex align-items-center gap-2"
-        >
-          <Edit size={16} />
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onEdit(manager)}>
+          <Edit className="h-4 w-4 mr-2" />
           Editar
-        </Dropdown.Item>
-        
-        <Dropdown.Divider />
-        
-        <Dropdown.Item
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
           onClick={() => onToggleStatus(manager)}
-          className={`d-flex align-items-center gap-2 ${
-            manager.estatus ? "text-danger" : "text-success"
-          }`}
+          className={manager.estatus ? "text-destructive" : "text-green-600"}
         >
           {manager.estatus ? (
             <>
-              <PowerOff size={16} />
+              <PowerOff className="h-4 w-4 mr-2" />
               Desactivar
             </>
           ) : (
             <>
-              <Power size={16} />
+              <Power className="h-4 w-4 mr-2" />
               Activar
             </>
           )}
-        </Dropdown.Item>
-      </Dropdown.Menu>
-    </Dropdown>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

@@ -1,7 +1,16 @@
+"use client";
+
 import React from "react";
-import { Dropdown } from "react-bootstrap";
 import { Edit, Eye, Award, Gift, MoreVertical } from "lucide-react";
 import { Client } from "../types";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ClientActionsProps {
   client: Client;
@@ -19,52 +28,38 @@ const ClientActions: React.FC<ClientActionsProps> = ({
   onViewRewards,
 }) => {
   return (
-    <Dropdown>
-      <Dropdown.Toggle
-        variant="outline-secondary"
-        size="sm"
-        className="d-flex align-items-center gap-1 border-0"
-        style={{ boxShadow: "none" }}
-      >
-        <MoreVertical size={16} />
-      </Dropdown.Toggle>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <MoreVertical className="h-4 w-4" />
+          <span className="sr-only">Abrir menú</span>
+        </Button>
+      </DropdownMenuTrigger>
 
-      <Dropdown.Menu align="end">
-        <Dropdown.Item
-          onClick={() => onView(client)}
-          className="d-flex align-items-center gap-2"
-        >
-          <Eye size={16} />
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onView(client)} className="gap-2">
+          <Eye className="h-4 w-4" />
           Ver Detalles
-        </Dropdown.Item>
-        
-        <Dropdown.Item
-          onClick={() => onEdit(client)}
-          className="d-flex align-items-center gap-2"
-        >
-          <Edit size={16} />
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => onEdit(client)} className="gap-2">
+          <Edit className="h-4 w-4" />
           Editar
-        </Dropdown.Item>
-        
-        <Dropdown.Divider />
-        
-        <Dropdown.Item
-          onClick={() => onViewPoints(client)}
-          className="d-flex align-items-center gap-2"
-        >
-          <Award size={16} className="text-info" />
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onClick={() => onViewPoints(client)} className="gap-2">
+          <Award className="h-4 w-4 text-blue-500" />
           Ver Historial de Puntos
-        </Dropdown.Item>
-        
-        <Dropdown.Item
-          onClick={() => onViewRewards(client)}
-          className="d-flex align-items-center gap-2"
-        >
-          <Gift size={16} className="text-success" />
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => onViewRewards(client)} className="gap-2">
+          <Gift className="h-4 w-4 text-green-500" />
           Ver Recompensas Reclamadas
-        </Dropdown.Item>
-      </Dropdown.Menu>
-    </Dropdown>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

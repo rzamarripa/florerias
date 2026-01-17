@@ -1,8 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Table, Button, Form, Spinner, Row, Col } from "react-bootstrap";
-import { Search, X } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Search, X, Loader2 } from "lucide-react";
 import { companySalesService } from "./services/companySales";
 import { BranchSalesData } from "./types";
 import { formatCurrency } from "@/utils";
@@ -88,7 +100,7 @@ export default function CompanySalesPage() {
       const name = `${branch.branchName} (${branch.branchCode})`;
       return name.length > 20 ? name.substring(0, 17) + '...' : name;
     });
-    
+
     // Extraer datos reales de cada sucursal
     const salesData = branchesSales.slice(0, 10).map(branch => branch.totalSalesWithoutDelivery); // S/S
     const deliveryData = branchesSales.slice(0, 10).map(branch => branch.totalDeliveryService); // Servicio
@@ -141,211 +153,173 @@ export default function CompanySalesPage() {
   }, [branchesSales]);
 
   return (
-    <div className="container-fluid py-1">
+    <div className="container mx-auto py-1">
       {/* Header */}
       <div className="mb-1">
-        <div className="d-flex justify-content-between align-items-start">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="mb-0 fw-bold">Ventas de Sucursales del Administrador</h2>
-            <p className="text-muted mb-0" style={{ fontSize: "13px" }}>
+            <h2 className="mb-0 font-bold text-2xl">Ventas de Sucursales del Administrador</h2>
+            <p className="text-muted-foreground mb-0 text-sm">
               Resumen de ventas por sucursal
             </p>
           </div>
         </div>
       </div>
 
-      {/* Card de filtros */}
-      <div
-        className="card border-0 shadow-sm mb-1"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body py-1 px-3">
-          <Row className="align-items-end">
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label className="small fw-semibold text-muted">
-                  Fecha inicio
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  size="sm"
-                />
-              </Form.Group>
-            </Col>
+      {/* Filter Card */}
+      <Card className="border-0 shadow-sm mb-1 rounded-lg">
+        <CardContent className="py-1 px-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <Label className="text-sm font-semibold text-muted-foreground">
+                Fecha inicio
+              </Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="h-8"
+              />
+            </div>
 
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label className="small fw-semibold text-muted">
-                  Fecha fin
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  size="sm"
-                />
-              </Form.Group>
-            </Col>
+            <div>
+              <Label className="text-sm font-semibold text-muted-foreground">
+                Fecha fin
+              </Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="h-8"
+              />
+            </div>
 
-            <Col md={4} className="d-flex gap-2">
+            <div className="flex gap-2">
               <Button
-                variant="primary"
+                variant="default"
                 onClick={loadBranchesSales}
                 disabled={loading}
                 size="sm"
                 className="px-3"
               >
-                <Search size={16} className="me-1" />
+                <Search size={16} className="mr-1" />
                 Buscar
               </Button>
 
               <Button
-                variant="outline-secondary"
+                variant="outline"
                 onClick={handleClearFilters}
                 size="sm"
               >
-                <X size={16} className="me-1" />
+                <X size={16} className="mr-1" />
                 Limpiar
               </Button>
-            </Col>
-          </Row>
-        </div>
-      </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Gráfica de ventas */}
+      {/* Sales Chart */}
       {branchesSales.length > 0 && (
         <div className="mb-2">
-          <SalesChart 
-            data={chartData} 
+          <SalesChart
+            data={chartData}
             title="Ventas"
           />
         </div>
       )}
 
-      {/* Tabla principal */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      {/* Main Table */}
+      <Card className="border-0 shadow-sm rounded-lg">
+        <CardContent className="p-0">
           {loading ? (
             <div className="text-center p-3">
-              <Spinner animation="border" role="status" variant="primary">
-                <span className="visually-hidden">Cargando...</span>
-              </Spinner>
+              <Loader2 className="animate-spin text-primary mx-auto" size={24} />
+              <span className="sr-only">Cargando...</span>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ backgroundColor: "#f8f9fa" }}>
-                  <tr>
-                    <th
-                      className="border-0 px-4 py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-muted">
+                  <TableRow>
+                    <TableHead className="border-0 px-4 py-2 text-sm font-bold">
                       Sucursal
-                    </th>
-                    <th
-                      className="border-0 text-center py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-center py-2 text-sm font-bold">
                       Código
-                    </th>
-                    <th
-                      className="border-0 text-center py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-center py-2 text-sm font-bold">
                       Órdenes
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
                       Total Ventas
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
                       Servicio
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
                       S/S
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
                       Total Pagado
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
                       Regalías
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
                       Pub. Marca
-                    </th>
-                    <th
-                      className="border-0 text-end px-3 py-2"
-                      style={{ fontSize: "14px", fontWeight: "700" }}
-                    >
+                    </TableHead>
+                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
                       Pub. Sucursal
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {branchesSales.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="text-center py-3 text-muted">
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-3 text-muted-foreground">
                         No se encontraron datos para el período seleccionado
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     branchesSales.map((branch) => (
-                      <tr key={branch.branchId}>
-                        <td className="px-4 py-2">
-                          <span className="fw-semibold">
+                      <TableRow key={branch.branchId}>
+                        <TableCell className="px-4 py-2">
+                          <span className="font-semibold">
                             {branch.branchName}
                           </span>
-                        </td>
-                        <td className="text-center py-2">
-                          <span className="badge bg-light text-dark">
+                        </TableCell>
+                        <TableCell className="text-center py-2">
+                          <Badge variant="secondary">
                             {branch.branchCode}
-                          </span>
-                        </td>
-                        <td className="text-center py-2">
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center py-2">
                           {branch.totalOrders}
-                        </td>
-                        <td className="text-end px-3 py-2">
-                          <span className="fw-semibold">
+                        </TableCell>
+                        <TableCell className="text-right px-3 py-2">
+                          <span className="font-semibold">
                             {formatCurrency(branch.totalSales)}
                           </span>
-                        </td>
-                        <td className="text-end px-3 py-2">
-                          <span className="fw-semibold">
+                        </TableCell>
+                        <TableCell className="text-right px-3 py-2">
+                          <span className="font-semibold">
                             {formatCurrency(branch.totalDeliveryService)}
                           </span>
-                        </td>
-                        <td className="text-end px-3 py-2">
-                          <span className="fw-semibold text-success">
+                        </TableCell>
+                        <TableCell className="text-right px-3 py-2">
+                          <span className="font-semibold text-green-500">
                             {formatCurrency(branch.totalSalesWithoutDelivery)}
                           </span>
-                        </td>
-                        <td className="text-end px-3 py-2">
+                        </TableCell>
+                        <TableCell className="text-right px-3 py-2">
                           <div>
-                            <span className="fw-semibold">
+                            <span className="font-semibold">
                               {formatCurrency(branch.totalPaid)}
                             </span>
                             {branch.totalSalesWithoutDelivery > 0 && (
                               <div>
-                                <small className="text-muted">
+                                <small className="text-muted-foreground">
                                   {(
                                     (branch.totalPaid / branch.totalSalesWithoutDelivery) *
                                     100
@@ -355,56 +329,56 @@ export default function CompanySalesPage() {
                               </div>
                             )}
                           </div>
-                        </td>
-                        <td className="text-end px-3 py-2">
+                        </TableCell>
+                        <TableCell className="text-right px-3 py-2">
                           {branch.royaltiesAmount === 0 ? (
-                            <span className="text-muted">-</span>
+                            <span className="text-muted-foreground">-</span>
                           ) : (
                             <div>
-                              <span className="fw-semibold">
+                              <span className="font-semibold">
                                 {formatCurrency(branch.royaltiesAmount)}
                               </span>
                               <div>
-                                <small className="text-muted">
+                                <small className="text-muted-foreground">
                                   {branch.royalties.toFixed(2)}%
                                 </small>
                               </div>
                             </div>
                           )}
-                        </td>
-                        <td className="text-end px-3 py-2">
+                        </TableCell>
+                        <TableCell className="text-right px-3 py-2">
                           <div>
-                            <span className="fw-semibold">
+                            <span className="font-semibold">
                               {formatCurrency(branch.brandAdvertisingAmount)}
                             </span>
                             <div>
-                              <small className="text-muted">
+                              <small className="text-muted-foreground">
                                 {branch.brandAdvertising.toFixed(2)}%
                               </small>
                             </div>
                           </div>
-                        </td>
-                        <td className="text-end px-3 py-2">
+                        </TableCell>
+                        <TableCell className="text-right px-3 py-2">
                           <div>
-                            <span className="fw-semibold">
+                            <span className="font-semibold">
                               {formatCurrency(branch.branchAdvertisingAmount)}
                             </span>
                             <div>
-                              <small className="text-muted">
+                              <small className="text-muted-foreground">
                                 {branch.branchAdvertising.toFixed(2)}%
                               </small>
                             </div>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
+                </TableBody>
               </Table>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
     </div>
   );

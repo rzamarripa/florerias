@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Card } from "react-bootstrap";
-import { X, Save, Award } from "lucide-react";
+import { X, Save, Award, Loader2 } from "lucide-react";
 import {
   PointsConfig,
   CreatePointsConfigData,
   UpdatePointsConfigData,
 } from "../types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface PointsConfigModalProps {
   show: boolean;
@@ -76,367 +88,367 @@ const PointsConfigModal: React.FC<PointsConfigModalProps> = ({
   const isEditing = !!config;
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered scrollable>
-      <Modal.Header className="border-bottom-0 pb-0">
-        <Modal.Title className="d-flex align-items-center gap-2">
-          <Award size={20} className="text-primary" />
-          {isEditing ? "Editar Configuración de Puntos" : "Nueva Configuración de Puntos"}
-        </Modal.Title>
-        <Button
-          variant="link"
-          onClick={onHide}
-          className="text-muted p-0"
-          style={{ border: "none", background: "none" }}
-        >
-          <X size={20} />
-        </Button>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Award size={20} className="text-primary" />
+            {isEditing ? "Editar Configuración de Puntos" : "Nueva Configuración de Puntos"}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Modal.Body>
-        <Form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           {/* Puntos por Total de Compra */}
           <Card className="mb-3">
-            <Card.Header className="bg-light py-2">
-              <Form.Check
-                type="switch"
-                id="purchaseAmountEnabled"
-                label={<strong>Puntos por Total de Compra</strong>}
-                checked={formData.pointsPerPurchaseAmount?.enabled}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    pointsPerPurchaseAmount: {
-                      ...formData.pointsPerPurchaseAmount!,
-                      enabled: e.target.checked,
-                    },
-                  })
-                }
-              />
-            </Card.Header>
+            <CardHeader className="bg-muted/50 py-2 px-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="purchaseAmountEnabled"
+                  checked={formData.pointsPerPurchaseAmount?.enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      pointsPerPurchaseAmount: {
+                        ...formData.pointsPerPurchaseAmount!,
+                        enabled: checked,
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="purchaseAmountEnabled" className="font-semibold cursor-pointer">
+                  Puntos por Total de Compra
+                </Label>
+              </div>
+            </CardHeader>
             {formData.pointsPerPurchaseAmount?.enabled && (
-              <Card.Body>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-2">
-                      <Form.Label className="small">Por cada $ (monto)</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="1"
-                        value={formData.pointsPerPurchaseAmount?.amount}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsPerPurchaseAmount: {
-                              ...formData.pointsPerPurchaseAmount!,
-                              amount: parseInt(e.target.value) || 1,
-                            },
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-2">
-                      <Form.Label className="small">Puntos a otorgar</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        value={formData.pointsPerPurchaseAmount?.points}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsPerPurchaseAmount: {
-                              ...formData.pointsPerPurchaseAmount!,
-                              points: parseInt(e.target.value) || 0,
-                            },
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <small className="text-muted">
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="purchaseAmount" className="text-sm">Por cada $ (monto)</Label>
+                    <Input
+                      id="purchaseAmount"
+                      type="number"
+                      min="1"
+                      value={formData.pointsPerPurchaseAmount?.amount}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pointsPerPurchaseAmount: {
+                            ...formData.pointsPerPurchaseAmount!,
+                            amount: parseInt(e.target.value) || 1,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="purchasePoints" className="text-sm">Puntos a otorgar</Label>
+                    <Input
+                      id="purchasePoints"
+                      type="number"
+                      min="0"
+                      value={formData.pointsPerPurchaseAmount?.points}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pointsPerPurchaseAmount: {
+                            ...formData.pointsPerPurchaseAmount!,
+                            points: parseInt(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
                   Ejemplo: Por cada ${formData.pointsPerPurchaseAmount?.amount} de compra, el cliente recibe {formData.pointsPerPurchaseAmount?.points} punto(s).
-                </small>
-              </Card.Body>
+                </p>
+              </CardContent>
             )}
           </Card>
 
           {/* Puntos por Compras Acumuladas */}
           <Card className="mb-3">
-            <Card.Header className="bg-light py-2">
-              <Form.Check
-                type="switch"
-                id="accumulatedPurchasesEnabled"
-                label={<strong>Puntos por Compras Acumuladas</strong>}
-                checked={formData.pointsPerAccumulatedPurchases?.enabled}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    pointsPerAccumulatedPurchases: {
-                      ...formData.pointsPerAccumulatedPurchases!,
-                      enabled: e.target.checked,
-                    },
-                  })
-                }
-              />
-            </Card.Header>
+            <CardHeader className="bg-muted/50 py-2 px-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="accumulatedPurchasesEnabled"
+                  checked={formData.pointsPerAccumulatedPurchases?.enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      pointsPerAccumulatedPurchases: {
+                        ...formData.pointsPerAccumulatedPurchases!,
+                        enabled: checked,
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="accumulatedPurchasesEnabled" className="font-semibold cursor-pointer">
+                  Puntos por Compras Acumuladas
+                </Label>
+              </div>
+            </CardHeader>
             {formData.pointsPerAccumulatedPurchases?.enabled && (
-              <Card.Body>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-2">
-                      <Form.Label className="small">Compras requeridas</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="1"
-                        value={formData.pointsPerAccumulatedPurchases?.purchasesRequired}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsPerAccumulatedPurchases: {
-                              ...formData.pointsPerAccumulatedPurchases!,
-                              purchasesRequired: parseInt(e.target.value) || 1,
-                            },
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-2">
-                      <Form.Label className="small">Puntos a otorgar</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        value={formData.pointsPerAccumulatedPurchases?.points}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsPerAccumulatedPurchases: {
-                              ...formData.pointsPerAccumulatedPurchases!,
-                              points: parseInt(e.target.value) || 0,
-                            },
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <small className="text-muted">
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="purchasesRequired" className="text-sm">Compras requeridas</Label>
+                    <Input
+                      id="purchasesRequired"
+                      type="number"
+                      min="1"
+                      value={formData.pointsPerAccumulatedPurchases?.purchasesRequired}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pointsPerAccumulatedPurchases: {
+                            ...formData.pointsPerAccumulatedPurchases!,
+                            purchasesRequired: parseInt(e.target.value) || 1,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="accumulatedPoints" className="text-sm">Puntos a otorgar</Label>
+                    <Input
+                      id="accumulatedPoints"
+                      type="number"
+                      min="0"
+                      value={formData.pointsPerAccumulatedPurchases?.points}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pointsPerAccumulatedPurchases: {
+                            ...formData.pointsPerAccumulatedPurchases!,
+                            points: parseInt(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
                   Ejemplo: Por cada {formData.pointsPerAccumulatedPurchases?.purchasesRequired} compras acumuladas, el cliente recibe {formData.pointsPerAccumulatedPurchases?.points} punto(s).
-                </small>
-              </Card.Body>
+                </p>
+              </CardContent>
             )}
           </Card>
 
           {/* Puntos por Primera Venta */}
           <Card className="mb-3">
-            <Card.Header className="bg-light py-2">
-              <Form.Check
-                type="switch"
-                id="firstPurchaseEnabled"
-                label={<strong>Puntos por Primera Compra</strong>}
-                checked={formData.pointsForFirstPurchase?.enabled}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    pointsForFirstPurchase: {
-                      ...formData.pointsForFirstPurchase!,
-                      enabled: e.target.checked,
-                    },
-                  })
-                }
-              />
-            </Card.Header>
+            <CardHeader className="bg-muted/50 py-2 px-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="firstPurchaseEnabled"
+                  checked={formData.pointsForFirstPurchase?.enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      pointsForFirstPurchase: {
+                        ...formData.pointsForFirstPurchase!,
+                        enabled: checked,
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="firstPurchaseEnabled" className="font-semibold cursor-pointer">
+                  Puntos por Primera Compra
+                </Label>
+              </div>
+            </CardHeader>
             {formData.pointsForFirstPurchase?.enabled && (
-              <Card.Body>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-2">
-                      <Form.Label className="small">Puntos a otorgar</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        value={formData.pointsForFirstPurchase?.points}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsForFirstPurchase: {
-                              ...formData.pointsForFirstPurchase!,
-                              points: parseInt(e.target.value) || 0,
-                            },
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <small className="text-muted">
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstPurchasePoints" className="text-sm">Puntos a otorgar</Label>
+                    <Input
+                      id="firstPurchasePoints"
+                      type="number"
+                      min="0"
+                      value={formData.pointsForFirstPurchase?.points}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pointsForFirstPurchase: {
+                            ...formData.pointsForFirstPurchase!,
+                            points: parseInt(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
                   Puntos de bienvenida al realizar la primera compra.
-                </small>
-              </Card.Body>
+                </p>
+              </CardContent>
             )}
           </Card>
 
           {/* Puntos por Registro de Cliente */}
           <Card className="mb-3">
-            <Card.Header className="bg-light py-2">
-              <Form.Check
-                type="switch"
-                id="clientRegistrationEnabled"
-                label={<strong>Puntos por Registro de Cliente</strong>}
-                checked={formData.pointsForClientRegistration?.enabled}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    pointsForClientRegistration: {
-                      ...formData.pointsForClientRegistration!,
-                      enabled: e.target.checked,
-                    },
-                  })
-                }
-              />
-            </Card.Header>
+            <CardHeader className="bg-muted/50 py-2 px-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="clientRegistrationEnabled"
+                  checked={formData.pointsForClientRegistration?.enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      pointsForClientRegistration: {
+                        ...formData.pointsForClientRegistration!,
+                        enabled: checked,
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="clientRegistrationEnabled" className="font-semibold cursor-pointer">
+                  Puntos por Registro de Cliente
+                </Label>
+              </div>
+            </CardHeader>
             {formData.pointsForClientRegistration?.enabled && (
-              <Card.Body>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-2">
-                      <Form.Label className="small">Puntos a otorgar</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        value={formData.pointsForClientRegistration?.points}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsForClientRegistration: {
-                              ...formData.pointsForClientRegistration!,
-                              points: parseInt(e.target.value) || 0,
-                            },
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <small className="text-muted">
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="registrationPoints" className="text-sm">Puntos a otorgar</Label>
+                    <Input
+                      id="registrationPoints"
+                      type="number"
+                      min="0"
+                      value={formData.pointsForClientRegistration?.points}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pointsForClientRegistration: {
+                            ...formData.pointsForClientRegistration!,
+                            points: parseInt(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
                   Puntos al registrarse como cliente nuevo.
-                </small>
-              </Card.Body>
+                </p>
+              </CardContent>
             )}
           </Card>
 
           {/* Puntos por Visita a Sucursal */}
           <Card className="mb-3">
-            <Card.Header className="bg-light py-2">
-              <Form.Check
-                type="switch"
-                id="branchVisitEnabled"
-                label={<strong>Puntos por Visita a Sucursal</strong>}
-                checked={formData.pointsForBranchVisit?.enabled}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    pointsForBranchVisit: {
-                      ...formData.pointsForBranchVisit!,
-                      enabled: e.target.checked,
-                    },
-                  })
-                }
-              />
-            </Card.Header>
+            <CardHeader className="bg-muted/50 py-2 px-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="branchVisitEnabled"
+                  checked={formData.pointsForBranchVisit?.enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      pointsForBranchVisit: {
+                        ...formData.pointsForBranchVisit!,
+                        enabled: checked,
+                      },
+                    })
+                  }
+                />
+                <Label htmlFor="branchVisitEnabled" className="font-semibold cursor-pointer">
+                  Puntos por Visita a Sucursal
+                </Label>
+              </div>
+            </CardHeader>
             {formData.pointsForBranchVisit?.enabled && (
-              <Card.Body>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-2">
-                      <Form.Label className="small">Puntos a otorgar</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="0"
-                        value={formData.pointsForBranchVisit?.points}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsForBranchVisit: {
-                              ...formData.pointsForBranchVisit!,
-                              points: parseInt(e.target.value) || 0,
-                            },
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-2">
-                      <Form.Label className="small">Visitas máximas por día</Form.Label>
-                      <Form.Control
-                        type="number"
-                        min="1"
-                        value={formData.pointsForBranchVisit?.maxVisitsPerDay}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pointsForBranchVisit: {
-                              ...formData.pointsForBranchVisit!,
-                              maxVisitsPerDay: parseInt(e.target.value) || 1,
-                            },
-                          })
-                        }
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <small className="text-muted">
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="visitPoints" className="text-sm">Puntos a otorgar</Label>
+                    <Input
+                      id="visitPoints"
+                      type="number"
+                      min="0"
+                      value={formData.pointsForBranchVisit?.points}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pointsForBranchVisit: {
+                            ...formData.pointsForBranchVisit!,
+                            points: parseInt(e.target.value) || 0,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="maxVisitsPerDay" className="text-sm">Visitas máximas por día</Label>
+                    <Input
+                      id="maxVisitsPerDay"
+                      type="number"
+                      min="1"
+                      value={formData.pointsForBranchVisit?.maxVisitsPerDay}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pointsForBranchVisit: {
+                            ...formData.pointsForBranchVisit!,
+                            maxVisitsPerDay: parseInt(e.target.value) || 1,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
                   Limita cuántas veces al día puede recibir puntos por visita.
-                </small>
-              </Card.Body>
+                </p>
+              </CardContent>
             )}
           </Card>
 
           {/* Estado */}
-          <Form.Group className="mb-3">
-            <Form.Check
-              type="checkbox"
-              label="Configuración Activa"
+          <div className="flex items-center space-x-2 mt-4">
+            <Checkbox
+              id="configStatus"
               checked={formData.status}
-              onChange={(e) =>
+              onCheckedChange={(checked) =>
                 setFormData({
                   ...formData,
-                  status: e.target.checked,
+                  status: checked === true,
                 })
               }
             />
-          </Form.Group>
-        </Form>
-      </Modal.Body>
+            <Label htmlFor="configStatus" className="cursor-pointer">
+              Configuración Activa
+            </Label>
+          </div>
 
-      <Modal.Footer className="border-top-0 pt-0">
-        <Button variant="outline-secondary" onClick={onHide} disabled={loading}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={loading}
-          className="d-flex align-items-center gap-2"
-        >
-          {loading ? (
-            <>
-              <div className="spinner-border spinner-border-sm" role="status" />
-              Guardando...
-            </>
-          ) : (
-            <>
-              <Save size={16} />
-              {isEditing ? "Actualizar" : "Crear"} Configuración
-            </>
-          )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+          <DialogFooter className="mt-6">
+            <Button variant="outline" type="button" onClick={onHide} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  {isEditing ? "Actualizar" : "Crear"} Configuración
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

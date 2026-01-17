@@ -1,4 +1,4 @@
-import { type MenuItemType } from "@/types/layout";
+import { type MenuItemType } from "@/types/menu";
 import {
   ShieldUser,
   Users,

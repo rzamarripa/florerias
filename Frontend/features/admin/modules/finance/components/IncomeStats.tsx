@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Row, Col, Card, Spinner } from "react-bootstrap";
-import { CreditCard, DollarSign, Wallet, Building2, Banknote } from "lucide-react";
+import { CreditCard, DollarSign, Wallet, Building2, Banknote, Loader2 } from "lucide-react";
 import { financeService } from "../services/finance";
 import { FinanceFilters, IncomeStats as IncomeStatsType } from "../types";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
+
+import { Card, CardContent } from "@/components/ui/card";
 
 interface IncomeStatsProps {
   filters: FinanceFilters;
@@ -36,9 +37,9 @@ const IncomeStats: React.FC<IncomeStatsProps> = ({ filters }) => {
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" />
-        <p className="text-muted mt-3">Cargando ingresos...</p>
+      <div className="text-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <p className="text-muted-foreground mt-3">Cargando ingresos...</p>
       </div>
     );
   }
@@ -118,58 +119,45 @@ const IncomeStats: React.FC<IncomeStatsProps> = ({ filters }) => {
     bgColor: string;
   }) => (
     <Card
-      className="border-0 shadow-sm h-100"
-      style={{
-        borderRadius: "15px",
-        transition: "transform 0.2s, box-shadow 0.2s",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-5px)";
-        e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.1)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.05)";
-      }}
+      className="border-0 shadow-sm h-full rounded-[15px] transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
     >
-      <Card.Body className="p-2">
-        <p className="mb-2 fw-semibold " style={{ fontSize: "18px" }}>
+      <CardContent className="p-2">
+        <p className="mb-2 font-semibold text-lg">
           {title}
         </p>
-        <div className="d-flex justify-content-between align-items-start ">
+        <div className="flex justify-between items-start">
           <div
-            className="p-3 rounded-circle"
+            className="p-3 rounded-full"
             style={{ backgroundColor: bgColor }}
           >
             <Icon size={24} color={color} />
           </div>
-          <h3 className=" mb-1" style={{ fontSize: "28px" }}>
+          <h3 className="mb-1 text-[28px]">
             {formatCurrency(value)}
           </h3>
         </div>
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 
   return (
     <div className="my-5">
-      <h5 className="fw-bold mb-3">Ingresos por Método de Pago</h5>
-      <Row className="g-3">
+      <h5 className="font-bold mb-3">Ingresos por Método de Pago</h5>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((stat, index) => {
           const style = getPaymentMethodStyle(stat.paymentMethodName, index);
           return (
-            <Col key={stat.paymentMethodId} md={3} sm={6}>
-              <IncomeCard
-                title={stat.paymentMethodName}
-                value={stat.total}
-                icon={style.icon}
-                color={style.color}
-                bgColor={style.bgColor}
-              />
-            </Col>
+            <IncomeCard
+              key={stat.paymentMethodId}
+              title={stat.paymentMethodName}
+              value={stat.total}
+              icon={style.icon}
+              color={style.color}
+              bgColor={style.bgColor}
+            />
           );
         })}
-      </Row>
+      </div>
     </div>
   );
 };

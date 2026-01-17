@@ -1,14 +1,26 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-toastify";
-import { X } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { productCategorySchema, ProductCategoryFormData } from "../schemas/productCategorySchema";
 import { productCategoriesService } from "../services/productCategories";
 import { ProductCategory } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ProductCategoryModalProps {
   show: boolean;
@@ -77,112 +89,79 @@ const ProductCategoryModal: React.FC<ProductCategoryModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header className="border-0 pb-0">
-        <div>
-          <Modal.Title className="fw-bold">
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
             {category ? "Editar Categoría de Producto" : "Nueva Categoría de Producto"}
-          </Modal.Title>
-          <p className="text-muted mb-0 small">
+          </DialogTitle>
+          <DialogDescription>
             {category
               ? "Actualiza la información de la categoría"
               : "Completa los datos de la nueva categoría"}
-          </p>
-        </div>
-        <Button
-          variant="link"
-          onClick={onHide}
-          className="text-muted p-0"
-          style={{ fontSize: "1.5rem" }}
-        >
-          <X size={24} />
-        </Button>
-      </Modal.Header>
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body className="pt-3">
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <Row className="g-3">
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid gap-4 py-4">
             {/* Nombre */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  Nombre de la Categoría <span className="text-danger">*</span>
-                </Form.Label>
-                <Controller
-                  name="name"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Control
-                      {...field}
-                      type="text"
-                      placeholder="Ej: Flores Naturales, Arreglos Florales, Plantas"
-                      isInvalid={!!errors.name}
-                      style={{ borderRadius: "8px" }}
-                    />
-                  )}
-                />
-                {errors.name && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.name.message}
-                  </Form.Control.Feedback>
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Nombre de la Categoría <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                name="name"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="name"
+                    type="text"
+                    placeholder="Ej: Flores Naturales, Arreglos Florales, Plantas"
+                    className={errors.name ? "border-destructive" : ""}
+                  />
                 )}
-              </Form.Group>
-            </Col>
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
 
             {/* Descripción */}
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">Descripción (Opcional)</Form.Label>
-                <Controller
-                  name="description"
-                  control={control}
-                  render={({ field }) => (
-                    <Form.Control
-                      {...field}
-                      as="textarea"
-                      rows={3}
-                      placeholder="Describe la categoría de productos..."
-                      isInvalid={!!errors.description}
-                      style={{ borderRadius: "8px" }}
-                    />
-                  )}
-                />
-                {errors.description && (
-                  <Form.Control.Feedback type="invalid">
-                    {errors.description.message}
-                  </Form.Control.Feedback>
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción (Opcional)</Label>
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <Textarea
+                    {...field}
+                    id="description"
+                    placeholder="Describe la categoría de productos..."
+                    rows={3}
+                    className={errors.description ? "border-destructive" : ""}
+                  />
                 )}
-              </Form.Group>
-            </Col>
-          </Row>
+              />
+              {errors.description && (
+                <p className="text-sm text-destructive">{errors.description.message}</p>
+              )}
+            </div>
+          </div>
 
-          <div className="d-flex justify-content-end gap-2 mt-4">
+          <DialogFooter>
             <Button
-              variant="light"
+              type="button"
+              variant="outline"
               onClick={onHide}
               disabled={loading}
-              style={{ borderRadius: "8px" }}
             >
               Cancelar
             </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={loading}
-              style={{
-                borderRadius: "8px",
-              }}
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Guardando...
                 </>
               ) : category ? (
@@ -191,10 +170,10 @@ const ProductCategoryModal: React.FC<ProductCategoryModalProps> = ({
                 "Crear Categoría"
               )}
             </Button>
-          </div>
-        </Form>
-      </Modal.Body>
-    </Modal>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

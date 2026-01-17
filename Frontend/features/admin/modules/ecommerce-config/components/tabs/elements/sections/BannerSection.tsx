@@ -1,7 +1,15 @@
 import React from 'react';
-import { Form, Row, Col, Accordion } from 'react-bootstrap';
-import { TbPhoto, TbUpload } from 'react-icons/tb';
-import { toast } from 'react-toastify';
+import { Image, Upload } from 'lucide-react';
+import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import {
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 interface BannerSectionProps {
   bannerEnabled: boolean;
@@ -35,95 +43,82 @@ const BannerSection: React.FC<BannerSectionProps> = ({
   setBannerButtonLink,
 }) => {
   return (
-    <Accordion.Item eventKey="banner" className="mb-3 border-0 shadow-sm rounded overflow-hidden">
-      <Accordion.Header className="bg-light">
-        <div className="d-flex align-items-center w-100">
-          <TbPhoto size={20} className="text-primary me-2" />
-          <span className="fw-semibold fs-6">Banner Principal</span>
-          <Form.Check 
-            type="switch"
+    <AccordionItem value="banner" className="border rounded-lg shadow-sm overflow-hidden">
+      <AccordionTrigger className="px-4 py-3 bg-muted/50 hover:no-underline">
+        <div className="flex items-center justify-between w-full pr-2">
+          <div className="flex items-center gap-2">
+            <Image className="h-5 w-5 text-primary" />
+            <span className="font-semibold">Banner Principal</span>
+          </div>
+          <Switch
             id="banner-switch"
             checked={bannerEnabled}
-            onChange={(e) => setBannerEnabled(e.target.checked)}
-            className="ms-auto me-2"
+            onCheckedChange={setBannerEnabled}
             onClick={(e) => e.stopPropagation()}
           />
         </div>
-      </Accordion.Header>
-      <Accordion.Body className="bg-white">
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4 pt-2 bg-background">
         {bannerEnabled ? (
-          <div>
-            <Row className="g-2 mb-2">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Título</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="text" 
-                    placeholder="Ofertas especiales"
-                    value={bannerTitle}
-                    onChange={(e) => setBannerTitle(e.target.value)}
-                    maxLength={100}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Descripción</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="text" 
-                    placeholder="Descuentos de hasta 50%"
-                    value={bannerText}
-                    onChange={(e) => setBannerText(e.target.value)}
-                    maxLength={300}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            
-            <Row className="g-2 mb-2">
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Texto del botón</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="text" 
-                    placeholder="Ver más"
-                    value={bannerButtonName}
-                    onChange={(e) => setBannerButtonName(e.target.value)}
-                    maxLength={50}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="small fw-medium">Enlace</Form.Label>
-                  <Form.Control 
-                    size="sm"
-                    type="text" 
-                    placeholder="/productos"
-                    value={bannerButtonLink}
-                    onChange={(e) => setBannerButtonLink(e.target.value)}
-                    maxLength={200}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            
-            <Form.Group>
-              <Form.Label className="small fw-medium">Imagen</Form.Label>
-              <div className="border rounded p-2 bg-light">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Titulo</Label>
+                <Input
+                  type="text"
+                  placeholder="Ofertas especiales"
+                  value={bannerTitle}
+                  onChange={(e) => setBannerTitle(e.target.value)}
+                  maxLength={100}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Descripcion</Label>
+                <Input
+                  type="text"
+                  placeholder="Descuentos de hasta 50%"
+                  value={bannerText}
+                  onChange={(e) => setBannerText(e.target.value)}
+                  maxLength={300}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Texto del boton</Label>
+                <Input
+                  type="text"
+                  placeholder="Ver mas"
+                  value={bannerButtonName}
+                  onChange={(e) => setBannerButtonName(e.target.value)}
+                  maxLength={50}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Enlace</Label>
+                <Input
+                  type="text"
+                  placeholder="/productos"
+                  value={bannerButtonLink}
+                  onChange={(e) => setBannerButtonLink(e.target.value)}
+                  maxLength={200}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Imagen</Label>
+              <div className="border rounded-lg p-3 bg-muted/50">
                 {bannerUrl && (
-                  <img 
-                    src={bannerUrl} 
-                    alt="Banner" 
-                    style={{ maxWidth: "100%", maxHeight: "100px" }}
-                    className="mb-2 rounded"
+                  <img
+                    src={bannerUrl}
+                    alt="Banner"
+                    className="max-w-full max-h-[100px] mb-2 rounded"
                   />
                 )}
-                <div>
-                  <Form.Control
+                <div className="flex items-center gap-2">
+                  <Input
                     type="file"
                     accept="image/*"
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,27 +129,31 @@ const BannerSection: React.FC<BannerSectionProps> = ({
                         toast.error("El archivo debe ser menor a 5MB");
                       }
                     }}
-                    className="d-none"
+                    className="hidden"
                     id="banner-upload"
                   />
-                  <label htmlFor="banner-upload" className="btn btn-outline-primary btn-sm">
-                    <TbUpload className="me-1" size={14} />
-                    Subir imagen
+                  <label htmlFor="banner-upload">
+                    <Button variant="outline" size="sm" asChild>
+                      <span className="cursor-pointer">
+                        <Upload className="mr-1 h-3.5 w-3.5" />
+                        Subir imagen
+                      </span>
+                    </Button>
                   </label>
                   {bannerFile && (
-                    <span className="text-success small ms-2">
+                    <span className="text-sm text-green-600">
                       {bannerFile.name}
                     </span>
                   )}
                 </div>
               </div>
-            </Form.Group>
+            </div>
           </div>
         ) : (
-          <p className="text-muted text-center my-3">Banner deshabilitado</p>
+          <p className="text-muted-foreground text-center py-3">Banner deshabilitado</p>
         )}
-      </Accordion.Body>
-    </Accordion.Item>
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 

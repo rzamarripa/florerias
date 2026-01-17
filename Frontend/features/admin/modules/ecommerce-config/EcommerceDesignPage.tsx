@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Nav, Tab, Spinner, Button } from "react-bootstrap";
-import { TbArrowLeft, TbZoomIn, TbZoomOut, TbZoomReset, TbExternalLink } from "react-icons/tb";
+import { Loader2, ArrowLeft, ZoomIn, ZoomOut, RotateCcw, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { ecommerceConfigService } from "./services/ecommerceConfig";
 import {
   uploadEcommerceLogo,
@@ -34,23 +37,23 @@ export default function EcommerceDesignPage() {
   const [config, setConfig] = useState<EcommerceConfig | null>(null);
   const [companyId, setCompanyId] = useState<string>("");
   const [branchId, setBranchId] = useState<string>("");
-  const [zoomLevel, setZoomLevel] = useState(100); // Start at 100% (which represents the scaled view)
-  
-  // Estados para cada sección
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  // Estados para cada seccion
   const [pageTitle, setPageTitle] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [topbarItems, setTopbarItems] = useState<TopbarItem[]>([]);
-  
+
   const [selectedTemplate, setSelectedTemplate] = useState<'classic' | 'modern' | 'minimalist' | 'elegant'>('modern');
-  
+
   const [colors, setColors] = useState<EcommerceConfigColors>({
     primary: "#6366f1",
     secondary: "#10b981",
     background: "#ffffff",
     text: "#1f2937"
   });
-  
+
   const [typography, setTypography] = useState<EcommerceConfigTypography>({
     titleFont: "Inter",
     titleSize: 36,
@@ -58,37 +61,37 @@ export default function EcommerceDesignPage() {
     subtitleSize: 24,
     normalSize: 16
   });
-  
+
   // Estados para elementos destacados - Banner
   const [bannerEnabled, setBannerEnabled] = useState(true);
   const [bannerTitle, setBannerTitle] = useState("");
   const [bannerText, setBannerText] = useState("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string>("");
-  const [bannerButtonName, setBannerButtonName] = useState("Ver más");
+  const [bannerButtonName, setBannerButtonName] = useState("Ver mas");
   const [bannerButtonLink, setBannerButtonLink] = useState("#");
-  
+
   // Estados para carrusel
   const [carouselEnabled, setCarouselEnabled] = useState(true);
   const [carouselImages, setCarouselImages] = useState<Array<{ url: string; path: string }>>([]);
   const [carouselFiles, setCarouselFiles] = useState<File[]>([]);
-  
+
   // Estados para delivery
   const [pickupEnabled, setPickupEnabled] = useState(true);
   const [pickupTime, setPickupTime] = useState("30 minutos");
   const [pickupFrom, setPickupFrom] = useState("09:00");
   const [pickupTo, setPickupTo] = useState("21:00");
-  
+
   const [deliveryEnabled, setDeliveryEnabled] = useState(true);
   const [deliveryTime, setDeliveryTime] = useState("45 minutos");
   const [deliveryFrom, setDeliveryFrom] = useState("09:00");
   const [deliveryTo, setDeliveryTo] = useState("21:00");
-  
+
   // Estados para promociones
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [promotionItems, setPromotionItems] = useState<PromotionItem[]>([]);
-  
-  // Estados para catálogo de productos
+
+  // Estados para catalogo de productos
   const [catalogEnabled, setCatalogEnabled] = useState(true);
   const [catalogDisplay, setCatalogDisplay] = useState("grid");
   const [catalogProductsPerPage, setCatalogProductsPerPage] = useState(12);
@@ -101,7 +104,7 @@ export default function EcommerceDesignPage() {
     { key: "encabezado", label: "Encabezado" },
     { key: "plantillas", label: "Plantillas" },
     { key: "colores", label: "Colores" },
-    { key: "tipografias", label: "Tipografías" },
+    { key: "tipografias", label: "Tipografias" },
     { key: "elementos", label: "Elementos destacados" },
   ];
 
@@ -157,13 +160,13 @@ export default function EcommerceDesignPage() {
     setBannerTitle(newElements.banner.title || "");
     setBannerText(newElements.banner.text || "");
     setBannerUrl(newElements.banner.imageUrl || "");
-    setBannerButtonName(newElements.banner.button?.name || "Ver más");
+    setBannerButtonName(newElements.banner.button?.name || "Ver mas");
     setBannerButtonLink(newElements.banner.button?.link || "#");
-    
+
     // Update carousel
     setCarouselEnabled(newElements.carousel.enabled);
     setCarouselImages(newElements.carousel.images);
-    
+
     // Update delivery
     setPickupEnabled(newElements.delivery.pickup.enabled);
     setPickupTime(newElements.delivery.pickup.time);
@@ -173,11 +176,11 @@ export default function EcommerceDesignPage() {
     setDeliveryTime(newElements.delivery.delivery.time);
     setDeliveryFrom(newElements.delivery.delivery.availableFrom);
     setDeliveryTo(newElements.delivery.delivery.availableTo);
-    
+
     // Update promotions
     setPromotionsEnabled(newElements.promotions.enabled);
     setPromotionItems(newElements.promotions.items);
-    
+
     // Update product catalog
     setCatalogEnabled(newElements.productCatalog.enabled);
     setCatalogDisplay(newElements.productCatalog.display || "grid");
@@ -188,7 +191,7 @@ export default function EcommerceDesignPage() {
     setCatalogShowSort(newElements.productCatalog.showSort !== false);
   };
 
-  // Cargar configuración al montar
+  // Cargar configuracion al montar
   useEffect(() => {
     loadConfig();
   }, []);
@@ -198,16 +201,16 @@ export default function EcommerceDesignPage() {
       setLoading(true);
       const response = await ecommerceConfigService.getManagerConfig();
       const { config, branch, companyId } = response.data;
-      
+
       if (companyId) {
         setCompanyId(companyId);
       }
       if (branch?._id) {
         setBranchId(branch._id);
       }
-      
+
       setConfig(config);
-      
+
       if (config) {
         if (config.header) {
           setPageTitle(config.header.pageTitle || branch?.branchName || "");
@@ -216,55 +219,55 @@ export default function EcommerceDesignPage() {
         } else {
           setPageTitle(branch?.branchName || "");
         }
-        
+
         if (config.template) {
           setSelectedTemplate(config.template);
         }
-        
+
         if (config.colors) {
           setColors(config.colors);
         }
-        
+
         if (config.typography) {
           setTypography(config.typography);
         }
-        
+
         if (config.featuredElements) {
           const featured = config.featuredElements;
-          
+
           if (featured.banner) {
             setBannerEnabled(featured.banner.enabled);
             setBannerTitle(featured.banner.title || "");
             setBannerText(featured.banner.text || "");
             setBannerUrl(featured.banner.imageUrl || "");
-            setBannerButtonName(featured.banner.button?.name || "Ver más");
+            setBannerButtonName(featured.banner.button?.name || "Ver mas");
             setBannerButtonLink(featured.banner.button?.link || "#");
           }
-          
+
           if (featured.carousel) {
             setCarouselEnabled(featured.carousel.enabled);
             setCarouselImages(featured.carousel.images || []);
           }
-          
+
           if (featured.delivery) {
             const { pickup, delivery } = featured.delivery;
-            
+
             setPickupEnabled(pickup.enabled);
             setPickupTime(pickup.time);
             setPickupFrom(pickup.availableFrom);
             setPickupTo(pickup.availableTo);
-            
+
             setDeliveryEnabled(delivery.enabled);
             setDeliveryTime(delivery.time);
             setDeliveryFrom(delivery.availableFrom);
             setDeliveryTo(delivery.availableTo);
           }
-          
+
           if (featured.promotions) {
             setPromotionsEnabled(featured.promotions.enabled);
             setPromotionItems(featured.promotions.items || []);
           }
-          
+
           if (featured.productCatalog) {
             setCatalogEnabled(featured.productCatalog.enabled);
             setCatalogDisplay(featured.productCatalog.display || "grid");
@@ -281,8 +284,8 @@ export default function EcommerceDesignPage() {
         }
       }
     } catch (error: any) {
-      console.error("Error al cargar configuración:", error);
-      toast.error("Error al cargar la configuración");
+      console.error("Error al cargar configuracion:", error);
+      toast.error("Error al cargar la configuracion");
     } finally {
       setLoading(false);
     }
@@ -331,28 +334,28 @@ export default function EcommerceDesignPage() {
   // Guardar encabezado
   const saveHeader = async () => {
     if (!companyId || !branchId) {
-      toast.error("No se ha podido obtener la información de la sucursal");
+      toast.error("No se ha podido obtener la informacion de la sucursal");
       return;
     }
-    
+
     const validTopbarItems = topbarItems.filter(item => item.name && item.link);
-    
+
     try {
       setSaving(true);
-      
+
       let finalLogoUrl = logoUrl;
       let finalLogoPath = config?.header?.logoPath || "";
-      
+
       if (logoFile) {
         if (config?.header?.logoPath) {
           await deleteFile(config.header.logoPath).catch(console.error);
         }
-        
+
         const logoResult = await uploadEcommerceLogo(logoFile, companyId, branchId);
         finalLogoUrl = logoResult.url;
         finalLogoPath = logoResult.path;
       }
-      
+
       let updatedConfig;
       if (!config?._id) {
         updatedConfig = await ecommerceConfigService.createConfig({
@@ -365,7 +368,7 @@ export default function EcommerceDesignPage() {
             topbar: validTopbarItems
           }
         });
-        toast.success("Configuración creada correctamente");
+        toast.success("Configuracion creada correctamente");
       } else {
         updatedConfig = await ecommerceConfigService.updateHeader(config._id, {
           pageTitle,
@@ -375,7 +378,7 @@ export default function EcommerceDesignPage() {
         });
         toast.success("Encabezado actualizado correctamente");
       }
-      
+
       setConfig(updatedConfig);
       setLogoUrl(finalLogoUrl);
       setLogoFile(null);
@@ -390,13 +393,13 @@ export default function EcommerceDesignPage() {
   // Guardar plantilla
   const saveTemplate = async () => {
     if (!companyId || !branchId) {
-      toast.error("No se ha podido obtener la información de la sucursal");
+      toast.error("No se ha podido obtener la informacion de la sucursal");
       return;
     }
-    
+
     try {
       setSaving(true);
-      
+
       let updatedConfig;
       if (!config?._id) {
         updatedConfig = await ecommerceConfigService.createConfig({
@@ -404,12 +407,12 @@ export default function EcommerceDesignPage() {
           branchId: branchId,
           template: selectedTemplate
         });
-        toast.success("Configuración creada correctamente");
+        toast.success("Configuracion creada correctamente");
       } else {
         updatedConfig = await ecommerceConfigService.updateTemplate(config._id, selectedTemplate);
         toast.success("Plantilla actualizada correctamente");
       }
-      
+
       setConfig(updatedConfig);
     } catch (error: any) {
       console.error("Error al guardar plantilla:", error);
@@ -422,13 +425,13 @@ export default function EcommerceDesignPage() {
   // Guardar colores
   const saveColors = async () => {
     if (!companyId || !branchId) {
-      toast.error("No se ha podido obtener la información de la sucursal");
+      toast.error("No se ha podido obtener la informacion de la sucursal");
       return;
     }
-    
+
     try {
       setSaving(true);
-      
+
       let updatedConfig;
       if (!config?._id) {
         updatedConfig = await ecommerceConfigService.createConfig({
@@ -436,12 +439,12 @@ export default function EcommerceDesignPage() {
           branchId: branchId,
           colors: colors
         });
-        toast.success("Configuración creada correctamente");
+        toast.success("Configuracion creada correctamente");
       } else {
         updatedConfig = await ecommerceConfigService.updateColors(config._id, colors);
         toast.success("Colores actualizados correctamente");
       }
-      
+
       setConfig(updatedConfig);
     } catch (error: any) {
       console.error("Error al guardar colores:", error);
@@ -451,16 +454,16 @@ export default function EcommerceDesignPage() {
     }
   };
 
-  // Guardar tipografías
+  // Guardar tipografias
   const saveTypography = async () => {
     if (!companyId || !branchId) {
-      toast.error("No se ha podido obtener la información de la sucursal");
+      toast.error("No se ha podido obtener la informacion de la sucursal");
       return;
     }
-    
+
     try {
       setSaving(true);
-      
+
       let updatedConfig;
       if (!config?._id) {
         updatedConfig = await ecommerceConfigService.createConfig({
@@ -468,16 +471,16 @@ export default function EcommerceDesignPage() {
           branchId: branchId,
           typography: typography
         });
-        toast.success("Configuración creada correctamente");
+        toast.success("Configuracion creada correctamente");
       } else {
         updatedConfig = await ecommerceConfigService.updateTypography(config._id, typography);
-        toast.success("Tipografías actualizadas correctamente");
+        toast.success("Tipografias actualizadas correctamente");
       }
-      
+
       setConfig(updatedConfig);
     } catch (error: any) {
-      console.error("Error al guardar tipografías:", error);
-      toast.error("Error al guardar las tipografías");
+      console.error("Error al guardar tipografias:", error);
+      toast.error("Error al guardar las tipografias");
     } finally {
       setSaving(false);
     }
@@ -486,39 +489,39 @@ export default function EcommerceDesignPage() {
   // Guardar elementos destacados
   const saveFeaturedElements = async () => {
     if (!companyId || !branchId) {
-      toast.error("No se ha podido obtener la información de la sucursal");
+      toast.error("No se ha podido obtener la informacion de la sucursal");
       return;
     }
-    
+
     try {
       setSaving(true);
-      
+
       let finalBannerUrl = bannerUrl;
       let finalBannerPath = config?.featuredElements?.banner?.imagePath || "";
-      
+
       if (bannerFile) {
         if (config?.featuredElements?.banner?.imagePath) {
           await deleteFile(config.featuredElements.banner.imagePath).catch(console.error);
         }
-        
+
         const bannerResult = await uploadEcommerceBanner(bannerFile, companyId, branchId);
         finalBannerUrl = bannerResult.url;
         finalBannerPath = bannerResult.path;
       }
-      
+
       const finalCarouselImages = [...carouselImages];
-      
+
       if (carouselFiles.length > 0) {
-        toast.info(`Subiendo ${carouselFiles.length} imágenes del carrusel...`);
-        
+        toast.info(`Subiendo ${carouselFiles.length} imagenes del carrusel...`);
+
         for (let i = 0; i < carouselFiles.length; i++) {
           const file = carouselFiles[i];
           if (file) {
             try {
               const result = await uploadEcommerceCarouselImage(
-                file, 
-                companyId, 
-                branchId, 
+                file,
+                companyId,
+                branchId,
                 finalCarouselImages.length + i
               );
               finalCarouselImages.push({ url: result.url, path: result.path });
@@ -529,10 +532,10 @@ export default function EcommerceDesignPage() {
           }
         }
       }
-      
+
       const limitedCarouselImages = finalCarouselImages.slice(0, 5);
       const validPromotions = promotionItems.filter(item => item.name && item.name.trim() !== '');
-      
+
       let updatedConfig;
       const featuredElementsData = {
         banner: {
@@ -578,19 +581,19 @@ export default function EcommerceDesignPage() {
           showSort: catalogShowSort
         }
       };
-      
+
       if (!config?._id) {
         updatedConfig = await ecommerceConfigService.createConfig({
           companyId: companyId,
           branchId: branchId,
           featuredElements: featuredElementsData
         });
-        toast.success("Configuración creada correctamente");
+        toast.success("Configuracion creada correctamente");
       } else {
         updatedConfig = await ecommerceConfigService.updateFeaturedElements(config._id, featuredElementsData);
         toast.success("Elementos destacados actualizados correctamente");
       }
-      
+
       setConfig(updatedConfig);
       setBannerUrl(finalBannerUrl);
       setCarouselImages(limitedCarouselImages);
@@ -610,63 +613,52 @@ export default function EcommerceDesignPage() {
     if (image?.path) {
       await deleteFile(image.path).catch(console.error);
     }
-    
+
     const newImages = carouselImages.filter((_, i) => i !== index);
     setCarouselImages(newImages);
   };
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}>
-        <Spinner animation="border" variant="primary" />
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="d-flex flex-column h-100">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="d-flex align-items-center mb-4">
-        <Link href="/" className="btn btn-link text-muted p-0 me-3">
-          <TbArrowLeft className="fs-5" />
+      <div className="flex items-center mb-4">
+        <Link href="/" className="text-muted-foreground p-0 mr-3 hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h4 className="mb-0">Diseño</h4>
+        <h4 className="text-lg font-semibold mb-0">Diseno</h4>
       </div>
 
       {/* Main Container with Config Panel and Preview */}
-      <div className="d-flex flex-grow-1 gap-3" style={{ height: 'calc(100vh - 100px)' }}>
+      <div className="flex flex-grow gap-3" style={{ height: 'calc(100vh - 100px)' }}>
         {/* Configuration Panel */}
-        <Card className="border-0 shadow-sm flex-grow-1" style={{ maxWidth: '60%' }}>
-          <Card.Body className="p-0 d-flex flex-column">
-          {/* Tabs Navigation */}
-          <Nav variant="tabs" className="nav-tabs-custom border-bottom-0">
-            {tabs.map((tab) => (
-              <Nav.Item key={tab.key}>
-                <Nav.Link
-                  active={activeKey === tab.key}
-                  onClick={() => setActiveKey(tab.key)}
-                  className={`px-4 py-3 ${
-                    activeKey === tab.key
-                      ? "border-bottom-2 border-primary text-primary fw-semibold"
-                      : "text-muted"
-                  }`}
-                  style={{
-                    borderBottom: activeKey === tab.key ? "2px solid var(--bs-primary)" : "none",
-                    cursor: "pointer"
-                  }}
-                >
-                  {tab.label}
-                </Nav.Link>
-              </Nav.Item>
-            ))}
-          </Nav>
+        <Card className="border-0 shadow-sm flex-grow" style={{ maxWidth: '60%' }}>
+          <CardContent className="p-0 flex flex-col h-full">
+            <Tabs value={activeKey} onValueChange={setActiveKey} className="flex flex-col h-full">
+              {/* Tabs Navigation */}
+              <TabsList className="w-full justify-start rounded-none border-b bg-transparent h-auto p-0">
+                {tabs.map((tab) => (
+                  <TabsTrigger
+                    key={tab.key}
+                    value={tab.key}
+                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-          {/* Tab Content */}
-          <div className="p-4 overflow-auto flex-grow-1">
-            <Tab.Container activeKey={activeKey}>
-              <Tab.Content>
+              {/* Tab Content */}
+              <div className="p-4 overflow-auto flex-grow">
                 {/* Encabezado Tab */}
-                <Tab.Pane eventKey="encabezado">
+                <TabsContent value="encabezado" className="mt-0">
                   <HeaderTab
                     pageTitle={pageTitle}
                     setPageTitle={setPageTitle}
@@ -678,40 +670,40 @@ export default function EcommerceDesignPage() {
                     saving={saving}
                     onSave={saveHeader}
                   />
-                </Tab.Pane>
+                </TabsContent>
 
                 {/* Plantillas Tab */}
-                <Tab.Pane eventKey="plantillas">
+                <TabsContent value="plantillas" className="mt-0">
                   <TemplatesTab
                     selectedTemplate={selectedTemplate}
                     setSelectedTemplate={setSelectedTemplate}
                     saving={saving}
                     onSave={saveTemplate}
                   />
-                </Tab.Pane>
+                </TabsContent>
 
                 {/* Colores Tab */}
-                <Tab.Pane eventKey="colores">
+                <TabsContent value="colores" className="mt-0">
                   <ColorsTab
                     colors={colors}
                     setColors={setColors}
                     saving={saving}
                     onSave={saveColors}
                   />
-                </Tab.Pane>
+                </TabsContent>
 
-                {/* Tipografías Tab */}
-                <Tab.Pane eventKey="tipografias">
+                {/* Tipografias Tab */}
+                <TabsContent value="tipografias" className="mt-0">
                   <TypographyTab
                     typography={typography}
                     setTypography={setTypography}
                     saving={saving}
                     onSave={saveTypography}
                   />
-                </Tab.Pane>
+                </TabsContent>
 
                 {/* Elementos destacados Tab */}
-                <Tab.Pane eventKey="elementos">
+                <TabsContent value="elementos" className="mt-0">
                   <FeaturedElementsTab
                     featuredElements={featuredElements}
                     setFeaturedElements={setFeaturedElements}
@@ -722,96 +714,93 @@ export default function EcommerceDesignPage() {
                     saving={saving}
                     onSave={saveFeaturedElements}
                   />
-                </Tab.Pane>
-              </Tab.Content>
-            </Tab.Container>
-          </div>
-        </Card.Body>
-      </Card>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
 
-      {/* Preview Panel */}
-      <div className="border rounded shadow-sm d-flex flex-column" style={{ width: '40%', backgroundColor: '#f8f9fa' }}>
-        {/* Zoom Controls */}
-        <div className="d-flex align-items-center justify-content-between px-2 py-1 border-bottom bg-white">
-          <div className="d-flex align-items-center gap-1">
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
-              disabled={zoomLevel <= 50}
-              style={{ padding: '2px 6px', fontSize: '12px' }}
-            >
-              <TbZoomOut size={12} />
-            </Button>
-            <span className="badge bg-secondary px-2 py-1" style={{ minWidth: '45px', fontSize: '10px' }}>
-              {zoomLevel}%
-            </span>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
-              disabled={zoomLevel >= 200}
-              style={{ padding: '2px 6px', fontSize: '12px' }}
-            >
-              <TbZoomIn size={12} />
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => setZoomLevel(100)}
-              style={{ padding: '2px 6px', fontSize: '12px' }}
-            >
-              <TbZoomReset size={12} />
-            </Button>
+        {/* Preview Panel */}
+        <div className="border rounded-lg shadow-sm flex flex-col bg-muted/30" style={{ width: '40%' }}>
+          {/* Zoom Controls */}
+          <div className="flex items-center justify-between px-2 py-1 border-b bg-background">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
+                disabled={zoomLevel <= 50}
+                className="h-6 w-6 p-0"
+              >
+                <ZoomOut className="h-3 w-3" />
+              </Button>
+              <Badge variant="secondary" className="px-2 py-0.5 min-w-[45px] text-center text-xs">
+                {zoomLevel}%
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
+                disabled={zoomLevel >= 200}
+                className="h-6 w-6 p-0"
+              >
+                <ZoomIn className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setZoomLevel(100)}
+                className="h-6 w-6 p-0"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-xs">Vista previa</span>
+              <Link
+                href="/ecommerce-preview?preview=true"
+                target="_blank"
+                className="inline-flex items-center gap-1"
+              >
+                <Button size="sm" className="h-6 px-2 text-xs">
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Ver completo
+                </Button>
+              </Link>
+            </div>
           </div>
-          <div className="d-flex align-items-center gap-2">
-            <span className="text-muted" style={{ fontSize: '11px' }}>Vista previa</span>
-            <Link 
-              href="/ecommerce-preview?preview=true" 
-              target="_blank"
-              className="btn btn-primary btn-sm d-flex align-items-center gap-1"
-              style={{ padding: '2px 8px', fontSize: '11px' }}
-            >
-              <TbExternalLink size={12} />
-              Ver completo
-            </Link>
-          </div>
-        </div>
-        
-        {/* Preview Container */}
-        <div 
-          className="flex-grow-1 position-relative overflow-auto" 
-          style={{ 
-            backgroundColor: '#e2e8f0',
-            minHeight: 0
-          }}
-        >
-          <div 
-            className="position-absolute"
-            style={{ 
-              width: `${100 / 0.3}%`,
-              height: `${100 / 0.3}%`,
-              transform: `scale(${(zoomLevel * 0.3) / 100})`,
-              transformOrigin: 'top left',
-              left: 0,
-              top: 0
-            }}
+
+          {/* Preview Container */}
+          <div
+            className="flex-grow relative overflow-auto min-h-0"
+            style={{ backgroundColor: '#e2e8f0' }}
           >
-            <EcommerceView
-              header={{
-                pageTitle: pageTitle,
-                logoUrl: logoUrl,
-                topbar: topbarItems,
-                logoPath: config?.header?.logoPath || ""
+            <div
+              className="absolute"
+              style={{
+                width: `${100 / 0.3}%`,
+                height: `${100 / 0.3}%`,
+                transform: `scale(${(zoomLevel * 0.3) / 100})`,
+                transformOrigin: 'top left',
+                left: 0,
+                top: 0
               }}
-              colors={colors}
-              typography={typography}
-              featuredElements={featuredElements}
-              itemsStock={config?.itemsStock}
-            />
+            >
+              <EcommerceView
+                header={{
+                  pageTitle: pageTitle,
+                  logoUrl: logoUrl,
+                  topbar: topbarItems,
+                  logoPath: config?.header?.logoPath || ""
+                }}
+                colors={colors}
+                typography={typography}
+                featuredElements={featuredElements}
+                itemsStock={config?.itemsStock}
+              />
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

@@ -1,9 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, FileText, Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Badge, Button, Col, Form, Modal, Row, Table } from "react-bootstrap";
 import { useForm } from "react-hook-form";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import {
   UpdatePageFormData,
   updatePageSchema,
@@ -12,6 +11,28 @@ import { ModuleFormData, moduleSchema } from "../schemas/moduleSchema";
 import { CreateModuleData, Module, modulesService } from "../services/modules";
 import { pagesService, UpdatePageData } from "../services/pages";
 import { ModuleRow } from "../types";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface EditPageModalProps {
   show: boolean;
@@ -315,161 +336,130 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={handleClose}
-      size="lg"
-      centered
-      backdrop="static"
-    >
-      <Modal.Header closeButton className="border-0 pb-2">
-        <Modal.Title className="h4 fw-semibold mb-0">
-          Actualizar página
-        </Modal.Title>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={(open) => !isSubmitting && !open && handleClose()}>
+      <DialogContent className="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Actualizar página
+          </DialogTitle>
+          <DialogDescription>
+            Actualiza los datos de la página y sus módulos
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body className="px-4">
         {loadingPage ? (
-          <div className="text-center py-5">
-            <div className="spinner-border text-primary mb-3" role="status">
-              <span className="visually-hidden">Cargando...</span>
-            </div>
-            <p className="text-muted mb-0">Cargando datos de la página...</p>
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+            <p className="text-muted-foreground">Cargando datos de la página...</p>
           </div>
         ) : (
           <>
-            <Form onSubmit={handleSubmit(onSubmit)}>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label className="fw-medium mb-2 small">
-                      Nombre de la página
-                    </Form.Label>
-                    <Form.Control
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">
+                      Nombre de la página <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="edit-name"
                       type="text"
                       placeholder="Nombre de la página"
                       {...register("name")}
-                      isInvalid={!!errors.name}
-                      className="shadow-none"
                     />
-                    <Form.Control.Feedback type="invalid">
-                      {errors.name?.message}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label className="fw-medium mb-2 small">
-                      Ruta de la página
-                    </Form.Label>
-                    <Form.Control
+                    {errors.name && (
+                      <p className="text-sm text-destructive">{errors.name?.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-path">
+                      Ruta de la página <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="edit-path"
                       type="text"
                       placeholder="Ruta de la página"
                       {...register("path")}
-                      isInvalid={!!errors.path}
-                      className="shadow-none"
                     />
-                    <Form.Control.Feedback type="invalid">
-                      {errors.path?.message}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
+                    {errors.path && (
+                      <p className="text-sm text-destructive">{errors.path?.message}</p>
+                    )}
+                  </div>
+                </div>
 
-              <Row className="mb-4">
-                <Col>
-                  <Form.Group>
-                    <Form.Label className="fw-medium mb-2 small">
-                      Descripción (opcional)
-                    </Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      placeholder="Descripción de la página"
-                      {...register("description")}
-                      isInvalid={!!errors.description}
-                      className="shadow-none"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      {errors.description?.message}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-            </Form>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Descripción (opcional)</Label>
+                  <Textarea
+                    id="edit-description"
+                    rows={3}
+                    placeholder="Descripción de la página"
+                    {...register("description")}
+                  />
+                  {errors.description && (
+                    <p className="text-sm text-destructive">{errors.description?.message}</p>
+                  )}
+                </div>
+              </div>
+            </form>
 
-            <div className="mb-4">
-              <h5 className="fw-semibold mb-3 pb-2 border-bottom">
+            <div className="space-y-4">
+              <h4 className="font-semibold border-b pb-2">
                 Módulos de la página
-              </h5>
+              </h4>
 
-              <Form onSubmit={handleAddModule}>
-                <Row className="mb-3">
-                  <Col md={5}>
-                    <Form.Group>
-                      <Form.Label className="fw-medium mb-2 small">
-                        Nombre del módulo
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="Nombre del módulo"
-                        {...registerModule("nombre")}
-                        isInvalid={!!moduleErrors.nombre}
-                        className="shadow-none"
-                      />
-                      <Form.Control.Feedback type="invalid">
-                        {moduleErrors.nombre?.message}
-                      </Form.Control.Feedback>
-                    </Form.Group>
-                  </Col>
-                  <Col md={5}>
-                    <Form.Group>
-                      <Form.Label className="fw-medium mb-2 small">
-                        Descripción del módulo
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="Descripción del módulo"
-                        {...registerModule("description")}
-                        isInvalid={!!moduleErrors.description}
-                        className="shadow-none"
-                      />
-                      <Form.Control.Feedback type="invalid">
-                        {moduleErrors.description?.message}
-                      </Form.Control.Feedback>
-                    </Form.Group>
-                  </Col>
-                  <Col md={2} className="d-flex align-items-end">
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      disabled={!moduleNombre?.trim() || isSubmitting}
-                      className="fw-medium w-100"
-                      title="Agregar módulo a la lista"
-                    >
-                      <Plus size={16} className="me-2" />
-                      Agregar
-                    </Button>
-                  </Col>
-                </Row>
-              </Form>
+              <form onSubmit={handleAddModule}>
+                <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-moduleName">Nombre del módulo</Label>
+                    <Input
+                      id="edit-moduleName"
+                      type="text"
+                      placeholder="Nombre del módulo"
+                      {...registerModule("nombre")}
+                    />
+                    {moduleErrors.nombre && (
+                      <p className="text-sm text-destructive">{moduleErrors.nombre?.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-moduleDescription">Descripción del módulo</Label>
+                    <Input
+                      id="edit-moduleDescription"
+                      type="text"
+                      placeholder="Descripción del módulo"
+                      {...registerModule("description")}
+                    />
+                    {moduleErrors.description && (
+                      <p className="text-sm text-destructive">{moduleErrors.description?.message}</p>
+                    )}
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={!moduleNombre?.trim() || isSubmitting}
+                    title="Agregar módulo a la lista"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar
+                  </Button>
+                </div>
+              </form>
 
               {allModules.length > 0 && (
-                <div className="border rounded overflow-hidden">
-                  <Table responsive className="mb-0">
-                    <thead>
-                      <tr>
-                        <th className="fw-semibold small">#</th>
-                        <th className="fw-semibold small">Nombre del módulo</th>
-                        <th className="fw-semibold small">
-                          Descripción del módulo
-                        </th>
-                        <th className="fw-semibold small align-middle text-center">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <div className="border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Nombre del módulo</TableHead>
+                        <TableHead>Descripción del módulo</TableHead>
+                        <TableHead className="w-20 text-center">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {allModules
                         .map((module, index) => {
                           if (!module || !module.id) {
@@ -478,32 +468,32 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
                           }
 
                           return (
-                            <tr key={module.id}>
-                              <td className="align-middle">
-                                <small className="text-muted font-monospace">
-                                  {index + 1}
-                                </small>
-                              </td>
-                              <td className="align-middle small">
+                            <TableRow key={module.id}>
+                              <TableCell className="text-muted-foreground font-mono text-sm">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell className="text-sm">
                                 {module.nombre || "Sin nombre"}
                                 {module.isExisting && (
-                                  <Badge bg="secondary" className="ms-2">
+                                  <Badge variant="secondary" className="ml-2">
                                     Existente
                                   </Badge>
                                 )}
                                 {!module.isExisting && (
-                                  <Badge bg="success" className="ms-2">
+                                  <Badge variant="default" className="ml-2 bg-green-600">
                                     Nuevo
                                   </Badge>
                                 )}
-                              </td>
-                              <td className="align-middle small">
+                              </TableCell>
+                              <TableCell className="text-sm">
                                 {module.description || "Sin descripción"}
-                              </td>
-                              <td className="align-middle text-center">
-                                <button
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button
                                   type="button"
-                                  className="btn btn-light btn-icon btn-sm rounded-circle"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
                                   title={
                                     module.isExisting
                                       ? "Eliminar módulo de la base de datos"
@@ -522,60 +512,50 @@ const EditPageModal: React.FC<EditPageModalProps> = ({
                                   }
                                 >
                                   {deletingModules.has(module.id) ? (
-                                    <div
-                                      className="spinner-border spinner-border-sm"
-                                      role="status"
-                                    >
-                                      <span className="visually-hidden">
-                                        Eliminando...
-                                      </span>
-                                    </div>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
-                                    <Trash2 size={16} />
+                                    <Trash2 className="h-4 w-4" />
                                   )}
-                                </button>
-                              </td>
-                            </tr>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
                           );
                         })
                         .filter(Boolean)}
-                    </tbody>
+                    </TableBody>
                   </Table>
                 </div>
               )}
             </div>
+
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSubmit(onSubmit)}
+                disabled={isSubmitting || loadingPage}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar"
+                )}
+              </Button>
+            </DialogFooter>
           </>
         )}
-      </Modal.Body>
-
-      <Modal.Footer className="border-0">
-        <Button
-          type="button"
-          variant="light"
-          onClick={handleClose}
-          className="fw-medium px-4"
-          disabled={isSubmitting}
-        >
-          Cancelar
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={handleSubmit(onSubmit)}
-          disabled={isSubmitting || loadingPage}
-          className="fw-medium px-4"
-        >
-          {isSubmitting ? (
-            <>
-              <span className="spinner-border spinner-border-sm me-2" />
-              Guardando...
-            </>
-          ) : (
-            "Guardar"
-          )}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 };
 

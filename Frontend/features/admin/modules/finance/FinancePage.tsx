@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Tabs, Tab } from "react-bootstrap";
 import FinanceFilters from "./components/FinanceFilters";
 import FinanceStats from "./components/FinanceStats";
 import IncomeStats from "./components/IncomeStats";
@@ -10,6 +9,10 @@ import DiscountedSalesTable from "./components/DiscountedSalesTable";
 import BuysTable from "./components/BuysTable";
 import ExpensesTable from "./components/ExpensesTable";
 import { FinanceFilters as FinanceFiltersType } from "./types";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
 
 const FinancePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("pagos-realizados");
@@ -44,18 +47,12 @@ const FinancePage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container mx-auto py-4 px-4">
       {/* Header */}
-      <div className="mb-4">
-        <div className="d-flex justify-content-between align-items-start">
-          <div>
-            <h2 className="mb-1 fw-bold">Finanzas</h2>
-            <p className="text-muted mb-0">
-              Consulta y analiza el estado financiero
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Finanzas"
+        description="Consulta y analiza el estado financiero"
+      />
 
       {/* Filtros */}
       <FinanceFilters onSearch={handleSearch} />
@@ -67,74 +64,56 @@ const FinancePage: React.FC = () => {
       <IncomeStats filters={filters} />
 
       {/* Tabs para diferentes secciones */}
-      <div
-        className="card border-0 shadow-sm"
-        style={{ borderRadius: "15px" }}
-      >
-        <div className="card-body p-0">
-          {/* Header con pestañas */}
-          <div
-            className="px-4 pt-3"
-            style={{
-              borderBottom: "2px solid #f1f3f5",
-            }}
-          >
-            <Tabs
-              activeKey={activeTab}
-              onSelect={(k) => setActiveTab(k || "pagos-realizados")}
-              className="border-0"
-            >
-              <Tab
-                eventKey="pagos-realizados"
-                title={
-                  <span className="px-3 py-2 fw-semibold">
-                    Pagos Realizados
-                  </span>
-                }
-              >
-                <div className="p-4">
-                  <OrderPaymentsTable filters={filters} />
-                </div>
-              </Tab>
+      <Card className="border-0 shadow-sm rounded-[15px]">
+        <CardContent className="p-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="px-4 pt-3 border-b-2 border-muted">
+              <TabsList className="bg-transparent border-0 h-auto p-0 gap-0">
+                <TabsTrigger
+                  value="pagos-realizados"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  Pagos Realizados
+                </TabsTrigger>
+                <TabsTrigger
+                  value="ventas-descuento"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  Ventas con Descuento
+                </TabsTrigger>
+                <TabsTrigger
+                  value="compras"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  Compras
+                </TabsTrigger>
+                <TabsTrigger
+                  value="gastos"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  Gastos
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-              <Tab
-                eventKey="ventas-descuento"
-                title={
-                  <span className="px-3 py-2 fw-semibold">
-                    Ventas con Descuento
-                  </span>
-                }
-              >
-                <div className="p-4">
-                  <DiscountedSalesTable filters={filters} />
-                </div>
-              </Tab>
+            <TabsContent value="pagos-realizados" className="p-4 mt-0">
+              <OrderPaymentsTable filters={filters} />
+            </TabsContent>
 
-              <Tab
-                eventKey="compras"
-                title={
-                  <span className="px-3 py-2 fw-semibold">Compras</span>
-                }
-              >
-                <div className="p-4">
-                  <BuysTable filters={filters} />
-                </div>
-              </Tab>
+            <TabsContent value="ventas-descuento" className="p-4 mt-0">
+              <DiscountedSalesTable filters={filters} />
+            </TabsContent>
 
-              <Tab
-                eventKey="gastos"
-                title={
-                  <span className="px-3 py-2 fw-semibold">Gastos</span>
-                }
-              >
-                <div className="p-4">
-                  <ExpensesTable filters={filters} />
-                </div>
-              </Tab>
-            </Tabs>
-          </div>
-        </div>
-      </div>
+            <TabsContent value="compras" className="p-4 mt-0">
+              <BuysTable filters={filters} />
+            </TabsContent>
+
+            <TabsContent value="gastos" className="p-4 mt-0">
+              <ExpensesTable filters={filters} />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };

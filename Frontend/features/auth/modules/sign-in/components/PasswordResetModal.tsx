@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from "react";
 import {
-  Modal,
-  Button,
-  Form,
-  FormControl,
-  FormLabel,
-  Alert,
-  Spinner,
-  InputGroup,
-} from "react-bootstrap";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
 import { TbMail, TbLock, TbShieldLock } from "react-icons/tb";
 import {
   sendResetCode,
@@ -51,7 +53,6 @@ const PasswordResetModal = ({
 
   useEffect(() => {
     if (show) {
-      // Reset state when modal opens
       setStep("email");
       setCode("");
       setNewPassword("");
@@ -69,18 +70,16 @@ const PasswordResetModal = ({
       return;
     }
 
-    console.log("Enviando código a:", email);
     setIsLoading(true);
     setError("");
 
     try {
       const response = await sendResetCode(email);
-      console.log("Respuesta del servidor:", response);
-      
+
       if (response.success) {
         setSuccess("Código enviado exitosamente a tu correo");
         setStep("code");
-        setResendTimer(60); // 60 seconds before allowing resend
+        setResendTimer(60);
       } else {
         setError(response.message || "Error al enviar el código");
       }
@@ -102,7 +101,7 @@ const PasswordResetModal = ({
     setError("");
 
     const response = await verifyResetCode(email, code);
-    
+
     if (response.success) {
       setSuccess("Código verificado correctamente");
       setStep("reset");
@@ -116,7 +115,6 @@ const PasswordResetModal = ({
   const handleResetPassword = async () => {
     setError("");
 
-    // Validations
     if (!currentPassword) {
       setError("Por favor ingresa tu contraseña actual");
       return;
@@ -139,8 +137,13 @@ const PasswordResetModal = ({
 
     setIsLoading(true);
 
-    const response = await resetPassword(email, code, newPassword, confirmPassword);
-    
+    const response = await resetPassword(
+      email,
+      code,
+      newPassword,
+      confirmPassword
+    );
+
     if (response.success) {
       setSuccess("Contraseña actualizada exitosamente");
       setTimeout(() => {
@@ -163,106 +166,108 @@ const PasswordResetModal = ({
       case "email":
         return (
           <>
-            <Modal.Header closeButton>
-              <Modal.Title>Recuperar Contraseña</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <p className="text-muted mb-4">
-                Ingresa tu correo electrónico y te enviaremos un código de verificación
+            <DialogHeader>
+              <DialogTitle>Recuperar Contraseña</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-muted-foreground mb-4">
+                Ingresa tu correo electrónico y te enviaremos un código de
+                verificación
               </p>
 
               {error && (
-                <Alert variant="danger" className="mb-3">
-                  {error}
+                <Alert variant="destructive" className="mb-3">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
               {success && (
-                <Alert variant="success" className="mb-3">
-                  {success}
+                <Alert className="mb-3 border-green-500 text-green-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>{success}</AlertDescription>
                 </Alert>
               )}
 
-              <Form.Group className="mb-3">
-                <FormLabel>Correo Electrónico</FormLabel>
-                <InputGroup>
-                  <InputGroup.Text>
-                    <TbMail />
-                  </InputGroup.Text>
-                  <FormControl
+              <div className="space-y-2">
+                <Label>Correo Electrónico</Label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                    <TbMail className="text-muted-foreground" />
+                  </span>
+                  <Input
                     type="email"
                     placeholder="tu@correo.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
+                    className="rounded-l-none"
                   />
-                </InputGroup>
-              </Form.Group>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={onClose}>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button
-                variant="primary"
-                onClick={handleSendCode}
-                disabled={isLoading || !email}
-              >
+              <Button onClick={handleSendCode} disabled={isLoading || !email}>
                 {isLoading ? (
                   <>
-                    <Spinner size="sm" className="me-2" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Enviando...
                   </>
                 ) : (
                   "Enviar Código"
                 )}
               </Button>
-            </Modal.Footer>
+            </DialogFooter>
           </>
         );
 
       case "code":
         return (
           <>
-            <Modal.Header closeButton>
-              <Modal.Title>Verificar Código</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <p className="text-muted mb-4">
+            <DialogHeader>
+              <DialogTitle>Verificar Código</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-muted-foreground mb-4">
                 Ingresa el código de 6 dígitos que enviamos a {email}
               </p>
 
               {error && (
-                <Alert variant="danger" className="mb-3">
-                  {error}
+                <Alert variant="destructive" className="mb-3">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
               {success && (
-                <Alert variant="success" className="mb-3">
-                  {success}
+                <Alert className="mb-3 border-green-500 text-green-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>{success}</AlertDescription>
                 </Alert>
               )}
 
-              <Form.Group className="mb-3">
-                <FormLabel>Código de Verificación</FormLabel>
-                <InputGroup>
-                  <InputGroup.Text>
-                    <TbShieldLock />
-                  </InputGroup.Text>
-                  <FormControl
+              <div className="space-y-2">
+                <Label>Código de Verificación</Label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                    <TbShieldLock className="text-muted-foreground" />
+                  </span>
+                  <Input
                     type="text"
                     placeholder="123456"
                     maxLength={6}
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                     disabled={isLoading}
-                    className="text-center fs-4 fw-bold"
+                    className="rounded-l-none text-center text-xl font-bold"
                   />
-                </InputGroup>
-              </Form.Group>
+                </div>
+              </div>
 
-              <div className="text-center">
+              <div className="text-center mt-4">
                 {resendTimer > 0 ? (
-                  <p className="text-muted small">
+                  <p className="text-muted-foreground text-sm">
                     Reenviar código en {resendTimer} segundos
                   </p>
                 ) : (
@@ -275,108 +280,113 @@ const PasswordResetModal = ({
                   </Button>
                 )}
               </div>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setStep("email")}>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep("email")}>
                 Volver
               </Button>
               <Button
-                variant="primary"
                 onClick={handleVerifyCode}
                 disabled={isLoading || code.length !== 6}
               >
                 {isLoading ? (
                   <>
-                    <Spinner size="sm" className="me-2" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Verificando...
                   </>
                 ) : (
                   "Verificar"
                 )}
               </Button>
-            </Modal.Footer>
+            </DialogFooter>
           </>
         );
 
       case "reset":
         return (
           <>
-            <Modal.Header closeButton>
-              <Modal.Title>Nueva Contraseña</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <p className="text-muted mb-4">
+            <DialogHeader>
+              <DialogTitle>Nueva Contraseña</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-muted-foreground mb-4">
                 Ingresa tu contraseña actual y crea una nueva contraseña
               </p>
 
               {error && (
-                <Alert variant="danger" className="mb-3">
-                  {error}
+                <Alert variant="destructive" className="mb-3">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
               {success && (
-                <Alert variant="success" className="mb-3">
-                  {success}
+                <Alert className="mb-3 border-green-500 text-green-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>{success}</AlertDescription>
                 </Alert>
               )}
 
-              <Form.Group className="mb-3">
-                <FormLabel>Contraseña Actual</FormLabel>
-                <InputGroup>
-                  <InputGroup.Text>
-                    <TbLock />
-                  </InputGroup.Text>
-                  <FormControl
-                    type="password"
-                    placeholder="Contraseña actual"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </InputGroup>
-              </Form.Group>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Contraseña Actual</Label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                      <TbLock className="text-muted-foreground" />
+                    </span>
+                    <Input
+                      type="password"
+                      placeholder="Contraseña actual"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      disabled={isLoading}
+                      className="rounded-l-none"
+                    />
+                  </div>
+                </div>
 
-              <Form.Group className="mb-3">
-                <FormLabel>Nueva Contraseña</FormLabel>
-                <InputGroup>
-                  <InputGroup.Text>
-                    <TbLock />
-                  </InputGroup.Text>
-                  <FormControl
-                    type="password"
-                    placeholder="Nueva contraseña"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </InputGroup>
-                <Form.Text className="text-muted">
-                  Mínimo 3 caracteres
-                </Form.Text>
-              </Form.Group>
+                <div className="space-y-2">
+                  <Label>Nueva Contraseña</Label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                      <TbLock className="text-muted-foreground" />
+                    </span>
+                    <Input
+                      type="password"
+                      placeholder="Nueva contraseña"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      disabled={isLoading}
+                      className="rounded-l-none"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo 3 caracteres
+                  </p>
+                </div>
 
-              <Form.Group className="mb-3">
-                <FormLabel>Confirmar Nueva Contraseña</FormLabel>
-                <InputGroup>
-                  <InputGroup.Text>
-                    <TbLock />
-                  </InputGroup.Text>
-                  <FormControl
-                    type="password"
-                    placeholder="Confirmar contraseña"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </InputGroup>
-              </Form.Group>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setStep("code")}>
+                <div className="space-y-2">
+                  <Label>Confirmar Nueva Contraseña</Label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
+                      <TbLock className="text-muted-foreground" />
+                    </span>
+                    <Input
+                      type="password"
+                      placeholder="Confirmar contraseña"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isLoading}
+                      className="rounded-l-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep("code")}>
                 Volver
               </Button>
               <Button
-                variant="primary"
                 onClick={handleResetPassword}
                 disabled={
                   isLoading ||
@@ -387,23 +397,23 @@ const PasswordResetModal = ({
               >
                 {isLoading ? (
                   <>
-                    <Spinner size="sm" className="me-2" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Actualizando...
                   </>
                 ) : (
                   "Actualizar Contraseña"
                 )}
               </Button>
-            </Modal.Footer>
+            </DialogFooter>
           </>
         );
     }
   };
 
   return (
-    <Modal show={show} onHide={onClose} centered>
-      {renderStepContent()}
-    </Modal>
+    <Dialog open={show} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>{renderStepContent()}</DialogContent>
+    </Dialog>
   );
 };
 

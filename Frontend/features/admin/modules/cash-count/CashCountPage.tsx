@@ -1,14 +1,43 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Table, Spinner, Button, Form, Row, Col, Badge, Pagination } from "react-bootstrap";
-import { Eye, Calendar, DollarSign } from "lucide-react";
+import {
+  Eye,
+  Calendar,
+  DollarSign,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { toast } from "react-toastify";
 import { cashRegisterLogsService } from "./services/cashRegisterLogs";
 import { CashRegisterLog, CashRegisterRef } from "./types";
 import CashCountDetailModal from "./components/CashCountDetailModal";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const CashCountPage: React.FC = () => {
   const { activeBranch } = useActiveBranchStore();
@@ -52,7 +81,7 @@ const CashCountPage: React.FC = () => {
   }, [activeBranch?._id]);
 
   const loadCashRegisters = async () => {
-    // Los cajeros no necesitan cargar la lista de cajas porque el filtro se aplica automáticamente en el backend
+    // Los cajeros no necesitan cargar la lista de cajas porque el filtro se aplica automaticamente en el backend
     if (isCashier) {
       return;
     }
@@ -71,7 +100,7 @@ const CashCountPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Para cajeros: el backend filtra automáticamente por cashierId
+      // Para cajeros: el backend filtra automaticamente por cashierId
       // Para admins: incluir el branchId de la sucursal activa si existe
       const filtersToSend = isCashier
         ? {
@@ -80,10 +109,11 @@ const CashCountPage: React.FC = () => {
           }
         : {
             ...filters,
-            ...(activeBranch?._id && { branchId: activeBranch._id })
+            ...(activeBranch?._id && { branchId: activeBranch._id }),
           };
 
-      const response = await cashRegisterLogsService.getAllCashRegisterLogs(filtersToSend);
+      const response =
+        await cashRegisterLogsService.getAllCashRegisterLogs(filtersToSend);
 
       if (response.success) {
         setLogs(response.data);
@@ -117,7 +147,8 @@ const CashCountPage: React.FC = () => {
     try {
       setLoadingDetail(true);
       setShowDetailModal(true);
-      const response = await cashRegisterLogsService.getCashRegisterLogById(logId);
+      const response =
+        await cashRegisterLogsService.getCashRegisterLogById(logId);
       if (response.success) {
         setSelectedLog(response.data);
       }
@@ -152,266 +183,273 @@ const CashCountPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container mx-auto py-4 px-4">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="mb-1 fw-bold">Historial de Cierres de Caja</h2>
-          <p className="text-muted mb-0">
+          <h2 className="mb-1 font-bold text-2xl">
+            Historial de Cierres de Caja
+          </h2>
+          <p className="text-muted-foreground">
             Consulta el historial completo de cierres de caja registradora
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div
-        className="card border-0 shadow-sm mb-4"
-        style={{ borderRadius: "15px" }}
-      >
-        <div className="card-body p-4">
-          <Row className="g-3">
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  <Calendar size={16} className="me-2" />
-                  Fecha Inicio
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, startDate: e.target.value }))
-                  }
-                />
-              </Form.Group>
-            </Col>
+      <Card className="mb-4 border-0 shadow-sm rounded-[15px]">
+        <CardContent className="p-4">
+          <div
+            className={`grid gap-3 ${isCashier ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-4"}`}
+          >
+            <div className="space-y-2">
+              <Label className="font-semibold flex items-center">
+                <Calendar size={16} className="mr-2" />
+                Fecha Inicio
+              </Label>
+              <Input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, startDate: e.target.value }))
+                }
+              />
+            </div>
 
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label className="fw-semibold">
-                  <Calendar size={16} className="me-2" />
-                  Fecha Fin
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, endDate: e.target.value }))
-                  }
-                />
-              </Form.Group>
-            </Col>
+            <div className="space-y-2">
+              <Label className="font-semibold flex items-center">
+                <Calendar size={16} className="mr-2" />
+                Fecha Fin
+              </Label>
+              <Input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, endDate: e.target.value }))
+                }
+              />
+            </div>
 
-            {/* Ocultar selector de caja para cajeros - el backend filtra automáticamente por su sucursal */}
+            {/* Ocultar selector de caja para cajeros - el backend filtra automaticamente por su sucursal */}
             {!isCashier && (
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold">
-                    <DollarSign size={16} className="me-2" />
-                    Caja Registradora
-                  </Form.Label>
-                  <Form.Select
-                    value={filters.cashRegisterId}
-                    onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        cashRegisterId: e.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">Todas las cajas</option>
+              <div className="space-y-2">
+                <Label className="font-semibold flex items-center">
+                  <DollarSign size={16} className="mr-2" />
+                  Caja Registradora
+                </Label>
+                <Select
+                  value={filters.cashRegisterId}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      cashRegisterId: value === "all" ? "" : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todas las cajas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las cajas</SelectItem>
                     {cashRegisters.map((cashRegister) => (
-                      <option key={cashRegister._id} value={cashRegister._id}>
+                      <SelectItem
+                        key={cashRegister._id}
+                        value={cashRegister._id}
+                      >
                         {cashRegister.name}
                         {cashRegister.branchId &&
                           ` - ${cashRegister.branchId.branchName}`}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
-            <Col md={isCashier ? 4 : 2} className="d-flex align-items-end gap-2">
-              <Button
-                variant="primary"
-                onClick={handleSearch}
-                className="w-100"
-              >
+            <div className="flex items-end gap-2">
+              <Button onClick={handleSearch} className="flex-1">
                 Buscar
               </Button>
               <Button
-                variant="outline-secondary"
+                variant="outline"
                 onClick={handleClearFilters}
-                className="w-100"
+                className="flex-1"
               >
                 Limpiar
               </Button>
-            </Col>
-          </Row>
-        </div>
-      </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <div
-        className="card border-0 shadow-sm"
-        style={{ borderRadius: "15px" }}
-      >
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <Table hover className="mb-0">
-              <thead style={{ background: "#f8f9fa" }}>
-                <tr>
-                  <th className="px-4 py-3 fw-semibold text-muted">
-                    FECHA CIERRE
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted">CAJA</th>
-                  <th className="px-4 py-3 fw-semibold text-muted">SUCURSAL</th>
-                  <th className="px-4 py-3 fw-semibold text-muted">CAJERO</th>
-                  <th className="px-4 py-3 fw-semibold text-muted">GERENTE</th>
-                  <th className="px-4 py-3 fw-semibold text-muted text-end">
-                    SALDO INICIAL
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted text-end">
-                    TOTAL VENTAS
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted text-end">
-                    TOTAL GASTOS
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted text-end">
-                    SALDO FINAL
-                  </th>
-                  <th className="px-4 py-3 fw-semibold text-muted text-center">
-                    ACCIONES
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={10} className="text-center py-5">
-                      <Spinner animation="border" variant="primary" />
-                      <p className="text-muted mt-3">Cargando historial...</p>
-                    </td>
-                  </tr>
-                ) : logs.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="text-center py-5">
-                      <DollarSign size={48} className="text-muted mb-3" />
-                      <p className="text-muted mb-0">
-                        No se encontraron cierres de caja
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  logs.map((log) => (
-                    <tr
-                      key={log._id}
-                      style={{ borderBottom: "1px solid #f1f3f5" }}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="fw-semibold">
-                          {formatDate(log.closedAt)}
-                        </div>
-                        {log.openedAt && (
-                          <small className="text-muted">
-                            Abierto: {formatDate(log.openedAt)}
-                          </small>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="fw-semibold">{log.cashRegisterName}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          bg="info"
-                          style={{
-                            padding: "4px 12px",
-                            borderRadius: "20px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          {log.branchId.branchName}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        {log.cashierId ? (
-                          <div>
-                            <div className="fw-semibold" style={{ fontSize: "13px" }}>
-                              {log.cashierId.profile.fullName}
-                            </div>
-                            <small className="text-muted">
-                              {log.cashierId.username}
-                            </small>
-                          </div>
-                        ) : (
-                          <span className="text-muted">N/A</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
+      <Card className="border-0 shadow-sm rounded-[15px]">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                  FECHA CIERRE
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                  CAJA
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                  SUCURSAL
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                  CAJERO
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                  GERENTE
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
+                  SALDO INICIAL
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
+                  TOTAL VENTAS
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
+                  TOTAL GASTOS
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
+                  SALDO FINAL
+                </TableHead>
+                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-center">
+                  ACCIONES
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                    <p className="text-muted-foreground mt-3">
+                      Cargando historial...
+                    </p>
+                  </TableCell>
+                </TableRow>
+              ) : logs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-12">
+                    <DollarSign
+                      size={48}
+                      className="text-muted-foreground mb-3 mx-auto"
+                    />
+                    <p className="text-muted-foreground">
+                      No se encontraron cierres de caja
+                    </p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                logs.map((log) => (
+                  <TableRow key={log._id} className="border-b border-border/50">
+                    <TableCell className="px-4 py-3">
+                      <div className="font-semibold">
+                        {formatDate(log.closedAt)}
+                      </div>
+                      {log.openedAt && (
+                        <small className="text-muted-foreground">
+                          Abierto: {formatDate(log.openedAt)}
+                        </small>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="font-semibold">{log.cashRegisterName}</div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <Badge
+                        variant="secondary"
+                        className="px-3 py-1 rounded-full font-medium bg-blue-100 text-blue-800"
+                      >
+                        {log.branchId.branchName}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {log.cashierId ? (
                         <div>
-                          <div className="fw-semibold" style={{ fontSize: "13px" }}>
-                            {log.managerId.profile.fullName}
+                          <div className="font-semibold text-[13px]">
+                            {log.cashierId.profile.fullName}
                           </div>
-                          <small className="text-muted">
-                            {log.managerId.username}
+                          <small className="text-muted-foreground">
+                            {log.cashierId.username}
                           </small>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        <span className="fw-semibold">
-                          {formatCurrency(log.totals.initialBalance)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        <span className="fw-semibold text-success">
-                          {formatCurrency(log.totals.totalSales)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        <span className="fw-semibold text-danger">
-                          {formatCurrency(log.totals.totalExpenses)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        <span className="fw-bold text-primary">
-                          {formatCurrency(log.totals.finalBalance)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Button
-                          variant="light"
-                          size="sm"
-                          className="rounded-circle"
-                          style={{ width: "32px", height: "32px", padding: "0" }}
-                          onClick={() => handleViewDetail(log._id)}
-                          title="Ver detalle"
-                        >
-                          <Eye size={16} />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          </div>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div>
+                        <div className="font-semibold text-[13px]">
+                          {log.managerId.profile.fullName}
+                        </div>
+                        <small className="text-muted-foreground">
+                          {log.managerId.username}
+                        </small>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right">
+                      <span className="font-semibold">
+                        {formatCurrency(log.totals.initialBalance)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right">
+                      <span className="font-semibold text-green-600">
+                        {formatCurrency(log.totals.totalSales)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right">
+                      <span className="font-semibold text-red-600">
+                        {formatCurrency(log.totals.totalExpenses)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right">
+                      <span className="font-bold text-primary">
+                        {formatCurrency(log.totals.finalBalance)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full w-8 h-8"
+                        onClick={() => handleViewDetail(log._id)}
+                        title="Ver detalle"
+                      >
+                        <Eye size={16} />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
 
           {/* Pagination */}
           {!loading && logs.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center p-4 border-top">
-              <div className="text-muted">
+            <div className="flex justify-between items-center p-4 border-t">
+              <div className="text-muted-foreground">
                 Mostrando {logs.length} de {pagination.total} registros
               </div>
-              <Pagination className="mb-0">
-                <Pagination.First
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
                   onClick={() => handlePageChange(1)}
                   disabled={pagination.page === 1}
-                />
-                <Pagination.Prev
+                >
+                  <ChevronsLeft size={16} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                />
+                >
+                  <ChevronLeft size={16} />
+                </Button>
 
                 {[...Array(pagination.pages)].map((_, index) => {
                   const pageNumber = index + 1;
@@ -422,43 +460,58 @@ const CashCountPage: React.FC = () => {
                       pageNumber <= pagination.page + 1)
                   ) {
                     return (
-                      <Pagination.Item
+                      <Button
                         key={pageNumber}
-                        active={pageNumber === pagination.page}
+                        variant={
+                          pageNumber === pagination.page ? "default" : "outline"
+                        }
+                        size="icon-sm"
                         onClick={() => handlePageChange(pageNumber)}
                       >
                         {pageNumber}
-                      </Pagination.Item>
+                      </Button>
                     );
                   } else if (
                     pageNumber === pagination.page - 2 ||
                     pageNumber === pagination.page + 2
                   ) {
-                    return <Pagination.Ellipsis key={pageNumber} disabled />;
+                    return (
+                      <span key={pageNumber} className="px-2 text-muted-foreground">
+                        ...
+                      </span>
+                    );
                   }
                   return null;
                 })}
 
-                <Pagination.Next
+                <Button
+                  variant="outline"
+                  size="icon-sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={pagination.page === pagination.pages}
-                />
-                <Pagination.Last
+                >
+                  <ChevronRight size={16} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
                   onClick={() => handlePageChange(pagination.pages)}
                   disabled={pagination.page === pagination.pages}
-                />
-              </Pagination>
+                >
+                  <ChevronsRight size={16} />
+                </Button>
+              </div>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Detail Modal */}
       <CashCountDetailModal
-        show={showDetailModal}
-        onHide={() => {
-          setShowDetailModal(false);
-          setSelectedLog(null);
+        open={showDetailModal}
+        onOpenChange={(open) => {
+          setShowDetailModal(open);
+          if (!open) setSelectedLog(null);
         }}
         log={selectedLog}
         loading={loadingDetail}

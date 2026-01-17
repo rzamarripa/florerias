@@ -1,18 +1,25 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Form,
-  InputGroup,
-  Spinner,
-  Row,
-  Col,
-  Modal,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
-  Badge,
-  Alert,
-} from "react-bootstrap";
-import { Search, Package } from "lucide-react";
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search, Package, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -33,7 +40,7 @@ const PizarronEnvioPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
 
-  // Stages dinámicos
+  // Stages dinamicos
   const [shippingStages, setShippingStages] = useState<StageCatalog[]>([]);
 
   const { activeBranch } = useActiveBranchStore();
@@ -45,19 +52,19 @@ const PizarronEnvioPage: React.FC = () => {
     try {
       setLoadingStages(true);
 
-      // Cargar stages de Envío
+      // Cargar stages de Envio
       const shippingResponse = await stageCatalogsService.getUserStages('Envio');
       setShippingStages(shippingResponse.data || []);
 
     } catch (error: any) {
       console.error("Error loading stages:", error);
-      toast.error(error.message || "Error al cargar las etapas del pizarrón");
+      toast.error(error.message || "Error al cargar las etapas del pizarron");
     } finally {
       setLoadingStages(false);
     }
   };
 
-  // Cargar órdenes
+  // Cargar ordenes
   const loadOrders = async () => {
     try {
       setLoading(true);
@@ -69,14 +76,14 @@ const PizarronEnvioPage: React.FC = () => {
       });
 
       if (response.data) {
-        // Filtrar solo las órdenes no canceladas
+        // Filtrar solo las ordenes no canceladas
         const validOrders = response.data.filter(
           (order) => order.status !== "cancelado"
         );
         setOrders(validOrders);
       }
     } catch (error: any) {
-      toast.error(error.message || "Error al cargar las órdenes");
+      toast.error(error.message || "Error al cargar las ordenes");
       console.error("Error loading orders:", error);
     } finally {
       setLoading(false);
@@ -91,10 +98,10 @@ const PizarronEnvioPage: React.FC = () => {
     loadOrders();
   }, [searchTerm, productFilter, activeBranch]);
 
-  // Usar el hook especializado para escuchar cambios en órdenes
+  // Usar el hook especializado para escuchar cambios en ordenes
   useOrderSocket({
     onOrderCreated: (newOrder) => {
-      console.log("📩 [PizarronEnvio] Nueva orden recibida:", newOrder);
+      console.log("[PizarronEnvio] Nueva orden recibida:", newOrder);
 
       if (newOrder.status !== "cancelado") {
         setOrders((prevOrders) => {
@@ -106,7 +113,7 @@ const PizarronEnvioPage: React.FC = () => {
       }
     },
     onOrderUpdated: (updatedOrder) => {
-      console.log("📝 [PizarronEnvio] Orden actualizada:", updatedOrder);
+      console.log("[PizarronEnvio] Orden actualizada:", updatedOrder);
       setOrders((prevOrders) =>
         prevOrders.map((o) =>
           o._id === updatedOrder._id ? updatedOrder as Order : o
@@ -114,7 +121,7 @@ const PizarronEnvioPage: React.FC = () => {
       );
     },
     onOrderDeleted: (data: { orderId: string }) => {
-      console.log("🗑️ [PizarronEnvio] Orden eliminada:", data.orderId);
+      console.log("[PizarronEnvio] Orden eliminada:", data.orderId);
       setOrders((prevOrders) =>
         prevOrders.filter((o) => o._id !== data.orderId)
       );
@@ -176,10 +183,10 @@ const PizarronEnvioPage: React.FC = () => {
     }));
   };
 
-  // Obtener órdenes por stage (solo Envío)
+  // Obtener ordenes por stage (solo Envio)
   const getOrdersByStage = (stageId: string): Order[] => {
     return orders.filter((order) => {
-      // No mostrar órdenes canceladas
+      // No mostrar ordenes canceladas
       if (order.status === 'cancelado') return false;
 
       // Obtener el ID del stage de la orden
@@ -190,7 +197,7 @@ const PizarronEnvioPage: React.FC = () => {
       // Verificar que la orden tenga el stage correcto
       if (orderStageId !== stageId) return false;
 
-      // Envío: mostrar solo órdenes con sentToShipping = true
+      // Envio: mostrar solo ordenes con sentToShipping = true
       return order.sentToShipping === true;
     });
   };
@@ -220,77 +227,66 @@ const PizarronEnvioPage: React.FC = () => {
   const shippingColumns = createColumnsFromStages(shippingStages);
 
   return (
-    <div className="container-fluid py-1">
+    <div className="container mx-auto py-1 px-4">
       {/* Header */}
       <div className="mb-2">
-        <h2 className="fw-bold mb-1">Pizarrón de Envío</h2>
-        <p className="text-muted">Gestiona las órdenes en las diferentes etapas de envío</p>
+        <h2 className="font-bold text-2xl mb-1">Pizarron de Envio</h2>
+        <p className="text-muted-foreground">Gestiona las ordenes en las diferentes etapas de envio</p>
       </div>
 
       {/* Filters */}
-      <div
-        className="card border-0 shadow-sm mb-2"
-        style={{ borderRadius: "10px" }}
-      >
-        <div className="card-body p-2">
-          <Row className="g-2">
-            <Col md={6}>
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por orden, cliente..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
-            </Col>
-            <Col md={6}>
-              <InputGroup>
-                <InputGroup.Text className="bg-light border-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroup.Text>
-                <Form.Control
-                  type="text"
-                  placeholder="Filtrar por producto..."
-                  value={productFilter}
-                  onChange={handleProductFilterChange}
-                  className="border-0 bg-light"
-                  style={{ borderRadius: "0 10px 10px 0" }}
-                />
-              </InputGroup>
-            </Col>
-          </Row>
-        </div>
-      </div>
+      <Card className="border-0 shadow-sm mb-2 rounded-lg">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por orden, cliente..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10 bg-muted/50 border-0"
+              />
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Filtrar por producto..."
+                value={productFilter}
+                onChange={handleProductFilterChange}
+                className="pl-10 bg-muted/50 border-0"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Pizarrón de Envío */}
+      {/* Pizarron de Envio */}
       {loadingStages ? (
         <div className="text-center py-5">
-          <Spinner animation="border" variant="success" />
-          <p className="mt-3 text-muted">Cargando pizarrón...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto" />
+          <p className="mt-3 text-muted-foreground">Cargando pizarron...</p>
         </div>
       ) : loading ? (
         <div className="text-center py-5">
-          <Spinner animation="border" variant="success" />
-          <p className="mt-3 text-muted">Cargando órdenes...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto" />
+          <p className="mt-3 text-muted-foreground">Cargando ordenes...</p>
         </div>
       ) : shippingColumns.length === 0 ? (
-        <Alert variant="warning" className="mt-3">
-          <Package size={20} className="me-2" />
-          No hay etapas configuradas para el pizarrón de Envío.
-          <br />
-          <small>Crea etapas en el catálogo de etapas para poder visualizar las órdenes aquí.</small>
+        <Alert variant="default" className="mt-3 border-yellow-300 bg-yellow-50">
+          <Package className="h-5 w-5 text-yellow-600" />
+          <AlertDescription className="ml-2">
+            No hay etapas configuradas para el pizarron de Envio.
+            <br />
+            <small>Crea etapas en el catalogo de etapas para poder visualizar las ordenes aqui.</small>
+          </AlertDescription>
         </Alert>
       ) : (
         <DndProvider backend={HTML5Backend}>
-          <Row className="g-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {shippingColumns.map((column) => (
-              <Col key={column.id} lg={3} md={4} sm={6} xs={12}>
+              <div key={column.id}>
                 <KanbanColumn
                   title={column.title}
                   count={getOrdersByStage(column.id).length}
@@ -300,110 +296,99 @@ const PizarronEnvioPage: React.FC = () => {
                   onViewDetails={handleViewDetails}
                   onChangeStatus={handleChangeStage}
                 />
-              </Col>
+              </div>
             ))}
-          </Row>
+          </div>
         </DndProvider>
       )}
 
       {/* Order Detail Modal */}
-      <Modal
-        show={showDetailModal}
-        onHide={() => setShowDetailModal(false)}
-        size="lg"
-        centered
-      >
-        <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title className="fw-bold">Detalle de Orden</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="px-4 pb-4">
-          {selectedOrder && (
-            <>
-              {/* Order Info */}
-              <div className="mb-4">
-                <Row className="g-3">
-                  <Col md={6}>
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader className="border-b-0 pb-0">
+            <DialogTitle className="font-bold text-lg">Detalle de Orden</DialogTitle>
+          </DialogHeader>
+          <div className="pt-1 pb-2">
+            {selectedOrder && (
+              <>
+                {/* Order Info */}
+                <div className="mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="mb-3">
-                      <label className="text-muted small mb-1">
-                        Número de Orden
+                      <label className="text-muted-foreground text-sm mb-1 block">
+                        Numero de Orden
                       </label>
-                      <div className="fw-bold">{selectedOrder.orderNumber}</div>
+                      <div className="font-bold">{selectedOrder.orderNumber}</div>
                     </div>
-                  </Col>
-                  <Col md={6}>
                     <div className="mb-3">
-                      <label className="text-muted small mb-1">Estado</label>
-                      <div className="fw-bold text-capitalize">
+                      <label className="text-muted-foreground text-sm mb-1 block">Estado</label>
+                      <div className="font-bold capitalize">
                         <Badge
-                          bg={selectedOrder.status === 'sinAnticipo' ? 'warning' : 'primary'}
+                          variant={selectedOrder.status === 'sinAnticipo' ? 'outline' : 'default'}
+                          className={selectedOrder.status === 'sinAnticipo' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}
                         >
                           {selectedOrder.status}
                         </Badge>
                       </div>
                     </div>
-                  </Col>
-                </Row>
-              </div>
+                  </div>
+                </div>
 
-              {/* Client Info */}
-              <div className="mb-4">
-                <h6 className="fw-bold mb-3">Información del Cliente</h6>
-                <Row className="g-3">
-                  <Col md={selectedOrder.arregloUrl ? 6 : 12}>
-                    <div className="mb-3">
-                      <label className="text-muted small mb-1">Nombre</label>
-                      <div>{selectedOrder.clientInfo.name}</div>
-                    </div>
-                    <div className="mb-3">
-                      <label className="text-muted small mb-1">Teléfono</label>
-                      <div>{selectedOrder.clientInfo.phone || "N/A"}</div>
-                    </div>
-                    <div className="mb-2">
-                      <label className="text-muted small mb-1">Email</label>
-                      <div>{selectedOrder.clientInfo.email || "N/A"}</div>
-                    </div>
-                  </Col>
-                  {selectedOrder.arregloUrl && (
-                    <Col md={6}>
+                {/* Client Info */}
+                <div className="mb-4">
+                  <h6 className="font-bold mb-3">Informacion del Cliente</h6>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className={selectedOrder.arregloUrl ? "" : "md:col-span-2"}>
+                      <div className="mb-3">
+                        <label className="text-muted-foreground text-sm mb-1 block">Nombre</label>
+                        <div>{selectedOrder.clientInfo.name}</div>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-muted-foreground text-sm mb-1 block">Telefono</label>
+                        <div>{selectedOrder.clientInfo.phone || "N/A"}</div>
+                      </div>
                       <div className="mb-2">
-                        <label className="text-muted small mb-1">Imagen del Arreglo</label>
-                        <div className="mt-2 d-flex justify-content-center">
-                          <img
-                            src={selectedOrder.arregloUrl}
-                            alt="Arreglo"
-                            className="img-fluid rounded shadow-sm"
-                            style={{
-                              maxHeight: "300px",
-                              objectFit: "contain",
-                              cursor: "pointer",
-                            }}
-                            onClick={() => window.open(selectedOrder.arregloUrl!, '_blank')}
-                          />
+                        <label className="text-muted-foreground text-sm mb-1 block">Email</label>
+                        <div>{selectedOrder.clientInfo.email || "N/A"}</div>
+                      </div>
+                    </div>
+                    {selectedOrder.arregloUrl && (
+                      <div>
+                        <div className="mb-2">
+                          <label className="text-muted-foreground text-sm mb-1 block">Imagen del Arreglo</label>
+                          <div className="mt-2 flex justify-center">
+                            <img
+                              src={selectedOrder.arregloUrl}
+                              alt="Arreglo"
+                              className="rounded shadow-sm cursor-pointer"
+                              style={{
+                                maxHeight: "300px",
+                                objectFit: "contain",
+                              }}
+                              onClick={() => window.open(selectedOrder.arregloUrl!, '_blank')}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </Col>
-                  )}
-                </Row>
-              </div>
+                    )}
+                  </div>
+                </div>
 
-              {/* Delivery Info */}
-              {selectedOrder.deliveryData && (
-                <div className="mb-4">
-                  <h6 className="fw-bold mb-3">Información de Entrega</h6>
-                  <Row className="g-3">
-                    <Col md={6}>
+                {/* Delivery Info */}
+                {selectedOrder.deliveryData && (
+                  <div className="mb-4">
+                    <h6 className="font-bold mb-3">Informacion de Entrega</h6>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="mb-2">
-                        <label className="text-muted small mb-1">
+                        <label className="text-muted-foreground text-sm mb-1 block">
                           Destinatario
                         </label>
                         <div>
                           {selectedOrder.deliveryData.recipientName || "N/A"}
                         </div>
                       </div>
-                    </Col>
-                    <Col md={6}>
                       <div className="mb-2">
-                        <label className="text-muted small mb-1">
+                        <label className="text-muted-foreground text-sm mb-1 block">
                           Fecha de Entrega
                         </label>
                         <div>
@@ -414,113 +399,93 @@ const PizarronEnvioPage: React.FC = () => {
                             : "N/A"}
                         </div>
                       </div>
-                    </Col>
-                    {selectedOrder.deliveryData.message && (
-                      <Col md={12}>
-                        <div className="mb-2">
-                          <label className="text-muted small mb-1">
+                      {selectedOrder.deliveryData.message && (
+                        <div className="md:col-span-2 mb-2">
+                          <label className="text-muted-foreground text-sm mb-1 block">
                             Mensaje
                           </label>
                           <div>{selectedOrder.deliveryData.message}</div>
                         </div>
-                      </Col>
-                    )}
-                  </Row>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Items */}
+                <div className="mb-4">
+                  <h6 className="font-bold mb-3">Productos</h6>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead>Producto</TableHead>
+                          <TableHead className="text-center">Cantidad</TableHead>
+                          <TableHead className="text-right">Precio Unitario</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedOrder.items.map((item) => (
+                          <TableRow key={item._id}>
+                            <TableCell>{item.productName}</TableCell>
+                            <TableCell className="text-center">{item.quantity}</TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(item.unitPrice)}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatCurrency(item.amount)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-              )}
 
-              {/* Items */}
-              <div className="mb-4">
-                <h6 className="fw-bold mb-3">Productos</h6>
-                <Table responsive bordered hover>
-                  <thead className="table-light">
-                    <tr>
-                      <th>Producto</th>
-                      <th className="text-center">Cantidad</th>
-                      <th className="text-end">Precio Unitario</th>
-                      <th className="text-end">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedOrder.items.map((item) => (
-                      <tr key={item._id}>
-                        <td>{item.productName}</td>
-                        <td className="text-center">{item.quantity}</td>
-                        <td className="text-end">
-                          {formatCurrency(item.unitPrice)}
-                        </td>
-                        <td className="text-end fw-semibold">
-                          {formatCurrency(item.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-
-              {/* Financial Summary */}
-              <div className="bg-light p-3 rounded">
-                <Row className="g-2">
-                  <Col xs={6}>
-                    <div className="text-muted small">Subtotal:</div>
-                  </Col>
-                  <Col xs={6} className="text-end">
-                    <div className="fw-semibold">
+                {/* Financial Summary */}
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-muted-foreground text-sm">Subtotal:</div>
+                    <div className="text-right font-semibold">
                       {formatCurrency(selectedOrder.subtotal)}
                     </div>
-                  </Col>
-                  {selectedOrder.discount > 0 && (
-                    <>
-                      <Col xs={6}>
-                        <div className="text-muted small">Descuento:</div>
-                      </Col>
-                      <Col xs={6} className="text-end">
-                        <div className="text-danger">
+                    {selectedOrder.discount > 0 && (
+                      <>
+                        <div className="text-muted-foreground text-sm">Descuento:</div>
+                        <div className="text-right text-red-500">
                           -{formatCurrency(selectedOrder.discount)}
                         </div>
-                      </Col>
-                    </>
-                  )}
-                  <Col xs={6}>
-                    <div className="fw-bold">Total:</div>
-                  </Col>
-                  <Col xs={6} className="text-end">
-                    <div className="fw-bold fs-5">
+                      </>
+                    )}
+                    <div className="font-bold">Total:</div>
+                    <div className="text-right font-bold text-lg">
                       {formatCurrency(selectedOrder.total)}
                     </div>
-                  </Col>
-                  {selectedOrder.advance > 0 && (
-                    <>
-                      <Col xs={6}>
-                        <div className="text-muted small">Anticipo:</div>
-                      </Col>
-                      <Col xs={6} className="text-end">
-                        <div className="text-success">
+                    {selectedOrder.advance > 0 && (
+                      <>
+                        <div className="text-muted-foreground text-sm">Anticipo:</div>
+                        <div className="text-right text-green-600">
                           {formatCurrency(selectedOrder.advance)}
                         </div>
-                      </Col>
-                    </>
-                  )}
-                  {selectedOrder.remainingBalance > 0 && (
-                    <>
-                      <Col xs={6}>
-                        <div className="text-danger small fw-bold">
+                      </>
+                    )}
+                    {selectedOrder.remainingBalance > 0 && (
+                      <>
+                        <div className="text-red-500 text-sm font-bold">
                           Saldo Pendiente:
                         </div>
-                      </Col>
-                      <Col xs={6} className="text-end">
-                        <div className="text-danger fw-bold">
+                        <div className="text-right text-red-500 font-bold">
                           {formatCurrency(selectedOrder.remainingBalance)}
                         </div>
-                      </Col>
-                    </>
-                  )}
-                </Row>
-              </div>
-            </>
-          )}
-        </Modal.Body>
-      </Modal>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

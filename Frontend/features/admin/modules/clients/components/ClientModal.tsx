@@ -1,10 +1,24 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
-import { X, Save, User, QrCode, Download } from "lucide-react";
+import { X, Save, User, QrCode, Download, Loader2 } from "lucide-react";
 import { Client, CreateClientData, UpdateClientData } from "../types";
 import { useRouter } from "next/navigation";
 import digitalCardService from "../../digitalCards/services/digitalCardService";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ClientModalProps {
   show: boolean;
@@ -48,7 +62,6 @@ const ClientModal: React.FC<ClientModalProps> = ({
         status: client.status,
         branch: client.branch?._id || "",
       });
-      // Cargar tarjeta digital si existe
       if (client._id) {
         checkDigitalCard(client._id);
       }
@@ -69,9 +82,9 @@ const ClientModal: React.FC<ClientModalProps> = ({
   }, [client, show]);
 
   const handleChange = (field: keyof CreateClientData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -118,16 +131,16 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
   const handleGenerateCard = async () => {
     if (!client?._id) return;
-    
+
     try {
       setGeneratingCard(true);
       let card = digitalCard;
-      
+
       if (!card) {
         card = await digitalCardService.generateDigitalCard(client._id);
         toast.success("Tarjeta digital generada exitosamente");
       }
-      
+
       setDigitalCard(card);
       setShowCardActions(true);
     } catch (error) {
@@ -141,8 +154,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
   const handleDownloadQR = () => {
     if (digitalCard?.qrCode) {
       digitalCardService.downloadQRImage(
-        digitalCard.qrCode, 
-        `qr-${client?.clientNumber || 'cliente'}.png`
+        digitalCard.qrCode,
+        `qr-${client?.clientNumber || "cliente"}.png`
       );
       toast.success("Código QR descargado");
     }
@@ -156,152 +169,140 @@ const ClientModal: React.FC<ClientModalProps> = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
-      <Modal.Header className="border-bottom-0 pb-0">
-        <Modal.Title className="d-flex align-items-center gap-2">
-          <User size={20} className="text-primary" />
-          {isEditing ? "Editar Cliente" : "Nuevo Cliente"}
-        </Modal.Title>
-        <Button
-          variant="link"
-          onClick={onHide}
-          className="text-muted p-0"
-          style={{ border: "none", background: "none" }}
-        >
-          <X size={20} />
-        </Button>
-      </Modal.Header>
+    <Dialog open={show} onOpenChange={onHide}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5 text-primary" />
+            {isEditing ? "Editar Cliente" : "Nuevo Cliente"}
+          </DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Modifica los datos del cliente"
+              : "Completa los datos para crear un nuevo cliente"}
+          </DialogDescription>
+        </DialogHeader>
 
-      <Modal.Body>
-        <Form onSubmit={handleSubmit}>
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Nombre <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Nombre <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
                   type="text"
                   placeholder="Ingresa el nombre"
                   value={formData.name}
                   onChange={(e) => handleChange("name", e.target.value)}
-                  isInvalid={!!errors.name}
+                  className={errors.name ? "border-destructive" : ""}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.name}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name}</p>
+                )}
+              </div>
 
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Apellido <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+              <div className="space-y-2">
+                <Label htmlFor="lastName">
+                  Apellido <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="lastName"
                   type="text"
                   placeholder="Ingresa el apellido"
                   value={formData.lastName}
                   onChange={(e) => handleChange("lastName", e.target.value)}
-                  isInvalid={!!errors.lastName}
+                  className={errors.lastName ? "border-destructive" : ""}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.lastName}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
+                {errors.lastName && (
+                  <p className="text-sm text-destructive">{errors.lastName}</p>
+                )}
+              </div>
+            </div>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  Teléfono <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">
+                  Teléfono <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="phoneNumber"
                   type="tel"
                   placeholder="Ingresa el número de teléfono"
                   value={formData.phoneNumber}
                   onChange={(e) => handleChange("phoneNumber", e.target.value)}
-                  isInvalid={!!errors.phoneNumber}
+                  className={errors.phoneNumber ? "border-destructive" : ""}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.phoneNumber}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
+                {errors.phoneNumber && (
+                  <p className="text-sm text-destructive">{errors.phoneNumber}</p>
+                )}
+              </div>
 
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Correo Electrónico</Form.Label>
-                <Form.Control
+              <div className="space-y-2">
+                <Label htmlFor="email">Correo Electrónico</Label>
+                <Input
+                  id="email"
                   type="email"
                   placeholder="correo@ejemplo.com"
                   value={formData.email}
                   onChange={(e) => handleChange("email", e.target.value)}
-                  isInvalid={!!errors.email}
+                  className={errors.email ? "border-destructive" : ""}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.email}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
+              </div>
+            </div>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>Puntos Iniciales</Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="points">Puntos Iniciales</Label>
+                <Input
+                  id="points"
                   type="number"
                   placeholder="0"
                   min="0"
                   value={formData.points}
-                  onChange={(e) => handleChange("points", parseInt(e.target.value) || 0)}
-                  isInvalid={!!errors.points}
+                  onChange={(e) =>
+                    handleChange("points", parseInt(e.target.value) || 0)
+                  }
+                  className={errors.points ? "border-destructive" : ""}
                 />
-                <Form.Control.Feedback type="invalid">
-                  {errors.points}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
+                {errors.points && (
+                  <p className="text-sm text-destructive">{errors.points}</p>
+                )}
+              </div>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Check
-                  type="checkbox"
-                  label="Cliente Activo"
+              <div className="flex items-center space-x-2 pt-8">
+                <Switch
+                  id="status"
                   checked={formData.status}
-                  onChange={(e) => handleChange("status", e.target.checked)}
+                  onCheckedChange={(checked) => handleChange("status", checked)}
                 />
-              </Form.Group>
-            </Col>
-          </Row>
-        </Form>
-      </Modal.Body>
+                <Label htmlFor="status">Cliente Activo</Label>
+              </div>
+            </div>
+          </div>
 
-      <Modal.Footer className="border-top-0 pt-0">
-        <div className="d-flex justify-content-between w-100">
-          <div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             {isEditing && (
-              <div className="d-flex gap-2">
+              <div className="flex gap-2 mr-auto">
                 {!digitalCard ? (
                   <Button
-                    variant="outline-primary"
+                    type="button"
+                    variant="outline"
                     onClick={handleGenerateCard}
                     disabled={generatingCard}
-                    className="d-flex align-items-center gap-2"
                   >
                     {generatingCard ? (
                       <>
-                        <Spinner size="sm" animation="border" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Generando...
                       </>
                     ) : (
                       <>
-                        <QrCode size={16} />
+                        <QrCode className="h-4 w-4 mr-2" />
                         Generar Tarjeta
                       </>
                     )}
@@ -309,52 +310,52 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 ) : (
                   <>
                     <Button
-                      variant="outline-success"
+                      type="button"
+                      variant="outline"
                       onClick={handleDownloadQR}
-                      className="d-flex align-items-center gap-2"
                     >
-                      <Download size={16} />
+                      <Download className="h-4 w-4 mr-2" />
                       Descargar QR
                     </Button>
                     <Button
-                      variant="outline-primary"
+                      type="button"
+                      variant="outline"
                       onClick={handleViewFullCard}
-                      className="d-flex align-items-center gap-2"
                     >
-                      <QrCode size={16} />
+                      <QrCode className="h-4 w-4 mr-2" />
                       Ver Tarjeta
                     </Button>
                   </>
                 )}
               </div>
             )}
-          </div>
-          <div className="d-flex gap-2">
-            <Button variant="outline-secondary" onClick={onHide} disabled={loading}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              disabled={loading}
-              className="d-flex align-items-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="spinner-border spinner-border-sm" role="status" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Save size={16} />
-                  {isEditing ? "Actualizar" : "Crear"} Cliente
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </Modal.Footer>
-    </Modal>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onHide}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    {isEditing ? "Actualizar" : "Crear"} Cliente
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

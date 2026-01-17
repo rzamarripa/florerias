@@ -1,12 +1,30 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Table, Badge, Form, Spinner } from "react-bootstrap";
-import { Plus, Package, Search, ChevronLeft, ChevronRight, Eye, Edit, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Package, Search, ChevronLeft, ChevronRight, Eye, Edit, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { productsService } from "./services/products";
 import { Product, ProductFilters } from "./types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -65,8 +83,8 @@ const ProductsPage: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = (value: string): void => {
+    setStatusFilter(value === "all" ? "" : value);
   };
 
   const handlePageChange = (page: number) => {
@@ -101,226 +119,199 @@ const ProductsPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="container mx-auto py-2">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="mb-1 fw-bold">Productos</h2>
-          <p className="text-muted mb-0">Gestiona el catálogo de productos</p>
+          <h2 className="text-2xl font-bold mb-1">Productos</h2>
+          <p className="text-muted-foreground">Gestiona el catalogo de productos</p>
         </div>
-        <Button
-          variant="primary"
-          onClick={handleNewProduct}
-          className="d-flex align-items-center gap-2 px-4"
-        >
+        <Button onClick={handleNewProduct} className="flex items-center gap-2 px-4">
           <Plus size={20} />
           Nuevo Producto
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="card border-0 shadow-sm mb-2" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-2">
-          <div className="row g-2">
-            <div className="col-md-6">
-              <div className="position-relative">
-                <Search
-                  size={18}
-                  className="position-absolute top-50 translate-middle-y ms-3 text-muted"
-                  style={{ zIndex: 10 }}
-                />
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar producto..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="ps-5 border-0 bg-light"
-                  style={{ borderRadius: "10px" }}
-                />
-              </div>
+      <Card className="mb-4 border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10"
+              />
+              <Input
+                type="text"
+                placeholder="Buscar producto..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10 bg-muted/50 border-0"
+              />
             </div>
-            <div className="col-md-6">
-              <Form.Select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="border-0 bg-light"
-                style={{ borderRadius: "10px" }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="true">Activos</option>
-                <option value="false">Inactivos</option>
-              </Form.Select>
-            </div>
+            <Select
+              value={statusFilter || "all"}
+              onValueChange={handleStatusFilterChange}
+            >
+              <SelectTrigger className="bg-muted/50 border-0 w-full">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Tabla de productos */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: "10px" }}>
-        <div className="card-body p-0">
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Cargando...</span>
-              </div>
-              <p className="text-muted mt-3">Cargando productos...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground mt-3">Cargando productos...</p>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead style={{ background: "#f8f9fa" }}>
-                  <tr>
-                    <th className="px-2 py-2 fw-semibold text-muted">ORDEN</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">NOMBRE</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">DESCRIPCIÓN</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">COSTO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">PRECIO</th>
-                    <th className="px-2 py-2 fw-semibold text-muted">ESTATUS</th>
-                    <th className="px-2 py-2 fw-semibold text-muted text-center">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-5 text-muted">
-                        <Package size={48} className="mb-3 opacity-50" />
-                        <div>No se encontraron productos</div>
-                        <small>Intenta ajustar los filtros de búsqueda</small>
-                      </td>
-                    </tr>
-                  ) : (
-                    products.map((product) => (
-                      <tr key={product._id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                        <td className="px-2 py-2">{product.orden}</td>
-                        <td className="px-2 py-2">
-                          <div className="d-flex align-items-center gap-3">
-                            {product.imagen ? (
-                              <img
-                                src={product.imagen}
-                                alt={product.nombre}
-                                className="rounded border"
-                                width="40"
-                                height="40"
-                                style={{ objectFit: "cover", minWidth: "40px" }}
-                              />
-                            ) : (
-                              <div className="bg-light rounded border d-flex align-items-center justify-content-center" style={{ width: "40px", height: "40px", minWidth: "40px" }}>
-                                <Package size={20} className="text-muted" />
-                              </div>
-                            )}
-                            <div>
-                              <div className="fw-semibold">{product.nombre}</div>
-                              <div className="text-muted small">{product.unidad}</div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold text-muted-foreground">ORDEN</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">NOMBRE</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">DESCRIPCION</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">COSTO</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">PRECIO</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">ESTATUS</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <Package size={48} className="mx-auto mb-3 opacity-50 text-muted-foreground" />
+                      <div className="text-muted-foreground">No se encontraron productos</div>
+                      <small className="text-muted-foreground">Intenta ajustar los filtros de busqueda</small>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  products.map((product) => (
+                    <TableRow key={product._id}>
+                      <TableCell>{product.orden}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {product.imagen ? (
+                            <img
+                              src={product.imagen}
+                              alt={product.nombre}
+                              className="rounded border w-10 h-10 object-cover min-w-[40px]"
+                            />
+                          ) : (
+                            <div className="bg-muted rounded border flex items-center justify-center w-10 h-10 min-w-[40px]">
+                              <Package size={20} className="text-muted-foreground" />
                             </div>
+                          )}
+                          <div>
+                            <div className="font-semibold">{product.nombre}</div>
+                            <div className="text-muted-foreground text-sm">{product.unidad}</div>
                           </div>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div
-                            className="text-truncate"
-                            style={{ maxWidth: "300px" }}
-                            title={product.descripcion}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div
+                          className="truncate max-w-[300px]"
+                          title={product.descripcion}
+                        >
+                          {product.descripcion || "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-green-600 font-medium">
+                        ${(product.totalCosto || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-primary font-medium">
+                        ${(product.totalVenta || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={product.estatus ? "default" : "destructive"}
+                          className="rounded-full"
+                        >
+                          {product.estatus ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleViewProduct(product._id)}
+                            title="Ver"
                           >
-                            {product.descripcion || "-"}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2 text-success fw-medium">
-                          ${(product.totalCosto || 0).toFixed(2)}
-                        </td>
-                        <td className="px-2 py-2 text-primary fw-medium">
-                          ${(product.totalVenta || 0).toFixed(2)}
-                        </td>
-                        <td className="px-2 py-2">
-                          <Badge
-                            bg={product.estatus ? "success" : "danger"}
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontWeight: "500",
-                            }}
+                            <Eye size={16} className="text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleEditProduct(product._id)}
+                            title="Editar"
                           >
-                            {product.estatus ? "Activo" : "Inactivo"}
-                          </Badge>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="d-flex justify-content-center gap-2">
-                            <Button
-                              variant="light"
-                              size="sm"
-                              onClick={() => handleViewProduct(product._id)}
-                              className="border-0"
-                              style={{ borderRadius: "8px" }}
-                              title="Ver"
-                            >
-                              <Eye size={16} className="text-info" />
-                            </Button>
-                            <Button
-                              variant="light"
-                              size="sm"
-                              onClick={() => handleEditProduct(product._id)}
-                              className="border-0"
-                              style={{ borderRadius: "8px" }}
-                              title="Editar"
-                            >
-                              <Edit size={16} className="text-warning" />
-                            </Button>
-                            <Button
-                              variant="light"
-                              size="sm"
-                              onClick={() => handleToggleStatus(product)}
-                              className="border-0"
-                              style={{ borderRadius: "8px" }}
-                              title={product.estatus ? "Desactivar" : "Activar"}
-                            >
-                              {product.estatus ? (
-                                <ToggleRight size={16} className="text-danger" />
-                              ) : (
-                                <ToggleLeft size={16} className="text-success" />
-                              )}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            </div>
+                            <Edit size={16} className="text-yellow-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleToggleStatus(product)}
+                            title={product.estatus ? "Desactivar" : "Activar"}
+                          >
+                            {product.estatus ? (
+                              <ToggleRight size={16} className="text-red-500" />
+                            ) : (
+                              <ToggleLeft size={16} className="text-green-500" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           )}
 
-          {/* Paginación */}
+          {/* Paginacion */}
           {!loading && products.length > 0 && (
-            <div className="d-flex justify-content-between align-items-center px-2 py-2 border-top">
-              <p className="text-muted mb-0">
+            <div className="flex justify-between items-center px-4 py-3 border-t">
+              <p className="text-muted-foreground text-sm">
                 Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                 {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} productos
               </p>
-              <div className="d-flex gap-2">
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="light"
+                  variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  style={{ borderRadius: "8px" }}
                 >
                   <ChevronLeft size={16} />
                 </Button>
-                <span className="px-3 py-1">
-                  Página {pagination.page} de {pagination.pages}
+                <span className="px-3 py-1 text-sm">
+                  Pagina {pagination.page} de {pagination.pages}
                 </span>
                 <Button
-                  variant="light"
+                  variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={pagination.page === pagination.pages}
-                  style={{ borderRadius: "8px" }}
                 >
                   <ChevronRight size={16} />
                 </Button>
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
