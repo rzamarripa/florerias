@@ -3,7 +3,6 @@
 import React, { Fragment } from "react";
 import Sidenav from "./sidenav";
 import Topbar from "./topbar";
-import { ChatFloatingButton } from "@/components/common/chat";
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -12,7 +11,6 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
         <Topbar />
         <Sidenav />
         <div className="content-page">{children}</div>
-        <ChatFloatingButton />
       </div>
     </Fragment>
   );
