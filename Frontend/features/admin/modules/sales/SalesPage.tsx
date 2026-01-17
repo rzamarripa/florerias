@@ -170,185 +170,111 @@ const SalesPage: React.FC = () => {
       // Obtener los datos según la pestaña activa
       const { salesData, productsData } = await getExportData();
 
-      // Crear el archivo Excel
-      const XLSX = await import("xlsx");
-      const workbook = XLSX.utils.book_new();
+      // Crear el archivo Excel con ExcelJS
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "Sistema de Ventas";
+      workbook.created = new Date();
+
+      // Anchos de columna
+      const salesColWidths = [15, 25, 15, 25, 15, 12, 12, 12, 20, 12, 10, 12, 10, 10, 10, 15, 12, 8, 10];
+      const productsColWidths = [15, 25, 30, 10, 12, 12, 15, 12, 12, 15, 15];
+      const summaryColWidths = [40, 30];
 
       // Hoja 1: Resumen de Ventas
-      const salesWorksheet = XLSX.utils.json_to_sheet(salesData);
-      XLSX.utils.book_append_sheet(workbook, salesWorksheet, "Resumen Ventas");
+      const salesSheet = workbook.addWorksheet("Resumen Ventas");
+      if (salesData.length > 0) {
+        const salesHeaders = Object.keys(salesData[0]);
+        salesSheet.addRow(salesHeaders);
+        salesSheet.getRow(1).font = { bold: true };
+        salesSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+        salesData.forEach((row: any) => salesSheet.addRow(Object.values(row)));
+        salesColWidths.forEach((width, i) => { if (salesSheet.columns[i]) salesSheet.columns[i].width = width; });
+      }
 
-      // Hoja 2: Detalle de Productos
-      const productsWorksheet = XLSX.utils.json_to_sheet(productsData);
-      XLSX.utils.book_append_sheet(
-        workbook,
-        productsWorksheet,
-        "Productos Vendidos"
-      );
+      // Hoja 2: Detalle de Productos con subtotales
+      const productsSheet = workbook.addWorksheet("Productos Vendidos");
+      if (productsData.length > 0) {
+        // Ordenar productos por cliente y folio
+        const sortedProducts = [...productsData].sort((a, b) => {
+          if (a.Cliente !== b.Cliente) return a.Cliente.localeCompare(b.Cliente);
+          return a.Folio.localeCompare(b.Folio);
+        });
+
+        // Crear datos con subtotales
+        const productsWithSubtotals: any[] = [];
+        let currentClient = "";
+        let clientTotal = 0;
+        let clientCount = 0;
+
+        sortedProducts.forEach((product) => {
+          if (product.Cliente !== currentClient) {
+            if (currentClient !== "") {
+              productsWithSubtotals.push({
+                Folio: "", Cliente: `SUBTOTAL ${currentClient}`, Producto: "",
+                Cantidad: clientCount, "Precio Unitario": "", "Total Producto": clientTotal,
+                "Fecha Pedido": "", "Estatus Venta": "", Tipo: "SUBTOTAL",
+                "Canal de Venta": "", "Método de Pago": "",
+              });
+            }
+            currentClient = product.Cliente;
+            clientTotal = 0;
+            clientCount = 0;
+          }
+          productsWithSubtotals.push(product);
+          clientTotal += product["Total Producto"] || 0;
+          clientCount += product.Cantidad || 0;
+        });
+
+        if (currentClient !== "") {
+          productsWithSubtotals.push({
+            Folio: "", Cliente: `SUBTOTAL ${currentClient}`, Producto: "",
+            Cantidad: clientCount, "Precio Unitario": "", "Total Producto": clientTotal,
+            "Fecha Pedido": "", "Estatus Venta": "", Tipo: "SUBTOTAL",
+            "Canal de Venta": "", "Método de Pago": "",
+          });
+        }
+
+        // Total general
+        const grandTotal = productsData.reduce((sum: number, p: any) => sum + (p["Total Producto"] || 0), 0);
+        const grandCount = productsData.reduce((sum: number, p: any) => sum + (p.Cantidad || 0), 0);
+        productsWithSubtotals.push({
+          Folio: "", Cliente: "TOTAL GENERAL", Producto: "",
+          Cantidad: grandCount, "Precio Unitario": "", "Total Producto": grandTotal,
+          "Fecha Pedido": "", "Estatus Venta": "", Tipo: "TOTAL",
+          "Canal de Venta": "", "Método de Pago": "",
+        });
+
+        const productHeaders = Object.keys(productsWithSubtotals[0]);
+        productsSheet.addRow(productHeaders);
+        productsSheet.getRow(1).font = { bold: true };
+        productsSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0E0E0" } };
+        productsWithSubtotals.forEach((row: any) => productsSheet.addRow(Object.values(row)));
+        productsColWidths.forEach((width, i) => { if (productsSheet.columns[i]) productsSheet.columns[i].width = width; });
+      }
 
       // Hoja 3: Resumen Ejecutivo
+      const summarySheet = workbook.addWorksheet("Resumen Ejecutivo");
       const summaryData = generateSummaryData(salesData, productsData);
-      const summaryWorksheet = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(
-        workbook,
-        summaryWorksheet,
-        "Resumen Ejecutivo"
-      );
-
-      // Configurar columnas para mejor visualización
-      const salesCols = [
-        { wch: 15 }, // Folio
-        { wch: 25 }, // Cliente
-        { wch: 15 }, // Teléfono
-        { wch: 25 }, // Email
-        { wch: 15 }, // Canal
-        { wch: 12 }, // Fecha Pedido
-        { wch: 12 }, // Fecha Entrega
-        { wch: 12 }, // Estatus
-        { wch: 20 }, // Método Pago
-        { wch: 12 }, // Subtotal
-        { wch: 10 }, // Descuento
-        { wch: 12 }, // Total
-        { wch: 10 }, // Anticipo
-        { wch: 10 }, // Pagado
-        { wch: 10 }, // Cambio
-        { wch: 15 }, // Saldo
-        { wch: 12 }, // Tipo Envío
-        { wch: 8 }, // Anónimo
-        { wch: 10 }, // Venta Rápida
-      ];
-
-      const productsCols = [
-        { wch: 15 }, // Folio
-        { wch: 25 }, // Cliente
-        { wch: 30 }, // Producto
-        { wch: 10 }, // Cantidad
-        { wch: 12 }, // Precio Unit
-        { wch: 12 }, // Total
-        { wch: 15 }, // Fecha Pedido
-        { wch: 12 }, // Estatus
-      ];
-
-      const summaryCols = [
-        { wch: 40 }, // MÉTRICA
-        { wch: 30 }, // VALOR
-      ];
-
-      salesWorksheet["!cols"] = salesCols;
-      productsWorksheet["!cols"] = productsCols;
-      summaryWorksheet["!cols"] = summaryCols;
-
-      // Agregar grupos/outlines para hacer expandible/colapsable
-      if (salesData.length > 0) {
-        salesWorksheet["!outline"] = {
-          summaryBelow: false,
-          summaryRight: false,
-        };
-
-        // Agregar subtotales por cliente en la hoja de productos
-        if (productsData.length > 0) {
-          // Ordenar productos por cliente y folio
-          const sortedProducts = productsData.sort((a, b) => {
-            if (a.Cliente !== b.Cliente) {
-              return a.Cliente.localeCompare(b.Cliente);
-            }
-            return a.Folio.localeCompare(b.Folio);
-          });
-
-          // Crear nueva hoja con subtotales
-          const productsWithSubtotals: any[] = [];
-          let currentClient = "";
-          let clientTotal = 0;
-          let clientCount = 0;
-
-          sortedProducts.forEach((product, index) => {
-            if (product.Cliente !== currentClient) {
-              // Agregar subtotal del cliente anterior
-              if (currentClient !== "") {
-                productsWithSubtotals.push({
-                  Folio: "",
-                  Cliente: `SUBTOTAL ${currentClient}`,
-                  Producto: "",
-                  Cantidad: clientCount,
-                  "Precio Unitario": "",
-                  "Total Producto": clientTotal,
-                  "Fecha Pedido": "",
-                  "Estatus Venta": "",
-                  Tipo: "SUBTOTAL",
-                  "Canal de Venta": "",
-                  "Método de Pago": "",
-                });
-              }
-
-              // Iniciar nuevo cliente
-              currentClient = product.Cliente;
-              clientTotal = 0;
-              clientCount = 0;
-            }
-
-            productsWithSubtotals.push(product);
-            clientTotal += product["Total Producto"] || 0;
-            clientCount += product.Cantidad || 0;
-          });
-
-          // Agregar último subtotal
-          if (currentClient !== "") {
-            productsWithSubtotals.push({
-              Folio: "",
-              Cliente: `SUBTOTAL ${currentClient}`,
-              Producto: "",
-              Cantidad: clientCount,
-              "Precio Unitario": "",
-              "Total Producto": clientTotal,
-              "Fecha Pedido": "",
-              "Estatus Venta": "",
-              Tipo: "SUBTOTAL",
-              "Canal de Venta": "",
-              "Método de Pago": "",
-            });
-          }
-
-          // Agregar total general
-          const grandTotal = productsData.reduce(
-            (sum, product) => sum + (product["Total Producto"] || 0),
-            0
-          );
-          const grandCount = productsData.reduce(
-            (sum, product) => sum + (product.Cantidad || 0),
-            0
-          );
-
-          productsWithSubtotals.push({
-            Folio: "",
-            Cliente: "TOTAL GENERAL",
-            Producto: "",
-            Cantidad: grandCount,
-            "Precio Unitario": "",
-            "Total Producto": grandTotal,
-            "Fecha Pedido": "",
-            "Estatus Venta": "",
-            Tipo: "TOTAL",
-            "Canal de Venta": "",
-            "Método de Pago": "",
-          });
-
-          // Recrear la hoja de productos con subtotales
-          const newProductsWorksheet = XLSX.utils.json_to_sheet(
-            productsWithSubtotals
-          );
-          newProductsWorksheet["!cols"] = productsCols;
-          newProductsWorksheet["!outline"] = {
-            summaryBelow: false,
-            summaryRight: false,
-          };
-
-          // Reemplazar la hoja de productos
-          workbook.Sheets["Productos Vendidos"] = newProductsWorksheet;
-        }
+      if (summaryData.length > 0) {
+        const summaryHeaders = Object.keys(summaryData[0]);
+        summarySheet.addRow(summaryHeaders);
+        summarySheet.getRow(1).font = { bold: true };
+        summaryData.forEach((row: any) => summarySheet.addRow(Object.values(row)));
+        summaryColWidths.forEach((width, i) => { if (summarySheet.columns[i]) summarySheet.columns[i].width = width; });
       }
 
       // Descargar el archivo
-      XLSX.writeFile(workbook, fileName);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       toast.success("Archivo Excel detallado exportado exitosamente");
     } catch (error) {
