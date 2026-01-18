@@ -159,16 +159,11 @@ const CompanyDashboardPage: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-2xl font-bold">Dashboard de Empresa</h2>
-          <p className="text-muted-foreground">
-            Visualiza y gestiona todas tus sucursales
-          </p>
-        </div>
-        <div className="bg-primary text-primary-foreground flex items-center justify-center rounded-full w-12 h-12">
-          <Building2 size={28} />
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold">Dashboard de Empresa</h2>
+        <p className="text-muted-foreground">
+          Visualiza y gestiona todas tus sucursales
+        </p>
       </div>
 
       {/* Filtros de Fecha */}
