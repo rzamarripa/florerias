@@ -214,10 +214,10 @@ const DeliveryPage: React.FC = () => {
         }}
       />
 
-      {/* Filters */}
+      {/* Filters & Table */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="p-0">
+          <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
             <Select value={filterType} onValueChange={handleFilterTypeChange}>
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filtrar por" />
@@ -258,12 +258,6 @@ const DeliveryPage: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

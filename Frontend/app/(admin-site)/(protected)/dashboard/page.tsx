@@ -1,6 +1,5 @@
 "use client";
 
-import PageBreadcrumb from "@/components/layout/PageBreadcrumb";
 import CountUpClient from "@/components/common/CountUpClient";
 import EChartClient from "@/components/common/EChartClient";
 import {
@@ -53,12 +52,6 @@ export default function Page() {
 
   return (
     <div className="container-fluid">
-      <PageBreadcrumb
-        title="Panel de Control"
-        subtitle="Resumen"
-        section="Admin"
-      />
-
       <div className="row g-3 mb-4">
         <div className="col-12 col-sm-6 col-xl-3">
           <div className="card h-100">

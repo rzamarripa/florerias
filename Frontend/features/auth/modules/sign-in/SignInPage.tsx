@@ -7,6 +7,7 @@ import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import { TbLockPassword, TbMail } from "react-icons/tb";
 import { AuthError, loginService } from "./services/auth";
 import PasswordResetModal from "./components/PasswordResetModal";
+import loginBg from "@/assets/images/login-bg.png";
 
 const SignInPage = () => {
   const router = useRouter();
@@ -109,14 +111,14 @@ const SignInPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
-        <Card className="rounded-2xl overflow-hidden">
+        <Card className="rounded-2xl overflow-hidden py-0">
           <div className="grid lg:grid-cols-2">
             <CardContent className="p-8">
-              <div className="text-center mb-6">
+              <div className="text-center mb-6 flex flex-col items-center">
                 <AppLogo />
-                <h4 className="font-bold mt-4 text-xl">Bienvenido a MaFlores</h4>
+                <h4 className="font-bold mt-4 text-xl">Bienvenido</h4>
                 <p className="text-muted-foreground lg:w-3/4 mx-auto">
-                  Inicia sesión para acceder al panel de administración.
+                  Gestiona tu florería de forma simple y eficiente.
                 </p>
               </div>
 
@@ -203,12 +205,20 @@ const SignInPage = () => {
               </form>
 
               <p className="text-center text-muted-foreground mt-6">
-                © 2014 - {currentYear} MaFlores — by{" "}
+                © 2014 - {currentYear} Zolt — by{" "}
                 <span className="font-semibold">Masoft</span>
               </p>
             </CardContent>
 
-            <div className="hidden lg:block bg-gradient-to-br from-primary/20 to-primary/5 min-h-[500px]" />
+            <div className="hidden lg:block relative min-h-[500px] h-full">
+              <Image
+                src={loginBg}
+                alt="Florería"
+                fill
+                className="object-cover rounded-r-2xl"
+                priority
+              />
+            </div>
           </div>
         </Card>
       </div>

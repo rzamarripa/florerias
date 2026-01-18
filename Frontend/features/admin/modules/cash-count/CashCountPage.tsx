@@ -196,95 +196,91 @@ const CashCountPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-4 border-0 shadow-sm rounded-[15px]">
-        <CardContent className="p-4">
-          <div
-            className={`grid gap-3 ${isCashier ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-4"}`}
-          >
-            <div className="space-y-2">
-              <Label className="font-semibold flex items-center">
-                <Calendar size={16} className="mr-2" />
-                Fecha Inicio
-              </Label>
-              <Input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, startDate: e.target.value }))
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="font-semibold flex items-center">
-                <Calendar size={16} className="mr-2" />
-                Fecha Fin
-              </Label>
-              <Input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, endDate: e.target.value }))
-                }
-              />
-            </div>
-
-            {/* Ocultar selector de caja para cajeros - el backend filtra automaticamente por su sucursal */}
-            {!isCashier && (
+      {/* Filters & Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="p-4 border-b">
+            <div
+              className={`grid gap-4 ${isCashier ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-4"}`}
+            >
               <div className="space-y-2">
                 <Label className="font-semibold flex items-center">
-                  <DollarSign size={16} className="mr-2" />
-                  Caja Registradora
+                  <Calendar size={16} className="mr-2" />
+                  Fecha Inicio
                 </Label>
-                <Select
-                  value={filters.cashRegisterId}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      cashRegisterId: value === "all" ? "" : value,
-                    }))
+                <Input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, startDate: e.target.value }))
                   }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Todas las cajas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las cajas</SelectItem>
-                    {cashRegisters.map((cashRegister) => (
-                      <SelectItem
-                        key={cashRegister._id}
-                        value={cashRegister._id}
-                      >
-                        {cashRegister.name}
-                        {cashRegister.branchId &&
-                          ` - ${cashRegister.branchId.branchName}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
-            )}
 
-            <div className="flex items-end gap-2">
-              <Button onClick={handleSearch} className="flex-1">
-                Buscar
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleClearFilters}
-                className="flex-1"
-              >
-                Limpiar
-              </Button>
+              <div className="space-y-2">
+                <Label className="font-semibold flex items-center">
+                  <Calendar size={16} className="mr-2" />
+                  Fecha Fin
+                </Label>
+                <Input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, endDate: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Ocultar selector de caja para cajeros - el backend filtra automaticamente por su sucursal */}
+              {!isCashier && (
+                <div className="space-y-2">
+                  <Label className="font-semibold flex items-center">
+                    <DollarSign size={16} className="mr-2" />
+                    Caja Registradora
+                  </Label>
+                  <Select
+                    value={filters.cashRegisterId}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        cashRegisterId: value === "all" ? "" : value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Todas las cajas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las cajas</SelectItem>
+                      {cashRegisters.map((cashRegister) => (
+                        <SelectItem
+                          key={cashRegister._id}
+                          value={cashRegister._id}
+                        >
+                          {cashRegister.name}
+                          {cashRegister.branchId &&
+                            ` - ${cashRegister.branchId.branchName}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="flex items-end gap-2">
+                <Button onClick={handleSearch} className="flex-1">
+                  Buscar
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  className="flex-1"
+                >
+                  Limpiar
+                </Button>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card className="border-0 shadow-sm rounded-[15px]">
-        <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>

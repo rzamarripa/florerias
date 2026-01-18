@@ -202,10 +202,10 @@ const CashiersPage: React.FC = () => {
         }}
       />
 
-      {/* Filters */}
+      {/* Filters & Table */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="p-0">
+          <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -230,12 +230,6 @@ const CashiersPage: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -192,11 +192,11 @@ const PaymentMethodsPage: React.FC = () => {
         }}
       />
 
-      {/* Filters */}
+      {/* Filters & Table */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1 relative">
+        <CardContent className="p-0">
+          <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
+            <div className="flex-1 relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
@@ -206,28 +206,20 @@ const PaymentMethodsPage: React.FC = () => {
                 className="pl-10"
               />
             </div>
-            <div className="w-full md:w-48">
-              <Select
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los estados" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="true">Activos</SelectItem>
-                  <SelectItem value="false">Inactivos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+            >
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

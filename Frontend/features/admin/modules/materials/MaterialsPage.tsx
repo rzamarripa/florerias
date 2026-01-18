@@ -203,22 +203,22 @@ const MaterialsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Filters */}
-      <Card className="border-0 shadow-sm mb-2 rounded-[10px]">
-        <CardContent className="p-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div className="relative">
+      {/* Filters & Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
+            <div className="relative flex-1">
               <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Buscar por nombre..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-10 border-0 bg-muted rounded-[10px]"
+                className="pl-10"
               />
             </div>
             <Select value={statusFilter || "all"} onValueChange={handleStatusFilterChange}>
-              <SelectTrigger className="border-0 bg-muted rounded-[10px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
@@ -228,12 +228,6 @@ const MaterialsPage: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card className="border-0 shadow-sm rounded-[10px]">
-        <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />

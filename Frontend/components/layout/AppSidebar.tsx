@@ -364,30 +364,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/">
-                <div className="flex aspect-square size-8 items-center justify-center">
-                  <Image
-                    src={logoSm.src}
-                    alt="MaFlores"
-                    width={32}
-                    height={32}
-                    className="size-8"
-                  />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">MaFlores</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    Sistema de Gestión
-                  </span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarHeader className="flex items-center justify-center py-4">
+        <Link href="/">
+          <Image
+            src={logo.src}
+            alt="Zolt"
+            width={120}
+            height={40}
+            className="h-8 w-auto"
+          />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>

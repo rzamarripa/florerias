@@ -691,15 +691,15 @@ const NewCompanyPage: React.FC = () => {
                   Seleccionar Administrador (Opcional)
                 </Label>
                 <Select
-                  value={formData.administratorId || ""}
-                  onValueChange={handleDistributorChange}
+                  value={formData.administratorId || "new"}
+                  onValueChange={(value) => handleDistributorChange(value === "new" ? "" : value)}
                 >
                   <SelectTrigger className="py-2">
                     <SelectValue placeholder="-- Seleccione un administrador existente o cree uno nuevo --" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">
-                      -- Seleccione un administrador existente o cree uno nuevo --
+                    <SelectItem value="new">
+                      -- Crear nuevo administrador --
                     </SelectItem>
                     {distributors.map((dist) => (
                       <SelectItem key={dist._id} value={dist._id}>

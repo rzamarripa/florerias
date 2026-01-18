@@ -30,7 +30,7 @@ const Error404 = () => {
         </div>
 
         <p className="text-center text-muted-foreground mt-8">
-          © 2014 - {currentYear} MaFlores — by{" "}
+          © 2014 - {currentYear} Zolt — by{" "}
           <span className="font-bold">{author}</span>
         </p>
       </div>

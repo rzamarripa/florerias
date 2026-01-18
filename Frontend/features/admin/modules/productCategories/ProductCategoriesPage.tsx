@@ -111,25 +111,21 @@ const ProductCategoriesPage: React.FC = () => {
         }}
       />
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Buscar por nombre o descripción..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
+      {/* Filters & Table */}
       <Card>
         <CardContent className="p-0">
+          <div className="p-4 border-b">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre o descripción..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+              />
+            </div>
+          </div>
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -207,88 +207,82 @@ const BuysPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-2 shadow-sm border-0">
-        <CardContent className="p-2">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-            <div className="md:col-span-3">
-              <Label className="font-semibold mb-2">
-                Fecha Inicial *
-              </Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-muted/50 border-0"
-              />
-            </div>
-            <div className="md:col-span-3">
-              <Label className="font-semibold mb-2">
-                Fecha Final *
-              </Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-muted/50 border-0"
-              />
-            </div>
-            <div className="md:col-span-4">
-              <div className="flex gap-1">
+      {/* Filters & Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="p-4 border-b">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+              <div className="md:col-span-3">
+                <Label className="font-semibold mb-2">
+                  Fecha Inicial *
+                </Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-3">
+                <Label className="font-semibold mb-2">
+                  Fecha Final *
+                </Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-4">
+                <div className="flex gap-1">
+                  <Button
+                    variant={viewMode === "dia" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleViewModeChange("dia")}
+                    className="flex-1"
+                  >
+                    Dia
+                  </Button>
+                  <Button
+                    variant={viewMode === "semana" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleViewModeChange("semana")}
+                    className="flex-1"
+                  >
+                    Semana
+                  </Button>
+                  <Button
+                    variant={viewMode === "mes" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleViewModeChange("mes")}
+                    className="flex-1"
+                  >
+                    Mes
+                  </Button>
+                </div>
+              </div>
+              <div className="md:col-span-2">
                 <Button
-                  variant={viewMode === "dia" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleViewModeChange("dia")}
-                  className="flex-1 rounded-lg"
+                  onClick={handleSearch}
+                  className="w-full"
                 >
-                  Dia
-                </Button>
-                <Button
-                  variant={viewMode === "semana" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleViewModeChange("semana")}
-                  className="flex-1 rounded-lg"
-                >
-                  Semana
-                </Button>
-                <Button
-                  variant={viewMode === "mes" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleViewModeChange("mes")}
-                  className="flex-1 rounded-lg"
-                >
-                  Mes
+                  Buscar
                 </Button>
               </div>
             </div>
-            <div className="md:col-span-2">
-              <Button
-                onClick={handleSearch}
-                className="w-full"
-              >
-                Buscar
-              </Button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="relative">
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por folio o concepto..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="pl-10"
+                />
+              </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Buscar por folio o concepto..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="pl-10 bg-muted/50 border-0"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card className="shadow-sm border-0">
-        <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />

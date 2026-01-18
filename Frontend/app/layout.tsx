@@ -9,12 +9,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MaFlores",
-  description: "Sistema para Florerías",
+  title: "Zolt",
+  description: "Sistema de Gestión para Florerías",
   icons: {
-    icon: "/favicon-simple.svg",
-    shortcut: "/favicon-simple.svg",
-    apple: "/favicon-simple.svg",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
 };
 
@@ -26,8 +26,9 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning className={inter.variable}>
       <head>
-        <link rel="icon" href="/favicon-simple.svg" type="image/svg+xml" />
-        <link rel="shortcut icon" href="/favicon-simple.svg" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
       </head>
       <body className="font-sans antialiased">
         <AppWrapper>{children}</AppWrapper>

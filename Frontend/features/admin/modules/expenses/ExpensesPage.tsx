@@ -54,44 +54,43 @@ const ExpensesPage: React.FC = () => {
       </div>
 
       {/* Tabs con Tablas */}
-      <Card className="border-0 shadow-sm rounded-[10px]">
+      <Card>
         <CardContent className="p-0">
-          {/* Header con pestanas */}
-          <div className="px-4 pt-3 border-b-2 border-gray-100">
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => setActiveTab(value)}
-            >
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value)}
+          >
+            <div className="px-4 pt-3 border-b">
               <TabsList className="bg-transparent border-0 h-auto p-0 gap-0">
                 <TabsTrigger
                   value="check_transfer"
-                  className="px-3 py-2 font-semibold data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none"
+                  className="px-4 py-2 font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none data-[state=active]:bg-transparent"
                 >
                   Cheque / Transferencia
                 </TabsTrigger>
                 <TabsTrigger
                   value="petty_cash"
-                  className="px-3 py-2 font-semibold data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none"
+                  className="px-4 py-2 font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none data-[state=active]:bg-transparent"
                 >
                   Caja Chica
                 </TabsTrigger>
               </TabsList>
+            </div>
 
-              <TabsContent value="check_transfer" className="p-4">
-                <CheckTransferTable
-                  onEdit={handleOpenModal}
-                  refreshTrigger={refreshTrigger}
-                />
-              </TabsContent>
+            <TabsContent value="check_transfer" className="mt-0">
+              <CheckTransferTable
+                onEdit={handleOpenModal}
+                refreshTrigger={refreshTrigger}
+              />
+            </TabsContent>
 
-              <TabsContent value="petty_cash" className="p-4">
-                <PettyCashTable
-                  onEdit={handleOpenModal}
-                  refreshTrigger={refreshTrigger}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
+            <TabsContent value="petty_cash" className="mt-0">
+              <PettyCashTable
+                onEdit={handleOpenModal}
+                refreshTrigger={refreshTrigger}
+              />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 

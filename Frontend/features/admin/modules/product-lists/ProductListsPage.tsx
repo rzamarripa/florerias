@@ -178,29 +178,21 @@ const ProductListsPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="border-0 shadow-sm mb-2 rounded-[10px]">
-        <CardContent className="p-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div className="flex items-center bg-muted rounded-[10px]">
-              <div className="px-3">
-                <Search size={18} className="text-muted-foreground" />
-              </div>
+      {/* Filters & Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="p-4 border-b">
+            <div className="relative max-w-md">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Buscar por nombre de lista..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="border-0 bg-transparent"
+                className="pl-10"
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card className="border-0 shadow-sm rounded-[10px]">
-        <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />

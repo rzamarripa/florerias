@@ -132,11 +132,11 @@ const ProductsPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-4 border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
+      {/* Filters & Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
+            <div className="relative flex-1">
               <Search
                 size={18}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10"
@@ -146,14 +146,14 @@ const ProductsPage: React.FC = () => {
                 placeholder="Buscar producto..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-10 bg-muted/50 border-0"
+                className="pl-10"
               />
             </div>
             <Select
               value={statusFilter || "all"}
               onValueChange={handleStatusFilterChange}
             >
-              <SelectTrigger className="bg-muted/50 border-0 w-full">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
@@ -163,12 +163,6 @@ const ProductsPage: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabla de productos */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

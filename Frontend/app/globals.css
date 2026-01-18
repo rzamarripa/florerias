@@ -149,6 +149,19 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  /* Cursor pointer para elementos interactivos */
+  button,
+  a,
+  [role="button"],
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  select,
+  [tabindex]:not([tabindex="-1"]),
+  .cursor-pointer {
+    cursor: pointer;
+  }
 }
 
 /* ===== tailwindcss-animate equivalents for Tailwind v4 ===== */

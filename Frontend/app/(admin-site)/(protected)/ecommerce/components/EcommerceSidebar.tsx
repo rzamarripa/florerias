@@ -182,7 +182,7 @@ export function EcommerceSidebar({ ...props }: React.ComponentProps<typeof Sideb
                 <div className="flex aspect-square size-8 items-center justify-center">
                   <Image
                     src={logoSm.src}
-                    alt="MaFlores"
+                    alt="Zolt"
                     width={32}
                     height={32}
                     className="size-8"

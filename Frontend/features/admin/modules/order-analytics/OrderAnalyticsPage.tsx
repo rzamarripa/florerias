@@ -268,9 +268,9 @@ const OrderAnalyticsPage: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="font-bold text-2xl mb-1">Dashboard Analitico</h2>
+          <h2 className="font-bold text-2xl mb-1">Dashboard Analítico</h2>
           <p className="text-muted-foreground mb-0">
-            Analisis completo de ventas y rendimiento
+            Análisis completo de ventas y rendimiento
           </p>
         </div>
         <Button className="flex items-center gap-2">

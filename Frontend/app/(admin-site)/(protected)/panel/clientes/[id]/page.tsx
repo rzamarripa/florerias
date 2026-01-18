@@ -1,6 +1,5 @@
 "use client";
 
-import PageBreadcrumb from "@/components/layout/PageBreadcrumb";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
 import { Client } from "@/features/admin/modules/clients/types";
 import { useEffect, useMemo, useState } from "react";
@@ -125,12 +124,6 @@ export default function ClientDetailPage() {
 
   return (
     <div className="w-full px-4">
-      <PageBreadcrumb
-        title="Detalle de Usuario"
-        subtitle="Clientes"
-        section="Admin"
-      />
-
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-card rounded-lg border shadow-sm">
           <div className="p-6">

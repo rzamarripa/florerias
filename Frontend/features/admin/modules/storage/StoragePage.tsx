@@ -313,10 +313,10 @@ const StoragePage: React.FC = () => {
         )}
       </div>
 
-      {/* Filters */}
-      <Card className="border-0 shadow-sm mb-2 rounded-lg">
-        <CardContent className="p-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      {/* Filters & Table */}
+      <Card className="border-0 shadow-sm rounded-lg">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border-b">
             <div className="relative">
               <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -324,7 +324,7 @@ const StoragePage: React.FC = () => {
                 placeholder="Buscar por sucursal..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-10 bg-muted/50 border-0"
+                className="pl-10"
               />
             </div>
 
@@ -334,7 +334,7 @@ const StoragePage: React.FC = () => {
                 value={branchFilter || "all"}
                 onValueChange={handleBranchFilterChange}
               >
-                <SelectTrigger className="bg-muted/50 border-0">
+                <SelectTrigger>
                   <SelectValue placeholder="Todas las sucursales" />
                 </SelectTrigger>
                 <SelectContent>
@@ -353,7 +353,7 @@ const StoragePage: React.FC = () => {
               value={statusFilter || "all"}
               onValueChange={handleStatusFilterChange}
             >
-              <SelectTrigger className={`bg-muted/50 border-0 ${!isAdmin ? "" : "md:col-span-2"}`}>
+              <SelectTrigger className={!isAdmin ? "" : "md:col-span-2"}>
                 <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
@@ -363,12 +363,6 @@ const StoragePage: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card className="border-0 shadow-sm rounded-lg">
-        <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />

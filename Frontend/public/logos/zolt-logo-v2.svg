@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Concepto 2: Z minimalista con tulipán pequeño arriba -->
+
+  <!-- Letra Z bold -->
+  <path d="M35,45 L165,45 L165,60 L75,140 L165,140 L165,160 L35,160 L35,145 L125,60 L35,60 Z" fill="#1a1a2e"/>
+
+  <!-- Tulipán pequeño encima de la Z -->
+  <g transform="translate(165, 25)">
+    <!-- Tallo -->
+    <rect x="-2" y="8" width="4" height="18" rx="2" fill="#4A7C43"/>
+
+    <!-- Pétalos -->
+    <ellipse cx="0" cy="0" rx="10" ry="14" fill="#E63946"/>
+    <ellipse cx="-6" cy="4" rx="7" ry="11" fill="#DC2F3C"/>
+    <ellipse cx="6" cy="4" rx="7" ry="11" fill="#DC2F3C"/>
+  </g>
+</svg>
