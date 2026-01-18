@@ -111,13 +111,13 @@ const SalesModal: React.FC<SalesModalProps> = ({
   return (
     <Dialog open={show} onOpenChange={onHide}>
       <DialogContent className="max-w-6xl">
-        <DialogHeader className="bg-green-500 text-white p-4 -m-6 mb-0 rounded-t-lg">
-          <DialogTitle className="flex items-center text-white">
-            <ShoppingCart size={24} className="mr-2" />
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShoppingCart size={20} />
             Ventas de {branchName}
           </DialogTitle>
         </DialogHeader>
-        <div className="max-h-[600px] overflow-y-auto mt-4">
+        <div className="max-h-[600px] overflow-y-auto">
           {loading ? (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
@@ -134,35 +134,35 @@ const SalesModal: React.FC<SalesModalProps> = ({
             <>
               {/* Summary cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                <div className="card border-0 h-full bg-green-50">
-                  <div className="card-body text-center p-4">
+                <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 h-full">
+                  <div className="text-center p-4">
                     <DollarSign size={24} className="text-green-500 mx-auto" />
-                    <h5 className="mt-2 mb-0 font-bold text-green-500">
+                    <h5 className="mt-2 font-bold text-green-500">
                       {formatCurrency(totalSales)}
                     </h5>
-                    <p className="text-muted-foreground mb-0" style={{ fontSize: "12px" }}>
+                    <p className="text-muted-foreground text-xs">
                       Total de Ventas
                     </p>
                   </div>
                 </div>
-                <div className="card border-0 h-full bg-blue-50">
-                  <div className="card-body text-center p-4">
+                <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 h-full">
+                  <div className="text-center p-4">
                     <ShoppingCart size={24} className="text-blue-500 mx-auto" />
-                    <h5 className="mt-2 mb-0 font-bold text-blue-500">
+                    <h5 className="mt-2 font-bold text-blue-500">
                       {sales.length}
                     </h5>
-                    <p className="text-muted-foreground mb-0" style={{ fontSize: "12px" }}>
+                    <p className="text-muted-foreground text-xs">
                       Ordenes Totales
                     </p>
                   </div>
                 </div>
-                <div className="card border-0 h-full bg-cyan-50">
-                  <div className="card-body text-center p-4">
+                <div className="rounded-lg border bg-cyan-50 dark:bg-cyan-950/20 h-full">
+                  <div className="text-center p-4">
                     <DollarSign size={24} className="text-cyan-500 mx-auto" />
-                    <h5 className="mt-2 mb-0 font-bold text-cyan-500">
+                    <h5 className="mt-2 font-bold text-cyan-500">
                       {formatCurrency(totalSales / sales.length)}
                     </h5>
-                    <p className="text-muted-foreground mb-0" style={{ fontSize: "12px" }}>
+                    <p className="text-muted-foreground text-xs">
                       Ticket Promedio
                     </p>
                   </div>

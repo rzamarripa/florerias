@@ -157,19 +157,17 @@ const CompanyDashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid py-2">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="mb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <h2 className="mb-1 font-bold">Dashboard de Empresa</h2>
-            <p className="text-muted-foreground mb-0">
-              Visualiza y gestiona todas tus sucursales
-            </p>
-          </div>
-          <div className="bg-primary text-white flex items-center justify-center rounded-full" style={{ width: "50px", height: "50px" }}>
-            <Building2 size={28} />
-          </div>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold">Dashboard de Empresa</h2>
+          <p className="text-muted-foreground">
+            Visualiza y gestiona todas tus sucursales
+          </p>
+        </div>
+        <div className="bg-primary text-primary-foreground flex items-center justify-center rounded-full w-12 h-12">
+          <Building2 size={28} />
         </div>
       </div>
 
@@ -178,60 +176,50 @@ const CompanyDashboardPage: React.FC = () => {
 
       {/* Branches Grid */}
       {loading ? (
-        <div
-          className="card border-0 shadow-sm"
-          style={{ borderRadius: "10px" }}
-        >
-          <div className="card-body p-4 text-center">
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="p-6 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
-            <p className="text-muted-foreground mb-0">Cargando estadísticas...</p>
+            <p className="text-muted-foreground">Cargando estadísticas...</p>
           </div>
         </div>
       ) : hasSearched ? (
         branches.length === 0 ? (
-          <div
-            className="card border-0 shadow-sm"
-            style={{ borderRadius: "10px" }}
-          >
-            <div className="card-body p-4 text-center">
+          <div className="rounded-lg border bg-card shadow-sm">
+            <div className="p-6 text-center">
               <Building2 size={48} className="text-muted-foreground mb-3 mx-auto" />
-              <h5 className="text-muted-foreground mb-2">No hay sucursales disponibles</h5>
-              <p className="text-muted-foreground mb-0" style={{ fontSize: "14px" }}>
+              <h5 className="text-muted-foreground font-medium mb-2">No hay sucursales disponibles</h5>
+              <p className="text-sm text-muted-foreground">
                 No se encontraron sucursales para tu usuario
               </p>
             </div>
           </div>
         ) : (
-          <div className="mb-2">
-            <div className="mb-2">
-              <h5 className="font-semibold mb-1">
+          <div className="space-y-4">
+            <div>
+              <h5 className="font-semibold">
                 Sucursales ({branches.length})
               </h5>
-              <p className="text-muted-foreground mb-0" style={{ fontSize: "14px" }}>
+              <p className="text-sm text-muted-foreground">
                 Haz clic en las estadísticas para ver detalles
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {branches.map((branch) => (
-                <div key={branch._id}>
-                  <BranchCard
-                    branch={branch}
-                    onEmployeesClick={() => handleEmployeesClick(branch)}
-                    onSalesClick={() => handleSalesClick(branch)}
-                    onExpensesClick={() => handleExpensesClick(branch)}
-                    onPurchasesClick={() => handlePurchasesClick(branch)}
-                  />
-                </div>
+                <BranchCard
+                  key={branch._id}
+                  branch={branch}
+                  onEmployeesClick={() => handleEmployeesClick(branch)}
+                  onSalesClick={() => handleSalesClick(branch)}
+                  onExpensesClick={() => handleExpensesClick(branch)}
+                  onPurchasesClick={() => handlePurchasesClick(branch)}
+                />
               ))}
             </div>
           </div>
         )
       ) : (
-        <div
-          className="card border-0 shadow-sm"
-          style={{ borderRadius: "10px" }}
-        >
-          <div className="card-body p-4 text-center">
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="p-6 text-center">
             <div className="mb-3">
               <svg
                 width="80"
@@ -245,10 +233,10 @@ const CompanyDashboardPage: React.FC = () => {
                 <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h5 className="text-muted-foreground mb-2">
+            <h5 className="text-muted-foreground font-medium mb-2">
               Los filtros se cargarán automáticamente
             </h5>
-            <p className="text-muted-foreground mb-0" style={{ fontSize: "14px" }}>
+            <p className="text-sm text-muted-foreground">
               Espera un momento mientras cargamos las estadísticas del mes actual
             </p>
           </div>

@@ -398,8 +398,8 @@ const NewProductListPage: React.FC = () => {
 
       <form onSubmit={handleSubmit}>
         {/* Informacion Basica */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <CardHeader className="bg-white border-0 py-3">
+        <Card className="mb-4 shadow-sm">
+          <CardHeader className="bg-white py-3">
             <div className="flex items-center gap-2">
               <Package size={20} className="text-primary" />
               <h5 className="mb-0 font-bold">Informacion de la Lista</h5>
@@ -487,8 +487,8 @@ const NewProductListPage: React.FC = () => {
         </Card>
 
         {/* Agregar Productos */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <CardHeader className="bg-white border-0 py-3">
+        <Card className="mb-4 shadow-sm">
+          <CardHeader className="bg-white py-3">
             <div className="flex items-center gap-2">
               <Package size={20} className="text-primary" />
               <h5 className="mb-0 font-bold">Productos</h5>

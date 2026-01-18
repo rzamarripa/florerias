@@ -456,8 +456,8 @@ export default function EcommerceCatalogPage() {
       <div className="grid grid-cols-12 gap-4 px-3">
         {/* Sidebar Filters */}
         <div className="col-span-12 lg:col-span-3">
-          <Card className="border-0 shadow-sm mb-3">
-            <CardHeader className="bg-muted/50 border-0 py-3">
+          <Card className="shadow-sm mb-3">
+            <CardHeader className="bg-muted/50 py-3">
               <div className="flex justify-between items-center">
                 <h6 className="text-sm font-medium mb-0">Filtros</h6>
                 <Button
@@ -493,7 +493,7 @@ export default function EcommerceCatalogPage() {
         {/* Products Grid/List */}
         <div className="col-span-12 lg:col-span-9">
           {filteredProducts.length === 0 ? (
-            <Card className="border-0 shadow-sm">
+            <Card className="shadow-sm">
               <CardContent className="text-center py-12">
                 <Package className="h-16 w-16 text-muted-foreground mx-auto mb-3" />
                 <h5 className="text-lg font-medium">No se encontraron productos</h5>

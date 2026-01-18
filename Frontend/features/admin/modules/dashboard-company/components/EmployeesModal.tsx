@@ -59,13 +59,13 @@ const EmployeesModal: React.FC<EmployeesModalProps> = ({
   return (
     <Dialog open={show} onOpenChange={onHide}>
       <DialogContent className="max-w-4xl">
-        <DialogHeader className="bg-primary text-primary-foreground p-4 -m-6 mb-0 rounded-t-lg">
-          <DialogTitle className="flex items-center text-white">
-            <User size={24} className="mr-2" />
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User size={20} />
             Empleados de {branchName}
           </DialogTitle>
         </DialogHeader>
-        <div className="max-h-[600px] overflow-y-auto mt-4">
+        <div className="max-h-[600px] overflow-y-auto">
           {employees.length === 0 ? (
             <div className="text-center py-12">
               <User size={48} className="text-muted-foreground mb-3 mx-auto" />

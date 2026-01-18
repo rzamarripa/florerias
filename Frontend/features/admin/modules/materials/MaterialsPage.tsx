@@ -282,7 +282,7 @@ const MaterialsPage: React.FC = () => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditMaterial(material._id)}
-                                  className="border-0 rounded-lg"
+                                  className=" rounded-lg"
                                   title="Editar"
                                 >
                                   <Edit size={16} className="text-yellow-500" />
@@ -291,7 +291,7 @@ const MaterialsPage: React.FC = () => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDelete(material._id)}
-                                  className="border-0 rounded-lg"
+                                  className=" rounded-lg"
                                   title="Eliminar"
                                 >
                                   <Trash2 size={16} className="text-red-500" />

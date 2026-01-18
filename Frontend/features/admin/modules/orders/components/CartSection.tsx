@@ -131,8 +131,8 @@ const CartSection: React.FC<CartSectionProps> = ({
 
   return (
     <div className="col-span-12 lg:col-span-4 h-full">
-      <Card className="border-0 shadow-sm h-full flex flex-col">
-        <CardHeader className="bg-white border-0 py-2 flex-shrink-0">
+      <Card className="shadow-sm h-full flex flex-col">
+        <CardHeader className="bg-white py-2 flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="font-bold">Carrito</span>
             <Badge variant="default">{items.length}</Badge>
@@ -283,9 +283,9 @@ const CartSection: React.FC<CartSectionProps> = ({
                         item.insumos.map((insumo, idx) => (
                           <tr
                             key={`${index}-insumo-${idx}`}
-                            className="border-0"
+                            className=""
                           >
-                            <td className="py-1 pl-4 border-0 text-muted-foreground text-sm">
+                            <td className="py-1 pl-4 text-muted-foreground text-sm">
                               {insumo.cantidad} {insumo.nombre}
                               {insumo.isExtra && (
                                 <Badge
@@ -296,12 +296,12 @@ const CartSection: React.FC<CartSectionProps> = ({
                                 </Badge>
                               )}
                             </td>
-                            <td className="py-1 border-0 text-right text-muted-foreground text-sm">
+                            <td className="py-1 text-right text-muted-foreground text-sm">
                               {insumo.isExtra
                                 ? `+$${insumo.importeVenta.toFixed(2)}`
                                 : ""}
                             </td>
-                            <td className="py-1 border-0"></td>
+                            <td className="py-1"></td>
                           </tr>
                         ))}
                     </React.Fragment>
@@ -341,7 +341,7 @@ const CartSection: React.FC<CartSectionProps> = ({
             </span>
           </div>
         </CardContent>
-        <CardFooter className="bg-white border-0 p-3 flex-shrink-0">
+        <CardFooter className="bg-white p-3 flex-shrink-0">
           <div className="grid gap-2 w-full">
             <Button
               size="lg"

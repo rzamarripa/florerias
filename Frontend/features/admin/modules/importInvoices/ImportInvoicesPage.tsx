@@ -7,8 +7,8 @@ import { FileText } from "lucide-react";
 const ImportInvoicesPage: React.FC = () => {
   return (
     <div className="import-invoices-page">
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="bg-white border-0 py-3">
+      <Card className="shadow-sm">
+        <CardHeader className="bg-white py-3">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-primary" />
             <h5 className="mb-0 font-bold">Importar CFDI</h5>

@@ -424,7 +424,7 @@ const NewProductPage: React.FC = () => {
 
       <form onSubmit={handleSubmit}>
         {/* Informacion Basica */}
-        <Card className="mb-4 border-0 shadow-sm">
+        <Card className="mb-4 shadow-sm">
           <CardHeader className="bg-background border-b-0 py-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Package size={20} className="text-primary" />
@@ -532,7 +532,7 @@ const NewProductPage: React.FC = () => {
         </Card>
 
         {/* Imagen */}
-        <Card className="mb-4 border-0 shadow-sm">
+        <Card className="mb-4 shadow-sm">
           <CardHeader className="bg-background border-b-0 py-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Upload size={20} className="text-primary" />
@@ -581,7 +581,7 @@ const NewProductPage: React.FC = () => {
         </Card>
 
         {/* Insumos */}
-        <Card className="mb-4 border-0 shadow-sm">
+        <Card className="mb-4 shadow-sm">
           <CardHeader className="bg-background border-b-0 py-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Package size={20} className="text-primary" />
@@ -822,7 +822,7 @@ const NewProductPage: React.FC = () => {
         </Card>
 
         {/* Mano de Obra */}
-        <Card className="mb-4 border-0 shadow-sm">
+        <Card className="mb-4 shadow-sm">
           <CardHeader className="bg-background border-b-0 py-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Package size={20} className="text-primary" />

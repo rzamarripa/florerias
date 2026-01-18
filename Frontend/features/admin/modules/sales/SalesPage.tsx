@@ -616,14 +616,14 @@ const SalesPage: React.FC = () => {
 
       {/* Tabs - Solo se muestran después de hacer una búsqueda */}
       {hasSearched ? (
-        <Card className="border-0 shadow-sm rounded-xl">
+        <Card className="shadow-sm rounded-xl">
           <CardContent className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="px-4 pt-3 border-b">
                 <TabsList className="bg-transparent h-auto p-0 gap-0">
                   <TabsTrigger
                     value="nuevas"
-                    className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
                     Nuevas Ventas
                   </TabsTrigger>
@@ -631,7 +631,7 @@ const SalesPage: React.FC = () => {
                   {creditPaymentMethodId && (
                     <TabsTrigger
                       value="credito"
-                      className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                      className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                     >
                       Ventas a Credito
                     </TabsTrigger>
@@ -640,7 +640,7 @@ const SalesPage: React.FC = () => {
                   {exchangePaymentMethodId && (
                     <TabsTrigger
                       value="intercambio"
-                      className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                      className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                     >
                       Ventas de Intercambio
                     </TabsTrigger>
@@ -648,21 +648,21 @@ const SalesPage: React.FC = () => {
 
                   <TabsTrigger
                     value="canceladas"
-                    className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
                     Ventas Canceladas
                   </TabsTrigger>
 
                   <TabsTrigger
                     value="pendientes"
-                    className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
                     Pendientes de Pago
                   </TabsTrigger>
 
                   <TabsTrigger
                     value="sin-autorizar"
-                    className="px-4 py-2 font-semibold rounded-none border-0 border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
                     Por Autorizar
                   </TabsTrigger>
@@ -716,7 +716,7 @@ const SalesPage: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-0 shadow-sm rounded-xl">
+        <Card className="shadow-sm rounded-xl">
           <CardContent className="p-4 text-center">
             <div className="mb-3">
               <svg

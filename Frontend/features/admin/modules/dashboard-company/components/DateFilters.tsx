@@ -79,11 +79,8 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
   };
 
   return (
-    <div
-      className="card border-0 shadow-sm mb-2"
-      style={{ borderRadius: "10px" }}
-    >
-      <div className="card-body p-2">
+    <div className="rounded-lg border bg-card shadow-sm">
+      <div className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
           <div className="md:col-span-4">
             <div className="space-y-1">
@@ -97,7 +94,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="border-0 bg-muted rounded-lg py-2 px-3 text-sm"
+                className=" bg-muted rounded-lg py-2 px-3 text-sm"
               />
             </div>
           </div>
@@ -114,7 +111,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="border-0 bg-muted rounded-lg py-2 px-3 text-sm"
+                className=" bg-muted rounded-lg py-2 px-3 text-sm"
               />
             </div>
           </div>

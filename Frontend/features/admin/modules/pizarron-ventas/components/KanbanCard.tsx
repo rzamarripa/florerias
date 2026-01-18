@@ -81,7 +81,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
   return (
     <div ref={canDrag ? drag : null}>
       <Card
-        className="mb-3 border-0 shadow-sm relative rounded-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+        className="mb-3 shadow-sm relative rounded-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
         style={{
           cursor: canDrag ? "move" : "pointer",
           opacity: isDragging ? 0.5 : 1,
@@ -93,7 +93,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
           {/* Header with Stage Badge */}
           <div className="flex justify-between items-start mb-2">
             <Badge
-              className="px-2 py-1 text-[0.7rem] font-semibold border-0"
+              className="px-2 py-1 text-[0.7rem] font-semibold"
               style={{
                 backgroundColor: stageColor || undefined,
               }}

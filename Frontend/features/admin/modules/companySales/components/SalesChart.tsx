@@ -190,7 +190,7 @@ export default function SalesChart({ data, title = "Ventas" }: SalesChartProps) 
 
   return (
     <div 
-      className="card border-0 shadow-sm" 
+      className="card shadow-sm" 
       style={{ borderRadius: "10px" }}
     >
       <div className="card-body p-2">

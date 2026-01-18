@@ -89,7 +89,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
   };
 
   return (
-    <Card className="border-0 shadow-sm mb-2 rounded-xl">
+    <Card className="shadow-sm mb-2 rounded-xl">
       <CardContent className="p-2">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
           <div className={isAdministrator || isCajero || isGerente ? "md:col-span-4" : "md:col-span-3"}>
@@ -101,7 +101,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="border-0 bg-gray-100 rounded-lg"
+                className=" bg-gray-100 rounded-lg"
               />
             </div>
           </div>
@@ -115,7 +115,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="border-0 bg-gray-100 rounded-lg"
+                className=" bg-gray-100 rounded-lg"
               />
             </div>
           </div>
@@ -132,7 +132,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                   onValueChange={setBranchId}
                   disabled={loadingBranches}
                 >
-                  <SelectTrigger className="border-0 bg-gray-100 rounded-lg">
+                  <SelectTrigger className=" bg-gray-100 rounded-lg">
                     <SelectValue placeholder="Todas las sucursales" />
                   </SelectTrigger>
                   <SelectContent>
@@ -163,7 +163,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             <Button
               variant={viewMode === "dia" ? "default" : "outline"}
               onClick={() => setViewMode("dia")}
-              className="rounded-none border-0 font-semibold text-xs px-3 py-1.5"
+              className="rounded-none font-semibold text-xs px-3 py-1.5"
               size="sm"
             >
               Dia
@@ -171,7 +171,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             <Button
               variant={viewMode === "semana" ? "default" : "outline"}
               onClick={() => setViewMode("semana")}
-              className="rounded-none border-0 border-x font-semibold text-xs px-3 py-1.5"
+              className="rounded-none border-x font-semibold text-xs px-3 py-1.5"
               size="sm"
             >
               Semana
@@ -179,7 +179,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
             <Button
               variant={viewMode === "mes" ? "default" : "outline"}
               onClick={() => setViewMode("mes")}
-              className="rounded-none border-0 font-semibold text-xs px-3 py-1.5"
+              className="rounded-none font-semibold text-xs px-3 py-1.5"
               size="sm"
             >
               Mes

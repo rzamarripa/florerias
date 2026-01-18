@@ -261,7 +261,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy,
                     setFormData({ ...formData, paymentDate: e.target.value })
                   }
                   required
-                  className="bg-muted/50 border-0"
+                  className="bg-muted/50"
                 />
               </div>
 
@@ -275,7 +275,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy,
                     setFormData({ ...formData, paymentMethod: value })
                   }
                 >
-                  <SelectTrigger className="bg-muted/50 border-0 w-full">
+                  <SelectTrigger className="bg-muted/50 w-full">
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -302,7 +302,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy,
                   }
                   disabled={loadingCashRegisters || cashRegisters.length === 0}
                 >
-                  <SelectTrigger className="bg-muted/50 border-0 w-full">
+                  <SelectTrigger className="bg-muted/50 w-full">
                     <SelectValue
                       placeholder={
                         loadingCashRegisters
@@ -336,7 +336,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy,
                   setFormData({ ...formData, provider: value })
                 }
               >
-                <SelectTrigger className="bg-muted/50 border-0 w-full">
+                <SelectTrigger className="bg-muted/50 w-full">
                   <SelectValue placeholder="Seleccionar proveedor (opcional)..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -360,7 +360,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy,
                 }
                 disabled={loadingConcepts}
               >
-                <SelectTrigger className="bg-muted/50 border-0 w-full">
+                <SelectTrigger className="bg-muted/50 w-full">
                   <SelectValue
                     placeholder={
                       loadingConcepts ? "Cargando conceptos..." : "Seleccionar concepto..."
@@ -392,7 +392,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy,
                   setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
                 }
                 required
-                className="bg-muted/50 border-0"
+                className="bg-muted/50"
               />
             </div>
 
@@ -405,7 +405,7 @@ const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy,
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="bg-muted/50 border-0"
+                className="bg-muted/50"
               />
             </div>
           </div>

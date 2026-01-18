@@ -176,8 +176,8 @@ const NewMaterialPage: React.FC = () => {
 
       <form onSubmit={handleSubmit}>
         {/* Informacion General */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <CardHeader className="bg-white border-0 py-3">
+        <Card className="mb-4 shadow-sm">
+          <CardHeader className="bg-white py-3">
             <div className="flex items-center gap-2">
               <Package2 size={20} className="text-primary" />
               <h5 className="mb-0 font-bold text-lg">Informacion del Material</h5>
@@ -283,8 +283,8 @@ const NewMaterialPage: React.FC = () => {
         </Card>
 
         {/* Precios */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <CardHeader className="bg-white border-0 py-3">
+        <Card className="mb-4 shadow-sm">
+          <CardHeader className="bg-white py-3">
             <div className="flex items-center gap-2">
               <DollarSign size={20} className="text-primary" />
               <h5 className="mb-0 font-bold text-lg">Precios</h5>
@@ -339,7 +339,7 @@ const NewMaterialPage: React.FC = () => {
 
         {/* Resumen Financiero */}
         {formData.price > 0 && formData.cost > 0 && (
-          <Card className="mb-4 border-0 shadow-sm overflow-hidden">
+          <Card className="mb-4 shadow-sm overflow-hidden">
             <CardHeader className="bg-green-600 text-white py-3">
               <div className="flex items-center gap-2">
                 <DollarSign size={20} />

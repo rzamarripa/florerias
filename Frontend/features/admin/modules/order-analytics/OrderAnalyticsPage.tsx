@@ -199,7 +199,7 @@ const OrderAnalyticsPage: React.FC = () => {
     bgColor: string;
     trend?: number;
   }> = ({ title, value, icon: Icon, color, bgColor, trend }) => (
-    <Card className="border-0 shadow-sm h-full overflow-hidden">
+    <Card className="shadow-sm h-full overflow-hidden">
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
           <div className="flex-grow">
@@ -280,7 +280,7 @@ const OrderAnalyticsPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <Card className="border-0 shadow-sm mb-4">
+      <Card className="shadow-sm mb-4">
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
             <div>
@@ -397,7 +397,7 @@ const OrderAnalyticsPage: React.FC = () => {
           color="#f59e0b"
           bgColor="#fef3c7"
         />
-        <Card className="border-0 shadow-sm h-full overflow-hidden">
+        <Card className="shadow-sm h-full overflow-hidden">
           <CardContent className="p-4">
             <div className="flex justify-between items-start">
               <div className="flex-grow">
@@ -452,7 +452,7 @@ const OrderAnalyticsPage: React.FC = () => {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
-          <Card className="border-0 shadow-sm h-full">
+          <Card className="shadow-sm h-full">
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-3">
                 <h5 className="font-bold mb-0">Ventas Ultimos 7 Dias</h5>
@@ -499,7 +499,7 @@ const OrderAnalyticsPage: React.FC = () => {
         </div>
 
         <div>
-          <Card className="border-0 shadow-sm h-full">
+          <Card className="shadow-sm h-full">
             <CardContent className="p-4">
               <h5 className="font-bold mb-3">Mes Actual vs Anterior</h5>
               <div className="relative" style={{ height: "300px" }}>
@@ -523,7 +523,7 @@ const OrderAnalyticsPage: React.FC = () => {
 
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <h5 className="font-bold mb-3">Ventas por Categoria</h5>
             <div className="relative" style={{ height: "300px" }}>
@@ -542,7 +542,7 @@ const OrderAnalyticsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <h5 className="font-bold mb-3">Metodos de Pago</h5>
             <div className="relative" style={{ height: "300px" }}>
@@ -563,7 +563,7 @@ const OrderAnalyticsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <div className="flex items-center mb-3">
               <AlertTriangle className="w-5 h-5 text-yellow-500 mr-2" />
@@ -600,7 +600,7 @@ const OrderAnalyticsPage: React.FC = () => {
 
       {/* Charts Row 3 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <h5 className="font-bold mb-3">Ventas por Hora del Dia</h5>
             <div className="relative" style={{ height: "280px" }}>
@@ -619,7 +619,7 @@ const OrderAnalyticsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <h5 className="font-bold mb-3">Ventas por Dia de la Semana</h5>
             <div className="relative" style={{ height: "280px" }}>
@@ -641,7 +641,7 @@ const OrderAnalyticsPage: React.FC = () => {
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <h5 className="font-bold mb-3">Top Productos Mas Vendidos</h5>
             <div style={{ maxHeight: "300px", overflowY: "auto" }}>
@@ -684,7 +684,7 @@ const OrderAnalyticsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <div className="flex items-center mb-3">
               <Award className="w-5 h-5 text-primary mr-2" />

@@ -314,7 +314,7 @@ const StoragePage: React.FC = () => {
       </div>
 
       {/* Filters & Table */}
-      <Card className="border-0 shadow-sm rounded-lg">
+      <Card className="shadow-sm rounded-lg">
         <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border-b">
             <div className="relative">

@@ -122,7 +122,7 @@ const AddExtrasModal: React.FC<AddExtrasModalProps> = ({
   return (
     <Dialog open={show} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-2xl">
-        <DialogHeader className="border-0 pb-0">
+        <DialogHeader className=" pb-0">
           <div className="w-full">
             <div className="flex justify-between items-center">
               <div>
@@ -235,7 +235,7 @@ const AddExtrasModal: React.FC<AddExtrasModalProps> = ({
           )}
         </div>
 
-        <DialogFooter className="border-0">
+        <DialogFooter className="">
           <div className="flex gap-2 w-full justify-end">
             <Button variant="secondary" onClick={handleClose} disabled={loading}>
               Cancelar

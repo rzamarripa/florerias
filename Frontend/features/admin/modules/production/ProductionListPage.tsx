@@ -259,7 +259,7 @@ const ProductionListPage: React.FC = () => {
       </div>
 
       {/* Tabs con diseno mas compacto */}
-      <Card className="border-0 shadow-sm rounded-lg">
+      <Card className="shadow-sm rounded-lg">
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="px-3 pt-2 border-b">

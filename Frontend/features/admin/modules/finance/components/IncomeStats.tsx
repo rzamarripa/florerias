@@ -119,7 +119,7 @@ const IncomeStats: React.FC<IncomeStatsProps> = ({ filters }) => {
     bgColor: string;
   }) => (
     <Card
-      className="border-0 shadow-sm h-full rounded-[15px] transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+      className="shadow-sm h-full rounded-[15px] transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
     >
       <CardContent className="p-2">
         <p className="mb-2 font-semibold text-lg">

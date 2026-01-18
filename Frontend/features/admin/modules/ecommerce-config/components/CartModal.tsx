@@ -336,7 +336,7 @@ const CartModal: React.FC<CartModalProps> = ({ branchId: propBranchId, onProduct
                                 updateQuantity(item._id, val);
                               }
                             }}
-                            className="w-14 h-8 text-center border-0 rounded-none focus-visible:ring-0"
+                            className="w-14 h-8 text-center rounded-none focus-visible:ring-0"
                           />
                           <Button
                             variant="ghost"

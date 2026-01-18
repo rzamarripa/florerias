@@ -4,7 +4,15 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Settings } from "lucide-react";
+import { useTheme } from "next-themes";
+import {
+  ChevronRight,
+  ChevronUp,
+  Search,
+  Sun,
+  Moon,
+  Monitor,
+} from "lucide-react";
 import { TbBuildingStore } from "react-icons/tb";
 
 import {
@@ -21,6 +29,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -36,9 +45,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 import { MenuItemType } from "@/types/menu";
-import { originalMenuItems, roleBasedMenuItems, userDropdownItems } from "@/config/constants";
+import {
+  originalMenuItems,
+  roleBasedMenuItems,
+  userDropdownItems,
+} from "@/config/constants";
 import { useUserModulesStore } from "@/stores/userModulesStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores";
@@ -51,8 +65,107 @@ import {
 
 import logo from "@/assets/images/logo.png";
 import logoSm from "@/assets/images/logo-sm.png";
-import { Fragment, useState } from "react";
+import { Fragment, useState, useEffect } from "react";
 import BranchSelectionModal from "@/components/branches/BranchSelectionModal";
+
+// Search button component
+function SearchButton() {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
+  const handleSearch = () => {
+    // Dispatch Cmd+K event to open command palette
+    const event = new KeyboardEvent("keydown", {
+      key: "k",
+      metaKey: true,
+      ctrlKey: true,
+      bubbles: true,
+    });
+    document.dispatchEvent(event);
+  };
+
+  if (isCollapsed) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={handleSearch}
+      >
+        <Search className="h-4 w-4" />
+      </Button>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleSearch}
+      className="flex w-full items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+    >
+      <Search className="h-4 w-4" />
+      <span className="flex-1 text-left">Buscar...</span>
+      <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+        <span className="text-xs">⌘</span>K
+      </kbd>
+    </button>
+  );
+}
+
+// Theme toggle component
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
+  if (isCollapsed) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      >
+        {theme === "dark" ? (
+          <Sun className="h-4 w-4" />
+        ) : (
+          <Moon className="h-4 w-4" />
+        )}
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 rounded-md border bg-muted/50 p-1">
+      <Button
+        variant={theme === "light" ? "secondary" : "ghost"}
+        size="sm"
+        className="h-7 flex-1 gap-1.5"
+        onClick={() => setTheme("light")}
+      >
+        <Sun className="h-3.5 w-3.5" />
+        <span className="text-xs">Claro</span>
+      </Button>
+      <Button
+        variant={theme === "dark" ? "secondary" : "ghost"}
+        size="sm"
+        className="h-7 flex-1 gap-1.5"
+        onClick={() => setTheme("dark")}
+      >
+        <Moon className="h-3.5 w-3.5" />
+        <span className="text-xs">Oscuro</span>
+      </Button>
+    </div>
+  );
+}
 
 // Recursive menu item component
 function NavItem({ item }: { item: MenuItemType }) {
@@ -182,12 +295,12 @@ function NavUser() {
                     {user?.role?.name || role || "Usuario"}
                   </span>
                 </div>
-                <Settings className="ml-auto size-4" />
+                <ChevronUp className="ml-auto size-4" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-              side="bottom"
+              side="top"
               align="end"
               sideOffset={4}
             >
@@ -249,6 +362,8 @@ function NavUser() {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { allowedModules } = useUserModulesStore();
   const { role } = useUserRoleStore();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const filteredMenuItems = React.useMemo(() => {
     const isAdmin = isSuperAdmin(role);
@@ -364,18 +479,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
+      {/* Header with Logo */}
       <SidebarHeader className="flex items-center justify-center py-4">
-        <Link href="/">
+        <Link href="/" className="flex items-center gap-2">
           <Image
-            src={logo.src}
+            src={isCollapsed ? logoSm.src : logo.src}
             alt="Zolt"
-            width={120}
-            height={40}
-            className="h-8 w-auto"
+            width={isCollapsed ? 32 : 120}
+            height={isCollapsed ? 32 : 40}
+            className={isCollapsed ? "h-8 w-8" : "h-8 w-auto"}
           />
         </Link>
       </SidebarHeader>
 
+      {/* Search Bar */}
+      <div className="px-2 pb-2">
+        <SearchButton />
+      </div>
+
+      <SidebarSeparator />
+
+      {/* Navigation */}
       <SidebarContent>
         {groupedItems.map((group, idx) => (
           <SidebarGroup key={idx}>
@@ -391,6 +515,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ))}
       </SidebarContent>
 
+      <SidebarSeparator />
+
+      {/* Theme Toggle */}
+      <div className="px-2 py-2">
+        <ThemeToggle />
+      </div>
+
+      {/* Footer with User */}
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>

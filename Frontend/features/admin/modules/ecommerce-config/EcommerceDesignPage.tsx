@@ -639,7 +639,7 @@ export default function EcommerceDesignPage() {
       {/* Main Container with Config Panel and Preview */}
       <div className="flex flex-grow gap-3" style={{ height: 'calc(100vh - 100px)' }}>
         {/* Configuration Panel */}
-        <Card className="border-0 shadow-sm flex-grow" style={{ maxWidth: '60%' }}>
+        <Card className="shadow-sm flex-grow" style={{ maxWidth: '60%' }}>
           <CardContent className="p-0 flex flex-col h-full">
             <Tabs value={activeKey} onValueChange={setActiveKey} className="flex flex-col h-full">
               {/* Tabs Navigation */}

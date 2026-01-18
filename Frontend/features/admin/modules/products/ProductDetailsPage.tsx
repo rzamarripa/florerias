@@ -120,7 +120,7 @@ const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({
         Volver a productos
       </Button>
 
-      <Card className="border-0 shadow-sm">
+      <Card className="shadow-sm">
         <CardContent className="p-4">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Product Images */}

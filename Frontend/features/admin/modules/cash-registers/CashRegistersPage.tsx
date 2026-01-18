@@ -160,7 +160,7 @@ const CashRegistersPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <Card className="border-0 shadow-sm rounded-[10px]">
+      <Card className="shadow-sm rounded-[10px]">
         <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-12">

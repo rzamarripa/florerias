@@ -95,7 +95,7 @@ const ExpensesTable: React.FC<ExpensesTableProps> = ({ filters }) => {
 
   return (
     <div className="mb-4">
-      <Card className="border-0 shadow-sm rounded-[15px]">
+      <Card className="shadow-sm rounded-[15px]">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>

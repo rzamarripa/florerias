@@ -345,7 +345,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                 {featuredElements.delivery.pickup?.enabled && (
                   <div className="col-md-6">
                     <div 
-                      className="card border-0 h-100 shadow-sm hover-shadow-lg"
+                      className="card h-100 shadow-sm hover-shadow-lg"
                       style={{ 
                         borderRadius: '16px',
                         transition: 'all 0.3s ease',
@@ -410,7 +410,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                 {featuredElements?.delivery?.delivery?.enabled && (
                   <div className="col-md-6">
                     <div 
-                      className="card border-0 h-100 shadow-sm hover-shadow-lg"
+                      className="card h-100 shadow-sm hover-shadow-lg"
                       style={{ 
                         borderRadius: '16px',
                         transition: 'all 0.3s ease',
@@ -582,7 +582,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                       <button
                         key={index}
                         onClick={() => setCurrentPromoIndex(index)}
-                        className="p-0 border-0"
+                        className="p-0"
                         style={{
                           width: index === currentPromoIndex ? '24px' : '8px',
                           height: '8px',
@@ -638,7 +638,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                   itemsStock.slice(0, featuredElements.productCatalog?.productsPerPage || 12).map((product, index) => (
                     <div key={product._id} className={`col-${featuredElements.productCatalog?.display === 'list' ? '12' : featuredElements.productCatalog?.display === 'cards' ? '6' : 'lg-3 md-6'}`}>
                       <div 
-                        className="card border-0 h-100 shadow-sm position-relative overflow-hidden"
+                        className="card h-100 shadow-sm position-relative overflow-hidden"
                         style={{ 
                           borderRadius: '16px',
                           transition: 'all 0.3s ease'
@@ -810,7 +810,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                   [1, 2, 3, 4].map((num) => (
                     <div key={num} className={`col-${featuredElements.productCatalog?.display === 'list' ? '12' : featuredElements.productCatalog?.display === 'cards' ? '6' : 'lg-3 md-6'}`}>
                       <div 
-                        className="card border-0 h-100 shadow-sm position-relative overflow-hidden"
+                        className="card h-100 shadow-sm position-relative overflow-hidden"
                         style={{ 
                           borderRadius: '16px',
                           transition: 'all 0.3s ease'

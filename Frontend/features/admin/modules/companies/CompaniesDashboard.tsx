@@ -519,7 +519,7 @@ const CompaniesDashboard: React.FC = () => {
   return (
     <div className="container-fluid py-2">
       {/* Filters Section */}
-      <Card className="border-0 shadow-sm mb-2 rounded-[10px]">
+      <Card className="shadow-sm mb-2 rounded-[10px]">
         <CardContent className="p-2">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
             <div className="md:col-span-3">
@@ -608,7 +608,7 @@ const CompaniesDashboard: React.FC = () => {
       {/* Top 5 Metrics Cards - Con datos reales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
         {/* Empresas Card */}
-        <Card className="border-0 shadow-sm rounded-xl">
+        <Card className="shadow-sm rounded-xl">
           <CardContent className="text-center p-3">
             <div className="mb-3">
               <div
@@ -628,7 +628,7 @@ const CompaniesDashboard: React.FC = () => {
         </Card>
 
         {/* Sucursales Card */}
-        <Card className="border-0 shadow-sm rounded-xl">
+        <Card className="shadow-sm rounded-xl">
           <CardContent className="text-center p-3">
             <div className="mb-3">
               <div
@@ -648,7 +648,7 @@ const CompaniesDashboard: React.FC = () => {
         </Card>
 
         {/* Clientes Card */}
-        <Card className="border-0 shadow-sm rounded-xl">
+        <Card className="shadow-sm rounded-xl">
           <CardContent className="text-center p-3">
             <div className="mb-3">
               <div
@@ -668,7 +668,7 @@ const CompaniesDashboard: React.FC = () => {
         </Card>
 
         {/* Ventas Card */}
-        <Card className="border-0 shadow-sm rounded-xl">
+        <Card className="shadow-sm rounded-xl">
           <CardContent className="text-center p-3">
             <div className="mb-3">
               <div
@@ -688,7 +688,7 @@ const CompaniesDashboard: React.FC = () => {
         </Card>
 
         {/* Revenue Card */}
-        <Card className="border-0 shadow-sm rounded-xl lg:col-span-2">
+        <Card className="shadow-sm rounded-xl lg:col-span-2">
           <CardContent className="p-3">
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -737,8 +737,8 @@ const CompaniesDashboard: React.FC = () => {
       {/* Gráfica de Ingresos y Reportes Trimestrales */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-4">
         <div className="lg:col-span-8">
-          <Card className="border-0 shadow-sm rounded-xl">
-            <CardHeader className="bg-white border-0 py-3 px-4">
+          <Card className="shadow-sm rounded-xl">
+            <CardHeader className="bg-white py-3 px-4">
               <div className="flex justify-between items-center">
                 <div>
                   <h5 className="font-bold mb-0">Ingresos Diarios</h5>
@@ -783,8 +783,8 @@ const CompaniesDashboard: React.FC = () => {
         </div>
 
         <div className="lg:col-span-4">
-          <Card className="border-0 shadow-sm h-full rounded-xl">
-            <CardHeader className="bg-white border-0 py-3 px-4">
+          <Card className="shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white py-3 px-4">
               <div className="flex justify-between items-center">
                 <h5 className="font-bold mb-0">Ventas Semanales</h5>
                 <div className="flex gap-2">
@@ -891,8 +891,8 @@ const CompaniesDashboard: React.FC = () => {
       {/* Rendimiento de Ventas y Últimas Actualizaciones */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-4">
         <div className="lg:col-span-5">
-          <Card className="border-0 shadow-sm h-full rounded-xl">
-            <CardHeader className="bg-white border-0 py-3 px-4">
+          <Card className="shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white py-3 px-4">
               <div className="flex justify-between items-center">
                 <h5 className="font-bold mb-0">Rendimiento de Ventas</h5>
                 <div className="flex gap-2">
@@ -1020,8 +1020,8 @@ const CompaniesDashboard: React.FC = () => {
         </div>
 
         <div className="lg:col-span-7">
-          <Card className="border-0 shadow-sm h-full rounded-xl">
-            <CardHeader className="bg-white border-0 py-3 px-4">
+          <Card className="shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white py-3 px-4">
               <div className="flex justify-between items-center">
                 <h5 className="font-bold mb-0">Últimas Órdenes</h5>
                 <Badge variant="secondary" className="px-3 py-2">
@@ -1111,7 +1111,7 @@ const CompaniesDashboard: React.FC = () => {
                     return (
                       <div
                         key={order._id}
-                        className="border-0 px-0 py-3 border-b last:border-b-0"
+                        className=" px-0 py-3 border-b last:border-b-0"
                       >
                         <div className="flex gap-3">
                           <div
@@ -1201,8 +1201,8 @@ const CompaniesDashboard: React.FC = () => {
       {/* Mensajes y Discusiones */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
         <div className="lg:col-span-5">
-          <Card className="border-0 shadow-sm h-full rounded-xl">
-            <CardHeader className="bg-white border-0 py-3 px-4">
+          <Card className="shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white py-3 px-4">
               <div className="flex justify-between items-center">
                 <div>
                   <h5 className="font-bold mb-1">Top 10 Clientes</h5>
@@ -1256,7 +1256,7 @@ const CompaniesDashboard: React.FC = () => {
                     const lastOrderTime = getTimeAgo(lastOrderDate);
 
                     return (
-                      <div key={idx} className="border-0 px-0 py-3 border-b last:border-b-0">
+                      <div key={idx} className=" px-0 py-3 border-b last:border-b-0">
                         <div className="flex gap-3 items-center">
                           <div
                             className="flex items-center gap-2"
@@ -1344,8 +1344,8 @@ const CompaniesDashboard: React.FC = () => {
         </div>
 
         <div className="lg:col-span-7">
-          <Card className="border-0 shadow-sm h-full rounded-xl">
-            <CardHeader className="bg-white border-0 py-3 px-4">
+          <Card className="shadow-sm h-full rounded-xl">
+            <CardHeader className="bg-white py-3 px-4">
               <div className="flex justify-between items-center">
                 <div>
                   <h5 className="font-bold mb-1">Top 5 Sucursales del Mes</h5>
@@ -1367,31 +1367,31 @@ const CompaniesDashboard: React.FC = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead
-                        className="border-0 text-muted-foreground text-sm"
+                        className=" text-muted-foreground text-sm"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         #
                       </TableHead>
                       <TableHead
-                        className="border-0 text-muted-foreground text-sm"
+                        className=" text-muted-foreground text-sm"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         SUCURSAL
                       </TableHead>
                       <TableHead
-                        className="border-0 text-muted-foreground text-sm text-center"
+                        className=" text-muted-foreground text-sm text-center"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         EMPRESA
                       </TableHead>
                       <TableHead
-                        className="border-0 text-muted-foreground text-sm text-center"
+                        className=" text-muted-foreground text-sm text-center"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         ÓRDENES
                       </TableHead>
                       <TableHead
-                        className="border-0 text-muted-foreground text-sm text-right"
+                        className=" text-muted-foreground text-sm text-right"
                         style={{ fontSize: "11px", fontWeight: "normal" }}
                       >
                         TOTAL VENTAS

@@ -1340,8 +1340,8 @@ const NewOrderPage = () => {
           <form onSubmit={handleSubmit}>
             {/* Selector de Sucursal - Solo para usuarios Redes */}
             {isSocialMedia && (
-              <Card className="mb-4 border-0 shadow-sm">
-                <CardHeader className="bg-primary text-white border-0 py-3 rounded-t-lg">
+              <Card className="mb-4 shadow-sm">
+                <CardHeader className="bg-primary text-white py-3 rounded-t-lg">
                   <div className="flex items-center gap-2">
                     <Store size={20} />
                     <h5 className="mb-0 font-bold">Seleccionar Sucursal</h5>
@@ -1398,8 +1398,8 @@ const NewOrderPage = () => {
 
             {/* Selector de Caja - Solo para usuarios Redes despues de seleccionar sucursal */}
             {isSocialMedia && formData.branchId && (
-              <Card className="mb-4 border-0 shadow-sm">
-                <CardHeader className="bg-green-600 text-white border-0 py-3 rounded-t-lg">
+              <Card className="mb-4 shadow-sm">
+                <CardHeader className="bg-green-600 text-white py-3 rounded-t-lg">
                   <div className="flex items-center gap-2">
                     <CreditCard size={20} />
                     <h5 className="mb-0 font-bold">Seleccionar Caja</h5>
@@ -1507,8 +1507,8 @@ const NewOrderPage = () => {
             )}
 
             {/* Informacion del Cliente */}
-            <Card className="mb-4 border-0 shadow-sm">
-              <CardHeader className="bg-white border-0 py-3">
+            <Card className="mb-4 shadow-sm">
+              <CardHeader className="bg-white py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <User size={20} className="text-primary" />
@@ -1739,8 +1739,8 @@ const NewOrderPage = () => {
             </Card>
 
             {/* Productos */}
-            <Card className="mb-4 border-0 shadow-sm">
-              <CardHeader className="bg-white border-0 py-3">
+            <Card className="mb-4 shadow-sm">
+              <CardHeader className="bg-white py-3">
                 <div className="flex items-center gap-2">
                   <Package size={20} className="text-primary" />
                   <h5 className="mb-0 font-bold">Productos</h5>
@@ -1932,26 +1932,26 @@ const NewOrderPage = () => {
                               item.insumos.map((insumo, idx) => (
                                 <TableRow
                                   key={`${index}-insumo-${idx}`}
-                                  className="border-0"
+                                  className=""
                                 >
-                                  <TableCell className="py-1 pl-10 border-0">
+                                  <TableCell className="py-1 pl-10">
                                     {insumo.cantidad}
                                   </TableCell>
-                                  <TableCell className="py-1 pl-10 border-0 font-bold">
+                                  <TableCell className="py-1 pl-10 font-bold">
                                     {insumo.nombre}
                                   </TableCell>
-                                  <TableCell className="py-1 border-0">
+                                  <TableCell className="py-1">
                                     {insumo.isExtra && (
                                       <Badge variant="default" className="bg-blue-500">
                                         Extra
                                       </Badge>
                                     )}
                                   </TableCell>
-                                  <TableCell className="py-1 border-0 text-right">
+                                  <TableCell className="py-1 text-right">
                                     ${insumo.importeVenta.toFixed(2)}
                                   </TableCell>
-                                  <TableCell className="py-1 border-0"></TableCell>
-                                  <TableCell className="py-1 border-0"></TableCell>
+                                  <TableCell className="py-1"></TableCell>
+                                  <TableCell className="py-1"></TableCell>
                                 </TableRow>
                               ))}
                           </React.Fragment>
@@ -1964,8 +1964,8 @@ const NewOrderPage = () => {
             </Card>
 
             {/* Tipo de Envio */}
-            <Card className="mb-4 border-0 shadow-sm">
-              <CardHeader className="bg-white border-0 py-3">
+            <Card className="mb-4 shadow-sm">
+              <CardHeader className="bg-white py-3">
                 <div className="flex items-center gap-2">
                   <Send size={20} className="text-primary" />
                   <h5 className="mb-0 font-bold">Tipo de Envio</h5>
@@ -2278,8 +2278,8 @@ const NewOrderPage = () => {
             </Card>
 
             {/* Forma de Pago y Resumen */}
-            <Card className="mb-4 border-0 shadow-sm">
-              <CardHeader className="bg-white border-0 py-3">
+            <Card className="mb-4 shadow-sm">
+              <CardHeader className="bg-white py-3">
                 <div className="flex items-center gap-2">
                   <CreditCard size={20} className="text-primary" />
                   <h5 className="mb-0 font-bold">Forma de Pago</h5>

@@ -48,7 +48,7 @@ const StatCard: React.FC<StatCardProps> = ({
   return (
     <div className="flex-1 min-w-[180px]">
       <Card
-        className="border-0 shadow-sm h-full rounded-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+        className="shadow-sm h-full rounded-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
       >
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -165,7 +165,7 @@ const SalesStats: React.FC<SalesStatsProps> = ({ filters }) => {
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex-1 min-w-[180px]">
             <Card
-              className="border-0 shadow-sm h-full rounded-xl"
+              className="shadow-sm h-full rounded-xl"
               style={{ minHeight: "160px" }}
             >
               <CardContent className="p-4 flex items-center justify-center h-full">

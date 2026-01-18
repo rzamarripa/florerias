@@ -38,7 +38,7 @@ const ClientViewModal: React.FC<ClientViewModalProps> = ({
   return (
     <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
       <DialogContent className="max-w-3xl">
-        <DialogHeader className="border-0 pb-0">
+        <DialogHeader className=" pb-0">
           <DialogTitle className="font-bold text-primary">
             Información del Cliente
           </DialogTitle>
@@ -157,7 +157,7 @@ const ClientViewModal: React.FC<ClientViewModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="border-0 pt-0">
+        <DialogFooter className=" pt-0">
           <Button variant="secondary" onClick={onHide}>
             Cerrar
           </Button>

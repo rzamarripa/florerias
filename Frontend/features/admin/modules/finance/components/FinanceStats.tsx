@@ -70,7 +70,7 @@ const FinanceStats: React.FC<FinanceStatsProps> = ({ filters }) => {
     iconBg: string;
     iconColor: string;
   }) => (
-    <Card className="border-0 shadow-[0_1px_1px_rgba(0,0,0,.05)] rounded-[4px]">
+    <Card className=" shadow-[0_1px_1px_rgba(0,0,0,.05)] rounded-[4px]">
       <CardContent className="p-[10px]">
         <div
           className="mb-2 text-[20px] text-[#464545] font-normal mt-2"
@@ -142,7 +142,7 @@ const FinanceStats: React.FC<FinanceStatsProps> = ({ filters }) => {
           iconColor="#fd7e14"
         />
         <div className="md:col-span-2">
-          <Card className="border-0 bg-primary text-white shadow-[0_1px_1px_rgba(0,0,0,.05)] rounded-[4px]">
+          <Card className=" bg-primary text-white shadow-[0_1px_1px_rgba(0,0,0,.05)] rounded-[4px]">
             <CardContent className="p-3">
               <div className="flex items-start justify-between mb-3">
                 <div

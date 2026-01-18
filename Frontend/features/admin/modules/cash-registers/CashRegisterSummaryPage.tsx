@@ -206,7 +206,7 @@ const CashRegisterSummaryPage: React.FC = () => {
       </div>
 
       {/* Totales Section */}
-      <Card className="border-0 shadow-sm mb-4 rounded-[15px]">
+      <Card className="shadow-sm mb-4 rounded-[15px]">
         <CardContent className="p-4">
           <h5 className="font-bold mb-4">Esta caja cuenta actualmente con:</h5>
 
@@ -252,7 +252,7 @@ const CashRegisterSummaryPage: React.FC = () => {
 
       {/* Expenses Table Section */}
       {summary.expenses && summary.expenses.length > 0 && (
-        <Card className="border-0 shadow-sm mb-4 rounded-[15px]">
+        <Card className="shadow-sm mb-4 rounded-[15px]">
           <CardContent className="p-0">
             <div className="p-4 border-b">
               <h5 className="font-bold mb-0">Detalle de Gastos</h5>
@@ -302,7 +302,7 @@ const CashRegisterSummaryPage: React.FC = () => {
       )}
 
       {/* Sales Table Section */}
-      <Card className="border-0 shadow-sm mb-4 rounded-[15px]">
+      <Card className="shadow-sm mb-4 rounded-[15px]">
         <CardContent className="p-0">
           <div className="p-4 border-b">
             <h5 className="font-bold mb-0">Detalle de Ventas</h5>

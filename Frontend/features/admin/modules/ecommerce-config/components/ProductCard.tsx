@@ -126,7 +126,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
 
   if (viewMode === "list") {
     return (
-      <Card className="border-0 shadow-sm h-full hover:shadow-md transition-shadow">
+      <Card className="shadow-sm h-full hover:shadow-md transition-shadow">
         <CardContent className="p-4">
           <div className="flex gap-4">
             {/* Image */}
@@ -210,7 +210,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
                             setQuantity(val);
                           }
                         }}
-                        className="w-10 h-8 text-center border-0 p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-10 h-8 text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                       <Button
                         variant="ghost"
@@ -241,7 +241,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
 
   // Grid View
   return (
-    <Card className="border-0 shadow-sm h-full hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+    <Card className="shadow-sm h-full hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
       {/* Discount Badge */}
       {product.discountPercentage && (
         <div className="absolute top-2 right-2 z-10">
@@ -337,7 +337,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode }) => {
                   setQuantity(val);
                 }
               }}
-              className="w-10 h-8 text-center border-0 p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-10 h-8 text-center p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <Button
               variant="ghost"

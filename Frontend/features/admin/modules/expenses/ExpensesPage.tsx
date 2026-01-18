@@ -61,7 +61,7 @@ const ExpensesPage: React.FC = () => {
             onValueChange={(value) => setActiveTab(value)}
           >
             <div className="px-4 pt-3 border-b">
-              <TabsList className="bg-transparent border-0 h-auto p-0 gap-0">
+              <TabsList className="bg-transparent h-auto p-0 gap-0">
                 <TabsTrigger
                   value="check_transfer"
                   className="px-4 py-2 font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none data-[state=active]:bg-transparent"

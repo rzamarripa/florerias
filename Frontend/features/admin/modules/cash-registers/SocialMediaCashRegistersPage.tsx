@@ -166,7 +166,7 @@ const SocialMediaCashRegistersPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <Card className="border-0 shadow-sm rounded-[15px]">
+      <Card className="shadow-sm rounded-[15px]">
         <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-12">

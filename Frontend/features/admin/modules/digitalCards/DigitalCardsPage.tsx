@@ -406,7 +406,7 @@ const DigitalCardsPage: React.FC = () => {
       {/* Modal de vista previa de tarjeta */}
       <Dialog open={showCardModal} onOpenChange={setShowCardModal}>
         <DialogContent
-          className="max-w-3xl p-0 overflow-hidden border-0"
+          className="max-w-3xl p-0 overflow-hidden"
           style={{
             background: 'linear-gradient(to bottom right, rgb(15, 23, 42), rgb(30, 41, 59), rgb(15, 23, 42))',
             borderColor: 'rgb(51, 65, 85)',

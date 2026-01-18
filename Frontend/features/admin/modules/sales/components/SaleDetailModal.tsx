@@ -185,7 +185,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
               {/* Resumen Financiero - Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 {/* Card Subtotal */}
-                <Card className="border-0 shadow-sm rounded-xl">
+                <Card className="shadow-sm rounded-xl">
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between mb-2">
                       <h6 className="text-muted-foreground mb-0 font-normal text-xs">
@@ -205,7 +205,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                 </Card>
 
                 {/* Card Descuento */}
-                <Card className="border-0 shadow-sm rounded-xl">
+                <Card className="shadow-sm rounded-xl">
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between mb-2">
                       <h6 className="text-muted-foreground mb-0 font-normal text-xs">
@@ -232,7 +232,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                 </Card>
 
                 {/* Card Total */}
-                <Card className="border-0 shadow-sm rounded-xl">
+                <Card className="shadow-sm rounded-xl">
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between mb-2">
                       <h6 className="text-muted-foreground mb-0 font-normal text-xs">
@@ -252,7 +252,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                 </Card>
 
                 {/* Card Saldo Pendiente */}
-                <Card className="border-0 shadow-sm rounded-xl">
+                <Card className="shadow-sm rounded-xl">
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between mb-2">
                       <h6 className="text-muted-foreground mb-0 font-normal text-xs">
@@ -280,7 +280,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
               {/* Informacion del Cliente y Entrega */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                 {/* Cliente */}
-                <Card className="border-0 shadow-sm h-full rounded-xl">
+                <Card className="shadow-sm h-full rounded-xl">
                   <CardContent className="p-4">
                     <h5 className="font-bold mb-3 flex items-center gap-2">
                       <User className="h-5 w-5 text-primary" />
@@ -348,7 +348,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                 </Card>
 
                 {/* Entrega */}
-                <Card className="border-0 shadow-sm h-full rounded-xl">
+                <Card className="shadow-sm h-full rounded-xl">
                   <CardContent className="p-4">
                     <h5 className="font-bold mb-3 flex items-center gap-2">
                       <Truck className="h-5 w-5 text-primary" />
@@ -443,7 +443,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
               </div>
 
               {/* Productos */}
-              <Card className="border-0 shadow-sm mb-4 rounded-xl">
+              <Card className="shadow-sm mb-4 rounded-xl">
                 <CardHeader className="p-4 border-b">
                   <CardTitle className="font-bold mb-0 flex items-center gap-2">
                     <Package className="h-5 w-5 text-primary" />
@@ -508,7 +508,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
               </Card>
 
               {/* Historial de Pagos */}
-              <Card className="border-0 shadow-sm mb-4 rounded-xl">
+              <Card className="shadow-sm mb-4 rounded-xl">
                 <CardHeader className="p-4 border-b">
                   <CardTitle className="font-bold mb-0 flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-primary" />
@@ -599,7 +599,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
               </Card>
 
               {/* Resumen de Pago */}
-              <Card className="border-0 shadow-sm rounded-xl">
+              <Card className="shadow-sm rounded-xl">
                 <CardContent className="p-4">
                   <h5 className="font-bold mb-3 flex items-center gap-2">
                     <DollarSign className="h-5 w-5 text-primary" />

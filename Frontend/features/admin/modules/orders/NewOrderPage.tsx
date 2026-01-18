@@ -1202,7 +1202,7 @@ const NewOrderPage = () => {
         <div className="lg:col-span-8 h-full flex flex-col">
           {/* Config POS para usuarios Redes (sucursal/caja) */}
           {isSocialMedia && (
-            <Card className="border-0 shadow-sm mb-3">
+            <Card className="shadow-sm mb-3">
               <CardContent className="py-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
                   <div>
@@ -1292,8 +1292,8 @@ const NewOrderPage = () => {
             </Card>
           )}
 
-          <Card className="border-0 shadow-sm flex-1 flex flex-col">
-            <CardHeader className="bg-white border-0 py-2 flex-shrink-0">
+          <Card className="shadow-sm flex-1 flex flex-col">
+            <CardHeader className="bg-white py-2 flex-shrink-0">
               <div className="flex items-center w-full justify-between">
                 <div className="flex items-center gap-2">
                   <Package size={18} className="text-primary" />

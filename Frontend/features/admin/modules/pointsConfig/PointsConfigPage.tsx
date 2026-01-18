@@ -224,7 +224,7 @@ const PointsConfigPage: React.FC = () => {
     detail?: string
   ) => (
     <div>
-      <Card className="border-0 shadow-sm h-full">
+      <Card className="shadow-sm h-full">
         <CardContent className="p-4">
           <div className="flex items-center">
             <div
@@ -281,7 +281,7 @@ const PointsConfigPage: React.FC = () => {
 
   const renderRewardCard = (reward: PointsReward) => (
     <div key={reward._id}>
-      <Card className="border-0 shadow-sm h-full">
+      <Card className="shadow-sm h-full">
         <CardContent className="p-4">
           <div className="flex items-center">
             <div
@@ -402,7 +402,7 @@ const PointsConfigPage: React.FC = () => {
         </div>
 
         {!config ? (
-          <Card className="border-0 shadow-sm">
+          <Card className="shadow-sm">
             <CardContent className="text-center py-10">
               <Award size={64} className="text-muted-foreground mb-3 opacity-50 mx-auto" />
               <h5 className="text-muted-foreground">No hay configuración de puntos</h5>
@@ -522,7 +522,7 @@ const PointsConfigPage: React.FC = () => {
             <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
           </div>
         ) : otherRewards.length === 0 ? (
-          <Card className="border-0 shadow-sm">
+          <Card className="shadow-sm">
             <CardContent className="text-center py-10">
               <Gift size={64} className="text-muted-foreground mb-3 opacity-50 mx-auto" />
               <h5 className="text-muted-foreground">No hay recompensas configuradas</h5>
@@ -556,7 +556,7 @@ const PointsConfigPage: React.FC = () => {
           </h6>
         </div>
 
-        <Card className="border-0 shadow-sm">
+        <Card className="shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

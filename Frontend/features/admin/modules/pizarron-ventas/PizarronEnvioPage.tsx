@@ -235,7 +235,7 @@ const PizarronEnvioPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <Card className="border-0 shadow-sm mb-2 rounded-lg">
+      <Card className="shadow-sm mb-2 rounded-lg">
         <CardContent className="p-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div className="relative">
@@ -245,7 +245,7 @@ const PizarronEnvioPage: React.FC = () => {
                 placeholder="Buscar por orden, cliente..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-10 bg-muted/50 border-0"
+                className="pl-10 bg-muted/50"
               />
             </div>
             <div className="relative">
@@ -255,7 +255,7 @@ const PizarronEnvioPage: React.FC = () => {
                 placeholder="Filtrar por producto..."
                 value={productFilter}
                 onChange={handleProductFilterChange}
-                className="pl-10 bg-muted/50 border-0"
+                className="pl-10 bg-muted/50"
               />
             </div>
           </div>

@@ -423,8 +423,8 @@ const NewCompanyPage: React.FC = () => {
 
       <form onSubmit={handleSubmit}>
         {/* Company Information */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <CardHeader className="bg-white border-0 py-3">
+        <Card className="mb-4 shadow-sm">
+          <CardHeader className="bg-white py-3">
             <div className="flex items-center gap-2">
               <Building2 size={20} className="text-primary" />
               <h5 className="mb-0 font-bold">Datos de la Empresa</h5>
@@ -556,8 +556,8 @@ const NewCompanyPage: React.FC = () => {
         </Card>
 
         {/* Fiscal Address */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <CardHeader className="bg-white border-0 py-3">
+        <Card className="mb-4 shadow-sm">
+          <CardHeader className="bg-white py-3">
             <div className="flex items-center gap-2">
               <MapPin size={20} className="text-primary" />
               <h5 className="mb-0 font-bold">Dirección Fiscal</h5>
@@ -662,8 +662,8 @@ const NewCompanyPage: React.FC = () => {
         </Card>
 
         {/* Administrator User */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <CardHeader className="bg-white border-0 py-3">
+        <Card className="mb-4 shadow-sm">
+          <CardHeader className="bg-white py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <UserPlus size={20} className="text-primary" />
@@ -918,8 +918,8 @@ const NewCompanyPage: React.FC = () => {
         </Card>
 
         {/* Primary Contact */}
-        <Card className="mb-4 border-0 shadow-sm">
-          <CardHeader className="bg-white border-0 py-3">
+        <Card className="mb-4 shadow-sm">
+          <CardHeader className="bg-white py-3">
             <div className="flex items-center gap-2">
               <User size={20} className="text-primary" />
               <h5 className="mb-0 font-bold">Contacto Principal</h5>

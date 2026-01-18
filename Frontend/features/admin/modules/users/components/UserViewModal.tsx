@@ -96,7 +96,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
             </div>
 
             <div className="space-y-2">
-              <Card className="border-0 bg-muted/50">
+              <Card className=" bg-muted/50">
                 <CardContent className="py-2 px-3">
                   <div className="flex items-center">
                     <div className="mr-2">
@@ -133,7 +133,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 bg-muted/50">
+              <Card className=" bg-muted/50">
                 <CardContent className="py-2 px-3">
                   <div className="flex items-center">
                     <div className="mr-2">
@@ -166,7 +166,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ user }) => {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 bg-muted/50">
+              <Card className=" bg-muted/50">
                 <CardContent className="py-2 px-3">
                   <div className="flex items-center">
                     <div className="mr-2">

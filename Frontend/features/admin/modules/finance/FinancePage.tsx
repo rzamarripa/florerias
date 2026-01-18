@@ -64,11 +64,11 @@ const FinancePage: React.FC = () => {
       <IncomeStats filters={filters} />
 
       {/* Tabs para diferentes secciones */}
-      <Card className="border-0 shadow-sm rounded-[15px]">
+      <Card className="shadow-sm rounded-[15px]">
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="px-4 pt-3 border-b-2 border-muted">
-              <TabsList className="bg-transparent border-0 h-auto p-0 gap-0">
+              <TabsList className="bg-transparent h-auto p-0 gap-0">
                 <TabsTrigger
                   value="pagos-realizados"
                   className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"

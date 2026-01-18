@@ -71,7 +71,7 @@ const PaymentsTable: React.FC<PaymentsTableProps> = ({ filters }) => {
   return (
     <div className="mb-4">
       <h5 className="font-bold mb-3 text-lg">Listado de Cobros Realizados</h5>
-      <Card className="border-0 shadow-sm rounded-[15px]">
+      <Card className="shadow-sm rounded-[15px]">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>

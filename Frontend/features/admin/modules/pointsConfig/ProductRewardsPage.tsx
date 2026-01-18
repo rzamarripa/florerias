@@ -298,7 +298,7 @@ const ProductRewardsPage: React.FC = () => {
 
     return (
       <div key={reward._id} className="col-span-1">
-        <Card className="border-0 shadow-sm h-full overflow-hidden">
+        <Card className="shadow-sm h-full overflow-hidden">
           {/* Product Image */}
           <div className="relative h-[140px]">
             {product?.imagen ? (
@@ -421,7 +421,7 @@ const ProductRewardsPage: React.FC = () => {
         </div>
 
         {existingProductRewards.length === 0 ? (
-          <Card className="border-0 shadow-sm">
+          <Card className="shadow-sm">
             <CardContent className="text-center py-8">
               <ShoppingBag size={48} className="text-muted-foreground mb-4 opacity-50 mx-auto" />
               <h6 className="text-muted-foreground font-medium">No hay productos configurados como recompensa</h6>
@@ -452,7 +452,7 @@ const ProductRewardsPage: React.FC = () => {
         </div>
 
         {/* Search */}
-        <Card className="border-0 shadow-sm mb-6">
+        <Card className="shadow-sm mb-6">
           <CardContent className="py-4">
             <div className="relative max-w-[400px]">
               <Search
@@ -479,7 +479,7 @@ const ProductRewardsPage: React.FC = () => {
             </AlertDescription>
           </Alert>
         ) : filteredProducts.length === 0 ? (
-          <Card className="border-0 shadow-sm">
+          <Card className="shadow-sm">
             <CardContent className="text-center py-12">
               <Package size={64} className="text-muted-foreground opacity-50 mb-4 mx-auto" />
               <h5 className="text-muted-foreground font-medium">No hay productos disponibles</h5>
@@ -500,7 +500,7 @@ const ProductRewardsPage: React.FC = () => {
               return (
                 <div key={item._id}>
                   <Card
-                    className={`border-0 shadow-sm h-full overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
+                    className={`shadow-sm h-full overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
                       isReward ? "opacity-85" : ""
                     } ${!isReward && (isManager ? managerBranch : currentBranchId) ? "cursor-pointer" : ""}`}
                     onClick={() => !isReward && (isManager ? managerBranch : currentBranchId) && handleProductClick(item)}

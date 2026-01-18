@@ -94,7 +94,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
         <ScrollArea className="max-h-[calc(90vh-180px)] px-6">
           <div className="space-y-4 pb-4">
             {/* Totales Section */}
-            <Card className="border-0 shadow-sm rounded-xl">
+            <Card className="shadow-sm rounded-xl">
               <CardContent className="p-3">
                 <h6 className="font-bold mb-3 text-sm">
                   Esta caja contaba con:
@@ -150,7 +150,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
             <h6 className="font-bold text-sm">Ingresos</h6>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {/* Card Efectivo */}
-              <Card className="border-0 shadow-sm rounded-xl">
+              <Card className="shadow-sm rounded-xl">
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-2">
                     <h6 className="text-muted-foreground font-normal text-xs">
@@ -170,7 +170,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
               </Card>
 
               {/* Card Intercambio */}
-              <Card className="border-0 shadow-sm rounded-xl">
+              <Card className="shadow-sm rounded-xl">
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-2">
                     <h6 className="text-muted-foreground font-normal text-xs">
@@ -190,7 +190,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
               </Card>
 
               {/* Card Credito */}
-              <Card className="border-0 shadow-sm rounded-xl">
+              <Card className="shadow-sm rounded-xl">
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-2">
                     <h6 className="text-muted-foreground font-normal text-xs">
@@ -210,7 +210,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
               </Card>
 
               {/* Card Transferencia */}
-              <Card className="border-0 shadow-sm rounded-xl">
+              <Card className="shadow-sm rounded-xl">
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-2">
                     <h6 className="text-muted-foreground font-normal text-xs">
@@ -231,7 +231,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
             </div>
 
             {/* Sales Table Section */}
-            <Card className="border-0 shadow-sm rounded-xl">
+            <Card className="shadow-sm rounded-xl">
               <CardContent className="p-0">
                 <div className="p-3 border-b">
                   <h6 className="font-bold text-sm">Detalle de Ventas</h6>
@@ -339,7 +339,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
 
             {/* Expenses Table Section */}
             {log.expenses && log.expenses.length > 0 && (
-              <Card className="border-0 shadow-sm rounded-xl">
+              <Card className="shadow-sm rounded-xl">
                 <CardContent className="p-0">
                   <div className="p-3 border-b">
                     <h6 className="font-bold text-sm">Detalle de Gastos</h6>
@@ -392,7 +392,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
 
             {/* Buys Table Section */}
             {log.buys && log.buys.length > 0 && (
-              <Card className="border-0 shadow-sm rounded-xl">
+              <Card className="shadow-sm rounded-xl">
                 <CardContent className="p-0">
                   <div className="p-3 border-b">
                     <h6 className="font-bold text-sm">

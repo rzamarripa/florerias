@@ -157,7 +157,7 @@ const DashboardItemsPage: React.FC = () => {
 
       {/* Metricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-3">
               <div>
@@ -194,7 +194,7 @@ const DashboardItemsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-3">
               <div>
@@ -231,7 +231,7 @@ const DashboardItemsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-3">
               <div>
@@ -266,7 +266,7 @@ const DashboardItemsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm h-full">
+        <Card className="shadow-sm h-full">
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-3">
               <div>
@@ -325,7 +325,7 @@ const DashboardItemsPage: React.FC = () => {
       {/* Reportes trimestrales y metricas adicionales */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
         <div className="md:col-span-6">
-          <Card className="border-0 shadow-sm h-full">
+          <Card className="shadow-sm h-full">
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-3">
                 <h5 className="mb-0">
@@ -381,7 +381,7 @@ const DashboardItemsPage: React.FC = () => {
 
         <div className="md:col-span-3">
           <Card
-            className="border-0 shadow-sm h-full"
+            className="shadow-sm h-full"
             style={{ backgroundColor: "#2196f3", color: "white" }}
           >
             <CardContent className="p-4">
@@ -426,7 +426,7 @@ const DashboardItemsPage: React.FC = () => {
         </div>
 
         <div className="md:col-span-3">
-          <Card className="border-0 shadow-sm h-full">
+          <Card className="shadow-sm h-full">
             <CardContent className="p-4">
               <h1 className="text-5xl mb-3 text-blue-500">
                 ${(metrics.totalProfit / 1000).toFixed(1)}k
@@ -469,7 +469,7 @@ const DashboardItemsPage: React.FC = () => {
       {/* Tabla de Insumos por Orden */}
       <div className="grid grid-cols-1">
         <div className="col-span-1">
-          <Card className="border-0 shadow-sm">
+          <Card className="shadow-sm">
             <CardContent className="p-4">
               <div className="flex justify-between items-center mb-4">
                 <div>

@@ -212,7 +212,7 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
   };
 
   return (
-    <Card className="border-0 shadow-sm mb-4 rounded-[15px]">
+    <Card className="shadow-sm mb-4 rounded-[15px]">
       <CardContent className="p-3">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="space-y-2">

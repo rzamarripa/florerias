@@ -167,7 +167,7 @@ export default function CompanySalesPage() {
       </div>
 
       {/* Filter Card */}
-      <Card className="border-0 shadow-sm mb-1 rounded-lg">
+      <Card className="shadow-sm mb-1 rounded-lg">
         <CardContent className="py-1 px-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
@@ -230,7 +230,7 @@ export default function CompanySalesPage() {
       )}
 
       {/* Main Table */}
-      <Card className="border-0 shadow-sm rounded-lg">
+      <Card className="shadow-sm rounded-lg">
         <CardContent className="p-0">
           {loading ? (
             <div className="text-center p-3">
@@ -242,34 +242,34 @@ export default function CompanySalesPage() {
               <Table>
                 <TableHeader className="bg-muted">
                   <TableRow>
-                    <TableHead className="border-0 px-4 py-2 text-sm font-bold">
+                    <TableHead className=" px-4 py-2 text-sm font-bold">
                       Sucursal
                     </TableHead>
-                    <TableHead className="border-0 text-center py-2 text-sm font-bold">
+                    <TableHead className=" text-center py-2 text-sm font-bold">
                       Código
                     </TableHead>
-                    <TableHead className="border-0 text-center py-2 text-sm font-bold">
+                    <TableHead className=" text-center py-2 text-sm font-bold">
                       Órdenes
                     </TableHead>
-                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
                       Total Ventas
                     </TableHead>
-                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
                       Servicio
                     </TableHead>
-                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
                       S/S
                     </TableHead>
-                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
                       Total Pagado
                     </TableHead>
-                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
                       Regalías
                     </TableHead>
-                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
                       Pub. Marca
                     </TableHead>
-                    <TableHead className="border-0 text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
                       Pub. Sucursal
                     </TableHead>
                   </TableRow>

@@ -93,7 +93,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         }}
       >
         {orders.length === 0 ? (
-          <Card className="border-0 text-center rounded-xl bg-muted/50">
+          <Card className=" text-center rounded-xl bg-muted/50">
             <CardContent className="py-8 px-4">
               <p className="mb-0 text-muted-foreground text-sm">
                 No hay ordenes en esta etapa

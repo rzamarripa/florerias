@@ -188,7 +188,7 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
   return (
     <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
       <DialogContent className="max-w-3xl">
-        <DialogHeader className="border-0 pb-0">
+        <DialogHeader className=" pb-0">
           <div className="flex items-center gap-2">
             <div
               className="bg-primary text-white flex items-center justify-center rounded-full"
@@ -407,7 +407,7 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="border-0 pt-0">
+        <DialogFooter className=" pt-0">
           <Button variant="secondary" onClick={onHide}>
             Cerrar
           </Button>
@@ -416,7 +416,7 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
         {/* Modal para mostrar el código generado */}
         <Dialog open={showCodeModal} onOpenChange={(open) => !open && setShowCodeModal(false)}>
           <DialogContent className="max-w-sm">
-            <DialogHeader className="border-0 pb-0">
+            <DialogHeader className=" pb-0">
               <div className="flex items-center gap-2">
                 <div
                   className="bg-green-500 text-white flex items-center justify-center rounded-full"
@@ -450,7 +450,7 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
                 Presenta este código al momento de realizar tu compra para aplicar tu recompensa.
               </p>
             </div>
-            <DialogFooter className="border-0 pt-0 justify-center">
+            <DialogFooter className=" pt-0 justify-center">
               <Button variant="default" className="bg-green-500 hover:bg-green-600" onClick={() => setShowCodeModal(false)}>
                 Entendido
               </Button>

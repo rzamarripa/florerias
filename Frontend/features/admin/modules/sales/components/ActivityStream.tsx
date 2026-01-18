@@ -193,7 +193,7 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
   }
 
   return (
-    <Card className="border-0 shadow-sm bg-muted/30">
+    <Card className="shadow-sm bg-muted/30">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Clock size={20} className="text-primary" />
@@ -246,7 +246,7 @@ const ActivityStream: React.FC<ActivityStreamProps> = ({ orderId }) => {
 
                 {/* Contenido del evento */}
                 <div className="flex-grow">
-                  <Card className="border-0 shadow-sm">
+                  <Card className="shadow-sm">
                     <CardContent className="p-3">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-grow">
