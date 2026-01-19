@@ -31,10 +31,14 @@ const pagesData = [
 
   // Cajas
   { name: "Cajas Registradoras", path: "/ventas/cajas", description: "Gestión de cajas registradoras" },
+  { name: "Cajas de Redes Sociales", path: "/ventas/cajas-redes-sociales", description: "Gestión de cajas para redes sociales" },
   { name: "Historial Cajas", path: "/panel-de-control/cajas/historial", description: "Historial de movimientos de cajas" },
 
   // Producción
-  { name: "Pizarrón de Ventas", path: "/produccion/pizarron-ventas", description: "Panel de producción y ventas" },
+  { name: "Pizarrón de Producción", path: "/produccion/pizarron-ventas", description: "Panel de producción y ventas" },
+  { name: "Pizarrón de Envío", path: "/produccion/pizarron-envio", description: "Panel de envíos y entregas" },
+  { name: "Listado de Producción", path: "/ventas/listado-produccion", description: "Listado de órdenes en producción" },
+  { name: "Ventas de Franquicias", path: "/ventas/ventas-empresas", description: "Gestión de ventas por franquicias" },
 
   // Usuarios (Personal)
   { name: "Clientes", path: "/panel/clientes", description: "Gestión de clientes" },
@@ -43,10 +47,17 @@ const pagesData = [
   { name: "Repartidores", path: "/panel/repartidores", description: "Gestión de repartidores" },
   { name: "Gerentes", path: "/panel/gerentes", description: "Gestión de gerentes" },
 
+  // Puntos y Tarjetas Digitales
+  { name: "Tarjetas Digitales", path: "/admin/digital-cards", description: "Gestión de tarjetas digitales de clientes" },
+  { name: "Configuración de Puntos", path: "/panel/config-puntos", description: "Configuración del sistema de puntos" },
+
   // Catálogos
+  { name: "Etapas de Ventas", path: "/catalogos/etapas", description: "Catálogo de etapas del proceso de venta" },
   { name: "Productos", path: "/catalogos/productos", description: "Catálogo de productos" },
+  { name: "Categorías de Productos", path: "/catalogos/categorias-productos", description: "Categorías para organizar productos" },
   { name: "Listas de Productos", path: "/catalogos/listas-productos", description: "Gestión de listas de productos" },
   { name: "Materiales", path: "/catalogos/materiales", description: "Catálogo de materiales" },
+  { name: "Gestión de Materiales", path: "/catalogos/gestion-materiales", description: "Administración de inventario de materiales" },
   { name: "Unidades de Medida", path: "/catalogos/unidades-medida", description: "Catálogo de unidades de medida" },
   { name: "Métodos de Pago", path: "/catalogos/payment-method", description: "Catálogo de métodos de pago" },
   { name: "Conceptos de Gastos", path: "/catalogos/conceptos-gastos", description: "Catálogo de conceptos de gastos" },
@@ -56,6 +67,10 @@ const pagesData = [
 
   // Reportes
   { name: "Finanzas", path: "/finanzas/finanzas", description: "Reportes financieros" },
+
+  // E-commerce
+  { name: "Diseño E-commerce", path: "/ecommerce/configuracion/diseno", description: "Configuración del diseño de la tienda en línea" },
+  { name: "Catálogo E-commerce", path: "/ecommerce/catalogo", description: "Catálogo de productos para tienda en línea" },
 ];
 
 // Los 4 módulos básicos que cada página debe tener
@@ -163,6 +178,47 @@ const createSuperAdmin = async () => {
       console.log("✓ Super Admin role actualizado con todos los permisos");
     }
 
+    // Crear o actualizar rol Administrador (con acceso a puntos y ecommerce)
+    let adminRole = await Role.findOne({ name: "Administrador" });
+
+    if (!adminRole) {
+      adminRole = await Role.create({
+        name: "Administrador",
+        description: "Rol de administrador con acceso completo incluyendo puntos y ecommerce",
+        modules: allModuleIds,
+        estatus: true,
+      });
+      console.log("✓ Administrador role creado con todos los permisos");
+    } else {
+      adminRole.modules = allModuleIds;
+      await adminRole.save();
+      console.log("✓ Administrador role actualizado con todos los permisos");
+    }
+
+    // Crear roles adicionales básicos
+    const basicRoles = [
+      { name: "Distribuidor", description: "Rol para distribuidores del sistema" },
+      { name: "Gerente", description: "Rol para gerentes de sucursales" },
+      { name: "Cajero", description: "Rol para cajeros" },
+      { name: "Redes", description: "Rol para personal de redes sociales" },
+      { name: "Producción", description: "Rol para personal de producción" },
+    ];
+
+    for (const roleData of basicRoles) {
+      const existingRole = await Role.findOne({ name: roleData.name });
+      if (!existingRole) {
+        await Role.create({
+          name: roleData.name,
+          description: roleData.description,
+          modules: [],
+          estatus: true,
+        });
+        console.log(`✓ Rol ${roleData.name} creado`);
+      } else {
+        console.log(`ℹ️ Rol ${roleData.name} ya existe`);
+      }
+    }
+
     // Check if admin user exists
     const existingAdmin = await User.findOne({ username: "admin" });
 
@@ -193,8 +249,11 @@ const createSuperAdmin = async () => {
     console.log("═".repeat(60));
     console.log("\n📊 RESUMEN:");
     console.log(`  • ${pagesData.length} páginas creadas`);
-    console.log(`  • ${pagesData.length * moduleTypes.length} módulos creados`);
-    console.log(`  • 1 rol Super Admin con todos los permisos`);
+    console.log(`  • ${pagesData.length * moduleTypes.length} módulos creados (4 por página)`);
+    console.log(`  • 7 roles creados:`);
+    console.log(`    - Super Admin (acceso total)`);
+    console.log(`    - Administrador (acceso total + puntos + ecommerce)`);
+    console.log(`    - Distribuidor, Gerente, Cajero, Redes, Producción`);
     console.log(`  • 1 usuario admin`);
     console.log("\n=== CREDENCIALES ===");
     console.log("Username: admin");

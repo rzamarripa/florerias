@@ -21,9 +21,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: "${BACKEND_PORT}"
-      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASS}@mongo:27017/${MONGO_DB}?authSource=admin
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASS_ENCODED}@mongo:27017/${MONGO_DB}?authSource=admin
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRE: ${JWT_EXPIRE}
+      FRONTEND_URL: ${PUBLIC_URL}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
     ports:
       - "127.0.0.1:${BACKEND_PORT}:${BACKEND_PORT}"
 

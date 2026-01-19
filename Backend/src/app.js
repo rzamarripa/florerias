@@ -33,6 +33,8 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:3000',
   'http://localhost:3001',
+  'https://zolt.mx',
+  'https://www.zolt.mx',
 ].filter(Boolean);
 
 app.use(
