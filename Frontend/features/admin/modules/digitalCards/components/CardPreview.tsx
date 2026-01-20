@@ -1,13 +1,7 @@
+"use client"
+
 import React from 'react';
-import { 
-  Award, 
-  Phone, 
-  Mail,
-  Star,
-  X,
-  Download,
-  CreditCard
-} from 'lucide-react';
+import { MoreVertical } from 'lucide-react';
 import Image from 'next/image';
 
 interface CardPreviewProps {
@@ -15,6 +9,8 @@ interface CardPreviewProps {
     _id: string;
     qrCode?: string; // Base64 - ahora opcional
     qrCodeUrl?: string; // URL del QR en Firebase
+    heroUrl?: string; // URL de la imagen hero en Firebase
+    heroPath?: string; // Path de la imagen hero en Firebase
     barcode?: string;
     lastPointsBalance: number;
     lastUpdated: Date;
@@ -56,204 +52,205 @@ const CardPreview: React.FC<CardPreviewProps> = ({
   onClose,
   onDownload,
 }) => {
-  const getClientLevel = (points: number) => {
-    if (points >= 1000) return { name: 'Elite', maxPoints: 2000 };
-    if (points >= 500) return { name: 'Platino', maxPoints: 1000 };
-    if (points >= 100) return { name: 'Oro', maxPoints: 500 };
-    return { name: 'Platino', maxPoints: 100 };
-  };
-
-  const level = getClientLevel(client.points);
-  const progressPercentage = Math.min((client.points / level.maxPoints) * 100, 100);
-
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
+  // Formatear el código del cliente
+  const memberCode = `TC-${new Date().getFullYear()}-${client.clientNumber.slice(-5) || '78523'}`;
 
   return (
-    <div className={`${className}`} 
-      style={{
-        background: 'linear-gradient(to bottom right, rgb(15, 23, 42), rgb(30, 41, 59), rgb(15, 23, 42))',
-        borderRadius: '0.75rem',
-        overflow: 'hidden'
-      }}
-    >
-      {/* Card Content */}
-      <div className="p-4">
-        {/* Premium Card with Gradient */}
-        <div 
-          className="position-relative rounded-3 p-1 shadow-lg"
-          style={{
-            background: 'linear-gradient(to bottom right, rgb(6, 182, 212), rgb(59, 130, 246), rgb(147, 51, 234))',
-            boxShadow: '0 20px 25px -5px rgba(6, 182, 212, 0.2)'
-          }}
-        >
-          <div 
-            className="position-relative rounded-3 p-4"
-            style={{
-              background: 'linear-gradient(to bottom right, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))',
-              backdropFilter: 'blur(48px)'
-            }}
-          >
-            {/* Decorative Elements */}
-            <div 
-              className="position-absolute top-0 end-0"
-              style={{
-                width: '128px',
-                height: '128px',
-                background: 'rgba(6, 182, 212, 0.1)',
-                borderRadius: '50%',
-                filter: 'blur(48px)'
-              }}
-            />
-            <div 
-              className="position-absolute bottom-0 start-0"
-              style={{
-                width: '128px',
-                height: '128px',
-                background: 'rgba(147, 51, 234, 0.1)',
-                borderRadius: '50%',
-                filter: 'blur(48px)'
-              }}
-            />
-
-            <div className="position-relative">
-              {/* Level Badge and Card Number */}
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <div 
-                  className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill border"
-                  style={{
-                    background: 'linear-gradient(to right, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))',
-                    borderColor: 'rgba(251, 191, 36, 0.3)'
-                  }}
-                >
-                  <Award size={16} style={{ color: '#fbbf24' }} />
-                  <span className="small fw-semibold" style={{ color: '#fef3c7' }}>
-                    {level.name}
-                  </span>
-                </div>
-                <div className="small font-monospace" style={{ color: '#94a3b8' }}>
-                  #{client.clientNumber}
-                </div>
-              </div>
-
-              {/* Cardholder Name */}
-              <div className="mb-4">
-                <p className="small mb-1" style={{ color: '#94a3b8' }}>Titular</p>
-                <h3 className="h3 fw-bold text-white" style={{ letterSpacing: '0.05em' }}>
-                  {client.name} {client.lastName}
-                </h3>
-              </div>
-
-              {/* Contact Info */}
-              <div className="row g-4">
-                <div className="col-6">
-                  <div className="d-flex gap-2">
-                    <Phone size={16} style={{ color: '#06b6d4', marginTop: '2px' }} />
-                    <div>
-                      <p className="small mb-0" style={{ color: '#94a3b8' }}>Teléfono</p>
-                      <p className="small fw-medium mb-0" style={{ color: '#e2e8f0' }}>
-                        {client.phoneNumber}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-6">
-                  <div className="d-flex gap-2">
-                    <Mail size={16} style={{ color: '#06b6d4', marginTop: '2px' }} />
-                    <div className="text-truncate">
-                      <p className="small mb-0" style={{ color: '#94a3b8' }}>Email</p>
-                      <p className="small fw-medium mb-0 text-truncate" style={{ color: '#e2e8f0' }}>
-                        {client.email || 'No registrado'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+    <div className={`w-full max-w-sm mx-auto ${className}`}>
+      {/* Card Container */}
+      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl overflow-hidden shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-white flex items-center justify-center p-1">
+              {/* Logo placeholder - you can replace with actual logo */}
+              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">
+                  {branch.name ? branch.name.charAt(0).toUpperCase() : 'Z'}
+                </span>
               </div>
             </div>
+            <span className="text-white font-semibold text-base">
+              {branch.name || 'TechCorp'}
+            </span>
           </div>
+          <button 
+            className="text-white/80 hover:text-white transition-colors"
+            onClick={onClose}
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Main Content - Points */}
+        <div className="px-5 pb-4">
+          <p className="text-white/70 text-xs uppercase tracking-wider mb-1">
+            PUNTOS ACUMULADOS
+          </p>
+          <p className="text-white text-2xl font-semibold">
+            {client.points.toLocaleString('es-MX')} pts
+          </p>
+        </div>
+
+        {/* User Info */}
+        <div className="px-5 pb-4">
+          <p className="text-white/70 text-xs uppercase tracking-wider mb-1">
+            USUARIO
+          </p>
+          <p className="text-white text-lg font-medium">
+            {client.name} {client.lastName}
+          </p>
         </div>
 
         {/* QR Code Section */}
-        <div className="d-flex flex-column align-items-center gap-3 p-4 rounded-3 bg-white mt-4">
-          <div className="rounded-2 overflow-hidden">
-            {digitalCard.qrCodeUrl ? (
+        <div className="bg-white mx-5 mb-4 rounded-xl p-3 flex flex-col items-center">
+          {/* QR Code - Show real QR if available */}
+          <div className="bg-white p-1 mb-2">
+            {digitalCard.qrCodeUrl || digitalCard.qrCode ? (
               <Image 
-                src={digitalCard.qrCodeUrl} 
+                src={digitalCard.qrCodeUrl || digitalCard.qrCode || ''} 
                 alt="QR Code" 
-                width={160}
-                height={160}
-                style={{ display: 'block' }}
+                width={96}
+                height={96}
+                className="block"
                 unoptimized
               />
-            ) : digitalCard.qrCode ? (
-              <Image 
-                src={digitalCard.qrCode} 
-                alt="QR Code" 
-                width={160}
-                height={160}
-                style={{ display: 'block' }}
-              />
             ) : (
-              <div 
-                className="d-flex align-items-center justify-content-center"
-                style={{ width: 160, height: 160, backgroundColor: '#f3f4f6' }}
+              <svg
+                viewBox="0 0 100 100"
+                className="w-24 h-24"
+                fill="currentColor"
               >
-                <span className="text-muted">QR no disponible</span>
-              </div>
+                {/* Corner squares */}
+                <rect x="0" y="0" width="28" height="28" />
+                <rect x="4" y="4" width="20" height="20" fill="white" />
+                <rect x="8" y="8" width="12" height="12" />
+                
+                <rect x="72" y="0" width="28" height="28" />
+                <rect x="76" y="4" width="20" height="20" fill="white" />
+                <rect x="80" y="8" width="12" height="12" />
+                
+                <rect x="0" y="72" width="28" height="28" />
+                <rect x="4" y="76" width="20" height="20" fill="white" />
+                <rect x="8" y="80" width="12" height="12" />
+                
+                {/* Data patterns - creates a realistic QR code pattern */}
+                <rect x="36" y="0" width="4" height="4" />
+                <rect x="44" y="0" width="4" height="4" />
+                <rect x="52" y="0" width="4" height="4" />
+                <rect x="60" y="0" width="4" height="4" />
+                
+                <rect x="36" y="8" width="4" height="4" />
+                <rect x="48" y="8" width="4" height="4" />
+                <rect x="56" y="8" width="4" height="4" />
+                
+                <rect x="32" y="16" width="4" height="4" />
+                <rect x="40" y="16" width="4" height="4" />
+                <rect x="52" y="16" width="4" height="4" />
+                <rect x="64" y="16" width="4" height="4" />
+                
+                <rect x="36" y="24" width="4" height="4" />
+                <rect x="44" y="24" width="4" height="4" />
+                <rect x="56" y="24" width="4" height="4" />
+                
+                <rect x="0" y="36" width="4" height="4" />
+                <rect x="8" y="36" width="4" height="4" />
+                <rect x="20" y="36" width="4" height="4" />
+                <rect x="32" y="36" width="4" height="4" />
+                <rect x="40" y="36" width="4" height="4" />
+                <rect x="48" y="36" width="4" height="4" />
+                <rect x="60" y="36" width="4" height="4" />
+                <rect x="72" y="36" width="4" height="4" />
+                <rect x="80" y="36" width="4" height="4" />
+                <rect x="92" y="36" width="4" height="4" />
+                
+                <rect x="4" y="44" width="4" height="4" />
+                <rect x="16" y="44" width="4" height="4" />
+                <rect x="28" y="44" width="4" height="4" />
+                <rect x="36" y="44" width="4" height="4" />
+                <rect x="52" y="44" width="4" height="4" />
+                <rect x="64" y="44" width="4" height="4" />
+                <rect x="76" y="44" width="4" height="4" />
+                <rect x="88" y="44" width="4" height="4" />
+                
+                <rect x="0" y="52" width="4" height="4" />
+                <rect x="12" y="52" width="4" height="4" />
+                <rect x="24" y="52" width="4" height="4" />
+                <rect x="40" y="52" width="4" height="4" />
+                <rect x="48" y="52" width="4" height="4" />
+                <rect x="56" y="52" width="4" height="4" />
+                <rect x="68" y="52" width="4" height="4" />
+                <rect x="80" y="52" width="4" height="4" />
+                <rect x="96" y="52" width="4" height="4" />
+                
+                <rect x="8" y="60" width="4" height="4" />
+                <rect x="20" y="60" width="4" height="4" />
+                <rect x="32" y="60" width="4" height="4" />
+                <rect x="44" y="60" width="4" height="4" />
+                <rect x="60" y="60" width="4" height="4" />
+                <rect x="72" y="60" width="4" height="4" />
+                <rect x="84" y="60" width="4" height="4" />
+                
+                <rect x="36" y="72" width="4" height="4" />
+                <rect x="48" y="72" width="4" height="4" />
+                <rect x="56" y="72" width="4" height="4" />
+                <rect x="68" y="72" width="4" height="4" />
+                
+                <rect x="72" y="76" width="4" height="4" />
+                <rect x="80" y="76" width="4" height="4" />
+                <rect x="92" y="76" width="4" height="4" />
+                
+                <rect x="36" y="80" width="4" height="4" />
+                <rect x="44" y="80" width="4" height="4" />
+                <rect x="60" y="80" width="4" height="4" />
+                <rect x="76" y="80" width="4" height="4" />
+                <rect x="88" y="80" width="4" height="4" />
+                
+                <rect x="32" y="88" width="4" height="4" />
+                <rect x="48" y="88" width="4" height="4" />
+                <rect x="56" y="88" width="4" height="4" />
+                <rect x="72" y="88" width="4" height="4" />
+                <rect x="84" y="88" width="4" height="4" />
+                <rect x="96" y="88" width="4" height="4" />
+                
+                <rect x="36" y="96" width="4" height="4" />
+                <rect x="44" y="96" width="4" height="4" />
+                <rect x="52" y="96" width="4" height="4" />
+                <rect x="64" y="96" width="4" height="4" />
+                <rect x="76" y="96" width="4" height="4" />
+                <rect x="88" y="96" width="4" height="4" />
+              </svg>
             )}
           </div>
-          <p className="small fw-medium text-secondary mb-0">Escanea para compartir</p>
+          <p className="text-gray-600 text-sm font-mono tracking-wider">
+            {memberCode}
+          </p>
         </div>
 
-        {/* Points Section */}
-        <div 
-          className="p-4 rounded-3 border mt-4"
-          style={{
-            background: 'linear-gradient(to bottom right, rgb(30, 41, 59), rgb(15, 23, 42))',
-            borderColor: 'rgb(51, 65, 85)'
-          }}
-        >
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <span className="small fw-medium" style={{ color: '#94a3b8' }}>
-              Puntos Acumulados
-            </span>
-            <div className="d-flex align-items-center gap-1">
-              <Star size={20} style={{ color: '#fbbf24', fill: '#fbbf24' }} />
-              <span className="h3 fw-bold text-white mb-0">{client.points}</span>
+        {/* Decorative Image */}
+        <div className="relative h-36 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-t from-transparent to-blue-700/40 z-10" />
+          {digitalCard.heroUrl ? (
+            <Image
+              src={digitalCard.heroUrl}
+              alt="Imagen decorativa"
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          ) : (
+            // Fallback con gradiente de colores si no hay imagen
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-400 via-purple-400 to-indigo-400 opacity-60">
+              <div className="absolute bottom-0 left-0 w-full h-full">
+                <div className="absolute bottom-0 left-0 w-20 h-20 bg-red-400 rounded-full transform translate-y-10"></div>
+                <div className="absolute bottom-0 left-16 w-24 h-24 bg-yellow-400 rounded-full transform translate-y-12"></div>
+                <div className="absolute bottom-0 left-36 w-20 h-20 bg-pink-400 rounded-full transform translate-y-10"></div>
+                <div className="absolute bottom-0 right-20 w-24 h-24 bg-orange-400 rounded-full transform translate-y-12"></div>
+                <div className="absolute bottom-0 right-0 w-20 h-20 bg-purple-400 rounded-full transform translate-y-10"></div>
+              </div>
             </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div>
-            <div 
-              className="rounded-pill overflow-hidden mb-2"
-              style={{ height: '8px', backgroundColor: 'rgb(51, 65, 85)' }}
-            >
-              <div
-                className="h-100 rounded-pill"
-                style={{
-                  width: `${progressPercentage}%`,
-                  background: 'linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246), rgb(147, 51, 234))',
-                  transition: 'width 0.5s ease'
-                }}
-              />
-            </div>
-            <div className="d-flex justify-content-between">
-              <span className="small" style={{ color: '#94a3b8' }}>Nivel Inicial</span>
-              <span className="small" style={{ color: '#94a3b8' }}>Nivel Elite</span>
-            </div>
-          </div>
+          )}
         </div>
-
-        {/* Member Since */}
-        <p className="text-center small mt-4 mb-0" style={{ color: '#64748b' }}>
-          Miembro desde {formatDate(digitalCard.expiresAt)}
-        </p>
       </div>
     </div>
   );

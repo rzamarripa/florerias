@@ -13,6 +13,7 @@ import {
   updateCompanyBranches,
   getMyCompany,
   getCompanyByBranchId,
+  getCompanyByAdministratorId,
   getUserCompany,
   getDistributorDashboardStats,
 } from "../controllers/companyController.js";
@@ -29,6 +30,7 @@ router.get("/redes/branches", protect, getRedesUserBranches);
 router.get("/my-company", protect, getMyCompany);
 router.get("/user-company", protect, getUserCompany);
 router.get("/branch/:branchId", protect, getCompanyByBranchId);
+router.get("/administrator/:administratorId", protect, getCompanyByAdministratorId);
 router.get("/:id", protect, getCompanyById);
 
 router.post("/", protect, createCompany);

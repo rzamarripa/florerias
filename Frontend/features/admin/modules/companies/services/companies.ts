@@ -131,6 +131,7 @@ export const companiesService = {
     const response = await apiCall<{
       success: boolean;
       data: {
+        companyId: string;
         companyName: string;
         rfc: string;
         address: {
@@ -148,6 +149,19 @@ export const companiesService = {
       }
     }>(`/companies/branch/${branchId}`);
     return response as any;
+  },
+
+  getCompanyByAdministratorId: async (administratorId: string) => {
+    const response = await apiCall<{
+      success: boolean;
+      data: {
+        _id: string;
+        legalName: string;
+        tradeName?: string;
+        rfc: string;
+      }
+    }>(`/companies/administrator/${administratorId}`);
+    return response;
   },
 
   getRedesUserBranches: async (): Promise<{ success: boolean; count: number; data: any[] }> => {

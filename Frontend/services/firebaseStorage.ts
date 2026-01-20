@@ -219,3 +219,24 @@ export const uploadDigitalCardQR = async (
   // Subir el archivo a Firebase
   return uploadFile(file, folder);
 };
+
+/**
+ * Sube la imagen hero de una tarjeta digital a Firebase Storage
+ * @param file - El archivo de imagen hero
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @param clientId - El ID del cliente
+ * @returns URL de descarga de la imagen y path en Firebase
+ */
+export const uploadDigitalCardHero = async (
+  file: File,
+  companyId: string,
+  branchId: string,
+  clientId: string
+): Promise<UploadFileResult> => {
+  // Definir la carpeta de destino (al mismo nivel que tarjeta)
+  const folder = `Empresas/${companyId}/branches/${branchId}/clients/${clientId}/hero_cards`;
+  
+  // Subir el archivo a Firebase
+  return uploadFile(file, folder);
+};

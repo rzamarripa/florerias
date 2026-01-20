@@ -1,9 +1,9 @@
 import { DigitalCard } from "../models/DigitalCard.js";
 import { Client } from "../models/Client.js";
 import { CardTransaction } from "../models/CardTransaction.js";
-import { Branch } from "../models/Branch.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import appleWalletService from "../services/digitalCards/appleWalletService.js";
+import googleWalletService from "../services/digitalCards/googleWalletService.js";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -14,8 +14,8 @@ export const generateDigitalCard = async (req, res) => {
     const { clientId } = req.params;
     const { cardType = "generic" } = req.body;
 
-    // Buscar el cliente con su información de sucursal
-    const client = await Client.findById(clientId).populate("branch");
+    // Buscar el cliente con su información de empresa
+    const client = await Client.findById(clientId).populate("company");
     
     if (!client) {
       return res.status(404).json({
@@ -37,7 +37,7 @@ export const generateDigitalCard = async (req, res) => {
           clientId: client._id,
           clientNumber: client.clientNumber,
           passSerialNumber: digitalCard.passSerialNumber,
-          branchId: client.branch._id,
+          companyId: client.company._id,
         });
 
         await digitalCard.rotate(qrCode, qrData);
@@ -49,7 +49,7 @@ export const generateDigitalCard = async (req, res) => {
           clientId: client._id,
           transactionType: "card_rotated",
           locationData: {
-            branchId: client.branch._id,
+            companyId: client.company._id,
           },
         });
       }
@@ -58,11 +58,11 @@ export const generateDigitalCard = async (req, res) => {
       const tempPassSerialNumber = uuidv4();
       
       // Generar el QR con el passSerialNumber temporal
-      const { qrCode, qrData, expiresAt } = await qrCodeService.generateQRCode({
+      const { qrCode, qrData } = await qrCodeService.generateQRCode({
         clientId: client._id,
         clientNumber: client.clientNumber,
         passSerialNumber: tempPassSerialNumber,
-        branchId: client.branch._id,
+        companyId: client.company._id,
       });
 
       tempQrCode = qrCode; // Guardar QR temporal para enviarlo al frontend
@@ -75,12 +75,12 @@ export const generateDigitalCard = async (req, res) => {
         clientId: client._id,
         cardType,
         lastPointsBalance: client.points,
-        branchId: client.branch._id,
+        companyId: client.company._id,
         passSerialNumber: tempPassSerialNumber, // Usar el mismo passSerialNumber
         qrData: qrData, // Asignar qrData desde el inicio
         barcode: barcode,
         metadata: {
-          logoText: client.branch.name || "Corazón Violeta",
+          logoText: client.company?.tradeName || client.company?.legalName || "Corazón Violeta",
         },
       });
 
@@ -94,7 +94,7 @@ export const generateDigitalCard = async (req, res) => {
         transactionType: "card_generated",
         balanceAfter: client.points,
         locationData: {
-          branchId: client.branch._id,
+          companyId: client.company._id,
         },
       });
     }
@@ -115,9 +115,9 @@ export const generateDigitalCard = async (req, res) => {
         phoneNumber: client.phoneNumber,
         email: client.email,
       },
-      branch: {
-        name: client.branch.name,
-        address: client.branch.address,
+      company: {
+        name: client.company?.tradeName || client.company?.legalName || "Empresa",
+        id: client.company?._id,
       },
     };
 
@@ -143,7 +143,7 @@ export const getDigitalCard = async (req, res) => {
 
     const digitalCard = await DigitalCard.findOne({ clientId })
       .populate("clientId")
-      .populate("branchId");
+      .populate("companyId");
 
     if (!digitalCard) {
       return res.status(404).json({
@@ -217,7 +217,7 @@ export const downloadAppleWallet = async (req, res) => {
       clientId: digitalCard.clientId._id,
       transactionType: "card_downloaded",
       locationData: {
-        branchId: digitalCard.branchId._id,
+        companyId: digitalCard.companyId._id,
       },
       deviceInfo: {
         deviceType: "ios",
@@ -270,7 +270,7 @@ export const updateCardPoints = async (req, res) => {
       balanceBefore: previousBalance,
       balanceAfter: points,
       locationData: {
-        branchId: digitalCard.branchId,
+        companyId: digitalCard.companyId,
       },
       notes: reason,
     });
@@ -322,7 +322,7 @@ export const getCardTransactions = async (req, res) => {
         limit: parseInt(limit),
         skip: parseInt(skip),
         type,
-        branchId: digitalCard.branchId,
+        companyId: digitalCard.companyId,
         startDate,
         endDate,
       }
@@ -419,7 +419,7 @@ export const deactivateCard = async (req, res) => {
       clientId: digitalCard.clientId,
       transactionType: "card_updated",
       locationData: {
-        branchId: digitalCard.branchId,
+        companyId: digitalCard.companyId,
       },
       notes: `Tarjeta desactivada: ${reason || "Sin razón especificada"}`,
     });
@@ -521,6 +521,50 @@ export const updateQRUrls = async (req, res) => {
 };
 
 /**
+ * Actualiza las URLs de la imagen hero después de subir a Firebase
+ */
+export const updateHeroUrls = async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const { heroUrl, heroPath } = req.body;
+
+    if (!heroUrl || !heroPath) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requieren heroUrl y heroPath",
+      });
+    }
+
+    const digitalCard = await DigitalCard.findById(cardId);
+
+    if (!digitalCard) {
+      return res.status(404).json({
+        success: false,
+        message: "Tarjeta digital no encontrada",
+      });
+    }
+
+    // Actualizar URLs de la imagen hero
+    digitalCard.heroUrl = heroUrl;
+    digitalCard.heroPath = heroPath;
+    
+    await digitalCard.save();
+
+    res.status(200).json({
+      success: true,
+      data: digitalCard,
+      message: "URLs de la imagen hero actualizadas correctamente",
+    });
+  } catch (error) {
+    console.error("Error actualizando URLs de la imagen hero:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
  * Obtiene todas las tarjetas digitales de una sucursal
  */
 export const getCardsByBranch = async (req, res) => {
@@ -555,6 +599,115 @@ export const getCardsByBranch = async (req, res) => {
     });
   } catch (error) {
     console.error("Error obteniendo tarjetas por sucursal:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Descarga la tarjeta digital en formato Google Wallet
+ */
+export const downloadGoogleWallet = async (req, res) => {
+  try {
+    const { cardId } = req.params;
+
+    const digitalCard = await DigitalCard.findById(cardId)
+      .populate("clientId")
+      .populate("companyId");
+
+    if (!digitalCard) {
+      return res.status(404).json({
+        success: false,
+        message: "Tarjeta digital no encontrada",
+      });
+    }
+
+    // Preparar datos del cliente para el pass
+    const clientData = {
+      clientId: digitalCard.clientId._id,
+      name: digitalCard.clientId.name,
+      lastName: digitalCard.clientId.lastName,
+      clientNumber: digitalCard.clientId.clientNumber,
+      phoneNumber: digitalCard.clientId.phoneNumber,
+      email: digitalCard.clientId.email,
+      points: digitalCard.clientId.points,
+      passSerialNumber: digitalCard.passSerialNumber,
+      branchName: digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta",
+      qrData: digitalCard.qrData,
+      logoUrl: digitalCard.clientId.logoUrl || null, // Logo dinámico si existe
+      heroUrl: digitalCard.heroUrl || null, // Imagen hero si existe
+    };
+
+    try {
+      // Verificar si el servicio está configurado
+      const isConfigured = await googleWalletService.isConfigured();
+      
+      if (!isConfigured) {
+        // Modo de desarrollo - generar pass demo
+        const demoPass = googleWalletService.generateGenericPass(clientData);
+        
+        return res.status(200).json({
+          success: true,
+          isDevelopment: true,
+          data: demoPass,
+        });
+      }
+
+      // Inicializar y crear/actualizar la clase de tarjeta con imagen hero si existe
+      const companyName = digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta";
+      const logoUrl = digitalCard.companyId?.logoUrl || null;
+      await googleWalletService.createOrUpdateLoyaltyClass(digitalCard.heroUrl, companyName, logoUrl);
+
+      // Generar el objeto de fidelidad
+      const result = await googleWalletService.generateLoyaltyObject(clientData);
+
+      // Actualizar el ID de Google Wallet en la tarjeta digital
+      if (result.objectId) {
+        digitalCard.googleWalletId = result.objectId;
+        await digitalCard.save();
+      }
+
+      // Registrar la descarga
+      await digitalCard.recordDownload();
+
+      // Registrar en transacciones
+      await CardTransaction.create({
+        digitalCardId: digitalCard._id,
+        clientId: digitalCard.clientId._id,
+        transactionType: "card_downloaded",
+        locationData: {
+          companyId: digitalCard.companyId._id,
+        },
+        deviceInfo: {
+          deviceType: "mobile",
+          userAgent: req.headers["user-agent"],
+        },
+      });
+
+      // Retornar la URL para guardar en Google Wallet
+      res.status(200).json({
+        success: true,
+        saveUrl: result.saveUrl,
+        objectId: result.objectId,
+        message: "Tarjeta lista para agregar a Google Wallet",
+      });
+    } catch (serviceError) {
+      console.error("Error con Google Wallet Service:", serviceError);
+      
+      // Si hay error con el servicio, generar pass demo
+      const demoPass = googleWalletService.generateGenericPass(clientData);
+      
+      return res.status(200).json({
+        success: true,
+        isDevelopment: true,
+        data: demoPass,
+        error: serviceError.message,
+      });
+    }
+  } catch (error) {
+    console.error("Error descargando Google Wallet:", error);
     res.status(500).json({
       success: false,
       message: error.message,

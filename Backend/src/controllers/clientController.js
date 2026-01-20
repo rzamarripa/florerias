@@ -1,6 +1,7 @@
 import { Client } from "../models/Client.js";
 import { Purchase } from "../models/Purchase.js";
 import { Branch } from "../models/Branch.js";
+import { Company } from "../models/Company.js";
 import { PointsReward } from "../models/PointsReward.js";
 import clientPointsService from "../services/clientPointsService.js";
 import { createSafeRegexFilter } from "../utils/sanitize.js";
@@ -22,9 +23,9 @@ export const getAllClients = async (req, res) => {
     const skip = (page - 1) * limit;
     const filters = {};
 
-    // Filtro por sucursal basado en branchId del query
-    if (req.query.branchId) {
-      filters.branch = req.query.branchId;
+    // Filtro por empresa basado en companyId del query
+    if (req.query.companyId) {
+      filters.company = req.query.companyId;
     }
 
     // Filtros opcionales - usando sanitización para prevenir ReDoS
@@ -46,7 +47,7 @@ export const getAllClients = async (req, res) => {
 
     const clients = await Client.find(filters)
       .populate("purchases")
-      .populate("branch")
+      .populate("company")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -80,7 +81,7 @@ export const getAllClients = async (req, res) => {
 
 export const createClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, points, status, branch } = req.body;
+    const { name, lastName, phoneNumber, email, points, status, company } = req.body;
 
     // Validaciones básicas
     if (!name || !lastName || !phoneNumber) {
@@ -90,19 +91,19 @@ export const createClient = async (req, res) => {
       });
     }
 
-    if (!branch) {
+    if (!company) {
       return res.status(400).json({
         success: false,
-        message: "Branch is required",
+        message: "Company is required",
       });
     }
 
-    // Verificar si ya existe un cliente con el mismo número de teléfono en la misma sucursal
-    const existingClient = await Client.findOne({ phoneNumber, branch });
+    // Verificar si ya existe un cliente con el mismo número de teléfono en la misma empresa
+    const existingClient = await Client.findOne({ phoneNumber, company });
     if (existingClient) {
       return res.status(400).json({
         success: false,
-        message: "A client with this phone number already exists in this branch",
+        message: "A client with this phone number already exists in this company",
       });
     }
 
@@ -113,7 +114,7 @@ export const createClient = async (req, res) => {
       email: email || "",
       points: points || 0,
       status: status !== undefined ? status : true,
-      branch,
+      company,
     };
 
     const client = await Client.create(clientData);
@@ -123,7 +124,7 @@ export const createClient = async (req, res) => {
     try {
       const pointsResult = await clientPointsService.processRegistrationPoints({
         clientId: client._id,
-        branchId: branch,
+        branchId: company, // Usar company ID para el sistema de puntos
         registeredBy: req.user?._id || null,
       });
 
@@ -175,7 +176,7 @@ export const getClientById = async (req, res) => {
   try {
     const client = await Client.findById(req.params.id)
       .populate("purchases")
-      .populate("branch");
+      .populate("company");
 
     if (!client) {
       return res.status(404).json({

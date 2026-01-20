@@ -56,7 +56,7 @@ export const scanQRCode = async (req, res) => {
 
     // Obtener información completa del cliente
     const client = await Client.findById(qrPayload.clientId)
-      .populate("branch")
+      .populate("company")
       .populate({
         path: "rewards",
         populate: {
@@ -111,8 +111,8 @@ export const scanQRCode = async (req, res) => {
           status: client.status,
         },
         branch: {
-          id: client.branch._id,
-          name: client.branch.name,
+          id: client.company._id,
+          name: client.company.legalName || client.company.tradeName || "Empresa",
         },
         digitalCard: {
           id: digitalCard._id,

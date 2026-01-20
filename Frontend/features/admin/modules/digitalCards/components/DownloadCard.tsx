@@ -177,12 +177,19 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
                 variant="outline"
                 size="lg"
                 onClick={onDownloadGoogle}
-                disabled
-                className="w-full flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border-2 border-gray-300"
               >
-                <Smartphone size={20} />
+                <svg 
+                  width="20" 
+                  height="20" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-1"
+                >
+                  <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z" fill="#4285F4"/>
+                </svg>
                 Agregar a Google Wallet
-                <small className="ml-2 opacity-70">(Proximamente)</small>
               </Button>
             )}
 

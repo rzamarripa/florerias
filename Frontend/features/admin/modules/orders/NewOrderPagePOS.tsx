@@ -1344,7 +1344,7 @@ const NewOrderPage = () => {
                 <CardHeader className="bg-primary text-white py-3 rounded-t-lg">
                   <div className="flex items-center gap-2">
                     <Store size={20} />
-                    <h5 className="mb-0 font-bold">Seleccionar Sucursal</h5>
+                    <h5 className="font-bold">Seleccionar Sucursal</h5>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4">

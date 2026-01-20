@@ -52,10 +52,10 @@ const clientSchema = new Schema(
       required: true,
       default: true
     },
-    branch: {
+    company: {
       type: Schema.Types.ObjectId,
-      ref: "cv_branch",
-      required: [true, "La sucursal es requerida"]
+      ref: "cv_company",
+      required: [true, "La empresa es requerida"]
     },
     purchases: [{
       type: Schema.Types.ObjectId,
@@ -123,7 +123,7 @@ const clientSchema = new Schema(
 // Indexes for search optimization (clientNumber already has index from unique: true)
 clientSchema.index({ phoneNumber: 1 });
 clientSchema.index({ status: 1 });
-clientSchema.index({ branch: 1 });
+clientSchema.index({ company: 1 });
 
 // Method to get full name
 clientSchema.methods.getFullName = function() {

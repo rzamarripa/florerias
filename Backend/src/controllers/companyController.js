@@ -1135,6 +1135,35 @@ export const getCompanyByBranchId = async (req, res) => {
   }
 };
 
+// Obtener empresa por ID del administrador
+export const getCompanyByAdministratorId = async (req, res) => {
+  try {
+    const { administratorId } = req.params;
+
+    const company = await Company.findOne({ administrator: administratorId })
+      .populate("branches", "branchName _id")
+      .select("_id legalName tradeName rfc");
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontró una empresa para este administrador",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: company,
+    });
+  } catch (error) {
+    console.error("Error al obtener empresa por administrador:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error al obtener la empresa",
+    });
+  }
+};
+
 // Obtener la empresa del usuario autenticado (Administrador o Gerente)
 export const getUserCompany = async (req, res) => {
   try {

@@ -1,0 +1,39 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Lectura pública
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+
+    //DEPRECATED - Mantener para órdenes antiguas (opcional)
+    match /orders/{orderId}/{allPaths=**} {
+      allow write: if true;
+    }
+
+    //NUEVA ESTRUCTURA - Órdenes organizadas por empresa y sucursal
+    match /Empresas/{companyId}/branches/{branchId}/orders/{orderId}/{allPaths=**} {
+      allow write: if true;
+    }
+
+    //Logo de empresas
+    match /Empresas/{companyId}/logo/{allPaths=**} {
+      allow write: if true;
+    }
+
+    // TARJETAS DIGITALES - QR de clientes
+    match /Empresas/{companyId}/branches/{branchId}/clients/{clientId}/tarjeta/{allPaths=**} {
+      allow write: if true;
+    }
+
+    // TARJETAS DIGITALES - Hero images (imágenes decorativas)
+    match /Empresas/{companyId}/branches/{branchId}/clients/{clientId}/hero_cards/{allPaths=**} {
+      allow write: if true;
+    }
+
+    // ECOMMERCE - Configuración de tienda online
+    match /ecommerce/empresas/{companyId}/sucursales/{branchId}/{allPaths=**} {
+      allow write: if true;
+    }
+  }
+}

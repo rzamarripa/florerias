@@ -42,7 +42,7 @@ class QRCodeService {
         clientId: clientData.clientId,
         clientNumber: clientData.clientNumber,
         passSerialNumber: clientData.passSerialNumber,
-        branchId: clientData.branchId,
+        companyId: clientData.companyId,
         timestamp: Date.now(),
         version: "1.0",
       };

@@ -50,7 +50,7 @@ class GoogleWalletService {
   /**
    * Crea o actualiza la clase de tarjeta de fidelidad
    */
-  async createOrUpdateLoyaltyClass() {
+  async createOrUpdateLoyaltyClass(heroImageUrl = null, companyName = 'Corazón Violeta', logoUrl = null) {
     await this.initialize();
     if (!this.auth) throw new Error('Google Wallet no configurado');
 
@@ -58,43 +58,49 @@ class GoogleWalletService {
     
     const loyaltyClass = {
       id: this.classId,
-      issuerName: 'Corazón Violeta',
+      issuerName: companyName,
       programName: 'Programa de Fidelidad',
       programLogo: {
         sourceUri: {
-          uri: 'https://corazonvioleta.com/logo.png',
+          uri: logoUrl || 'https://i.imgur.com/6KZMZqA.png', // Logo dinámico o default
         },
       },
       reviewStatus: 'UNDER_REVIEW',
-      hexBackgroundColor: '#8B5CF6', // Purple
-      heroImage: {
-        sourceUri: {
-          uri: 'https://corazonvioleta.com/hero.jpg',
-        },
-      },
+      hexBackgroundColor: '#2563EB', // Azul más oscuro como CardPreview
       countryCode: 'MX',
       multipleDevicesAndHoldersAllowedStatus: 'MULTIPLE_HOLDERS',
-      callbackOptions: {
-        url: `${process.env.API_URL}/api/digital-cards/google-callback`,
-        updateRequestUrl: `${process.env.API_URL}/api/digital-cards/google-update`,
-      },
+      // callbackOptions: {
+      //   url: `${process.env.API_URL}/api/digital-cards/google-callback`,
+      //   updateRequestUrl: `${process.env.API_URL}/api/digital-cards/google-update`,
+      // },
       classTemplateInfo: {
         cardTemplateOverride: {
           cardRowTemplateInfos: [
             {
-              oneItem: {
-                item: {
+              twoItems: {
+                startItem: {
                   firstValue: {
                     fields: [{
-                      fieldPath: 'object.loyaltyPoints.balance',
+                      fieldPath: 'object.textModulesData[0].header',
                     }],
                   },
                   secondValue: {
                     fields: [{
-                      fieldPath: 'object.validTimeInterval.end',
+                      fieldPath: 'object.textModulesData[0].body',
                     }],
                   },
-                  predefinedItem: 'POINTS_MODULE',
+                },
+                endItem: {
+                  firstValue: {
+                    fields: [{
+                      fieldPath: 'object.loyaltyPoints.label',
+                    }],
+                  },
+                  secondValue: {
+                    fields: [{
+                      fieldPath: 'object.loyaltyPoints.balance.int',
+                    }],
+                  },
                 },
               },
             },
@@ -104,6 +110,16 @@ class GoogleWalletService {
       enableSmartTap: true,
       redemptionIssuers: [this.issuerId],
     };
+
+    // Temporalmente sin imágenes para evitar errores de Google Wallet
+    // TODO: Agregar imágenes cuando Google las acepte
+    // if (heroImageUrl && heroImageUrl.includes('firebasestorage.googleapis.com')) {
+    //   loyaltyClass.heroImage = {
+    //     sourceUri: {
+    //       uri: heroImageUrl,
+    //     },
+    //   };
+    // }
 
     try {
       // Intentar obtener la clase existente
@@ -143,6 +159,9 @@ class GoogleWalletService {
     if (!this.auth) throw new Error('Google Wallet no configurado');
 
     const objectId = `${this.issuerId}.${clientData.clientNumber}_${Date.now()}`;
+    const companyName = clientData.branchName || 'Corazón Violeta';
+    
+    // La imagen hero ya se configuró en createOrUpdateLoyaltyClass
     
     const loyaltyObject = {
       id: objectId,
@@ -152,33 +171,23 @@ class GoogleWalletService {
       state: 'ACTIVE',
       barcode: {
         type: 'QR_CODE',
-        value: clientData.qrData,
+        value: clientData.qrData || clientData.clientNumber,
         alternateText: clientData.clientNumber,
       },
       loyaltyPoints: {
         balance: {
           int: clientData.points || 0,
         },
-        label: 'Puntos',
+        label: 'PUNTOS ACUMULADOS',
       },
       secondaryLoyaltyPoints: {
         balance: {
           string: this.getClientLevel(clientData.points),
         },
-        label: 'Nivel',
+        label: 'Nivel / Inicial',
       },
       linkedOfferIds: [], // Aquí se pueden agregar ofertas vinculadas
-      messages: [
-        {
-          header: 'Bienvenido',
-          body: 'Gracias por ser parte de nuestro programa de fidelidad',
-          displayInterval: {
-            start: {
-              date: new Date().toISOString(),
-            },
-          },
-        },
-      ],
+      messages: [],
       validTimeInterval: {
         start: {
           date: new Date().toISOString(),
@@ -188,50 +197,43 @@ class GoogleWalletService {
         },
       },
       locations: clientData.locations || [],
-      infoModuleData: {
-        labelValueRows: [
-          {
-            columns: [
-              {
-                label: 'Cliente',
-                value: clientData.clientNumber,
-              },
-              {
-                label: 'Sucursal',
-                value: clientData.branchName || 'Principal',
-              },
-            ],
-          },
-          {
-            columns: [
-              {
-                label: 'Teléfono',
-                value: clientData.phoneNumber || 'N/A',
-              },
-              {
-                label: 'Email',
-                value: clientData.email || 'N/A',
-              },
-            ],
-          },
-        ],
-        showLastUpdateTime: true,
-      },
       textModulesData: [
+        {
+          header: 'Nombre de miembro',
+          body: `${clientData.name} ${clientData.lastName}`,
+          id: 'member_name',
+        },
+        {
+          header: 'ID de miembro',
+          body: clientData.clientNumber,
+          id: 'member_id',
+        },
+        {
+          header: 'Bienvenido a ' + companyName,
+          body: 'Disfruta de los beneficios de nuestro programa de fidelidad',
+          id: 'welcome_message',
+        },
         {
           header: 'Términos y Condiciones',
           body: 'Los puntos acumulados pueden ser canjeados por recompensas en cualquier sucursal participante.',
+          id: 'terms',
+        },
+        {
+          header: 'Cliente',
+          body: clientData.clientNumber,
+          id: 'client_number',
+        },
+        {
+          header: 'Sucursal',
+          body: companyName,
+          id: 'branch',
         },
       ],
       linksModuleData: {
         uris: [
           {
-            uri: 'https://corazonvioleta.com',
+            uri: process.env.FRONTEND_URL || 'https://corazonvioleta.com',
             description: 'Sitio Web',
-          },
-          {
-            uri: `tel:${clientData.phoneNumber}`,
-            description: 'Contacto',
           },
         ],
       },
@@ -265,9 +267,9 @@ class GoogleWalletService {
    */
   generateSaveUrl(objectId) {
     const claims = {
-      iss: this.issuerId,
+      iss: this.auth?.jsonClient?.client_email || 'zolt-wallet@zolt-wallet.iam.gserviceaccount.com',
       aud: 'google',
-      origins: [process.env.FRONTEND_URL || 'http://localhost:3000'],
+      origins: [process.env.FRONTEND_URL?.replace(/\/$/, '') || 'http://localhost:3000'],
       typ: 'savetowallet',
       payload: {
         loyaltyObjects: [
@@ -278,8 +280,6 @@ class GoogleWalletService {
       },
     };
 
-    // Aquí necesitarías firmar el JWT con la clave privada del service account
-    // Por simplicidad, retornamos la URL base
     const jwt = this.signJWT(claims);
     return `https://pay.google.com/gp/v/save/${jwt}`;
   }
@@ -468,6 +468,34 @@ class GoogleWalletService {
         '6. Configure GOOGLE_WALLET_ISSUER_ID en el archivo .env',
       ],
     };
+  }
+
+  /**
+   * Actualiza la imagen hero de la clase
+   */
+  async updateClassHeroImage(heroUrl) {
+    if (!this.auth || !heroUrl) return;
+    
+    try {
+      const client = await this.auth.getClient();
+      const updateUrl = `${this.baseUrl}/loyaltyClass/${this.classId}`;
+      
+      await client.request({
+        url: updateUrl,
+        method: 'PATCH',
+        data: {
+          heroImage: {
+            sourceUri: {
+              uri: heroUrl,
+            },
+          },
+        },
+      });
+      
+      console.log('Imagen hero actualizada en la clase');
+    } catch (error) {
+      console.error('Error actualizando imagen hero:', error);
+    }
   }
 
   /**

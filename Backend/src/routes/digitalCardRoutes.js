@@ -3,6 +3,7 @@ import {
   generateDigitalCard,
   getDigitalCard,
   downloadAppleWallet,
+  downloadGoogleWallet,
   updateCardPoints,
   getCardTransactions,
   getCardStatistics,
@@ -10,6 +11,7 @@ import {
   generateTemporaryQR,
   getCardsByBranch,
   updateQRUrls,
+  updateHeroUrls,
 } from "../controllers/digitalCardController.js";
 import { DigitalCard } from "../models/DigitalCard.js";
 
@@ -25,6 +27,9 @@ router.get("/client/:clientId", getDigitalCard);
 
 // Actualizar URLs del QR después de subir a Firebase
 router.put("/update-qr-urls/:cardId", updateQRUrls);
+
+// Actualizar URLs de la imagen hero después de subir a Firebase
+router.put("/update-hero-urls/:cardId", updateHeroUrls);
 
 // Obtener tarjeta digital pública (sin autenticación)
 router.get("/public/:cardId", async (req, res) => {
@@ -57,6 +62,7 @@ router.get("/public/:cardId", async (req, res) => {
         },
         qrCode: digitalCard.qrCode,
         qrCodeUrl: digitalCard.qrCodeUrl,
+        heroUrl: digitalCard.heroUrl,
         expiresAt: digitalCard.expiresAt,
         lastUpdated: digitalCard.lastUpdated,
         isActive: digitalCard.isActive,
@@ -78,6 +84,9 @@ router.get("/public/:cardId", async (req, res) => {
 
 // Descargar tarjeta en formato Apple Wallet
 router.get("/download/apple/:cardId", downloadAppleWallet);
+
+// Descargar tarjeta en formato Google Wallet
+router.get("/download/google/:cardId", downloadGoogleWallet);
 
 // Actualizar puntos en la tarjeta
 router.put("/update-points/:cardId", updateCardPoints);

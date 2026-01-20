@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Download, QrCode, Search, ScanLine, X, Loader2 } from 'lucide-react';
+import { CreditCard, Download, QrCode, Search, ScanLine, X, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,8 @@ import QRScanner from './components/QRScanner';
 import digitalCardService from './services/digitalCardService';
 import { clientsService } from '../clients/services/clients';
 import { branchesService } from '../branches/services/branches';
-import { uploadDigitalCardQR } from '@/services/firebaseStorage';
+import { companiesService } from '../companies/services/companies';
+import { uploadDigitalCardQR, uploadDigitalCardHero } from '@/services/firebaseStorage';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import { useUserRoleStore } from '@/stores/userRoleStore';
 import { useActiveBranchStore } from '@/stores/activeBranchStore';
@@ -58,94 +59,103 @@ const DigitalCardsPage: React.FC = () => {
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentBranchId, setCurrentBranchId] = useState<string>('');
+  const [companyId, setCompanyId] = useState<string>('');
+  const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
+  const [heroImagePreview, setHeroImagePreview] = useState<string>('');
+  const [uploadingHero, setUploadingHero] = useState(false);
 
   const { user } = useUserSessionStore();
-  const { role } = useUserRoleStore();
+  const { hasRole } = useUserRoleStore();
   const { activeBranch } = useActiveBranchStore();
+  const isManager = hasRole('Gerente');
+  const isAdmin = hasRole('Administrador') || hasRole('Admin') || hasRole('Super Admin');
 
   useEffect(() => {
-    loadBranchAndClients();
+    loadCompanyAndClients();
   }, [user, activeBranch]);
 
-  const loadBranchAndClients = async () => {
+  const loadCompanyAndClients = async () => {
     try {
       setLoading(true);
 
+      let currentCompanyId = '';
       let currentBranchId = '';
 
-      // Si es Super Admin y tiene sucursal activa, usar esa
-      if (role === 'Super Admin' && activeBranch) {
-        currentBranchId = activeBranch._id;
-      }
-      // Si es Gerente, buscar su sucursal
-      else if (role === 'Gerente' && user?._id) {
+      // Para Gerentes: obtener empresa a través de su sucursal
+      if (isManager && user?._id) {
         try {
-          // Buscar la sucursal donde este usuario es gerente
-          const branches = await branchesService.getAllBranches({
-            managerId: user._id
-          });
-
-          if (branches.data && branches.data.length > 0) {
-            currentBranchId = branches.data[0]._id;
+          const branchesResponse = await branchesService.getUserBranches();
+          if (branchesResponse.success && branchesResponse.data && branchesResponse.data.length > 0) {
+            const branch = branchesResponse.data[0];
+            currentBranchId = branch._id;
+            
+            // Obtener la empresa a través de la sucursal
+            const companyResponse = await companiesService.getCompanyByBranchId(branch._id);
+            if (companyResponse.success && companyResponse.data) {
+              currentCompanyId = companyResponse.data.companyId;
+            }
           } else {
-            toast.error('No se encontro una sucursal asignada a este gerente');
+            toast.error('No se encontró una sucursal asignada para el gerente');
             return;
           }
         } catch (error) {
-          console.error('Error buscando sucursal del gerente:', error);
-          toast.error('Error al buscar sucursal del gerente');
+          console.error('Error al cargar sucursal del gerente:', error);
+          toast.error('Error al cargar la sucursal del gerente');
           return;
         }
       }
-      // Para otros roles, usar la sucursal activa
-      else if (activeBranch) {
-        currentBranchId = activeBranch._id;
+      // Para Administradores: obtener empresa directamente
+      else if (isAdmin && user?._id) {
+        try {
+          const companyResponse = await companiesService.getCompanyByAdministratorId(user._id);
+          if (companyResponse.success && companyResponse.data) {
+            currentCompanyId = companyResponse.data._id;
+          }
+          
+          // Si hay sucursal activa, usarla
+          if (activeBranch) {
+            currentBranchId = activeBranch._id;
+          }
+        } catch (error) {
+          console.error('Error al cargar empresa del administrador:', error);
+          toast.error('Error al cargar la empresa del administrador');
+          return;
+        }
       }
 
-      if (!currentBranchId) {
-        toast.warning('No se pudo determinar la sucursal');
+      if (!currentCompanyId) {
+        toast.warning('No se pudo determinar la empresa');
         return;
       }
 
-      setCurrentBranchId(currentBranchId);
+      setCompanyId(currentCompanyId);
+      if (currentBranchId) {
+        setCurrentBranchId(currentBranchId);
+      }
 
-      // Cargar clientes de la sucursal
+      // Cargar clientes de la empresa
       const response = await clientsService.getAllClients({
-        branchId: currentBranchId,
+        companyId: currentCompanyId,
         limit: 100
       });
 
       if (response.success && response.data) {
-        // Obtener informacion de la sucursal
-        const branchInfo = await branchesService.getBranchById(currentBranchId);
-        const branch = branchInfo.data;
-
-        // Obtener el companyId de la sucursal
-        let branchCompanyId = '';
-        if (branch.companyId) {
-          if (typeof branch.companyId === 'object' && branch.companyId !== null) {
-            branchCompanyId = (branch.companyId as any)._id || '';
-          } else if (typeof branch.companyId === 'string') {
-            branchCompanyId = branch.companyId;
-          }
-        }
-
-        // Mapear los clientes para incluir el objeto branch completo con companyId
-        const clientsWithBranch = response.data.map((client: any) => ({
+        // Para los clientes, crear un objeto branch simplificado con el companyId
+        const clientsWithCompany = response.data.map((client: any) => ({
           ...client,
           branch: {
-            _id: branch._id || currentBranchId,
-            name: branch.branchName || (branch as any).name || 'Sucursal',
-            address: branch.address || '',
-            companyId: branchCompanyId // Incluir el companyId aqui
+            _id: currentBranchId || 'N/A',
+            name: activeBranch?.branchName || 'Empresa',
+            address: '',
+            companyId: currentCompanyId
           }
         }));
 
-        setClients(clientsWithBranch);
+        setClients(clientsWithCompany);
 
         // Load digital cards for all clients
         const cardsMap: Record<string, any> = {};
-        for (const client of clientsWithBranch) {
+        for (const client of clientsWithCompany) {
           try {
             const card = await digitalCardService.getDigitalCard(client._id);
             if (card) {
@@ -167,6 +177,92 @@ const DigitalCardsPage: React.FC = () => {
       toast.error('Error al cargar los clientes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleHeroImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setHeroImageFile(file);
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setHeroImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadHeroImage = async () => {
+    if (!heroImageFile || !digitalCard || !selectedClient) {
+      toast.error('Falta información necesaria para subir la imagen');
+      return;
+    }
+
+    try {
+      setUploadingHero(true);
+
+      // Obtener companyId
+      let companyId = '';
+      if (selectedClient.branch && typeof selectedClient.branch === 'object' && 'companyId' in selectedClient.branch) {
+        companyId = (selectedClient.branch as any).companyId;
+      } else {
+        const branchInfo = await branchesService.getBranchById(selectedClient.branch._id);
+        if (branchInfo.data?.companyId) {
+          if (typeof branchInfo.data.companyId === 'object' && branchInfo.data.companyId !== null) {
+            companyId = (branchInfo.data.companyId as any)._id || '';
+          } else if (typeof branchInfo.data.companyId === 'string') {
+            companyId = branchInfo.data.companyId;
+          }
+        }
+      }
+
+      if (!companyId) {
+        throw new Error('No se pudo determinar la empresa');
+      }
+
+      // Subir imagen hero a Firebase
+      const heroResult = await uploadDigitalCardHero(
+        heroImageFile,
+        companyId,
+        selectedClient.branch._id,
+        selectedClient._id
+      );
+
+      // Actualizar la tarjeta con las URLs de la imagen hero
+      const updatedCard = await digitalCardService.updateHeroUrls(
+        digitalCard._id,
+        heroResult.url,
+        heroResult.path
+      );
+
+      // Actualizar el estado local
+      setDigitalCard({
+        ...digitalCard,
+        heroUrl: heroResult.url,
+        heroPath: heroResult.path
+      });
+
+      // Actualizar el estado de tarjetas digitales
+      setDigitalCards(prev => ({
+        ...prev,
+        [selectedClient._id]: {
+          ...prev[selectedClient._id],
+          heroUrl: heroResult.url,
+          heroPath: heroResult.path
+        }
+      }));
+
+      toast.success('Imagen decorativa subida exitosamente');
+      
+      // Limpiar el estado del archivo
+      setHeroImageFile(null);
+      setHeroImagePreview('');
+    } catch (error) {
+      console.error('Error subiendo imagen hero:', error);
+      toast.error('No se pudo subir la imagen decorativa');
+    } finally {
+      setUploadingHero(false);
     }
   };
 
@@ -338,7 +434,7 @@ const DigitalCardsPage: React.FC = () => {
       ) : filteredClients.length === 0 ? (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg flex items-center gap-2">
           <Search size={20} />
-          {searchTerm ? 'No se encontraron clientes con ese criterio' : 'No hay clientes registrados en esta sucursal'}
+          {searchTerm ? 'No se encontraron clientes con ese criterio' : 'No hay clientes registrados en esta empresa'}
         </div>
       ) : (
         <Card>
@@ -442,6 +538,76 @@ const DigitalCardsPage: React.FC = () => {
             )}
           </div>
 
+          {/* Sección para subir imagen hero */}
+          <div className="px-4 py-3 border-t" style={{ borderColor: 'rgba(51, 65, 85, 0.5)' }}>
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-white mb-1 flex items-center gap-2">
+                  <ImageIcon size={16} style={{ color: '#06b6d4' }} />
+                  Imagen Decorativa
+                </h4>
+                <p className="text-xs text-gray-400 mb-2">
+                  Personaliza la tarjeta con una imagen en la parte inferior
+                </p>
+                <div className="flex items-center gap-3">
+                  <label 
+                    htmlFor="hero-image-modal"
+                    className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md transition-colors"
+                    style={{
+                      backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                      color: '#06b6d4',
+                      border: '1px solid rgba(6, 182, 212, 0.3)'
+                    }}
+                  >
+                    <Upload size={14} />
+                    Seleccionar Imagen
+                  </label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleHeroImageChange}
+                    className="hidden"
+                    id="hero-image-modal"
+                  />
+                  {heroImageFile && (
+                    <Badge variant="secondary" className="text-xs">
+                      {heroImageFile.name}
+                    </Badge>
+                  )}
+                  {heroImageFile && (
+                    <Button
+                      size="sm"
+                      onClick={handleUploadHeroImage}
+                      disabled={uploadingHero}
+                      className="h-7 px-3 text-xs"
+                      style={{
+                        background: uploadingHero ? 'gray' : 'linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))'
+                      }}
+                    >
+                      {uploadingHero ? (
+                        <>
+                          <Loader2 className="animate-spin mr-1" size={12} />
+                          Subiendo...
+                        </>
+                      ) : (
+                        'Aplicar Imagen'
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {heroImagePreview && (
+                <div className="w-24 h-16 rounded-md overflow-hidden border" style={{ borderColor: 'rgba(51, 65, 85, 0.5)' }}>
+                  <img 
+                    src={heroImagePreview} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Custom Footer */}
           <DialogFooter
             className="flex gap-3 px-4 py-3 border-t"
@@ -486,6 +652,32 @@ const DigitalCardsPage: React.FC = () => {
           onHide={() => setShowDownloadModal(false)}
           card={digitalCard}
           client={selectedClient!}
+          onDownloadGoogle={async () => {
+            try {
+              // Usar la URL del API correcta para Next.js
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3005';
+              const response = await fetch(
+                `${apiUrl}/api/digital-cards/download/google/${digitalCard._id}`
+              );
+              const data = await response.json();
+              
+              if (data.success) {
+                if (data.saveUrl) {
+                  // Abrir URL de Google Wallet en nueva pestaña
+                  window.open(data.saveUrl, '_blank');
+                  toast.success('Abriendo Google Wallet...');
+                } else if (data.isDevelopment) {
+                  toast.info('Modo desarrollo: Configure las credenciales de Google Wallet');
+                  console.log('Instrucciones:', data.data?.instructions);
+                }
+              } else {
+                toast.error('Error al generar tarjeta para Google Wallet');
+              }
+            } catch (error) {
+              console.error('Error:', error);
+              toast.error('Error al conectar con el servidor');
+            }
+          }}
         />
       )}
 

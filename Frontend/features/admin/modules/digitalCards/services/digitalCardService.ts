@@ -9,6 +9,8 @@ export interface DigitalCard {
   qrCode?: string; // Base64 - ahora opcional
   qrCodeUrl?: string; // URL del QR en Firebase
   qrCodePath?: string; // Path del QR en Firebase
+  heroUrl?: string; // URL de la imagen hero en Firebase
+  heroPath?: string; // Path de la imagen hero en Firebase
   tempQrCode?: string; // QR temporal que viene del backend
   qrData: string;
   barcode?: string;
@@ -33,7 +35,7 @@ export interface DigitalCard {
     labelColor: string;
     logoText: string;
   };
-  branchId: string | Branch;
+  companyId: string | Company;
   rotationSchedule: {
     enabled: boolean;
     intervalDays: number;
@@ -62,7 +64,7 @@ export interface CardTransaction {
   rewardId?: string;
   orderId?: string;
   locationData: {
-    branchId: string;
+    companyId: string;
     terminalId?: string;
     employeeId?: string;
     coordinates?: {
@@ -98,7 +100,7 @@ export interface ScanResult {
       points: number;
       status: boolean;
     };
-    branch: {
+    company: {
       id: string;
       name: string;
     };
@@ -138,6 +140,12 @@ interface Branch {
   _id: string;
   name: string;
   address?: string;
+}
+
+interface Company {
+  _id: string;
+  legalName: string;
+  tradeName?: string;
 }
 
 class DigitalCardService {
@@ -431,6 +439,17 @@ class DigitalCardService {
     const response = await apiCall<DigitalCard>(`/digital-cards/update-qr-urls/${cardId}`, {
       method: 'PUT',
       body: JSON.stringify({ qrCodeUrl, qrCodePath }),
+    });
+    return response.data;
+  }
+
+  /**
+   * Actualiza las URLs de la imagen hero después de subirla a Firebase
+   */
+  async updateHeroUrls(cardId: string, heroUrl: string, heroPath: string): Promise<DigitalCard> {
+    const response = await apiCall<DigitalCard>(`/digital-cards/update-hero-urls/${cardId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ heroUrl, heroPath }),
     });
     return response.data;
   }

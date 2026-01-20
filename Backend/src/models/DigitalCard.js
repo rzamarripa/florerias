@@ -36,6 +36,14 @@ const digitalCardSchema = new Schema(
       type: String,
       default: null, // Path del QR en Firebase Storage
     },
+    heroUrl: {
+      type: String,
+      default: null, // URL de la imagen hero en Firebase Storage
+    },
+    heroPath: {
+      type: String,
+      default: null, // Path de la imagen hero en Firebase Storage
+    },
     qrData: {
       type: String,
       required: true, // Encrypted data for QR
@@ -117,10 +125,10 @@ const digitalCardSchema = new Schema(
         default: "Corazón Violeta",
       },
     },
-    branchId: {
+    companyId: {
       type: Schema.Types.ObjectId,
-      ref: "cv_branch",
-      required: [true, "La sucursal es requerida"],
+      ref: "cv_company",
+      required: [true, "La empresa es requerida"],
     },
     rotationSchedule: {
       enabled: {
@@ -173,7 +181,7 @@ const digitalCardSchema = new Schema(
 // Indexes
 digitalCardSchema.index({ clientId: 1 });
 digitalCardSchema.index({ passSerialNumber: 1 });
-digitalCardSchema.index({ branchId: 1 });
+digitalCardSchema.index({ companyId: 1 });
 digitalCardSchema.index({ isActive: 1 });
 digitalCardSchema.index({ expiresAt: 1 });
 digitalCardSchema.index({ "rotationSchedule.nextRotation": 1 });

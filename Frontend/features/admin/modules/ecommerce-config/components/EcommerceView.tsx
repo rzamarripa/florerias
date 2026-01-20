@@ -42,24 +42,24 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
   }, []);
 
   return (
-    <div className="h-100 d-flex flex-column" style={{ fontFamily: typography?.textFont || 'Inter' }}>
+    <div className="h-full flex flex-col" style={{ fontFamily: typography?.textFont || 'Inter' }}>
       {/* Modern Browser Frame */}
       <div 
-        className="d-flex align-items-center px-3 py-2" 
+        className="flex items-center px-3 py-2" 
         style={{ 
           background: 'linear-gradient(135deg, #1a1c23 0%, #2d3142 100%)',
           borderTopLeftRadius: '12px',
           borderTopRightRadius: '12px'
         }}
       >
-        <div className="d-flex gap-2">
+        <div className="flex gap-2">
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#ff5f57' }} />
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#ffbd2e' }} />
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#28ca42' }} />
         </div>
-        <div className="flex-grow-1 mx-4">
+        <div className="flex-grow mx-4">
           <div 
-            className="px-3 py-1 rounded-pill text-center" 
+            className="px-3 py-1 rounded-full text-center" 
             style={{ 
               backgroundColor: 'rgba(255,255,255,0.1)', 
               fontSize: '11px', 
@@ -68,14 +68,14 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
             }}
           >
             <span style={{ opacity: 0.7 }}>🔒 https://</span>
-            <span className="fw-medium">{header?.pageTitle?.toLowerCase().replace(/\s+/g, '-') || 'mi-tienda'}.com</span>
+            <span className="font-medium">{header?.pageTitle?.toLowerCase().replace(/\s+/g, '-') || 'mi-tienda'}.com</span>
           </div>
         </div>
       </div>
 
       {/* Website Content */}
       <div 
-        className="flex-grow-1 overflow-auto position-relative"
+        className="flex-grow overflow-auto relative"
         style={{ 
           backgroundColor: colors?.background || '#ffffff',
           borderBottomLeftRadius: '12px',
@@ -84,7 +84,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
       >
         {/* Modern Navigation Bar */}
         <nav 
-          className={`sticky-top transition-all ${isScrolled ? 'shadow-lg' : ''}`}
+          className={`sticky top-0 transition-all ${isScrolled ? 'shadow-lg' : ''}`}
           style={{ 
             backgroundColor: isScrolled ? 'rgba(255,255,255,0.95)' : '#ffffff',
             backdropFilter: isScrolled ? 'blur(10px)' : 'none',
@@ -93,15 +93,15 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
             zIndex: 1000
           }}
         >
-          <div className="container-fluid px-4">
-            <div className="d-flex align-items-center justify-content-between py-3">
+          <div className="w-full px-4">
+            <div className="flex items-center justify-between py-3">
               {/* Logo & Brand */}
-              <div className="d-flex align-items-center gap-3">
+              <div className="flex items-center gap-3">
                 {header?.logoUrl ? (
                   <img 
                     src={header.logoUrl} 
                     alt="Logo" 
-                    className="rounded-2"
+                    className="rounded-md"
                     style={{ 
                       height: '40px', 
                       width: '40px', 
@@ -111,7 +111,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                   />
                 ) : (
                   <div 
-                    className="d-flex align-items-center justify-content-center rounded-2"
+                    className="flex items-center justify-center rounded-md"
                     style={{
                       width: '40px',
                       height: '40px',
@@ -119,14 +119,14 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                       boxShadow: '0 4px 6px rgba(99, 102, 241, 0.25)'
                     }}
                   >
-                    <span className="text-white fw-bold" style={{ fontSize: '18px' }}>
+                    <span className="text-white font-bold" style={{ fontSize: '18px' }}>
                       {header?.pageTitle?.charAt(0) || 'T'}
                     </span>
                   </div>
                 )}
                 <div>
                   <h5 
-                    className="mb-0 fw-bold"
+                    className="mb-0 font-bold"
                     style={{ 
                       fontFamily: typography?.titleFont || 'Inter',
                       fontSize: '20px',
@@ -143,12 +143,12 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
               </div>
               
               {/* Navigation Links */}
-              <div className="d-none d-md-flex align-items-center gap-4">
+              <div className="hidden md:flex items-center gap-4">
                 {header?.topbar?.map((item, index) => (
                   <a
                     key={index}
                     href={item.link}
-                    className="text-decoration-none position-relative py-2"
+                    className="no-underline relative py-2"
                     style={{
                       fontSize: '14px',
                       fontWeight: '500',
@@ -172,9 +172,9 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
               </div>
 
               {/* Cart & User Actions */}
-              <div className="d-flex align-items-center gap-3">
+              <div className="flex items-center gap-3">
                 <button 
-                  className="btn btn-light rounded-circle position-relative p-2"
+                  className="bg-gray-100 rounded-full relative p-2"
                   style={{ 
                     width: '40px', 
                     height: '40px',
@@ -183,7 +183,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                 >
                   <TbShoppingCart size={18} />
                   <span 
-                    className="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+                    className="absolute top-0 left-full -translate-x-1/2 -translate-y-1/2 px-2 py-1 rounded-full text-xs"
                     style={{ 
                       backgroundColor: colors?.secondary || '#8b5cf6',
                       fontSize: '10px'
@@ -193,7 +193,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                   </span>
                 </button>
                 <button 
-                  className="btn rounded-pill px-4 py-2"
+                  className="rounded-full px-4 py-2"
                   style={{ 
                     backgroundColor: colors?.primary || '#6366f1',
                     color: 'white',
@@ -212,7 +212,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
         {/* Hero Section - Modern Style */}
         {featuredElements?.banner?.enabled && (
           <section 
-            className="position-relative overflow-hidden"
+            className="relative overflow-hidden"
             style={{ 
               minHeight: '500px',
               background: featuredElements.banner.imageUrl 
@@ -224,9 +224,9 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
             }}
           >
             {/* Animated Background Shapes */}
-            <div className="position-absolute w-100 h-100" style={{ opacity: 0.1 }}>
+            <div className="absolute w-full h-full" style={{ opacity: 0.1 }}>
               <div 
-                className="position-absolute rounded-circle"
+                className="absolute rounded-full"
                 style={{
                   width: '400px',
                   height: '400px',
@@ -237,7 +237,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                 }}
               />
               <div 
-                className="position-absolute rounded-circle"
+                className="absolute rounded-full"
                 style={{
                   width: '300px',
                   height: '300px',
@@ -249,12 +249,12 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
               />
             </div>
 
-            <div className="container position-relative" style={{ zIndex: 10 }}>
-              <div className="row align-items-center min-vh-50 py-5">
-                <div className="col-lg-7">
+            <div className="container mx-auto relative px-4" style={{ zIndex: 10 }}>
+              <div className="grid grid-cols-12 items-center min-h-[50vh] py-5">
+                <div className="col-span-12 lg:col-span-7">
                   <div className="py-5">
                     <span 
-                      className="badge rounded-pill px-3 py-2 mb-3"
+                      className="inline-block rounded-full px-3 py-2 mb-3 text-sm"
                       style={{ 
                         backgroundColor: 'rgba(255,255,255,0.2)',
                         backdropFilter: 'blur(10px)',
@@ -267,7 +267,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                       🔥 OFERTAS EXCLUSIVAS
                     </span>
                     <h1 
-                      className="display-3 fw-bold text-white mb-4"
+                      className="text-6xl font-bold text-white mb-4"
                       style={{ 
                         fontFamily: typography?.titleFont || 'Inter',
                         lineHeight: '1.1',
@@ -278,7 +278,7 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                       {featuredElements.banner.title || 'Descubre lo Mejor'}
                     </h1>
                     <p 
-                      className="lead text-white mb-5"
+                      className="text-xl text-white mb-5"
                       style={{ 
                         fontFamily: typography?.textFont || 'Inter',
                         fontSize: '20px',
@@ -289,10 +289,10 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                     >
                       {featuredElements.banner.text || 'Productos de alta calidad con los mejores precios del mercado'}
                     </p>
-                    <div className="d-flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-3">
                       {featuredElements.banner.button && (
                         <button
-                          className="btn btn-lg text-white position-relative overflow-hidden"
+                          className="text-white relative overflow-hidden text-lg"
                           style={{
                             backgroundColor: colors?.primary || '#6366f1',
                             padding: '14px 32px',
@@ -312,11 +312,11 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                           }}
                         >
                           {featuredElements.banner.button.name || 'Comprar Ahora'}
-                          <TbArrowRight className="ms-2" size={20} />
+                          <TbArrowRight className="ml-2" size={20} />
                         </button>
                       )}
                       <button
-                        className="btn btn-lg btn-outline-light"
+                        className="text-white border-2 border-white text-lg"
                         style={{
                           padding: '14px 32px',
                           fontWeight: '600',
@@ -339,9 +339,9 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
 
         {/* Features Section - Delivery Info */}
         {(featuredElements?.delivery?.pickup?.enabled || featuredElements?.delivery?.delivery?.enabled) && (
-          <section className="py-5 bg-light">
-            <div className="container">
-              <div className="row g-4">
+          <section className="py-5 bg-gray-100">
+            <div className="container mx-auto px-4">
+              <div className="grid grid-cols-12 gap-4">
                 {featuredElements.delivery.pickup?.enabled && (
                   <div className="col-md-6">
                     <div 

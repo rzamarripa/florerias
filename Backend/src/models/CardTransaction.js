@@ -57,10 +57,10 @@ const cardTransactionSchema = new Schema(
       default: null,
     },
     locationData: {
-      branchId: {
+      companyId: {
         type: Schema.Types.ObjectId,
-        ref: "cv_branch",
-        required: [true, "La sucursal es requerida"],
+        ref: "cv_company",
+        required: [true, "La empresa es requerida"],
       },
       terminalId: {
         type: String,
