@@ -93,12 +93,12 @@ class GoogleWalletService {
                 endItem: {
                   firstValue: {
                     fields: [{
-                      fieldPath: 'object.loyaltyPoints.label',
+                      fieldPath: 'object.textModulesData[1].header',
                     }],
                   },
                   secondValue: {
                     fields: [{
-                      fieldPath: 'object.loyaltyPoints.balance.int',
+                      fieldPath: 'object.textModulesData[1].body',
                     }],
                   },
                 },
@@ -169,6 +169,11 @@ class GoogleWalletService {
       accountId: clientData.clientNumber,
       accountName: `${clientData.name} ${clientData.lastName}`,
       state: 'ACTIVE',
+      heroImage: clientData.heroUrl ? {
+        sourceUri: {
+          uri: clientData.heroUrl,
+        },
+      } : undefined,
       barcode: {
         type: 'QR_CODE',
         value: clientData.qrData || clientData.clientNumber,
@@ -178,13 +183,13 @@ class GoogleWalletService {
         balance: {
           int: clientData.points || 0,
         },
-        label: 'PUNTOS ACUMULADOS',
+        label: 'Puntos',
       },
       secondaryLoyaltyPoints: {
         balance: {
           string: this.getClientLevel(clientData.points),
         },
-        label: 'Nivel / Inicial',
+        label: 'Nivel',
       },
       linkedOfferIds: [], // Aquí se pueden agregar ofertas vinculadas
       messages: [],
@@ -199,36 +204,45 @@ class GoogleWalletService {
       locations: clientData.locations || [],
       textModulesData: [
         {
-          header: 'Nombre de miembro',
+          header: 'PUNTOS ACUMULADOS',
+          body: `${clientData.points || 0} pts`,
+          id: 'points_display',
+        },
+        {
+          header: 'USUARIO',
           body: `${clientData.name} ${clientData.lastName}`,
-          id: 'member_name',
-        },
-        {
-          header: 'ID de miembro',
-          body: clientData.clientNumber,
-          id: 'member_id',
-        },
-        {
-          header: 'Bienvenido a ' + companyName,
-          body: 'Disfruta de los beneficios de nuestro programa de fidelidad',
-          id: 'welcome_message',
-        },
-        {
-          header: 'Términos y Condiciones',
-          body: 'Los puntos acumulados pueden ser canjeados por recompensas en cualquier sucursal participante.',
-          id: 'terms',
-        },
-        {
-          header: 'Cliente',
-          body: clientData.clientNumber,
-          id: 'client_number',
-        },
-        {
-          header: 'Sucursal',
-          body: companyName,
-          id: 'branch',
+          id: 'user_name',
         },
       ],
+      infoModuleData: {
+        labelValueRows: [
+          {
+            columns: [
+              {
+                label: 'Nombre de miembro',
+                value: `${clientData.name} ${clientData.lastName}`,
+              },
+            ],
+          },
+          {
+            columns: [
+              {
+                label: 'ID de miembro',
+                value: clientData.clientNumber,
+              },
+            ],
+          },
+          {
+            columns: [
+              {
+                label: 'Programa de Fidelidad',
+                value: 'Disfruta de los beneficios exclusivos y acumula puntos en cada compra.',
+              },
+            ],
+          },
+        ],
+        showLastUpdateTime: false,
+      },
       linksModuleData: {
         uris: [
           {
@@ -414,9 +428,10 @@ class GoogleWalletService {
    * Determina el nivel del cliente basado en sus puntos
    */
   getClientLevel(points) {
-    if (points >= 1000) return 'Oro';
-    if (points >= 500) return 'Plata';
-    if (points >= 100) return 'Bronce';
+    if (points >= 5000) return 'Diamante';
+    if (points >= 2000) return 'Oro';
+    if (points >= 1000) return 'Plata';
+    if (points >= 500) return 'Bronce';
     return 'Inicial';
   }
 

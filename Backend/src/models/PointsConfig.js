@@ -86,12 +86,23 @@ const pointsConfigSchema = new Schema(
         min: 1,
       },
     },
-    // Sucursal asociada
+    // Indicador de configuración global (empresa) o específica (sucursal)
+    isGlobal: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    // Empresa asociada (para configuración global)
+    company: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_company",
+      default: null,
+    },
+    // Sucursal asociada (para configuración específica)
     branch: {
       type: Schema.Types.ObjectId,
       ref: "cv_branch",
-      required: [true, "La sucursal es requerida"],
-      unique: true,
+      default: null,
     },
     // Estado de la configuración
     status: {
@@ -106,9 +117,44 @@ const pointsConfigSchema = new Schema(
   }
 );
 
-// Index para búsqueda por sucursal
+// Validación personalizada para asegurar que tenga company O branch
+pointsConfigSchema.pre('validate', function(next) {
+  if (this.isGlobal) {
+    // Si es global, debe tener company y no branch
+    if (!this.company) {
+      next(new Error('La empresa es requerida para configuración global'));
+    } else if (this.branch) {
+      next(new Error('Una configuración global no puede tener sucursal específica'));
+    } else {
+      next();
+    }
+  } else {
+    // Si no es global, debe tener branch y no company
+    if (!this.branch) {
+      next(new Error('La sucursal es requerida para configuración específica'));
+    } else if (this.company) {
+      next(new Error('Una configuración específica no puede tener empresa'));
+    } else {
+      next();
+    }
+  }
+});
+
+// Index para búsqueda por sucursal y empresa
 pointsConfigSchema.index({ branch: 1 });
+pointsConfigSchema.index({ company: 1 });
 pointsConfigSchema.index({ status: 1 });
+pointsConfigSchema.index({ isGlobal: 1 });
+
+// Index único compuesto para evitar duplicados
+pointsConfigSchema.index({ company: 1, isGlobal: 1 }, { 
+  unique: true,
+  partialFilterExpression: { company: { $ne: null } }
+});
+pointsConfigSchema.index({ branch: 1, isGlobal: 1 }, { 
+  unique: true,
+  partialFilterExpression: { branch: { $ne: null } }
+});
 
 const PointsConfig = mongoose.model("points_config", pointsConfigSchema);
 export { PointsConfig };

@@ -62,6 +62,11 @@ const cardTransactionSchema = new Schema(
         ref: "cv_company",
         required: [true, "La empresa es requerida"],
       },
+      branchId: {
+        type: Schema.Types.ObjectId,
+        ref: "cv_branch",
+        default: null,
+      },
       terminalId: {
         type: String,
         default: null,
@@ -159,6 +164,7 @@ cardTransactionSchema.statics.createScanTransaction = async function(data) {
     balanceBefore: data.currentPoints || 0,
     balanceAfter: data.currentPoints || 0,
     locationData: {
+      companyId: data.companyId,
       branchId: data.branchId,
       terminalId: data.terminalId,
       employeeId: data.employeeId,
@@ -188,6 +194,7 @@ cardTransactionSchema.statics.createPointsTransaction = async function(data) {
     balanceAfter: data.balanceAfter,
     orderId: data.orderId,
     locationData: {
+      companyId: data.companyId,
       branchId: data.branchId,
       terminalId: data.terminalId,
       employeeId: data.employeeId,
@@ -212,6 +219,7 @@ cardTransactionSchema.statics.createRewardTransaction = async function(data) {
     rewardId: data.rewardId,
     orderId: data.orderId,
     locationData: {
+      companyId: data.companyId,
       branchId: data.branchId,
       employeeId: data.employeeId,
     },

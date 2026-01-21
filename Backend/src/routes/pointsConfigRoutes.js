@@ -4,6 +4,7 @@ import {
   createPointsConfig,
   getPointsConfigById,
   getPointsConfigByBranch,
+  getPointsConfigByCompany,
   updatePointsConfig,
   deletePointsConfig,
   activatePointsConfig,
@@ -15,6 +16,7 @@ const router = express.Router();
 router.get("/", getAllPointsConfigs);
 router.get("/:id", getPointsConfigById);
 router.get("/branch/:branchId", getPointsConfigByBranch);
+router.get("/company/:companyId", getPointsConfigByCompany);
 
 // POST routes
 router.post("/", createPointsConfig);

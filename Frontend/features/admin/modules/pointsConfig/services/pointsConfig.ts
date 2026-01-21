@@ -12,7 +12,7 @@ export const pointsConfigService = {
   getAllPointsConfigs: async (
     filters: PointsConfigFilters = {}
   ): Promise<GetPointsConfigsResponse> => {
-    const { page = 1, limit = 10, branchId, status } = filters;
+    const { page = 1, limit = 10, branchId, companyId, isGlobal, status } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -20,6 +20,8 @@ export const pointsConfigService = {
     });
 
     if (branchId) searchParams.append("branchId", branchId);
+    if (companyId) searchParams.append("companyId", companyId);
+    if (isGlobal !== undefined) searchParams.append("isGlobal", isGlobal.toString());
     if (status !== undefined) searchParams.append("status", status.toString());
 
     const response = await apiCall<GetPointsConfigsResponse>(
@@ -42,6 +44,15 @@ export const pointsConfigService = {
   ): Promise<{ success: boolean; data: PointsConfig }> => {
     const response = await apiCall<{ success: boolean; data: PointsConfig }>(
       `/points-config/branch/${branchId}`
+    );
+    return response;
+  },
+
+  getPointsConfigByCompany: async (
+    companyId: string
+  ): Promise<{ success: boolean; data: PointsConfig }> => {
+    const response = await apiCall<{ success: boolean; data: PointsConfig }>(
+      `/points-config/company/${companyId}`
     );
     return response;
   },

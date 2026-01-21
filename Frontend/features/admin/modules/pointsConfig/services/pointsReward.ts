@@ -40,13 +40,15 @@ export const pointsRewardService = {
 
   getPointsRewardsByBranch: async (
     branchId: string,
-    filters: PointsRewardFilters = {}
+    filters: PointsRewardFilters = {},
+    includeGlobal: boolean = false
   ): Promise<GetPointsRewardsResponse> => {
     const { page = 1, limit = 100, status } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
+      includeGlobal: includeGlobal.toString(),
     });
 
     if (status !== undefined) searchParams.append("status", status.toString());
@@ -101,6 +103,25 @@ export const pointsRewardService = {
       {
         method: "PUT",
       }
+    );
+    return response;
+  },
+
+  getPointsRewardsByCompany: async (
+    companyId: string,
+    filters: PointsRewardFilters = {}
+  ): Promise<GetPointsRewardsResponse> => {
+    const { page = 1, limit = 100, status } = filters;
+
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (status !== undefined) searchParams.append("status", status.toString());
+
+    const response = await apiCall<GetPointsRewardsResponse>(
+      `/points-rewards/company/${companyId}?${searchParams}`
     );
     return response;
   },

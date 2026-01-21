@@ -4,6 +4,7 @@ import {
   createPointsReward,
   getPointsRewardById,
   getPointsRewardsByBranch,
+  getPointsRewardsByCompany,
   updatePointsReward,
   deletePointsReward,
   activatePointsReward,
@@ -15,6 +16,7 @@ const router = express.Router();
 router.get("/", getAllPointsRewards);
 router.get("/:id", getPointsRewardById);
 router.get("/branch/:branchId", getPointsRewardsByBranch);
+router.get("/company/:companyId", getPointsRewardsByCompany);
 
 // POST routes
 router.post("/", createPointsReward);

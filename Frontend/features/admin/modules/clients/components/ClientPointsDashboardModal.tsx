@@ -116,7 +116,8 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
     try {
       const response = await pointsRewardService.getPointsRewardsByBranch(
         branchId,
-        { status: true }
+        { status: true },
+        true // Incluir recompensas globales para que el cliente pueda canjearlas
       );
 
       if (response.success) {

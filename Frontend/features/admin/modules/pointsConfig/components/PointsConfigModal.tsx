@@ -51,6 +51,7 @@ const defaultFormData: CreatePointsConfigData = {
     points: 2,
     maxVisitsPerDay: 1,
   },
+  isGlobal: false,
   branch: "",
   status: true,
 };
@@ -72,7 +73,9 @@ const PointsConfigModal: React.FC<PointsConfigModalProps> = ({
         pointsForFirstPurchase: config.pointsForFirstPurchase,
         pointsForClientRegistration: config.pointsForClientRegistration,
         pointsForBranchVisit: config.pointsForBranchVisit,
-        branch: typeof config.branch === "string" ? config.branch : config.branch._id,
+        isGlobal: config.isGlobal,
+        company: config.company ? (typeof config.company === "string" ? config.company : config.company._id) : undefined,
+        branch: config.branch ? (typeof config.branch === "string" ? config.branch : config.branch._id) : undefined,
         status: config.status,
       });
     } else {

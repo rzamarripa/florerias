@@ -49,6 +49,7 @@ import { PaymentMethod } from "@/features/admin/modules/payment-methods/types";
 import { CashRegister } from "@/features/admin/modules/cash-registers/types";
 import { Neighborhood } from "@/features/admin/modules/neighborhoods/types";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
+import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import ClientRewardsModal from "./ClientRewardsModal";
 import ClientRedeemedRewardsModal from "@/features/admin/modules/clients/components/ClientRedeemedRewardsModal";
 import StripePaymentModal from "./StripePaymentModal";
@@ -139,7 +140,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [pendingFiles, setPendingFiles] = useState<{ comprobante: File | null; arreglo: File | null } | null>(null);
   const [shouldSubmitOrder, setShouldSubmitOrder] = useState(false);
 
-  // Cargar clientes filtrados por sucursal
+  // Cargar clientes filtrados por empresa (a través de la sucursal)
   const fetchClients = async (branchId?: string) => {
     setLoadingClients(true);
     try {
@@ -147,9 +148,27 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         limit: 1000,
         status: true,
       };
+      
+      // Si hay un branchId, obtener primero la empresa
       if (branchId) {
-        filters.branchId = branchId;
+        try {
+          const companyResponse = await companiesService.getCompanyByBranchId(branchId);
+          if (companyResponse.success && companyResponse.data) {
+            // Filtrar por empresa (companyId) en lugar de sucursal
+            filters.companyId = companyResponse.data.companyId;
+          } else {
+            console.warn("No se pudo obtener la empresa de la sucursal");
+            // Si no se puede obtener la empresa, no cargar clientes
+            setClients([]);
+            return;
+          }
+        } catch (error) {
+          console.error("Error al obtener empresa de la sucursal:", error);
+          setClients([]);
+          return;
+        }
       }
+      
       const response = await clientsService.getAllClients(filters);
       setClients(response.data);
     } catch (err) {

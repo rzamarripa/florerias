@@ -1,5 +1,6 @@
 import { PointsConfig } from "../models/PointsConfig.js";
 import { Branch } from "../models/Branch.js";
+import { Company } from "../models/Company.js";
 
 export const getAllPointsConfigs = async (req, res) => {
   try {
@@ -13,13 +14,24 @@ export const getAllPointsConfigs = async (req, res) => {
       filters.branch = req.query.branchId;
     }
 
+    // Filtro por empresa
+    if (req.query.companyId) {
+      filters.company = req.query.companyId;
+    }
+
+    // Filtro por tipo (global o específico)
+    if (req.query.isGlobal !== undefined) {
+      filters.isGlobal = req.query.isGlobal === "true";
+    }
+
     // Filtro por estado
     if (req.query.status !== undefined) {
       filters.status = req.query.status === "true";
     }
 
     const pointsConfigs = await PointsConfig.find(filters)
-      .populate("branch", "name address")
+      .populate("branch", "branchName branchCode")
+      .populate("company", "name")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -54,30 +66,58 @@ export const createPointsConfig = async (req, res) => {
       pointsForClientRegistration,
       pointsForBranchVisit,
       branch,
+      company,
+      isGlobal,
       status,
     } = req.body;
 
-    if (!branch) {
-      return res.status(400).json({
-        success: false,
-        message: "La sucursal es requerida",
-      });
-    }
+    // Validar según si es global o específico
+    if (isGlobal) {
+      if (!company) {
+        return res.status(400).json({
+          success: false,
+          message: "La empresa es requerida para configuración global",
+        });
+      }
 
-    const branchExists = await Branch.findById(branch);
-    if (!branchExists) {
-      return res.status(404).json({
-        success: false,
-        message: "La sucursal no existe",
-      });
-    }
+      const companyExists = await Company.findById(company);
+      if (!companyExists) {
+        return res.status(404).json({
+          success: false,
+          message: "La empresa no existe",
+        });
+      }
 
-    const existingConfig = await PointsConfig.findOne({ branch });
-    if (existingConfig) {
-      return res.status(400).json({
-        success: false,
-        message: "Ya existe una configuración de puntos para esta sucursal",
-      });
+      const existingConfig = await PointsConfig.findOne({ company, isGlobal: true });
+      if (existingConfig) {
+        return res.status(400).json({
+          success: false,
+          message: "Ya existe una configuración global de puntos para esta empresa",
+        });
+      }
+    } else {
+      if (!branch) {
+        return res.status(400).json({
+          success: false,
+          message: "La sucursal es requerida para configuración específica",
+        });
+      }
+
+      const branchExists = await Branch.findById(branch);
+      if (!branchExists) {
+        return res.status(404).json({
+          success: false,
+          message: "La sucursal no existe",
+        });
+      }
+
+      const existingConfig = await PointsConfig.findOne({ branch, isGlobal: false });
+      if (existingConfig) {
+        return res.status(400).json({
+          success: false,
+          message: "Ya existe una configuración de puntos para esta sucursal",
+        });
+      }
     }
 
     const pointsConfigData = {
@@ -104,15 +144,16 @@ export const createPointsConfig = async (req, res) => {
         points: 2,
         maxVisitsPerDay: 1,
       },
-      branch,
+      isGlobal: isGlobal || false,
+      company: isGlobal ? company : null,
+      branch: !isGlobal ? branch : null,
       status: status !== undefined ? status : true,
     };
 
     const pointsConfig = await PointsConfig.create(pointsConfigData);
-    const populatedConfig = await PointsConfig.findById(pointsConfig._id).populate(
-      "branch",
-      "name address"
-    );
+    const populatedConfig = await PointsConfig.findById(pointsConfig._id)
+      .populate("branch", "branchName branchCode")
+      .populate("company", "name");
 
     res.status(201).json({
       success: true,
@@ -135,10 +176,9 @@ export const createPointsConfig = async (req, res) => {
 
 export const getPointsConfigById = async (req, res) => {
   try {
-    const pointsConfig = await PointsConfig.findById(req.params.id).populate(
-      "branch",
-      "name address"
-    );
+    const pointsConfig = await PointsConfig.findById(req.params.id)
+      .populate("branch", "branchName branchCode")
+      .populate("company", "name");
 
     if (!pointsConfig) {
       return res.status(404).json({
@@ -161,20 +201,64 @@ export const getPointsConfigById = async (req, res) => {
 
 export const getPointsConfigByBranch = async (req, res) => {
   try {
-    const pointsConfig = await PointsConfig.findOne({
-      branch: req.params.branchId,
-    }).populate("branch", "name address");
+    const branchId = req.params.branchId;
+    
+    // Buscar configuración por sucursal (SIN filtro isGlobal)
+    let pointsConfig = await PointsConfig.findOne({
+      branch: branchId,
+      status: true,
+    })
+      .populate("branch", "branchName branchCode")
+      .populate("company", "name");
 
+    // Si no hay configuración de sucursal, buscar global
     if (!pointsConfig) {
-      return res.status(404).json({
-        success: false,
-        message: "Configuración de puntos no encontrada para esta sucursal",
-      });
+      const branch = await Branch.findById(branchId);
+      if (branch && branch.companyId) {
+        pointsConfig = await PointsConfig.findOne({
+          company: branch.companyId,
+          isGlobal: true,
+          status: true,
+        })
+          .populate("branch", "branchName branchCode")
+          .populate("company", "name");
+      }
     }
 
+    // IMPORTANTE: Devolver 200 con data: null en lugar de 404
+    // Esto evita errores en la consola del frontend
     res.status(200).json({
       success: true,
-      data: pointsConfig,
+      data: pointsConfig || null,
+      message: pointsConfig 
+        ? "Configuración encontrada" 
+        : "No hay configuración de puntos activa"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getPointsConfigByCompany = async (req, res) => {
+  try {
+    const pointsConfig = await PointsConfig.findOne({
+      company: req.params.companyId,
+      isGlobal: true,
+      status: true,
+    })
+      .populate("branch", "branchName branchCode")
+      .populate("company", "name");
+
+    // Devolver 200 con data: null en lugar de 404
+    res.status(200).json({
+      success: true,
+      data: pointsConfig || null,
+      message: pointsConfig 
+        ? "Configuración global encontrada" 
+        : "No hay configuración global de puntos activa"
     });
   } catch (error) {
     res.status(500).json({
@@ -223,7 +307,9 @@ export const updatePointsConfig = async (req, res) => {
         new: true,
         runValidators: true,
       }
-    ).populate("branch", "name address");
+    )
+      .populate("branch", "branchName branchCode")
+      .populate("company", "name");
 
     if (!pointsConfig) {
       return res.status(404).json({
@@ -251,7 +337,9 @@ export const deletePointsConfig = async (req, res) => {
       req.params.id,
       { status: false },
       { new: true }
-    ).populate("branch", "name address");
+    )
+      .populate("branch", "branchName branchCode")
+      .populate("company", "name");
 
     if (!pointsConfig) {
       return res.status(404).json({
@@ -279,7 +367,9 @@ export const activatePointsConfig = async (req, res) => {
       req.params.id,
       { status: true },
       { new: true }
-    ).populate("branch", "name address");
+    )
+      .populate("branch", "branchName branchCode")
+      .populate("company", "name");
 
     if (!pointsConfig) {
       return res.status(404).json({

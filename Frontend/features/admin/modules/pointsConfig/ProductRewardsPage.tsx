@@ -143,7 +143,7 @@ const ProductRewardsPage: React.FC = () => {
         setStorage(storageResponse.data);
       }
 
-      const rewardsResponse = await pointsRewardService.getPointsRewardsByBranch(targetBranchId);
+      const rewardsResponse = await pointsRewardService.getPointsRewardsByBranch(targetBranchId, {}, false);
       const productRewards = rewardsResponse.data.filter(
         (reward) => reward.isProducto === true
       );

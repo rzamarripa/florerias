@@ -119,12 +119,12 @@ export const createClient = async (req, res) => {
 
     const client = await Client.create(clientData);
 
-    // Procesar puntos por registro de cliente si está habilitado
+    // Procesar puntos por registro de cliente SOLO con configuración global de empresa
     let registrationPointsInfo = null;
     try {
-      const pointsResult = await clientPointsService.processRegistrationPoints({
+      const pointsResult = await clientPointsService.processRegistrationPointsForCompany({
         clientId: client._id,
-        branchId: company, // Usar company ID para el sistema de puntos
+        companyId: company, // ID de la empresa para configuración global
         registeredBy: req.user?._id || null,
       });
 
@@ -133,7 +133,7 @@ export const createClient = async (req, res) => {
           pointsEarned: pointsResult.points,
           newBalance: pointsResult.newBalance,
         };
-        console.log(`✅ Puntos por registro otorgados al cliente ${client._id}: ${pointsResult.points} pts`);
+        console.log(`✅ Puntos por registro otorgados al cliente ${client._id}: ${pointsResult.points} pts (Solo config. global)`);
       }
     } catch (pointsError) {
       console.error("Error al procesar puntos por registro:", pointsError);

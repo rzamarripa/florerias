@@ -47,6 +47,16 @@ const clientPointsHistorySchema = new Schema(
       ref: "cv_branch",
       required: [true, "La sucursal es requerida"],
     },
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_company",
+      default: null,
+    },
+    configSource: {
+      type: String,
+      enum: ["global", "branch", "manual"],
+      default: "branch",
+    },
     balanceBefore: {
       type: Number,
       default: 0,

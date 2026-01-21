@@ -3,6 +3,7 @@ import { Client } from "../models/Client.js";
 import { CardTransaction } from "../models/CardTransaction.js";
 import Order from "../models/Order.js";
 import { PointsReward } from "../models/PointsReward.js";
+import { Branch } from "../models/Branch.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import clientPointsService from "../services/clientPointsService.js";
 
@@ -80,6 +81,15 @@ export const scanQRCode = async (req, res) => {
       });
     }
 
+    // Obtener la sucursal para obtener el companyId
+    const branch = await Branch.findById(branchId);
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Sucursal no encontrada",
+      });
+    }
+
     // Registrar el escaneo en las transacciones
     await CardTransaction.createScanTransaction({
       digitalCardId: digitalCard._id,
@@ -87,6 +97,7 @@ export const scanQRCode = async (req, res) => {
       scanMethod: "qr",
       currentPoints: client.points,
       branchId,
+      companyId: branch.companyId,
       terminalId,
       employeeId,
       deviceInfo,
@@ -241,6 +252,15 @@ export const processPointsTransaction = async (req, res) => {
     // Actualizar la tarjeta digital
     await digitalCard.updateBalance(balanceAfter);
 
+    // Obtener la sucursal para el companyId
+    const branch = await Branch.findById(branchId);
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Sucursal no encontrada",
+      });
+    }
+
     // Registrar la transacción de la tarjeta
     await CardTransaction.createPointsTransaction({
       digitalCardId: digitalCard._id,
@@ -251,6 +271,7 @@ export const processPointsTransaction = async (req, res) => {
       balanceAfter,
       orderId,
       branchId,
+      companyId: branch.companyId,
       employeeId,
     });
 
@@ -363,6 +384,15 @@ export const processRewardRedemption = async (req, res) => {
       registeredBy: employeeId,
     });
 
+    // Obtener la sucursal para el companyId
+    const branch = await Branch.findById(branchId);
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Sucursal no encontrada",
+      });
+    }
+
     // Registrar la transacción de la tarjeta
     await CardTransaction.createRewardTransaction({
       digitalCardId: digitalCard._id,
@@ -373,6 +403,7 @@ export const processRewardRedemption = async (req, res) => {
       balanceAfter,
       rewardId: reward._id,
       branchId,
+      companyId: branch.companyId,
       employeeId,
       notes: `Recompensa canjeada: ${reward.name}`,
     });
@@ -548,6 +579,15 @@ export const useRewardInOrder = async (req, res) => {
     const digitalCard = await DigitalCard.findOne({ clientId });
 
     if (digitalCard) {
+      // Obtener la sucursal para el companyId
+      const branch = await Branch.findById(branchId);
+      if (!branch) {
+        return res.status(404).json({
+          success: false,
+          message: "Sucursal no encontrada",
+        });
+      }
+
       // Registrar el uso de la recompensa
       await CardTransaction.createRewardTransaction({
         digitalCardId: digitalCard._id,
@@ -556,6 +596,7 @@ export const useRewardInOrder = async (req, res) => {
         rewardId: clientReward.reward._id,
         orderId,
         branchId,
+        companyId: branch.companyId,
         employeeId,
         balanceBefore: client.points,
         balanceAfter: client.points,

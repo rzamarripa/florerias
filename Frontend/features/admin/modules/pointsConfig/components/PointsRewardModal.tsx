@@ -52,7 +52,9 @@ const defaultFormData: CreatePointsRewardData = {
   maxTotalRedemptions: 0,
   validFrom: null,
   validUntil: null,
-  branch: "",
+  isGlobal: false,
+  company: undefined,
+  branch: undefined,
   status: true,
 };
 
@@ -79,7 +81,9 @@ const PointsRewardModal: React.FC<PointsRewardModalProps> = ({
         maxTotalRedemptions: reward.maxTotalRedemptions,
         validFrom: reward.validFrom ? reward.validFrom.split("T")[0] : null,
         validUntil: reward.validUntil ? reward.validUntil.split("T")[0] : null,
-        branch: typeof reward.branch === "string" ? reward.branch : reward.branch._id,
+        isGlobal: reward.isGlobal,
+        company: reward.company ? (typeof reward.company === "string" ? reward.company : reward.company._id) : undefined,
+        branch: reward.branch ? (typeof reward.branch === "string" ? reward.branch : reward.branch._id) : undefined,
         status: reward.status,
       });
     } else {

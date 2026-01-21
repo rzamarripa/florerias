@@ -192,8 +192,6 @@ const getAllOrders = async (req, res) => {
       }
     }
 
-    console.log('getAllOrders - Query params:', { startDate, endDate, branchId, status });
-    console.log('getAllOrders - Filtros aplicados:', JSON.stringify(filters, null, 2));
 
     // Calcular skip para paginación
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -727,7 +725,6 @@ const createOrder = async (req, res) => {
           // Actualizar la fecha de último egreso
           storage.lastOutcome = Date.now();
           await storage.save();
-          console.log('Stock descontado exitosamente al crear orden:', savedOrder.orderNumber);
 
           // Emitir evento de socket para notificar actualización de stock a otros usuarios
           if (productsUpdated.length > 0 || materialsUpdated.length > 0) {
@@ -802,16 +799,6 @@ const createOrder = async (req, res) => {
           registeredBy: req.user?._id,
         });
 
-        if (pointsResult.success && pointsResult.totalPoints > 0) {
-          console.log(
-            `✅ Puntos acumulados para cliente ${clientInfo.clientId}:`,
-            pointsResult.totalPoints,
-            'pts -',
-            pointsResult.details.map(d => d.description).join(', ')
-          );
-        } else if (pointsResult.message) {
-          console.log(`ℹ️ [Puntos] ${pointsResult.message}`);
-        }
       } catch (pointsError) {
         console.error('Error al procesar puntos del cliente:', pointsError);
         // No fallar la orden si hay error al procesar puntos
@@ -834,7 +821,6 @@ const createOrder = async (req, res) => {
             rewardEntry.usedAt = new Date();
             rewardEntry.usedInOrder = savedOrder._id;
             await clientToUpdate.save();
-            console.log(`✅ Recompensa canjeada: código ${appliedRewardCode} en orden ${savedOrder.orderNumber}`);
           }
         }
       } catch (rewardError) {
@@ -931,7 +917,6 @@ const createOrder = async (req, res) => {
             console.error('Error al crear log de solicitud de descuento:', logError);
           }
 
-          console.log('✅ DiscountAuth creado antes de emitir socket:', savedAuth._id);
         }
       } catch (discountAuthError) {
         console.error('Error al crear solicitud de descuento:', discountAuthError);
@@ -1305,7 +1290,6 @@ const updateOrderStatus = async (req, res) => {
           // Actualizar fecha de último ingreso (porque estamos devolviendo stock)
           storage.lastIncome = Date.now();
           await storage.save();
-          console.log('Stock restaurado al almacén por cancelación de orden:', order.orderNumber);
         }
       } catch (stockError) {
         console.error('Error al restaurar stock por cancelación:', stockError);
@@ -1330,7 +1314,6 @@ const updateOrderStatus = async (req, res) => {
           });
 
           await notification.save();
-          console.log('Notificación de cancelación creada:', notification);
         }
       } catch (notificationError) {
         console.error('Error al crear notificación de cancelación:', notificationError);
@@ -1461,7 +1444,6 @@ const deleteOrder = async (req, res) => {
 
           storage.lastIncome = Date.now();
           await storage.save();
-          console.log('Stock restaurado al almacén por eliminación de orden:', orderToDelete.orderNumber);
         }
       } catch (stockError) {
         console.error('Error al restaurar stock por eliminación:', stockError);
@@ -1625,7 +1607,6 @@ const getOrdersSummary = async (req, res) => {
       }
     }
 
-    console.log('getOrdersSummary - Filtros aplicados:', JSON.stringify(filters, null, 2));
 
     // Obtener todas las órdenes que cumplen con los filtros
     const allOrders = await Order.find(filters);
@@ -2038,7 +2019,6 @@ const getUnauthorizedOrders = async (req, res) => {
       }
     }
 
-    console.log('getUnauthorizedOrders - Filtros aplicados:', JSON.stringify(filters, null, 2));
 
     // Calcular skip para paginación
     const skip = (parseInt(page) - 1) * parseInt(limit);

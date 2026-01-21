@@ -75,10 +75,23 @@ const pointsRewardSchema = new Schema(
       type: Date,
       default: null,
     },
+    // Indica si es una recompensa global (empresa) o específica (sucursal)
+    isGlobal: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    // Empresa para recompensas globales (solo si isGlobal es true)
+    company: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_company",
+      default: null,
+    },
+    // Sucursal para recompensas específicas (solo si isGlobal es false)
     branch: {
       type: Schema.Types.ObjectId,
       ref: "cv_branch",
-      required: [true, "La sucursal es requerida"],
+      default: null,
     },
     status: {
       type: Boolean,
@@ -92,7 +105,35 @@ const pointsRewardSchema = new Schema(
   }
 );
 
+// Validación personalizada: solo recompensas canjeables pueden ser globales
+pointsRewardSchema.pre('save', function(next) {
+  // Solo recompensas canjeables (isProducto: false) pueden ser globales
+  if (this.isGlobal && this.isProducto) {
+    return next(new Error('Los productos como recompensa no pueden ser globales, deben ser específicos de sucursal'));
+  }
+  
+  // Validar que tenga company O branch según isGlobal
+  if (this.isGlobal) {
+    if (!this.company) {
+      return next(new Error('Las recompensas globales requieren una empresa'));
+    }
+    // Las globales no deben tener branch
+    this.branch = null;
+  } else {
+    if (!this.branch) {
+      return next(new Error('Las recompensas específicas requieren una sucursal'));
+    }
+    // Las específicas no deben tener company
+    this.company = null;
+  }
+  
+  next();
+});
+
+// Indexes
 pointsRewardSchema.index({ branch: 1 });
+pointsRewardSchema.index({ company: 1 });
+pointsRewardSchema.index({ isGlobal: 1 });
 pointsRewardSchema.index({ status: 1 });
 pointsRewardSchema.index({ pointsRequired: 1 });
 pointsRewardSchema.index({ productId: 1 });

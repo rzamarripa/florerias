@@ -32,6 +32,11 @@ export interface BranchInfo {
   address?: string;
 }
 
+export interface CompanyInfo {
+  _id: string;
+  name: string;
+}
+
 export interface PointsConfig {
   _id: string;
   pointsPerPurchaseAmount: PointsPerPurchaseAmount;
@@ -39,7 +44,9 @@ export interface PointsConfig {
   pointsForFirstPurchase: PointsForFirstPurchase;
   pointsForClientRegistration: PointsForClientRegistration;
   pointsForBranchVisit: PointsForBranchVisit;
-  branch: BranchInfo | string;
+  isGlobal: boolean;
+  company?: CompanyInfo | string | null;
+  branch?: BranchInfo | string | null;
   status: boolean;
   createdAt: string;
   updatedAt: string;
@@ -51,7 +58,9 @@ export interface CreatePointsConfigData {
   pointsForFirstPurchase?: PointsForFirstPurchase;
   pointsForClientRegistration?: PointsForClientRegistration;
   pointsForBranchVisit?: PointsForBranchVisit;
-  branch: string;
+  isGlobal: boolean;
+  company?: string;
+  branch?: string;
   status?: boolean;
 }
 
@@ -80,6 +89,8 @@ export interface PointsConfigFilters {
   page?: number;
   limit?: number;
   branchId?: string;
+  companyId?: string;
+  isGlobal?: boolean;
   status?: boolean;
 }
 
@@ -116,7 +127,9 @@ export interface PointsReward {
   maxTotalRedemptions: number;
   validFrom: string | null;
   validUntil: string | null;
-  branch: BranchInfo | string;
+  isGlobal: boolean;
+  company?: CompanyInfo | string | null;
+  branch?: BranchInfo | string | null;
   status: boolean;
   createdAt: string;
   updatedAt: string;
@@ -136,7 +149,9 @@ export interface CreatePointsRewardData {
   maxTotalRedemptions?: number;
   validFrom?: string | null;
   validUntil?: string | null;
-  branch: string;
+  isGlobal?: boolean;
+  company?: string;
+  branch?: string;
   status?: boolean;
 }
 
