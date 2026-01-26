@@ -4,6 +4,7 @@ import { CardTransaction } from "../models/CardTransaction.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import appleWalletService from "../services/digitalCards/appleWalletService.js";
 import googleWalletService from "../services/digitalCards/googleWalletService.js";
+import { sendGoogleWalletCard } from "../services/emailService.js";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -686,12 +687,26 @@ export const downloadGoogleWallet = async (req, res) => {
         },
       });
 
+      // Enviar correo con el enlace de Google Wallet
+      if (clientData.email) {
+        const emailResult = await sendGoogleWalletCard(
+          clientData,
+          result.saveUrl,
+          companyName
+        );
+        
+        if (emailResult.success) {
+          console.log("Correo de Google Wallet enviado exitosamente");
+        }
+      }
+
       // Retornar la URL para guardar en Google Wallet
       res.status(200).json({
         success: true,
         saveUrl: result.saveUrl,
         objectId: result.objectId,
         message: "Tarjeta lista para agregar a Google Wallet",
+        emailSent: clientData.email ? true : false,
       });
     } catch (serviceError) {
       console.error("Error con Google Wallet Service:", serviceError);

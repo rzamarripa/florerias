@@ -30,6 +30,7 @@ interface DownloadCardProps {
     name: string;
     lastName: string;
     clientNumber: string;
+    email?: string;
   };
   onDownloadApple?: () => void;
   onDownloadGoogle?: () => void;
@@ -176,7 +177,19 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
               <Button
                 variant="outline"
                 size="lg"
-                onClick={onDownloadGoogle}
+                onClick={async () => {
+                  await onDownloadGoogle();
+                  // Mostrar notificación de que se envió el correo
+                  if (client.email) {
+                    toast.success(
+                      `Se ha enviado un correo a ${client.email} con el enlace para agregar tu tarjeta a Google Wallet`,
+                      {
+                        autoClose: 5000,
+                        position: "top-center"
+                      }
+                    );
+                  }
+                }}
                 className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border-2 border-gray-300"
               >
                 <svg 

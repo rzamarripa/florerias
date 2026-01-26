@@ -4,23 +4,26 @@ import { User } from "./src/models/User.js";
 import { Module } from "./src/models/Module.js";
 import { Page } from "./src/models/Page.js";
 import { Client } from "./src/models/Client.js";
-import dotenv from "dotenv";
 
-dotenv.config();
+// CONEXIÓN DIRECTA A LA BASE DE DATOS DE PRODUCCIÓN
+const PRODUCTION_MONGODB_URI = "mongodb+srv://root:nuevapassword12345@cluster0.sg6ov.mongodb.net/produccion?retryWrites=true&w=majority&appName=Cluster0";
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("MongoDB connected successfully");
+    console.log("Conectando a la base de datos de PRODUCCIÓN...");
+    await mongoose.connect(PRODUCTION_MONGODB_URI);
+    console.log("✅ Conectado a MongoDB PRODUCCIÓN (base: produccion)");
   } catch (error) {
-    console.error("MongoDB connection error:", error);
+    console.error("❌ Error de conexión a MongoDB:", error);
     process.exit(1);
   }
 };
 
 const createSeedData = async () => {
   try {
-    console.log("Starting seed data creation...");
+    console.log("\n🌱 INICIANDO SEED EN BASE DE DATOS DE PRODUCCIÓN 🌱\n");
+    console.log("⚠️  ADVERTENCIA: Esto plantará datos en la base de datos 'produccion'");
+    console.log("━".repeat(60));
 
     // Define todas las páginas basadas en constants.ts del frontend
     const pagesData = [
@@ -87,11 +90,20 @@ const createSeedData = async () => {
       { name: "Eliminar", key: "eliminar" },
     ];
 
+    // Limpiar colecciones existentes
+    console.log("\n🗑️  Limpiando datos existentes...");
+    await Module.deleteMany({});
+    await Page.deleteMany({});
+    await Role.deleteMany({});
+    await User.deleteMany({});
+    await Client.deleteMany({});
+    console.log("✅ Colecciones limpiadas");
+
     // Crear páginas y sus módulos
     const allPages = [];
     const allModules = [];
     
-    console.log(`Creating ${pagesData.length} pages with their modules...`);
+    console.log(`\n📄 Creando ${pagesData.length} páginas con sus módulos...`);
     
     for (const pageData of pagesData) {
       // Crear la página
@@ -120,19 +132,20 @@ const createSeedData = async () => {
       page.modules = pageModules;
       await page.save();
       
-      console.log(`Page created: ${page.name} with ${moduleTypes.length} modules`);
+      console.log(`✓ ${page.name} - ${moduleTypes.length} módulos`);
     }
 
-    console.log(`\n${allPages.length} pages and ${allModules.length} modules created successfully!\n`);
+    console.log(`\n✅ ${allPages.length} páginas y ${allModules.length} módulos creados!\n`);
 
     // Crear Super Admin role con TODOS los permisos
+    console.log("👤 Creando roles...");
     const superAdminRole = await Role.create({
       name: "Super Admin",
       description: "Rol con permisos totales del sistema",
       modules: allModules.map(m => m._id), // Todos los módulos
       estatus: true,
     });
-    console.log("Super Admin role created with full permissions");
+    console.log("✓ Super Admin - Acceso total");
 
     // Crear rol Administrador con permisos administrativos
     const adminModules = allModules.filter(m => {
@@ -152,7 +165,7 @@ const createSeedData = async () => {
       modules: adminModules.map(m => m._id),
       estatus: true,
     });
-    console.log("Admin role created");
+    console.log("✓ Administrador");
 
     // Crear rol Distribuidor
     const distributorModules = allModules.filter(m => {
@@ -174,7 +187,7 @@ const createSeedData = async () => {
       modules: distributorModules.map(m => m._id),
       estatus: true,
     });
-    console.log("Distribuidor role created");
+    console.log("✓ Distribuidor");
 
     // Crear rol Gerente
     const managerModules = allModules.filter(m => {
@@ -196,7 +209,7 @@ const createSeedData = async () => {
       modules: managerModules.map(m => m._id),
       estatus: true,
     });
-    console.log("Gerente role created");
+    console.log("✓ Gerente");
 
     // Crear rol Cajero
     const cajeroModules = allModules.filter(m => {
@@ -218,7 +231,7 @@ const createSeedData = async () => {
       modules: cajeroModules.map(m => m._id),
       estatus: true,
     });
-    console.log("Cajero role created");
+    console.log("✓ Cajero");
 
     // Crear rol Usuario básico
     const userModules = allModules.filter(m => {
@@ -232,15 +245,16 @@ const createSeedData = async () => {
       modules: userModules.map(m => m._id),
       estatus: true,
     });
-    console.log("User role created");
+    console.log("✓ Usuario\n");
 
     // Crear usuarios
+    console.log("👥 Creando usuarios...");
     const users = [
       {
         username: "admin",
         email: "admin@floriSoft.com",
         phone: "555-0001",
-        password: "123qwe", // CAMBIADO A 123qwe
+        password: "123qwe", // CONTRASEÑA: 123qwe
         profile: {
           name: "Administrador",
           lastName: "Sistema",
@@ -310,11 +324,11 @@ const createSeedData = async () => {
 
     for (const userData of users) {
       const user = await User.create(userData);
-      console.log(`User created: ${user.username} (${user.profile.fullName})`);
+      console.log(`✓ ${user.username} - ${user.profile.fullName}`);
     }
 
     // Crear clientes
-    console.log("\nCreating clients...");
+    console.log("\n🧑 Creando clientes...");
     const clientsData = [
       {
         name: "Roberto",
@@ -356,28 +370,35 @@ const createSeedData = async () => {
     for (const clientData of clientsData) {
       const client = await Client.create(clientData);
       console.log(
-        `Client created: ${client.name} ${client.lastName} - ${client.clientNumber} (${client.points} points)`
+        `✓ ${client.name} ${client.lastName} - ${client.points} puntos`
       );
     }
 
-    console.log("\n=== SEED COMPLETED SUCCESSFULLY ===");
-    console.log("Created:");
-    console.log(`- ${allPages.length} Pages with their paths from the menu`);
-    console.log(`- ${allModules.length} Modules (4 CRUD modules per page)`);
-    console.log(`- 6 Roles: Super Admin (full access), Administrador, Distribuidor, Gerente, Cajero, Usuario`);
-    console.log(`- 5 Users including admin with different roles`);
-    console.log(`- 5 Clients with sample data`);
-    console.log("\n=== SUPER ADMIN CREDENTIALS ===");
-    console.log(`Username: admin`);
-    console.log(`Password: 123qwe`);
-    console.log(`Email: admin@floriSoft.com`);
-    console.log(`Role: Super Admin (Full system access)`);
-    console.log("================================\n");
+    console.log("\n" + "═".repeat(60));
+    console.log("🎉 SEED COMPLETADO EN BASE DE DATOS DE PRODUCCIÓN 🎉");
+    console.log("═".repeat(60));
+    console.log("\n📊 RESUMEN:");
+    console.log(`  • Base de datos: produccion`);
+    console.log(`  • ${allPages.length} Páginas creadas`);
+    console.log(`  • ${allModules.length} Módulos (4 CRUD por página)`);
+    console.log(`  • 6 Roles configurados`);
+    console.log(`  • 5 Usuarios creados`);
+    console.log(`  • 5 Clientes de prueba`);
+    
+    console.log("\n🔐 CREDENCIALES DE SUPER ADMIN:");
+    console.log("  ┌─────────────────────────────────┐");
+    console.log("  │  Usuario: admin                 │");
+    console.log("  │  Contraseña: 123qwe             │");
+    console.log("  │  Email: admin@floriSoft.com     │");
+    console.log("  │  Rol: Super Admin               │");
+    console.log("  └─────────────────────────────────┘");
+    console.log("\n" + "═".repeat(60) + "\n");
+    
   } catch (error) {
-    console.error("Error creating seed data:", error);
+    console.error("\n❌ Error creando seed data:", error);
   } finally {
     await mongoose.disconnect();
-    console.log("MongoDB disconnected");
+    console.log("🔌 Desconectado de MongoDB PRODUCCIÓN");
   }
 };
 
@@ -387,4 +408,5 @@ const runSeed = async () => {
   process.exit(0);
 };
 
+// Ejecutar directamente
 runSeed();

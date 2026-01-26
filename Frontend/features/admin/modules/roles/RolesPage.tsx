@@ -1,7 +1,7 @@
 "use client";
 
-import { FileText, Settings, Users, Pencil, Loader2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { FileText, Settings, Users, Pencil, Loader2, Search } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import CreateRoleModal from "./components/CreateRolModal";
 import { rolesService } from "./services/roles";
@@ -27,6 +27,7 @@ const RolesPage: React.FC = () => {
   }>({});
   const [isEditingName, setIsEditingName] = useState<boolean>(false);
   const [editedName, setEditedName] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
     loadInitialData();
@@ -212,6 +213,16 @@ const RolesPage: React.FC = () => {
     return originalRoleModules[roleId]?.length || 0;
   };
 
+  const filteredPages = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return pages;
+    }
+    
+    return pages.filter((page) =>
+      page.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [pages, searchTerm]);
+
   return (
     <div className="space-y-4">
       {/* Header with action */}
@@ -343,8 +354,19 @@ const RolesPage: React.FC = () => {
                     <p className="text-muted-foreground mt-3">Cargando módulos...</p>
                   </div>
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    {pages.map((page: Page) => (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Buscar página..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <ScrollArea className="h-[460px] pr-4">
+                      {filteredPages.map((page: Page) => (
                       <div
                         key={page._id}
                         className="mb-2 border rounded-md overflow-hidden"
@@ -391,7 +413,15 @@ const RolesPage: React.FC = () => {
                         )}
                       </div>
                     ))}
-                  </ScrollArea>
+                    {filteredPages.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <Search className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">No se encontraron páginas</p>
+                        <p className="text-sm text-muted-foreground">Intenta con otro término de búsqueda</p>
+                      </div>
+                    )}
+                    </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>

@@ -233,7 +233,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
                           {userCompany.legalName} - {userCompany.rfc}
                         </SelectItem>
                       ) : (
-                        <SelectItem value="">Cargando empresa...</SelectItem>
+                        <SelectItem value="loading">Cargando empresa...</SelectItem>
                       )}
                     </SelectContent>
                   </Select>

@@ -78,12 +78,12 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
   const handleSearch = () => {
     // Para administradores: usar sucursal activa del store, o undefined si no hay
     // Para cajeros y gerentes: no enviar branchId (el backend lo filtrara automaticamente)
-    // Para rol Redes: usar el branchId seleccionado
+    // Para rol Redes: usar el branchId seleccionado, o undefined si es "all"
     const finalBranchId = isAdministrator
       ? (activeBranch?._id || undefined)
       : (isCajero || isGerente)
       ? undefined // Cajeros y Gerentes no envian branchId, el backend lo filtra automaticamente
-      : (branchId || undefined);
+      : (branchId === "all" ? undefined : (branchId || undefined));
 
     onSearch({ startDate, endDate, viewMode, branchId: finalBranchId });
   };
@@ -136,7 +136,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onSearch }) => {
                     <SelectValue placeholder="Todas las sucursales" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas las sucursales</SelectItem>
+                    <SelectItem value="all">Todas las sucursales</SelectItem>
                     {branches.map((branch) => (
                       <SelectItem key={branch._id} value={branch._id}>
                         {branch.branchName}

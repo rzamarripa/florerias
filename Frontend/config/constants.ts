@@ -75,6 +75,12 @@ export const roleBasedMenuItems: MenuItemType[] = [
     roleKey: "distribuidor",
     children: [
       {
+        key: "dashboard-distribuidor",
+        label: "Dashboard Distribuidor",
+        url: "/gestion/empresas/dashboard",
+        icon: Building,
+      },
+      {
         key: "reparto",
         label: "Reparto",
         url: "/sucursal/reparto",

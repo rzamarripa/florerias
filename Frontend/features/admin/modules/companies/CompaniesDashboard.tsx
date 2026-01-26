@@ -41,10 +41,12 @@ import {
   Search,
   Filter,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { companiesService } from "./services/companies";
 import { useUserSessionStore } from "@/stores/userSessionStore";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { Company } from "./types";
@@ -157,6 +159,7 @@ interface DashboardStats {
 const CompaniesDashboard: React.FC = () => {
   const router = useRouter();
   const { user } = useUserSessionStore();
+  const { canAccess, canView } = usePagePermissions("/gestion/empresas/dashboard");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -164,6 +167,14 @@ const CompaniesDashboard: React.FC = () => {
   // Filter states
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
+
+  // Verificar permisos de acceso
+  useEffect(() => {
+    if (!canAccess()) {
+      toast.error("No tienes permisos para acceder a esta página");
+      router.push("/sucursal/ventas"); // Redirigir a una página por defecto
+    }
+  }, [canAccess, router]);
 
   // Get current date in YYYY-MM-DD format
   const getCurrentDate = () => {
@@ -174,7 +185,7 @@ const CompaniesDashboard: React.FC = () => {
   const [filters, setFilters] = useState({
     startDate: getCurrentDate(),
     endDate: getCurrentDate(),
-    companyId: "",
+    companyId: "all",
   });
 
   useEffect(() => {
@@ -204,10 +215,10 @@ const CompaniesDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Verificar que el usuario sea Distribuidor
-      if (user?.role?.name !== "Distribuidor") {
+      // Verificar permisos de visualización
+      if (!canView()) {
         setError(
-          "Solo los usuarios con rol Distribuidor pueden acceder a este dashboard"
+          "No tienes permisos para ver las estadísticas de este dashboard"
         );
         setLoading(false);
         return;
@@ -218,7 +229,7 @@ const CompaniesDashboard: React.FC = () => {
       const response = await companiesService.getDistributorDashboardStats({
         startDate: filtersToUse.startDate,
         endDate: filtersToUse.endDate,
-        companyId: filtersToUse.companyId || undefined,
+        companyId: filtersToUse.companyId === "all" ? undefined : filtersToUse.companyId,
       });
 
       if (response.success && response.data) {
@@ -250,7 +261,7 @@ const CompaniesDashboard: React.FC = () => {
     const defaultFilters = {
       startDate: getCurrentDate(),
       endDate: getCurrentDate(),
-      companyId: "",
+      companyId: "all",
     };
     setFilters(defaultFilters);
     loadDashboardData(defaultFilters);
@@ -568,7 +579,7 @@ const CompaniesDashboard: React.FC = () => {
                     <SelectValue placeholder="Todas las empresas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas las empresas</SelectItem>
+                    <SelectItem value="all">Todas las empresas</SelectItem>
                     {companies.map((company) => (
                       <SelectItem key={company._id} value={company._id}>
                         {company.tradeName || company.legalName}

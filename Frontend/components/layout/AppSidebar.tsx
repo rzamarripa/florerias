@@ -50,7 +50,6 @@ import { Button } from "@/components/ui/button";
 import { MenuItemType } from "@/types/menu";
 import {
   originalMenuItems,
-  roleBasedMenuItems,
   userDropdownItems,
 } from "@/config/constants";
 import { useUserModulesStore } from "@/stores/userModulesStore";
@@ -388,10 +387,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         };
       }
 
+      // SuperAdmin tiene acceso completo
       if (isAdmin) {
         return item;
       }
 
+      // Para todos los demás roles, filtrar basado en permisos de la base de datos
       if (item.url) {
         const pagePath = getPagePathFromRoute(item.url);
         if (canAccessPage(allowedModules, pagePath)) {
@@ -403,55 +404,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       return item;
     };
 
-    if (isAdmin) {
-      return originalMenuItems
-        .map((item) => filterMenuItem(item))
-        .filter((item) => item !== null) as MenuItemType[];
-    }
-
-    const normalizedRole = role?.toLowerCase();
-    let roleKey: string | null = null;
-
-    if (normalizedRole === "gerente" || normalizedRole === "manager") {
-      roleKey = "gerente";
-    } else if (normalizedRole === "cajero" || normalizedRole === "cashier") {
-      roleKey = "cajero";
-    } else if (normalizedRole === "distribuidor" || normalizedRole === "distributor") {
-      roleKey = "distribuidor";
-    } else if (normalizedRole === "redes" || normalizedRole === "social media") {
-      roleKey = "redes";
-    } else if (normalizedRole === "admin" || normalizedRole === "administrador") {
-      roleKey = "admin";
-    }
-
-    if (!roleKey) {
-      return [];
-    }
-
-    const roleMenu = roleBasedMenuItems.find((item) => item.roleKey === roleKey);
-
-    if (!roleMenu) {
-      return [];
-    }
-
-    const roleParentMenu: MenuItemType = {
-      key: roleMenu.key,
-      label: roleMenu.label,
-      icon: roleMenu.icon,
-      children: originalMenuItems
-        .map((item) => filterMenuItem(item))
-        .filter((item) => item !== null && !item.isTitle) as MenuItemType[],
-    };
-
-    return [
-      { key: "menu", label: "Módulos", isTitle: true },
-      roleParentMenu,
-    ].filter((item) => {
-      if (item.children && item.children.length === 0) {
-        return false;
-      }
-      return true;
-    });
+    // Usar originalMenuItems para TODOS los roles
+    // SuperAdmin lo obtiene sin filtros, otros roles con filtros basados en permisos
+    return originalMenuItems
+      .map((item) => filterMenuItem(item))
+      .filter((item) => item !== null) as MenuItemType[];
   }, [allowedModules, role]);
 
   // Group menu items by title sections

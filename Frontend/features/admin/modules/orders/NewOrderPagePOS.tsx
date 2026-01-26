@@ -89,7 +89,7 @@ const NewOrderPage = () => {
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedClientId, setSelectedClientId] = useState<string>("new");
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -524,7 +524,7 @@ const NewOrderPage = () => {
   const handleClientSelect = (clientId: string) => {
     setSelectedClientId(clientId);
 
-    if (!clientId) {
+    if (!clientId || clientId === "new") {
       setFormData({
         ...formData,
         clientInfo: {
@@ -1552,7 +1552,7 @@ const NewOrderPage = () => {
                         <SelectValue placeholder="Seleccionar cliente o ingresar nuevo..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Seleccionar cliente o ingresar nuevo...</SelectItem>
+                        <SelectItem value="new">Seleccionar cliente o ingresar nuevo...</SelectItem>
                         {clients.map((client) => (
                           <SelectItem key={client._id} value={client._id}>
                             {client.name} {client.lastName} -{" "}

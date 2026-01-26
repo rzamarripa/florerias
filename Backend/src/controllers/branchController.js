@@ -235,7 +235,30 @@ export const getAllBranches = async (req, res) => {
       // Buscar la sucursal donde el usuario es el gerente
       filters.manager = req.user._id;
     }
-    // CASO 4: Otros roles no tienen acceso
+    // CASO 4: Si el usuario es Distribuidor
+    else if (userRole === "Distribuidor") {
+      // Importar el modelo Company si no está importado
+      const { Company } = await import("../models/Company.js");
+      
+      // Buscar empresas donde el usuario es distribuidor
+      const companies = await Company.find({ distributor: req.user._id }).select("_id");
+      
+      if (companies.length === 0) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          totalBranches: 0,
+          currentPage: page,
+          totalPages: 0,
+          message: "No tienes empresas asignadas como distribuidor"
+        });
+      }
+      
+      const companyIds = companies.map(c => c._id);
+      // Filtrar sucursales de esas empresas
+      filters.companyId = { $in: companyIds };
+    }
+    // CASO 5: Otros roles no tienen acceso
     else {
       return res.status(403).json({
         success: false,
