@@ -3,7 +3,6 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Accordion } from '@/components/ui/accordion';
 import BannerSection from './sections/BannerSection';
-import CarouselSection from './sections/CarouselSection';
 import DeliverySection from './sections/DeliverySection';
 import PromotionsSection from './sections/PromotionsSection';
 import ProductCatalogSection from './sections/ProductCatalogSection';
@@ -15,10 +14,8 @@ import type {
 interface FeaturedElementsTabProps {
   featuredElements: EcommerceConfigFeaturedElements;
   setFeaturedElements: (elements: EcommerceConfigFeaturedElements) => void;
-  carouselFiles: File[];
-  setCarouselFiles: (files: File[]) => void;
-  bannerFile: File | null;
-  setBannerFile: (file: File | null) => void;
+  bannerFiles: File[];
+  setBannerFiles: (files: File[]) => void;
   saving: boolean;
   onSave: () => void;
 }
@@ -26,19 +23,17 @@ interface FeaturedElementsTabProps {
 const FeaturedElementsTab: React.FC<FeaturedElementsTabProps> = ({
   featuredElements,
   setFeaturedElements,
-  carouselFiles,
-  setCarouselFiles,
-  bannerFile,
-  setBannerFile,
+  bannerFiles,
+  setBannerFiles,
   saving,
   onSave,
 }) => {
-  const removeCarouselImage = (index: number) => {
-    const updatedImages = featuredElements.carousel.images.filter((_, i) => i !== index);
+  const removeBannerImage = (index: number) => {
+    const updatedImages = featuredElements.banner?.images?.filter((_, i) => i !== index) || [];
     setFeaturedElements({
       ...featuredElements,
-      carousel: {
-        ...featuredElements.carousel,
+      banner: {
+        ...featuredElements.banner!,
         images: updatedImages
       }
     });
@@ -47,188 +42,110 @@ const FeaturedElementsTab: React.FC<FeaturedElementsTabProps> = ({
   return (
     <div>
       <h5 className="mb-4 text-lg font-semibold">Configura los elementos destacados de tu tienda</h5>
-
-      <Accordion type="single" collapsible defaultValue="banner" className="mb-4 space-y-3">
+      
+      <Accordion type="multiple" defaultValue={["banner", "delivery"]} className="space-y-3">
         <BannerSection
-          bannerEnabled={featuredElements.banner.enabled}
-          setBannerEnabled={(enabled) => setFeaturedElements({
+          bannerEnabled={featuredElements.banner?.enabled || false}
+          setBannerEnabled={(value) => setFeaturedElements({
             ...featuredElements,
-            banner: { ...featuredElements.banner, enabled }
+            banner: { ...featuredElements.banner!, enabled: value }
           })}
-          bannerTitle={featuredElements.banner.title || ''}
-          setBannerTitle={(title) => setFeaturedElements({
+          bannerTitle={featuredElements.banner?.title || ''}
+          setBannerTitle={(value) => setFeaturedElements({
             ...featuredElements,
-            banner: { ...featuredElements.banner, title }
+            banner: { ...featuredElements.banner!, title: value }
           })}
-          bannerText={featuredElements.banner.text || ''}
-          setBannerText={(text) => setFeaturedElements({
+          bannerText={featuredElements.banner?.text || ''}
+          setBannerText={(value) => setFeaturedElements({
             ...featuredElements,
-            banner: { ...featuredElements.banner, text }
+            banner: { ...featuredElements.banner!, text: value }
           })}
-          bannerUrl={featuredElements.banner.imageUrl || ''}
-          bannerFile={bannerFile}
-          setBannerFile={setBannerFile}
-          bannerButtonName={featuredElements.banner.button?.name || ''}
-          setBannerButtonName={(name) => setFeaturedElements({
+          bannerImages={featuredElements.banner?.images || []}
+          setBannerImages={(images) => setFeaturedElements({
             ...featuredElements,
-            banner: {
-              ...featuredElements.banner,
-              button: {
-                ...featuredElements.banner.button,
-                name,
-                link: featuredElements.banner.button?.link || ''
-              }
-            }
+            banner: { ...featuredElements.banner!, images }
           })}
-          bannerButtonLink={featuredElements.banner.button?.link || ''}
-          setBannerButtonLink={(link) => setFeaturedElements({
+          bannerFiles={bannerFiles}
+          setBannerFiles={setBannerFiles}
+          bannerButtonName={featuredElements.banner?.button?.name || 'Ver más'}
+          setBannerButtonName={(value) => setFeaturedElements({
             ...featuredElements,
             banner: {
-              ...featuredElements.banner,
-              button: {
-                name: featuredElements.banner.button?.name || '',
-                link
-              }
+              ...featuredElements.banner!,
+              button: { ...featuredElements.banner?.button!, name: value }
             }
           })}
-        />
-
-        <CarouselSection
-          carouselEnabled={featuredElements.carousel.enabled}
-          setCarouselEnabled={(enabled) => setFeaturedElements({
+          bannerButtonLink={featuredElements.banner?.button?.link || '#'}
+          setBannerButtonLink={(value) => setFeaturedElements({
             ...featuredElements,
-            carousel: { ...featuredElements.carousel, enabled }
+            banner: {
+              ...featuredElements.banner!,
+              button: { ...featuredElements.banner?.button!, link: value }
+            }
           })}
-          carouselImages={featuredElements.carousel.images}
-          carouselFiles={carouselFiles}
-          setCarouselFiles={setCarouselFiles}
-          removeCarouselImage={removeCarouselImage}
+          onRemoveImage={removeBannerImage}
         />
 
         <DeliverySection
-          pickupEnabled={featuredElements.delivery.pickup.enabled}
-          setPickupEnabled={(enabled) => setFeaturedElements({
-            ...featuredElements,
+          delivery={featuredElements.delivery || {
+            pickup: {
+              enabled: true,
+              time: '30 minutos',
+              availableFrom: '09:00',
+              availableTo: '21:00'
+            },
             delivery: {
-              ...featuredElements.delivery,
-              pickup: { ...featuredElements.delivery.pickup, enabled }
+              enabled: true,
+              time: '45 minutos',
+              availableFrom: '09:00',
+              availableTo: '21:00'
             }
-          })}
-          pickupTime={featuredElements.delivery.pickup.time}
-          setPickupTime={(time) => setFeaturedElements({
+          }}
+          setDelivery={(delivery) => setFeaturedElements({
             ...featuredElements,
-            delivery: {
-              ...featuredElements.delivery,
-              pickup: { ...featuredElements.delivery.pickup, time }
-            }
-          })}
-          pickupFrom={featuredElements.delivery.pickup.availableFrom}
-          setPickupFrom={(availableFrom) => setFeaturedElements({
-            ...featuredElements,
-            delivery: {
-              ...featuredElements.delivery,
-              pickup: { ...featuredElements.delivery.pickup, availableFrom }
-            }
-          })}
-          pickupTo={featuredElements.delivery.pickup.availableTo}
-          setPickupTo={(availableTo) => setFeaturedElements({
-            ...featuredElements,
-            delivery: {
-              ...featuredElements.delivery,
-              pickup: { ...featuredElements.delivery.pickup, availableTo }
-            }
-          })}
-          deliveryEnabled={featuredElements.delivery.delivery.enabled}
-          setDeliveryEnabled={(enabled) => setFeaturedElements({
-            ...featuredElements,
-            delivery: {
-              ...featuredElements.delivery,
-              delivery: { ...featuredElements.delivery.delivery, enabled }
-            }
-          })}
-          deliveryTime={featuredElements.delivery.delivery.time}
-          setDeliveryTime={(time) => setFeaturedElements({
-            ...featuredElements,
-            delivery: {
-              ...featuredElements.delivery,
-              delivery: { ...featuredElements.delivery.delivery, time }
-            }
-          })}
-          deliveryFrom={featuredElements.delivery.delivery.availableFrom}
-          setDeliveryFrom={(availableFrom) => setFeaturedElements({
-            ...featuredElements,
-            delivery: {
-              ...featuredElements.delivery,
-              delivery: { ...featuredElements.delivery.delivery, availableFrom }
-            }
-          })}
-          deliveryTo={featuredElements.delivery.delivery.availableTo}
-          setDeliveryTo={(availableTo) => setFeaturedElements({
-            ...featuredElements,
-            delivery: {
-              ...featuredElements.delivery,
-              delivery: { ...featuredElements.delivery.delivery, availableTo }
-            }
+            delivery
           })}
         />
 
         <PromotionsSection
-          promotionsEnabled={featuredElements.promotions.enabled}
-          setPromotionsEnabled={(enabled) => setFeaturedElements({
+          promotionsEnabled={featuredElements.promotions?.enabled || false}
+          setPromotionsEnabled={(value) => setFeaturedElements({
             ...featuredElements,
-            promotions: { ...featuredElements.promotions, enabled }
+            promotions: { ...featuredElements.promotions!, enabled: value }
           })}
-          promotions={featuredElements.promotions.items}
-          setPromotions={(items: PromotionItem[]) => setFeaturedElements({
+          promotionItems={featuredElements.promotions?.items || []}
+          setPromotionItems={(items) => setFeaturedElements({
             ...featuredElements,
-            promotions: { ...featuredElements.promotions, items }
+            promotions: { ...featuredElements.promotions!, items }
           })}
         />
 
         <ProductCatalogSection
-          catalogEnabled={featuredElements.productCatalog.enabled}
-          setCatalogEnabled={(enabled) => setFeaturedElements({
+          catalogEnabled={featuredElements.productCatalog?.enabled || false}
+          setCatalogEnabled={(value) => setFeaturedElements({
             ...featuredElements,
-            productCatalog: { ...featuredElements.productCatalog, enabled }
+            productCatalog: { ...featuredElements.productCatalog!, enabled: value }
           })}
-          catalogDisplay={featuredElements.productCatalog.display}
-          setCatalogDisplay={(display) => setFeaturedElements({
+          catalogSettings={{
+            display: featuredElements.productCatalog?.display || 'grid',
+            productsPerPage: featuredElements.productCatalog?.productsPerPage || 12,
+            showFilters: featuredElements.productCatalog?.showFilters !== false,
+            showCategories: featuredElements.productCatalog?.showCategories !== false,
+            showSearch: featuredElements.productCatalog?.showSearch !== false,
+            showSort: featuredElements.productCatalog?.showSort !== false,
+          }}
+          setCatalogSettings={(settings) => setFeaturedElements({
             ...featuredElements,
-            productCatalog: { ...featuredElements.productCatalog, display }
-          })}
-          catalogProductsPerPage={featuredElements.productCatalog.productsPerPage}
-          setCatalogProductsPerPage={(productsPerPage) => setFeaturedElements({
-            ...featuredElements,
-            productCatalog: { ...featuredElements.productCatalog, productsPerPage }
-          })}
-          catalogShowFilters={featuredElements.productCatalog.showFilters}
-          setCatalogShowFilters={(showFilters) => setFeaturedElements({
-            ...featuredElements,
-            productCatalog: { ...featuredElements.productCatalog, showFilters }
-          })}
-          catalogShowCategories={featuredElements.productCatalog.showCategories}
-          setCatalogShowCategories={(showCategories) => setFeaturedElements({
-            ...featuredElements,
-            productCatalog: { ...featuredElements.productCatalog, showCategories }
-          })}
-          catalogShowSearch={featuredElements.productCatalog.showSearch}
-          setCatalogShowSearch={(showSearch) => setFeaturedElements({
-            ...featuredElements,
-            productCatalog: { ...featuredElements.productCatalog, showSearch }
-          })}
-          catalogShowSort={featuredElements.productCatalog.showSort}
-          setCatalogShowSort={(showSort) => setFeaturedElements({
-            ...featuredElements,
-            productCatalog: { ...featuredElements.productCatalog, showSort }
+            productCatalog: {
+              ...featuredElements.productCatalog!,
+              ...settings
+            }
           })}
         />
       </Accordion>
 
-      <div className="flex justify-end mt-4">
-        <Button
-          onClick={onSave}
-          disabled={saving}
-        >
+      <div className="mt-6 flex justify-end">
+        <Button onClick={onSave} disabled={saving}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Guardar cambios
         </Button>

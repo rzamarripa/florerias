@@ -62,19 +62,14 @@ export default function EcommerceDesignPage() {
     normalSize: 16
   });
 
-  // Estados para elementos destacados - Banner
+  // Estados para elementos destacados - Banner con carrusel integrado
   const [bannerEnabled, setBannerEnabled] = useState(true);
   const [bannerTitle, setBannerTitle] = useState("");
   const [bannerText, setBannerText] = useState("");
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [bannerUrl, setBannerUrl] = useState<string>("");
+  const [bannerImages, setBannerImages] = useState<Array<{ url: string; path: string }>>([]);
+  const [bannerFiles, setBannerFiles] = useState<File[]>([]);
   const [bannerButtonName, setBannerButtonName] = useState("Ver mas");
   const [bannerButtonLink, setBannerButtonLink] = useState("#");
-
-  // Estados para carrusel
-  const [carouselEnabled, setCarouselEnabled] = useState(true);
-  const [carouselImages, setCarouselImages] = useState<Array<{ url: string; path: string }>>([]);
-  const [carouselFiles, setCarouselFiles] = useState<File[]>([]);
 
   // Estados para delivery
   const [pickupEnabled, setPickupEnabled] = useState(true);
@@ -114,16 +109,11 @@ export default function EcommerceDesignPage() {
       enabled: bannerEnabled,
       title: bannerTitle,
       text: bannerText,
-      imageUrl: bannerUrl,
-      imagePath: config?.featuredElements?.banner?.imagePath || "",
+      images: bannerImages,
       button: {
         name: bannerButtonName,
         link: bannerButtonLink
       }
-    },
-    carousel: {
-      enabled: carouselEnabled,
-      images: carouselImages
     },
     delivery: {
       pickup: {
@@ -155,17 +145,13 @@ export default function EcommerceDesignPage() {
   };
 
   const setFeaturedElements = (newElements: EcommerceConfigFeaturedElements) => {
-    // Update banner
+    // Update banner with integrated carousel
     setBannerEnabled(newElements.banner.enabled);
     setBannerTitle(newElements.banner.title || "");
     setBannerText(newElements.banner.text || "");
-    setBannerUrl(newElements.banner.imageUrl || "");
+    setBannerImages(newElements.banner.images || []);
     setBannerButtonName(newElements.banner.button?.name || "Ver mas");
     setBannerButtonLink(newElements.banner.button?.link || "#");
-
-    // Update carousel
-    setCarouselEnabled(newElements.carousel.enabled);
-    setCarouselImages(newElements.carousel.images);
 
     // Update delivery
     setPickupEnabled(newElements.delivery.pickup.enabled);
@@ -239,14 +225,9 @@ export default function EcommerceDesignPage() {
             setBannerEnabled(featured.banner.enabled);
             setBannerTitle(featured.banner.title || "");
             setBannerText(featured.banner.text || "");
-            setBannerUrl(featured.banner.imageUrl || "");
+            setBannerImages(featured.banner.images || []);
             setBannerButtonName(featured.banner.button?.name || "Ver mas");
             setBannerButtonLink(featured.banner.button?.link || "#");
-          }
-
-          if (featured.carousel) {
-            setCarouselEnabled(featured.carousel.enabled);
-            setCarouselImages(featured.carousel.images || []);
           }
 
           if (featured.delivery) {
@@ -496,35 +477,22 @@ export default function EcommerceDesignPage() {
     try {
       setSaving(true);
 
-      let finalBannerUrl = bannerUrl;
-      let finalBannerPath = config?.featuredElements?.banner?.imagePath || "";
+      const finalBannerImages = [...bannerImages];
 
-      if (bannerFile) {
-        if (config?.featuredElements?.banner?.imagePath) {
-          await deleteFile(config.featuredElements.banner.imagePath).catch(console.error);
-        }
+      if (bannerFiles.length > 0) {
+        toast.info(`Subiendo ${bannerFiles.length} imagenes del banner...`);
 
-        const bannerResult = await uploadEcommerceBanner(bannerFile, companyId, branchId);
-        finalBannerUrl = bannerResult.url;
-        finalBannerPath = bannerResult.path;
-      }
-
-      const finalCarouselImages = [...carouselImages];
-
-      if (carouselFiles.length > 0) {
-        toast.info(`Subiendo ${carouselFiles.length} imagenes del carrusel...`);
-
-        for (let i = 0; i < carouselFiles.length; i++) {
-          const file = carouselFiles[i];
+        for (let i = 0; i < bannerFiles.length; i++) {
+          const file = bannerFiles[i];
           if (file) {
             try {
               const result = await uploadEcommerceCarouselImage(
                 file,
                 companyId,
                 branchId,
-                finalCarouselImages.length + i
+                finalBannerImages.length + i
               );
-              finalCarouselImages.push({ url: result.url, path: result.path });
+              finalBannerImages.push({ url: result.url, path: result.path });
             } catch (error) {
               console.error(`Error subiendo imagen ${i + 1}:`, error);
               toast.error(`Error subiendo imagen ${file.name}`);
@@ -533,7 +501,7 @@ export default function EcommerceDesignPage() {
         }
       }
 
-      const limitedCarouselImages = finalCarouselImages.slice(0, 5);
+      const limitedBannerImages = finalBannerImages.slice(0, 5);
       const validPromotions = promotionItems.filter(item => item.name && item.name.trim() !== '');
 
       let updatedConfig;
@@ -542,16 +510,11 @@ export default function EcommerceDesignPage() {
           enabled: bannerEnabled,
           title: bannerTitle,
           text: bannerText,
-          imageUrl: finalBannerUrl,
-          imagePath: finalBannerPath,
+          images: limitedBannerImages,
           button: {
             name: bannerButtonName,
             link: bannerButtonLink
           }
-        },
-        carousel: {
-          enabled: carouselEnabled,
-          images: limitedCarouselImages
         },
         delivery: {
           pickup: {
@@ -595,10 +558,8 @@ export default function EcommerceDesignPage() {
       }
 
       setConfig(updatedConfig);
-      setBannerUrl(finalBannerUrl);
-      setCarouselImages(limitedCarouselImages);
-      setBannerFile(null);
-      setCarouselFiles([]);
+      setBannerImages(limitedBannerImages);
+      setBannerFiles([]);
     } catch (error: any) {
       console.error("Error al guardar elementos destacados:", error);
       toast.error("Error al guardar los elementos destacados");
@@ -607,15 +568,15 @@ export default function EcommerceDesignPage() {
     }
   };
 
-  // Eliminar imagen del carrusel
-  const removeCarouselImage = async (index: number) => {
-    const image = carouselImages[index];
+  // Eliminar imagen del banner
+  const removeBannerImage = async (index: number) => {
+    const image = bannerImages[index];
     if (image?.path) {
       await deleteFile(image.path).catch(console.error);
     }
 
-    const newImages = carouselImages.filter((_, i) => i !== index);
-    setCarouselImages(newImages);
+    const newImages = bannerImages.filter((_, i) => i !== index);
+    setBannerImages(newImages);
   };
 
   if (loading) {
@@ -707,10 +668,8 @@ export default function EcommerceDesignPage() {
                   <FeaturedElementsTab
                     featuredElements={featuredElements}
                     setFeaturedElements={setFeaturedElements}
-                    carouselFiles={carouselFiles}
-                    setCarouselFiles={setCarouselFiles}
-                    bannerFile={bannerFile}
-                    setBannerFile={setBannerFile}
+                    bannerFiles={bannerFiles}
+                    setBannerFiles={setBannerFiles}
                     saving={saving}
                     onSave={saveFeaturedElements}
                   />

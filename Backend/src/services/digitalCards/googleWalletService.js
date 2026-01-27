@@ -56,6 +56,10 @@ class GoogleWalletService {
 
     const client = await this.auth.getClient();
     
+    // En desarrollo usar APPROVED para evitar el mensaje de prueba
+    // En producción usar UNDER_REVIEW hasta que Google apruebe la clase
+    const reviewStatus = process.env.NODE_ENV === 'development' ? 'APPROVED' : 'UNDER_REVIEW';
+    
     const loyaltyClass = {
       id: this.classId,
       issuerName: companyName,
@@ -65,7 +69,7 @@ class GoogleWalletService {
           uri: logoUrl || 'https://i.imgur.com/6KZMZqA.png', // Logo dinámico o default
         },
       },
-      reviewStatus: 'UNDER_REVIEW',
+      reviewStatus: reviewStatus,
       hexBackgroundColor: '#2563EB', // Azul más oscuro como CardPreview
       countryCode: 'MX',
       multipleDevicesAndHoldersAllowedStatus: 'MULTIPLE_HOLDERS',
@@ -134,7 +138,7 @@ class GoogleWalletService {
         data: loyaltyClass,
       });
       
-      console.log('Clase de fidelidad actualizada');
+      console.log('Clase de fidelidad actualizada con reviewStatus:', reviewStatus);
     } catch (error) {
       if (error.response?.status === 404) {
         // Si no existe, crear
@@ -144,7 +148,7 @@ class GoogleWalletService {
           method: 'POST',
           data: loyaltyClass,
         });
-        console.log('Clase de fidelidad creada');
+        console.log('Clase de fidelidad creada con reviewStatus:', reviewStatus);
       } else {
         throw error;
       }
@@ -157,9 +161,19 @@ class GoogleWalletService {
   async generateLoyaltyObject(clientData) {
     await this.initialize();
     if (!this.auth) throw new Error('Google Wallet no configurado');
+    if (!this.issuerId) throw new Error('GOOGLE_WALLET_ISSUER_ID no configurado en .env');
 
-    const objectId = `${this.issuerId}.${clientData.clientNumber}_${Date.now()}`;
+    // Usar passSerialNumber si existe, o generar uno nuevo basado en clientNumber y timestamp
+    const uniqueId = clientData.passSerialNumber || `${clientData.clientNumber}_${Date.now()}`;
+    const objectId = `${this.issuerId}.${uniqueId}`;
     const companyName = clientData.branchName || 'Corazón Violeta';
+    
+    console.log('Generando objeto de fidelidad:', {
+      issuerId: this.issuerId,
+      uniqueId,
+      objectId,
+      clientNumber: clientData.clientNumber
+    });
     
     // La imagen hero ya se configuró en createOrUpdateLoyaltyClass
     
@@ -257,21 +271,68 @@ class GoogleWalletService {
     const client = await this.auth.getClient();
     
     try {
-      // Intentar crear el objeto
-      const createUrl = `${this.baseUrl}/loyaltyObject`;
-      const response = await client.request({
-        url: createUrl,
-        method: 'POST',
-        data: loyaltyObject,
-      });
-      
-      return {
-        objectId,
-        saveUrl: this.generateSaveUrl(objectId),
-        loyaltyObject: response.data,
-      };
+      // Primero intentar obtener si ya existe
+      try {
+        const getUrl = `${this.baseUrl}/loyaltyObject/${objectId}`;
+        const existingObject = await client.request({
+          url: getUrl,
+          method: 'GET',
+        });
+        
+        // Si ya existe, actualizarlo
+        const updateUrl = `${this.baseUrl}/loyaltyObject/${objectId}`;
+        const response = await client.request({
+          url: updateUrl,
+          method: 'PATCH',
+          data: {
+            state: 'ACTIVE',
+            loyaltyPoints: loyaltyObject.loyaltyPoints,
+            textModulesData: loyaltyObject.textModulesData,
+            secondaryLoyaltyPoints: loyaltyObject.secondaryLoyaltyPoints,
+          },
+        });
+        
+        console.log('Objeto de fidelidad actualizado:', objectId);
+        
+        return {
+          objectId,
+          saveUrl: this.generateSaveUrl(objectId),
+          loyaltyObject: response.data,
+        };
+      } catch (getError) {
+        // Si no existe (404), crear uno nuevo
+        if (getError.response?.status === 404) {
+          const createUrl = `${this.baseUrl}/loyaltyObject`;
+          const response = await client.request({
+            url: createUrl,
+            method: 'POST',
+            data: loyaltyObject,
+          });
+          
+          console.log('Objeto de fidelidad creado:', objectId);
+          
+          // Verificar que el objeto se creó correctamente
+          const verifyUrl = `${this.baseUrl}/loyaltyObject/${objectId}`;
+          try {
+            await client.request({
+              url: verifyUrl,
+              method: 'GET',
+            });
+            console.log('Objeto verificado exitosamente');
+          } catch (verifyError) {
+            console.error('Error verificando objeto:', verifyError);
+          }
+          
+          return {
+            objectId,
+            saveUrl: this.generateSaveUrl(objectId),
+            loyaltyObject: response.data,
+          };
+        }
+        throw getError;
+      }
     } catch (error) {
-      console.error('Error creando objeto de fidelidad:', error);
+      console.error('Error procesando objeto de fidelidad:', error.response?.data || error.message);
       throw error;
     }
   }
@@ -280,22 +341,59 @@ class GoogleWalletService {
    * Genera el enlace para guardar la tarjeta en Google Wallet
    */
   generateSaveUrl(objectId) {
-    const claims = {
-      iss: this.auth?.jsonClient?.client_email || 'zolt-wallet@zolt-wallet.iam.gserviceaccount.com',
-      aud: 'google',
-      origins: [process.env.FRONTEND_URL?.replace(/\/$/, '') || 'http://localhost:3000'],
-      typ: 'savetowallet',
-      payload: {
-        loyaltyObjects: [
-          {
-            id: objectId,
-          },
-        ],
-      },
-    };
+    try {
+      // Leer el service account para obtener el client_email correcto
+      const keyFile = JSON.parse(
+        fsSync.readFileSync(
+          path.join(__dirname, '../../../certificates/google-service-account.json'),
+          'utf8'
+        )
+      );
 
-    const jwt = this.signJWT(claims);
-    return `https://pay.google.com/gp/v/save/${jwt}`;
+      const claims = {
+        iss: keyFile.client_email, // Usar el client_email del archivo de credenciales
+        aud: 'google',
+        origins: [], // Dejar vacío para permitir todos los orígenes
+        typ: 'savetowallet',
+        payload: {
+          loyaltyObjects: [
+            {
+              id: objectId,
+            },
+          ],
+        },
+      };
+
+      const jwt = this.signJWT(claims);
+      const saveUrl = `https://pay.google.com/gp/v/save/${jwt}`;
+      
+      console.log('SaveUrl generado:', {
+        objectId,
+        issuer: keyFile.client_email,
+        jwtLength: jwt.length,
+        url: saveUrl.substring(0, 80) + '...'
+      });
+      
+      return saveUrl;
+    } catch (error) {
+      console.error('Error generando saveUrl:', error);
+      // Si hay error, intentar con valores por defecto
+      const fallbackClaims = {
+        iss: 'zolt-wallet@zolt-wallet.iam.gserviceaccount.com',
+        aud: 'google',
+        origins: [],
+        typ: 'savetowallet',
+        payload: {
+          loyaltyObjects: [
+            {
+              id: objectId,
+            },
+          ],
+        },
+      };
+      const jwt = this.signJWT(fallbackClaims);
+      return `https://pay.google.com/gp/v/save/${jwt}`;
+    }
   }
 
   /**
@@ -540,6 +638,35 @@ class GoogleWalletService {
    */
   generateAppInstallLink() {
     return 'https://play.google.com/store/apps/details?id=com.google.android.apps.walletnfcrel';
+  }
+
+  /**
+   * Regenera el saveUrl para un objeto existente
+   */
+  async regenerateSaveUrl(objectId) {
+    await this.initialize();
+    if (!this.auth) throw new Error('Google Wallet no configurado');
+
+    try {
+      // Verificar que el objeto existe
+      const client = await this.auth.getClient();
+      const verifyUrl = `${this.baseUrl}/loyaltyObject/${objectId}`;
+      
+      const response = await client.request({
+        url: verifyUrl,
+        method: 'GET',
+      });
+      
+      if (response.data && response.data.id === objectId) {
+        // El objeto existe, generar nuevo saveUrl
+        return this.generateSaveUrl(objectId);
+      } else {
+        throw new Error('Objeto no encontrado en Google Wallet');
+      }
+    } catch (error) {
+      console.error('Error regenerando saveUrl:', error);
+      throw error;
+    }
   }
 }
 

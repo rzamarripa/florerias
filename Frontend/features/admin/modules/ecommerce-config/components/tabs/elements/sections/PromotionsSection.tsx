@@ -22,60 +22,59 @@ interface PromotionItem {
 interface PromotionsSectionProps {
   promotionsEnabled: boolean;
   setPromotionsEnabled: (value: boolean) => void;
-  promotions: PromotionItem[];
-  setPromotions: (promotions: PromotionItem[]) => void;
+  promotionItems: PromotionItem[];
+  setPromotionItems: (promotions: PromotionItem[]) => void;
 }
 
 const PromotionsSection: React.FC<PromotionsSectionProps> = ({
   promotionsEnabled,
   setPromotionsEnabled,
-  promotions,
-  setPromotions,
+  promotionItems,
+  setPromotionItems,
 }) => {
   const addPromotion = () => {
-    if (promotions.length < 5) {
-      setPromotions([
-        ...promotions,
+    if (promotionItems.length < 5) {
+      setPromotionItems([
+        ...promotionItems,
         {
           name: '',
           text: '',
           expirationDate: '',
-          order: promotions.length
+          order: promotionItems.length
         }
       ]);
     }
   };
 
   const removePromotion = (index: number) => {
-    setPromotions(promotions.filter((_, i) => i !== index));
+    setPromotionItems(promotionItems.filter((_, i) => i !== index));
   };
 
   const updatePromotion = (index: number, field: keyof PromotionItem, value: string) => {
-    const updated = [...promotions];
+    const updated = [...promotionItems];
     updated[index] = { ...updated[index], [field]: value };
-    setPromotions(updated);
+    setPromotionItems(updated);
   };
 
   return (
     <AccordionItem value="promotions" className="border rounded-lg shadow-sm overflow-hidden">
-      <AccordionTrigger className="px-4 py-3 bg-muted/50 hover:no-underline">
-        <div className="flex items-center justify-between w-full pr-2">
+      <div className="flex items-center justify-between px-4 py-3 bg-muted/50">
+        <AccordionTrigger className="flex-1 hover:no-underline py-0">
           <div className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-yellow-500" />
             <span className="font-semibold">Promociones</span>
           </div>
-          <Switch
-            id="promotions-switch"
-            checked={promotionsEnabled}
-            onCheckedChange={setPromotionsEnabled}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      </AccordionTrigger>
+        </AccordionTrigger>
+        <Switch
+          id="promotions-switch"
+          checked={promotionsEnabled}
+          onCheckedChange={setPromotionsEnabled}
+        />
+      </div>
       <AccordionContent className="px-4 pb-4 pt-2 bg-background">
         {promotionsEnabled ? (
           <div className="space-y-4">
-            {promotions.map((promotion, index) => (
+            {promotionItems.map((promotion, index) => (
               <div key={index} className="pb-4 border-b last:border-b-0">
                 <div className="flex justify-between items-start mb-3">
                   <Badge variant="secondary">Promocion {index + 1}</Badge>
@@ -127,7 +126,7 @@ const PromotionsSection: React.FC<PromotionsSectionProps> = ({
               </div>
             ))}
 
-            {promotions.length < 5 && (
+            {promotionItems.length < 5 && (
               <Button
                 variant="outline"
                 size="sm"

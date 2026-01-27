@@ -198,13 +198,38 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
   const handleQRCode = async (qrData: string) => {
     try {
       setProcessing(true);
+      
+      // Log del QR data para depuración (solo primeros caracteres por seguridad)
+      console.log("Procesando QR data:", {
+        length: qrData.length,
+        preview: qrData.substring(0, 100) + "...",
+        startsWithJWT: qrData.startsWith("eyJ") // Los JWT típicamente empiezan con eyJ
+      });
 
       const response = await digitalCardService.scanQRCode(qrData, branchId);
 
       // Verificar si la respuesta fue exitosa
       if (!response.success || !response.data) {
-        throw new Error((response as any).message || "Error al procesar el codigo QR");
+        const errorMsg = (response as any).message || "Error al procesar el codigo QR";
+        console.error("Error en respuesta del servidor:", errorMsg);
+        
+        // Proporcionar mensajes de error más específicos
+        if (errorMsg.includes("inválido") || errorMsg.includes("invalid")) {
+          throw new Error("El código QR no es válido o ha expirado. Por favor, solicita uno nuevo.");
+        } else if (errorMsg.includes("no encontrada") || errorMsg.includes("not found")) {
+          throw new Error("La tarjeta digital no está activa o no existe.");
+        } else if (errorMsg.includes("inactiva") || errorMsg.includes("inactive")) {
+          throw new Error("La tarjeta digital está inactiva. Por favor, contacta al administrador.");
+        } else {
+          throw new Error(errorMsg);
+        }
       }
+
+      console.log("QR escaneado exitosamente:", {
+        clientName: response.data.client.fullName,
+        clientNumber: response.data.client.clientNumber,
+        points: response.data.client.points
+      });
 
       setScanResult(response.data);
       setScannedClientData(response.data);
@@ -241,9 +266,13 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
         setShowRewardsModal(true);
       }, 1500);
     } catch (err: any) {
+      console.error("Error procesando código QR:", err);
       const errorMessage = err.message || err.response?.data?.message || "Error al procesar el codigo QR";
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, {
+        position: "top-center",
+        autoClose: 5000,
+      });
     } finally {
       setProcessing(false);
     }
@@ -253,8 +282,23 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!Html5QrcodeScanner) {
-      toast.error("El escáner aún no está listo. Por favor, intenta de nuevo.");
+    // Validar el archivo antes de procesarlo
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Por favor, selecciona una imagen válida (JPG, PNG, GIF o WebP)");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Validar tamaño del archivo (máximo 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast.error("La imagen es demasiado grande. Máximo 10MB");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
 
@@ -262,19 +306,147 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
       setError(null);
       setProcessing(true);
 
-      // Importar Html5Qrcode para escaneo de archivos
-      const { Html5Qrcode } = await import('html5-qrcode');
+      console.log("Procesando archivo:", {
+        name: file.name,
+        type: file.type,
+        size: `${(file.size / 1024).toFixed(2)} KB`
+      });
+
+      // Usar qr-scanner que es más robusto para QR codes complejos
+      const QrScanner = (await import('qr-scanner')).default;
       
-      const html5QrCode = new Html5Qrcode("qr-reader-file");
-      const decodedText = await html5QrCode.scanFile(file, true);
+      let decodedText: string | null = null;
       
-      console.log("QR from file:", decodedText);
+      try {
+        // Intentar con qr-scanner primero (más confiable para QR codes densos)
+        console.log("Intentando con qr-scanner...");
+        const result = await QrScanner.scanImage(file, {
+          returnDetailedScanResult: true,
+          alsoTryWithoutScanRegion: true,
+        });
+        
+        if (result && result.data) {
+          decodedText = result.data;
+          console.log("QR detectado exitosamente con qr-scanner:", decodedText.substring(0, 50) + "...");
+        }
+      } catch (qrScannerError: any) {
+        console.error("qr-scanner falló:", qrScannerError);
+        
+        // Si qr-scanner falla, intentar con html5-qrcode como fallback
+        try {
+          console.log("Intentando con html5-qrcode como fallback...");
+          const { Html5Qrcode } = await import('html5-qrcode');
+          
+          // Asegurarse de que el elemento exista
+          if (!document.getElementById("qr-reader-file")) {
+            const scannerElement = document.createElement('div');
+            scannerElement.id = "qr-reader-file";
+            scannerElement.style.display = 'none';
+            document.body.appendChild(scannerElement);
+          }
+          
+          const html5QrCode = new Html5Qrcode("qr-reader-file");
+          
+          try {
+            // Intentar escanear directamente
+            decodedText = await html5QrCode.scanFile(file, false);
+            console.log("QR detectado con html5-qrcode");
+          } catch (html5Error) {
+            console.error("html5-qrcode también falló:", html5Error);
+          } finally {
+            // Limpiar el escáner
+            try {
+              await html5QrCode.clear();
+            } catch (clearError) {
+              console.log("Error al limpiar el escáner:", clearError);
+            }
+          }
+        } catch (fallbackError) {
+          console.error("Error con el fallback:", fallbackError);
+        }
+      }
+      
+      if (!decodedText) {
+        // Si ningún método funcionó, intentar un último intento procesando la imagen
+        console.log("Intentando procesar la imagen manualmente...");
+        
+        const processedResult = await new Promise<string | null>((resolve) => {
+          const img = new Image();
+          img.onload = async () => {
+            try {
+              // Crear canvas para procesar la imagen
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              
+              if (!ctx) {
+                resolve(null);
+                return;
+              }
+              
+              // Escalar la imagen para mejor detección
+              const maxSize = 2048;
+              let width = img.width;
+              let height = img.height;
+              
+              if (width > maxSize || height > maxSize) {
+                const scale = Math.min(maxSize / width, maxSize / height);
+                width *= scale;
+                height *= scale;
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              
+              // Mejorar contraste y brillo
+              ctx.filter = 'contrast(2) brightness(1.2)';
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              // Intentar escanear el canvas procesado
+              try {
+                const processedDataUrl = canvas.toDataURL('image/png');
+                const processedBlob = await (await fetch(processedDataUrl)).blob();
+                const result = await QrScanner.scanImage(processedBlob, {
+                  returnDetailedScanResult: true,
+                  alsoTryWithoutScanRegion: true,
+                });
+                resolve(result?.data || null);
+              } catch (e) {
+                resolve(null);
+              }
+            } catch (e) {
+              resolve(null);
+            }
+          };
+          
+          img.onerror = () => resolve(null);
+          img.src = URL.createObjectURL(file);
+        });
+        
+        if (processedResult) {
+          decodedText = processedResult;
+          console.log("QR detectado después de procesar la imagen");
+        }
+      }
+      
+      if (!decodedText) {
+        setError("No se pudo leer el código QR. El QR puede ser muy denso o complejo. Intenta usar la cámara o asegúrate de que la imagen sea clara.");
+        toast.error("No se pudo detectar el código QR. Intenta con una imagen más clara o usa la cámara", {
+          position: "top-center",
+          autoClose: 5000,
+        });
+        return;
+      }
+      
+      console.log("Procesando código QR detectado...");
       await handleQRCode(decodedText);
       
     } catch (err: any) {
-      console.error("Error scanning file:", err);
-      setError("No se pudo leer el código QR de la imagen");
-      toast.error("No se encontró un código QR válido en la imagen");
+      console.error("Error general al procesar archivo:", err);
+      setError("Error inesperado al procesar la imagen");
+      toast.error("Error al procesar la imagen. Por favor, intenta de nuevo.", {
+        position: "top-center",
+        autoClose: 5000,
+      });
     } finally {
       setProcessing(false);
       // Reset file input
@@ -336,12 +508,13 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
           {!scanning && !scanResult && !error && (
             <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4">
               <p className="text-sm">
-                <strong>Nota:</strong> Para usar la cámara, necesitas:
+                <strong>Nota:</strong> Para escanear códigos QR:
               </p>
               <ul className="text-sm mt-2 ml-4">
-                <li>• Usar HTTPS o localhost</li>
-                <li>• Permitir el acceso a la cámara cuando el navegador lo solicite</li>
-                <li>• Tener una cámara disponible en tu dispositivo</li>
+                <li>• <strong>Cámara:</strong> Requiere HTTPS o localhost y permisos de cámara</li>
+                <li>• <strong>Archivo:</strong> La imagen debe contener un código QR claro y bien enfocado</li>
+                <li>• <strong>Formato:</strong> Se aceptan imágenes JPG, PNG, GIF o WebP (máx. 10MB)</li>
+                <li>• <strong>Calidad:</strong> Asegúrate de que el QR esté completo y sin distorsión</li>
               </ul>
             </div>
           )}

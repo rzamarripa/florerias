@@ -608,6 +608,58 @@ export const getCardsByBranch = async (req, res) => {
 };
 
 /**
+ * Obtiene o regenera el saveUrl para Google Wallet
+ */
+export const getGoogleWalletSaveUrl = async (req, res) => {
+  try {
+    const { cardId } = req.params;
+
+    const digitalCard = await DigitalCard.findById(cardId)
+      .populate("clientId")
+      .populate("companyId");
+
+    if (!digitalCard) {
+      return res.status(404).json({
+        success: false,
+        message: "Tarjeta digital no encontrada",
+      });
+    }
+
+    // Si ya tiene un googleWalletId, regenerar el saveUrl
+    if (digitalCard.googleWalletId) {
+      try {
+        const newSaveUrl = await googleWalletService.regenerateSaveUrl(digitalCard.googleWalletId);
+        
+        // Actualizar el saveUrl en la base de datos
+        digitalCard.passUrl = {
+          ...digitalCard.passUrl,
+          google: newSaveUrl,
+        };
+        await digitalCard.save();
+
+        return res.status(200).json({
+          success: true,
+          saveUrl: newSaveUrl,
+          objectId: digitalCard.googleWalletId,
+          message: "SaveUrl regenerado exitosamente",
+        });
+      } catch (error) {
+        console.error("Error regenerando saveUrl:", error);
+      }
+    }
+
+    // Si no tiene googleWalletId o falló la regeneración, generar nueva tarjeta
+    return downloadGoogleWallet(req, res);
+  } catch (error) {
+    console.error("Error obteniendo saveUrl de Google Wallet:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
  * Descarga la tarjeta digital en formato Google Wallet
  */
 export const downloadGoogleWallet = async (req, res) => {
@@ -664,9 +716,19 @@ export const downloadGoogleWallet = async (req, res) => {
       // Generar el objeto de fidelidad
       const result = await googleWalletService.generateLoyaltyObject(clientData);
 
+      // Validar que el saveUrl se generó correctamente
+      if (!result.saveUrl || !result.saveUrl.startsWith('https://pay.google.com/gp/v/save/')) {
+        console.error('SaveUrl inválido:', result.saveUrl);
+        throw new Error('No se pudo generar el enlace para Google Wallet');
+      }
+
       // Actualizar el ID de Google Wallet en la tarjeta digital
       if (result.objectId) {
         digitalCard.googleWalletId = result.objectId;
+        digitalCard.passUrl = {
+          ...digitalCard.passUrl,
+          google: result.saveUrl,
+        };
         await digitalCard.save();
       }
 
@@ -688,15 +750,21 @@ export const downloadGoogleWallet = async (req, res) => {
       });
 
       // Enviar correo con el enlace de Google Wallet
-      if (clientData.email) {
-        const emailResult = await sendGoogleWalletCard(
-          clientData,
-          result.saveUrl,
-          companyName
-        );
-        
-        if (emailResult.success) {
-          console.log("Correo de Google Wallet enviado exitosamente");
+      if (clientData.email && result.saveUrl) {
+        try {
+          const emailResult = await sendGoogleWalletCard(
+            clientData,
+            result.saveUrl,
+            companyName
+          );
+          
+          if (emailResult.success) {
+            console.log("Correo de Google Wallet enviado exitosamente con saveUrl:", result.saveUrl);
+          } else {
+            console.error("Error enviando correo:", emailResult.error);
+          }
+        } catch (emailError) {
+          console.error("Error enviando correo de Google Wallet:", emailError);
         }
       }
 

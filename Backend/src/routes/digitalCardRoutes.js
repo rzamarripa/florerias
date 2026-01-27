@@ -4,6 +4,7 @@ import {
   getDigitalCard,
   downloadAppleWallet,
   downloadGoogleWallet,
+  getGoogleWalletSaveUrl,
   updateCardPoints,
   getCardTransactions,
   getCardStatistics,
@@ -87,6 +88,9 @@ router.get("/download/apple/:cardId", downloadAppleWallet);
 
 // Descargar tarjeta en formato Google Wallet
 router.get("/download/google/:cardId", downloadGoogleWallet);
+
+// Obtener o regenerar saveUrl de Google Wallet
+router.get("/google-wallet/save-url/:cardId", getGoogleWalletSaveUrl);
 
 // Actualizar puntos en la tarjeta
 router.put("/update-points/:cardId", updateCardPoints);

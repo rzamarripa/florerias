@@ -50,20 +50,19 @@ const ProductCatalogSection: React.FC<ProductCatalogSectionProps> = ({
 }) => {
   return (
     <AccordionItem value="catalog" className="border rounded-lg shadow-sm overflow-hidden">
-      <AccordionTrigger className="px-4 py-3 bg-muted/50 hover:no-underline">
-        <div className="flex items-center justify-between w-full pr-2">
+      <div className="flex items-center justify-between px-4 py-3 bg-muted/50">
+        <AccordionTrigger className="flex-1 hover:no-underline py-0">
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-purple-500" />
             <span className="font-semibold">Catalogo de Productos</span>
           </div>
-          <Switch
-            id="catalog-switch"
-            checked={catalogEnabled}
-            onCheckedChange={setCatalogEnabled}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      </AccordionTrigger>
+        </AccordionTrigger>
+        <Switch
+          id="catalog-switch"
+          checked={catalogEnabled}
+          onCheckedChange={setCatalogEnabled}
+        />
+      </div>
       <AccordionContent className="px-4 pb-4 pt-2 bg-background">
         {catalogEnabled ? (
           <div className="space-y-4">

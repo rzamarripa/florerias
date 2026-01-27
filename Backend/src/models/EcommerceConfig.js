@@ -108,8 +108,10 @@ const ecommerceConfigSchema = new mongoose.Schema({
         maxlength: 300,
         default: ''
       },
-      imageUrl: String,
-      imagePath: String,
+      images: [{
+        url: String,
+        path: String
+      }],
       button: {
         name: {
           type: String,
@@ -123,17 +125,7 @@ const ecommerceConfigSchema = new mongoose.Schema({
         }
       }
     },
-    carousel: {
-      enabled: {
-        type: Boolean,
-        default: true
-      },
-      images: [{
-        url: String,
-        path: String
-      }]
-    },
-    deliveryData: {
+    delivery: {
       pickup: {
         enabled: {
           type: Boolean,

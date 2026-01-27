@@ -122,14 +122,15 @@ const CarouselSection: React.FC<CarouselSectionProps> = ({
                   className="hidden"
                   id="carousel-upload"
                 />
-                <label htmlFor="carousel-upload">
-                  <Button variant="outline" size="sm" asChild>
-                    <span className="cursor-pointer">
-                      <Upload className="mr-1 h-3.5 w-3.5" />
-                      Agregar imagenes
-                    </span>
-                  </Button>
-                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('carousel-upload')?.click()}
+                  type="button"
+                >
+                  <Upload className="mr-1 h-3.5 w-3.5" />
+                  Agregar imagenes
+                </Button>
                 <span className="text-sm text-muted-foreground">
                   {5 - carouselImages.length - carouselFiles.length} espacios disponibles
                 </span>

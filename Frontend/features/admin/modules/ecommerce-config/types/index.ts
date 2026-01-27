@@ -50,16 +50,11 @@ export interface EcommerceConfigFeaturedElements {
     enabled: boolean;
     title?: string;
     text?: string;
-    imageUrl?: string;
-    imagePath?: string;
+    images?: CarouselImage[];
     button?: {
       name: string;
       link: string;
     };
-  };
-  carousel?: {
-    enabled: boolean;
-    images: CarouselImage[];
   };
   delivery?: {
     pickup: DeliverySettings;

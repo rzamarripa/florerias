@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Upload } from 'lucide-react';
+import { Image, Upload, X, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import type { CarouselImage } from '../../../../types';
 
 interface BannerSectionProps {
   bannerEnabled: boolean;
@@ -18,13 +19,15 @@ interface BannerSectionProps {
   setBannerTitle: (value: string) => void;
   bannerText: string;
   setBannerText: (value: string) => void;
-  bannerUrl: string;
-  bannerFile: File | null;
-  setBannerFile: (file: File | null) => void;
+  bannerImages: CarouselImage[];
+  setBannerImages: (images: CarouselImage[]) => void;
+  bannerFiles: File[];
+  setBannerFiles: (files: File[]) => void;
   bannerButtonName: string;
   setBannerButtonName: (value: string) => void;
   bannerButtonLink: string;
   setBannerButtonLink: (value: string) => void;
+  onRemoveImage: (index: number) => void;
 }
 
 const BannerSection: React.FC<BannerSectionProps> = ({
@@ -34,36 +37,68 @@ const BannerSection: React.FC<BannerSectionProps> = ({
   setBannerTitle,
   bannerText,
   setBannerText,
-  bannerUrl,
-  bannerFile,
-  setBannerFile,
+  bannerImages,
+  setBannerImages,
+  bannerFiles,
+  setBannerFiles,
   bannerButtonName,
   setBannerButtonName,
   bannerButtonLink,
   setBannerButtonLink,
+  onRemoveImage,
 }) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const validFiles: File[] = [];
+    const maxImages = 5;
+    const currentTotal = bannerImages.length + bannerFiles.length;
+    
+    for (let i = 0; i < files.length && currentTotal + validFiles.length < maxImages; i++) {
+      const file = files[i];
+      if (file.size <= 5 * 1024 * 1024) {
+        validFiles.push(file);
+      } else {
+        toast.error(`${file.name} excede el tamaño máximo de 5MB`);
+      }
+    }
+
+    if (validFiles.length > 0) {
+      setBannerFiles([...bannerFiles, ...validFiles]);
+      toast.success(`${validFiles.length} imagen(es) agregada(s)`);
+    }
+    
+    if (currentTotal + validFiles.length >= maxImages) {
+      toast.info(`Máximo ${maxImages} imágenes permitidas`);
+    }
+  };
+
+  const removeNewFile = (index: number) => {
+    setBannerFiles(bannerFiles.filter((_, i) => i !== index));
+  };
+
   return (
     <AccordionItem value="banner" className="border rounded-lg shadow-sm overflow-hidden">
-      <AccordionTrigger className="px-4 py-3 bg-muted/50 hover:no-underline">
-        <div className="flex items-center justify-between w-full pr-2">
+      <div className="flex items-center justify-between px-4 py-3 bg-muted/50">
+        <AccordionTrigger className="flex-1 hover:no-underline py-0">
           <div className="flex items-center gap-2">
             <Image className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Banner Principal</span>
+            <span className="font-semibold">Banner Hero</span>
           </div>
-          <Switch
-            id="banner-switch"
-            checked={bannerEnabled}
-            onCheckedChange={setBannerEnabled}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      </AccordionTrigger>
+        </AccordionTrigger>
+        <Switch
+          id="banner-switch"
+          checked={bannerEnabled}
+          onCheckedChange={setBannerEnabled}
+        />
+      </div>
       <AccordionContent className="px-4 pb-4 pt-2 bg-background">
         {bannerEnabled ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Titulo</Label>
+                <Label className="text-sm font-medium">Título</Label>
                 <Input
                   type="text"
                   placeholder="Ofertas especiales"
@@ -73,7 +108,7 @@ const BannerSection: React.FC<BannerSectionProps> = ({
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Descripcion</Label>
+                <Label className="text-sm font-medium">Descripción</Label>
                 <Input
                   type="text"
                   placeholder="Descuentos de hasta 50%"
@@ -86,10 +121,10 @@ const BannerSection: React.FC<BannerSectionProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Texto del boton</Label>
+                <Label className="text-sm font-medium">Texto del botón</Label>
                 <Input
                   type="text"
-                  placeholder="Ver mas"
+                  placeholder="Ver más"
                   value={bannerButtonName}
                   onChange={(e) => setBannerButtonName(e.target.value)}
                   maxLength={50}
@@ -108,44 +143,80 @@ const BannerSection: React.FC<BannerSectionProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Imagen</Label>
-              <div className="border rounded-lg p-3 bg-muted/50">
-                {bannerUrl && (
-                  <img
-                    src={bannerUrl}
-                    alt="Banner"
-                    className="max-w-full max-h-[100px] mb-2 rounded"
-                  />
+              <Label className="text-sm font-medium">Imágenes del Banner (máx. 5)</Label>
+              <div className="border rounded-lg p-3 bg-muted/50 space-y-3">
+                {/* Existing images */}
+                {bannerImages.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    {bannerImages.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image.url}
+                          alt={`Banner ${index + 1}`}
+                          className="w-full h-20 object-cover rounded"
+                        />
+                        <button
+                          onClick={() => onRemoveImage(index)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          type="button"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const file = e.target.files?.[0];
-                      if (file && file.size <= 5 * 1024 * 1024) {
-                        setBannerFile(file);
-                      } else {
-                        toast.error("El archivo debe ser menor a 5MB");
-                      }
-                    }}
-                    className="hidden"
-                    id="banner-upload"
-                  />
-                  <label htmlFor="banner-upload">
-                    <Button variant="outline" size="sm" asChild>
-                      <span className="cursor-pointer">
-                        <Upload className="mr-1 h-3.5 w-3.5" />
-                        Subir imagen
-                      </span>
+
+                {/* New files preview */}
+                {bannerFiles.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    {bannerFiles.map((file, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          className="w-full h-20 object-cover rounded border-2 border-green-500"
+                        />
+                        <button
+                          onClick={() => removeNewFile(index)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          type="button"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <span className="absolute bottom-0 left-0 right-0 bg-green-500 text-white text-xs px-1 truncate">
+                          Nueva
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {bannerImages.length + bannerFiles.length < 5 && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="banner-upload"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('banner-upload')?.click()}
+                      type="button"
+                    >
+                      <Upload className="mr-1 h-3.5 w-3.5" />
+                      Agregar imágenes
                     </Button>
-                  </label>
-                  {bannerFile && (
-                    <span className="text-sm text-green-600">
-                      {bannerFile.name}
+                    <span className="text-sm text-muted-foreground">
+                      {5 - bannerImages.length - bannerFiles.length} espacios disponibles
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
