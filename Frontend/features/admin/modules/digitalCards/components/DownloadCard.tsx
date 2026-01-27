@@ -158,18 +158,16 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
               Guardar en Fotos
             </Button>
 
-            {/* Botones de wallet deshabilitados hasta configurar */}
+            {/* Botón de Apple Wallet */}
             {onDownloadApple && (
               <Button
                 variant="secondary"
                 size="lg"
                 onClick={onDownloadApple}
-                disabled
                 className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white hover:bg-gray-800"
               >
                 <Smartphone size={20} />
                 Agregar a Apple Wallet
-                <small className="ml-2 opacity-70">(Proximamente)</small>
               </Button>
             )}
 

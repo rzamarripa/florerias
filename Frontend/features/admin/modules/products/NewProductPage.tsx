@@ -68,7 +68,7 @@ const NewProductPage: React.FC = () => {
     materialId: "",
     nombre: "",
     cantidad: 1,
-    unidad: "pieza",
+    unidad: "pieza", // Valor por defecto siempre presente
     importeCosto: 0,
     importeVenta: 0,
   });
@@ -122,7 +122,7 @@ const NewProductPage: React.FC = () => {
           materialId: firstMaterial._id,
           nombre: firstMaterial.name,
           cantidad: 1,
-          unidad: firstMaterial.unit.abbreviation,
+          unidad: (firstMaterial.unit?.abbreviation || "pieza").trim() || "pieza", // Asegurar que nunca sea vacío
           importeCosto: firstMaterial.cost,
           importeVenta: firstMaterial.price,
         });
@@ -158,7 +158,10 @@ const NewProductPage: React.FC = () => {
         productCategory: product.productCategory?._id || null,
         orden: product.orden,
         imagen: product.imagen,
-        insumos: product.insumos,
+        insumos: product.insumos?.map(insumo => ({
+          ...insumo,
+          unidad: insumo.unidad || "pieza" // Asegurar que cada insumo tenga unidad
+        })) || [],
         labour: product.labour || 0,
         estatus: product.estatus,
       });
@@ -238,7 +241,7 @@ const NewProductPage: React.FC = () => {
         materialId: firstMaterial._id,
         nombre: firstMaterial.name,
         cantidad: 1,
-        unidad: firstMaterial.unit.abbreviation,
+        unidad: (firstMaterial.unit?.abbreviation || "pieza").trim() || "pieza",
         importeCosto: firstMaterial.cost,
         importeVenta: firstMaterial.price,
       });
@@ -265,11 +268,15 @@ const NewProductPage: React.FC = () => {
     const importeCosto = cantidad * unitCost;
     const importeVenta = cantidad * unitPrice;
 
+    // Validación estricta de unidad
+    const unidadFinal = (currentInsumo.unidad || "").trim() || "pieza";
+    
     const insumoToAdd = {
       ...currentInsumo,
+      unidad: unidadFinal, // Asegurar que siempre haya unidad válida
       importeCosto,
       importeVenta,
-    };
+    } as Insumo;
 
     if (editingInsumoIndex !== null) {
       // Actualizar insumo existente
@@ -290,7 +297,7 @@ const NewProductPage: React.FC = () => {
         materialId: firstMaterial._id,
         nombre: firstMaterial.name,
         cantidad: 1,
-        unidad: firstMaterial.unit.abbreviation,
+        unidad: (firstMaterial.unit?.abbreviation || "pieza").trim() || "pieza",
         importeCosto: firstMaterial.cost,
         importeVenta: firstMaterial.price,
       });
@@ -358,15 +365,32 @@ const NewProductPage: React.FC = () => {
         throw new Error("El nombre y la unidad son obligatorios");
       }
 
+      // Limpiar y validar insumos antes de enviar
+      const insumosValidados = (formData.insumos || []).map(insumo => ({
+        ...insumo,
+        unidad: (insumo.unidad || "").trim() || "pieza", // Asegurar unidad válida
+      }));
+      
       // Los datos del producto con la imagen en base64
       const productData: CreateProductData = {
         ...formData,
+        insumos: insumosValidados,
         imagen: formData.imagen || "",
         precioVentaFinal: precioVentaEditable,
       };
 
       console.log("Datos a enviar:", productData);
       console.log("Imagen URL length:", formData.imagen?.length || 0);
+      console.log("Insumos detalle:", productData.insumos);
+      productData.insumos?.forEach((insumo, index) => {
+        console.log(`Insumo ${index}:`, {
+          nombre: insumo.nombre,
+          unidad: insumo.unidad,
+          unidad_tipo: typeof insumo.unidad,
+          unidad_vacio: insumo.unidad === '',
+          unidad_undefined: insumo.unidad === undefined
+        });
+      });
 
       if (isEditing) {
         await productsService.updateProduct(productId, productData);
@@ -615,7 +639,7 @@ const NewProductPage: React.FC = () => {
                         ...currentInsumo,
                         materialId: selectedMaterial._id,
                         nombre: selectedMaterial.name,
-                        unidad: selectedMaterial.unit.abbreviation,
+                        unidad: selectedMaterial.unit?.abbreviation || "pieza",
                         importeCosto: selectedMaterial.cost,
                         importeVenta: selectedMaterial.price,
                       });

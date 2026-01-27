@@ -652,6 +652,36 @@ const DigitalCardsPage: React.FC = () => {
           onHide={() => setShowDownloadModal(false)}
           card={digitalCard}
           client={selectedClient!}
+          onDownloadApple={async () => {
+            try {
+              // Usar la URL del API correcta para Next.js
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3005';
+              const response = await fetch(
+                `${apiUrl}/api/digital-cards/download/apple/${digitalCard._id}`
+              );
+              
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al descargar Apple Wallet Pass');
+              }
+              
+              // Descargar el archivo .pkpass
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${selectedClient?.clientNumber || 'card'}.pkpass`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+              
+              toast.success('Apple Wallet Pass descargado correctamente');
+            } catch (error: any) {
+              console.error('Error descargando Apple Wallet:', error);
+              toast.error(error.message || 'Error al descargar Apple Wallet Pass');
+            }
+          }}
           onDownloadGoogle={async () => {
             try {
               // Usar la URL del API correcta para Next.js

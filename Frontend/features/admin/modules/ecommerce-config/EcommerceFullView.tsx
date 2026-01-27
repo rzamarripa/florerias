@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ecommerceConfigService } from "./services/ecommerceConfig";
 import EcommerceView from "./components/EcommerceView";
-import EcommerceCatalog from "./components/EcommerceCatalog";
 import ClientCartModal from "./components/ClientCartModal";
 import { useCartStore } from "./store/cartStore";
 import type { EcommerceConfig } from "./types";
@@ -15,10 +14,10 @@ import type { EcommerceConfig } from "./types";
 export default function EcommerceFullView() {
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<EcommerceConfig | null>(null);
-  const [showCatalog, setShowCatalog] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const preview = searchParams.get("preview") === "true";
-  
+
   const { getTotalItems } = useCartStore();
   const totalItemsInCart = getTotalItems();
 
@@ -38,20 +37,20 @@ export default function EcommerceFullView() {
           pageTitle: branch?.branchName || "Mi Tienda Online",
           logoUrl: "",
           logoPath: "",
-          topbar: []
+          topbar: [],
         },
         colors: configData?.colors || {
           primary: "#6366f1",
           secondary: "#10b981",
           background: "#ffffff",
-          text: "#1f2937"
+          text: "#1f2937",
         },
         typography: configData?.typography || {
           titleFont: "Inter",
           titleSize: 36,
           textFont: "Inter",
           subtitleSize: 24,
-          normalSize: 16
+          normalSize: 16,
         },
         featuredElements: configData?.featuredElements || {
           banner: {
@@ -59,25 +58,25 @@ export default function EcommerceFullView() {
             title: "",
             text: "",
             images: [],
-            button: { name: "Ver mas", link: "#" }
+            button: { name: "Ver mas", link: "#" },
           },
           delivery: {
             pickup: {
               enabled: false,
               time: "30 minutos",
               availableFrom: "09:00",
-              availableTo: "21:00"
+              availableTo: "21:00",
             },
             delivery: {
               enabled: false,
               time: "45 minutos",
               availableFrom: "09:00",
-              availableTo: "21:00"
-            }
+              availableTo: "21:00",
+            },
           },
           promotions: {
             enabled: false,
-            items: []
+            items: [],
           },
           productCatalog: {
             enabled: true,
@@ -86,9 +85,9 @@ export default function EcommerceFullView() {
             showFilters: true,
             showCategories: true,
             showSearch: true,
-            showSort: true
-          }
-        }
+            showSort: true,
+          },
+        },
       });
     } catch (error) {
       console.error("Error al cargar configuracion:", error);
@@ -117,45 +116,23 @@ export default function EcommerceFullView() {
   if (preview) {
     return (
       <div className="relative h-screen">
-        {/* Preview Badge */}
-        <div
-          className="fixed top-0 left-1/2 -translate-x-1/2 mt-3 px-4 py-2 rounded-full shadow-lg z-[9999] font-semibold text-sm text-white backdrop-blur-sm"
-          style={{
-            backgroundColor: "rgba(99, 102, 241, 0.95)",
-          }}
-        >
-          Vista previa del E-commerce
-        </div>
-
         {/* Shopping Button */}
         <Button
-          className="fixed top-3 right-3 z-[9999] shadow-lg"
+          className="fixed top-20 right-4 z-40 shadow-lg hover:shadow-xl transition-all"
+          size="lg"
           style={{
             backgroundColor: config.colors?.primary || "#6366f1",
           }}
-          onClick={() => setShowCatalog(true)}
+          onClick={() => router.push('/ecommerce-catalog')}
         >
-          <ShoppingBag className="h-4 w-4 mr-2" />
+          <ShoppingBag className="h-5 w-5 mr-2" />
           Realizar Compras
           {totalItemsInCart > 0 && (
-            <Badge
-              variant="destructive"
-              className="ml-2"
-            >
+            <Badge variant="destructive" className="ml-2 px-2 py-1">
               {totalItemsInCart}
             </Badge>
           )}
         </Button>
-
-        {/* Catalog Modal */}
-        {showCatalog && (
-          <EcommerceCatalog
-            itemsStock={config.itemsStock}
-            colors={config.colors}
-            typography={config.typography}
-            onClose={() => setShowCatalog(false)}
-          />
-        )}
 
         {/* Cart Modal */}
         <ClientCartModal
@@ -179,40 +156,24 @@ export default function EcommerceFullView() {
     <div className="relative">
       {/* Shopping Button - Fixed Position */}
       <Button
-        className="fixed top-20 right-4 z-[1000] shadow-lg hover:shadow-xl transition-all"
+        className="fixed top-20 right-4 z-40 shadow-lg hover:shadow-xl transition-all"
         size="lg"
         style={{
           backgroundColor: config.colors?.primary || "#6366f1",
         }}
-        onClick={() => setShowCatalog(true)}
+        onClick={() => router.push('/ecommerce-catalog')}
       >
         <ShoppingBag className="h-5 w-5 mr-2" />
         Realizar Compras
         {totalItemsInCart > 0 && (
-          <Badge
-            variant="destructive"
-            className="ml-2 px-2 py-1"
-          >
+          <Badge variant="destructive" className="ml-2 px-2 py-1">
             {totalItemsInCart}
           </Badge>
         )}
       </Button>
 
-      {/* Catalog Modal */}
-      {showCatalog && (
-        <EcommerceCatalog
-          itemsStock={config.itemsStock}
-          colors={config.colors}
-          typography={config.typography}
-          onClose={() => setShowCatalog(false)}
-        />
-      )}
-
       {/* Cart Modal */}
-      <ClientCartModal
-        colors={config.colors}
-        typography={config.typography}
-      />
+      <ClientCartModal colors={config.colors} typography={config.typography} />
 
       {/* Main Ecommerce View */}
       <EcommerceView

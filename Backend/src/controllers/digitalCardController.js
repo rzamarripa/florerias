@@ -4,7 +4,7 @@ import { CardTransaction } from "../models/CardTransaction.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import appleWalletService from "../services/digitalCards/appleWalletService.js";
 import googleWalletService from "../services/digitalCards/googleWalletService.js";
-import { sendGoogleWalletCard } from "../services/emailService.js";
+import { sendGoogleWalletCard, sendAppleWalletCard } from "../services/emailService.js";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -181,7 +181,7 @@ export const downloadAppleWallet = async (req, res) => {
 
     const digitalCard = await DigitalCard.findById(cardId)
       .populate("clientId")
-      .populate("branchId");
+      .populate("companyId");
 
     if (!digitalCard) {
       return res.status(404).json({
@@ -200,39 +200,72 @@ export const downloadAppleWallet = async (req, res) => {
       email: digitalCard.clientId.email,
       points: digitalCard.clientId.points,
       passSerialNumber: digitalCard.passSerialNumber,
-      branchName: digitalCard.branchId.name,
+      branchName: digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta",
+      logoUrl: digitalCard.companyId?.logoUrl || null, // Logo dinámico de la empresa
+      heroUrl: digitalCard.heroUrl || null, // Imagen hero/banner desde Firebase
     };
 
-    // Generar el Apple Wallet Pass
-    const passBuffer = await appleWalletService.generatePass(
-      clientData,
-      digitalCard.qrData
-    );
+    try {
+      // Generar el Apple Wallet Pass
+      const passBuffer = await appleWalletService.generatePass(
+        clientData,
+        digitalCard.qrData
+      );
 
-    // Registrar la descarga
-    await digitalCard.recordDownload();
+      // Registrar la descarga
+      await digitalCard.recordDownload();
 
-    // Registrar en transacciones
-    await CardTransaction.create({
-      digitalCardId: digitalCard._id,
-      clientId: digitalCard.clientId._id,
-      transactionType: "card_downloaded",
-      locationData: {
-        companyId: digitalCard.companyId._id,
-      },
-      deviceInfo: {
-        deviceType: "ios",
-        userAgent: req.headers["user-agent"],
-      },
-    });
+      // Registrar en transacciones
+      await CardTransaction.create({
+        digitalCardId: digitalCard._id,
+        clientId: digitalCard.clientId._id,
+        transactionType: "card_downloaded",
+        locationData: {
+          companyId: digitalCard.companyId._id,
+        },
+        deviceInfo: {
+          deviceType: "ios",
+          userAgent: req.headers["user-agent"],
+        },
+      });
 
-    // Enviar el archivo .pkpass
-    res.set({
-      "Content-Type": "application/vnd.apple.pkpass",
-      "Content-Disposition": `attachment; filename="${digitalCard.clientId.clientNumber}.pkpass"`,
-    });
+      // Enviar por correo si el cliente tiene email
+      if (clientData.email) {
+        try {
+          const companyName = digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta";
+          const emailResult = await sendAppleWalletCard(
+            clientData,
+            passBuffer,
+            companyName
+          );
+          
+          if (emailResult.success) {
+            console.log("Apple Wallet Pass enviado por correo exitosamente");
+          } else {
+            console.error("Error enviando correo de Apple Wallet:", emailResult.error);
+          }
+        } catch (emailError) {
+          console.error("Error enviando correo de Apple Wallet:", emailError);
+        }
+      }
 
-    res.send(passBuffer);
+      // Enviar el archivo .pkpass como respuesta
+      res.set({
+        "Content-Type": "application/vnd.apple.pkpass",
+        "Content-Disposition": `attachment; filename="${digitalCard.clientId.clientNumber}.pkpass"`,
+      });
+
+      res.send(passBuffer);
+    } catch (serviceError) {
+      console.error("Error con Apple Wallet Service:", serviceError);
+      
+      // Si hay error, retornar mensaje de error
+      return res.status(500).json({
+        success: false,
+        message: "Error generando Apple Wallet Pass. Verifique que los certificados estén configurados correctamente.",
+        error: serviceError.message,
+      });
+    }
   } catch (error) {
     console.error("Error descargando Apple Wallet:", error);
     res.status(500).json({

@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import digitalCardService from "../services/digitalCardService";
 import RewardsSelectionModal from "./RewardsSelectionModal";
-import { pointsRewardService } from "../../pointsConfig/services/pointsReward";
+import { clientsService } from "../../clients/services/clients";
+import { AvailableRewardItem } from "../../clients/types";
 import { PointsReward } from "../../pointsConfig/types";
 
 interface QRScannerProps {
@@ -21,9 +22,10 @@ interface QRScannerProps {
   onHide: () => void;
   onScanSuccess: (data: any) => void;
   branchId: string;
+  showRewards?: boolean; // Control whether to show rewards modal (default true)
 }
 
-export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRScannerProps) {
+export default function QRScanner({ show, onHide, onScanSuccess, branchId, showRewards = true }: QRScannerProps) {
   const [scanning, setScanning] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -243,11 +245,36 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
       // Obtener las recompensas disponibles para el cliente
       try {
         setLoadingRewards(true);
-        const rewards = await pointsRewardService.getAvailableRewards(
-          response.data.client.id,
-          branchId
+        const rewardsResponse = await clientsService.getAvailableRewards(
+          response.data.client.id
         );
-        setAvailableRewards(rewards);
+        if (rewardsResponse.success && rewardsResponse.data) {
+          // Map AvailableRewardItem to PointsReward format
+          const mappedRewards: PointsReward[] = rewardsResponse.data.map((item: AvailableRewardItem) => ({
+            _id: item.reward._id,
+            name: item.reward.name,
+            description: item.reward.description,
+            pointsRequired: item.reward.pointsRequired,
+            rewardType: item.reward.rewardType,
+            rewardValue: item.reward.rewardValue,
+            isPercentage: item.reward.isPercentage,
+            isProducto: item.reward.isProducto,
+            productId: item.reward.productId,
+            productQuantity: 1, // Default value
+            maxRedemptionsPerClient: 0, // Default value
+            totalRedemptions: 0, // Default value
+            maxTotalRedemptions: 0, // Default value
+            validFrom: item.reward.validFrom,
+            validUntil: item.reward.validUntil,
+            isGlobal: false, // Default value
+            status: true, // Available rewards are active
+            createdAt: item.redeemedAt, // Use redeemed date as created date
+            updatedAt: item.redeemedAt,
+          }));
+          setAvailableRewards(mappedRewards);
+        } else {
+          setAvailableRewards([]);
+        }
       } catch (err) {
         console.error("Error obteniendo recompensas:", err);
         setAvailableRewards([]);
@@ -261,9 +288,11 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
         setScanResult(null);
         onHide(); // Cerrar el modal del scanner
 
-        // Luego notificar el exito y abrir el modal de recompensas
+        // Luego notificar el exito y abrir el modal de recompensas si está habilitado
         onScanSuccess(response.data);
-        setShowRewardsModal(true);
+        if (showRewards) {
+          setShowRewardsModal(true);
+        }
       }, 1500);
     } catch (err: any) {
       console.error("Error procesando código QR:", err);
@@ -661,7 +690,7 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId }: QRS
     </Dialog>
 
     {/* Modal de Recompensas */}
-    {scannedClientData && (
+    {scannedClientData && showRewards && (
       <RewardsSelectionModal
         show={showRewardsModal}
         onHide={handleRewardsModalClose}

@@ -252,8 +252,50 @@ const createProduct = async (req, res) => {
       // Super Admin: companyId queda como null
     }
 
+    // Debug: Ver que datos llegan
+    console.log('=== DEBUG CREAR PRODUCTO ===');
+    console.log('Datos recibidos:', {
+      nombre,
+      unidad,
+      insumos_count: insumos?.length || 0,
+      insumos: insumos
+    });
+    
+    if (insumos && insumos.length > 0) {
+      insumos.forEach((insumo, index) => {
+        console.log(`Insumo ${index}:`, {
+          materialId: insumo.materialId,
+          nombre: insumo.nombre,
+          unidad: insumo.unidad,
+          unidad_tipo: typeof insumo.unidad,
+          unidad_vacio: insumo.unidad === '',
+          unidad_undefined: insumo.unidad === undefined,
+          unidad_null: insumo.unidad === null,
+          cantidad: insumo.cantidad,
+          importeCosto: insumo.importeCosto,
+          importeVenta: insumo.importeVenta
+        });
+      });
+    }
+    console.log('==========================');
+
+    // Validar y limpiar insumos PRIMERO antes de cualquier operación
+    const insumosLimpios = (insumos || []).map(insumo => {
+      // Validación estricta de unidad
+      const unidadLimpia = (insumo.unidad || '').toString().trim() || 'pieza';
+      
+      return {
+        materialId: insumo.materialId,
+        nombre: insumo.nombre,
+        cantidad: insumo.cantidad || 0,
+        unidad: unidadLimpia, // Asegurar que siempre haya unidad válida
+        importeCosto: insumo.importeCosto || 0,
+        importeVenta: insumo.importeVenta || 0
+      };
+    });
+
     // Calcular totalCosto sumando los importeCosto de los insumos + mano de obra
-    const costoInsumos = insumos?.reduce((sum, insumo) => sum + (insumo.importeCosto || 0), 0) || 0;
+    const costoInsumos = insumosLimpios.reduce((sum, insumo) => sum + (insumo.importeCosto || 0), 0);
     const totalCosto = costoInsumos + (labour || 0);
 
     // Crear nuevo producto
@@ -264,7 +306,7 @@ const createProduct = async (req, res) => {
       productCategory: productCategory || null,
       orden: orden || 0,
       imagen: imagen || '',
-      insumos: insumos || [],
+      insumos: insumosLimpios,
       labour: labour || 0,
       totalCosto,
       totalVenta: precioVentaFinal || 0,
@@ -336,7 +378,20 @@ const updateProduct = async (req, res) => {
     if (orden !== undefined) updateData.orden = orden;
     if (imagen !== undefined) updateData.imagen = imagen;
     if (insumos !== undefined) {
-      updateData.insumos = insumos;
+      // Validar y limpiar insumos antes de actualizar
+      updateData.insumos = insumos.map(insumo => {
+        // Validación estricta de unidad
+        const unidadLimpia = (insumo.unidad || '').toString().trim() || 'pieza';
+        
+        return {
+          materialId: insumo.materialId,
+          nombre: insumo.nombre,
+          cantidad: insumo.cantidad || 0,
+          unidad: unidadLimpia, // Asegurar que siempre haya unidad válida
+          importeCosto: insumo.importeCosto || 0,
+          importeVenta: insumo.importeVenta || 0
+        };
+      });
     }
     if (labour !== undefined) updateData.labour = labour;
 

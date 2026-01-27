@@ -101,7 +101,7 @@ const EcommerceCatalog: React.FC<EcommerceCatalogProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-white overflow-hidden">
+    <div className="fixed top-16 left-0 right-0 bottom-0 z-30 bg-white overflow-hidden">
       {/* Header */}
       <div 
         className="sticky top-0 z-10 bg-white border-b shadow-sm"

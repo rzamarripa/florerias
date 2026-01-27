@@ -305,6 +305,10 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'cs_user',
     default: null
+  },
+  eOrder: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,
@@ -322,6 +326,7 @@ orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ isSocialMediaOrder: 1 });
 orderSchema.index({ socialMedia: 1 });
+orderSchema.index({ eOrder: 1 });
 
 // Middleware para generar número de orden antes de guardar
 orderSchema.pre('save', async function(next) {

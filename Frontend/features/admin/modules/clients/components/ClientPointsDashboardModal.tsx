@@ -40,6 +40,13 @@ interface ClientPointsDashboardModalProps {
   onHide: () => void;
   client: Client | any | null;
   branchId: string | null;
+  onRewardRedeemed?: (code: string, rewardData: {
+    rewardId: string;
+    name: string;
+    rewardValue: number;
+    isPercentage: boolean;
+    pointsRequired?: number;
+  }) => void;
 }
 
 const reasonLabels: Record<PointsHistoryReason, string> = {
@@ -69,6 +76,7 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
   onHide,
   client,
   branchId,
+  onRewardRedeemed,
 }) => {
   const [history, setHistory] = useState<ClientPointsHistory[]>([]);
   const [rewards, setRewards] = useState<PointsReward[]>([]);
@@ -168,6 +176,17 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
         setShowCodeModal(true);
         loadHistory();
         toast.success("Recompensa reclamada exitosamente");
+        
+        // Notificar al componente padre sobre la recompensa canjeada
+        if (onRewardRedeemed) {
+          onRewardRedeemed(response.data.code, {
+            rewardId: reward._id,
+            name: reward.name,
+            rewardValue: reward.rewardValue,
+            isPercentage: reward.isPercentage,
+            pointsRequired: reward.pointsRequired,
+          });
+        }
       }
     } catch (error: any) {
       console.error("Error redeeming reward:", error);

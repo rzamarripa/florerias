@@ -1,26 +1,45 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   ShoppingCart,
   Plus,
   Minus,
-  Trash2,
-  CreditCard,
   Loader2,
+  ArrowRight,
+  CreditCard,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "../store/cartStore";
 import { toast } from "react-toastify";
+import OrderDetailsModal from "@/features/admin/modules/orders/components/OrderDetailsModal";
+import QRScanner from "@/features/admin/modules/digitalCards/components/QRScanner";
+import ClientPointsDashboardModal from "@/features/admin/modules/clients/components/ClientPointsDashboardModal";
+import { CreateOrderData, OrderItem } from "@/features/admin/modules/orders/types";
+import { PaymentMethod } from "@/features/admin/modules/payment-methods/types";
+import { Branch } from "@/features/admin/modules/branches/types";
+import { CashRegister } from "@/features/admin/modules/cash-registers/types";
+import { Storage } from "@/features/admin/modules/storage/types";
+import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
+import { branchesService } from "@/features/admin/modules/branches/services/branches";
+import { cashRegistersService } from "@/features/admin/modules/cash-registers/services/cashRegisters";
+import { storageService } from "@/features/admin/modules/storage/services/storage";
+import { ordersService } from "@/features/admin/modules/orders/services/orders";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { generateSaleTicket } from "@/features/admin/modules/orders/utils/generateSaleTicket";
+import { uploadComprobante, uploadArreglo } from "@/services/firebaseStorage";
+import { companiesService } from "@/features/admin/modules/companies/services/companies";
+import DiscountAuthModal from "@/features/admin/modules/orders/components/DiscountAuthModal";
+import { ecommerceConfigService } from "../services/ecommerceConfig";
 
 interface ClientCartModalProps {
   colors?: any;
@@ -32,13 +51,31 @@ const ClientCartModal: React.FC<ClientCartModalProps> = ({
   typography,
 }) => {
   const [processingOrder, setProcessingOrder] = useState(false);
-  const [customerData, setCustomerData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    address: "",
-    notes: "",
-  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
+  
+  // Estados para OrderDetailsModal
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
+  const [loadingCashRegister, setLoadingCashRegister] = useState(false);
+  const [storage, setStorage] = useState<Storage | null>(null);
+  const [selectedStorageId, setSelectedStorageId] = useState<string>("");
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [showDiscountRequestDialog, setShowDiscountRequestDialog] = useState(false);
+  const [discountRequestMessage, setDiscountRequestMessage] = useState("");
+  const [hasPendingDiscountAuth, setHasPendingDiscountAuth] = useState(false);
+  const [branchId, setBranchId] = useState<string>("");
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [showPointsDashboard, setShowPointsDashboard] = useState(false);
+  const [scannedClientData, setScannedClientData] = useState<any>(null);
+
+  const { user } = useUserSessionStore();
+  const { getIsCashier, getIsSocialMedia } = useUserRoleStore();
+  const isCashier = getIsCashier();
+  const isSocialMedia = getIsSocialMedia();
 
   const {
     items,
@@ -51,242 +88,500 @@ const ClientCartModal: React.FC<ClientCartModalProps> = ({
     getAvailableStock,
   } = useCartStore();
 
-  const totalPrice = getTotalPrice();
+  const subtotal = getTotalPrice();
+  const total = subtotal; // Sin descuentos aquí, OrderDetailsModal los maneja
+
+  // Cargar datos necesarios para OrderDetailsModal
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      // Cargar métodos de pago
+      const paymentMethodsResponse = await paymentMethodsService.getAllPaymentMethods({ status: true });
+      setPaymentMethods(paymentMethodsResponse.data || []);
+
+      // Cargar configuración de ecommerce para obtener el branch
+      const configResponse = await ecommerceConfigService.getManagerConfig();
+      if (configResponse.data && configResponse.data.branch) {
+        const branchData = configResponse.data.branch;
+        const loadedBranchId = branchData._id || branchData;
+        setBranchId(loadedBranchId);
+        
+        // Update formData with loaded branchId
+        setFormData(prev => ({ ...prev, branchId: loadedBranchId }));
+        
+        // Cargar caja registradora del usuario
+        if (user?.id) {
+          const cashRegisterResponse = await cashRegistersService.getCashRegisterByUserId(user.id);
+          if (cashRegisterResponse.success && cashRegisterResponse.data) {
+            setCashRegister(cashRegisterResponse.data);
+          }
+        }
+
+        // Cargar storage de la sucursal
+        const storageResponse = await storageService.getStorageByBranch(branchData._id || branchData);
+        if (storageResponse.success && storageResponse.data) {
+          setStorage(storageResponse.data);
+          setSelectedStorageId(storageResponse.data._id);
+        }
+      }
+    } catch (error) {
+      console.error("Error al cargar datos iniciales:", error);
+    }
+  };
+
+  // Preparar formData para OrderDetailsModal
+  const [formData, setFormData] = useState<CreateOrderData>({
+    branchId: "",
+    cashRegisterId: null,
+    clientInfo: {
+      name: "",
+      phone: "",
+      email: "",
+    },
+    salesChannel: "tienda",
+    items: [],
+    shippingType: "tienda",
+    anonymous: false,
+    quickSale: false,
+    deliveryData: {
+      recipientName: "",
+      deliveryDateTime: "",
+      message: "",
+      street: "",
+      neighborhoodId: "",
+      deliveryPrice: 0,
+    },
+    paymentMethod: "",
+    discount: 0,
+    discountType: "porcentaje",
+    subtotal: 0,
+    total: 0,
+    advance: 0,
+    paidWith: 0,
+    change: 0,
+    remainingBalance: 0,
+    sendToProduction: false,
+    eOrder: true, // Marcar como orden de e-commerce
+  });
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
+    const availableStock = getAvailableStock(productId);
+    const currentItem = items.find(item => item._id === productId);
+    const currentQuantity = currentItem?.quantity || 0;
+    const maxQuantity = availableStock + currentQuantity;
+
     if (newQuantity <= 0) {
       removeFromCart(productId);
+    } else if (newQuantity > maxQuantity) {
+      toast.error(`Solo hay ${maxQuantity} unidades disponibles`);
     } else {
       updateQuantity(productId, newQuantity);
     }
   };
 
-  const handleCheckout = async () => {
-    // Validar datos del cliente
-    if (!customerData.name || !customerData.phone) {
-      toast.error("Por favor ingresa tu nombre y teléfono");
-      return;
-    }
-
+  const handleCheckout = () => {
     if (items.length === 0) {
       toast.error("El carrito está vacío");
       return;
     }
 
+    // Convertir items del carrito a formato OrderItem
+    const orderItems: OrderItem[] = items.map(item => ({
+      isProduct: true,
+      productId: item._id,
+      productName: item.nombre,
+      quantity: item.quantity,
+      unitPrice: item.precio,
+      amount: item.precio * item.quantity,
+      productCategory: item.productCategory || null,
+      insumos: [], // Los insumos se manejan en el backend
+    }));
+
+    // Actualizar formData con los datos del carrito
+    setFormData(prev => ({
+      ...prev,
+      branchId: branchId,
+      cashRegisterId: cashRegister?._id || null,
+      storageId: selectedStorageId || null,
+      items: orderItems,
+      subtotal: subtotal,
+      total: total,
+      paidWith: total,
+      remainingBalance: 0,
+      eOrder: true, // Asegurar que es una orden de e-commerce
+    }));
+
+    // Abrir el modal de detalles de orden
+    setShowOrderDetailsModal(true);
+  };
+
+  const handleSubmitWithFiles = async (
+    e: React.FormEvent,
+    files: { comprobante: File | null; arreglo: File | null }
+  ) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     try {
-      setProcessingOrder(true);
-      
-      // Aquí iría la lógica para procesar la orden
-      // Por ahora solo simulamos el proceso
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success("¡Orden procesada exitosamente! Te contactaremos pronto.");
-      clearCart();
+      // Validaciones básicas
+      if (formData.items.length === 0) {
+        throw new Error("Debes agregar al menos un producto");
+      }
+
+      // Si hay caja registradora, validar que esté abierta
+      if (cashRegister && !cashRegister.isOpen) {
+        throw new Error("La caja registradora debe estar abierta para crear órdenes");
+      }
+
+      // Subir archivos si existen
+      let comprobanteUrl: string | null = null;
+      let comprobantePath: string | null = null;
+      let arregloUrl: string | null = null;
+      let arregloPath: string | null = null;
+
+      if (files.comprobante || files.arreglo) {
+        setUploadingFiles(true);
+        
+        if (files.comprobante) {
+          const comprobanteResult = await uploadComprobante(files.comprobante);
+          comprobanteUrl = comprobanteResult.url;
+          comprobantePath = comprobanteResult.path;
+        }
+
+        if (files.arreglo) {
+          const arregloResult = await uploadArreglo(files.arreglo);
+          arregloUrl = arregloResult.url;
+          arregloPath = arregloResult.path;
+        }
+        
+        setUploadingFiles(false);
+      }
+
+      // Crear la orden
+      const orderData = {
+        ...formData,
+        comprobanteUrl,
+        comprobantePath,
+        arregloUrl,
+        arregloPath,
+        salesChannel: "tienda" as const,
+        eOrder: true, // Marcar como orden de e-commerce
+        hasPendingDiscountAuth,
+        discountRequestMessage: discountRequestMessage || null,
+      };
+
+      const response = await ordersService.createOrder(orderData);
+
+      if (!response || !response.success) {
+        throw new Error(response?.message || "Error al crear la orden");
+      }
+
+      // Generar ticket si es necesario
+      if (response.data) {
+        try {
+          const companyResponse = await companiesService.getCompanyByBranchId(formData.branchId);
+          const companyData = companyResponse?.data;
+
+          await generateSaleTicket({
+            orderNumber: response.data.orderNumber || "",
+            branchName: response.data.branch?.branchName || "",
+            cashierName: user?.name || "",
+            items: formData.items,
+            subtotal: formData.subtotal,
+            discount: formData.discount || 0,
+            total: formData.total,
+            paidWith: formData.paidWith || 0,
+            change: formData.change || 0,
+            paymentMethodName: paymentMethods.find(pm => pm._id === formData.paymentMethod)?.name || "",
+            advance: formData.advance || 0,
+            remainingBalance: formData.remainingBalance || 0,
+            clientName: formData.clientInfo?.name || "",
+            recipientName: formData.deliveryData?.recipientName || "",
+            deliveryDate: formData.deliveryData?.deliveryDateTime || "",
+            deliveryMessage: formData.deliveryData?.message || "",
+            companyData,
+          });
+        } catch (ticketError) {
+          console.error("Error generando ticket:", ticketError);
+        }
+      }
+
+      toast.success("¡Orden creada exitosamente!");
+      setSuccess(true);
+      clearCart(); // Limpiar carrito después de crear la orden
+      setShowOrderDetailsModal(false);
       closeCart();
-      setCustomerData({
-        name: "",
-        phone: "",
-        email: "",
-        address: "",
-        notes: "",
-      });
-    } catch (error) {
-      toast.error("Error al procesar la orden");
+
+    } catch (error: any) {
+      console.error("Error al crear orden:", error);
+      setError(error.message || "Error al crear la orden");
+      toast.error(error.message || "Error al crear la orden");
     } finally {
-      setProcessingOrder(false);
+      setLoading(false);
+      setUploadingFiles(false);
     }
   };
 
+  const handleDiscountChange = (value: number, tipo: "porcentaje" | "cantidad") => {
+    setFormData(prev => ({
+      ...prev,
+      discount: value,
+      discountType: tipo,
+      total: tipo === "porcentaje" 
+        ? prev.subtotal - (prev.subtotal * value / 100)
+        : prev.subtotal - value
+    }));
+  };
+
+  const handleCancelDiscount = () => {
+    setFormData(prev => ({
+      ...prev,
+      discount: 0,
+      discountType: "porcentaje",
+      total: prev.subtotal
+    }));
+    setHasPendingDiscountAuth(false);
+    setDiscountRequestMessage("");
+  };
+
+  const handleQRScanSuccess = (scanData: any) => {
+    // Guardar los datos del cliente escaneado
+    setScannedClientData(scanData);
+    
+    // Verificar si el cliente pertenece a la sucursal actual
+    if (scanData && scanData.client) {
+      // Obtener la sucursal del cliente
+      const clientBranchId = scanData.client.branchId || scanData.client.branch;
+      // Obtener la sucursal actual
+      const currentBranchId = branchId;
+      
+      // Verificar que el cliente pertenezca a la misma sucursal (si aplica)
+      if (clientBranchId && currentBranchId && clientBranchId !== currentBranchId) {
+        toast.error("El cliente no corresponde a la sucursal actual");
+        // No actualizar el formulario si el cliente no es de la misma sucursal
+        setShowQrScanner(false);
+        setTimeout(() => {
+          setShowOrderDetailsModal(true);
+        }, 100);
+        return;
+      }
+      
+      // Si pasa la validación, actualizar el formulario con los datos del cliente
+      setFormData((prev) => ({
+        ...prev,
+        clientInfo: {
+          clientId: scanData.client.id,
+          name: scanData.client.fullName || `${scanData.client.name} ${scanData.client.lastName}`,
+          phone: scanData.client.phoneNumber || "",
+          email: scanData.client.email || "",
+        },
+        anonymous: false,
+      }));
+      
+      // Cerrar el scanner primero
+      setShowQrScanner(false);
+      
+      // Reabrir el modal de detalles
+      setTimeout(() => {
+        setShowOrderDetailsModal(true);
+        // Abrir el dashboard de puntos después de un breve delay
+        setTimeout(() => {
+          setShowPointsDashboard(true);
+        }, 500);
+      }, 100);
+      
+      toast.success(`Cliente ${scanData.client.fullName} identificado correctamente`);
+    }
+  };
+  
+  const handleRewardRedeemed = (code: string, rewardData: {
+    rewardId: string;
+    name: string;
+    rewardValue: number;
+    isPercentage: boolean;
+    pointsRequired?: number;
+  }) => {
+    // Aplicar la recompensa al formulario
+    if (rewardData.isPercentage) {
+      setFormData(prev => ({
+        ...prev,
+        discount: rewardData.rewardValue,
+        discountType: "porcentaje",
+        appliedRewardCode: code,
+        appliedReward: {
+          code,
+          rewardId: rewardData.rewardId,
+          name: rewardData.name,
+          rewardValue: rewardData.rewardValue,
+          isPercentage: true,
+        },
+        total: prev.subtotal - (prev.subtotal * rewardData.rewardValue / 100),
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        discount: rewardData.rewardValue,
+        discountType: "cantidad",
+        appliedRewardCode: code,
+        appliedReward: {
+          code,
+          rewardId: rewardData.rewardId,
+          name: rewardData.name,
+          rewardValue: rewardData.rewardValue,
+          isPercentage: false,
+        },
+        total: prev.subtotal - rewardData.rewardValue,
+      }));
+    }
+    
+    toast.success(`Recompensa "${rewardData.name}" aplicada con código: ${code}`);
+  };
+
   return (
-    <Sheet open={isOpen} onOpenChange={closeCart}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Tu Carrito
-          </SheetTitle>
-          <SheetDescription>
-            {items.length === 0
-              ? "Tu carrito está vacío"
-              : `${items.length} producto(s) en tu carrito`}
-          </SheetDescription>
-        </SheetHeader>
-
-        {items.length > 0 && (
-          <>
-            <div className="mt-6 space-y-4">
-              {items.map((item) => (
-                <div
-                  key={item._id}
-                  className="flex gap-3 p-3 bg-gray-50 rounded-lg"
+    <>
+      <Sheet open={isOpen} onOpenChange={closeCart}>
+        <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
+          {/* Header */}
+          <SheetHeader className="px-6 py-4 border-b">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-lg font-semibold">
+                Carrito de Compras ({items.length})
+              </SheetTitle>
+              {items.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    clearCart();
+                    toast.info("Carrito vaciado");
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  {/* Product Image */}
-                  <div className="w-16 h-16 bg-gray-200 rounded flex-shrink-0">
-                    {item.imagen ? (
-                      <img
-                        src={item.imagen}
-                        alt={item.nombre}
-                        className="w-full h-full object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingCart className="h-6 w-6 text-gray-400" />
+                  Vaciar todo
+                </Button>
+              )}
+            </div>
+          </SheetHeader>
+
+          {/* Cart Items */}
+          {items.length > 0 ? (
+            <div className="flex-1 overflow-y-auto">
+              <div className="px-6 py-4 space-y-4">
+                {items.map((item) => {
+                  const availableStock = getAvailableStock(item._id);
+                  const maxQuantity = availableStock + item.quantity;
+                  
+                  return (
+                    <div key={item._id} className="flex gap-4">
+                      {/* Product Image */}
+                      <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                        {item.imagen ? (
+                          <img
+                            src={item.imagen}
+                            alt={item.nombre}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <ShoppingCart className="h-8 w-8 text-gray-300" />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Product Details */}
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm">{item.nombre}</h4>
-                    <p className="text-sm text-gray-600">
-                      ${item.precio.toFixed(2)} c/u
-                    </p>
-                    
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleQuantityChange(item._id, item.quantity - 1)}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="text-sm font-medium w-8 text-center">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleQuantityChange(item._id, item.quantity + 1)}
-                        disabled={item.quantity >= getAvailableStock(item._id) + item.quantity}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 ml-auto text-red-500 hover:text-red-700"
-                        onClick={() => removeFromCart(item._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {/* Product Details */}
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div className="flex justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-sm font-medium line-clamp-2">
+                              {item.nombre}
+                            </h3>
+                            {item.descripcion && (
+                              <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
+                                {item.descripcion}
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 -mt-1 -mr-2"
+                            onClick={() => removeFromCart(item._id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {/* Quantity and Price */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-md"
+                              onClick={() => handleQuantityChange(item._id, item.quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <div className="w-12 text-center text-sm font-medium">
+                              {item.quantity}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-md"
+                              onClick={() => handleQuantityChange(item._id, item.quantity + 1)}
+                              disabled={item.quantity >= maxQuantity}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="text-sm font-semibold">
+                            ${(item.precio * item.quantity).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
 
-                  {/* Subtotal */}
-                  <div className="text-right">
-                    <p className="font-semibold">
-                      ${(item.precio * item.quantity).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Separator className="my-6" />
-
-            {/* Customer Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Información de Contacto</h3>
-              
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="name">Nombre *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Tu nombre completo"
-                    value={customerData.name}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="phone">Teléfono *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="Tu número de teléfono"
-                    value={customerData.phone}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, phone: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="email">Email (opcional)</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="tu@email.com"
-                    value={customerData.email}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, email: e.target.value })
-                    }
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="address">Dirección de entrega</Label>
-                  <Input
-                    id="address"
-                    placeholder="Tu dirección completa"
-                    value={customerData.address}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, address: e.target.value })
-                    }
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="notes">Notas adicionales</Label>
-                  <Input
-                    id="notes"
-                    placeholder="Instrucciones especiales..."
-                    value={customerData.notes}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, notes: e.target.value })
-                    }
-                  />
+              {/* Order Summary */}
+              <div className="px-6 py-4 space-y-2 border-t">
+                <div className="flex items-center justify-between font-semibold">
+                  <span>Total</span>
+                  <span className="text-lg">${total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
-
-            <Separator className="my-6" />
-
-            {/* Order Summary */}
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal</span>
-                <span>${totalPrice.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Envío</span>
-                <span className="text-green-600">Gratis</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
-                <span style={{ color: colors?.primary || "#6366f1" }}>
-                  ${totalPrice.toFixed(2)}
-                </span>
-              </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center px-6">
+              <ShoppingCart className="h-16 w-16 text-muted-foreground/30 mb-4" />
+              <p className="text-lg font-medium mb-2">Tu carrito está vacío</p>
+              <p className="text-sm text-muted-foreground text-center mb-6">
+                Agrega algunos productos para comenzar
+              </p>
+              <Button onClick={closeCart} className="gap-2">
+                Continuar comprando
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
+          )}
 
-            {/* Action Buttons */}
-            <div className="mt-6 space-y-3">
+          {/* Checkout Button */}
+          {items.length > 0 && (
+            <div className="border-t px-6 py-4 space-y-4">
               <Button
                 className="w-full"
                 size="lg"
                 onClick={handleCheckout}
                 disabled={processingOrder}
-                style={{ backgroundColor: colors?.primary || "#6366f1" }}
+                style={{ 
+                  backgroundColor: colors?.primary || "#6366f1",
+                }}
               >
                 {processingOrder ? (
                   <>
@@ -296,31 +591,89 @@ const ClientCartModal: React.FC<ClientCartModalProps> = ({
                 ) : (
                   <>
                     <CreditCard className="mr-2 h-4 w-4" />
-                    Realizar Pedido
+                    Finalizar Compra
                   </>
                 )}
               </Button>
-              
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={closeCart}
-              >
-                Seguir Comprando
-              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Completa los detalles de tu pedido en el siguiente paso
+              </p>
             </div>
-          </>
-        )}
+          )}
+        </SheetContent>
+      </Sheet>
 
-        {items.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <ShoppingCart className="h-16 w-16 text-gray-300 mb-4" />
-            <p className="text-gray-500 mb-4">No hay productos en tu carrito</p>
-            <Button onClick={closeCart}>Explorar Productos</Button>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
+      {/* Order Details Modal */}
+      <OrderDetailsModal
+        show={showOrderDetailsModal}
+        onHide={() => setShowOrderDetailsModal(false)}
+        formData={formData}
+        setFormData={setFormData}
+        cashRegister={cashRegister}
+        loadingCashRegister={loadingCashRegister}
+        isSocialMedia={isSocialMedia}
+        isCashier={isCashier}
+        selectedStorageId={selectedStorageId}
+        hasPendingDiscountAuth={hasPendingDiscountAuth}
+        loading={loading}
+        uploadingFiles={uploadingFiles}
+        error={error}
+        success={success}
+        isEcommerceOrder={true}
+        onDiscountChange={handleDiscountChange}
+        onSubmit={handleSubmitWithFiles}
+        onShowDiscountRequestDialog={() => setShowDiscountRequestDialog(true)}
+        onCancelDiscount={handleCancelDiscount}
+        onScanQR={() => {
+          setShowOrderDetailsModal(false);
+          setShowQrScanner(true);
+        }}
+      />
+
+      {/* Discount Auth Modal */}
+      <DiscountAuthModal
+        show={showDiscountRequestDialog}
+        onHide={() => setShowDiscountRequestDialog(false)}
+        onSubmit={(message) => {
+          setDiscountRequestMessage(message);
+          setHasPendingDiscountAuth(true);
+          setShowDiscountRequestDialog(false);
+          toast.info("Solicitud de descuento enviada. Procede con la orden.");
+        }}
+      />
+
+      {/* QR Scanner Modal */}
+      <QRScanner
+        show={showQrScanner}
+        onHide={() => setShowQrScanner(false)}
+        onScanSuccess={handleQRScanSuccess}
+        branchId={branchId}
+        showRewards={false}
+      />
+
+      {/* Modal del Dashboard de Puntos */}
+      {scannedClientData && (
+        <ClientPointsDashboardModal
+          show={showPointsDashboard}
+          onHide={() => {
+            setShowPointsDashboard(false);
+            // No limpiar scannedClientData para mantener los datos del cliente en el formulario
+          }}
+          client={{
+            _id: scannedClientData.client.id,
+            name: scannedClientData.client.name,
+            lastName: scannedClientData.client.lastName,
+            clientNumber: scannedClientData.client.clientNumber,
+            phoneNumber: scannedClientData.client.phoneNumber,
+            email: scannedClientData.client.email,
+            points: scannedClientData.client.points,
+            status: scannedClientData.client.status,
+          }}
+          branchId={branchId}
+          onRewardRedeemed={handleRewardRedeemed}
+        />
+      )}
+    </>
   );
 };
 

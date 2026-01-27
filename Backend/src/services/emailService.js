@@ -520,3 +520,142 @@ export const sendGoogleWalletCard = async (clientData, saveUrl, companyName = "C
     return { success: false, error: error.message };
   }
 };
+
+/**
+ * Enviar Apple Wallet Pass por correo
+ * @param {Object} clientData - Datos del cliente
+ * @param {Buffer} passBuffer - Buffer del archivo .pkpass
+ * @param {String} companyName - Nombre de la empresa
+ */
+export const sendAppleWalletCard = async (clientData, passBuffer, companyName = 'Corazón Violeta') => {
+  try {
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: clientData.email,
+      subject: `Tu Tarjeta Digital Apple Wallet - ${companyName}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f4f4;
+            }
+            .container {
+              max-width: 600px;
+              margin: 20px auto;
+              background-color: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #000 0%, #333 100%);
+              color: white;
+              padding: 40px 30px;
+              text-align: center;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 28px;
+              font-weight: 600;
+            }
+            .content {
+              padding: 40px 30px;
+            }
+            .wallet-info {
+              background: #f8f9fa;
+              border-radius: 10px;
+              padding: 20px;
+              margin: 25px 0;
+            }
+            .instructions {
+              background: #e3f2fd;
+              border-left: 4px solid #2196F3;
+              padding: 15px;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              padding: 30px;
+              background: #f8f9fa;
+              color: #666;
+              font-size: 14px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🍎 Tu Tarjeta Apple Wallet</h1>
+              <p>¡${clientData.name}, tu tarjeta digital está lista!</p>
+            </div>
+            
+            <div class="content">
+              <p style="font-size: 16px; color: #555;">Hola <strong>${clientData.name} ${clientData.lastName}</strong>,</p>
+              
+              <p>Te hemos enviado tu tarjeta de fidelidad para Apple Wallet. Con ella podrás:</p>
+              
+              <ul style="color: #555; line-height: 2;">
+                <li>Acumular y consultar tus puntos fácilmente</li>
+                <li>Recibir notificaciones de promociones exclusivas</li>
+                <li>Acceder rápidamente desde tu iPhone</li>
+                <li>Mostrar tu código QR para identificarte</li>
+              </ul>
+
+              <div class="wallet-info">
+                <h3>📱 Información de tu tarjeta:</h3>
+                <p><strong>Nombre:</strong> ${clientData.name} ${clientData.lastName}</p>
+                <p><strong>Número de cliente:</strong> ${clientData.clientNumber}</p>
+                <p><strong>Puntos actuales:</strong> ${clientData.points || 0}</p>
+              </div>
+
+              <div class="instructions">
+                <h3>📲 Cómo agregar tu tarjeta:</h3>
+                <ol>
+                  <li>Abre este correo en tu iPhone</li>
+                  <li>Descarga el archivo adjunto (.pkpass)</li>
+                  <li>Toca el archivo descargado</li>
+                  <li>Se abrirá Apple Wallet automáticamente</li>
+                  <li>Presiona "Agregar" en la esquina superior derecha</li>
+                </ol>
+              </div>
+
+              <p style="margin-top: 30px; padding: 15px; background: #f0f0f0; border-radius: 8px; text-align: center;">
+                <strong>⚠️ Importante:</strong> Este archivo solo funciona en dispositivos Apple (iPhone, Apple Watch)
+              </p>
+            </div>
+
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} ${companyName}. Todos los derechos reservados.</p>
+              <p style="margin-top: 10px; font-size: 12px;">
+                Si tienes problemas para agregar tu tarjeta, contacta a soporte.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      attachments: [
+        {
+          filename: `${clientData.clientNumber}.pkpass`,
+          content: passBuffer,
+          contentType: 'application/vnd.apple.pkpass'
+        }
+      ]
+    });
+
+    console.log('Apple Wallet Pass enviado por correo:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error enviando Apple Wallet Pass:', error);
+    return { success: false, error: error.message };
+  }
+};

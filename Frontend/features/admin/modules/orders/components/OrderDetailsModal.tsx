@@ -85,6 +85,7 @@ interface OrderDetailsModalProps {
   setError: (error: string | null) => void;
   setSuccess: (success: boolean) => void;
   onScanQR?: () => void;
+  isEcommerceOrder?: boolean;
 }
 
 const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
@@ -110,6 +111,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   setError,
   setSuccess,
   onScanQR,
+  isEcommerceOrder = false,
 }) => {
   const router = useRouter();
 
@@ -702,7 +704,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                     </div>
 
                     {/* Recompensa - Solo mostrar si hay cliente seleccionado */}
-                    {selectedClientId && (
+                    {(selectedClientId || formData.clientInfo.clientId) && (
                       <div>
                         <Label className="font-semibold flex items-center gap-1 mb-2">
                           <Gift size={16} />
@@ -737,7 +739,29 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                             <Button
                               variant="outline"
                               type="button"
-                              onClick={() => setShowRewardsModal(true)}
+                              onClick={async () => {
+                                // Si hay un cliente seleccionado del dropdown, usar ese
+                                if (selectedClientId) {
+                                  const client = clients.find(c => c._id === selectedClientId);
+                                  if (client) {
+                                    setSelectedClientForRewards(client);
+                                  }
+                                } 
+                                // Si no, pero hay un clientId del QR scan, buscar el cliente
+                                else if (formData.clientInfo.clientId) {
+                                  try {
+                                    const response = await clientsService.getClientById(formData.clientInfo.clientId);
+                                    if (response.success && response.data) {
+                                      setSelectedClientForRewards(response.data);
+                                    }
+                                  } catch (error) {
+                                    console.error("Error obteniendo datos del cliente:", error);
+                                    toast.error("No se pudieron cargar los datos del cliente");
+                                    return;
+                                  }
+                                }
+                                setShowRewardsModal(true);
+                              }}
                               className="flex items-center justify-center gap-2"
                             >
                               <Gift size={16} />
@@ -746,7 +770,29 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                             <Button
                               variant="outline"
                               type="button"
-                              onClick={() => setShowRedeemedRewardsModal(true)}
+                              onClick={async () => {
+                                // Si hay un cliente seleccionado del dropdown, usar ese
+                                if (selectedClientId) {
+                                  const client = clients.find(c => c._id === selectedClientId);
+                                  if (client) {
+                                    setSelectedClientForRewards(client);
+                                    setShowRedeemedRewardsModal(true);
+                                  }
+                                } 
+                                // Si no, pero hay un clientId del QR scan, buscar el cliente
+                                else if (formData.clientInfo.clientId) {
+                                  try {
+                                    const response = await clientsService.getClientById(formData.clientInfo.clientId);
+                                    if (response.success && response.data) {
+                                      setSelectedClientForRewards(response.data);
+                                      setShowRedeemedRewardsModal(true);
+                                    }
+                                  } catch (error) {
+                                    console.error("Error obteniendo datos del cliente:", error);
+                                    toast.error("No se pudieron cargar los datos del cliente");
+                                  }
+                                }
+                              }}
                               className="flex items-center justify-center gap-2 text-green-600 border-green-300 hover:bg-green-50"
                               title="Ver todas las recompensas reclamadas del cliente"
                             >
@@ -758,8 +804,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                       </div>
                     )}
 
-                    {/* Caja registradora */}
-                    {!isSocialMedia && (
+                    {/* Caja registradora - Ocultar para órdenes de e-commerce */}
+                    {!isSocialMedia && !isEcommerceOrder && (
                       <div>
                         <Label className="font-semibold flex items-center gap-1 mb-2">
                           <CreditCard size={16} />
@@ -880,8 +926,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           />
                         </div>
 
-                        {/* Canal de venta */}
-                        {!isSocialMedia && !isCashier && (
+                        {/* Canal de venta - Ocultar para órdenes de e-commerce */}
+                        {!isSocialMedia && !isCashier && !isEcommerceOrder && (
                           <div>
                             <Label className="font-semibold flex items-center gap-1 mb-2">
                               <Store size={16} />
@@ -1475,11 +1521,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       )}
 
       {/* Modal de seleccion de recompensas */}
-      {formData.clientInfo.clientId && (
+      {(selectedClientId || formData.clientInfo.clientId) && (
         <ClientRewardsModal
           show={showRewardsModal}
           onHide={() => setShowRewardsModal(false)}
-          clientId={formData.clientInfo.clientId}
+          clientId={selectedClientId || formData.clientInfo.clientId || ''}
           onSelectReward={handleSelectReward}
         />
       )}

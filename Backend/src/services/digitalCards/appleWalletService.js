@@ -8,15 +8,16 @@ const __dirname = path.dirname(__filename);
 
 class AppleWalletService {
   constructor() {
-    this.passTypeIdentifier = process.env.APPLE_PASS_TYPE_ID || "pass.com.corazonvioleta.loyalty";
-    this.teamIdentifier = process.env.APPLE_TEAM_ID || "";
+    this.passTypeIdentifier = process.env.APPLE_PASS_TYPE_ID || "pass.mx.zolt.lealtad";
+    this.teamIdentifier = process.env.APPLE_TEAM_ID || "VHWEEDN99C";
     this.organizationName = "Corazón Violeta";
     this.certificatesPath = path.join(__dirname, "../../../certificates");
+    this.wwdrPath = path.join(this.certificatesPath, "wwdr.pem");
   }
 
   /**
    * Genera un Apple Wallet Pass para un cliente
-   * @param {Object} clientData - Datos del cliente
+   * @param {Object} clientData - Datos del cliente (incluye logoUrl y heroUrl)
    * @param {String} qrData - Datos encriptados para el QR
    * @returns {Promise<Buffer>} - Buffer del archivo .pkpass
    */
@@ -114,19 +115,20 @@ class AppleWalletService {
         },
         
         // Web Service URL para actualizaciones push
-        webServiceURL: process.env.APPLE_WEB_SERVICE_URL || "https://api.corazonvioleta.com/wallet",
+        webServiceURL: process.env.APPLE_WEB_SERVICE_URL || "https://api.corazonvioleta.com/api/digital-cards",
         authenticationToken: this.generateAuthToken(clientData.clientId),
       };
 
       // Si tenemos certificados configurados, generar el pass firmado
       if (await this.hasCertificates()) {
-        const pass = new PKPass({}, 
+        const pass = new PKPass({});
+        
+        // Configurar certificados
+        pass.setCertificates(
           await fs.readFile(path.join(this.certificatesPath, "signerCert.pem")),
           await fs.readFile(path.join(this.certificatesPath, "signerKey.pem")),
-          {
-            // Contraseña del certificado si es necesaria
-            passphrase: process.env.APPLE_CERT_PASSWORD,
-          }
+          await fs.readFile(this.wwdrPath),
+          process.env.APPLE_CERT_PASSWORD || "Z@ltLe@1t@d2026"
         );
 
         // Agregar los datos del pass
@@ -134,11 +136,12 @@ class AppleWalletService {
           pass[key] = passData[key];
         });
 
-        // Agregar imágenes si existen
-        await this.addPassImages(pass);
+        // Agregar imágenes dinámicas desde Firebase
+        await this.addDynamicImages(pass, clientData.logoUrl, clientData.heroUrl);
 
-        // Generar el pass
-        return await pass.generate();
+        // Generar el pass buffer
+        const buffer = pass.getAsBuffer();
+        return buffer;
       } else {
         // Para desarrollo: generar un pass no firmado (solo estructura)
         console.warn("No se encontraron certificados. Generando pass de prueba.");
@@ -206,37 +209,68 @@ class AppleWalletService {
     try {
       await fs.access(path.join(this.certificatesPath, "signerCert.pem"));
       await fs.access(path.join(this.certificatesPath, "signerKey.pem"));
+      await fs.access(this.wwdrPath);
       return true;
-    } catch {
+    } catch (error) {
+      console.log("Certificados de Apple no encontrados:", error.message);
       return false;
     }
   }
 
   /**
-   * Agrega imágenes al pass si existen
-   * @param {PKPass} pass - Instancia del pass
+   * Descarga una imagen desde una URL y la convierte a Buffer
+   * @param {String} url - URL de la imagen
+   * @returns {Promise<Buffer|null>} - Buffer de la imagen o null si falla
    */
-  async addPassImages(pass) {
-    const imagesPath = path.join(this.certificatesPath, "../assets/wallet");
-    
-    const images = [
-      { name: "icon.png", key: "icon" },
-      { name: "icon@2x.png", key: "icon@2x" },
-      { name: "logo.png", key: "logo" },
-      { name: "logo@2x.png", key: "logo@2x" },
-      { name: "strip.png", key: "strip" },
-      { name: "strip@2x.png", key: "strip@2x" },
-    ];
-
-    for (const img of images) {
-      try {
-        const imagePath = path.join(imagesPath, img.name);
-        const imageBuffer = await fs.readFile(imagePath);
-        pass.addBuffer(img.key, imageBuffer);
-      } catch (error) {
-        // Si la imagen no existe, continuar sin ella
-        console.log(`Imagen ${img.name} no encontrada, omitiendo...`);
+  async downloadImageAsBuffer(url) {
+    try {
+      if (!url) return null;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.log(`Error descargando imagen: ${response.status}`);
+        return null;
       }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (error) {
+      console.log(`Error descargando imagen desde ${url}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Agrega imágenes dinámicas al pass desde Firebase
+   * @param {PKPass} pass - Instancia del pass
+   * @param {String} logoUrl - URL del logo de la empresa
+   * @param {String} heroUrl - URL de la imagen hero/banner
+   */
+  async addDynamicImages(pass, logoUrl, heroUrl) {
+    try {
+      // Si hay logo de empresa, usarlo para icon y logo
+      if (logoUrl) {
+        const logoBuffer = await this.downloadImageAsBuffer(logoUrl);
+        if (logoBuffer) {
+          // Usar el mismo logo para icon y logo (PKPass los redimensionará)
+          pass.addBuffer("icon", logoBuffer);
+          pass.addBuffer("icon@2x", logoBuffer);
+          pass.addBuffer("logo", logoBuffer);
+          pass.addBuffer("logo@2x", logoBuffer);
+        }
+      }
+      
+      // Si hay imagen hero, usarla para strip
+      if (heroUrl) {
+        const heroBuffer = await this.downloadImageAsBuffer(heroUrl);
+        if (heroBuffer) {
+          pass.addBuffer("strip", heroBuffer);
+          pass.addBuffer("strip@2x", heroBuffer);
+        }
+      }
+    } catch (error) {
+      console.log("Error agregando imágenes dinámicas:", error.message);
+      // Continuar sin imágenes si hay error
     }
   }
 

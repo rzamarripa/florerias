@@ -310,7 +310,8 @@ const createOrder = async (req, res) => {
       change,
       remainingBalance,
       sendToProduction,
-      discountRequestMessage
+      discountRequestMessage,
+      eOrder
     } = req.body;
 
     // Validar campos requeridos
@@ -349,6 +350,7 @@ const createOrder = async (req, res) => {
     }
 
     // Validar que la caja registradora pertenezca a la sucursal seleccionada para usuarios de Redes
+    // Para órdenes de e-commerce (eOrder=true), la caja registradora es opcional
     if (cashRegisterId) {
       const cashRegister = await CashRegister.findById(cashRegisterId);
 
@@ -442,11 +444,12 @@ const createOrder = async (req, res) => {
 
     // Validar que los productos del catálogo existan y haya stock disponible
     for (const item of items) {
-      // Validar que todos los productos tengan categoría
-      if (!item.productCategory) {
+      // Solo requerir categoría para productos manuales (no del catálogo)
+      // Los productos del catálogo ya tienen categoría en su modelo Product
+      if (!item.productCategory && item.isProduct === false) {
         return res.status(400).json({
           success: false,
-          message: `El producto "${item.productName}" debe tener una categoría asignada`
+          message: `El producto manual "${item.productName}" debe tener una categoría asignada`
         });
       }
 
@@ -615,7 +618,8 @@ const createOrder = async (req, res) => {
       stage: stageId, // Asignar la etapa (puede ser null)
       isSocialMediaOrder: isSocialMediaOrder || false,
       socialMedia: socialMedia || null,
-      materials: materials // Agregar los materiales extras
+      materials: materials, // Agregar los materiales extras
+      eOrder: eOrder || false // Agregar campo eOrder para identificar órdenes de e-commerce
     });
 
     const savedOrder = await newOrder.save();
@@ -624,13 +628,14 @@ const createOrder = async (req, res) => {
     let savedPaymentId = null;
 
     // Si hay un anticipo (advance > 0) o un pago con Stripe, crear el registro en OrderPayment
-    if ((advance && advance > 0 && cashRegisterId) || stripePaymentIntentId) {
+    // Para órdenes de e-commerce sin caja registradora, permitir crear el pago sin cashRegisterId
+    if ((advance && advance > 0 && (cashRegisterId || eOrder)) || stripePaymentIntentId) {
       const paymentAmount = stripePaymentIntentId ? total : advance; // Si es Stripe, es pago completo
       const orderPayment = new OrderPayment({
         orderId: savedOrder._id,
         amount: paymentAmount,
         paymentMethod: paymentMethod,
-        cashRegisterId: cashRegisterId,
+        cashRegisterId: cashRegisterId || null,
         date: new Date(),
         registeredBy: req.user?._id || null,
         notes: stripePaymentIntentId ? 'Pago con tarjeta procesado por Stripe' : 'Pago inicial al crear la orden',

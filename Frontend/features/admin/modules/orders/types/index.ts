@@ -111,6 +111,7 @@ export interface Order {
   arregloUrl?: string | null;
   arregloPath?: string | null;
   materials?: OrderMaterial[];
+  eOrder?: boolean; // Campo para identificar órdenes de e-commerce
   createdAt: string;
   updatedAt: string;
 }
@@ -156,6 +157,7 @@ export interface CreateOrderData {
   stripePaymentMethodId?: string | null;
   stripePaymentStatus?: string | null;
   stripeCustomerId?: string | null;
+  eOrder?: boolean; // Campo para identificar órdenes de e-commerce
 }
 
 export interface UpdateOrderData extends Partial<CreateOrderData> {
