@@ -9,6 +9,7 @@ import OrderNotification from '../models/OrderNotification.js';
 import { Company } from '../models/Company.js';
 import { StageCatalog } from '../models/StageCatalog.js';
 import DiscountAuth from '../models/DiscountAuth.js';
+import EcommerceConfig from '../models/EcommerceConfig.js';
 import { emitOrderCreated, emitOrderUpdated, emitOrderDeleted, emitStockUpdated } from '../sockets/orderSocket.js';
 import orderLogService from '../services/orderLogService.js';
 import clientPointsService from '../services/clientPointsService.js';
@@ -660,8 +661,47 @@ const createOrder = async (req, res) => {
       await savedOrder.save();
     }
 
-    // Descontar productos y materiales del almacén al crear la orden
-    if (storage) {
+    // Manejar stock según el tipo de orden
+    if (eOrder) {
+      // Para órdenes de e-commerce, reducir stock de ec_ecommerce_config
+      try {
+        const ecommerceConfig = await EcommerceConfig.findOne({ branchId });
+        
+        if (ecommerceConfig && ecommerceConfig.itemsStock) {
+          let stockUpdated = false;
+          
+          for (const item of items) {
+            if (item.isProduct === true && item.productId) {
+              // Buscar el producto en itemsStock del e-commerce config
+              const productIndex = ecommerceConfig.itemsStock.findIndex(
+                (p) => p._id === item.productId || p.productId === item.productId
+              );
+              
+              if (productIndex !== -1) {
+                // Reducir el stock del producto en la configuración de e-commerce
+                ecommerceConfig.itemsStock[productIndex].stock -= item.quantity;
+                
+                // No permitir stock negativo
+                if (ecommerceConfig.itemsStock[productIndex].stock < 0) {
+                  ecommerceConfig.itemsStock[productIndex].stock = 0;
+                }
+                
+                stockUpdated = true;
+              }
+            }
+          }
+          
+          // Guardar cambios en la configuración de e-commerce
+          if (stockUpdated) {
+            await ecommerceConfig.save();
+          }
+        }
+      } catch (ecommerceError) {
+        console.error('Error al descontar stock de e-commerce:', ecommerceError);
+        // Continuar con la creación de la orden aunque falle el descuento del stock
+      }
+    } else if (storage) {
+      // Para órdenes tradicionales, reducir stock del almacén cv_storages
       const hasProductsFromCatalog = items.some(item => item.isProduct === true);
       const hasExtras = items.some(item =>
         item.insumos && item.insumos.some(insumo => insumo.isExtra === true && insumo.materialId)
@@ -1266,40 +1306,75 @@ const updateOrderStatus = async (req, res) => {
 
     // Si la orden fue cancelada (y no estaba cancelada antes), restaurar stock y crear notificación
     if (status === 'cancelado' && previousStatus !== 'cancelado') {
-      // Restaurar el stock de los productos del catálogo al almacén
-      try {
-        // Buscar el almacén de la sucursal de la orden
-        const storage = await Storage.findOne({ branch: existingOrder.branchId });
-
-        if (storage) {
-          // Restaurar stock de cada producto del catálogo en la orden
-          for (const item of existingOrder.items) {
-            if (item.isProduct === true && item.productId) {
-              const productInStorageIndex = storage.products.findIndex(
-                (p) => p.productId.toString() === item.productId.toString()
-              );
-
-              if (productInStorageIndex !== -1) {
-                // El producto ya existe en el almacén, incrementar su cantidad
-                storage.products[productInStorageIndex].quantity += item.quantity;
-              } else {
-                // El producto no existe en el almacén, agregarlo
-                storage.products.push({
-                  productId: item.productId,
-                  quantity: item.quantity
-                });
+      // Verificar si es una orden de e-commerce
+      if (existingOrder.eOrder) {
+        // Restaurar stock en ec_ecommerce_config para órdenes de e-commerce
+        try {
+          const ecommerceConfig = await EcommerceConfig.findOne({ branchId: existingOrder.branchId });
+          
+          if (ecommerceConfig && ecommerceConfig.itemsStock) {
+            let stockUpdated = false;
+            
+            for (const item of existingOrder.items) {
+              if (item.isProduct === true && item.productId) {
+                // Buscar el producto en itemsStock del e-commerce config
+                const productIndex = ecommerceConfig.itemsStock.findIndex(
+                  (p) => p._id === item.productId.toString() || p.productId === item.productId.toString()
+                );
+                
+                if (productIndex !== -1) {
+                  // Restaurar el stock del producto en la configuración de e-commerce
+                  ecommerceConfig.itemsStock[productIndex].stock += item.quantity;
+                  stockUpdated = true;
+                }
               }
             }
+            
+            // Guardar cambios en la configuración de e-commerce
+            if (stockUpdated) {
+              await ecommerceConfig.save();
+            }
           }
-
-          // Actualizar fecha de último ingreso (porque estamos devolviendo stock)
-          storage.lastIncome = Date.now();
-          await storage.save();
+        } catch (ecommerceError) {
+          console.error('Error al restaurar stock de e-commerce por cancelación:', ecommerceError);
+          // No fallar la cancelación si hay error al restaurar stock
         }
-      } catch (stockError) {
-        console.error('Error al restaurar stock por cancelación:', stockError);
-        // No fallar la cancelación si hay error al restaurar stock
-        // El administrador puede corregir el stock manualmente
+      } else {
+        // Restaurar stock en cv_storages para órdenes tradicionales
+        try {
+          // Buscar el almacén de la sucursal de la orden
+          const storage = await Storage.findOne({ branch: existingOrder.branchId });
+
+          if (storage) {
+            // Restaurar stock de cada producto del catálogo en la orden
+            for (const item of existingOrder.items) {
+              if (item.isProduct === true && item.productId) {
+                const productInStorageIndex = storage.products.findIndex(
+                  (p) => p.productId.toString() === item.productId.toString()
+                );
+
+                if (productInStorageIndex !== -1) {
+                  // El producto ya existe en el almacén, incrementar su cantidad
+                  storage.products[productInStorageIndex].quantity += item.quantity;
+                } else {
+                  // El producto no existe en el almacén, agregarlo
+                  storage.products.push({
+                    productId: item.productId,
+                    quantity: item.quantity
+                  });
+                }
+              }
+            }
+
+            // Actualizar fecha de último ingreso (porque estamos devolviendo stock)
+            storage.lastIncome = Date.now();
+            await storage.save();
+          }
+        } catch (stockError) {
+          console.error('Error al restaurar stock por cancelación:', stockError);
+          // No fallar la cancelación si hay error al restaurar stock
+          // El administrador puede corregir el stock manualmente
+        }
       }
 
       // Crear notificación de cancelación
@@ -1426,33 +1501,69 @@ const deleteOrder = async (req, res) => {
     // Restaurar el stock de los productos del catálogo al almacén (solo si no está cancelada)
     // Si ya estaba cancelada, el stock ya fue restaurado
     if (orderToDelete.status !== 'cancelado') {
-      try {
-        const storage = await Storage.findOne({ branch: orderToDelete.branchId });
-
-        if (storage) {
-          for (const item of orderToDelete.items) {
-            if (item.isProduct === true && item.productId) {
-              const productInStorageIndex = storage.products.findIndex(
-                (p) => p.productId.toString() === item.productId.toString()
-              );
-
-              if (productInStorageIndex !== -1) {
-                storage.products[productInStorageIndex].quantity += item.quantity;
-              } else {
-                storage.products.push({
-                  productId: item.productId,
-                  quantity: item.quantity
-                });
+      // Verificar si es una orden de e-commerce
+      if (orderToDelete.eOrder) {
+        // Restaurar stock en ec_ecommerce_config para órdenes de e-commerce
+        try {
+          const ecommerceConfig = await EcommerceConfig.findOne({ branchId: orderToDelete.branchId });
+          
+          if (ecommerceConfig && ecommerceConfig.itemsStock) {
+            let stockUpdated = false;
+            
+            for (const item of orderToDelete.items) {
+              if (item.isProduct === true && item.productId) {
+                // Buscar el producto en itemsStock del e-commerce config
+                const productIndex = ecommerceConfig.itemsStock.findIndex(
+                  (p) => p._id === item.productId.toString() || p.productId === item.productId.toString()
+                );
+                
+                if (productIndex !== -1) {
+                  // Restaurar el stock del producto en la configuración de e-commerce
+                  ecommerceConfig.itemsStock[productIndex].stock += item.quantity;
+                  stockUpdated = true;
+                }
               }
             }
+            
+            // Guardar cambios en la configuración de e-commerce
+            if (stockUpdated) {
+              await ecommerceConfig.save();
+            }
           }
-
-          storage.lastIncome = Date.now();
-          await storage.save();
+        } catch (ecommerceError) {
+          console.error('Error al restaurar stock de e-commerce por eliminación:', ecommerceError);
+          // Continuar con la eliminación aunque falle la restauración del stock
         }
-      } catch (stockError) {
-        console.error('Error al restaurar stock por eliminación:', stockError);
-        // Continuar con la eliminación aunque falle la restauración del stock
+      } else {
+        // Restaurar stock en cv_storages para órdenes tradicionales
+        try {
+          const storage = await Storage.findOne({ branch: orderToDelete.branchId });
+
+          if (storage) {
+            for (const item of orderToDelete.items) {
+              if (item.isProduct === true && item.productId) {
+                const productInStorageIndex = storage.products.findIndex(
+                  (p) => p.productId.toString() === item.productId.toString()
+                );
+
+                if (productInStorageIndex !== -1) {
+                  storage.products[productInStorageIndex].quantity += item.quantity;
+                } else {
+                  storage.products.push({
+                    productId: item.productId,
+                    quantity: item.quantity
+                  });
+                }
+              }
+            }
+
+            storage.lastIncome = Date.now();
+            await storage.save();
+          }
+        } catch (stockError) {
+          console.error('Error al restaurar stock por eliminación:', stockError);
+          // Continuar con la eliminación aunque falle la restauración del stock
+        }
       }
     }
 

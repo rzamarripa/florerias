@@ -23,7 +23,7 @@ class AppleWalletService {
    */
   async generatePass(clientData, qrData) {
     try {
-      // Configuración del pass
+      // Configuración del pass - Separar datos generales de los campos de storeCard
       const passData = {
         formatVersion: 1,
         passTypeIdentifier: this.passTypeIdentifier,
@@ -43,104 +43,116 @@ class AppleWalletService {
           messageEncoding: "iso-8859-1",
         },
         
-        // Tipo de pass: Tarjeta de tienda genérica
-        storeCard: {
-          // Campos principales
-          primaryFields: [
-            {
-              key: "points",
-              label: "PUNTOS",
-              value: clientData.points || 0,
-              changeMessage: "Ahora tienes %@ puntos",
-            },
-          ],
-          
-          // Campos secundarios
-          secondaryFields: [
-            {
-              key: "clientName",
-              label: "CLIENTE",
-              value: `${clientData.name} ${clientData.lastName}`,
-            },
-            {
-              key: "clientNumber",
-              label: "NÚMERO",
-              value: clientData.clientNumber,
-            },
-          ],
-          
-          // Campos auxiliares
-          auxiliaryFields: [
-            {
-              key: "branch",
-              label: "SUCURSAL",
-              value: clientData.branchName || "Principal",
-            },
-            {
-              key: "level",
-              label: "NIVEL",
-              value: this.getClientLevel(clientData.points),
-            },
-          ],
-          
-          // Campos del reverso
-          backFields: [
-            {
-              key: "terms",
-              label: "Términos y Condiciones",
-              value: "Los puntos acumulados pueden ser canjeados por recompensas en cualquier sucursal participante. Los puntos tienen una vigencia de 12 meses.",
-            },
-            {
-              key: "website",
-              label: "Sitio Web",
-              value: "https://corazonvioleta.com",
-            },
-            {
-              key: "phone",
-              label: "Teléfono",
-              value: clientData.phoneNumber || "N/A",
-            },
-            {
-              key: "email",
-              label: "Email",
-              value: clientData.email || "N/A",
-            },
-            {
-              key: "lastUpdate",
-              label: "Última Actualización",
-              value: new Date().toLocaleDateString("es-MX"),
-              dateStyle: "PKDateStyleShort",
-            },
-          ],
-        },
-        
         // Web Service URL para actualizaciones push
         webServiceURL: process.env.APPLE_WEB_SERVICE_URL || "https://api.corazonvioleta.com/api/digital-cards",
         authenticationToken: this.generateAuthToken(clientData.clientId),
       };
+      
+      // Datos específicos del storeCard
+      const storeCardFields = {
+        primaryFields: [
+          {
+            key: "points",
+            label: "PUNTOS",
+            value: clientData.points || 0,
+            changeMessage: "Ahora tienes %@ puntos",
+          },
+        ],
+        secondaryFields: [
+          {
+            key: "clientName",
+            label: "CLIENTE",
+            value: `${clientData.name} ${clientData.lastName}`,
+          },
+          {
+            key: "clientNumber",
+            label: "NÚMERO",
+            value: clientData.clientNumber,
+          },
+        ],
+        auxiliaryFields: [
+          {
+            key: "branch",
+            label: "SUCURSAL",
+            value: clientData.branchName || "Principal",
+          },
+          {
+            key: "level",
+            label: "NIVEL",
+            value: this.getClientLevel(clientData.points),
+          },
+        ],
+        backFields: [
+          {
+            key: "terms",
+            label: "Términos y Condiciones",
+            value: "Los puntos acumulados pueden ser canjeados por recompensas en cualquier sucursal participante. Los puntos tienen una vigencia de 12 meses.",
+          },
+          {
+            key: "website",
+            label: "Sitio Web",
+            value: "https://corazonvioleta.com",
+          },
+          {
+            key: "phone",
+            label: "Teléfono",
+            value: clientData.phoneNumber || "N/A",
+          },
+          {
+            key: "email",
+            label: "Email",
+            value: clientData.email || "N/A",
+          },
+          {
+            key: "lastUpdate",
+            label: "Última Actualización",
+            value: new Date().toLocaleDateString("es-MX"),
+            dateStyle: "PKDateStyleShort",
+          },
+        ],
+      };
 
       // Si tenemos certificados configurados, generar el pass firmado
       if (await this.hasCertificates()) {
-        const pass = new PKPass({});
-        
-        // Configurar certificados
-        pass.setCertificates(
-          await fs.readFile(path.join(this.certificatesPath, "signerCert.pem")),
-          await fs.readFile(path.join(this.certificatesPath, "signerKey.pem")),
-          await fs.readFile(this.wwdrPath),
-          process.env.APPLE_CERT_PASSWORD || "Z@ltLe@1t@d2026"
-        );
+        // Leer los certificados
+        const certificates = {
+          wwdr: await fs.readFile(this.wwdrPath),
+          signerCert: await fs.readFile(path.join(this.certificatesPath, "signerCert.pem")),
+          signerKey: await fs.readFile(path.join(this.certificatesPath, "signerKey.pem")),
+          signerKeyPassphrase: process.env.APPLE_CERT_PASSWORD || "Z@ltLe@1t@d2026"
+        };
 
-        // Agregar los datos del pass
-        Object.keys(passData).forEach(key => {
-          pass[key] = passData[key];
-        });
+        // Usar PKPass.from() con un modelo base
+        const modelPath = path.join(__dirname, "../../../models/storeCard.pass");
+        const pass = await PKPass.from({
+          model: modelPath,
+          certificates: certificates
+        }, passData);
+        
+        // El tipo ya está establecido por el modelo, no necesitamos establecerlo
+        // pass.type = "storeCard";
+        
+        // Agregar los campos del storeCard
+        storeCardFields.primaryFields.forEach(field => pass.primaryFields.push(field));
+        storeCardFields.secondaryFields.forEach(field => pass.secondaryFields.push(field));
+        storeCardFields.auxiliaryFields.forEach(field => pass.auxiliaryFields.push(field));
+        storeCardFields.backFields.forEach(field => pass.backFields.push(field));
 
         // Agregar imágenes dinámicas desde Firebase
         await this.addDynamicImages(pass, clientData.logoUrl, clientData.heroUrl);
 
         // Generar el pass buffer
         const buffer = pass.getAsBuffer();
+        
+        // Verificar que sea un buffer válido
+        if (!Buffer.isBuffer(buffer)) {
+          console.error("PKPass no generó un buffer válido, recibido:", typeof buffer);
+          throw new Error("Failed to generate valid pass buffer");
+        }
+        
+        // Log del tamaño del buffer para debugging
+        console.log(`Apple Wallet Pass generado: ${buffer.length} bytes`);
+        
         return buffer;
       } else {
         // Para desarrollo: generar un pass no firmado (solo estructura)
@@ -248,6 +260,8 @@ class AppleWalletService {
    */
   async addDynamicImages(pass, logoUrl, heroUrl) {
     try {
+      let iconAdded = false;
+      
       // Si hay logo de empresa, usarlo para icon y logo
       if (logoUrl) {
         const logoBuffer = await this.downloadImageAsBuffer(logoUrl);
@@ -257,6 +271,20 @@ class AppleWalletService {
           pass.addBuffer("icon@2x", logoBuffer);
           pass.addBuffer("logo", logoBuffer);
           pass.addBuffer("logo@2x", logoBuffer);
+          iconAdded = true;
+        }
+      }
+      
+      // Si no se agregó un icono, usar el mismo logo default que usa Google Wallet
+      if (!iconAdded) {
+        const defaultLogoUrl = "https://i.imgur.com/6KZMZqA.png";
+        const defaultLogoBuffer = await this.downloadImageAsBuffer(defaultLogoUrl);
+        
+        if (defaultLogoBuffer) {
+          pass.addBuffer("icon", defaultLogoBuffer);
+          pass.addBuffer("icon@2x", defaultLogoBuffer);
+          pass.addBuffer("logo", defaultLogoBuffer);
+          pass.addBuffer("logo@2x", defaultLogoBuffer);
         }
       }
       

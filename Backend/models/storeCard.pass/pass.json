@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "passTypeIdentifier": "pass.mx.zolt.lealtad",
+  "serialNumber": "PLACEHOLDER",
+  "teamIdentifier": "VHWEEDN99C",
+  "organizationName": "Corazón Violeta",
+  "description": "Tarjeta de Fidelidad",
+  "logoText": "Corazón Violeta",
+  "foregroundColor": "rgb(255, 255, 255)",
+  "backgroundColor": "rgb(139, 92, 246)",
+  "labelColor": "rgb(255, 255, 255)",
+  "storeCard": {}
+}

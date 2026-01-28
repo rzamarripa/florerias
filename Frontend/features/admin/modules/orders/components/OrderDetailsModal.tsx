@@ -566,15 +566,24 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Para órdenes e-commerce, agregar el campo eOrder
+    const orderData = isEcommerceOrder 
+      ? { ...formData, eOrder: true }
+      : formData;
+
     // Verificar si el metodo de pago seleccionado es tarjeta
     const selectedMethod = paymentMethods.find(m => m._id === formData.paymentMethod);
     if (selectedMethod && isCardPaymentMethod(selectedMethod.name)) {
       // Si es pago con tarjeta, guardar datos y abrir modal de Stripe
-      setPendingOrderData(formData);
+      setPendingOrderData(orderData);
       setPendingFiles({ comprobante: comprobanteFile, arreglo: arregloFile });
       setShowStripeModal(true);
     } else {
       // Si no es tarjeta, proceder con el flujo normal
+      // Asegurar que formData tenga eOrder si es e-commerce
+      if (isEcommerceOrder && !formData.eOrder) {
+        setFormData(prev => ({ ...prev, eOrder: true }));
+      }
       onSubmit(e, { comprobante: comprobanteFile, arreglo: arregloFile });
     }
   };
@@ -1481,8 +1490,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 uploadingFiles ||
                 formData.items.length === 0 ||
                 !formData.paymentMethod ||
-                !cashRegister ||
-                (formData.items.some((item) => item.isProduct === true) && !selectedStorageId) ||
+                (!isEcommerceOrder && !cashRegister) || // Solo requerir caja si NO es e-commerce
+                (formData.items.some((item) => item.isProduct === true) && !isEcommerceOrder && !selectedStorageId) || // Solo requerir storage si NO es e-commerce
                 (isSocialMedia && !formData.branchId)
               }
             >
@@ -1490,6 +1499,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 ? "Subiendo archivos..."
                 : loading
                 ? "Procesando..."
+                : isEcommerceOrder
+                ? "Confirmar pedido"
                 : "Confirmar venta"}
             </Button>
           </DialogFooter>

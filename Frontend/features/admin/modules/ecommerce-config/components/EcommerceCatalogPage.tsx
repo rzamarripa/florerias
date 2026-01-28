@@ -8,6 +8,7 @@ import {
   Grid,
   List,
   Star,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useCartStore } from "../store/cartStore";
 import ClientCartModal from "./ClientCartModal";
+import EcommerceCheckoutModal from "./EcommerceCheckoutModal";
 import { ecommerceConfigService } from "../services/ecommerceConfig";
 import type { StockItem, EcommerceConfig } from "../types";
 import { toast } from "react-toastify";
@@ -51,11 +53,15 @@ export default function EcommerceCatalogPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<EcommerceConfig | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [filteredProducts, setFilteredProducts] = useState<StockItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "price-asc" | "price-desc">("name");
+  const [sortBy, setSortBy] = useState<"name" | "price-asc" | "price-desc">(
+    "name"
+  );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+
   // Estados para filtros
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -63,12 +69,12 @@ export default function EcommerceCatalogPage() {
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(5000);
 
-  const { 
-    addToCart, 
-    getTotalItems, 
-    openCart, 
-    initializeStock, 
-    getAvailableStock 
+  const {
+    addToCart,
+    getTotalItems,
+    openCart,
+    initializeStock,
+    getAvailableStock,
   } = useCartStore();
   const totalItemsInCart = getTotalItems();
 
@@ -82,6 +88,11 @@ export default function EcommerceCatalogPage() {
       setLoading(true);
       const response = await ecommerceConfigService.getManagerConfig();
       const { config: configData, branch } = response.data;
+
+      // Guardar el branchId para el checkout
+      if (branch?._id) {
+        setBranchId(branch._id);
+      }
 
       const fullConfig = {
         ...configData,
@@ -108,20 +119,29 @@ export default function EcommerceCatalogPage() {
 
       // Agregar propiedades simuladas a los productos para el diseño mejorado
       if (fullConfig.itemsStock && fullConfig.itemsStock.length > 0) {
-        fullConfig.itemsStock = fullConfig.itemsStock.map(p => ({
+        fullConfig.itemsStock = fullConfig.itemsStock.map((p) => ({
           ...p,
+          stock: p.stock || 0, // Asegurar que el stock esté presente
           discount: Math.floor(Math.random() * 30 + 10), // Descuento entre 10-40%
           originalPrice: p.precio * (1 + Math.random() * 0.5), // Precio original simulado
           rating: 3 + Math.random() * 2, // Rating entre 3-5
           reviews: Math.floor(Math.random() * 100), // Reviews entre 0-100
         }));
+        
+        // Debug: log para verificar stock
+        console.log("Productos con stock:", fullConfig.itemsStock.map(p => ({
+          nombre: p.nombre,
+          stock: p.stock
+        })));
       }
 
       setConfig(fullConfig);
-      
+
       // Initialize stock
       if (fullConfig.itemsStock && fullConfig.itemsStock.length > 0) {
-        initializeStock(fullConfig.itemsStock.map(p => ({ _id: p._id, stock: p.stock })));
+        initializeStock(
+          fullConfig.itemsStock.map((p) => ({ _id: p._id, stock: p.stock }))
+        );
       }
     } catch (error) {
       console.error("Error al cargar configuración:", error);
@@ -134,7 +154,7 @@ export default function EcommerceCatalogPage() {
   // Filter and sort products
   useEffect(() => {
     if (!config?.itemsStock) return;
-    
+
     let filtered = [...config.itemsStock];
 
     // Filter by search
@@ -170,18 +190,16 @@ export default function EcommerceCatalogPage() {
 
   // Helper functions para filtros
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev =>
+    setSelectedCategories((prev) =>
       prev.includes(category)
-        ? prev.filter(c => c !== category)
+        ? prev.filter((c) => c !== category)
         : [...prev, category]
     );
   };
 
   const toggleBrand = (brand: string) => {
-    setSelectedBrands(prev =>
-      prev.includes(brand)
-        ? prev.filter(b => b !== brand)
-        : [...prev, brand]
+    setSelectedBrands((prev) =>
+      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
     );
   };
 
@@ -200,8 +218,8 @@ export default function EcommerceCatalogPage() {
             key={i}
             size={12}
             className={cn(
-              i < Math.floor(rating) 
-                ? "fill-yellow-400 text-yellow-400" 
+              i < Math.floor(rating)
+                ? "fill-yellow-400 text-yellow-400"
                 : "fill-gray-200 text-gray-200"
             )}
           />
@@ -211,23 +229,25 @@ export default function EcommerceCatalogPage() {
   };
 
   const handleAddToCart = (product: StockItem) => {
-    const availableStock = getAvailableStock(product._id);
-    
-    if (availableStock <= 0) {
+    // Usar el stock directamente del producto de e-commerce
+    if (product.stock <= 0) {
       toast.error("No hay stock disponible");
       return;
     }
 
-    addToCart({
-      _id: product._id,
-      nombre: product.nombre,
-      descripcion: product.descripcion,
-      precio: product.precio,
-      stock: product.stock,
-      imagen: product.imagen,
-      productCategory: product.productCategory,
-    }, 1);
-    
+    addToCart(
+      {
+        _id: product._id,
+        nombre: product.nombre,
+        descripcion: product.descripcion,
+        precio: product.precio,
+        stock: product.stock,
+        imagen: product.imagen,
+        productCategory: product.productCategory,
+      },
+      1
+    );
+
     toast.success(`${product.nombre} agregado al carrito`);
   };
 
@@ -262,7 +282,7 @@ export default function EcommerceCatalogPage() {
         <div className="max-w-[1400px] mx-auto px-6 py-4">
           <div className="mb-4">
             <h1 className="text-2xl font-semibold text-gray-900">
-              {totalProducts} Productos
+              Realizar Pedido
             </h1>
           </div>
 
@@ -277,7 +297,7 @@ export default function EcommerceCatalogPage() {
                 className="pl-10 pr-4 bg-gray-50 border-gray-200"
               />
             </div>
-            
+
             <div className="flex items-center gap-3 ml-4">
               <div className="flex rounded-lg border border-gray-200">
                 <Button
@@ -332,8 +352,12 @@ export default function EcommerceCatalogPage() {
           {/* Categories */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-900">Categoría:</h3>
-              <button className="text-xs text-indigo-600 hover:underline">Ver Todo</button>
+              <h3 className="text-sm font-semibold text-gray-900">
+                Categoría:
+              </h3>
+              <button className="text-xs text-indigo-600 hover:underline">
+                Ver Todo
+              </button>
             </div>
             <div className="space-y-3">
               {categories.map((category) => (
@@ -347,10 +371,14 @@ export default function EcommerceCatalogPage() {
                       onCheckedChange={() => toggleCategory(category.name)}
                       className="mr-2"
                     />
-                    <span className="text-sm text-gray-600">{category.name}</span>
+                    <span className="text-sm text-gray-600">
+                      {category.name}
+                    </span>
                   </div>
                   {category.count > 0 && (
-                    <span className="text-xs text-gray-400">({category.count})</span>
+                    <span className="text-xs text-gray-400">
+                      ({category.count})
+                    </span>
                   )}
                 </label>
               ))}
@@ -361,7 +389,9 @@ export default function EcommerceCatalogPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-900">Marcas:</h3>
-              <button className="text-xs text-indigo-600 hover:underline">Ver Todo</button>
+              <button className="text-xs text-indigo-600 hover:underline">
+                Ver Todo
+              </button>
             </div>
             <div className="space-y-3">
               {brands.map((brand) => (
@@ -378,7 +408,9 @@ export default function EcommerceCatalogPage() {
                     <span className="text-sm text-gray-600">{brand.name}</span>
                   </div>
                   {brand.count > 0 && (
-                    <span className="text-xs text-gray-400">({brand.count})</span>
+                    <span className="text-xs text-gray-400">
+                      ({brand.count})
+                    </span>
                   )}
                 </label>
               ))}
@@ -387,7 +419,9 @@ export default function EcommerceCatalogPage() {
 
           {/* Price Range */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Precio:</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+              Precio:
+            </h3>
             <div className="space-y-4">
               <Slider
                 value={priceRange}
@@ -435,19 +469,24 @@ export default function EcommerceCatalogPage() {
           {filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Package className="h-16 w-16 text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron productos</h3>
-              <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No se encontraron productos
+              </h3>
+              <p className="text-gray-500">
+                Intenta ajustar los filtros de búsqueda
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product: any) => {
-                const availableStock = getAvailableStock(product._id);
-                const isOutOfStock = availableStock <= 0;
+                // Usar el stock directamente del producto de e-commerce
+                const isOutOfStock = product.stock <= 0;
                 const discount = product.discount || 15;
-                const originalPrice = product.originalPrice || product.precio * 1.3;
+                const originalPrice =
+                  product.originalPrice || product.precio * 1.3;
                 const rating = product.rating || 4;
                 const reviews = product.reviews || 45;
-                
+
                 return (
                   <div
                     key={product._id}
@@ -462,15 +501,16 @@ export default function EcommerceCatalogPage() {
                         </Badge>
                       </div>
 
-                      {/* Stock Badge en esquina superior derecha */}
-                      {availableStock <= 5 && (
-                        <Badge
-                          variant={availableStock > 0 ? "secondary" : "destructive"}
-                          className="absolute top-2 right-2 z-10 text-xs"
-                        >
-                          Stock: {availableStock}
-                        </Badge>
-                      )}
+                      {/* Stock Badge en esquina superior derecha - Siempre mostrar el stock */}
+                      <Badge
+                        variant={
+                          product.stock === 0 ? "destructive" : 
+                          product.stock <= 5 ? "secondary" : "default"
+                        }
+                        className="absolute top-2 right-2 z-10 text-xs"
+                      >
+                        Stock: {product.stock}
+                      </Badge>
 
                       {product.imagen ? (
                         <img
@@ -486,7 +526,9 @@ export default function EcommerceCatalogPage() {
 
                       {isOutOfStock && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <span className="text-white font-semibold text-lg">Agotado</span>
+                          <span className="text-white font-semibold text-lg">
+                            Agotado
+                          </span>
                         </div>
                       )}
 
@@ -505,13 +547,15 @@ export default function EcommerceCatalogPage() {
                       <h3 className="font-medium text-sm text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem]">
                         {product.nombre}
                       </h3>
-                      
+
                       {/* Rating y Reviews */}
                       <div className="flex items-center gap-2 mb-2">
                         {renderStars(rating)}
-                        <span className="text-xs text-gray-500">({reviews})</span>
+                        <span className="text-xs text-gray-500">
+                          ({reviews})
+                        </span>
                       </div>
-                      
+
                       {/* Precios */}
                       <div className="flex items-center gap-2">
                         <span className="text-gray-400 line-through text-sm">
@@ -522,17 +566,22 @@ export default function EcommerceCatalogPage() {
                         </span>
                       </div>
 
+                      {/* Stock disponible */}
+                      <div className="text-xs text-gray-600 mt-1">
+                        Stock disponible: {product.stock} unidades
+                      </div>
+
                       {/* Botón agregar al carrito (mantener el existente también) */}
                       <Button
                         className="w-full text-xs mt-3"
                         size="sm"
                         disabled={isOutOfStock}
                         onClick={() => handleAddToCart(product)}
-                        style={{ 
-                          backgroundColor: isOutOfStock ? '#9ca3af' : '#6366f1'
+                        style={{
+                          backgroundColor: isOutOfStock ? "#9ca3af" : "#6366f1",
                         }}
                       >
-                        {isOutOfStock ? 'Agotado' : 'Agregar al carrito'}
+                        {isOutOfStock ? "Agotado" : "Agregar al carrito"}
                       </Button>
                     </div>
                   </div>
@@ -547,7 +596,25 @@ export default function EcommerceCatalogPage() {
       <ClientCartModal
         colors={config.colors}
         typography={config.typography}
+        onCheckout={() => {
+          setShowCheckoutModal(true);
+        }}
       />
+
+      {/* Checkout Modal */}
+      {branchId && (
+        <EcommerceCheckoutModal
+          show={showCheckoutModal}
+          onHide={() => {
+            setShowCheckoutModal(false);
+          }}
+          onOrderCreated={() => {
+            // Recargar configuración para actualizar stock después de crear orden exitosamente
+            loadConfig();
+          }}
+          branchId={branchId}
+        />
+      )}
     </div>
   );
 }

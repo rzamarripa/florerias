@@ -527,8 +527,11 @@ export const sendGoogleWalletCard = async (clientData, saveUrl, companyName = "C
  * @param {Buffer} passBuffer - Buffer del archivo .pkpass
  * @param {String} companyName - Nombre de la empresa
  */
-export const sendAppleWalletCard = async (clientData, passBuffer, companyName = 'Corazón Violeta') => {
+export const sendAppleWalletCard = async (clientData, passBuffer, companyName = 'Corazón Violeta', cardId) => {
   try {
+    const transporter = createTransporter();
+    const downloadUrl = `${process.env.API_URL || 'https://api.corazonvioleta.com'}/api/digital-cards/download/apple/${cardId}`;
+    
     const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: clientData.email,
@@ -619,10 +622,22 @@ export const sendAppleWalletCard = async (clientData, passBuffer, companyName = 
 
               <div class="instructions">
                 <h3>📲 Cómo agregar tu tarjeta:</h3>
-                <ol>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${downloadUrl}" 
+                     style="display: inline-block; 
+                            background: linear-gradient(135deg, #000 0%, #333 100%);
+                            color: white; 
+                            padding: 15px 40px; 
+                            border-radius: 50px; 
+                            text-decoration: none; 
+                            font-weight: 600;
+                            font-size: 18px;">
+                    🍎 Descargar para Apple Wallet
+                  </a>
+                </div>
+                <ol style="margin-top: 20px; font-size: 14px; color: #666;">
                   <li>Abre este correo en tu iPhone</li>
-                  <li>Descarga el archivo adjunto (.pkpass)</li>
-                  <li>Toca el archivo descargado</li>
+                  <li>Toca el botón "Descargar para Apple Wallet"</li>
                   <li>Se abrirá Apple Wallet automáticamente</li>
                   <li>Presiona "Agregar" en la esquina superior derecha</li>
                 </ol>
@@ -642,14 +657,8 @@ export const sendAppleWalletCard = async (clientData, passBuffer, companyName = 
           </div>
         </body>
         </html>
-      `,
-      attachments: [
-        {
-          filename: `${clientData.clientNumber}.pkpass`,
-          content: passBuffer,
-          contentType: 'application/vnd.apple.pkpass'
-        }
-      ]
+      `
+      // No adjuntamos el archivo, usamos el enlace de descarga directo
     });
 
     console.log('Apple Wallet Pass enviado por correo:', info.messageId);

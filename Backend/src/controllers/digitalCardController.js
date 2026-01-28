@@ -224,7 +224,7 @@ export const downloadAppleWallet = async (req, res) => {
           companyId: digitalCard.companyId._id,
         },
         deviceInfo: {
-          deviceType: "ios",
+          deviceType: "mobile", // Cambiar de "ios" a "mobile" que sí está en el enum
           userAgent: req.headers["user-agent"],
         },
       });
@@ -236,7 +236,8 @@ export const downloadAppleWallet = async (req, res) => {
           const emailResult = await sendAppleWalletCard(
             clientData,
             passBuffer,
-            companyName
+            companyName,
+            digitalCard._id
           );
           
           if (emailResult.success) {

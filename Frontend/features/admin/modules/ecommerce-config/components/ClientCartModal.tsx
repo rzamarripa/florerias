@@ -44,11 +44,13 @@ import { ecommerceConfigService } from "../services/ecommerceConfig";
 interface ClientCartModalProps {
   colors?: any;
   typography?: any;
+  onCheckout?: () => void;
 }
 
 const ClientCartModal: React.FC<ClientCartModalProps> = ({
   colors,
   typography,
+  onCheckout,
 }) => {
   const [processingOrder, setProcessingOrder] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -183,6 +185,14 @@ const ClientCartModal: React.FC<ClientCartModalProps> = ({
   };
 
   const handleCheckout = () => {
+    // Si hay una función onCheckout proporcionada, úsala
+    if (onCheckout) {
+      closeCart(); // Cerrar el carrito primero
+      onCheckout(); // Llamar a la función de checkout
+      return;
+    }
+
+    // Si no, usar la lógica existente
     if (items.length === 0) {
       toast.error("El carrito está vacío");
       return;
