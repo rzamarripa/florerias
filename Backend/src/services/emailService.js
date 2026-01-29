@@ -530,7 +530,7 @@ export const sendGoogleWalletCard = async (clientData, saveUrl, companyName = "C
 export const sendAppleWalletCard = async (clientData, passBuffer, companyName = 'Corazón Violeta', cardId) => {
   try {
     const transporter = createTransporter();
-    const downloadUrl = `${process.env.API_URL || 'https://corazondevioleta.masoft.mx'}/api/digital-cards/download/apple/${cardId}`;
+    const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://zolt.mx'}/api/digital-cards/download/apple/${cardId}`;
     
     const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,

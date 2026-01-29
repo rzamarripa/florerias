@@ -156,9 +156,9 @@ class AppleWalletService {
         
         return buffer;
       } else {
-        // Para desarrollo: generar un pass no firmado (solo estructura)
-        console.warn("No se encontraron certificados. Generando pass de prueba.");
-        return this.generateMockPass(passData);
+        // Si no hay certificados, lanzar un error claro
+        console.error("Certificados de Apple no encontrados en:", this.certificatesPath);
+        throw new Error("Certificados de Apple no encontrados. Verifique que existan signerCert.pem, signerKey.pem y wwdr.pem en Backend/certificates/");
       }
     } catch (error) {
       console.error("Error generando Apple Wallet Pass:", error);
@@ -220,12 +220,27 @@ class AppleWalletService {
    */
   async hasCertificates() {
     try {
-      await fs.access(path.join(this.certificatesPath, "signerCert.pem"));
-      await fs.access(path.join(this.certificatesPath, "signerKey.pem"));
+      const signerCertPath = path.join(this.certificatesPath, "signerCert.pem");
+      const signerKeyPath = path.join(this.certificatesPath, "signerKey.pem");
+      
+      console.log("Verificando certificados en:", this.certificatesPath);
+      console.log("- signerCert.pem:", signerCertPath);
+      console.log("- signerKey.pem:", signerKeyPath);
+      console.log("- wwdr.pem:", this.wwdrPath);
+      
+      await fs.access(signerCertPath);
+      console.log("✓ signerCert.pem encontrado");
+      
+      await fs.access(signerKeyPath);
+      console.log("✓ signerKey.pem encontrado");
+      
       await fs.access(this.wwdrPath);
+      console.log("✓ wwdr.pem encontrado");
+      
       return true;
     } catch (error) {
-      console.log("Certificados de Apple no encontrados:", error.message);
+      console.error("❌ Certificados de Apple no encontrados:", error.message);
+      console.error("Path verificado:", this.certificatesPath);
       return false;
     }
   }
