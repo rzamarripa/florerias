@@ -36,12 +36,13 @@ class AppleWalletService {
         backgroundColor: "rgb(139, 92, 246)", // Purple
         labelColor: "rgb(255, 255, 255)",
         
-        // Información del código de barras
-        barcode: {
+        // Información del código de barras - CRÍTICO: Usar 'barcodes' (array) no 'barcode'
+        barcodes: [{
           message: qrData,
           format: "PKBarcodeFormatQR",
           messageEncoding: "iso-8859-1",
-        },
+          altText: clientData.clientNumber || "Tarjeta Digital"
+        }],
         
         // Web Service URL para actualizaciones push
         webServiceURL: process.env.APPLE_WEB_SERVICE_URL || "https://api.corazonvioleta.com/api/digital-cards",
