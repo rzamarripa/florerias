@@ -9,11 +9,11 @@
   "foregroundColor": "rgb(255, 255, 255)",
   "backgroundColor": "rgb(15, 23, 42)",
   "labelColor": "rgb(148, 163, 184)",
-  "storeCard": {
+  "generic": {
+    "headerFields": [],
     "primaryFields": [],
     "secondaryFields": [],
     "auxiliaryFields": [],
-    "backFields": [],
-    "headerFields": []
+    "backFields": []
   }
 }

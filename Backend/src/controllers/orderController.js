@@ -537,51 +537,100 @@ const createOrder = async (req, res) => {
     // Determinar si enviar a producción automáticamente
     // Si tiene descuento pendiente de autorización, NO enviar a producción aunque tenga anticipo
     // Si hay anticipo (advance > 0) Y NO tiene descuento pendiente, enviar automáticamente a producción
-    const shouldSendToProduction = hasPendingDiscountAuth
+    let shouldSendToProduction = hasPendingDiscountAuth
       ? false
       : ((advance && advance > 0) ? true : (sendToProduction || false));
 
     // Determinar si se debe asignar una etapa y el status de la orden
-    // Asignar etapa si: sendToProduction = true O (advance > 0 Y NO hay descuento pendiente)
     let stageId = null;
     let orderStatus = 'pendiente'; // status por defecto
+    
+    // Variable para indicar si se debe enviar a envío
+    let shouldSendToShipping = false;
 
-    if (shouldSendToProduction || (advance && advance > 0 && !hasPendingDiscountAuth)) {
-      // Obtener la empresa a través de la sucursal
-      const branchWithCompany = await Branch.findById(branchId).populate('companyId');
+    // Verificar si es una venta rápida
+    if (quickSale) {
+      // Venta rápida - no enviar a producción
+      shouldSendToProduction = false;
+      
+      if (shippingType === 'tienda') {
+        // Caso 1: Venta rápida en tienda - directamente entregada
+        stageId = null;
+        orderStatus = 'entregada';
+        shouldSendToShipping = false;
+      } else {
+        // Caso 2: Venta rápida con envío - asignar primera etapa de Envío
+        shouldSendToShipping = true; // Marcar para envío
+        // Obtener la empresa a través de la sucursal
+        const branchWithCompany = await Branch.findById(branchId).populate('companyId');
 
-      if (!branchWithCompany || !branchWithCompany.companyId) {
-        return res.status(400).json({
-          success: false,
-          message: 'No se pudo obtener la empresa asociada a la sucursal'
+        if (!branchWithCompany || !branchWithCompany.companyId) {
+          return res.status(400).json({
+            success: false,
+            message: 'No se pudo obtener la empresa asociada a la sucursal'
+          });
+        }
+
+        const companyId = branchWithCompany.companyId._id;
+
+        // Buscar la primera etapa de tipo Envío
+        const firstShippingStage = await StageCatalog.findOne({
+          company: companyId,
+          stageNumber: 1,
+          boardType: 'Envio',
+          isActive: true
         });
+
+        if (!firstShippingStage) {
+          return res.status(400).json({
+            success: false,
+            message: 'No se encontró una etapa inicial de Envío (stageNumber = 1, boardType = Envio) activa para Venta Rápida. Por favor, crea una etapa de Envío en el catálogo de etapas antes de continuar.'
+          });
+        }
+
+        stageId = firstShippingStage._id;
+        orderStatus = 'envio';
       }
-
-      const companyId = branchWithCompany.companyId._id;
-
-      // Buscar la etapa con stageNumber = 1 y boardType = 'Produccion' para esta empresa
-      const firstStage = await StageCatalog.findOne({
-        company: companyId,
-        stageNumber: 1,
-        boardType: 'Produccion',
-        isActive: true
-      });
-
-      if (!firstStage) {
-        return res.status(400).json({
-          success: false,
-          message: 'No se encontró una etapa inicial de Producción (stageNumber = 1, boardType = Produccion) activa para esta empresa. Por favor, crea una etapa en el catálogo de etapas antes de continuar.'
-        });
-      }
-
-      stageId = firstStage._id;
-      orderStatus = 'pendiente'; // Con stage asignado, status = 'pendiente'
     } else {
-      // Si NO tiene anticipo Y NO se envía a producción
-      // O si tiene descuento pendiente de autorización
-      // Asignar status = 'sinAnticipo' (o 'pendiente' si tiene descuento pendiente) y stage = null
-      orderStatus = hasPendingDiscountAuth ? 'pendiente' : 'sinAnticipo';
-      stageId = null;
+      // Caso 3: Lógica normal (sin venta rápida)
+      // Asignar etapa si: sendToProduction = true O (advance > 0 Y NO hay descuento pendiente)
+      if (shouldSendToProduction || (advance && advance > 0 && !hasPendingDiscountAuth)) {
+        // Obtener la empresa a través de la sucursal
+        const branchWithCompany = await Branch.findById(branchId).populate('companyId');
+
+        if (!branchWithCompany || !branchWithCompany.companyId) {
+          return res.status(400).json({
+            success: false,
+            message: 'No se pudo obtener la empresa asociada a la sucursal'
+          });
+        }
+
+        const companyId = branchWithCompany.companyId._id;
+
+        // Buscar la etapa con stageNumber = 1 y boardType = 'Produccion' para esta empresa
+        const firstStage = await StageCatalog.findOne({
+          company: companyId,
+          stageNumber: 1,
+          boardType: 'Produccion',
+          isActive: true
+        });
+
+        if (!firstStage) {
+          return res.status(400).json({
+            success: false,
+            message: 'No se encontró una etapa inicial de Producción (stageNumber = 1, boardType = Produccion) activa para esta empresa. Por favor, crea una etapa en el catálogo de etapas antes de continuar.'
+          });
+        }
+
+        stageId = firstStage._id;
+        orderStatus = 'pendiente'; // Con stage asignado, status = 'pendiente'
+      } else {
+        // Si NO tiene anticipo Y NO se envía a producción
+        // O si tiene descuento pendiente de autorización
+        // Asignar status = 'sinAnticipo' (o 'pendiente' si tiene descuento pendiente) y stage = null
+        orderStatus = hasPendingDiscountAuth ? 'pendiente' : 'sinAnticipo';
+        stageId = null;
+      }
     }
 
     // Crear nueva orden
@@ -615,6 +664,7 @@ const createOrder = async (req, res) => {
       remainingBalance: remainingBalance || 0,
       payments: [],
       sendToProduction: shouldSendToProduction,
+      sentToShipping: shouldSendToShipping,
       status: orderStatus, // Asignar el status determinado ('pendiente' o 'sinAnticipo')
       stage: stageId, // Asignar la etapa (puede ser null)
       isSocialMediaOrder: isSocialMediaOrder || false,
@@ -1246,7 +1296,7 @@ const updateOrderStatus = async (req, res) => {
       }
     }
 
-    const validStatuses = ['pendiente', 'en-proceso', 'completado', 'cancelado'];
+    const validStatuses = ['pendiente', 'en-proceso', 'completado', 'cancelado', 'entregada', 'envio'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,

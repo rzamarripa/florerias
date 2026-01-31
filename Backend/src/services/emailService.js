@@ -530,7 +530,9 @@ export const sendGoogleWalletCard = async (clientData, saveUrl, companyName = "C
 export const sendAppleWalletCard = async (clientData, passBuffer, companyName = 'Corazón Violeta', cardId) => {
   try {
     const transporter = createTransporter();
-    const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://zolt.mx'}/api/digital-cards/download/apple/${cardId}`;
+    // Usar LOCAL_IP_URL para desarrollo local o API_URL para producción
+    const baseUrl = process.env.LOCAL_IP_URL || process.env.API_URL || 'http://192.168.50.14:3005';
+    const downloadUrl = `${baseUrl}/api/digital-cards/download/apple/${cardId}`;
     
     const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
@@ -623,7 +625,7 @@ export const sendAppleWalletCard = async (clientData, passBuffer, companyName = 
               <div class="instructions">
                 <h3>📲 Cómo agregar tu tarjeta:</h3>
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${downloadUrl}" 
+                  <a href="${downloadUrl}?email=sent" 
                      style="display: inline-block; 
                             background: linear-gradient(135deg, #000 0%, #333 100%);
                             color: white; 

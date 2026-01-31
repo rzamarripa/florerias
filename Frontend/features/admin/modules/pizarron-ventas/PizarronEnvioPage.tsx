@@ -128,7 +128,7 @@ const PizarronEnvioPage: React.FC = () => {
       toast.info("Una orden ha sido eliminada");
     },
     filters: {
-      status: ["pendiente", "en-proceso", "completado"],
+      status: ["pendiente", "en-proceso", "completado", "envio"],
     },
   });
 
@@ -197,8 +197,10 @@ const PizarronEnvioPage: React.FC = () => {
       // Verificar que la orden tenga el stage correcto
       if (orderStageId !== stageId) return false;
 
-      // Envio: mostrar solo ordenes con sentToShipping = true
-      return order.sentToShipping === true;
+      // Envio: mostrar ordenes con sentToShipping = true
+      // O ordenes de venta rápida con status='envio' y shippingType='envio'
+      return order.sentToShipping === true || 
+        (order.status === 'envio' && order.shippingType === 'envio');
     });
   };
 

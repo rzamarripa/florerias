@@ -2,6 +2,7 @@ import { PKPass } from "passkit-generator";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
+import sharp from "sharp";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,92 +24,79 @@ class AppleWalletService {
    */
   async generatePass(clientData, qrData) {
     try {
-      // Configuración del pass - Separar datos generales de los campos de storeCard
+      const companyName = clientData.branchName || "Corazón Violeta";
+      const clientName = `${clientData.name || ''} ${clientData.lastName || ''}`.trim() || "Cliente";
+      
+      // Datos del pass - Deben pasarse al constructor
       const passData = {
         formatVersion: 1,
         passTypeIdentifier: this.passTypeIdentifier,
         serialNumber: clientData.passSerialNumber,
         teamIdentifier: this.teamIdentifier,
         organizationName: this.organizationName,
-        description: "Tarjeta de Fidelidad Corazón Violeta",
-        logoText: "Corazón Violeta",
+        logoText: companyName,
+        description: "Programa de Lealtad",
+        backgroundColor: "rgb(15, 23, 42)",
         foregroundColor: "rgb(255, 255, 255)",
-        backgroundColor: "rgb(139, 92, 246)", // Purple
-        labelColor: "rgb(255, 255, 255)",
-        
-        // Información del código de barras - CRÍTICO: Usar 'barcodes' (array) no 'barcode'
-        barcodes: [{
-          message: qrData,
-          format: "PKBarcodeFormatQR",
-          messageEncoding: "iso-8859-1",
-          altText: clientData.clientNumber || "Tarjeta Digital"
-        }],
-        
-        // Web Service URL para actualizaciones push
-        webServiceURL: process.env.APPLE_WEB_SERVICE_URL || "https://api.corazonvioleta.com/api/digital-cards",
-        authenticationToken: this.generateAuthToken(clientData.clientId),
+        labelColor: "rgb(148, 163, 184)",
       };
       
-      // Datos específicos del storeCard
+      // Estructura de campos para STORECARD pass - Como en la imagen de referencia
       const storeCardFields = {
-        primaryFields: [
+        // Header: Puntos arriba a la derecha
+        headerFields: [
           {
             key: "points",
             label: "PUNTOS",
-            value: clientData.points || 0,
-            changeMessage: "Ahora tienes %@ puntos",
+            value: String(clientData.points || 0), // Convertir a string
+            textAlignment: "PKTextAlignmentRight",
           },
         ],
-        secondaryFields: [
+        
+        // Primary: Nombre del cliente (campo prominente)
+        primaryFields: [
           {
-            key: "clientName",
-            label: "CLIENTE",
-            value: `${clientData.name} ${clientData.lastName}`,
-          },
-          {
-            key: "clientNumber",
-            label: "NÚMERO",
-            value: clientData.clientNumber,
+            key: "memberName",
+            label: "NOMBRE",
+            value: clientName || "Cliente",
           },
         ],
-        auxiliaryFields: [
+        
+        // Sin campos secundarios ni auxiliares para diseño limpio
+        secondaryFields: [],
+        auxiliaryFields: [],
+        
+        // Back: Información adicional (parte trasera)
+        backFields: [
           {
-            key: "branch",
-            label: "SUCURSAL",
-            value: clientData.branchName || "Principal",
+            key: "memberCode",
+            label: "Código de Miembro",
+            value: String(clientData.clientNumber || "N/A"),
           },
           {
             key: "level",
-            label: "NIVEL",
+            label: "Nivel",
             value: this.getClientLevel(clientData.points),
           },
-        ],
-        backFields: [
           {
-            key: "terms",
-            label: "Términos y Condiciones",
-            value: "Los puntos acumulados pueden ser canjeados por recompensas en cualquier sucursal participante. Los puntos tienen una vigencia de 12 meses.",
-          },
-          {
-            key: "website",
-            label: "Sitio Web",
-            value: "https://corazonvioleta.com",
+            key: "company",
+            label: "Empresa",
+            value: String(companyName || "Corazón Violeta"),
           },
           {
             key: "phone",
             label: "Teléfono",
-            value: clientData.phoneNumber || "N/A",
+            value: String(clientData.phoneNumber || "No registrado"),
           },
           {
             key: "email",
             label: "Email",
-            value: clientData.email || "N/A",
+            value: String(clientData.email || "No registrado"),
           },
           {
-            key: "lastUpdate",
-            label: "Última Actualización",
-            value: new Date().toLocaleDateString("es-MX"),
-            dateStyle: "PKDateStyleShort",
+            key: "terms",
+            label: "Términos y Condiciones",
+            value: "Los puntos acumulados pueden ser canjeados por recompensas en cualquier sucursal participante. Vigencia: 12 meses.",
           },
         ],
       };
@@ -123,26 +111,55 @@ class AppleWalletService {
           signerKeyPassphrase: process.env.APPLE_CERT_PASSWORD || "Z@ltLe@1t@d2026"
         };
 
-        // Usar PKPass.from() con un modelo base
+        // IMPORTANTE: Usar modelo STORECARD para que el QR sea visible en el frente
         const modelPath = path.join(__dirname, "../../../models/storeCard.pass");
+        console.log("\n📱 Configuración del Apple Wallet Pass:");
+        console.log("  • Modelo:", modelPath);
+        console.log("  • Empresa:", companyName);
+        console.log("  • Cliente:", clientName);
+        console.log("  • Puntos:", clientData.points || 0);
+        console.log("  • Código:", clientData.clientNumber || "N/A");
+        console.log("  • Pass Serial:", clientData.passSerialNumber);
+        
+        // Crear el pass CON passData como segundo parámetro (como el código de ejemplo)
         const pass = await PKPass.from({
           model: modelPath,
           certificates: certificates
         }, passData);
         
-        // El tipo ya está establecido por el modelo, no necesitamos establecerlo
-        // pass.type = "storeCard";
+        console.log("Pass STORECARD creado con datos dinámicos, agregando campos...");
         
-        // Agregar los campos del storeCard
+        // Agregar los campos del storeCard pass
+        storeCardFields.headerFields.forEach(field => pass.headerFields.push(field));
         storeCardFields.primaryFields.forEach(field => pass.primaryFields.push(field));
-        storeCardFields.secondaryFields.forEach(field => pass.secondaryFields.push(field));
-        storeCardFields.auxiliaryFields.forEach(field => pass.auxiliaryFields.push(field));
+        if (storeCardFields.secondaryFields.length > 0) {
+          storeCardFields.secondaryFields.forEach(field => pass.secondaryFields.push(field));
+        }
+        if (storeCardFields.auxiliaryFields.length > 0) {
+          storeCardFields.auxiliaryFields.forEach(field => pass.auxiliaryFields.push(field));
+        }
         storeCardFields.backFields.forEach(field => pass.backFields.push(field));
+
+        // CRÍTICO: Agregar el código QR - En storeCard aparece en el FRENTE
+        console.log("Agregando código QR (aparecerá en el frente)...");
+        const memberCode = String(clientData.clientNumber || clientData.passSerialNumber?.slice(0, 20) || "MEMBER");
+        
+        // Asegurar que qrData sea string
+        const qrMessage = String(qrData || "");
+        
+        pass.setBarcodes({
+          message: qrMessage,
+          format: "PKBarcodeFormatQR",
+          messageEncoding: "iso-8859-1",
+          altText: memberCode // Código que aparece debajo del QR
+        });
+        console.log("✓ Código QR agregado - será visible en el FRENTE del pass");
 
         // Agregar imágenes dinámicas desde Firebase
         await this.addDynamicImages(pass, clientData.logoUrl, clientData.heroUrl);
 
         // Generar el pass buffer
+        console.log("Generando buffer del pass...");
         const buffer = pass.getAsBuffer();
         
         // Verificar que sea un buffer válido
@@ -151,8 +168,16 @@ class AppleWalletService {
           throw new Error("Failed to generate valid pass buffer");
         }
         
+        // Verificar que el buffer no esté vacío
+        if (buffer.length === 0) {
+          console.error("Buffer del pass está vacío");
+          throw new Error("Generated pass buffer is empty");
+        }
+        
         // Log del tamaño del buffer para debugging
-        console.log(`Apple Wallet Pass generado: ${buffer.length} bytes`);
+        console.log(`✅ Apple Wallet Pass generado exitosamente: ${buffer.length} bytes`);
+        console.log(`Pass Serial Number: ${clientData.passSerialNumber}`);
+        console.log(`Tipo de pass: STORECARD (QR visible en el frente)`);
         
         return buffer;
       } else {
@@ -162,31 +187,6 @@ class AppleWalletService {
       }
     } catch (error) {
       console.error("Error generando Apple Wallet Pass:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Actualiza un pass existente con nuevos datos
-   * @param {String} passSerialNumber - Número de serie del pass
-   * @param {Object} updates - Datos a actualizar
-   */
-  async updatePass(passSerialNumber, updates) {
-    try {
-      // Aquí implementarías la lógica para enviar una notificación push
-      // al dispositivo para que actualice el pass
-      const pushData = {
-        passTypeIdentifier: this.passTypeIdentifier,
-        serialNumber: passSerialNumber,
-        updates: updates,
-      };
-
-      // TODO: Implementar servicio de push notifications
-      console.log("Pass update queued:", pushData);
-      
-      return { success: true, message: "Actualización enviada" };
-    } catch (error) {
-      console.error("Error actualizando pass:", error);
       throw error;
     }
   }
@@ -209,7 +209,6 @@ class AppleWalletService {
    * @returns {String} - Token de autenticación
    */
   generateAuthToken(clientId) {
-    // Implementar generación de token JWT o similar
     const timestamp = Date.now();
     return Buffer.from(`${clientId}:${timestamp}`).toString("base64");
   }
@@ -269,6 +268,28 @@ class AppleWalletService {
   }
 
   /**
+   * Redimensiona una imagen a las dimensiones especificadas
+   * @param {Buffer} imageBuffer - Buffer de la imagen original
+   * @param {Number} width - Ancho deseado
+   * @param {Number} height - Alto deseado
+   * @returns {Promise<Buffer>} - Buffer de la imagen redimensionada
+   */
+  async resizeImage(imageBuffer, width, height) {
+    try {
+      return await sharp(imageBuffer)
+        .resize(width, height, {
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 } // Fondo transparente
+        })
+        .png()
+        .toBuffer();
+    } catch (error) {
+      console.error("Error redimensionando imagen:", error.message);
+      return imageBuffer; // Retornar original si falla
+    }
+  }
+
+  /**
    * Agrega imágenes dinámicas al pass desde Firebase
    * @param {PKPass} pass - Instancia del pass
    * @param {String} logoUrl - URL del logo de la empresa
@@ -276,62 +297,98 @@ class AppleWalletService {
    */
   async addDynamicImages(pass, logoUrl, heroUrl) {
     try {
-      let iconAdded = false;
+      console.log("Agregando imágenes dinámicas al pass...");
       
-      // Si hay logo de empresa, usarlo para icon y logo
+      // Descargar logo o usar default
+      let logoBuffer = null;
       if (logoUrl) {
-        const logoBuffer = await this.downloadImageAsBuffer(logoUrl);
-        if (logoBuffer) {
-          // Usar el mismo logo para icon y logo (PKPass los redimensionará)
-          pass.addBuffer("icon", logoBuffer);
-          pass.addBuffer("icon@2x", logoBuffer);
-          pass.addBuffer("logo", logoBuffer);
-          pass.addBuffer("logo@2x", logoBuffer);
-          iconAdded = true;
-        }
+        console.log("Descargando logo desde:", logoUrl);
+        logoBuffer = await this.downloadImageAsBuffer(logoUrl);
       }
       
-      // Si no se agregó un icono, usar el mismo logo default que usa Google Wallet
-      if (!iconAdded) {
+      if (!logoBuffer) {
         const defaultLogoUrl = "https://i.imgur.com/6KZMZqA.png";
-        const defaultLogoBuffer = await this.downloadImageAsBuffer(defaultLogoUrl);
-        
-        if (defaultLogoBuffer) {
-          pass.addBuffer("icon", defaultLogoBuffer);
-          pass.addBuffer("icon@2x", defaultLogoBuffer);
-          pass.addBuffer("logo", defaultLogoBuffer);
-          pass.addBuffer("logo@2x", defaultLogoBuffer);
-        }
+        console.log("Usando logo default desde:", defaultLogoUrl);
+        logoBuffer = await this.downloadImageAsBuffer(defaultLogoUrl);
       }
       
-      // Si hay imagen hero, usarla para strip
+      if (logoBuffer) {
+        console.log("Logo buffer obtenido, tamaño original:", logoBuffer.length, "bytes");
+        
+        // ICON: Debe ser cuadrado
+        // @1x: 29×29, @2x: 58×58, @3x: 87×87
+        console.log("Redimensionando icon...");
+        const icon1x = await this.resizeImage(logoBuffer, 29, 29);
+        const icon2x = await this.resizeImage(logoBuffer, 58, 58);
+        const icon3x = await this.resizeImage(logoBuffer, 87, 87);
+        
+        pass.addBuffer("icon.png", icon1x);
+        pass.addBuffer("icon@2x.png", icon2x);
+        pass.addBuffer("icon@3x.png", icon3x);
+        console.log("✓ Icons agregados (29×29, 58×58, 87×87)");
+        
+        // LOGO: Máximo 160×50 @1x
+        // @1x: max 160×50, @2x: max 320×100, @3x: max 480×150
+        console.log("Redimensionando logo...");
+        const logo1x = await this.resizeImage(logoBuffer, 160, 50);
+        const logo2x = await this.resizeImage(logoBuffer, 320, 100);
+        const logo3x = await this.resizeImage(logoBuffer, 480, 150);
+        
+        pass.addBuffer("logo.png", logo1x);
+        pass.addBuffer("logo@2x.png", logo2x);
+        pass.addBuffer("logo@3x.png", logo3x);
+        console.log("✓ Logos agregados (160×50, 320×100, 480×150)");
+      } else {
+        console.error("No se pudo obtener ningún logo buffer");
+      }
+      
+      // Si hay imagen hero, usarla para thumbnail (en generic pass)
       if (heroUrl) {
+        console.log("Descargando imagen hero desde:", heroUrl);
         const heroBuffer = await this.downloadImageAsBuffer(heroUrl);
         if (heroBuffer) {
-          pass.addBuffer("strip", heroBuffer);
-          pass.addBuffer("strip@2x", heroBuffer);
+          // THUMBNAIL: Para generic pass
+          // @1x: 90×90, @2x: 180×180, @3x: 270×270
+          console.log("Redimensionando thumbnail...");
+          const thumb1x = await this.resizeImage(heroBuffer, 90, 90);
+          const thumb2x = await this.resizeImage(heroBuffer, 180, 180);
+          const thumb3x = await this.resizeImage(heroBuffer, 270, 270);
+          
+          pass.addBuffer("thumbnail.png", thumb1x);
+          pass.addBuffer("thumbnail@2x.png", thumb2x);
+          pass.addBuffer("thumbnail@3x.png", thumb3x);
+          console.log("✓ Thumbnails agregados (90×90, 180×180, 270×270)");
         }
       }
     } catch (error) {
-      console.log("Error agregando imágenes dinámicas:", error.message);
+      console.error("Error agregando imágenes dinámicas:", error.message);
       // Continuar sin imágenes si hay error
     }
   }
 
   /**
-   * Genera un pass de prueba para desarrollo
-   * @param {Object} passData - Datos del pass
-   * @returns {Buffer} - Buffer simulado del pass
+   * Actualiza un pass existente con nuevos datos
+   * @param {String} passSerialNumber - Número de serie del pass
+   * @param {Object} updates - Datos a actualizar
    */
-  generateMockPass(passData) {
-    // Para desarrollo: retornar los datos del pass como JSON
-    const mockPass = {
-      ...passData,
-      _mock: true,
-      _message: "Este es un pass de prueba. Configure los certificados para generar passes reales.",
-    };
-    
-    return Buffer.from(JSON.stringify(mockPass, null, 2));
+  async updatePass(passSerialNumber, updates) {
+    try {
+      // Aquí implementarías la lógica para enviar una notificación push
+      // al dispositivo para que actualice el pass
+      const pushData = {
+        passTypeIdentifier: this.passTypeIdentifier,
+        serialNumber: passSerialNumber,
+        updates: updates,
+      };
+
+      // TODO: Implementar servicio de push notifications
+      console.log("Pass update queued:", pushData);
+      
+      return { success: true, message: "Actualización enviada" };
+    } catch (error) {
+      console.error("Error actualizando pass:", error);
+      throw error;
+    }
   }
 
   /**

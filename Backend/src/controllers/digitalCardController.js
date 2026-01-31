@@ -205,12 +205,29 @@ export const downloadAppleWallet = async (req, res) => {
       heroUrl: digitalCard.heroUrl || null, // Imagen hero/banner desde Firebase
     };
 
+    console.log("\n==================================================");
+    console.log("📱 GENERANDO APPLE WALLET PASS");
+    console.log("==================================================");
+    console.log("👤 Cliente:", clientData.name, clientData.lastName);
+    console.log("📧 Email:", clientData.email || "No registrado");
+    console.log("📞 Teléfono:", clientData.phoneNumber || "No registrado");
+    console.log("🆔 Número de Cliente:", clientData.clientNumber);
+    console.log("💎 Puntos:", clientData.points);
+    console.log("🏢 Empresa:", clientData.branchName);
+    console.log("🎫 Pass Serial Number:", clientData.passSerialNumber);
+    console.log("🖼️ Logo URL:", clientData.logoUrl ? "Sí" : "No");
+    console.log("🌅 Hero Image:", clientData.heroUrl ? "Sí" : "No");
+    console.log("📅 Fecha:", new Date().toLocaleString());
+    console.log("==================================================");
+
     try {
       // Generar el Apple Wallet Pass
+      console.log("⚙️ Iniciando generación del pass...");
       const passBuffer = await appleWalletService.generatePass(
         clientData,
         digitalCard.qrData
       );
+      console.log("✅ Pass generado exitosamente, tamaño:", passBuffer.length, "bytes");
 
       // Registrar la descarga
       await digitalCard.recordDownload();
@@ -229,10 +246,12 @@ export const downloadAppleWallet = async (req, res) => {
         },
       });
 
-      // Enviar por correo si el cliente tiene email
-      if (clientData.email) {
+      // Enviar por correo SOLO si NO viene del email (para evitar doble envío)
+      const isFromEmail = req.query.email === 'sent';
+      if (clientData.email && !isFromEmail) {
         try {
           const companyName = digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta";
+          console.log("\n📧 Enviando Apple Wallet Pass por correo a:", clientData.email);
           const emailResult = await sendAppleWalletCard(
             clientData,
             passBuffer,
@@ -241,13 +260,18 @@ export const downloadAppleWallet = async (req, res) => {
           );
           
           if (emailResult.success) {
-            console.log("Apple Wallet Pass enviado por correo exitosamente");
+            console.log("✅ Apple Wallet Pass enviado por correo exitosamente a:", clientData.email);
           } else {
-            console.error("Error enviando correo de Apple Wallet:", emailResult.error);
+            console.error("❌ Error enviando correo de Apple Wallet:", emailResult.error);
           }
         } catch (emailError) {
           console.error("Error enviando correo de Apple Wallet:", emailError);
         }
+      } else if (isFromEmail) {
+        console.log("📨 Descarga desde link de email detectada - No se enviará otro correo");
+        console.log("👤 Usuario descargando desde email:", clientData.email);
+      } else {
+        console.log("⚠️ Cliente sin email registrado");
       }
 
       // Enviar el archivo .pkpass como respuesta
