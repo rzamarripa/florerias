@@ -12,10 +12,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Truck } from "lucide-react";
 import { toast } from "react-toastify";
 import { Sale } from "../types";
 import { salesService } from "../services/sales";
+import { Neighborhood } from "@/features/admin/modules/neighborhoods/types";
+import { neighborhoodsService } from "@/features/admin/modules/neighborhoods/services/neighborhoods";
 
 interface EditSaleModalProps {
   show: boolean;
@@ -31,10 +40,36 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
   onSaleUpdated,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+  const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [formData, setFormData] = useState({
     deliveryMessage: "",
     deliveryDateTime: "",
+    recipientName: "",
+    street: "",
+    neighborhood: "",
+    reference: "",
   });
+
+  // Check if delivery fields should be shown
+  const showDeliveryFields = sale?.shippingType === 'envio' || sale?.stage?.boardType === 'Envio';
+
+  // Load neighborhoods
+  const fetchNeighborhoods = async () => {
+    setLoadingNeighborhoods(true);
+    try {
+      const response = await neighborhoodsService.getAllNeighborhoods({
+        limit: 1000,
+        status: "active",
+      });
+      setNeighborhoods(response.data);
+    } catch (err) {
+      console.error("Error al cargar colonias:", err);
+      toast.error("Error al cargar las colonias");
+    } finally {
+      setLoadingNeighborhoods(false);
+    }
+  };
 
   // Inicializar datos del formulario cuando se abre el modal
   useEffect(() => {
@@ -46,7 +81,16 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
       setFormData({
         deliveryMessage: sale.deliveryData?.message || "",
         deliveryDateTime: deliveryDate,
+        recipientName: sale.deliveryData?.recipientName || "",
+        street: sale.deliveryData?.street || "",
+        neighborhood: sale.deliveryData?.neighborhood || "",
+        reference: sale.deliveryData?.reference || "",
       });
+
+      // Load neighborhoods if showing delivery fields
+      if (showDeliveryFields) {
+        fetchNeighborhoods();
+      }
     }
   }, [show, sale]);
 
@@ -61,10 +105,20 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
     try {
       setLoading(true);
 
-      await salesService.updateSaleDeliveryInfo(sale._id, {
+      const updateData: any = {
         message: formData.deliveryMessage,
         deliveryDateTime: formData.deliveryDateTime,
-      });
+      };
+
+      // Include delivery address fields if showing delivery section
+      if (showDeliveryFields) {
+        if (formData.recipientName) updateData.recipientName = formData.recipientName;
+        if (formData.street) updateData.street = formData.street;
+        if (formData.neighborhood) updateData.neighborhood = formData.neighborhood;
+        if (formData.reference) updateData.reference = formData.reference;
+      }
+
+      await salesService.updateSaleDeliveryInfo(sale._id, updateData);
 
       toast.success("Informacion de entrega actualizada exitosamente");
       onSaleUpdated();
@@ -138,6 +192,91 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
                 Instrucciones especiales o comentarios para la entrega
               </p>
             </div>
+
+            {/* Delivery Address Section - Only show for shipping orders */}
+            {showDeliveryFields && (
+              <>
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Truck className="h-5 w-5 text-blue-600" />
+                    <h6 className="font-semibold text-blue-600">Direccion de Entrega</h6>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="recipientName" className="font-semibold">
+                        Entregar a:
+                      </Label>
+                      <Input
+                        id="recipientName"
+                        type="text"
+                        value={formData.recipientName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, recipientName: e.target.value })
+                        }
+                        placeholder="Nombre del destinatario"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="street" className="font-semibold">
+                          Calle y Numero
+                        </Label>
+                        <Input
+                          id="street"
+                          type="text"
+                          value={formData.street}
+                          onChange={(e) =>
+                            setFormData({ ...formData, street: e.target.value })
+                          }
+                          placeholder="Ej: Av. Principal #123"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="font-semibold">
+                          Colonia
+                        </Label>
+                        <Select
+                          value={formData.neighborhood}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, neighborhood: value })
+                          }
+                          disabled={loadingNeighborhoods}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar colonia..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {neighborhoods.map((neighborhood) => (
+                              <SelectItem key={neighborhood._id} value={neighborhood.name}>
+                                {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="reference" className="font-semibold">
+                        Senas o Referencias
+                      </Label>
+                      <Textarea
+                        id="reference"
+                        rows={2}
+                        value={formData.reference}
+                        onChange={(e) =>
+                          setFormData({ ...formData, reference: e.target.value })
+                        }
+                        placeholder="Ej: Casa blanca con porton negro, frente al parque..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter className="mt-4">

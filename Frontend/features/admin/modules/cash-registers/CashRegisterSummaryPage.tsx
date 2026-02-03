@@ -359,14 +359,28 @@ const CashRegisterSummaryPage: React.FC = () => {
                       </small>
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      <div>{order.orderNumber}</div>
-                      <small className="text-muted-foreground">
-                        {order.itemsCount}{" "}
-                        {order.itemsCount === 1 ? "producto" : "productos"}
-                      </small>
+                      <div className="flex flex-col gap-1">
+                        <div>{order.orderNumber}</div>
+                        <small className="text-muted-foreground">
+                          {order.itemsCount}{" "}
+                          {order.itemsCount === 1 ? "producto" : "productos"}
+                        </small>
+                        {/* Special labels for cancelled and credit sales */}
+                        {order.status === 'cancelado' && (
+                          <Badge className="bg-red-500 text-white hover:bg-red-500 px-2 py-0.5 text-xs font-semibold w-fit">
+                            CANCELADA
+                          </Badge>
+                        )}
+                        {(order.paymentMethod.toLowerCase().includes('crédito') || 
+                          order.paymentMethod.toLowerCase().includes('credito')) && (
+                          <Badge className="bg-orange-500 text-white hover:bg-orange-500 px-2 py-0.5 text-xs font-semibold w-fit">
+                            CRÉDITO
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      <span className="font-bold">
+                      <span className={`font-bold ${order.status === 'cancelado' ? 'line-through text-red-500' : ''}`}>
                         {formatCurrency(order.advance)}
                       </span>
                     </TableCell>

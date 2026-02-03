@@ -690,7 +690,7 @@ const getCashRegisterSummary = async (req, res) => {
       .populate('managerId', 'username email profile')
       .populate({
         path: 'lastRegistry.orderId',
-        select: 'orderNumber total advance shippingType clientInfo deliveryData createdAt status items paymentMethod',
+        select: 'orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod',
         populate: {
           path: 'paymentMethod',
           select: 'name'
@@ -725,11 +725,16 @@ const getCashRegisterSummary = async (req, res) => {
     let totalSales = 0;
     let totalExpenses = 0;
 
-    // Obtener todos los IDs de pagos de las órdenes registradas en esta caja
+    // Obtener todos los IDs de pagos y órdenes registradas en esta caja
     const paymentIds = [];
+    const orderIdsWithoutPayments = []; // Órdenes sin pagos (crédito)
+    
     cashRegister.lastRegistry.forEach(reg => {
       if (reg.paymentIds && reg.paymentIds.length > 0) {
         paymentIds.push(...reg.paymentIds);
+      } else if (reg.orderId) {
+        // Orden sin pagos (posiblemente crédito)
+        orderIdsWithoutPayments.push(reg.orderId);
       }
     });
 
@@ -743,27 +748,48 @@ const getCashRegisterSummary = async (req, res) => {
       })
       .populate({
         path: 'orderId',
-        select: 'orderNumber total shippingType clientInfo deliveryData createdAt status items'
+        select: 'orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod'
       });
+    
+    // Buscar órdenes que no tienen pagos (órdenes a crédito)
+    const { default: Order } = await import('../models/Order.js');
+    const creditOrders = await Order.find({
+      _id: { $in: orderIdsWithoutPayments }
+    })
+      .populate('paymentMethod', 'name')
+      .select('orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod');
 
     // Determinar qué pagos contar según el tipo de caja
     let relevantPayments = [];
+    let cashPayments = [];
+    let creditPayments = [];
+    
     if (cashRegister.isSocialMediaBox) {
       // Cajas de redes sociales: todos los pagos EXCEPTO efectivo
       relevantPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         return !paymentMethodName.includes('efectivo');
       });
+      // Para cajas de redes sociales, totalSales incluye todos los pagos no-efectivo
+      totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     } else {
-      // Cajas normales: solo pagos en efectivo
-      relevantPayments = allPayments.filter(payment => {
+      // Cajas normales: separar pagos en efectivo y crédito
+      cashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         return paymentMethodName.includes('efectivo');
       });
+      
+      creditPayments = allPayments.filter(payment => {
+        const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
+        return paymentMethodName.includes('crédito') || paymentMethodName.includes('credito');
+      });
+      
+      // Mostrar tanto pagos en efectivo como crédito en el resumen
+      relevantPayments = [...cashPayments, ...creditPayments];
+      
+      // Para el balance de caja, solo contar pagos en efectivo
+      totalSales = cashPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     }
-
-    // Calcular total de ventas según el tipo de caja
-    totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
 
     // Obtener gastos desde el array de expenses de la caja (solo de la sesión actual)
     const expensesFromDB = cashRegister.expenses || [];
@@ -787,6 +813,8 @@ const getCashRegisterSummary = async (req, res) => {
             recipientName: payment.orderId.deliveryData?.recipientName || 'N/A',
             total: payment.orderId.total,
             totalPaid: 0,
+            discount: payment.orderId.discount || 0,
+            discountType: payment.orderId.discountType || null,
             shippingType: payment.orderId.shippingType,
             paymentMethods: new Set(),
             status: payment.orderId.status,
@@ -801,6 +829,28 @@ const getCashRegisterSummary = async (req, res) => {
         if (payment.paymentMethod?.name) {
           order.paymentMethods.add(payment.paymentMethod.name);
         }
+      }
+    });
+    
+    // Añadir las órdenes a crédito (sin pagos)
+    creditOrders.forEach(creditOrder => {
+      const orderId = creditOrder._id.toString();
+      if (!ordersMap.has(orderId)) {
+        ordersMap.set(orderId, {
+          _id: creditOrder._id,
+          orderNumber: creditOrder.orderNumber,
+          clientName: creditOrder.clientInfo?.name || 'N/A',
+          recipientName: creditOrder.deliveryData?.recipientName || 'N/A',
+          total: creditOrder.total,
+          totalPaid: 0, // Sin pagos aún
+          discount: creditOrder.discount || 0,
+          discountType: creditOrder.discountType || null,
+          shippingType: creditOrder.shippingType,
+          paymentMethods: new Set([creditOrder.paymentMethod?.name || 'Crédito']),
+          status: creditOrder.status,
+          createdAt: creditOrder.createdAt,
+          itemsCount: creditOrder.items?.length || 0
+        });
       }
     });
 
@@ -830,6 +880,8 @@ const getCashRegisterSummary = async (req, res) => {
         recipientName: order.recipientName,
         total: order.total,
         advance: order.totalPaid, // Total pagado en esta caja
+        discount: order.discount,
+        discountType: order.discountType,
         shippingType: order.shippingType,
         paymentMethod: Array.from(order.paymentMethods).join(', ') || 'N/A',
         status: order.status,
@@ -905,7 +957,7 @@ const closeCashRegister = async (req, res) => {
       .populate('managerId', 'username email profile')
       .populate({
         path: 'lastRegistry.orderId',
-        select: 'orderNumber total advance shippingType clientInfo deliveryData createdAt status items paymentMethod',
+        select: 'orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod',
         populate: {
           path: 'paymentMethod',
           select: 'name'
@@ -946,11 +998,16 @@ const closeCashRegister = async (req, res) => {
     // Calcular totales para el log
     const initialBalance = Number(cashRegister.initialBalance) || 0;
 
-    // Obtener todos los IDs de pagos
+    // Obtener todos los IDs de pagos y órdenes registradas en esta caja
     const paymentIds = [];
+    const orderIdsWithoutPayments = []; // Órdenes sin pagos (crédito)
+    
     cashRegister.lastRegistry.forEach(reg => {
       if (reg.paymentIds && reg.paymentIds.length > 0) {
         paymentIds.push(...reg.paymentIds);
+      } else if (reg.orderId) {
+        // Orden sin pagos (posiblemente crédito)
+        orderIdsWithoutPayments.push(reg.orderId);
       }
     });
 
@@ -959,26 +1016,47 @@ const closeCashRegister = async (req, res) => {
       _id: { $in: paymentIds }
     })
       .populate('paymentMethod', 'name')
-      .populate('orderId', 'orderNumber total shippingType clientInfo deliveryData createdAt status items');
+      .populate('orderId', 'orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod');
+    
+    // Buscar órdenes que no tienen pagos (órdenes a crédito)
+    const creditOrders = await Order.find({
+      _id: { $in: orderIdsWithoutPayments }
+    })
+      .populate('paymentMethod', 'name')
+      .select('orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod');
 
     // Determinar qué pagos contar según el tipo de caja
     let relevantPayments = [];
+    let cashPayments = [];
+    let creditPayments = [];
+    let totalSales = 0;
+    
     if (cashRegister.isSocialMediaBox) {
       // Cajas de redes sociales: todos los pagos EXCEPTO efectivo
       relevantPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         return !paymentMethodName.includes('efectivo');
       });
+      // Para cajas de redes sociales, totalSales incluye todos los pagos no-efectivo
+      totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     } else {
-      // Cajas normales: solo pagos en efectivo
-      relevantPayments = allPayments.filter(payment => {
+      // Cajas normales: separar pagos en efectivo y crédito
+      cashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         return paymentMethodName.includes('efectivo');
       });
+      
+      creditPayments = allPayments.filter(payment => {
+        const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
+        return paymentMethodName.includes('crédito') || paymentMethodName.includes('credito');
+      });
+      
+      // Incluir tanto pagos en efectivo como crédito en el log
+      relevantPayments = [...cashPayments, ...creditPayments];
+      
+      // Para el balance de caja, solo contar pagos en efectivo
+      totalSales = cashPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     }
-
-    // Calcular total de ventas
-    const totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
 
     const totalExpenses = cashRegister.expenses.reduce((sum, expense) => {
       const total = Number(expense.total) || 0;
@@ -1032,6 +1110,8 @@ const closeCashRegister = async (req, res) => {
             recipientName: payment.orderId.deliveryData?.recipientName || 'N/A',
             total: Number(payment.orderId.total) || 0,
             advance: 0,
+            discount: payment.orderId.discount || 0,
+            discountType: payment.orderId.discountType || null,
             shippingType: payment.orderId.shippingType,
             paymentMethods: new Set(),
             status: payment.orderId.status,
@@ -1044,6 +1124,28 @@ const closeCashRegister = async (req, res) => {
         if (payment.paymentMethod?.name) {
           order.paymentMethods.add(payment.paymentMethod.name);
         }
+      }
+    });
+    
+    // Añadir las órdenes a crédito (sin pagos) al log
+    creditOrders.forEach(creditOrder => {
+      const orderId = creditOrder._id.toString();
+      if (!ordersMapForLog.has(orderId)) {
+        ordersMapForLog.set(orderId, {
+          orderId: creditOrder._id,
+          orderNumber: creditOrder.orderNumber,
+          clientName: creditOrder.clientInfo?.name || 'N/A',
+          recipientName: creditOrder.deliveryData?.recipientName || 'N/A',
+          total: Number(creditOrder.total) || 0,
+          advance: 0, // Sin pagos aún
+          discount: creditOrder.discount || 0,
+          discountType: creditOrder.discountType || null,
+          shippingType: creditOrder.shippingType,
+          paymentMethods: new Set([creditOrder.paymentMethod?.name || 'Crédito']),
+          status: creditOrder.status,
+          saleDate: creditOrder.createdAt,
+          itemsCount: creditOrder.items?.length || 0
+        });
       }
     });
 
@@ -1073,6 +1175,8 @@ const closeCashRegister = async (req, res) => {
         recipientName: order.recipientName,
         total: order.total,
         advance: order.advance,
+        discount: order.discount,
+        discountType: order.discountType,
         shippingType: order.shippingType,
         paymentMethod: Array.from(order.paymentMethods).join(', ') || 'N/A',
         status: order.status,

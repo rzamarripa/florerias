@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Eye, Edit, X, DollarSign, Printer, CheckCircle } from "lucide-react";
+import { MoreVertical, Eye, Edit, X, DollarSign, Printer, CheckCircle, Truck } from "lucide-react";
 import { Sale } from "../types";
 import PaymentModal from "./PaymentModal";
 import SaleDetailModal from "./SaleDetailModal";
@@ -17,6 +17,7 @@ import CancelSaleConfirmDialog from "./CancelSaleConfirmDialog";
 import RedeemFolioConfirmDialog from "./RedeemFolioConfirmDialog";
 import EditSaleModal from "./EditSaleModal";
 import { reprintSaleTicket } from "../utils/reprintSaleTicket";
+import { reprintDeliveryTicket } from "../utils/reprintDeliveryTicket";
 import { salesService } from "../services/sales";
 import { toast } from "react-toastify";
 import { useUserSessionStore } from "@/stores/userSessionStore";
@@ -73,6 +74,13 @@ const SaleActions: React.FC<SaleActionsProps> = ({
   const handleReprintTicket = async () => {
     await reprintSaleTicket(sale, user?.profile?.fullName);
   };
+
+  const handleReprintDeliveryTicket = async () => {
+    await reprintDeliveryTicket(sale);
+  };
+
+  // Check if delivery ticket should be shown
+  const showDeliveryTicket = sale.shippingType === 'envio' || sale.stage?.boardType === 'Envio';
 
   const handleOpenCancelDialog = () => {
     setShowCancelDialog(true);
@@ -134,6 +142,13 @@ const SaleActions: React.FC<SaleActionsProps> = ({
             <Printer className="h-4 w-4 mr-2" />
             Reimprimir Ticket
           </DropdownMenuItem>
+
+          {showDeliveryTicket && (
+            <DropdownMenuItem onClick={handleReprintDeliveryTicket}>
+              <Truck className="h-4 w-4 mr-2" />
+              Ticket de Envío
+            </DropdownMenuItem>
+          )}
 
           {showRedeemFolioAction && (
             <>

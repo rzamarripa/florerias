@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Eye, Edit, Trash2, Printer, Loader2 } from "lucide-react";
+import React, { useEffect, useState, Fragment } from "react";
+import { Eye, Edit, Trash2, Printer, Loader2, Truck } from "lucide-react";
 import { toast } from "react-toastify";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { salesService } from "../../services/sales";
@@ -176,7 +176,7 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
 
     const backgroundColor = `rgba(${stage.color.r}, ${stage.color.g}, ${stage.color.b}, ${stage.color.a})`;
 
-    return (
+    const stageBadge = (
       <Badge
         className="px-3 py-1 rounded-full font-medium text-white"
         style={{ backgroundColor }}
@@ -184,6 +184,24 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
         {stage.name}
       </Badge>
     );
+
+    // Si está en el pizarrón de envío, mostrar badge adicional
+    if (stage.boardType === 'Envio') {
+      return (
+        <>
+          {stageBadge}
+          <Badge 
+            variant="outline" 
+            className="ml-2 px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border-blue-200"
+          >
+            <Truck className="w-3 h-3 mr-1" />
+            Envío
+          </Badge>
+        </>
+      );
+    }
+
+    return stageBadge;
   };
 
   const formatDate = (dateString: string) => {

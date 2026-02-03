@@ -34,6 +34,7 @@ import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores/userSessionStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
+import { generateDeliveryTicket, DeliveryTicketData } from "./utils/generateDeliveryTicket";
 import { uploadComprobante, uploadArreglo } from "@/services/firebaseStorage";
 import { useStorageSocket, StockUpdatePayload } from "@/hooks/useStorageSocket";
 import QRScanner from "@/features/admin/modules/digitalCards/components/QRScanner";
@@ -944,6 +945,60 @@ const NewOrderPage = () => {
         toast.error(
           "No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador."
         );
+      }
+
+      // Si es una orden de tipo envío, generar también el ticket de delivery
+      if (orderData.shippingType === "envio") {
+        try {
+          // Preparar datos para el ticket de delivery
+          const deliveryTicketData: DeliveryTicketData = {
+            order: {
+              orderNumber: orderData.orderNumber,
+              clientInfo: {
+                name: orderData.clientInfo.name,
+                phone: orderData.clientInfo.phone || "",
+              },
+              deliveryData: {
+                recipientName: orderData.deliveryData.recipientName,
+                deliveryDateTime: orderData.deliveryData.deliveryDateTime,
+                street: orderData.deliveryData.street || "",
+                neighborhoodName: orderData.deliveryData.neighborhoodId?.name || "",
+                reference: orderData.deliveryData.reference || "",
+                message: orderData.deliveryData.message || "",
+              },
+              branchInfo: {
+                city: orderData.branchId?.city || companyResponse.data?.address?.city || "",
+                state: orderData.branchId?.state || companyResponse.data?.address?.state || "",
+              },
+            },
+          };
+
+          // Generar HTML del ticket de delivery
+          const deliveryTicketHTML = generateDeliveryTicket(deliveryTicketData);
+
+          // Crear ventana para imprimir ticket de delivery
+          // Usar setTimeout para evitar que el navegador bloquee múltiples popups
+          setTimeout(() => {
+            const deliveryPrintWindow = window.open("", "_blank", "width=400,height=600");
+
+            if (deliveryPrintWindow) {
+              deliveryPrintWindow.document.write(deliveryTicketHTML);
+              deliveryPrintWindow.document.close();
+
+              // Esperar a que se cargue el contenido
+              deliveryPrintWindow.onload = () => {
+                deliveryPrintWindow.focus();
+              };
+            } else {
+              toast.warning(
+                "No se pudo abrir la ventana para el ticket de entrega. Verifica los popups del navegador."
+              );
+            }
+          }, 1000); // Esperar 1 segundo antes de abrir el segundo ticket
+        } catch (deliveryError) {
+          console.error("Error generando ticket de delivery:", deliveryError);
+          // No mostrar error, solo log ya que el ticket principal se generó
+        }
       }
     } catch (error) {
       console.error("Error generando ticket de venta:", error);

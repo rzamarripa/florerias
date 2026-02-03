@@ -839,34 +839,75 @@ const createOrder = async (req, res) => {
       }
     }
 
-    // Si hay caja registradora asignada, actualizar su balance según el tipo de caja
-    // NO actualizar si es pago con Stripe (se maneja diferente)
-    if (cashRegisterId && advance > 0 && paymentMethod && !stripePaymentIntentId) {
+    // Si hay caja registradora asignada, actualizar su balance y/o registrar la orden
+    if (cashRegisterId) {
       try {
         // Obtener la caja registradora para saber si es de redes sociales
         const cashRegister = await CashRegister.findById(cashRegisterId);
-
-        // Obtener el método de pago para verificar si es efectivo
+        
+        // Obtener el método de pago para verificar el tipo
         const paymentMethodDoc = await PaymentMethod.findById(paymentMethod);
         const isEffectivo = paymentMethodDoc?.name?.toLowerCase().includes('efectivo') || false;
+        const isCredito = paymentMethodDoc?.name?.toLowerCase().includes('crédito') || 
+                         paymentMethodDoc?.name?.toLowerCase().includes('credito') || false;
 
-        // Determinar si se debe actualizar el balance:
-        // - Cajas normales: solo si el pago es en efectivo
-        // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo y tarjetas con Stripe
-        const shouldUpdateBalance = cashRegister?.isSocialMediaBox
-          ? !isEffectivo  // Cajas de redes: actualizar si NO es efectivo
-          : isEffectivo;  // Cajas normales: actualizar si ES efectivo
+        // Variable para controlar si ya se registró la orden
+        let orderRegistered = false;
 
-        // Actualizar el balance de la caja si corresponde
-        if (shouldUpdateBalance && savedPaymentId) {
+        // Caso 1: Orden con pago inmediato (advance > 0) - NO Stripe
+        if (advance > 0 && paymentMethod && !stripePaymentIntentId) {
+          // Determinar si se debe actualizar el balance:
+          // - Cajas normales: solo si el pago es en efectivo
+          // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo y tarjetas con Stripe
+          const shouldUpdateBalance = cashRegister?.isSocialMediaBox
+            ? !isEffectivo  // Cajas de redes: actualizar si NO es efectivo
+            : isEffectivo;  // Cajas normales: actualizar si ES efectivo
+
+          // Actualizar el balance de la caja si corresponde
+          if (shouldUpdateBalance && savedPaymentId) {
+            await CashRegister.findByIdAndUpdate(
+              cashRegisterId,
+              {
+                $inc: { currentBalance: advance },
+                $push: {
+                  lastRegistry: {
+                    orderId: savedOrder._id,
+                    paymentIds: [savedPaymentId], // Agregar el ID del pago en el array
+                    saleDate: new Date()
+                  }
+                }
+              }
+            );
+            orderRegistered = true;
+          }
+          // Si no se actualizó el balance pero hay pago (ej: crédito con anticipo)
+          else if (savedPaymentId) {
+            await CashRegister.findByIdAndUpdate(
+              cashRegisterId,
+              {
+                $push: {
+                  lastRegistry: {
+                    orderId: savedOrder._id,
+                    paymentIds: [savedPaymentId],
+                    saleDate: new Date()
+                  }
+                }
+              }
+            );
+            orderRegistered = true;
+          }
+        }
+        
+        // Caso 2: Si es orden a crédito sin anticipo, registrarla también
+        if (isCredito && (!advance || advance === 0) && !orderRegistered) {
+          // Registrar la orden en lastRegistry sin actualizar el balance
           await CashRegister.findByIdAndUpdate(
             cashRegisterId,
             {
-              $inc: { currentBalance: advance },
               $push: {
                 lastRegistry: {
                   orderId: savedOrder._id,
-                  paymentIds: [savedPaymentId], // Agregar el ID del pago en el array
+                  paymentIds: [], // Array vacío porque no hay pago inmediato
                   saleDate: new Date()
                 }
               }
@@ -1287,11 +1328,11 @@ const updateOrderStatus = async (req, res) => {
 
       const isDifferentDay = orderDateOnly.getTime() !== todayOnly.getTime();
 
-      // Si es un día diferente y el usuario NO es Administrador, denegar
-      if (isDifferentDay && userRole !== 'Administrador') {
+      // Si es un día diferente y el usuario NO es Administrador ni Gerente, denegar
+      if (isDifferentDay && userRole !== 'Administrador' && userRole !== 'Gerente') {
         return res.status(403).json({
           success: false,
-          message: 'Solo los administradores pueden cancelar ventas de días anteriores'
+          message: 'Solo los administradores y gerentes pueden cancelar ventas de días anteriores'
         });
       }
     }
@@ -1938,13 +1979,20 @@ const sendOrderToShipping = async (req, res) => {
 const updateOrderDeliveryInfo = async (req, res) => {
   try {
     const { id } = req.params;
-    const { message, deliveryDateTime } = req.body;
+    const { 
+      message, 
+      deliveryDateTime, 
+      recipientName, 
+      street, 
+      neighborhood, 
+      reference 
+    } = req.body;
 
     // Validar que se proporcione al menos un campo
-    if (!message && !deliveryDateTime) {
+    if (!message && !deliveryDateTime && !recipientName && !street && !neighborhood && !reference) {
       return res.status(400).json({
         success: false,
-        message: 'Debe proporcionar al menos el mensaje o la fecha de entrega'
+        message: 'Debe proporcionar al menos un campo para actualizar'
       });
     }
 
@@ -1962,6 +2010,22 @@ const updateOrderDeliveryInfo = async (req, res) => {
 
     if (message !== undefined) {
       updateData['deliveryData.message'] = message;
+    }
+
+    if (recipientName !== undefined) {
+      updateData['deliveryData.recipientName'] = recipientName;
+    }
+
+    if (street !== undefined) {
+      updateData['deliveryData.street'] = street;
+    }
+
+    if (neighborhood !== undefined) {
+      updateData['deliveryData.neighborhood'] = neighborhood;
+    }
+
+    if (reference !== undefined) {
+      updateData['deliveryData.reference'] = reference;
     }
 
     if (deliveryDateTime) {

@@ -364,8 +364,13 @@ export const generateCashRegisterTicket = (
                     ? '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #6c757d;">No se registraron ventas</td></tr>'
                     : summary.orders
                         .map(
-                          (order, index) => `
-                    <tr>
+                          (order, index) => {
+                            const isCancelled = order.status === 'cancelado';
+                            const isCredit = order.paymentMethod.toLowerCase().includes('crédito') || 
+                                           order.paymentMethod.toLowerCase().includes('credito');
+                            
+                            return `
+                    <tr ${isCancelled ? 'style="background-color: #ffebee;"' : ''}>
                         <td>${index + 1}</td>
                         <td style="font-size: 8pt;">${formatDate(order.createdAt)}</td>
                         <td>
@@ -385,11 +390,15 @@ export const generateCashRegisterTicket = (
                             <div style="font-weight: 600;">${order.clientName}</div>
                             <div style="font-size: 8pt; color: #6c757d;">Para: ${order.recipientName}</div>
                         </td>
-                        <td style="font-weight: 600;">${order.orderNumber}</td>
+                        <td style="font-weight: 600;">
+                            ${order.orderNumber}
+                            ${isCancelled ? '<br><span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">CANCELADA</span>' : ''}
+                            ${isCredit && !isCancelled ? '<br><span style="background-color: #fd7e14; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">CRÉDITO</span>' : ''}
+                        </td>
                         <td style="text-align: center;">${order.itemsCount}</td>
-                        <td style="text-align: right; font-weight: bold;">${formatCurrency(order.advance)}</td>
-                    </tr>
-                `
+                        <td style="text-align: right; font-weight: bold; ${isCancelled ? 'text-decoration: line-through; color: #dc3545;' : ''}">${formatCurrency(order.advance)}</td>
+                    </tr>`;
+                          }
                         )
                         .join("")
                 }

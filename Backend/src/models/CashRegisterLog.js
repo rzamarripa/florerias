@@ -100,6 +100,14 @@ const cashRegisterLogSchema = new Schema(
           type: Number,
           default: 0,
         },
+        discount: {
+          type: Number,
+          default: 0,
+        },
+        discountType: {
+          type: String,
+          default: null,
+        },
         shippingType: {
           type: String,
         },

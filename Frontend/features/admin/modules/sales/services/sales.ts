@@ -160,7 +160,14 @@ export const salesService = {
   // Actualizar información de entrega de una venta
   updateSaleDeliveryInfo: async (
     saleId: string,
-    data: { message: string; deliveryDateTime: string }
+    data: { 
+      message?: string; 
+      deliveryDateTime?: string;
+      recipientName?: string;
+      street?: string;
+      neighborhood?: string;
+      reference?: string;
+    }
   ): Promise<{ success: boolean; message: string; data: Sale }> => {
     const response = await apiCall<{ success: boolean; message: string; data: Sale }>(
       `/orders/${saleId}/delivery`,
