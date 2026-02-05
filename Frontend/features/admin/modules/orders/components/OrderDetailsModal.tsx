@@ -159,13 +159,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
             // Filtrar por empresa (companyId) en lugar de sucursal
             filters.companyId = companyResponse.data.companyId;
           } else {
-            console.warn("No se pudo obtener la empresa de la sucursal");
             // Si no se puede obtener la empresa, no cargar clientes
             setClients([]);
             return;
           }
         } catch (error) {
-          console.error("Error al obtener empresa de la sucursal:", error);
           setClients([]);
           return;
         }
@@ -174,7 +172,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       const response = await clientsService.getAllClients(filters);
       setClients(response.data);
     } catch (err) {
-      console.error("Error al cargar clientes:", err);
     } finally {
       setLoadingClients(false);
     }
@@ -205,7 +202,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         }));
       }
     } catch (err) {
-      console.error("Error al cargar metodos de pago:", err);
       toast.error("Error al cargar los metodos de pago");
     } finally {
       setLoadingPaymentMethods(false);
@@ -222,7 +218,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       });
       setNeighborhoods(response.data);
     } catch (err) {
-      console.error("Error al cargar colonias:", err);
       toast.error("Error al cargar las colonias");
     } finally {
       setLoadingNeighborhoods(false);
@@ -283,12 +278,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   useEffect(() => {
     if (shouldSubmitOrder && pendingFiles && stripePaymentData) {
       // Asegurar que el formData tenga los datos de Stripe antes de enviar
-      console.log("Enviando orden con datos de Stripe:", {
-        stripePaymentIntentId: formData.stripePaymentIntentId,
-        stripePaymentMethodId: formData.stripePaymentMethodId,
-        stripePaymentStatus: formData.stripePaymentStatus,
-      });
-
       const fakeEvent = new Event('submit') as any;
       onSubmit(fakeEvent, pendingFiles);
       setShouldSubmitOrder(false);
@@ -436,12 +425,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
   // Manejar seleccion de recompensa desde el modal
   const handleSelectReward = (rewardItem: AvailableRewardItem) => {
-    console.log("Reward seleccionado:", {
-      isProducto: rewardItem.reward.isProducto,
-      productId: rewardItem.reward.productId,
-      rewardType: rewardItem.reward.rewardType,
-      rewardValue: rewardItem.reward.rewardValue,
-    });
 
     // Si es una recompensa de producto, agregar como item
     if (rewardItem.reward.isProducto && rewardItem.reward.productId) {
@@ -590,7 +573,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
   // Manejar exito del pago con Stripe
   const handleStripePaymentSuccess = (paymentData: any) => {
-    console.log("Pago exitoso con Stripe, datos recibidos:", paymentData);
 
     setStripePaymentData(paymentData);
     setShowStripeModal(false);
@@ -603,8 +585,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       stripePaymentStatus: paymentData.status,
       stripeCustomerId: paymentData.stripeCustomerId,
     };
-
-    console.log("Actualizando formData con datos de Stripe:", updatedFormData);
 
     // IMPORTANTE: Actualizar el estado formData del componente padre con los datos de Stripe
     setFormData(updatedFormData);
@@ -764,7 +744,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                       setSelectedClientForRewards(response.data);
                                     }
                                   } catch (error) {
-                                    console.error("Error obteniendo datos del cliente:", error);
                                     toast.error("No se pudieron cargar los datos del cliente");
                                     return;
                                   }
@@ -797,7 +776,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                       setShowRedeemedRewardsModal(true);
                                     }
                                   } catch (error) {
-                                    console.error("Error obteniendo datos del cliente:", error);
                                     toast.error("No se pudieron cargar los datos del cliente");
                                   }
                                 }

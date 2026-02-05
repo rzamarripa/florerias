@@ -12,9 +12,9 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 import { cashRegisterLogsService } from "./services/cashRegisterLogs";
 import { CashRegisterLog, CashRegisterRef } from "./types";
-import CashCountDetailModal from "./components/CashCountDetailModal";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 
@@ -42,15 +42,13 @@ import {
 const CashCountPage: React.FC = () => {
   const { activeBranch } = useActiveBranchStore();
   const { getIsCashier, getIsAdmin } = useUserRoleStore();
+  const router = useRouter();
   const isCashier = getIsCashier();
   const isAdmin = getIsAdmin();
 
   const [logs, setLogs] = useState<CashRegisterLog[]>([]);
   const [cashRegisters, setCashRegisters] = useState<CashRegisterRef[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [selectedLog, setSelectedLog] = useState<CashRegisterLog | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const [filters, setFilters] = useState({
     cashRegisterId: "",
@@ -143,22 +141,8 @@ const CashCountPage: React.FC = () => {
     setTimeout(() => loadLogs(), 100);
   };
 
-  const handleViewDetail = async (logId: string) => {
-    try {
-      setLoadingDetail(true);
-      setShowDetailModal(true);
-      const response =
-        await cashRegisterLogsService.getCashRegisterLogById(logId);
-      if (response.success) {
-        setSelectedLog(response.data);
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Error al cargar el detalle");
-      console.error("Error loading log detail:", error);
-      setShowDetailModal(false);
-    } finally {
-      setLoadingDetail(false);
-    }
+  const handleViewDetail = (logId: string) => {
+    router.push(`/panel-de-control/cajas/historial/${logId}`);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -501,17 +485,6 @@ const CashCountPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Detail Modal */}
-      <CashCountDetailModal
-        open={showDetailModal}
-        onOpenChange={(open) => {
-          setShowDetailModal(open);
-          if (!open) setSelectedLog(null);
-        }}
-        log={selectedLog}
-        loading={loadingDetail}
-      />
     </div>
   );
 };

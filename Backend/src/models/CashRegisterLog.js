@@ -177,6 +177,61 @@ const cashRegisterLogSchema = new Schema(
         },
       },
     ],
+    discountAuths: [
+      {
+        authId: {
+          type: Schema.Types.ObjectId,
+          ref: "DiscountAuth",
+        },
+        orderId: {
+          type: Schema.Types.ObjectId,
+          ref: "Order",
+        },
+        orderNumber: {
+          type: String,
+        },
+        message: {
+          type: String,
+        },
+        requestedBy: {
+          type: String,
+        },
+        managerId: {
+          type: String,
+        },
+        discountValue: {
+          type: Number,
+          default: 0,
+        },
+        discountType: {
+          type: String,
+          enum: ['porcentaje', 'cantidad'],
+        },
+        discountAmount: {
+          type: Number,
+          default: 0,
+        },
+        isAuth: {
+          type: Boolean,
+          default: null,
+        },
+        authFolio: {
+          type: String,
+          default: null,
+        },
+        isRedeemed: {
+          type: Boolean,
+          default: false,
+        },
+        createdAt: {
+          type: Date,
+        },
+        approvedAt: {
+          type: Date,
+          default: null,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

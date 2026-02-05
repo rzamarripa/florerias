@@ -35,10 +35,12 @@ import { useUserSessionStore } from "@/stores/userSessionStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 import { generateDeliveryTicket, DeliveryTicketData } from "./utils/generateDeliveryTicket";
-import { uploadComprobante, uploadArreglo } from "@/services/firebaseStorage";
+import { uploadComprobante, uploadArreglo, uploadSaleTicket, uploadDeliveryTicket } from "@/services/firebaseStorage";
 import { useStorageSocket, StockUpdatePayload } from "@/hooks/useStorageSocket";
 import QRScanner from "@/features/admin/modules/digitalCards/components/QRScanner";
 import ClientPointsDashboardModal from "@/features/admin/modules/clients/components/ClientPointsDashboardModal";
+import { createTicket } from "./services/tickets";
+import WhatsAppTicketModal from "./components/WhatsAppTicketModal";
 
 const NewOrderPage = () => {
   const { getIsCashier, getIsSocialMedia } = useUserRoleStore();
@@ -78,6 +80,14 @@ const NewOrderPage = () => {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showPointsDashboard, setShowPointsDashboard] = useState(false);
   const [scannedClientData, setScannedClientData] = useState<any>(null);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsAppTicketData, setWhatsAppTicketData] = useState<{
+    orderNumber: string;
+    clientName: string;
+    clientPhone: string;
+    ticketUrl: string;
+    ticketType: 'sale' | 'delivery';
+  } | null>(null);
 
   const [formData, setFormData] = useState<CreateOrderData>({
     branchId: "",
@@ -880,6 +890,19 @@ const NewOrderPage = () => {
         throw new Error("No se pudieron obtener los datos de la empresa");
       }
 
+      const companyId = companyResponse.data.companyId;
+      const branchId = typeof orderData.branchId === "string" 
+        ? orderData.branchId 
+        : orderData.branchId._id;
+      const orderId = orderData._id;
+
+      console.log("IDs para subir tickets:", {
+        companyId,
+        branchId,
+        orderId,
+        orderData
+      });
+
       // Buscar el método de pago seleccionado para obtener su nombre
       const selectedPaymentMethod = paymentMethods.find(
         (pm) =>
@@ -930,6 +953,51 @@ const NewOrderPage = () => {
       // Generar HTML del ticket
       const ticketHTML = generateSaleTicket(ticketData);
 
+      // Variables para guardar las URLs de los tickets
+      let saleTicketUrl: string | null = null;
+      let saleTicketPath: string | null = null;
+      let deliveryTicketUrl: string | null = null;
+      let deliveryTicketPath: string | null = null;
+
+      // Subir ticket de venta a Firebase y guardar en base de datos
+      try {
+        console.log("Iniciando subida de ticket de venta a Firebase...");
+        console.log("HTML length:", ticketHTML.length);
+        
+        if (!companyId || !branchId || !orderId) {
+          console.error("Faltan IDs requeridos:", { companyId, branchId, orderId });
+          throw new Error("IDs faltantes para subir ticket");
+        }
+        
+        const saleTicketResult = await uploadSaleTicket(
+          ticketHTML,
+          companyId,
+          branchId,
+          orderId
+        );
+        saleTicketUrl = saleTicketResult.url;
+        saleTicketPath = saleTicketResult.path;
+        console.log("✅ Ticket de venta guardado exitosamente en Firebase:");
+        console.log("  URL:", saleTicketUrl);
+        console.log("  Path:", saleTicketPath);
+        
+        // Guardar ticket de venta en la base de datos
+        await createTicket({
+          orderId,
+          branchId,
+          url: saleTicketUrl,
+          path: saleTicketPath,
+          isStoreTicket: true
+        });
+        console.log("✅ Ticket de venta registrado en base de datos");
+      } catch (uploadError: any) {
+        console.error("❌ Error al subir ticket de venta:", uploadError);
+        console.error("  Mensaje:", uploadError.message);
+        console.error("  Stack:", uploadError.stack);
+        // No interrumpir el flujo, solo loggear el error
+        toast.warning("No se pudo guardar el ticket en la nube, pero se generó correctamente para imprimir");
+      }
+
       // Crear ventana para imprimir
       const printWindow = window.open("", "_blank", "width=800,height=600");
 
@@ -976,6 +1044,37 @@ const NewOrderPage = () => {
           // Generar HTML del ticket de delivery
           const deliveryTicketHTML = generateDeliveryTicket(deliveryTicketData);
 
+          // Subir ticket de envío a Firebase y guardar en base de datos
+          try {
+            console.log("Iniciando subida de ticket de envío a Firebase...");
+            
+            const deliveryTicketResult = await uploadDeliveryTicket(
+              deliveryTicketHTML,
+              companyId,
+              branchId,
+              orderId
+            );
+            deliveryTicketUrl = deliveryTicketResult.url;
+            deliveryTicketPath = deliveryTicketResult.path;
+            console.log("✅ Ticket de envío guardado exitosamente en Firebase:");
+            console.log("  URL:", deliveryTicketUrl);
+            console.log("  Path:", deliveryTicketPath);
+            
+            // Guardar ticket de envío en la base de datos
+            await createTicket({
+              orderId,
+              branchId,
+              url: deliveryTicketUrl,
+              path: deliveryTicketPath,
+              isStoreTicket: false
+            });
+            console.log("✅ Ticket de envío registrado en base de datos");
+          } catch (uploadError: any) {
+            console.error("❌ Error al subir ticket de envío:", uploadError);
+            console.error("  Mensaje:", uploadError.message);
+            // No interrumpir el flujo, solo loggear el error
+          }
+
           // Crear ventana para imprimir ticket de delivery
           // Usar setTimeout para evitar que el navegador bloquee múltiples popups
           setTimeout(() => {
@@ -999,6 +1098,20 @@ const NewOrderPage = () => {
           console.error("Error generando ticket de delivery:", deliveryError);
           // No mostrar error, solo log ya que el ticket principal se generó
         }
+      }
+
+      // Después de generar los tickets, verificar si se puede enviar por WhatsApp
+      if (orderData.clientInfo.phone && saleTicketUrl) {
+        // Preparar datos para el modal
+        setWhatsAppTicketData({
+          orderNumber: orderData.orderNumber,
+          clientName: orderData.clientInfo.name,
+          clientPhone: orderData.clientInfo.phone,
+          ticketUrl: saleTicketUrl,
+          ticketType: 'sale'
+        });
+        // Mostrar modal
+        setShowWhatsAppModal(true);
       }
     } catch (error) {
       console.error("Error generando ticket de venta:", error);
@@ -1479,6 +1592,26 @@ const NewOrderPage = () => {
             status: scannedClientData.client.status,
           }}
           branchId={formData.branchId}
+        />
+      )}
+
+      {/* Modal de WhatsApp para enviar ticket */}
+      {whatsAppTicketData && (
+        <WhatsAppTicketModal
+          isOpen={showWhatsAppModal}
+          onClose={() => {
+            setShowWhatsAppModal(false);
+            setWhatsAppTicketData(null);
+          }}
+          orderNumber={whatsAppTicketData.orderNumber}
+          clientName={whatsAppTicketData.clientName}
+          clientPhone={whatsAppTicketData.clientPhone}
+          ticketUrl={whatsAppTicketData.ticketUrl}
+          ticketType={whatsAppTicketData.ticketType}
+          onSuccess={() => {
+            // Opcional: acciones adicionales después de enviar exitosamente
+            console.log('Ticket enviado por WhatsApp exitosamente');
+          }}
         />
       )}
     </div>

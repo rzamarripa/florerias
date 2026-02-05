@@ -119,6 +119,25 @@ export interface OrderSummary {
   status: string;
   createdAt: string;
   itemsCount: number;
+  discount?: number;
+  sendToProduction?: boolean;
+}
+
+export interface DiscountAuthSummary {
+  _id: string;
+  orderId: string;
+  orderNumber: string;
+  message: string;
+  requestedBy: string;
+  managerId: string;
+  discountValue: number;
+  discountType: 'porcentaje' | 'cantidad';
+  discountAmount: number;
+  isAuth: boolean | null;
+  authFolio: string | null;
+  isRedeemed: boolean;
+  createdAt: string;
+  approvedAt: string | null;
 }
 
 export interface CashRegisterSummary {
@@ -146,4 +165,5 @@ export interface CashRegisterSummary {
   orders: OrderSummary[];
   expenses: ExpenseSummary[];
   buys: BuySummary[];
+  discountAuths: DiscountAuthSummary[];
 }

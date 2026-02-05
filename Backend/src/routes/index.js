@@ -48,6 +48,7 @@ import ecommerceConfigRoutes from "./ecommerceConfigRoutes.js";
 import digitalCardRoutes from "./digitalCardRoutes.js";
 import scannerRoutes from "./scannerRoutes.js";
 import stripeRoutes from "./stripeRoutes.js";
+import ticketRoutes from "./ticketRoutes.js";
 
 const router = Router();
 
@@ -99,5 +100,6 @@ router.use("/ecommerce-config", ecommerceConfigRoutes);
 router.use("/digital-cards", digitalCardRoutes);
 router.use("/scanner", scannerRoutes);
 router.use("/stripe", stripeRoutes);
+router.use("/tickets", ticketRoutes);
 
 export default router;

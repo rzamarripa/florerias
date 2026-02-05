@@ -240,3 +240,111 @@ export const uploadDigitalCardHero = async (
   // Subir el archivo a Firebase
   return uploadFile(file, folder);
 };
+
+/**
+ * Sube el ticket de venta HTML a Firebase Storage
+ * @param htmlContent - El contenido HTML del ticket
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @param orderId - El ID de la orden
+ * @returns URL de descarga del ticket y path en Firebase
+ */
+export const uploadSaleTicket = async (
+  htmlContent: string,
+  companyId: string,
+  branchId: string,
+  orderId: string
+): Promise<UploadFileResult> => {
+  try {
+    console.log("[uploadSaleTicket] Iniciando con params:", { companyId, branchId, orderId });
+    
+    // Convertir el string HTML a un Blob
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    console.log("[uploadSaleTicket] Blob creado, size:", blob.size);
+    
+    // Crear un File object desde el Blob
+    const file = new File([blob], 'ticketVenta.html', { type: 'text/html' });
+    
+    // Definir la carpeta de destino
+    const folder = `Empresas/${companyId}/branches/${branchId}/orders/${orderId}/tickets`;
+    
+    // Usar el nombre específico para el ticket de venta
+    const storage = getStorageInstance();
+    console.log("[uploadSaleTicket] Storage instance obtenida");
+    
+    const fileName = 'ticketVenta.html';
+    const filePath = `${folder}/${fileName}`;
+    console.log("[uploadSaleTicket] Path completo:", filePath);
+    
+    const storageRef = ref(storage, filePath);
+    
+    console.log("[uploadSaleTicket] Subiendo archivo a Firebase...");
+    const snapshot = await uploadBytes(storageRef, file);
+    console.log("[uploadSaleTicket] Archivo subido, obteniendo URL...");
+    
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    console.log("[uploadSaleTicket] URL obtenida:", downloadURL);
+    
+    return {
+      url: downloadURL,
+      path: filePath,
+    };
+  } catch (error) {
+    console.error("[uploadSaleTicket] Error completo:", error);
+    throw error;
+  }
+};
+
+/**
+ * Sube el ticket de envío HTML a Firebase Storage
+ * @param htmlContent - El contenido HTML del ticket
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @param orderId - El ID de la orden
+ * @returns URL de descarga del ticket y path en Firebase
+ */
+export const uploadDeliveryTicket = async (
+  htmlContent: string,
+  companyId: string,
+  branchId: string,
+  orderId: string
+): Promise<UploadFileResult> => {
+  try {
+    console.log("[uploadDeliveryTicket] Iniciando con params:", { companyId, branchId, orderId });
+    
+    // Convertir el string HTML a un Blob
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    console.log("[uploadDeliveryTicket] Blob creado, size:", blob.size);
+    
+    // Crear un File object desde el Blob
+    const file = new File([blob], 'ticketEnvio.html', { type: 'text/html' });
+    
+    // Definir la carpeta de destino
+    const folder = `Empresas/${companyId}/branches/${branchId}/orders/${orderId}/tickets`;
+    
+    // Usar el nombre específico para el ticket de envío
+    const storage = getStorageInstance();
+    console.log("[uploadDeliveryTicket] Storage instance obtenida");
+    
+    const fileName = 'ticketEnvio.html';
+    const filePath = `${folder}/${fileName}`;
+    console.log("[uploadDeliveryTicket] Path completo:", filePath);
+    
+    const storageRef = ref(storage, filePath);
+    
+    console.log("[uploadDeliveryTicket] Subiendo archivo a Firebase...");
+    const snapshot = await uploadBytes(storageRef, file);
+    console.log("[uploadDeliveryTicket] Archivo subido, obteniendo URL...");
+    
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    console.log("[uploadDeliveryTicket] URL obtenida:", downloadURL);
+    
+    return {
+      url: downloadURL,
+      path: filePath,
+    };
+  } catch (error) {
+    console.error("[uploadDeliveryTicket] Error completo:", error);
+    throw error;
+  }
+};

@@ -75,8 +75,6 @@ export const createOrderPayment = async (req, res) => {
     const wasPreviouslyNotSent = !order.sendToProduction;
     if (previousAdvance === 0 && wasPreviouslyNotSent && order.advance > 0) {
       order.sendToProduction = true;
-      console.log(`📦 [AutoSend] Orden ${order.orderNumber} enviada a producción automáticamente al recibir primer pago`);
-      console.log(`   - Condiciones: previousAdvance=${previousAdvance}, wasPreviouslyNotSent=${wasPreviouslyNotSent}, newAdvance=${order.advance}`);
 
       // Asignar stage de producción si no tiene uno
       if (!order.stage) {
@@ -97,13 +95,9 @@ export const createOrderPayment = async (req, res) => {
 
             if (firstStage) {
               order.stage = firstStage._id;
-              console.log(`   - Stage asignado: ${firstStage.name} (stageNumber: ${firstStage.stageNumber})`);
-            } else {
-              console.warn(`   - No se encontró stage inicial de Producción para la empresa ${companyId}`);
             }
           }
         } catch (stageError) {
-          console.error('Error al asignar stage automáticamente:', stageError);
           // No fallar el pago si hay error al asignar el stage
         }
       }
@@ -125,7 +119,6 @@ export const createOrderPayment = async (req, res) => {
           }
         );
       } catch (logError) {
-        console.error('Error al crear log de envío automático:', logError);
       }
     }
 
@@ -190,7 +183,6 @@ export const createOrderPayment = async (req, res) => {
         }
       );
     } catch (logError) {
-      console.error('Error al crear log de pago:', logError);
     }
 
     // Emitir socket para actualización en tiempo real
@@ -214,13 +206,8 @@ export const createOrderPayment = async (req, res) => {
 
       if (updatedOrder) {
         emitOrderUpdated(updatedOrder);
-        console.log(`📡 Socket emitido: Pago recibido para orden ${updatedOrder.orderNumber} - Monto: $${amount}`);
-        if (updatedOrder.sendToProduction && updatedOrder.stage) {
-          console.log(`   - Orden enviada a producción con stage: ${updatedOrder.stage.name}`);
-        }
       }
     } catch (socketError) {
-      console.error('Error al emitir socket de actualización de pago:', socketError);
     }
 
     res.status(201).json({
@@ -232,7 +219,6 @@ export const createOrderPayment = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error al crear pago:', error);
     res.status(500).json({ message: 'Error al registrar el pago', error: error.message });
   }
 };
@@ -250,7 +236,6 @@ export const getOrderPayments = async (req, res) => {
 
     res.status(200).json(payments);
   } catch (error) {
-    console.error('Error al obtener pagos:', error);
     res.status(500).json({ message: 'Error al obtener los pagos', error: error.message });
   }
 };
@@ -272,7 +257,6 @@ export const getOrderPaymentById = async (req, res) => {
 
     res.status(200).json(payment);
   } catch (error) {
-    console.error('Error al obtener pago:', error);
     res.status(500).json({ message: 'Error al obtener el pago', error: error.message });
   }
 };
@@ -354,7 +338,6 @@ export const deleteOrderPayment = async (req, res) => {
         }
       );
     } catch (logError) {
-      console.error('Error al crear log de pago eliminado:', logError);
     }
 
     // Emitir socket para actualización en tiempo real
@@ -378,10 +361,8 @@ export const deleteOrderPayment = async (req, res) => {
 
       if (updatedOrder) {
         emitOrderUpdated(updatedOrder);
-        console.log(`📡 Socket emitido: Pago eliminado de orden ${updatedOrder.orderNumber} - Monto: $${payment.amount}`);
       }
     } catch (socketError) {
-      console.error('Error al emitir socket de actualización de pago eliminado:', socketError);
     }
 
     res.status(200).json({
@@ -392,7 +373,6 @@ export const deleteOrderPayment = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error al eliminar pago:', error);
     res.status(500).json({ message: 'Error al eliminar el pago', error: error.message });
   }
 };
@@ -432,7 +412,6 @@ export const getAllOrderPayments = async (req, res) => {
       totalPayments: count
     });
   } catch (error) {
-    console.error('Error al obtener pagos:', error);
     res.status(500).json({ message: 'Error al obtener los pagos', error: error.message });
   }
 };
@@ -494,8 +473,6 @@ export const getOrderPaymentsByBranch = async (req, res) => {
         }).select('_id');
 
         branchIdsToSearch = branches.map(b => b._id);
-
-        console.log(`Admin ${userId} - Company: ${company._id} - Found ${branchIdsToSearch.length} branches`);
       }
       else if (userRole === 'Gerente') {
         // Para gerentes, buscar su sucursal
@@ -578,16 +555,8 @@ export const getOrderPaymentsByBranch = async (req, res) => {
       orderQuery.isSocialMediaOrder = false; // Solo órdenes que NO son de redes sociales
     }
 
-    console.log('OrderQuery:', JSON.stringify(orderQuery, null, 2));
-    console.log('BranchIds:', branchObjectIds.map(id => id.toString()));
-
     const orders = await Order.find(orderQuery).select('_id branchId cashier');
     const orderIds = orders.map(order => order._id);
-
-    console.log(`Found ${orders.length} orders matching criteria`);
-    if (orders.length > 0) {
-      console.log('Sample order:', orders[0]);
-    }
 
     // Si no hay órdenes, retornar array vacío
     if (orderIds.length === 0) {
@@ -638,15 +607,12 @@ export const getOrderPaymentsByBranch = async (req, res) => {
       .populate('cashRegisterId', 'name')
       .sort({ date: -1 });
 
-    console.log(`Found ${payments.length} payments for ${branchIdsToSearch.length} branches`);
-
     res.status(200).json({
       success: true,
       message: 'Pagos obtenidos exitosamente',
       data: payments
     });
   } catch (error) {
-    console.error('Error al obtener pagos por sucursal:', error);
     res.status(500).json({
       success: false,
       message: 'Error al obtener los pagos',

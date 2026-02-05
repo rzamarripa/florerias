@@ -344,8 +344,8 @@ export const generateCashRegisterTicket = (
             </div>
         </div>
 
-        <!-- Detalle de Ventas -->
-        <div class="section-title">Detalle de Ventas</div>
+        <!-- Detalle de Ventas Regulares -->
+        <div class="section-title">Detalle de Ventas Regulares</div>
         <table>
             <thead>
                 <tr>
@@ -360,11 +360,20 @@ export const generateCashRegisterTicket = (
             </thead>
             <tbody>
                 ${
-                  summary.orders.length === 0
-                    ? '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #6c757d;">No se registraron ventas</td></tr>'
-                    : summary.orders
-                        .map(
-                          (order, index) => {
+                  (() => {
+                    const regularOrders = summary.orders.filter(order => {
+                      const paymentLower = order.paymentMethod.toLowerCase();
+                      const isStoreCredit = paymentLower === 'crédito' || paymentLower === 'credito' || 
+                                           (paymentLower.includes('crédito') && !paymentLower.includes('tarjeta')) ||
+                                           (paymentLower.includes('credito') && !paymentLower.includes('tarjeta'));
+                      return !isStoreCredit;
+                    });
+                    
+                    return regularOrders.length === 0
+                      ? '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #6c757d;">No se registraron ventas regulares</td></tr>'
+                      : regularOrders
+                          .map(
+                            (order, index) => {
                             const isCancelled = order.status === 'cancelado';
                             const isCredit = order.paymentMethod.toLowerCase().includes('crédito') || 
                                            order.paymentMethod.toLowerCase().includes('credito');
@@ -398,12 +407,126 @@ export const generateCashRegisterTicket = (
                         <td style="text-align: center;">${order.itemsCount}</td>
                         <td style="text-align: right; font-weight: bold; ${isCancelled ? 'text-decoration: line-through; color: #dc3545;' : ''}">${formatCurrency(order.advance)}</td>
                     </tr>`;
-                          }
-                        )
-                        .join("")
+                            }
+                          )
+                          .join("");
+                  })()
                 }
             </tbody>
         </table>
+
+        <!-- Detalle de Ventas a Crédito -->
+        <div class="section-title">Detalle de Ventas a Crédito</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%;">No.</th>
+                    <th style="width: 15%;">Fecha</th>
+                    <th style="width: 20%;">Cliente</th>
+                    <th style="width: 15%;">No. Venta</th>
+                    <th style="width: 10%;">Productos</th>
+                    <th style="width: 12%; text-align: right;">Total</th>
+                    <th style="width: 12%; text-align: right;">Abonado</th>
+                    <th style="width: 11%; text-align: right;">Saldo</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${
+                  (() => {
+                    const creditOrders = summary.orders.filter(order => {
+                      const paymentLower = order.paymentMethod.toLowerCase();
+                      const isStoreCredit = paymentLower === 'crédito' || paymentLower === 'credito' || 
+                                           (paymentLower.includes('crédito') && !paymentLower.includes('tarjeta')) ||
+                                           (paymentLower.includes('credito') && !paymentLower.includes('tarjeta'));
+                      return isStoreCredit;
+                    });
+                    
+                    return creditOrders.length === 0
+                      ? '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #6c757d;">No se registraron ventas a crédito</td></tr>'
+                      : creditOrders
+                          .map(
+                            (order, index) => {
+                              const total = order.total || 0;
+                              const advance = order.advance || 0;
+                              const balance = total - advance;
+                              
+                              return `
+                      <tr>
+                          <td>${index + 1}</td>
+                          <td style="font-size: 8pt;">${formatDate(order.createdAt)}</td>
+                          <td>
+                              <div style="font-weight: 600;">${order.clientName}</div>
+                              <div style="font-size: 8pt; color: #6c757d;">Para: ${order.recipientName}</div>
+                          </td>
+                          <td style="font-weight: 600;">
+                              ${order.orderNumber}
+                              <br><span style="background-color: #fd7e14; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">CRÉDITO</span>
+                          </td>
+                          <td style="text-align: center;">${order.itemsCount}</td>
+                          <td style="text-align: right; font-weight: bold;">${formatCurrency(total)}</td>
+                          <td style="text-align: right; font-weight: bold; color: #28a745;">${formatCurrency(advance)}</td>
+                          <td style="text-align: right; font-weight: bold; color: #dc3545;">${formatCurrency(balance)}</td>
+                      </tr>`;
+                            }
+                          )
+                          .join("");
+                  })()
+                }
+            </tbody>
+        </table>
+
+        <!-- Detalle de Autorizaciones de Descuento -->
+        ${
+          summary.discountAuths && summary.discountAuths.length > 0 ? `
+        <div class="section-title">Autorizaciones de Descuento</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 12%;">Orden</th>
+                    <th style="width: 15%;">Fecha</th>
+                    <th style="width: 20%;">Solicitante</th>
+                    <th style="width: 15%;">Descuento</th>
+                    <th style="width: 20%;">Mensaje</th>
+                    <th style="width: 10%;">Estado</th>
+                    <th style="width: 8%;">Folio</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${
+                  summary.discountAuths
+                    .map(
+                      (auth) => `
+                <tr>
+                    <td style="font-weight: 600;">${auth.orderNumber}</td>
+                    <td style="font-size: 8pt;">${formatDate(auth.createdAt)}</td>
+                    <td>${auth.requestedBy}</td>
+                    <td>
+                        <span style="font-weight: bold; color: #fd7e14;">
+                            ${auth.discountType === 'porcentaje' ? auth.discountValue + '%' : formatCurrency(auth.discountValue)}
+                        </span>
+                        ${auth.discountAmount > 0 ? `<br><small>Total: ${formatCurrency(auth.discountAmount)}</small>` : ''}
+                    </td>
+                    <td style="font-size: 8pt;">${auth.message}</td>
+                    <td>
+                        ${
+                          auth.isAuth === null
+                            ? '<span style="background-color: #ffc107; color: #212529; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">PENDIENTE</span>'
+                            : auth.isAuth === true
+                            ? '<span style="background-color: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">APROBADO</span>'
+                            : '<span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">RECHAZADO</span>'
+                        }
+                        ${auth.isRedeemed ? '<br><span style="background-color: #007bff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 7pt; font-weight: bold; margin-top: 2px; display: inline-block;">CANJEADO</span>' : ''}
+                    </td>
+                    <td style="font-weight: 600; color: #007bff;">${auth.authFolio || '-'}</td>
+                </tr>
+                `
+                    )
+                    .join("")
+                }
+            </tbody>
+        </table>
+          ` : ''
+        }
 
         <!-- Detalle de Gastos -->
         <div class="section-title">Detalle de Gastos</div>

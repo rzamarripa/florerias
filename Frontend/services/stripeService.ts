@@ -198,10 +198,18 @@ export const processRefund = async (params: {
  * Validar si un método de pago es de tarjeta
  */
 export const isCardPaymentMethod = (paymentMethodName: string): boolean => {
-  const cardKeywords = ['tarjeta', 'card', 'credito', 'débito', 'debito', 'visa', 'mastercard', 'amex'];
-  return cardKeywords.some(keyword => 
-    paymentMethodName.toLowerCase().includes(keyword)
-  );
+  const nameLower = paymentMethodName.toLowerCase();
+  
+  // Primero verificar si es "crédito" solo (sin "tarjeta")
+  // Si es crédito solo, NO es pago con tarjeta
+  if ((nameLower === 'crédito' || nameLower === 'credito') && 
+      !nameLower.includes('tarjeta')) {
+    return false;
+  }
+  
+  // Palabras clave para identificar pagos con tarjeta
+  const cardKeywords = ['tarjeta de crédito', 'tarjeta de credito', 'tarjeta', 'card', 'débito', 'debito', 'visa', 'mastercard', 'amex'];
+  return cardKeywords.some(keyword => nameLower.includes(keyword));
 };
 
 /**

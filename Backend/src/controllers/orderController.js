@@ -234,7 +234,6 @@ const getAllOrders = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error al obtener órdenes:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -278,7 +277,6 @@ const getOrderById = async (req, res) => {
       data: order
     });
   } catch (error) {
-    console.error('Error al obtener orden:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -747,7 +745,6 @@ const createOrder = async (req, res) => {
           }
         }
       } catch (ecommerceError) {
-        console.error('Error al descontar stock de e-commerce:', ecommerceError);
         // Continuar con la creación de la orden aunque falle el descuento del stock
       }
     } else if (storage) {
@@ -832,7 +829,6 @@ const createOrder = async (req, res) => {
             );
           }
         } catch (storageError) {
-          console.error('Error al descontar stock del almacén:', storageError);
           // Continuar con la creación de la orden aunque falle el descuento del stock
           // El administrador puede corregir el stock manualmente
         }
@@ -857,11 +853,11 @@ const createOrder = async (req, res) => {
         // Caso 1: Orden con pago inmediato (advance > 0) - NO Stripe
         if (advance > 0 && paymentMethod && !stripePaymentIntentId) {
           // Determinar si se debe actualizar el balance:
-          // - Cajas normales: solo si el pago es en efectivo
-          // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo y tarjetas con Stripe
+          // Para cajas normales: si el pago es en efectivo O crédito Y el tipo de envío es 'tienda'
+          // Para cajas de redes sociales: todos los pagos EXCEPTO efectivo
           const shouldUpdateBalance = cashRegister?.isSocialMediaBox
             ? !isEffectivo  // Cajas de redes: actualizar si NO es efectivo
-            : isEffectivo;  // Cajas normales: actualizar si ES efectivo
+            : ((isEffectivo || isCredito) && savedOrder.shippingType === 'tienda');  // Cajas normales: efectivo o crédito Y en tienda
 
           // Actualizar el balance de la caja si corresponde
           if (shouldUpdateBalance && savedPaymentId) {
@@ -880,7 +876,7 @@ const createOrder = async (req, res) => {
             );
             orderRegistered = true;
           }
-          // Si no se actualizó el balance pero hay pago (ej: crédito con anticipo)
+          // Si no se actualizó el balance pero hay pago (ej: crédito con anticipo o envío a domicilio)
           else if (savedPaymentId) {
             await CashRegister.findByIdAndUpdate(
               cashRegisterId,
@@ -915,7 +911,6 @@ const createOrder = async (req, res) => {
           );
         }
       } catch (cashRegisterError) {
-        console.error('Error al actualizar caja registradora:', cashRegisterError);
         // No fallar la orden si hay error al actualizar la caja
       }
     }
@@ -936,7 +931,6 @@ const createOrder = async (req, res) => {
         });
 
       } catch (pointsError) {
-        console.error('Error al procesar puntos del cliente:', pointsError);
         // No fallar la orden si hay error al procesar puntos
       }
     }
@@ -960,7 +954,6 @@ const createOrder = async (req, res) => {
           }
         }
       } catch (rewardError) {
-        console.error('Error al marcar recompensa como canjeada:', rewardError);
         // No fallar la orden si hay error al procesar la recompensa
       }
     }
@@ -1050,12 +1043,10 @@ const createOrder = async (req, res) => {
               }
             );
           } catch (logError) {
-            console.error('Error al crear log de solicitud de descuento:', logError);
           }
 
         }
       } catch (discountAuthError) {
-        console.error('Error al crear solicitud de descuento:', discountAuthError);
         // No fallar la orden si hay error al crear la solicitud de descuento
       }
     }
@@ -1082,7 +1073,6 @@ const createOrder = async (req, res) => {
         await notification.save();
       }
     } catch (notificationError) {
-      console.error('Error al crear notificación:', notificationError);
       // No fallar la creación de la orden si falla la notificación
     }
 
@@ -1106,7 +1096,6 @@ const createOrder = async (req, res) => {
         }
       );
     } catch (logError) {
-      console.error('Error al crear log de orden:', logError);
       // No fallar la creación de la orden si falla el log
     }
 
@@ -1116,7 +1105,6 @@ const createOrder = async (req, res) => {
       message: 'Orden creada exitosamente'
     });
   } catch (error) {
-    console.error('Error al crear orden:', error);
 
     if (error.name === 'ValidationError') {
       return res.status(400).json({
@@ -1251,7 +1239,6 @@ const updateOrder = async (req, res) => {
         );
       }
     } catch (logError) {
-      console.error('Error al crear log de actualización:', logError);
       // No fallar la actualización si falla el log
     }
 
@@ -1264,7 +1251,6 @@ const updateOrder = async (req, res) => {
       message: 'Orden actualizada exitosamente'
     });
   } catch (error) {
-    console.error('Error al actualizar orden:', error);
 
     if (error.name === 'ValidationError') {
       return res.status(400).json({
@@ -1427,7 +1413,6 @@ const updateOrderStatus = async (req, res) => {
             }
           }
         } catch (ecommerceError) {
-          console.error('Error al restaurar stock de e-commerce por cancelación:', ecommerceError);
           // No fallar la cancelación si hay error al restaurar stock
         }
       } else {
@@ -1462,7 +1447,6 @@ const updateOrderStatus = async (req, res) => {
             await storage.save();
           }
         } catch (stockError) {
-          console.error('Error al restaurar stock por cancelación:', stockError);
           // No fallar la cancelación si hay error al restaurar stock
           // El administrador puede corregir el stock manualmente
         }
@@ -1487,7 +1471,6 @@ const updateOrderStatus = async (req, res) => {
           await notification.save();
         }
       } catch (notificationError) {
-        console.error('Error al crear notificación de cancelación:', notificationError);
         // No fallar la actualización del estado si falla la notificación
       }
 
@@ -1509,7 +1492,6 @@ const updateOrderStatus = async (req, res) => {
           }
         );
       } catch (logError) {
-        console.error('Error al crear log de cancelación:', logError);
       }
     }
 
@@ -1531,7 +1513,6 @@ const updateOrderStatus = async (req, res) => {
           }
         );
       } catch (logError) {
-        console.error('Error al crear log de completado:', logError);
       }
     }
 
@@ -1552,7 +1533,6 @@ const updateOrderStatus = async (req, res) => {
           }
         );
       } catch (logError) {
-        console.error('Error al crear log de cambio de status:', logError);
       }
     }
 
@@ -1565,7 +1545,6 @@ const updateOrderStatus = async (req, res) => {
       message: 'Estado de orden actualizado exitosamente'
     });
   } catch (error) {
-    console.error('Error al actualizar estado de orden:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -1622,7 +1601,6 @@ const deleteOrder = async (req, res) => {
             }
           }
         } catch (ecommerceError) {
-          console.error('Error al restaurar stock de e-commerce por eliminación:', ecommerceError);
           // Continuar con la eliminación aunque falle la restauración del stock
         }
       } else {
@@ -1652,7 +1630,6 @@ const deleteOrder = async (req, res) => {
             await storage.save();
           }
         } catch (stockError) {
-          console.error('Error al restaurar stock por eliminación:', stockError);
           // Continuar con la eliminación aunque falle la restauración del stock
         }
       }
@@ -1670,7 +1647,6 @@ const deleteOrder = async (req, res) => {
       message: 'Orden eliminada exitosamente'
     });
   } catch (error) {
-    console.error('Error al eliminar orden:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -1859,7 +1835,6 @@ const getOrdersSummary = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error al obtener resumen de ventas:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -1954,7 +1929,6 @@ const sendOrderToShipping = async (req, res) => {
         }
       );
     } catch (logError) {
-      console.error('Error al crear log de envío a shipping:', logError);
     }
 
     // Emitir evento de socket para notificar a otros usuarios
@@ -1966,7 +1940,6 @@ const sendOrderToShipping = async (req, res) => {
       message: 'Orden enviada al pizarrón de Envío exitosamente'
     });
   } catch (error) {
-    console.error('Error al enviar orden a Envío:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -2092,7 +2065,6 @@ const updateOrderDeliveryInfo = async (req, res) => {
         }
       );
     } catch (logError) {
-      console.error('Error al crear log de actualización de entrega:', logError);
       // No fallar la actualización si falla el log
     }
 
@@ -2105,7 +2077,6 @@ const updateOrderDeliveryInfo = async (req, res) => {
       message: 'Información de entrega actualizada exitosamente'
     });
   } catch (error) {
-    console.error('Error al actualizar información de entrega:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -2333,7 +2304,6 @@ const getUnauthorizedOrders = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error al obtener órdenes sin autorizar:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

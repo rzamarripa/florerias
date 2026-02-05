@@ -5,6 +5,7 @@ import { Expense } from '../models/Expense.js';
 import { Buy } from '../models/Buy.js';
 import OrderPayment from '../models/OrderPayment.js';
 import PaymentMethod from '../models/PaymentMethod.js';
+import DiscountAuth from '../models/DiscountAuth.js';
 
 // Obtener todas las cajas registradoras con filtros y paginación
 const getAllCashRegisters = async (req, res) => {
@@ -773,22 +774,26 @@ const getCashRegisterSummary = async (req, res) => {
       // Para cajas de redes sociales, totalSales incluye todos los pagos no-efectivo
       totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     } else {
-      // Cajas normales: separar pagos en efectivo y crédito
+      // Cajas normales: separar pagos en efectivo y crédito, y filtrar por tipo de envío
       cashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
-        return paymentMethodName.includes('efectivo');
+        const shippingType = payment.orderId?.shippingType || '';
+        // Solo pagos en efectivo de ventas en tienda
+        return paymentMethodName.includes('efectivo') && shippingType === 'tienda';
       });
       
       creditPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
-        return paymentMethodName.includes('crédito') || paymentMethodName.includes('credito');
+        const shippingType = payment.orderId?.shippingType || '';
+        // Solo pagos a crédito de ventas en tienda
+        return (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito')) && shippingType === 'tienda';
       });
       
-      // Mostrar tanto pagos en efectivo como crédito en el resumen
+      // Mostrar tanto pagos en efectivo como crédito en el resumen (solo de ventas en tienda)
       relevantPayments = [...cashPayments, ...creditPayments];
       
-      // Para el balance de caja, solo contar pagos en efectivo
-      totalSales = cashPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+      // Para el balance de caja, contar pagos en efectivo y crédito en tienda
+      totalSales = [...cashPayments, ...creditPayments].reduce((sum, payment) => sum + (payment.amount || 0), 0);
     }
 
     // Obtener gastos desde el array de expenses de la caja (solo de la sesión actual)
@@ -819,7 +824,8 @@ const getCashRegisterSummary = async (req, res) => {
             paymentMethods: new Set(),
             status: payment.orderId.status,
             createdAt: payment.orderId.createdAt || payment.date,
-            itemsCount: payment.orderId.items?.length || 0
+            itemsCount: payment.orderId.items?.length || 0,
+            sendToProduction: payment.orderId.sendToProduction || false
           });
         }
         // Sumar el monto del pago
@@ -832,10 +838,11 @@ const getCashRegisterSummary = async (req, res) => {
       }
     });
     
-    // Añadir las órdenes a crédito (sin pagos)
+    // Añadir las órdenes a crédito (sin pagos) - solo si son ventas en tienda
     creditOrders.forEach(creditOrder => {
       const orderId = creditOrder._id.toString();
-      if (!ordersMap.has(orderId)) {
+      // Solo incluir órdenes a crédito que sean de tipo tienda
+      if (!ordersMap.has(orderId) && creditOrder.shippingType === 'tienda') {
         ordersMap.set(orderId, {
           _id: creditOrder._id,
           orderNumber: creditOrder.orderNumber,
@@ -849,13 +856,23 @@ const getCashRegisterSummary = async (req, res) => {
           paymentMethods: new Set([creditOrder.paymentMethod?.name || 'Crédito']),
           status: creditOrder.status,
           createdAt: creditOrder.createdAt,
-          itemsCount: creditOrder.items?.length || 0
+          itemsCount: creditOrder.items?.length || 0,
+          sendToProduction: creditOrder.sendToProduction || false
         });
       }
     });
 
     // Convertir el Map a array
     const ordersArray = Array.from(ordersMap.values());
+
+    // Obtener las autorizaciones de descuento para las órdenes de esta caja
+    const orderIds = ordersArray.map(order => order._id);
+    const discountAuths = await DiscountAuth.find({ 
+      orderId: { $in: orderIds } 
+    })
+      .populate('requestedBy', 'username email profile')
+      .populate('managerId', 'username email profile')
+      .sort({ createdAt: -1 });
 
     const summary = {
       cashRegister: {
@@ -886,7 +903,8 @@ const getCashRegisterSummary = async (req, res) => {
         paymentMethod: Array.from(order.paymentMethods).join(', ') || 'N/A',
         status: order.status,
         createdAt: order.createdAt,
-        itemsCount: order.itemsCount
+        itemsCount: order.itemsCount,
+        sendToProduction: order.sendToProduction || false
       })),
       expenses: expensesFromDB.map(expense => ({
         _id: expense._id,
@@ -909,6 +927,22 @@ const getCashRegisterSummary = async (req, res) => {
         provider: buy.provider?.tradeName || buy.provider?.businessName || 'N/A',
         user: buy.user?.profile?.fullName || buy.user?.username || 'N/A',
         description: buy.description || ''
+      })),
+      discountAuths: discountAuths.map(auth => ({
+        _id: auth._id,
+        orderId: auth.orderId,
+        orderNumber: ordersArray.find(o => o._id.toString() === auth.orderId?.toString())?.orderNumber || 'N/A',
+        message: auth.message,
+        requestedBy: auth.requestedBy?.profile?.fullName || auth.requestedBy?.username || 'N/A',
+        managerId: auth.managerId?.profile?.fullName || auth.managerId?.username || 'N/A',
+        discountValue: auth.discountValue,
+        discountType: auth.discountType,
+        discountAmount: auth.discountAmount,
+        isAuth: auth.isAuth,
+        authFolio: auth.authFolio,
+        isRedeemed: auth.isRedeemed,
+        createdAt: auth.createdAt,
+        approvedAt: auth.approvedAt
       }))
     };
 
@@ -1019,6 +1053,7 @@ const closeCashRegister = async (req, res) => {
       .populate('orderId', 'orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod');
     
     // Buscar órdenes que no tienen pagos (órdenes a crédito)
+    const { default: Order } = await import('../models/Order.js');
     const creditOrders = await Order.find({
       _id: { $in: orderIdsWithoutPayments }
     })
@@ -1040,22 +1075,26 @@ const closeCashRegister = async (req, res) => {
       // Para cajas de redes sociales, totalSales incluye todos los pagos no-efectivo
       totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     } else {
-      // Cajas normales: separar pagos en efectivo y crédito
+      // Cajas normales: separar pagos en efectivo y crédito, y filtrar por tipo de envío
       cashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
-        return paymentMethodName.includes('efectivo');
+        const shippingType = payment.orderId?.shippingType || '';
+        // Solo pagos en efectivo de ventas en tienda
+        return paymentMethodName.includes('efectivo') && shippingType === 'tienda';
       });
       
       creditPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
-        return paymentMethodName.includes('crédito') || paymentMethodName.includes('credito');
+        const shippingType = payment.orderId?.shippingType || '';
+        // Solo pagos a crédito de ventas en tienda
+        return (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito')) && shippingType === 'tienda';
       });
       
-      // Incluir tanto pagos en efectivo como crédito en el log
+      // Incluir tanto pagos en efectivo como crédito en el log (solo de ventas en tienda)
       relevantPayments = [...cashPayments, ...creditPayments];
       
-      // Para el balance de caja, solo contar pagos en efectivo
-      totalSales = cashPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+      // Para el balance de caja, contar pagos en efectivo y crédito en tienda
+      totalSales = [...cashPayments, ...creditPayments].reduce((sum, payment) => sum + (payment.amount || 0), 0);
     }
 
     const totalExpenses = cashRegister.expenses.reduce((sum, expense) => {
@@ -1127,10 +1166,11 @@ const closeCashRegister = async (req, res) => {
       }
     });
     
-    // Añadir las órdenes a crédito (sin pagos) al log
+    // Añadir las órdenes a crédito (sin pagos) al log - solo si son ventas en tienda
     creditOrders.forEach(creditOrder => {
       const orderId = creditOrder._id.toString();
-      if (!ordersMapForLog.has(orderId)) {
+      // Solo incluir órdenes a crédito que sean de tipo tienda
+      if (!ordersMapForLog.has(orderId) && creditOrder.shippingType === 'tienda') {
         ordersMapForLog.set(orderId, {
           orderId: creditOrder._id,
           orderNumber: creditOrder.orderNumber,
@@ -1150,6 +1190,15 @@ const closeCashRegister = async (req, res) => {
     });
 
     const ordersArrayForLog = Array.from(ordersMapForLog.values());
+
+    // Obtener las autorizaciones de descuento para las órdenes de esta caja
+    const orderIds = ordersArrayForLog.map(order => order.orderId);
+    const discountAuths = await DiscountAuth.find({ 
+      orderId: { $in: orderIds } 
+    })
+      .populate('requestedBy', 'username email profile')
+      .populate('managerId', 'username email profile')
+      .sort({ createdAt: -1 });
 
     // Crear el log del cierre de caja
     const cashRegisterLog = new CashRegisterLog({
@@ -1199,6 +1248,22 @@ const closeCashRegister = async (req, res) => {
         provider: buy.provider?.tradeName || buy.provider?.businessName || 'N/A',
         user: buy.user?.profile?.fullName || buy.user?.username || 'N/A',
         description: buy.description || ''
+      })),
+      discountAuths: discountAuths.map(auth => ({
+        authId: auth._id,
+        orderId: auth.orderId,
+        orderNumber: ordersArrayForLog.find(o => o.orderId?.toString() === auth.orderId?.toString())?.orderNumber || 'N/A',
+        message: auth.message,
+        requestedBy: auth.requestedBy?.profile?.fullName || auth.requestedBy?.username || 'N/A',
+        managerId: auth.managerId?.profile?.fullName || auth.managerId?.username || 'N/A',
+        discountValue: auth.discountValue,
+        discountType: auth.discountType,
+        discountAmount: auth.discountAmount,
+        isAuth: auth.isAuth,
+        authFolio: auth.authFolio,
+        isRedeemed: auth.isRedeemed,
+        createdAt: auth.createdAt,
+        approvedAt: auth.approvedAt
       }))
     });
 
