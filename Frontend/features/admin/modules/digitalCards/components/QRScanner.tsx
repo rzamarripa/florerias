@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Camera, Upload, X, CheckCircle, Loader2 } from "lucide-react";
+import { Camera, Upload, X, CheckCircle, Loader2, CreditCard, Search } from "lucide-react";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,8 +35,12 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId, showR
   const [availableRewards, setAvailableRewards] = useState<PointsReward[]>([]);
   const [loadingRewards, setLoadingRewards] = useState(false);
   const [Html5QrcodeScanner, setHtml5QrcodeScanner] = useState<any>(null);
+  const [showBarcodeInput, setShowBarcodeInput] = useState(false);
+  const [barcodeValue, setBarcodeValue] = useState("");
+  const [searchingByBarcode, setSearchingByBarcode] = useState(false);
   const scannerRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   // Cargar Html5QrcodeScanner dinámicamente solo en el cliente
   useEffect(() => {
@@ -197,6 +201,128 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId, showR
     setScanning(false);
   };
 
+  const handleBarcodeSearch = async () => {
+    if (!barcodeValue.trim()) {
+      toast.error("Por favor ingresa un código de barras");
+      return;
+    }
+
+    try {
+      setSearchingByBarcode(true);
+      setError(null);
+
+      console.log("Buscando por código de barras:", barcodeValue);
+
+      // Usar el método searchByBarcode del servicio
+      const response = await digitalCardService.searchByBarcode(barcodeValue.trim(), branchId);
+
+      // Verificar si la respuesta fue exitosa
+      if (!response.success || !response.data) {
+        const errorMsg = (response as any).message || "Error al buscar el código de barras";
+        console.error("Error en respuesta del servidor:", errorMsg);
+        
+        // Proporcionar mensajes de error más específicos
+        if (errorMsg.includes("no encontrado") || errorMsg.includes("not found")) {
+          throw new Error("No se encontró ningún cliente con ese código de barras.");
+        } else if (errorMsg.includes("no pertenece") || errorMsg.includes("different company")) {
+          throw new Error("El cliente no pertenece a esta empresa.");
+        } else if (errorMsg.includes("inactivo") || errorMsg.includes("inactive")) {
+          throw new Error("El cliente está inactivo.");
+        } else {
+          throw new Error(errorMsg);
+        }
+      }
+
+      console.log("Código de barras encontrado exitosamente:", {
+        clientName: response.data.client.fullName,
+        clientNumber: response.data.client.clientNumber,
+        points: response.data.client.points
+      });
+
+      // Limpiar el input de código de barras
+      setBarcodeValue("");
+      setShowBarcodeInput(false);
+
+      // Procesar la respuesta como si fuera un escaneo QR normal
+      await processClientData(response.data);
+
+    } catch (err: any) {
+      console.error("Error buscando código de barras:", err);
+      const errorMessage = err.message || err.response?.data?.message || "Error al buscar el código de barras";
+      setError(errorMessage);
+      toast.error(errorMessage, {
+        position: "top-center",
+        autoClose: 5000,
+      });
+    } finally {
+      setSearchingByBarcode(false);
+    }
+  };
+
+  const processClientData = async (data: any) => {
+    setScanResult(data);
+    setScannedClientData(data);
+
+    // Mostrar toast de exito
+    toast.success(
+      `Cliente verificado correctamente: ${data.client.fullName}`,
+      { position: "top-center" }
+    );
+
+    // Obtener las recompensas disponibles para el cliente
+    try {
+      setLoadingRewards(true);
+      const rewardsResponse = await clientsService.getAvailableRewards(
+        data.client.id
+      );
+      if (rewardsResponse.success && rewardsResponse.data) {
+        // Map AvailableRewardItem to PointsReward format
+        const mappedRewards: PointsReward[] = rewardsResponse.data.map((item: AvailableRewardItem) => ({
+          _id: item.reward._id,
+          name: item.reward.name,
+          description: item.reward.description,
+          pointsRequired: item.reward.pointsRequired,
+          rewardType: item.reward.rewardType,
+          rewardValue: item.reward.rewardValue,
+          isPercentage: item.reward.isPercentage,
+          isProducto: item.reward.isProducto,
+          productId: item.reward.productId,
+          productQuantity: 1, // Default value
+          maxRedemptionsPerClient: 0, // Default value
+          totalRedemptions: 0, // Default value
+          maxTotalRedemptions: 0, // Default value
+          validFrom: item.reward.validFrom,
+          validUntil: item.reward.validUntil,
+          isGlobal: false, // Default value
+          status: true, // Available rewards are active
+          createdAt: item.redeemedAt, // Use redeemed date as created date
+          updatedAt: item.redeemedAt,
+        }));
+        setAvailableRewards(mappedRewards);
+      } else {
+        setAvailableRewards([]);
+      }
+    } catch (err) {
+      console.error("Error obteniendo recompensas:", err);
+      setAvailableRewards([]);
+    } finally {
+      setLoadingRewards(false);
+    }
+
+    // Cerrar el modal del scanner y abrir el modal de recompensas despues de un breve delay
+    setTimeout(() => {
+      setError(null);
+      setScanResult(null);
+      onHide(); // Cerrar el modal del scanner
+
+      // Luego notificar el exito y abrir el modal de recompensas si está habilitado
+      onScanSuccess(data);
+      if (showRewards) {
+        setShowRewardsModal(true);
+      }
+    }, 1500);
+  };
+
   const handleQRCode = async (qrData: string) => {
     try {
       setProcessing(true);
@@ -233,67 +359,8 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId, showR
         points: response.data.client.points
       });
 
-      setScanResult(response.data);
-      setScannedClientData(response.data);
-
-      // Mostrar toast de exito
-      toast.success(
-        `Codigo QR verificado correctamente para ${response.data.client.fullName}`,
-        { position: "top-center" }
-      );
-
-      // Obtener las recompensas disponibles para el cliente
-      try {
-        setLoadingRewards(true);
-        const rewardsResponse = await clientsService.getAvailableRewards(
-          response.data.client.id
-        );
-        if (rewardsResponse.success && rewardsResponse.data) {
-          // Map AvailableRewardItem to PointsReward format
-          const mappedRewards: PointsReward[] = rewardsResponse.data.map((item: AvailableRewardItem) => ({
-            _id: item.reward._id,
-            name: item.reward.name,
-            description: item.reward.description,
-            pointsRequired: item.reward.pointsRequired,
-            rewardType: item.reward.rewardType,
-            rewardValue: item.reward.rewardValue,
-            isPercentage: item.reward.isPercentage,
-            isProducto: item.reward.isProducto,
-            productId: item.reward.productId,
-            productQuantity: 1, // Default value
-            maxRedemptionsPerClient: 0, // Default value
-            totalRedemptions: 0, // Default value
-            maxTotalRedemptions: 0, // Default value
-            validFrom: item.reward.validFrom,
-            validUntil: item.reward.validUntil,
-            isGlobal: false, // Default value
-            status: true, // Available rewards are active
-            createdAt: item.redeemedAt, // Use redeemed date as created date
-            updatedAt: item.redeemedAt,
-          }));
-          setAvailableRewards(mappedRewards);
-        } else {
-          setAvailableRewards([]);
-        }
-      } catch (err) {
-        console.error("Error obteniendo recompensas:", err);
-        setAvailableRewards([]);
-      } finally {
-        setLoadingRewards(false);
-      }
-
-      // Cerrar el modal del scanner y abrir el modal de recompensas despues de un breve delay
-      setTimeout(() => {
-        setError(null);
-        setScanResult(null);
-        onHide(); // Cerrar el modal del scanner
-
-        // Luego notificar el exito y abrir el modal de recompensas si está habilitado
-        onScanSuccess(response.data);
-        if (showRewards) {
-          setShowRewardsModal(true);
-        }
-      }, 1500);
+      // Procesar la respuesta usando la función común
+      await processClientData(response.data);
     } catch (err: any) {
       console.error("Error procesando código QR:", err);
       const errorMessage = err.message || err.response?.data?.message || "Error al procesar el codigo QR";
@@ -489,6 +556,8 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId, showR
     stopScanner();
     setError(null);
     setScanResult(null);
+    setShowBarcodeInput(false);
+    setBarcodeValue("");
     onHide();
   };
 
@@ -544,6 +613,7 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId, showR
                 <li>• <strong>Archivo:</strong> La imagen debe contener un código QR claro y bien enfocado</li>
                 <li>• <strong>Formato:</strong> Se aceptan imágenes JPG, PNG, GIF o WebP (máx. 10MB)</li>
                 <li>• <strong>Calidad:</strong> Asegúrate de que el QR esté completo y sin distorsión</li>
+                <li>• <strong>Código de barras:</strong> También puedes buscar por el código alfanumérico de la tarjeta</li>
               </ul>
             </div>
           )}
@@ -562,49 +632,126 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId, showR
 
           {!scanning && !scanResult && (
             <div className="text-center py-4">
-              <div className="grid gap-3">
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={() => {
-                    console.log("Scan button clicked");
-                    startScanner();
-                  }}
-                  disabled={processing || !Html5QrcodeScanner}
-                  className="w-full"
-                >
-                  {!Html5QrcodeScanner ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Cargando escáner...
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="mr-2" size={20} />
-                      Escanear con Cámara
-                    </>
-                  )}
-                </Button>
+              {!showBarcodeInput ? (
+                <div className="grid gap-3">
+                  <Button
+                    variant="default"
+                    size="lg"
+                    onClick={() => {
+                      console.log("Scan button clicked");
+                      startScanner();
+                    }}
+                    disabled={processing || !Html5QrcodeScanner}
+                    className="w-full"
+                  >
+                    {!Html5QrcodeScanner ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cargando escáner...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="mr-2" size={20} />
+                        Escanear con Cámara
+                      </>
+                    )}
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={processing || !Html5QrcodeScanner}
-                  className="w-full"
-                >
-                  <Upload className="mr-2" size={20} />
-                  Subir Imagen con QR
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={processing || !Html5QrcodeScanner}
+                    className="w-full"
+                  >
+                    <Upload className="mr-2" size={20} />
+                    Subir Imagen con QR
+                  </Button>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={handleFileUpload}
-                />
-              </div>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">O</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    onClick={() => {
+                      setShowBarcodeInput(true);
+                      setTimeout(() => barcodeInputRef.current?.focus(), 100);
+                    }}
+                    className="w-full"
+                  >
+                    <CreditCard className="mr-2" size={20} />
+                    Buscar por Código de Barras
+                  </Button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleFileUpload}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-left block">
+                      Código de Barras de la Tarjeta Digital
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        ref={barcodeInputRef}
+                        type="text"
+                        value={barcodeValue}
+                        onChange={(e) => setBarcodeValue(e.target.value.toUpperCase())}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !searchingByBarcode) {
+                            handleBarcodeSearch();
+                          }
+                        }}
+                        placeholder="Ej: ABC123XYZ"
+                        className="flex-1 h-10 px-3 py-2 text-sm rounded-md border border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={searchingByBarcode}
+                        autoComplete="off"
+                        autoCapitalize="characters"
+                      />
+                      <Button
+                        onClick={handleBarcodeSearch}
+                        disabled={searchingByBarcode || !barcodeValue.trim()}
+                        size="default"
+                      >
+                        {searchingByBarcode ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Ingresa el código alfanumérico que aparece en la tarjeta digital del cliente
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowBarcodeInput(false);
+                      setBarcodeValue("");
+                      setError(null);
+                    }}
+                    className="w-full"
+                  >
+                    <X className="mr-2" size={16} />
+                    Cancelar búsqueda por código
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -626,10 +773,12 @@ export default function QRScanner({ show, onHide, onScanSuccess, branchId, showR
             </div>
           )}
 
-          {processing && (
+          {(processing || searchingByBarcode) && (
             <div className="text-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-              <p className="mt-3 text-muted-foreground">Procesando codigo QR...</p>
+              <p className="mt-3 text-muted-foreground">
+                {searchingByBarcode ? "Buscando cliente..." : "Procesando codigo QR..."}
+              </p>
             </div>
           )}
 

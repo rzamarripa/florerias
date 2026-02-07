@@ -6,6 +6,7 @@ import {
   validateTemporaryQR,
   getScanHistory,
   useRewardInOrder,
+  searchByBarcode,
 } from "../controllers/scannerController.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import { Client } from "../models/Client.js";
@@ -32,6 +33,9 @@ router.get("/history/:clientId", getScanHistory);
 
 // Usar recompensa en una orden
 router.post("/use-reward", useRewardInOrder);
+
+// Buscar cliente por código de barras
+router.post("/search-barcode", searchByBarcode);
 
 // Rutas adicionales para funcionalidades específicas
 

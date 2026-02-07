@@ -778,25 +778,26 @@ const getCashRegisterSummary = async (req, res) => {
       // Para cajas de redes sociales, totalSales incluye todos los pagos no-efectivo
       totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     } else {
-      // Cajas normales: separar pagos en efectivo y crédito, y filtrar por tipo de envío
+      // Cajas normales: TODOS los pagos de ventas en tienda (cualquier método de pago)
+      relevantPayments = allPayments.filter(payment => {
+        const shippingType = payment.orderId?.shippingType || '';
+        return shippingType === 'tienda';
+      });
+      
+      // Para el balance de caja, mantener solo efectivo y crédito de tienda
       cashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         const shippingType = payment.orderId?.shippingType || '';
-        // Solo pagos en efectivo de ventas en tienda
         return paymentMethodName.includes('efectivo') && shippingType === 'tienda';
       });
       
       creditPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         const shippingType = payment.orderId?.shippingType || '';
-        // Solo pagos a crédito de ventas en tienda
         return (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito')) && shippingType === 'tienda';
       });
       
-      // Mostrar tanto pagos en efectivo como crédito en el resumen (solo de ventas en tienda)
-      relevantPayments = [...cashPayments, ...creditPayments];
-      
-      // Para el balance de caja, contar pagos en efectivo y crédito en tienda
+      // Balance solo cuenta efectivo + crédito
       totalSales = [...cashPayments, ...creditPayments].reduce((sum, payment) => sum + (payment.amount || 0), 0);
     }
 
@@ -996,6 +997,12 @@ const getCashRegisterSummary = async (req, res) => {
       }
     });
 
+    // Filtrar órdenes canceladas
+    const canceledOrders = ordersArray.filter(order => order.status === 'cancelado');
+    
+    // Filtrar descuentos autorizados (isAuth = true)
+    const authorizedDiscounts = discountAuths.filter(auth => auth.isAuth === true);
+
     const summary = {
       cashRegister: {
         _id: cashRegister._id,
@@ -1054,6 +1061,39 @@ const getCashRegisterSummary = async (req, res) => {
         description: buy.description || ''
       })),
       discountAuths: discountAuths.map(auth => ({
+        _id: auth._id,
+        orderId: auth.orderId,
+        orderNumber: ordersArray.find(o => o._id.toString() === auth.orderId?.toString())?.orderNumber || 'N/A',
+        message: auth.message,
+        requestedBy: auth.requestedBy?.profile?.fullName || auth.requestedBy?.username || 'N/A',
+        managerId: auth.managerId?.profile?.fullName || auth.managerId?.username || 'N/A',
+        discountValue: auth.discountValue,
+        discountType: auth.discountType,
+        discountAmount: auth.discountAmount,
+        isAuth: auth.isAuth,
+        authFolio: auth.authFolio,
+        isRedeemed: auth.isRedeemed,
+        createdAt: auth.createdAt,
+        approvedAt: auth.approvedAt
+      })),
+      // Nuevas propiedades para ventas especiales
+      canceledOrders: canceledOrders.map(order => ({
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        clientName: order.clientName,
+        recipientName: order.recipientName,
+        total: order.total,
+        advance: order.totalPaid,
+        discount: order.discount,
+        discountType: order.discountType,
+        shippingType: order.shippingType,
+        paymentMethod: Array.from(order.paymentMethods).join(', ') || 'N/A',
+        status: order.status,
+        createdAt: order.createdAt,
+        itemsCount: order.itemsCount,
+        sendToProduction: order.sendToProduction || false
+      })),
+      authorizedDiscounts: authorizedDiscounts.map(auth => ({
         _id: auth._id,
         orderId: auth.orderId,
         orderNumber: ordersArray.find(o => o._id.toString() === auth.orderId?.toString())?.orderNumber || 'N/A',

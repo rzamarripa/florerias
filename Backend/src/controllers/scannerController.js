@@ -4,6 +4,7 @@ import { CardTransaction } from "../models/CardTransaction.js";
 import Order from "../models/Order.js";
 import { PointsReward } from "../models/PointsReward.js";
 import { Branch } from "../models/Branch.js";
+import { Company } from "../models/Company.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import clientPointsService from "../services/clientPointsService.js";
 
@@ -626,6 +627,171 @@ export const useRewardInOrder = async (req, res) => {
   }
 };
 
+/**
+ * Busca un cliente por código de barras (clientNumber)
+ */
+export const searchByBarcode = async (req, res) => {
+  try {
+    const { barcode, branchId, employeeId, terminalId, deviceInfo } = req.body;
+
+    if (!barcode || !branchId) {
+      return res.status(400).json({
+        success: false,
+        message: "Código de tarjeta y sucursal son requeridos",
+      });
+    }
+
+    // Preparar el código de barras para búsqueda (mantener formato original y también sin guiones)
+    const originalBarcode = barcode.trim().toUpperCase();
+    const cleanBarcode = barcode.replace(/[\s-]/g, '').toUpperCase();
+
+    // Buscar la tarjeta digital por el campo barcode (probar ambos formatos)
+    const digitalCard = await DigitalCard.findOne({ 
+      $or: [
+        { barcode: originalBarcode },
+        { barcode: cleanBarcode }
+      ],
+      isActive: true // Solo tarjetas activas
+    })
+    .populate({
+      path: "clientId",
+      populate: [
+        { path: "company" },
+        {
+          path: "rewards",
+          populate: {
+            path: "reward",
+            model: "points_reward",
+          },
+        }
+      ]
+    });
+
+    if (!digitalCard) {
+      return res.status(404).json({
+        success: false,
+        message: "Tarjeta digital no encontrada o código de barras inválido",
+      });
+    }
+
+    // Obtener el cliente desde la tarjeta digital
+    const client = digitalCard.clientId;
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: "Cliente no encontrado o código de tarjeta inválido",
+      });
+    }
+
+    // Verificar que el cliente esté activo
+    if (!client.status) {
+      return res.status(403).json({
+        success: false,
+        message: "Cliente inactivo",
+      });
+    }
+
+    // Obtener la sucursal para validar la empresa
+    const branch = await Branch.findById(branchId).populate('companyId');
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Sucursal no encontrada",
+      });
+    }
+
+    // Verificar que el cliente pertenezca a la misma empresa de la sucursal
+    if (client.company._id.toString() !== branch.companyId._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "El cliente no pertenece a esta empresa",
+      });
+    }
+
+    // Ya tenemos la tarjeta digital, verificar que esté activa
+    if (!digitalCard.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: "La tarjeta digital no está activa",
+      });
+    }
+
+    // Registrar la búsqueda en las transacciones
+    await CardTransaction.create({
+      digitalCardId: digitalCard._id,
+      clientId: client._id,
+      transactionType: "scan", // Usar "scan" que es un valor válido del enum
+      scanMethod: "barcode", // Método de escaneo: barcode
+      balanceBefore: client.points,
+      balanceAfter: client.points,
+      locationData: {
+        companyId: branch.companyId._id,
+        branchId,
+        terminalId,
+        employeeId,
+      },
+      deviceInfo: deviceInfo || {},
+      status: "success",
+      processedAt: new Date(),
+    });
+
+    // Obtener recompensas disponibles (no canjeadas)
+    const availableRewards = client.rewards.filter(r => !r.isRedeemed);
+
+    // Preparar respuesta con toda la información del cliente
+    const response = {
+      success: true,
+      searchMethod: "barcode",
+      data: {
+        client: {
+          id: client._id,
+          name: client.name,
+          lastName: client.lastName,
+          fullName: client.getFullName(),
+          clientNumber: client.clientNumber,
+          phoneNumber: client.phoneNumber,
+          email: client.email,
+          points: client.points,
+          status: client.status,
+        },
+        branch: {
+          id: client.company._id,
+          name: client.company.legalName || client.company.tradeName || "Empresa",
+        },
+        digitalCard: {
+          id: digitalCard._id,
+          lastUpdated: digitalCard.lastUpdated,
+          isActive: digitalCard.isActive,
+          barcode: digitalCard.barcode,
+        },
+        rewards: {
+          available: availableRewards.length,
+          list: availableRewards.map(r => ({
+            id: r._id,
+            rewardId: r.reward._id,
+            name: r.reward.name,
+            code: r.code,
+            pointsRequired: r.reward.pointsRequired,
+            rewardType: r.reward.rewardType,
+            rewardValue: r.reward.rewardValue,
+            isPercentage: r.reward.isPercentage,
+          })),
+        },
+        scanTime: new Date(),
+      },
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error buscando por código de barras:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // Función auxiliar para generar código de canje
 const generateRedemptionCode = () => {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -638,6 +804,7 @@ const generateRedemptionCode = () => {
 
 export default {
   scanQRCode,
+  searchByBarcode,
   processPointsTransaction,
   processRewardRedemption,
   validateTemporaryQR,

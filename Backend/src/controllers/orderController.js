@@ -22,7 +22,6 @@ const getAllOrders = async (req, res) => {
       page = 1,
       limit = 10,
       status,
-      salesChannel,
       clientName,
       orderNumber,
       branchId,
@@ -128,9 +127,6 @@ const getAllOrders = async (req, res) => {
       filters.status = status;
     }
 
-    if (salesChannel) {
-      filters.salesChannel = salesChannel;
-    }
 
     if (clientName) {
       filters['clientInfo.name'] = { $regex: clientName, $options: 'i' };
@@ -295,7 +291,6 @@ const createOrder = async (req, res) => {
       cashRegisterId,
       storageId,
       clientInfo,
-      salesChannel,
       salesChannelId,
       items,
       shippingType,
@@ -656,8 +651,7 @@ const createOrder = async (req, res) => {
       cashRegisterId: cashRegisterId || null,
       cashier: req.user._id, // Guardar el ID del usuario (cajero) que crea la orden
       clientInfo,
-      salesChannel: salesChannel || 'tienda',
-      salesChannelId: salesChannelId, // Agregar el ID del canal de ventas (requerido)
+      salesChannelId: salesChannelId, // ID del canal de ventas (requerido)
       items,
       shippingType: shippingType || 'tienda',
       anonymous: anonymous || false,
@@ -1113,7 +1107,6 @@ const createOrder = async (req, res) => {
           advance: savedOrder.advance,
           remainingBalance: savedOrder.remainingBalance,
           shippingType: savedOrder.shippingType,
-          salesChannel: savedOrder.salesChannel,
           itemsCount: savedOrder.items?.length || 0
         }
       );

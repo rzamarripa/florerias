@@ -42,6 +42,9 @@ import {
   Check,
   X,
   ScanLine,
+  Plus,
+  Edit2,
+  UserPlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CreateOrderData, ShippingType, AppliedRewardInfo } from "../types";
@@ -149,6 +152,13 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [pendingOrderData, setPendingOrderData] = useState<any>(null);
   const [pendingFiles, setPendingFiles] = useState<{ comprobante: File | null; arreglo: File | null } | null>(null);
   const [shouldSubmitOrder, setShouldSubmitOrder] = useState(false);
+
+  // Estado para edición manual del precio de envío
+  const [isEditingDeliveryPrice, setIsEditingDeliveryPrice] = useState(false);
+  const [manualDeliveryPrice, setManualDeliveryPrice] = useState<string>("");
+
+  // Estado para cliente invitado
+  const [isGuestClient, setIsGuestClient] = useState(false);
 
   // Cargar clientes filtrados por empresa (a través de la sucursal)
   const fetchClients = async (branchId?: string) => {
@@ -304,6 +314,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   // Efecto para actualizar el cliente seleccionado cuando se escanea un QR
   useEffect(() => {
     if (show && scannedClientId && clients.length > 0) {
+      // Desactivar modo invitado si está activo
+      if (isGuestClient) {
+        setIsGuestClient(false);
+      }
+      
       // Buscar si el cliente escaneado esta en la lista de clientes
       const clientExists = clients.find(c => c._id === scannedClientId);
       if (clientExists) {
@@ -338,6 +353,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       setPendingOrderData(null);
       setPendingFiles(null);
       setShouldSubmitOrder(false);
+      setIsGuestClient(false); // Resetear modo invitado
+      setIsEditingDeliveryPrice(false); // Resetear edición de precio de envío
+      setManualDeliveryPrice("");
     }
   }, [show, scannedClientId]);
 
@@ -353,6 +371,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
   // Manejar seleccion de cliente
   const handleClientSelect = (clientId: string) => {
+    // No hacer nada si está en modo invitado
+    if (isGuestClient) return;
+    
     setSelectedClientId(clientId);
 
     // Limpiar recompensa al cambiar de cliente
@@ -375,6 +396,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           name: "",
           phone: "",
           email: "",
+          isGuest: false,
         },
         total: newTotal,
         remainingBalance,
@@ -403,7 +425,69 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           name: `${selectedClient.name} ${selectedClient.lastName}`,
           phone: selectedClient.phoneNumber,
           email: selectedClient.email || "",
+          isGuest: false,
         },
+        total: newTotal,
+        remainingBalance,
+        appliedRewardCode: null,
+        appliedReward: null,
+      }));
+    }
+  };
+
+  // Manejar toggle de cliente invitado
+  const toggleGuestClient = () => {
+    if (isGuestClient) {
+      // Desactivar modo invitado
+      setIsGuestClient(false);
+      setSelectedClientId("");
+      
+      // Limpiar datos del cliente
+      setFormData((prev) => ({
+        ...prev,
+        clientInfo: {
+          name: "",
+          phone: "",
+          email: "",
+          isGuest: false,
+        },
+      }));
+      
+      // Limpiar recompensas
+      setAppliedReward(null);
+      setSelectedClientForRewards(null);
+    } else {
+      // Activar modo invitado
+      setIsGuestClient(true);
+      setSelectedClientId("");
+      
+      // Limpiar cliente seleccionado y establecer modo invitado
+      setFormData((prev) => ({
+        ...prev,
+        clientInfo: {
+          clientId: undefined,
+          name: "",
+          phone: "",
+          email: "",
+          isGuest: true,
+        },
+      }));
+      
+      // Limpiar recompensas (los invitados no pueden usar recompensas)
+      setAppliedReward(null);
+      setSelectedClientForRewards(null);
+      
+      // Recalcular totales sin recompensa
+      const manualDiscountAmount =
+        formData.discountType === "porcentaje"
+          ? (formData.subtotal * (formData.discount || 0)) / 100
+          : formData.discount || 0;
+      const deliveryPrice = formData.deliveryData.deliveryPrice || 0;
+      const newTotal = Math.max(0, formData.subtotal - manualDiscountAmount + deliveryPrice);
+      const remainingBalance = newTotal - (formData.advance || 0);
+      
+      setFormData((prev) => ({
+        ...prev,
         total: newTotal,
         remainingBalance,
         appliedRewardCode: null,
@@ -417,9 +501,14 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     const selectedNeighborhood = neighborhoods.find(
       (n) => n._id === neighborhoodId
     );
-    const deliveryPrice = selectedNeighborhood
-      ? selectedNeighborhood.priceDelivery
-      : 0;
+    
+    // Si no está en modo de edición manual, usar el precio de la colonia
+    let deliveryPrice = formData.deliveryData.deliveryPrice || 0;
+    if (!isEditingDeliveryPrice) {
+      deliveryPrice = selectedNeighborhood
+        ? selectedNeighborhood.priceDelivery
+        : 0;
+    }
 
     // Recalcular totales
     const discountAmount =
@@ -441,6 +530,69 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }));
   };
 
+  // Manejar cambio manual del precio de envío
+  const handleManualDeliveryPriceChange = (value: string) => {
+    const price = parseFloat(value) || 0;
+    
+    // Recalcular totales con el nuevo precio manual
+    const discountAmount =
+      formData.discountType === "porcentaje"
+        ? (formData.subtotal * (formData.discount || 0)) / 100
+        : formData.discount || 0;
+    const total = formData.subtotal - discountAmount + price;
+    const remainingBalance = total - (formData.advance || 0);
+
+    setManualDeliveryPrice(value);
+    setFormData((prev) => ({
+      ...prev,
+      deliveryData: {
+        ...prev.deliveryData,
+        deliveryPrice: price,
+      },
+      total,
+      remainingBalance,
+    }));
+  };
+
+  // Activar/desactivar edición manual del precio de envío
+  const toggleDeliveryPriceEdit = () => {
+    if (isEditingDeliveryPrice) {
+      // Al desactivar, volver al precio de la colonia seleccionada
+      if (formData.deliveryData.neighborhoodId) {
+        const selectedNeighborhood = neighborhoods.find(
+          (n) => n._id === formData.deliveryData.neighborhoodId
+        );
+        if (selectedNeighborhood) {
+          const originalPrice = selectedNeighborhood.priceDelivery;
+          
+          // Recalcular totales con el precio original
+          const discountAmount =
+            formData.discountType === "porcentaje"
+              ? (formData.subtotal * (formData.discount || 0)) / 100
+              : formData.discount || 0;
+          const total = formData.subtotal - discountAmount + originalPrice;
+          const remainingBalance = total - (formData.advance || 0);
+
+          setFormData((prev) => ({
+            ...prev,
+            deliveryData: {
+              ...prev.deliveryData,
+              deliveryPrice: originalPrice,
+            },
+            total,
+            remainingBalance,
+          }));
+        }
+      }
+      setManualDeliveryPrice("");
+      setIsEditingDeliveryPrice(false);
+    } else {
+      // Al activar, inicializar con el precio actual
+      setManualDeliveryPrice(formData.deliveryData.deliveryPrice?.toString() || "0");
+      setIsEditingDeliveryPrice(true);
+    }
+  };
+
   // Manejar cambio de tipo de envio
   const handleShippingTypeChange = (shippingType: ShippingType) => {
     const deliveryPrice = shippingType === "tienda" ? 0 : formData.deliveryData.deliveryPrice || 0;
@@ -450,6 +602,12 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         : formData.discount || 0;
     const total = formData.subtotal - discountAmount + deliveryPrice;
     const remainingBalance = total - (formData.advance || 0);
+
+    // Resetear edición manual al cambiar tipo de envío
+    if (shippingType !== "envio") {
+      setIsEditingDeliveryPrice(false);
+      setManualDeliveryPrice("");
+    }
 
     setFormData((prev) => ({
       ...prev,
@@ -741,26 +899,45 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                         <Search size={16} />
                         Buscar cliente existente
                       </Label>
-                      <Select
-                        value={selectedClientId}
-                        onValueChange={(value) => handleClientSelect(value)}
-                        disabled={loadingClients}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar cliente o ingresar nuevo..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clients.map((client) => (
-                            <SelectItem key={client._id} value={client._id}>
-                              {client.name} {client.lastName} - {client.phoneNumber}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedClientId}
+                          onValueChange={(value) => handleClientSelect(value)}
+                          disabled={loadingClients || isGuestClient}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder={isGuestClient ? "Cliente invitado activo" : "Seleccionar cliente o ingresar nuevo..."} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clients.map((client) => (
+                              <SelectItem key={client._id} value={client._id}>
+                                {client.name} {client.lastName} - {client.phoneNumber}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant={isGuestClient ? "default" : "outline"}
+                          onClick={toggleGuestClient}
+                          className="flex items-center gap-2"
+                          title={isGuestClient ? "Desactivar cliente invitado" : "Activar cliente invitado"}
+                        >
+                          <UserPlus size={16} />
+                          Cliente Invitado
+                        </Button>
+                      </div>
+                      {isGuestClient && (
+                        <Alert className="mt-2 bg-blue-50 border-blue-200">
+                          <AlertDescription className="text-sm">
+                            Modo cliente invitado activo. Los datos del cliente se pueden ingresar manualmente sin necesidad de registro previo.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
 
-                    {/* Recompensa - Solo mostrar si hay cliente seleccionado */}
-                    {(selectedClientId || formData.clientInfo.clientId) && (
+                    {/* Recompensa - Solo mostrar si hay cliente seleccionado y no es invitado */}
+                    {(selectedClientId || formData.clientInfo.clientId) && !isGuestClient && (
                       <div>
                         <Label className="font-semibold flex items-center gap-1 mb-2">
                           <Gift size={16} />
@@ -915,7 +1092,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                 <User size={16} />
                                 Nombre
                               </span>
-                              {onScanQR && (
+                              {onScanQR && !isGuestClient && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -929,7 +1106,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                             </Label>
                             <Input
                               type="text"
-                              placeholder="Nombre del cliente"
+                              placeholder={isGuestClient ? "Ingrese nombre del invitado" : "Nombre del cliente"}
                               value={formData.clientInfo.name}
                               onChange={(e) => {
                                 resetCustomValidationMessage(e as any);
@@ -940,6 +1117,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                               }}
                               onInvalid={(e) => setCustomValidationMessage(e as any)}
                               required
+                              className={isGuestClient ? "border-blue-300 bg-blue-50/30" : ""}
                             />
                           </div>
                           <div>
@@ -949,7 +1127,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                             </Label>
                             <Input
                               type="tel"
-                              placeholder="Telefono"
+                              placeholder={isGuestClient ? "Teléfono del invitado (opcional)" : "Telefono"}
                               value={formData.clientInfo.phone}
                               onChange={(e) =>
                                 setFormData((prev) => ({
@@ -957,6 +1135,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                   clientInfo: { ...prev.clientInfo, phone: e.target.value },
                                 }))
                               }
+                              className={isGuestClient ? "border-blue-300 bg-blue-50/30" : ""}
                             />
                           </div>
                         </div>
@@ -969,7 +1148,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           </Label>
                           <Input
                             type="email"
-                            placeholder="Correo electronico"
+                            placeholder={isGuestClient ? "Correo del invitado (opcional)" : "Correo electronico"}
                             value={formData.clientInfo.email}
                             onChange={(e) =>
                               setFormData((prev) => ({
@@ -977,6 +1156,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                 clientInfo: { ...prev.clientInfo, email: e.target.value },
                               }))
                             }
+                            className={isGuestClient ? "border-blue-300 bg-blue-50/30" : ""}
                           />
                         </div>
 
@@ -1006,34 +1186,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           </Select>
                         </div>
 
-                        {/* Canal de venta - Ocultar para órdenes de e-commerce */}
-                        {!isSocialMedia && !isCashier && !isEcommerceOrder && (
-                          <div>
-                            <Label className="font-semibold flex items-center gap-1 mb-2">
-                              <Store size={16} />
-                              Canal de venta
-                            </Label>
-                            <Select
-                              value={formData.salesChannel}
-                              onValueChange={(value) =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  salesChannel: value as "tienda" | "whatsapp" | "facebook" | "instagram",
-                                }))
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="tienda">Tienda</SelectItem>
-                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                                <SelectItem value="facebook">Facebook</SelectItem>
-                                <SelectItem value="instagram">Instagram</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
                       </>
                     )}
                   </CardContent>
@@ -1075,7 +1227,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                 setFormData((prev) => ({
                                   ...prev,
                                   socialMedia: platform,
-                                  salesChannel: platform,
                                 }));
                               }}
                             >
@@ -1212,24 +1363,70 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           </div>
                           <div>
                             <Label className="font-semibold mb-2 block">Colonia</Label>
-                            <Select
-                              value={formData.deliveryData.neighborhoodId}
-                              onValueChange={(value) => handleNeighborhoodChange(value)}
-                              disabled={loadingNeighborhoods}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar colonia..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {neighborhoods.map((neighborhood) => (
-                                  <SelectItem key={neighborhood._id} value={neighborhood._id}>
-                                    {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex gap-2">
+                              <Select
+                                value={formData.deliveryData.neighborhoodId}
+                                onValueChange={(value) => handleNeighborhoodChange(value)}
+                                disabled={loadingNeighborhoods || isEditingDeliveryPrice}
+                              >
+                                <SelectTrigger className="flex-1">
+                                  <SelectValue placeholder="Seleccionar colonia..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {neighborhoods.map((neighborhood) => (
+                                    <SelectItem key={neighborhood._id} value={neighborhood._id}>
+                                      {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant={isEditingDeliveryPrice ? "default" : "outline"}
+                                onClick={toggleDeliveryPriceEdit}
+                                title={isEditingDeliveryPrice ? "Restaurar precio original" : "Editar precio de envío manualmente"}
+                              >
+                                {isEditingDeliveryPrice ? <X size={16} /> : <Plus size={16} />}
+                              </Button>
+                            </div>
                           </div>
                         </div>
+
+                        {/* Precio de envío manual */}
+                        {isEditingDeliveryPrice && (
+                          <div className="mt-4">
+                            <Alert className="bg-yellow-50 border-yellow-200 mb-3">
+                              <AlertDescription>
+                                <small>Estás editando manualmente el precio de envío. Este precio sobrescribirá el precio predeterminado de la colonia seleccionada.</small>
+                              </AlertDescription>
+                            </Alert>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label className="font-semibold mb-2 block">Precio de envío personalizado</Label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={manualDeliveryPrice}
+                                    onChange={(e) => handleManualDeliveryPriceChange(e.target.value)}
+                                    className="pl-8"
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-end">
+                                <Alert className="bg-blue-50 border-blue-200 w-full">
+                                  <AlertDescription className="text-sm">
+                                    Precio original de la colonia: <strong>${formData.deliveryData.neighborhoodId ? neighborhoods.find(n => n._id === formData.deliveryData.neighborhoodId)?.priceDelivery.toFixed(2) || "0.00" : "0.00"}</strong>
+                                  </AlertDescription>
+                                </Alert>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Repartidor - full width */}
                         <div>

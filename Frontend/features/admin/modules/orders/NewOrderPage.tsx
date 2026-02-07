@@ -101,7 +101,6 @@ const NewOrderPage = () => {
       phone: "",
       email: "",
     },
-    salesChannel: "tienda",
     salesChannelId: "", // Inicializar como string vacío (requerido)
     items: [],
     shippingType: "tienda",
@@ -321,7 +320,6 @@ const NewOrderPage = () => {
         shippingType: "redes_sociales",
         isSocialMediaOrder: true,
         socialMedia: "whatsapp", // Valor por defecto
-        salesChannel: "whatsapp", // Sincronizar con socialMedia
       }));
     }
   }, [isSocialMedia]);
@@ -1224,9 +1222,6 @@ const NewOrderPage = () => {
       const orderData = {
         ...formData,
         storageId: selectedStorageId || null, // Puede ser null si solo hay productos manuales
-        // Para usuarios Cajero, forzar salesChannel a 'tienda'
-        // Para usuarios Redes, mantener el salesChannel del formData (sincronizado con plataforma)
-        salesChannel: isCashier ? "tienda" : formData.salesChannel,
         salesChannelId: formData.salesChannelId, // Incluir el ID del canal de ventas
         hasPendingDiscountAuth, // Enviar flag al backend
         discountRequestMessage: discountRequestMessage || null, // Enviar mensaje de solicitud de descuento
@@ -1347,7 +1342,6 @@ const NewOrderPage = () => {
             phone: "",
             email: "",
           },
-          salesChannel: isSocialMedia ? "whatsapp" : "tienda",
           salesChannelId: "", // Resetear canal de ventas
           items: [],
           shippingType: isSocialMedia ? "redes_sociales" : "tienda",

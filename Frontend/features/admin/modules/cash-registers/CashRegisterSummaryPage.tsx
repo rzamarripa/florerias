@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  X,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "./services/cashRegisters";
@@ -50,6 +51,8 @@ const CashRegisterSummaryPage: React.FC = () => {
   const [expensesPage, setExpensesPage] = useState(1);
   const [purchasesPage, setPurchasesPage] = useState(1);
   const [discountAuthsPage, setDiscountAuthsPage] = useState(1);
+  const [salesCanceledPage, setSalesCanceledPage] = useState(1);
+  const [salesDiscountsPage, setSalesDiscountsPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
@@ -1205,6 +1208,311 @@ const CashRegisterSummaryPage: React.FC = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Sales Special Section with Tabs - Canceled Orders and Authorized Discounts */}
+      {(summary?.canceledOrders?.length > 0 || summary?.authorizedDiscounts?.length > 0) && (
+        <Card className="shadow-sm mb-4 rounded-[15px]">
+          <CardContent className="p-0">
+            <div className="p-4 border-b">
+              <h5 className="font-bold mb-0">Detalle de Ventas Especiales</h5>
+            </div>
+
+            <Tabs defaultValue="canceled" className="w-full">
+              <div className="px-4 pt-3 border-b">
+                <TabsList className="bg-transparent h-auto p-0 gap-0">
+                  <TabsTrigger
+                    value="canceled"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <X size={16} className="mr-2" />
+                    Ventas Canceladas ({summary?.canceledOrders?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="discounts"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <ReceiptText size={16} className="mr-2" />
+                    Descuentos Autorizados ({summary?.authorizedDiscounts?.length || 0})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Canceled Orders Tab */}
+              <TabsContent value="canceled" className="mt-0">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        No.
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FECHA
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        NO. ORDEN
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        CLIENTE
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        DESTINATARIO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        MÉTODO PAGO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        TOTAL
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        ESTADO
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(!summary?.canceledOrders || summary.canceledOrders.length === 0) ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center py-12 text-muted-foreground"
+                        >
+                          <X size={48} className="mb-3 opacity-50 mx-auto" />
+                          <p className="mb-0">
+                            No hay ventas canceladas en esta sesión
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getPaginatedData(summary.canceledOrders, salesCanceledPage).map((order, index) => (
+                        <TableRow key={order._id}>
+                          <TableCell className="px-4 py-3">
+                            {(salesCanceledPage - 1) * ITEMS_PER_PAGE + index + 1}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <small>{formatDate(order.createdAt)}</small>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="font-semibold">
+                              {order.orderNumber}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="font-semibold">
+                              {order.clientName}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {order.recipientName}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {order.paymentMethod
+                              .split(", ")
+                              .map((method, idx) => (
+                                <Badge
+                                  key={idx}
+                                  className={`mr-1 mb-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                    method.toLowerCase().includes("efectivo")
+                                      ? "bg-green-500 text-white hover:bg-green-500"
+                                      : method.toLowerCase().includes("tarjeta")
+                                      ? "bg-cyan-500 text-white hover:bg-cyan-500"
+                                      : method.toLowerCase().includes("transferencia")
+                                      ? "bg-primary text-primary-foreground hover:bg-primary"
+                                      : "bg-gray-500 text-white hover:bg-gray-500"
+                                  }`}
+                                >
+                                  {method}
+                                </Badge>
+                              ))}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="font-bold line-through text-red-500">
+                              {formatCurrency(order.total)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <Badge className="bg-red-500 text-white hover:bg-red-500 px-2 py-0.5 text-xs font-semibold">
+                              CANCELADA
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination controls for Canceled Orders */}
+                {summary?.canceledOrders && summary.canceledOrders.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando {getPaginatedData(summary.canceledOrders, salesCanceledPage).length} de {summary.canceledOrders.length} registros
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSalesCanceledPage(Math.max(1, salesCanceledPage - 1))}
+                        disabled={salesCanceledPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Anterior
+                      </Button>
+                      
+                      <div className="flex items-center px-3 text-sm">
+                        Página {salesCanceledPage} de {getTotalPages(summary.canceledOrders)}
+                      </div>
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSalesCanceledPage(Math.min(getTotalPages(summary.canceledOrders), salesCanceledPage + 1))}
+                        disabled={salesCanceledPage === getTotalPages(summary.canceledOrders)}
+                      >
+                        Siguiente
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Authorized Discounts Tab */}
+              <TabsContent value="discounts" className="mt-0">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        No.
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FECHA APROBACIÓN
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        NO. ORDEN
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        SOLICITADO POR
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        AUTORIZADO POR
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        TIPO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        VALOR
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        MONTO DESCUENTO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FOLIO
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(!summary?.authorizedDiscounts || summary.authorizedDiscounts.length === 0) ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={9}
+                          className="text-center py-12 text-muted-foreground"
+                        >
+                          <ReceiptText size={48} className="mb-3 opacity-50 mx-auto" />
+                          <p className="mb-0">
+                            No hay descuentos autorizados en esta sesión
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getPaginatedData(summary.authorizedDiscounts, salesDiscountsPage).map((auth, index) => (
+                        <TableRow key={auth._id}>
+                          <TableCell className="px-4 py-3">
+                            {(salesDiscountsPage - 1) * ITEMS_PER_PAGE + index + 1}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <small>{auth.approvedAt ? formatDate(auth.approvedAt) : formatDate(auth.createdAt)}</small>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="font-semibold">
+                              {auth.orderNumber}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {auth.requestedBy}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {auth.managerId}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <Badge className="bg-blue-500 text-white hover:bg-blue-500 px-2 py-1 rounded-full text-xs">
+                              {auth.discountType === 'porcentaje' ? 'PORCENTAJE' : 'CANTIDAD'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="font-semibold">
+                              {auth.discountType === 'porcentaje' 
+                                ? `${auth.discountValue}%` 
+                                : formatCurrency(auth.discountValue)
+                              }
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="font-bold text-orange-600">
+                              {formatCurrency(auth.discountAmount)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-green-500 text-white hover:bg-green-500 px-2 py-0.5 text-xs font-semibold">
+                                AUTORIZADO
+                              </Badge>
+                              <span className="font-mono font-semibold">
+                                #{auth.authFolio}
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination controls for Authorized Discounts */}
+                {summary?.authorizedDiscounts && summary.authorizedDiscounts.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando {getPaginatedData(summary.authorizedDiscounts, salesDiscountsPage).length} de {summary.authorizedDiscounts.length} registros
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSalesDiscountsPage(Math.max(1, salesDiscountsPage - 1))}
+                        disabled={salesDiscountsPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Anterior
+                      </Button>
+                      
+                      <div className="flex items-center px-3 text-sm">
+                        Página {salesDiscountsPage} de {getTotalPages(summary.authorizedDiscounts)}
+                      </div>
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSalesDiscountsPage(Math.min(getTotalPages(summary.authorizedDiscounts), salesDiscountsPage + 1))}
+                        disabled={salesDiscountsPage === getTotalPages(summary.authorizedDiscounts)}
+                      >
+                        Siguiente
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Expenses & Purchases Section with Tabs */}
       <Card className="shadow-sm mb-4 rounded-[15px]">

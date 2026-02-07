@@ -3,6 +3,7 @@ export interface ClientInfo {
   name: string;
   phone?: string;
   email?: string;
+  isGuest?: boolean;
 }
 
 export interface DeliveryData {
@@ -85,7 +86,6 @@ export interface Order {
     currentBalance?: number;
   } | null;
   clientInfo: ClientInfo;
-  salesChannel: 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
   salesChannelId: string | {
     _id: string;
     name: string;
@@ -145,7 +145,6 @@ export interface CreateOrderData {
   cashRegisterId?: string | null;
   storageId?: string | null;
   clientInfo: ClientInfo;
-  salesChannel: 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
   salesChannelId: string;
   items: OrderItem[];
   shippingType: 'envio' | 'tienda' | 'redes_sociales';
@@ -209,12 +208,10 @@ export interface OrderFilters {
   page?: number;
   limit?: number;
   status?: string;
-  salesChannel?: string;
   clientName?: string;
   orderNumber?: string;
 }
 
-export type SalesChannelType = 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
 export type ShippingType = 'envio' | 'tienda' | 'redes_sociales';
 
 // Tipos para la gestión de pagos

@@ -397,6 +397,30 @@ class DigitalCardService {
   }
 
   /**
+   * Busca un cliente por código de barras
+   */
+  async searchByBarcode(
+    barcode: string,
+    branchId: string,
+    additionalData?: {
+      employeeId?: string;
+      terminalId?: string;
+      deviceInfo?: any;
+    }
+  ): Promise<ScanResult> {
+    const response = await apiCall<any>('/scanner/search-barcode', {
+      method: 'POST',
+      body: JSON.stringify({
+        barcode,
+        branchId,
+        ...additionalData,
+      }),
+    });
+    // El backend retorna directamente { success: true, data: {...} }
+    return response;
+  }
+
+  /**
    * Genera un enlace para compartir la tarjeta
    */
   generateShareLink(cardId: string): string {

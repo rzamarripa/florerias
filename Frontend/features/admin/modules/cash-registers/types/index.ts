@@ -198,4 +198,6 @@ export interface CashRegisterSummary {
   expenses: ExpenseSummary[];
   buys: BuySummary[];
   discountAuths: DiscountAuthSummary[];
+  canceledOrders?: OrderSummary[]; // Órdenes canceladas de la sesión
+  authorizedDiscounts?: DiscountAuthSummary[]; // Descuentos autorizados (isAuth=true)
 }

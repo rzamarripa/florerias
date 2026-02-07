@@ -18,6 +18,10 @@ const clientInfoSchema = new mongoose.Schema({
   email: {
     type: String,
     trim: true
+  },
+  isGuest: {
+    type: Boolean,
+    default: false
   }
 }, { _id: false });
 
@@ -153,12 +157,6 @@ const orderSchema = new mongoose.Schema({
   clientInfo: {
     type: clientInfoSchema,
     required: true
-  },
-  salesChannel: {
-    type: String,
-    required: true,
-    enum: ['tienda', 'whatsapp', 'facebook', 'instagram'],
-    default: 'tienda'
   },
   salesChannelId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -331,7 +329,6 @@ orderSchema.index({ cashRegisterId: 1 });
 orderSchema.index({ cashier: 1 });
 orderSchema.index({ 'clientInfo.name': 1 });
 orderSchema.index({ 'clientInfo.phone': 1 });
-orderSchema.index({ salesChannel: 1 });
 orderSchema.index({ salesChannelId: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
