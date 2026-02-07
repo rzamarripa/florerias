@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Save, User, Eye, EyeOff, Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Cashier, CreateCashierData, UpdateCashierData } from "../types";
+import { Cashier, UpdateCashierData } from "../types";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
@@ -29,8 +29,8 @@ import {
 interface CashierModalProps {
   show: boolean;
   onHide: () => void;
-  cashier?: Cashier | null;
-  onSave: (data: CreateCashierData | UpdateCashierData) => void;
+  cashier: Cashier | null;
+  onSave: (data: UpdateCashierData) => void;
   loading?: boolean;
 }
 
@@ -179,12 +179,8 @@ const CashierModal: React.FC<CashierModalProps> = ({
     if (!formData.profile.lastName.trim()) {
       newErrors["profile.lastName"] = "El apellido es requerido";
     }
-    if (!cashier && !formData.password.trim()) {
-      newErrors.password = "La contraseña es requerida";
-    }
-    if (!formData.branch) {
-      newErrors.branch = "La sucursal es requerida";
-    }
+    // La contraseña no es requerida en edición
+    // La sucursal no se puede cambiar en edición
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -192,26 +188,23 @@ const CashierModal: React.FC<CashierModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!cashier) return; // Solo funciona en modo edición
+    
     if (validateForm()) {
-      if (cashier) {
-        // For update, only send changed fields
-        const updateData: any = {
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-          profile: {
-            name: formData.profile.name,
-            lastName: formData.profile.lastName,
-          },
-        };
-        if (formData.password.trim()) {
-          updateData.password = formData.password;
-        }
-        onSave(updateData);
-      } else {
-        // For create, send all required fields
-        onSave(formData);
+      // For update, only send changed fields
+      const updateData: any = {
+        username: formData.username,
+        email: formData.email,
+        phone: formData.phone,
+        profile: {
+          name: formData.profile.name,
+          lastName: formData.profile.lastName,
+        },
+      };
+      if (formData.password.trim()) {
+        updateData.password = formData.password;
       }
+      onSave(updateData);
     }
   };
 
@@ -223,12 +216,10 @@ const CashierModal: React.FC<CashierModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
-            {isEditing ? "Editar Cajero" : "Nuevo Cajero"}
+            Editar Cajero
           </DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? "Actualiza la información del cajero"
-              : "Completa los datos del nuevo cajero"}
+            Actualiza la información del cajero
           </DialogDescription>
         </DialogHeader>
 
@@ -332,12 +323,10 @@ const CashierModal: React.FC<CashierModalProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="password">
-                Contraseña {!isEditing && <span className="text-destructive">*</span>}
-                {isEditing && (
-                  <span className="text-muted-foreground text-xs ml-1">
-                    (Dejar vacío para mantener actual)
-                  </span>
-                )}
+                Contraseña
+                <span className="text-muted-foreground text-xs ml-1">
+                  (Dejar vacío para mantener actual)
+                </span>
               </Label>
               <div className="relative">
                 <Input
@@ -415,7 +404,7 @@ const CashierModal: React.FC<CashierModalProps> = ({
               ) : (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  {isEditing ? "Actualizar" : "Crear"} Cajero
+                  Actualizar Cajero
                 </>
               )}
             </Button>

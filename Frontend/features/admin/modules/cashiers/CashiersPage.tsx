@@ -1,13 +1,12 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, Plus, User, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, User, Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cashiersService } from "./services/cashiers";
 import {
   Cashier,
   CashierFilters,
-  CreateCashierData,
   UpdateCashierData,
 } from "./types";
 import Actions from "./components/Actions";
@@ -104,10 +103,7 @@ const CashiersPage: React.FC = () => {
     loadCashiers(true, page);
   };
 
-  const handleCreateCashier = () => {
-    setSelectedCashier(null);
-    setShowModal(true);
-  };
+  // Función handleCreateCashier eliminada - Los cajeros se crean desde el módulo de branches
 
   const handleEditCashier = (cashier: Cashier) => {
     setSelectedCashier(cashier);
@@ -130,21 +126,18 @@ const CashiersPage: React.FC = () => {
   };
 
   const handleSaveCashier = async (
-    data: CreateCashierData | UpdateCashierData
+    data: UpdateCashierData
   ) => {
     try {
       setModalLoading(true);
       if (selectedCashier) {
         await cashiersService.updateCashier(selectedCashier._id, data);
         toast.success("Cajero actualizado exitosamente");
-      } else {
-        await cashiersService.createCashier(data as CreateCashierData);
-        toast.success("Cajero creado exitosamente");
+        setShowModal(false);
+        loadCashiers(false);
       }
-      setShowModal(false);
-      loadCashiers(false);
     } catch (error: any) {
-      toast.error(error.message || "Error al guardar el cajero");
+      toast.error(error.message || "Error al actualizar el cajero");
     } finally {
       setModalLoading(false);
     }
@@ -195,11 +188,6 @@ const CashiersPage: React.FC = () => {
       <PageHeader
         title="Cajeros"
         description="Gestiona los cajeros del sistema"
-        action={{
-          label: "Nuevo Cajero",
-          icon: <Plus className="h-4 w-4" />,
-          onClick: handleCreateCashier,
-        }}
       />
 
       {/* Filters & Table */}

@@ -86,6 +86,12 @@ export interface Order {
   } | null;
   clientInfo: ClientInfo;
   salesChannel: 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
+  salesChannelId: string | {
+    _id: string;
+    name: string;
+    abbreviation: string;
+    status: 'active' | 'inactive';
+  };
   items: OrderItem[];
   shippingType: 'envio' | 'tienda' | 'redes_sociales';
   anonymous: boolean;
@@ -112,6 +118,16 @@ export interface Order {
   arregloPath?: string | null;
   materials?: OrderMaterial[];
   eOrder?: boolean; // Campo para identificar órdenes de e-commerce
+  deliveryDriver?: string | {
+    _id: string;
+    username: string;
+    email?: string;
+    profile?: {
+      fullName?: string;
+      name?: string;
+      lastName?: string;
+    };
+  }; // Repartidor asignado para órdenes con envío
   createdAt: string;
   updatedAt: string;
 }
@@ -130,6 +146,7 @@ export interface CreateOrderData {
   storageId?: string | null;
   clientInfo: ClientInfo;
   salesChannel: 'tienda' | 'whatsapp' | 'facebook' | 'instagram';
+  salesChannelId: string;
   items: OrderItem[];
   shippingType: 'envio' | 'tienda' | 'redes_sociales';
   anonymous?: boolean;
@@ -158,10 +175,17 @@ export interface CreateOrderData {
   stripePaymentStatus?: string | null;
   stripeCustomerId?: string | null;
   eOrder?: boolean; // Campo para identificar órdenes de e-commerce
+  deliveryDriver?: string; // ID del repartidor asignado
+  deliveryDriverDetails?: {
+    _id: string;
+    name: string;
+    phone: string;
+  }; // Detalles del repartidor para WhatsApp
 }
 
 export interface UpdateOrderData extends Partial<CreateOrderData> {
   status?: 'pendiente' | 'en-proceso' | 'completado' | 'cancelado' | 'sinAnticipo';
+  salesChannelId?: string;
 }
 
 export interface CreateOrderResponseData {

@@ -31,6 +31,7 @@ import {
   Box,
   Stars,
   QrCode,
+  Store,
 } from "lucide-react";
 
 export interface UserDropdownItem {
@@ -183,8 +184,8 @@ export const roleBasedMenuItems: MenuItemType[] = [
           },
           {
             key: "produccion-usuarios",
-            label: "Producción",
-            url: "/panel/produccion",
+            label: "Usuarios deProducción",
+            url: "/panel/produccion-usuarios",
             icon: Package,
           },
           {
@@ -341,10 +342,22 @@ export const roleBasedMenuItems: MenuItemType[] = [
         icon: Calendar,
       },
       {
+        key: "canales-venta",
+        label: "Canales de Venta",
+        url: "/catalogos/canales-venta",
+        icon: Store,
+      },
+      {
         key: "produccion",
         label: "Producción",
         icon: Package,
         children: [
+          {
+            key: "usuarios-produccion",
+            label: "Usuarios de Producción",
+            url: "/panel/produccion-usuarios",
+            icon: Users,
+          },
           {
             key: "pizarron-produccion",
             label: "Pizarrón de Produccion",
@@ -403,8 +416,8 @@ export const roleBasedMenuItems: MenuItemType[] = [
           },
           {
             key: "produccion-usuarios",
-            label: "Producción",
-            url: "/panel/produccion",
+            label: "Usuarios de Producción",
+            url: "/panel/produccion-usuarios",
             icon: Package,
           },
           {
@@ -598,6 +611,12 @@ export const originalMenuItems: MenuItemType[] = [
         icon: Package,
         children: [
           {
+            key: "usuarios-produccion",
+            label: "Usuarios de Producción",
+            url: "/panel/produccion-usuarios",
+            icon: Users,
+          },
+          {
             key: "listado-produccion",
             label: "Listado de Producción",
             url: "/ventas/listado-produccion",
@@ -678,9 +697,9 @@ export const originalMenuItems: MenuItemType[] = [
             icon: UserCheck,
           },
           {
-            key: "produccion",
-            label: "Producción",
-            url: "/panel/produccion",
+            key: "produccion-usuarios",
+            label: "Usuarios de Producción",
+            url: "/panel/produccion-usuarios",
             icon: Package,
           },
           {
@@ -776,6 +795,12 @@ export const originalMenuItems: MenuItemType[] = [
         label: "Colonias",
         url: "/catalogos/colonias",
         icon: MapPinHouse,
+      },
+      {
+        key: "canales-venta",
+        label: "Canales de Venta",
+        url: "/catalogos/canales-venta",
+        icon: Store,
       },
     ],
   },

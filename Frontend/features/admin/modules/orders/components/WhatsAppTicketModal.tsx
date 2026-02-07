@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { MessageCircle, Phone, Globe, Check, X } from 'lucide-react';
+import { MessageCircle, Phone, Globe, Check, X, Mail } from 'lucide-react';
 import {
   countries,
   getDefaultCountry,
@@ -36,15 +36,24 @@ import {
   generateTicketMessage,
 } from '@/services/whatsappService';
 import { toast } from 'react-toastify';
+import { sendOrderEmail } from '@/services/emailService';
 
 interface WhatsAppTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
   orderNumber: string;
-  clientName: string;
+  
+  // Sale ticket data
+  clientName?: string;
   clientPhone?: string;
-  ticketUrl: string;
-  ticketType: 'sale' | 'delivery';
+  clientEmail?: string;
+  saleTicketUrl?: string;
+  
+  // Delivery ticket data
+  deliveryDriverName?: string;
+  deliveryDriverPhone?: string;
+  deliveryTicketUrl?: string;
+  
   onSuccess?: () => void;
 }
 
@@ -52,19 +61,44 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   isOpen,
   onClose,
   orderNumber,
-  clientName,
+  clientName = '',
   clientPhone = '',
-  ticketUrl,
-  ticketType,
+  clientEmail = '',
+  saleTicketUrl,
+  deliveryDriverName = '',
+  deliveryDriverPhone = '',
+  deliveryTicketUrl,
   onSuccess,
 }) => {
   // Estados
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState<Country>(getDefaultCountry());
+  // Checkboxes para cada ticket
+  const [sendToClient, setSendToClient] = useState(false);
+  const [sendToDriver, setSendToDriver] = useState(false);
+  const [sendEmailToClient, setSendEmailToClient] = useState(false);
+  
+  // Estados para el cliente
+  const [clientPhoneNumber, setClientPhoneNumber] = useState('');
+  const [clientSelectedCountry, setClientSelectedCountry] = useState<Country>(getDefaultCountry());
+  const [clientPhoneError, setClientPhoneError] = useState('');
+  
+  // Estados para el repartidor
+  const [driverPhoneNumber, setDriverPhoneNumber] = useState('');
+  const [driverSelectedCountry, setDriverSelectedCountry] = useState<Country>(getDefaultCountry());
+  const [driverPhoneError, setDriverPhoneError] = useState('');
+  
+  // Estados generales
   const [rememberCountry, setRememberCountry] = useState(false);
   const [sending, setSending] = useState(false);
-  const [phoneError, setPhoneError] = useState('');
   const [countrySearch, setCountrySearch] = useState('');
+
+  // Debug: Log datos recibidos
+  console.log('🔍 WhatsApp Modal - Datos recibidos:', {
+    orderNumber,
+    clientName,
+    deliveryDriverName: deliveryDriverName || 'NO DISPONIBLE',
+    saleTicketUrl: !!saleTicketUrl,
+    deliveryTicketUrl: !!deliveryTicketUrl
+  });
 
   // Filtrar países según búsqueda
   const filteredCountries = countries.filter(country =>
@@ -79,8 +113,11 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
         orderNumber,
         clientName,
         clientPhone,
-        ticketType,
-        ticketUrl: ticketUrl ? ticketUrl.substring(0, 50) + '...' : null
+        clientEmail,
+        saleTicketUrl: saleTicketUrl ? saleTicketUrl.substring(0, 50) + '...' : null,
+        deliveryDriverName,
+        deliveryDriverPhone,
+        deliveryTicketUrl: deliveryTicketUrl ? deliveryTicketUrl.substring(0, 50) + '...' : null
       });
       
       // Limpiar búsqueda
@@ -89,10 +126,16 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
       // Obtener último país usado o usar el por defecto
       const lastCountry = getLastUsedCountry();
       if (lastCountry) {
-        setSelectedCountry(lastCountry);
+        setClientSelectedCountry(lastCountry);
+        setDriverSelectedCountry(lastCountry);
         setRememberCountry(true);
         console.log('📍 País recordado:', lastCountry.name, lastCountry.dialCode);
       }
+      
+      // Activar checkboxes según tickets disponibles
+      setSendToClient(!!saleTicketUrl && !!clientPhone);
+      setSendToDriver(!!deliveryTicketUrl && !!deliveryDriverPhone);
+      setSendEmailToClient(!!clientEmail); // Activar email si el cliente tiene email
       
       // Si hay número de cliente, procesarlo
       if (clientPhone) {
@@ -106,104 +149,242 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
         if (cleanPhone.startsWith('+')) {
           const detected = detectCountryFromNumber(cleanPhone.substring(1));
           if (detected) {
-            setSelectedCountry(detected);
+            setClientSelectedCountry(detected);
             // Extraer solo el número local
             const localNumber = cleanPhone.substring(1 + detected.dialCode.length);
-            setPhoneNumber(localNumber);
-            console.log('🌍 País detectado:', detected.name, 'Número local:', localNumber);
+            setClientPhoneNumber(localNumber);
+            console.log('🌍 País detectado para cliente:', detected.name, 'Número local:', localNumber);
           } else {
-            setPhoneNumber(cleanPhone.replace('+', ''));
+            setClientPhoneNumber(cleanPhone.replace('+', ''));
           }
         } else {
           // Si no tiene código, asumir número local
-          setPhoneNumber(cleanPhone);
-          console.log('📞 Número sin código de país:', cleanPhone);
+          setClientPhoneNumber(cleanPhone);
+          console.log('📞 Número sin código de país (cliente):', cleanPhone);
+        }
+      }
+      
+      // Si hay número de repartidor, procesarlo
+      if (deliveryDriverPhone) {
+        const cleanPhone = deliveryDriverPhone.replace(/[^0-9+]/g, '');
+        console.log('📱 Procesando número del repartidor:', {
+          original: deliveryDriverPhone,
+          cleaned: cleanPhone
+        });
+        
+        // Detectar país si el número incluye código
+        if (cleanPhone.startsWith('+')) {
+          const detected = detectCountryFromNumber(cleanPhone.substring(1));
+          if (detected) {
+            setDriverSelectedCountry(detected);
+            // Extraer solo el número local
+            const localNumber = cleanPhone.substring(1 + detected.dialCode.length);
+            setDriverPhoneNumber(localNumber);
+            console.log('🌍 País detectado para repartidor:', detected.name, 'Número local:', localNumber);
+          } else {
+            setDriverPhoneNumber(cleanPhone.replace('+', ''));
+          }
+        } else {
+          // Si no tiene código, asumir número local
+          setDriverPhoneNumber(cleanPhone);
+          console.log('📞 Número sin código de país (repartidor):', cleanPhone);
         }
       }
     }
-  }, [isOpen, clientPhone]);
+  }, [isOpen, clientPhone, deliveryDriverPhone, saleTicketUrl, deliveryTicketUrl]);
 
-  // Validar número cuando cambia
+  // Validar número del cliente cuando cambia
   useEffect(() => {
-    if (phoneNumber && selectedCountry) {
-      if (!isValidPhoneNumber(phoneNumber, selectedCountry)) {
-        setPhoneError('Número de teléfono inválido');
+    if (clientPhoneNumber && clientSelectedCountry) {
+      if (!isValidPhoneNumber(clientPhoneNumber, clientSelectedCountry)) {
+        setClientPhoneError('Número de teléfono inválido');
       } else {
-        setPhoneError('');
+        setClientPhoneError('');
       }
     } else {
-      setPhoneError('');
+      setClientPhoneError('');
     }
-  }, [phoneNumber, selectedCountry]);
+  }, [clientPhoneNumber, clientSelectedCountry]);
+  
+  // Validar número del repartidor cuando cambia
+  useEffect(() => {
+    if (driverPhoneNumber && driverSelectedCountry) {
+      if (!isValidPhoneNumber(driverPhoneNumber, driverSelectedCountry)) {
+        setDriverPhoneError('Número de teléfono inválido');
+      } else {
+        setDriverPhoneError('');
+      }
+    } else {
+      setDriverPhoneError('');
+    }
+  }, [driverPhoneNumber, driverSelectedCountry]);
 
   // Manejar envío
   const handleSend = async () => {
-    // Validar número
-    if (!phoneNumber) {
-      setPhoneError('Por favor ingresa un número de teléfono');
+    // Validar que al menos uno esté seleccionado
+    if (!sendToClient && !sendToDriver && !sendEmailToClient) {
+      toast.error('Por favor selecciona al menos un método de envío');
       return;
     }
 
-    if (!isValidPhoneNumber(phoneNumber, selectedCountry)) {
-      setPhoneError('Número de teléfono inválido para el país seleccionado');
-      return;
+    // Validar números si están seleccionados
+    if (sendToClient) {
+      if (!clientPhoneNumber) {
+        setClientPhoneError('Por favor ingresa el número del cliente');
+        return;
+      }
+      if (!isValidPhoneNumber(clientPhoneNumber, clientSelectedCountry)) {
+        setClientPhoneError('Número de teléfono inválido para el país seleccionado');
+        return;
+      }
+    }
+
+    if (sendToDriver) {
+      if (!driverPhoneNumber) {
+        setDriverPhoneError('Por favor ingresa el número del repartidor');
+        return;
+      }
+      if (!isValidPhoneNumber(driverPhoneNumber, driverSelectedCountry)) {
+        setDriverPhoneError('Número de teléfono inválido para el país seleccionado');
+        return;
+      }
     }
 
     setSending(true);
-    setPhoneError('');
+    setClientPhoneError('');
+    setDriverPhoneError('');
+
+    let successCount = 0;
+    let errorCount = 0;
 
     try {
-      // Formatear número completo con código de país
-      const fullPhoneNumber = formatPhoneWithCountryCode(phoneNumber, selectedCountry);
-      
-      console.log('📤 WhatsApp Modal - Enviando ticket:', {
-        phoneNumber,
-        selectedCountry: selectedCountry.name,
-        dialCode: selectedCountry.dialCode,
-        fullPhoneNumber,
-        formatoEsperado: selectedCountry.code === 'MX' ? '52 + 10 dígitos (sin el 1)' : 'Estándar E.164',
-        ticketUrl: ticketUrl ? ticketUrl.substring(0, 50) + '...' : null,
-        orderNumber
-      });
-      
-      // Generar mensaje
-      const message = generateTicketMessage(orderNumber, clientName, ticketType);
-      
-      // Enviar por WhatsApp
-      const result = await sendTicketViaWhatsApp({
-        phoneNumber: fullPhoneNumber,
-        message,
-        ticketUrl,
-        ticketType,
-      });
+      // Enviar ticket de venta al cliente si está seleccionado
+      if (sendToClient && saleTicketUrl) {
+        try {
+          const fullPhoneNumber = formatPhoneWithCountryCode(clientPhoneNumber, clientSelectedCountry);
+          
+          console.log('📤 WhatsApp Modal - Enviando ticket de venta al cliente:', {
+            phoneNumber: clientPhoneNumber,
+            selectedCountry: clientSelectedCountry.name,
+            dialCode: clientSelectedCountry.dialCode,
+            fullPhoneNumber,
+            ticketUrl: saleTicketUrl ? saleTicketUrl.substring(0, 50) + '...' : null,
+            orderNumber
+          });
+          
+          const message = generateTicketMessage(orderNumber, clientName, 'sale');
+          
+          const result = await sendTicketViaWhatsApp({
+            phoneNumber: fullPhoneNumber,
+            message,
+            ticketUrl: saleTicketUrl,
+            ticketType: 'sale',
+          });
 
-      console.log('📨 WhatsApp Modal - Resultado:', {
-        success: result.success,
-        error: result.error,
-        details: result.details
-      });
-      
-      if (result.success) {
-        // Guardar país si se seleccionó recordar
-        if (rememberCountry) {
-          saveLastUsedCountry(selectedCountry);
+          if (result.success) {
+            successCount++;
+            console.log('✅ Ticket de venta enviado al cliente exitosamente');
+          } else {
+            errorCount++;
+            console.error('❌ Error al enviar ticket de venta al cliente:', result.error);
+          }
+        } catch (error: any) {
+          errorCount++;
+          console.error('Error enviando ticket al cliente:', error);
         }
+      }
 
-        console.log('✅ WhatsApp Modal - Ticket enviado exitosamente!');
-        toast.success('¡Ticket enviado por WhatsApp exitosamente!');
+      // Enviar ticket de envío al repartidor si está seleccionado
+      if (sendToDriver && deliveryTicketUrl) {
+        try {
+          const fullPhoneNumber = formatPhoneWithCountryCode(driverPhoneNumber, driverSelectedCountry);
+          
+          console.log('📤 WhatsApp Modal - Enviando ticket de envío al repartidor:', {
+            phoneNumber: driverPhoneNumber,
+            selectedCountry: driverSelectedCountry.name,
+            dialCode: driverSelectedCountry.dialCode,
+            fullPhoneNumber,
+            ticketUrl: deliveryTicketUrl ? deliveryTicketUrl.substring(0, 50) + '...' : null,
+            orderNumber,
+            deliveryDriverName: deliveryDriverName || 'NOMBRE NO DISPONIBLE'
+          });
+          
+          const message = generateTicketMessage(orderNumber, deliveryDriverName || 'Repartidor', 'delivery');
+          
+          const result = await sendTicketViaWhatsApp({
+            phoneNumber: fullPhoneNumber,
+            message,
+            ticketUrl: deliveryTicketUrl,
+            ticketType: 'delivery',
+          });
+
+          if (result.success) {
+            successCount++;
+            console.log('✅ Ticket de envío enviado al repartidor exitosamente');
+          } else {
+            errorCount++;
+            console.error('❌ Error al enviar ticket de envío al repartidor:', result.error);
+          }
+        } catch (error: any) {
+          errorCount++;
+          console.error('Error enviando ticket al repartidor:', error);
+        }
+      }
+
+      // Enviar email al cliente si está seleccionado
+      if (sendEmailToClient && clientEmail) {
+        try {
+          console.log('📧 WhatsApp Modal - Enviando email al cliente:', {
+            email: clientEmail,
+            clientName,
+            orderNumber
+          });
+          
+          const result = await sendOrderEmail({
+            to: clientEmail,
+            orderNumber,
+            clientName: clientName || 'Cliente',
+            ticketType: 'sale',
+            ticketImageUrl: saleTicketUrl // Pasar la URL de la imagen del ticket
+          });
+
+          if (result.success) {
+            successCount++;
+            console.log('✅ Email enviado al cliente exitosamente');
+          } else {
+            errorCount++;
+            console.error('❌ Error al enviar email al cliente:', result.error);
+          }
+        } catch (error: any) {
+          errorCount++;
+          console.error('Error enviando email al cliente:', error);
+        }
+      }
+
+      // Guardar país si se seleccionó recordar
+      if (rememberCountry && successCount > 0) {
+        saveLastUsedCountry(sendToClient ? clientSelectedCountry : driverSelectedCountry);
+      }
+
+      // Mostrar resultado
+      if (successCount > 0 && errorCount === 0) {
+        const messages = [];
+        if (sendToClient) messages.push('WhatsApp al cliente');
+        if (sendToDriver) messages.push('WhatsApp al repartidor');
+        if (sendEmailToClient) messages.push('Email al cliente');
+        toast.success(`✅ Enviado exitosamente: ${messages.join(', ')}`);
+        onSuccess?.();
+        onClose();
+      } else if (successCount > 0 && errorCount > 0) {
+        toast.warning(`${successCount} envío(s) exitoso(s), ${errorCount} fallo(s)`);
         onSuccess?.();
         onClose();
       } else {
-        console.error('❌ WhatsApp Modal - Error al enviar:', {
-          error: result.error,
-          details: result.details,
-          phoneNumber: fullPhoneNumber
-        });
-        toast.error(result.error || 'Error al enviar el ticket');
+        toast.error('Error al enviar los mensajes');
       }
     } catch (error: any) {
-      console.error('Error enviando ticket:', error);
-      toast.error('Error al enviar el ticket por WhatsApp');
+      console.error('Error enviando tickets:', error);
+      toast.error('Error al enviar los tickets por WhatsApp');
     } finally {
       setSending(false);
     }
@@ -215,11 +396,10 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-green-600" />
-            Enviar Ticket por WhatsApp
+            Enviar Tickets por WhatsApp y Email
           </DialogTitle>
           <DialogDescription>
-            ¿Deseas enviar el ticket de {ticketType === 'sale' ? 'venta' : 'envío'} al
-            cliente por WhatsApp?
+            Selecciona cómo deseas enviar los tickets disponibles
           </DialogDescription>
         </DialogHeader>
 
@@ -229,83 +409,200 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
             <p className="text-sm text-gray-600 dark:text-gray-400">
               <strong>Orden:</strong> #{orderNumber}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <strong>Cliente:</strong> {clientName}
-            </p>
-          </div>
-
-          {/* Selector de país */}
-          <div className="space-y-2">
-            <Label htmlFor="country">País</Label>
-            <Select
-              value={selectedCountry.code}
-              onValueChange={(value) => {
-                const country = countries.find(c => c.code === value);
-                if (country) setSelectedCountry(country);
-              }}
-            >
-              <SelectTrigger id="country">
-                <SelectValue>
-                  <span className="flex items-center gap-2">
-                    <span className="text-lg">{selectedCountry.flag}</span>
-                    <span>{selectedCountry.name}</span>
-                    <span className="text-gray-500">+{selectedCountry.dialCode}</span>
-                  </span>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {/* Búsqueda rápida */}
-                <div className="p-2">
-                  <Input
-                    placeholder="Buscar país..."
-                    value={countrySearch}
-                    onChange={(e) => setCountrySearch(e.target.value)}
-                    className="h-8"
-                  />
-                </div>
-                
-                {/* Lista de países */}
-                {filteredCountries.map((country) => (
-                  <SelectItem key={country.code} value={country.code}>
-                    <span className="flex items-center gap-2">
-                      <span className="text-lg">{country.flag}</span>
-                      <span>{country.name}</span>
-                      <span className="text-gray-500">+{country.dialCode}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Número de teléfono */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Número de teléfono</Label>
-            <div className="flex gap-2">
-              <div className="flex items-center px-3 bg-gray-100 dark:bg-gray-800 rounded-l-md">
-                <Globe className="h-4 w-4 mr-1 text-gray-500" />
-                <span className="text-sm font-medium">+{selectedCountry.dialCode}</span>
-              </div>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder={selectedCountry.format?.replace(/#/g, '0') || 'Número de teléfono'}
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ''))}
-                className={`flex-1 ${phoneError ? 'border-red-500' : ''}`}
-              />
-            </div>
-            
-            {/* Error o vista previa */}
-            {phoneError ? (
-              <p className="text-sm text-red-500">{phoneError}</p>
-            ) : phoneNumber ? (
+            {clientName && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                <Phone className="inline h-3 w-3 mr-1" />
-                Vista previa: {formatPhoneForDisplay(phoneNumber, selectedCountry)}
+                <strong>Cliente:</strong> {clientName}
               </p>
-            ) : null}
+            )}
+            {deliveryDriverName && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                <strong>Repartidor:</strong> {deliveryDriverName}
+              </p>
+            )}
           </div>
+
+          {/* Opción 1: Enviar ticket de venta al cliente */}
+          {saleTicketUrl && (
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sendToClient"
+                  checked={sendToClient}
+                  onCheckedChange={(checked) => setSendToClient(checked as boolean)}
+                />
+                <Label
+                  htmlFor="sendToClient"
+                  className="font-medium cursor-pointer"
+                >
+                  Enviar ticket de venta al cliente
+                </Label>
+              </div>
+              
+              {sendToClient && (
+                <div className="pl-6 space-y-3">
+                  {/* Selector de país para cliente */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">País</Label>
+                    <Select
+                      value={clientSelectedCountry.code}
+                      onValueChange={(value) => {
+                        const country = countries.find(c => c.code === value);
+                        if (country) setClientSelectedCountry(country);
+                      }}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue>
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg">{clientSelectedCountry.flag}</span>
+                            <span>{clientSelectedCountry.name}</span>
+                            <span className="text-gray-500">+{clientSelectedCountry.dialCode}</span>
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {filteredCountries.map((country) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            <span className="flex items-center gap-2">
+                              <span className="text-lg">{country.flag}</span>
+                              <span>{country.name}</span>
+                              <span className="text-gray-500">+{country.dialCode}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Número del cliente */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Número de teléfono</Label>
+                    <div className="flex gap-2">
+                      <div className="flex items-center px-3 bg-gray-100 dark:bg-gray-800 rounded-l-md">
+                        <span className="text-sm font-medium">+{clientSelectedCountry.dialCode}</span>
+                      </div>
+                      <Input
+                        type="tel"
+                        placeholder={clientSelectedCountry.format?.replace(/#/g, '0') || 'Número'}
+                        value={clientPhoneNumber}
+                        onChange={(e) => setClientPhoneNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                        className={`flex-1 h-9 ${clientPhoneError ? 'border-red-500' : ''}`}
+                      />
+                    </div>
+                    {clientPhoneError && (
+                      <p className="text-sm text-red-500">{clientPhoneError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Opción 2: Enviar ticket de envío al repartidor */}
+          {deliveryTicketUrl && (
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sendToDriver"
+                  checked={sendToDriver}
+                  onCheckedChange={(checked) => setSendToDriver(checked as boolean)}
+                />
+                <Label
+                  htmlFor="sendToDriver"
+                  className="font-medium cursor-pointer"
+                >
+                  Enviar ticket de envío al repartidor
+                </Label>
+              </div>
+              
+              {sendToDriver && (
+                <div className="pl-6 space-y-3">
+                  {/* Selector de país para repartidor */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">País</Label>
+                    <Select
+                      value={driverSelectedCountry.code}
+                      onValueChange={(value) => {
+                        const country = countries.find(c => c.code === value);
+                        if (country) setDriverSelectedCountry(country);
+                      }}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue>
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg">{driverSelectedCountry.flag}</span>
+                            <span>{driverSelectedCountry.name}</span>
+                            <span className="text-gray-500">+{driverSelectedCountry.dialCode}</span>
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {filteredCountries.map((country) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            <span className="flex items-center gap-2">
+                              <span className="text-lg">{country.flag}</span>
+                              <span>{country.name}</span>
+                              <span className="text-gray-500">+{country.dialCode}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Número del repartidor */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Número de teléfono</Label>
+                    <div className="flex gap-2">
+                      <div className="flex items-center px-3 bg-gray-100 dark:bg-gray-800 rounded-l-md">
+                        <span className="text-sm font-medium">+{driverSelectedCountry.dialCode}</span>
+                      </div>
+                      <Input
+                        type="tel"
+                        placeholder={driverSelectedCountry.format?.replace(/#/g, '0') || 'Número'}
+                        value={driverPhoneNumber}
+                        onChange={(e) => setDriverPhoneNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                        className={`flex-1 h-9 ${driverPhoneError ? 'border-red-500' : ''}`}
+                      />
+                    </div>
+                    {driverPhoneError && (
+                      <p className="text-sm text-red-500">{driverPhoneError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Opción 3: Enviar por Email al cliente */}
+          {clientEmail && (
+            <div className="border rounded-lg p-4 space-y-3 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sendEmailToClient"
+                  checked={sendEmailToClient}
+                  onCheckedChange={(checked) => setSendEmailToClient(checked as boolean)}
+                />
+                <Label
+                  htmlFor="sendEmailToClient"
+                  className="font-medium cursor-pointer"
+                >
+                  Enviar confirmación por Email al cliente
+                </Label>
+              </div>
+              
+              {sendEmailToClient && (
+                <div className="pl-6 space-y-2">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p><strong>Email:</strong> {clientEmail}</p>
+                    <p className="mt-1">
+                      Se enviará un correo con la confirmación de la orden
+                      {saleTicketUrl && <span className="text-green-600 font-medium"> incluyendo la imagen del ticket adjunta</span>}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Recordar país */}
           <div className="flex items-center space-x-2">
@@ -325,7 +622,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
           {/* Nota informativa */}
           <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
             <AlertDescription className="text-sm space-y-2">
-              <p>El cliente recibirá el ticket como archivo HTML junto con un mensaje de confirmación en WhatsApp.</p>
+              <p>Los tickets se enviarán como imágenes visibles directamente en el chat de WhatsApp.</p>
               <p className="text-xs text-gray-600 dark:text-gray-400">
                 <strong>Nota:</strong> En modo desarrollo, solo los números autorizados en Meta Business Suite pueden recibir mensajes.
               </p>
@@ -346,7 +643,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
           <Button
             type="button"
             onClick={handleSend}
-            disabled={sending || !phoneNumber || !!phoneError}
+            disabled={sending || (!sendToClient && !sendToDriver && !sendEmailToClient)}
             className="bg-green-600 hover:bg-green-700"
           >
             {sending ? (
@@ -357,7 +654,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
             ) : (
               <>
                 <Check className="h-4 w-4 mr-2" />
-                Enviar por WhatsApp
+                Enviar
               </>
             )}
           </Button>

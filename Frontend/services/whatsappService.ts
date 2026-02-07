@@ -65,16 +65,13 @@ export const sendTicketViaWhatsApp = async ({
       throw new Error('Número de teléfono inválido');
     }
 
-    // Determinar el nombre del archivo según el tipo de ticket
-    const documentFilename = ticketType === 'sale' ? 'ticket_venta.html' : 'ticket_envio.html';
-
+    // Ahora los tickets son imágenes PNG, no documentos HTML
     // Preparar el cuerpo de la petición
     const body = {
       to: formattedNumber,
       message,
       ...(ticketUrl && { 
-        documentUrl: ticketUrl,
-        documentFilename
+        documentUrl: ticketUrl // Será tratado como imagen en el API route
       })
     };
     
@@ -83,8 +80,7 @@ export const sendTicketViaWhatsApp = async ({
       toFormat: `Formato: ${body.to.startsWith('52') ? 'México' : 'Otro'} - Longitud: ${body.to.length}`,
       hasMessage: !!body.message,
       messagePreview: body.message ? body.message.substring(0, 50) + '...' : null,
-      hasDocument: !!ticketUrl,
-      documentFilename
+      hasTicketImage: !!ticketUrl
     });
 
     // Hacer la petición al API route
@@ -143,24 +139,24 @@ export const sendTicketViaWhatsApp = async ({
  */
 export const generateTicketMessage = (
   orderNumber: string,
-  clientName: string,
+  recipientName: string,
   ticketType: 'sale' | 'delivery' = 'sale'
 ): string => {
   if (ticketType === 'sale') {
-    return `Hola ${clientName}! 🌸
+    return `Hola ${recipientName}! 🌸
 
 Tu orden #${orderNumber} ha sido confirmada exitosamente.
 
 Te adjuntamos tu ticket de compra. ¡Gracias por tu preferencia!
 
-Corazón Violeta 💜`;
+Zolt Florería 💜`;
   } else {
-    return `Hola ${clientName}! 🌸
+    return `Hola ${recipientName}! 🌸
 
 Tu orden de envío #${orderNumber} está lista.
 
 Te adjuntamos el ticket con los detalles de entrega.
 
-Corazón Violeta 💜`;
+Zolt Florería 💜`;
   }
 };

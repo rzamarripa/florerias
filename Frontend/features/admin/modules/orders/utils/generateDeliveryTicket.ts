@@ -68,22 +68,30 @@ export const generateDeliveryTicket = (data: DeliveryTicketData): string => {
 
         body {
             font-family: 'Courier New', monospace;
-            font-size: 12pt;
+            font-size: 14pt;
             line-height: 1.6;
-            padding: 10mm 5mm;
-            max-width: 80mm;
-            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
         }
 
         .ticket-container {
-            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         .order-number {
             text-align: right;
             font-weight: bold;
-            font-size: 14pt;
-            margin-bottom: 10px;
+            font-size: 16pt;
+            margin-bottom: 15px;
         }
 
         .field-row {
@@ -94,13 +102,13 @@ export const generateDeliveryTicket = (data: DeliveryTicketData): string => {
 
         .field-label {
             font-weight: bold;
-            font-size: 10pt;
-            margin-bottom: 2px;
+            font-size: 12pt;
+            margin-bottom: 4px;
         }
 
         .field-value {
-            font-size: 12pt;
-            padding-left: 10px;
+            font-size: 14pt;
+            padding-left: 15px;
             white-space: pre-line;
         }
 
@@ -158,12 +166,31 @@ export const generateDeliveryTicket = (data: DeliveryTicketData): string => {
 
         @media print {
             body {
-                padding: 5mm 3mm;
+                padding: 0;
+                background: white;
+                min-height: auto;
+                display: block;
+            }
+
+            .ticket-container {
+                max-width: 80mm;
+                padding: 10px;
+                box-shadow: none;
             }
 
             @page {
                 size: 80mm auto;
                 margin: 0;
+            }
+        }
+
+        /* Estilos específicos para centrado en la ventana de visualización */
+        @media screen {
+            body {
+                font-size: 14pt;
+            }
+            .ticket-container {
+                max-width: 400px;
             }
         }
     </style>
@@ -224,13 +251,9 @@ ${order.clientInfo.phone}</span>
     </div>
 
     <script>
-        // Auto-imprimir al cargar
-        window.onload = function() {
-            window.print();
-            // Opcional: cerrar la ventana después de imprimir
-            window.onafterprint = function() {
-                window.close();
-            };
+        // Cerrar ventana después de imprimir
+        window.onafterprint = function() {
+            window.close();
         };
     </script>
 </body>

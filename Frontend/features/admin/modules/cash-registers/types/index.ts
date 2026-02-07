@@ -140,6 +140,36 @@ export interface DiscountAuthSummary {
   approvedAt: string | null;
 }
 
+export interface OrdersByPaymentMethod {
+  [paymentMethodName: string]: {
+    orders: OrderSummary[];
+    total: number;
+    count: number;
+  };
+}
+
+export interface PaymentSummary {
+  _id: string;
+  orderId: string;
+  orderNumber: string;
+  amount: number;
+  date: string;
+  notes: string;
+  isAdvance: boolean;
+  clientName: string;
+  recipientName: string;
+  orderStatus: string;
+  registeredBy: string;
+}
+
+export interface PaymentsByMethod {
+  [paymentMethodName: string]: {
+    payments: PaymentSummary[];
+    total: number;
+    count: number;
+  };
+}
+
 export interface CashRegisterSummary {
   cashRegister: {
     _id: string;
@@ -163,6 +193,8 @@ export interface CashRegisterSummary {
     intercambio: number;
   };
   orders: OrderSummary[];
+  ordersByPaymentMethod?: OrdersByPaymentMethod; // Nueva estructura agrupada por método de pago
+  paymentsByMethod?: PaymentsByMethod; // Nueva estructura con pagos individuales agrupados por método
   expenses: ExpenseSummary[];
   buys: BuySummary[];
   discountAuths: DiscountAuthSummary[];

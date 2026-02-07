@@ -107,13 +107,18 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
             padding: 20mm;
             background: #f5f5f5;
             color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
 
         .ticket-container {
-            max-width: 210mm;
+            max-width: 500px;
             margin: 0 auto;
             background: white;
-            padding: 20px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         .header {
@@ -245,6 +250,8 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
             body {
                 padding: 0;
                 background: white;
+                min-height: auto;
+                display: block;
             }
 
             .ticket-container {
@@ -255,6 +262,21 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
             @page {
                 size: A4;
                 margin: 10mm;
+            }
+        }
+
+        /* Estilos específicos para centrado en la ventana de visualización */
+        @media screen {
+            html {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #f5f5f5;
+            }
+            
+            body {
+                box-shadow: 0 0 20px rgba(0,0,0,0.1);
             }
         }
     </style>
@@ -411,9 +433,9 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
     </div>
 
     <script>
-        // Auto-imprimir al cargar
-        window.onload = function() {
-            window.print();
+        // Cerrar ventana después de imprimir
+        window.onafterprint = function() {
+            window.close();
         };
     </script>
 </body>

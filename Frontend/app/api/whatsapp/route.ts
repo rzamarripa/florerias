@@ -82,13 +82,12 @@ export async function POST(req: NextRequest) {
         }
       };
     } else if (documentUrl) {
-      // Enviar documento HTML como archivo
+      // Enviar como imagen (ahora los tickets son imágenes PNG)
       body = {
         ...body,
-        type: 'document',
-        document: {
+        type: 'image',
+        image: {
           link: documentUrl,
-          filename: documentFilename || 'ticket.html',
           caption: message || ''
         }
       };

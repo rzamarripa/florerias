@@ -12,8 +12,13 @@ export default function AuthLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useUserSessionStore();
-  const { getIsAdmin, getIsManager, getIsSocialMedia, getIsDistributor, getIsSuperAdmin } =
-    useUserRoleStore();
+  const {
+    getIsAdmin,
+    getIsManager,
+    getIsSocialMedia,
+    getIsDistributor,
+    getIsSuperAdmin,
+  } = useUserRoleStore();
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {

@@ -242,28 +242,25 @@ export const uploadDigitalCardHero = async (
 };
 
 /**
- * Sube el ticket de venta HTML a Firebase Storage
- * @param htmlContent - El contenido HTML del ticket
+ * Sube el ticket de venta como imagen PNG a Firebase Storage
+ * @param imageBlob - La imagen como Blob
  * @param companyId - El ID de la empresa
  * @param branchId - El ID de la sucursal
  * @param orderId - El ID de la orden
  * @returns URL de descarga del ticket y path en Firebase
  */
 export const uploadSaleTicket = async (
-  htmlContent: string,
+  imageBlob: Blob,
   companyId: string,
   branchId: string,
   orderId: string
 ): Promise<UploadFileResult> => {
   try {
     console.log("[uploadSaleTicket] Iniciando con params:", { companyId, branchId, orderId });
-    
-    // Convertir el string HTML a un Blob
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    console.log("[uploadSaleTicket] Blob creado, size:", blob.size);
+    console.log("[uploadSaleTicket] Imagen blob, size:", imageBlob.size);
     
     // Crear un File object desde el Blob
-    const file = new File([blob], 'ticketVenta.html', { type: 'text/html' });
+    const file = new File([imageBlob], 'ticketVenta.png', { type: 'image/png' });
     
     // Definir la carpeta de destino
     const folder = `Empresas/${companyId}/branches/${branchId}/orders/${orderId}/tickets`;
@@ -272,15 +269,15 @@ export const uploadSaleTicket = async (
     const storage = getStorageInstance();
     console.log("[uploadSaleTicket] Storage instance obtenida");
     
-    const fileName = 'ticketVenta.html';
+    const fileName = 'ticketVenta.png';
     const filePath = `${folder}/${fileName}`;
     console.log("[uploadSaleTicket] Path completo:", filePath);
     
     const storageRef = ref(storage, filePath);
     
-    console.log("[uploadSaleTicket] Subiendo archivo a Firebase...");
+    console.log("[uploadSaleTicket] Subiendo imagen a Firebase...");
     const snapshot = await uploadBytes(storageRef, file);
-    console.log("[uploadSaleTicket] Archivo subido, obteniendo URL...");
+    console.log("[uploadSaleTicket] Imagen subida, obteniendo URL...");
     
     const downloadURL = await getDownloadURL(snapshot.ref);
     console.log("[uploadSaleTicket] URL obtenida:", downloadURL);
@@ -296,28 +293,25 @@ export const uploadSaleTicket = async (
 };
 
 /**
- * Sube el ticket de envío HTML a Firebase Storage
- * @param htmlContent - El contenido HTML del ticket
+ * Sube el ticket de envío como imagen PNG a Firebase Storage
+ * @param imageBlob - La imagen como Blob
  * @param companyId - El ID de la empresa
  * @param branchId - El ID de la sucursal
  * @param orderId - El ID de la orden
  * @returns URL de descarga del ticket y path en Firebase
  */
 export const uploadDeliveryTicket = async (
-  htmlContent: string,
+  imageBlob: Blob,
   companyId: string,
   branchId: string,
   orderId: string
 ): Promise<UploadFileResult> => {
   try {
     console.log("[uploadDeliveryTicket] Iniciando con params:", { companyId, branchId, orderId });
-    
-    // Convertir el string HTML a un Blob
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    console.log("[uploadDeliveryTicket] Blob creado, size:", blob.size);
+    console.log("[uploadDeliveryTicket] Imagen blob, size:", imageBlob.size);
     
     // Crear un File object desde el Blob
-    const file = new File([blob], 'ticketEnvio.html', { type: 'text/html' });
+    const file = new File([imageBlob], 'ticketEnvio.png', { type: 'image/png' });
     
     // Definir la carpeta de destino
     const folder = `Empresas/${companyId}/branches/${branchId}/orders/${orderId}/tickets`;
@@ -326,15 +320,15 @@ export const uploadDeliveryTicket = async (
     const storage = getStorageInstance();
     console.log("[uploadDeliveryTicket] Storage instance obtenida");
     
-    const fileName = 'ticketEnvio.html';
+    const fileName = 'ticketEnvio.png';
     const filePath = `${folder}/${fileName}`;
     console.log("[uploadDeliveryTicket] Path completo:", filePath);
     
     const storageRef = ref(storage, filePath);
     
-    console.log("[uploadDeliveryTicket] Subiendo archivo a Firebase...");
+    console.log("[uploadDeliveryTicket] Subiendo imagen a Firebase...");
     const snapshot = await uploadBytes(storageRef, file);
-    console.log("[uploadDeliveryTicket] Archivo subido, obteniendo URL...");
+    console.log("[uploadDeliveryTicket] Imagen subida, obteniendo URL...");
     
     const downloadURL = await getDownloadURL(snapshot.ref);
     console.log("[uploadDeliveryTicket] URL obtenida:", downloadURL);

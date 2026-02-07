@@ -33,15 +33,13 @@ export const useSocket = (options: UseSocketOptions = {}): UseSocketReturn => {
     }
 
     if (!token) {
-      console.warn("⚠️ [useSocket] No se puede conectar: token no disponible");
+      // No mostrar warning si no hay token, es esperado
       return;
     }
 
     // Crear la conexión de socket con autenticación
     // Socket.IO se conecta a la raíz del servidor, no a /api
     const socketUrl = (env.NEXT_PUBLIC_API_URL || "http://localhost:3005").replace(/\/api$/, '');
-
-    console.log("🔌 [useSocket] Conectando a:", socketUrl);
 
     const socket = io(socketUrl, {
       auth: {
@@ -51,6 +49,8 @@ export const useSocket = (options: UseSocketOptions = {}): UseSocketReturn => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
+      transports: ['websocket', 'polling'], // Especificar transports explícitamente
+      timeout: 10000, // Timeout de conexión
     });
 
     // Eventos de conexión
@@ -60,12 +60,18 @@ export const useSocket = (options: UseSocketOptions = {}): UseSocketReturn => {
     });
 
     socket.on("disconnect", (reason) => {
-      console.log("❌ [useSocket] Socket desconectado:", reason);
+      // Solo mostrar si es una desconexión no esperada
+      if (reason !== 'io client disconnect' && reason !== 'transport close') {
+        console.log("⚠️ [useSocket] Socket desconectado:", reason);
+      }
       setIsConnected(false);
     });
 
     socket.on("connect_error", (error) => {
-      console.error("❌ [useSocket] Error de conexión:", error.message);
+      // Solo mostrar error en la primera conexión fallida, no en reintentos
+      if (!socketRef.current) {
+        console.warn("⚠️ [useSocket] No se pudo conectar al servidor WebSocket. El sistema continuará funcionando sin actualizaciones en tiempo real.");
+      }
       setIsConnected(false);
     });
 
@@ -83,11 +89,11 @@ export const useSocket = (options: UseSocketOptions = {}): UseSocketReturn => {
   useEffect(() => {
     if (!autoConnect) return;
     if (!token) {
-      console.log("⏳ [useSocket] Esperando token...");
+      // No hay token aún, esperar silenciosamente
       return;
     }
 
-    console.log("✓ [useSocket] Token encontrado, conectando...");
+    // Conectar cuando haya token disponible
     const timer = setTimeout(() => {
       connect();
     }, 100);

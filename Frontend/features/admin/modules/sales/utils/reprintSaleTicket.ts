@@ -82,9 +82,13 @@ export const reprintSaleTicket = async (
       printWindow.document.write(ticketHTML);
       printWindow.document.close();
 
-      // Esperar a que se cargue el contenido
+      // Esperar a que se cargue el contenido y luego imprimir
       printWindow.onload = () => {
         printWindow.focus();
+        // Pequeño delay para asegurar que el contenido esté completamente renderizado
+        setTimeout(() => {
+          printWindow.print();
+        }, 100);
       };
 
       toast.success("Ticket listo para imprimir");

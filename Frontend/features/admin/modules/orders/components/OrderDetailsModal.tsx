@@ -32,6 +32,7 @@ import {
   CreditCard,
   Send,
   Search,
+  Truck,
   ExternalLink,
   Eye,
   EyeOff,
@@ -50,6 +51,9 @@ import { CashRegister } from "@/features/admin/modules/cash-registers/types";
 import { Neighborhood } from "@/features/admin/modules/neighborhoods/types";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
+import { deliveryDriversService, DeliveryDriver } from "@/services/deliveryDriversService";
+import { salesChannelsService } from "@/features/admin/modules/salesChannels/services/salesChannels";
+import { SalesChannel } from "@/features/admin/modules/salesChannels/types";
 import ClientRewardsModal from "./ClientRewardsModal";
 import ClientRedeemedRewardsModal from "@/features/admin/modules/clients/components/ClientRedeemedRewardsModal";
 import StripePaymentModal from "./StripePaymentModal";
@@ -128,6 +132,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+  const [deliveryDrivers, setDeliveryDrivers] = useState<DeliveryDriver[]>([]);
+  const [loadingDeliveryDrivers, setLoadingDeliveryDrivers] = useState(false);
+  const [salesChannels, setSalesChannels] = useState<SalesChannel[]>([]);
+  const [loadingSalesChannels, setLoadingSalesChannels] = useState(false);
 
   // Estado para recompensas
   const [showRewardsModal, setShowRewardsModal] = useState(false);
@@ -224,14 +232,71 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   };
 
+  // Cargar repartidores activos de la sucursal
+  const fetchDeliveryDrivers = async (branchId: string) => {
+    setLoadingDeliveryDrivers(true);
+    try {
+      const drivers = await deliveryDriversService.getActiveDeliveryDriversByBranch(branchId);
+      setDeliveryDrivers(drivers);
+    } catch (err) {
+      toast.error("Error al cargar los repartidores");
+      setDeliveryDrivers([]);
+    } finally {
+      setLoadingDeliveryDrivers(false);
+    }
+  };
+
+  // Cargar canales de venta de la empresa
+  const fetchSalesChannels = async (branchId?: string) => {
+    setLoadingSalesChannels(true);
+    try {
+      const filters: any = {
+        limit: 1000,
+        status: "active",
+      };
+
+      // Si hay un branchId, obtener la empresa para filtrar
+      if (branchId) {
+        try {
+          const companyResponse = await companiesService.getCompanyByBranchId(branchId);
+          if (companyResponse.success && companyResponse.data) {
+            // Los canales se filtran automáticamente por empresa en el backend
+            // basándose en el usuario autenticado
+          }
+        } catch (error) {
+          console.error("Error obteniendo empresa:", error);
+        }
+      }
+
+      const response = await salesChannelsService.getAllSalesChannels(filters);
+      setSalesChannels(response.data);
+      
+      // Si no hay canal seleccionado y hay canales disponibles, seleccionar el primero
+      if (response.data.length > 0 && !formData.salesChannelId) {
+        setFormData((prev) => ({
+          ...prev,
+          salesChannelId: response.data[0]._id,
+        }));
+      }
+    } catch (err) {
+      console.error("Error al cargar los canales de venta:", err);
+      toast.error("Error al cargar los canales de venta");
+      setSalesChannels([]);
+    } finally {
+      setLoadingSalesChannels(false);
+    }
+  };
+
   // Cargar datos al montar o cuando se abre el modal
   useEffect(() => {
     if (show) {
       // Pasar el branchId del formulario para filtrar metodos de pago
       fetchPaymentMethods(formData.branchId);
       fetchNeighborhoods();
+      fetchSalesChannels(formData.branchId);
       if (formData.branchId) {
         fetchClients(formData.branchId);
+        fetchDeliveryDrivers(formData.branchId);
       }
     }
   }, [show]);
@@ -249,10 +314,12 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   }, [show, scannedClientId, clients]);
 
-  // Recargar clientes cuando cambia la sucursal
+  // Recargar clientes, repartidores y canales cuando cambia la sucursal
   useEffect(() => {
     if (show && formData.branchId) {
       fetchClients(formData.branchId);
+      fetchDeliveryDrivers(formData.branchId);
+      fetchSalesChannels(formData.branchId);
     }
   }, [formData.branchId, show]);
 
@@ -913,6 +980,32 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           />
                         </div>
 
+                        {/* Canal de Ventas - Campo obligatorio */}
+                        <div>
+                          <Label className="font-semibold flex items-center gap-1 mb-2">
+                            <Store size={16} />
+                            Canal de Ventas <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.salesChannelId}
+                            onValueChange={(value) =>
+                              setFormData((prev) => ({ ...prev, salesChannelId: value }))
+                            }
+                            disabled={loadingSalesChannels}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={loadingSalesChannels ? "Cargando canales..." : "Seleccionar canal de venta..."} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {salesChannels.map((channel) => (
+                                <SelectItem key={channel._id} value={channel._id}>
+                                  {channel.name} ({channel.abbreviation})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
                         {/* Canal de venta - Ocultar para órdenes de e-commerce */}
                         {!isSocialMedia && !isCashier && !isEcommerceOrder && (
                           <div>
@@ -1136,6 +1229,46 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                               </SelectContent>
                             </Select>
                           </div>
+                        </div>
+
+                        {/* Repartidor - full width */}
+                        <div>
+                          <Label className="font-semibold flex items-center gap-1 mb-2">
+                            <Truck size={16} />
+                            Repartidor <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={formData.deliveryDriver || ''}
+                            onValueChange={(value) => {
+                              const selectedDriver = deliveryDrivers.find(d => d._id === value);
+                              setFormData((prev) => ({ 
+                                ...prev, 
+                                deliveryDriver: value,
+                                deliveryDriverDetails: selectedDriver ? {
+                                  _id: selectedDriver._id,
+                                  name: selectedDriver.profile.fullName || `${selectedDriver.profile.name} ${selectedDriver.profile.lastName}`,
+                                  phone: selectedDriver.phone
+                                } : undefined
+                              }));
+                            }}
+                            disabled={loadingDeliveryDrivers}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={loadingDeliveryDrivers ? "Cargando repartidores..." : "Seleccionar repartidor..."} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {deliveryDrivers.map((driver) => (
+                                <SelectItem key={driver._id} value={driver._id}>
+                                  {driver.profile.fullName || `${driver.profile.name} ${driver.profile.lastName}`} - {driver.username}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {!deliveryDrivers.length && !loadingDeliveryDrivers && (
+                            <p className="text-sm text-red-500 mt-1">
+                              No hay repartidores activos en esta sucursal
+                            </p>
+                          )}
                         </div>
 
                         {/* Referencias - full width */}
@@ -1468,9 +1601,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 uploadingFiles ||
                 formData.items.length === 0 ||
                 !formData.paymentMethod ||
+                !formData.salesChannelId || // Requerir canal de ventas
                 (!isEcommerceOrder && !cashRegister) || // Solo requerir caja si NO es e-commerce
                 (formData.items.some((item) => item.isProduct === true) && !isEcommerceOrder && !selectedStorageId) || // Solo requerir storage si NO es e-commerce
-                (isSocialMedia && !formData.branchId)
+                (isSocialMedia && !formData.branchId) ||
+                (formData.shippingType === 'envio' && !formData.deliveryDriver) // Requerir repartidor para envíos
               }
             >
               {uploadingFiles

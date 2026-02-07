@@ -9,6 +9,8 @@ import roleVisibilityRoutes from "./roleVisibilityRoutes.js";
 import userRoutes from "./userRoutes.js";
 import fixIndexesRoutes from "./fixIndexesRoutes.js";
 import cashierRoutes from "./cashierRoutes.js";
+import deliveryDriverRoutes from "./deliveryDriverRoutes.js";
+import productionUserRoutes from "./productionUserRoutes.js";
 import productionRoutes from "./productionRoutes.js";
 import dealerRoutes from "./dealerRoutes.js";
 import managerRoutes from "./managerRoutes.js";
@@ -49,6 +51,7 @@ import digitalCardRoutes from "./digitalCardRoutes.js";
 import scannerRoutes from "./scannerRoutes.js";
 import stripeRoutes from "./stripeRoutes.js";
 import ticketRoutes from "./ticketRoutes.js";
+import salesChannelRoutes from "./salesChannelRoutes.js";
 
 const router = Router();
 
@@ -61,6 +64,8 @@ router.use("/modules", moduleRoutes);
 router.use("/role-visibility", roleVisibilityRoutes);
 router.use("/fix", fixIndexesRoutes);
 router.use("/cashiers", cashierRoutes);
+router.use("/delivery-drivers", deliveryDriverRoutes);
+router.use("/production-users", productionUserRoutes);
 router.use("/production", productionRoutes);
 router.use("/delivery", dealerRoutes);
 router.use("/managers", managerRoutes);
@@ -101,5 +106,6 @@ router.use("/digital-cards", digitalCardRoutes);
 router.use("/scanner", scannerRoutes);
 router.use("/stripe", stripeRoutes);
 router.use("/tickets", ticketRoutes);
+router.use("/sales-channels", salesChannelRoutes);
 
 export default router;

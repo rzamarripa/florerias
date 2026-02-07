@@ -208,6 +208,7 @@ const getAllOrders = async (req, res) => {
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
       .populate('cancelledBy', 'name email')
+      .populate('deliveryDriver', 'username email profile.fullName')
       .populate({
         path: 'payments',
         populate: [
@@ -257,6 +258,7 @@ const getOrderById = async (req, res) => {
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
       .populate('cancelledBy', 'name email')
+      .populate('deliveryDriver', 'username email profile.fullName')
       .populate({
         path: 'payments',
         populate: [
@@ -294,6 +296,7 @@ const createOrder = async (req, res) => {
       storageId,
       clientInfo,
       salesChannel,
+      salesChannelId,
       items,
       shippingType,
       anonymous,
@@ -310,7 +313,8 @@ const createOrder = async (req, res) => {
       remainingBalance,
       sendToProduction,
       discountRequestMessage,
-      eOrder
+      eOrder,
+      deliveryDriver
     } = req.body;
 
     // Validar campos requeridos
@@ -318,6 +322,13 @@ const createOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'La sucursal es obligatoria'
+      });
+    }
+
+    if (!salesChannelId) {
+      return res.status(400).json({
+        success: false,
+        message: 'El canal de ventas es obligatorio'
       });
     }
 
@@ -407,6 +418,14 @@ const createOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Los datos de entrega (nombre de quien recibe y fecha/hora) son obligatorios'
+      });
+    }
+
+    // Validar que si el tipo de envío es 'envio', debe tener un repartidor asignado
+    if (shippingType === 'envio' && !deliveryDriver) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe seleccionar un repartidor para órdenes con envío a domicilio'
       });
     }
 
@@ -638,6 +657,7 @@ const createOrder = async (req, res) => {
       cashier: req.user._id, // Guardar el ID del usuario (cajero) que crea la orden
       clientInfo,
       salesChannel: salesChannel || 'tienda',
+      salesChannelId: salesChannelId, // Agregar el ID del canal de ventas (requerido)
       items,
       shippingType: shippingType || 'tienda',
       anonymous: anonymous || false,
@@ -668,7 +688,8 @@ const createOrder = async (req, res) => {
       isSocialMediaOrder: isSocialMediaOrder || false,
       socialMedia: socialMedia || null,
       materials: materials, // Agregar los materiales extras
-      eOrder: eOrder || false // Agregar campo eOrder para identificar órdenes de e-commerce
+      eOrder: eOrder || false, // Agregar campo eOrder para identificar órdenes de e-commerce
+      deliveryDriver: deliveryDriver || null // Agregar el repartidor asignado
     });
 
     const savedOrder = await newOrder.save();
@@ -969,6 +990,7 @@ const createOrder = async (req, res) => {
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
       .populate('cancelledBy', 'name email')
+      .populate('deliveryDriver', 'username email profile.fullName')
       .populate({
         path: 'payments',
         populate: [
@@ -1181,6 +1203,7 @@ const updateOrder = async (req, res) => {
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
       .populate('cancelledBy', 'name email')
+      .populate('deliveryDriver', 'username email profile.fullName')
       .populate({
         path: 'payments',
         populate: [
@@ -1366,6 +1389,7 @@ const updateOrderStatus = async (req, res) => {
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
       .populate('cancelledBy', 'name email')
+      .populate('deliveryDriver', 'username email profile.fullName')
       .populate({
         path: 'payments',
         populate: [
@@ -1903,6 +1927,7 @@ const sendOrderToShipping = async (req, res) => {
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
       .populate('cancelledBy', 'name email')
+      .populate('deliveryDriver', 'username email profile.fullName')
       .populate({
         path: 'payments',
         populate: [
@@ -2028,6 +2053,7 @@ const updateOrderDeliveryInfo = async (req, res) => {
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
       .populate('cancelledBy', 'name email')
+      .populate('deliveryDriver', 'username email profile.fullName')
       .populate({
         path: 'payments',
         populate: [
@@ -2279,6 +2305,7 @@ const getUnauthorizedOrders = async (req, res) => {
       .populate('deliveryData.neighborhoodId', 'name priceDelivery')
       .populate('stage', 'name abreviation stageNumber color boardType')
       .populate('cancelledBy', 'name email')
+      .populate('deliveryDriver', 'username email profile.fullName')
       .populate({
         path: 'payments',
         populate: [

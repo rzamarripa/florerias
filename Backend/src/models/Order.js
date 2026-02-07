@@ -160,6 +160,11 @@ const orderSchema = new mongoose.Schema({
     enum: ['tienda', 'whatsapp', 'facebook', 'instagram'],
     default: 'tienda'
   },
+  salesChannelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cv_sales_channel',
+    required: [true, 'El canal de ventas es requerido']
+  },
   items: {
     type: [orderItemSchema],
     required: true,
@@ -309,6 +314,11 @@ const orderSchema = new mongoose.Schema({
   eOrder: {
     type: Boolean,
     default: false
+  },
+  deliveryDriver: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'cs_user',
+    default: null
   }
 }, {
   timestamps: true,
@@ -322,6 +332,7 @@ orderSchema.index({ cashier: 1 });
 orderSchema.index({ 'clientInfo.name': 1 });
 orderSchema.index({ 'clientInfo.phone': 1 });
 orderSchema.index({ salesChannel: 1 });
+orderSchema.index({ salesChannelId: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ isSocialMediaOrder: 1 });

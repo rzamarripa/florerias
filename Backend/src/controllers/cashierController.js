@@ -141,137 +141,7 @@ const getCashierById = async (req, res) => {
   }
 };
 
-// Crear un nuevo cajero
-const createCashier = async (req, res) => {
-  try {
-    const {
-      username,
-      email,
-      phone,
-      password,
-      profile,
-      branch
-    } = req.body;
-
-    // Validar campos requeridos
-    if (!username || !email || !phone || !password || !profile || !branch) {
-      return res.status(400).json({
-        success: false,
-        message: 'Todos los campos obligatorios deben ser proporcionados'
-      });
-    }
-
-    if (!profile.name || !profile.lastName) {
-      return res.status(400).json({
-        success: false,
-        message: 'El nombre y apellido son requeridos'
-      });
-    }
-
-    // Buscar el rol de Cajero
-    const cajeroRole = await Role.findOne({ name: /^Cajero$/i });
-    if (!cajeroRole) {
-      return res.status(400).json({
-        success: false,
-        message: 'No se encontró el rol de Cajero'
-      });
-    }
-
-    // Verificar que la sucursal existe
-    const branchExists = await Branch.findById(branch);
-    if (!branchExists) {
-      return res.status(404).json({
-        success: false,
-        message: 'La sucursal especificada no existe'
-      });
-    }
-
-    // Verificar si el username ya existe
-    const existingUsername = await User.findOne({
-      username: { $regex: new RegExp(`^${username}$`, 'i') }
-    });
-    if (existingUsername) {
-      return res.status(400).json({
-        success: false,
-        message: 'El nombre de usuario ya está en uso'
-      });
-    }
-
-    // Verificar si el email ya existe
-    const existingEmail = await User.findOne({
-      email: { $regex: new RegExp(`^${email}$`, 'i') }
-    });
-    if (existingEmail) {
-      return res.status(400).json({
-        success: false,
-        message: 'El correo electrónico ya está registrado'
-      });
-    }
-
-    // Crear nuevo cajero en cs_user
-    const newCashier = await User.create({
-      username,
-      email,
-      phone,
-      password,
-      profile: {
-        name: profile.name,
-        lastName: profile.lastName,
-        fullName: `${profile.name} ${profile.lastName}`,
-        estatus: true
-      },
-      role: cajeroRole._id
-    });
-
-    // Agregar el cajero al array employees de la sucursal
-    await Branch.findByIdAndUpdate(
-      branch,
-      { $addToSet: { employees: newCashier._id } },
-      { new: true }
-    );
-
-    // Obtener el cajero con datos completos
-    const populatedCashier = await User.findById(newCashier._id)
-      .select('-password')
-      .populate('role', 'name description');
-
-    const branchData = await Branch.findById(branch)
-      .select('branchName branchCode companyId');
-
-    res.status(201).json({
-      success: true,
-      data: {
-        ...populatedCashier.toObject(),
-        branch: branchData
-      },
-      message: 'Cajero creado exitosamente'
-    });
-  } catch (error) {
-    console.error('Error al crear cajero:', error);
-
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Error de validación',
-        errors: Object.values(error.errors).map(err => err.message)
-      });
-    }
-
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyPattern)[0];
-      return res.status(400).json({
-        success: false,
-        message: `El ${field} ya está registrado`
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor',
-      error: error.message
-    });
-  }
-};
+// Función createCashier eliminada - Los cajeros ahora se crean desde el módulo de branches
 
 // Actualizar un cajero
 const updateCashier = async (req, res) => {
@@ -521,7 +391,6 @@ const deactivateCashier = async (req, res) => {
 export {
   getAllCashiers,
   getCashierById,
-  createCashier,
   updateCashier,
   deleteCashier,
   activateCashier,

@@ -46,8 +46,7 @@ const CashRegisterSummaryPage: React.FC = () => {
   const [showCloseDialog, setShowCloseDialog] = useState(false);
 
   // Pagination states
-  const [regularSalesPage, setRegularSalesPage] = useState(1);
-  const [creditSalesPage, setCreditSalesPage] = useState(1);
+  const [paginationState, setPaginationState] = useState<{ [key: string]: number }>({});
   const [expensesPage, setExpensesPage] = useState(1);
   const [purchasesPage, setPurchasesPage] = useState(1);
   const [discountAuthsPage, setDiscountAuthsPage] = useState(1);
@@ -186,47 +185,110 @@ const CashRegisterSummaryPage: React.FC = () => {
     return Math.ceil(data.length / ITEMS_PER_PAGE);
   };
 
-  // Filter orders by type (simplified to just Regular and Credit)
+  // Get payment methods from paymentsByMethod (for payments) or ordersByPaymentMethod (for orders)
+  const paymentMethods = React.useMemo(() => {
+    // Prioritize paymentsByMethod if available
+    if (summary?.paymentsByMethod) {
+      return Object.keys(summary.paymentsByMethod).sort();
+    }
+    // Fallback to ordersByPaymentMethod
+    if (summary?.ordersByPaymentMethod) {
+      return Object.keys(summary.ordersByPaymentMethod).sort();
+    }
+    // Final fallback to old logic
+    return ['regular', 'credit'];
+  }, [summary?.paymentsByMethod, summary?.ordersByPaymentMethod]);
+
+  // Initialize pagination state for each payment method
+  React.useEffect(() => {
+    if (paymentMethods.length > 0) {
+      const initialState: { [key: string]: number } = {};
+      paymentMethods.forEach(method => {
+        if (!paginationState[method]) {
+          initialState[method] = 1;
+        }
+      });
+      if (Object.keys(initialState).length > 0) {
+        setPaginationState(prev => ({ ...prev, ...initialState }));
+      }
+    }
+  }, [paymentMethods]);
+
+  // Helper function to get paginated payments for a specific payment method
+  const getPaginatedPaymentsForMethod = (methodName: string, page: number) => {
+    if (!summary?.paymentsByMethod || !summary.paymentsByMethod[methodName]) {
+      return [];
+    }
+    const payments = summary.paymentsByMethod[methodName].payments;
+    return getPaginatedData(payments, page);
+  };
+
+  // Helper function to get paginated orders for a specific payment method (backward compatibility)
+  const getPaginatedOrdersForMethod = (methodName: string, page: number) => {
+    if (!summary?.ordersByPaymentMethod || !summary.ordersByPaymentMethod[methodName]) {
+      return [];
+    }
+    const orders = summary.ordersByPaymentMethod[methodName].orders;
+    return getPaginatedData(orders, page);
+  };
+
+  // Helper function to get total pages for payments of a payment method
+  const getTotalPagesForPaymentsMethod = (methodName: string) => {
+    if (!summary?.paymentsByMethod || !summary.paymentsByMethod[methodName]) {
+      return 0;
+    }
+    return getTotalPages(summary.paymentsByMethod[methodName].payments);
+  };
+
+  // Helper function to get total pages for orders of a payment method (backward compatibility)
+  const getTotalPagesForMethod = (methodName: string) => {
+    if (!summary?.ordersByPaymentMethod || !summary.ordersByPaymentMethod[methodName]) {
+      return 0;
+    }
+    return getTotalPages(summary.ordersByPaymentMethod[methodName].orders);
+  };
+
+  // Fallback for old logic (if backend doesn't support ordersByPaymentMethod yet)
   const regularOrders = React.useMemo(() => {
+    if (summary?.ordersByPaymentMethod) return [];
     if (!summary?.orders) return [];
     return summary.orders.filter((order) => {
       const paymentLower = order.paymentMethod.toLowerCase();
-      // Check if it's store credit (not credit card)
       const isStoreCredit =
         paymentLower === "crédito" ||
         paymentLower === "credito" ||
         (paymentLower.includes("crédito") &&
           !paymentLower.includes("tarjeta")) ||
         (paymentLower.includes("credito") && !paymentLower.includes("tarjeta"));
-
-      // Include in regular if it's NOT store credit
       return !isStoreCredit;
     });
-  }, [summary?.orders]);
+  }, [summary?.orders, summary?.ordersByPaymentMethod]);
 
   const creditOrders = React.useMemo(() => {
+    if (summary?.ordersByPaymentMethod) return [];
     if (!summary?.orders) return [];
     return summary.orders.filter((order) => {
       const paymentLower = order.paymentMethod.toLowerCase();
-      // Check if it's store credit (not credit card)
       const isStoreCredit =
         paymentLower === "crédito" ||
         paymentLower === "credito" ||
         (paymentLower.includes("crédito") &&
           !paymentLower.includes("tarjeta")) ||
         (paymentLower.includes("credito") && !paymentLower.includes("tarjeta"));
-
-      // Include in credit only if it IS store credit
       return isStoreCredit;
     });
-  }, [summary?.orders]);
+  }, [summary?.orders, summary?.ordersByPaymentMethod]);
   
   // Debug logging to check data
   React.useEffect(() => {
     if (summary) {
       console.log("Total orders:", summary.orders?.length || 0);
-      console.log("Regular orders:", regularOrders.length);
-      console.log("Credit orders:", creditOrders.length);
+      if (summary.ordersByPaymentMethod) {
+        console.log("Orders by payment method:", summary.ordersByPaymentMethod);
+      } else {
+        console.log("Regular orders:", regularOrders.length);
+        console.log("Credit orders:", creditOrders.length);
+      }
       console.log("Expenses:", summary.expenses?.length || 0);
       console.log("Purchases:", summary.buys?.length || 0);
       console.log("Discount Auths:", summary.discountAuths?.length || 0);
@@ -338,26 +400,417 @@ const CashRegisterSummaryPage: React.FC = () => {
             <h5 className="font-bold mb-0">Detalle de Ventas</h5>
           </div>
 
-          <Tabs defaultValue="regular" className="w-full">
+          <Tabs defaultValue={paymentMethods[0] || "regular"} className="w-full">
             <div className="px-4 pt-3 border-b">
-              <TabsList className="bg-transparent h-auto p-0 gap-0">
-                <TabsTrigger
-                  value="regular"
-                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                >
-                  Ventas Regulares ({regularOrders.length})
-                </TabsTrigger>
-                <TabsTrigger
-                  value="credit"
-                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                >
-                  Ventas a Crédito ({creditOrders.length})
-                </TabsTrigger>
+              <TabsList className="bg-transparent h-auto p-0 gap-0 flex-wrap">
+                {summary?.paymentsByMethod || summary?.ordersByPaymentMethod ? (
+                  // Dynamic tabs based on payment methods
+                  paymentMethods.map((methodName) => (
+                    <TabsTrigger
+                      key={methodName}
+                      value={methodName}
+                      className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    >
+                      {methodName} ({summary.paymentsByMethod?.[methodName]?.count || summary.ordersByPaymentMethod?.[methodName]?.count || 0})
+                    </TabsTrigger>
+                  ))
+                ) : (
+                  // Fallback to old static tabs
+                  <>
+                    <TabsTrigger
+                      value="regular"
+                      className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    >
+                      Ventas Regulares ({regularOrders.length})
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="credit"
+                      className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    >
+                      Ventas a Crédito ({creditOrders.length})
+                    </TabsTrigger>
+                  </>
+                )}
               </TabsList>
             </div>
 
-            {/* Regular Sales Tab */}
-            <TabsContent value="regular" className="mt-0">
+            {/* Dynamic Tab Contents */}
+            {summary?.paymentsByMethod ? (
+              // Dynamic tab content for payments
+              paymentMethods.map((methodName) => (
+                <TabsContent key={methodName} value={methodName} className="mt-0">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          No.
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          TIPO
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          FECHA
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          ORDEN
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          CLIENTE
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          NOTAS
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          REGISTRADO POR
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          IMPORTE
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {summary.paymentsByMethod[methodName].payments.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="text-center py-12 text-muted-foreground"
+                          >
+                            <Wallet size={48} className="mb-3 opacity-50 mx-auto" />
+                            <p className="mb-0">
+                              No se encontraron pagos con {methodName}
+                            </p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        getPaginatedPaymentsForMethod(methodName, paginationState[methodName] || 1).map((payment, index) => (
+                          <TableRow key={payment._id}>
+                            <TableCell className="px-4 py-3">
+                              {((paginationState[methodName] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              {payment.isAdvance ? (
+                                <Badge className="bg-blue-500 text-white hover:bg-blue-500 px-2 py-0.5 text-xs font-semibold">
+                                  ANTICIPO
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-green-500 text-white hover:bg-green-500 px-2 py-0.5 text-xs font-semibold">
+                                  PAGO
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <small>{formatDate(payment.date)}</small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="font-semibold">
+                                {payment.orderNumber}
+                              </div>
+                              {payment.orderStatus === "cancelado" && (
+                                <Badge className="bg-red-500 text-white hover:bg-red-500 px-2 py-0.5 text-xs font-semibold mt-1">
+                                  CANCELADA
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="font-semibold">
+                                {payment.clientName}
+                              </div>
+                              <small className="text-muted-foreground">
+                                Para: {payment.recipientName}
+                              </small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <small className="text-muted-foreground">
+                                {payment.notes || "-"}
+                              </small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <small className="text-muted-foreground">
+                                {payment.registeredBy}
+                              </small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <span
+                                className={`font-bold ${
+                                  payment.orderStatus === "cancelado"
+                                    ? "line-through text-red-500"
+                                    : ""
+                                }`}
+                              >
+                                {formatCurrency(payment.amount)}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination controls */}
+                  {summary.paymentsByMethod[methodName].payments.length > 0 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        Mostrando {getPaginatedPaymentsForMethod(methodName, paginationState[methodName] || 1).length} de {summary.paymentsByMethod[methodName].payments.length} pagos
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setPaginationState(prev => ({
+                              ...prev,
+                              [methodName]: Math.max(1, (prev[methodName] || 1) - 1)
+                            }));
+                          }}
+                          disabled={(paginationState[methodName] || 1) === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Anterior
+                        </Button>
+                        
+                        <div className="flex items-center px-3 text-sm">
+                          Página {paginationState[methodName] || 1} de {getTotalPagesForPaymentsMethod(methodName)}
+                        </div>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setPaginationState(prev => ({
+                              ...prev,
+                              [methodName]: Math.min(getTotalPagesForPaymentsMethod(methodName), (prev[methodName] || 1) + 1)
+                            }));
+                          }}
+                          disabled={(paginationState[methodName] || 1) === getTotalPagesForPaymentsMethod(methodName)}
+                        >
+                          Siguiente
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              ))
+            ) : summary?.ordersByPaymentMethod ? (
+              // Dynamic tab content for each payment method
+              paymentMethods.map((methodName) => (
+                <TabsContent key={methodName} value={methodName} className="mt-0">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          No.
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          FECHA
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          FORMA PAGO
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          CLIENTE
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          VENTA
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          DESCUENTO
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          IMPORTE
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {summary.ordersByPaymentMethod[methodName].orders.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className="text-center py-12 text-muted-foreground"
+                          >
+                            <Wallet size={48} className="mb-3 opacity-50 mx-auto" />
+                            <p className="mb-0">
+                              No se encontraron ventas con {methodName}
+                            </p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        getPaginatedOrdersForMethod(methodName, paginationState[methodName] || 1).map((order, index) => (
+                          <TableRow key={order._id}>
+                            <TableCell className="px-4 py-3">
+                              {((paginationState[methodName] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <small>{formatDate(order.createdAt)}</small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              {order.paymentMethod
+                                .split(", ")
+                                .map((method, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    className={`mr-1 mb-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                      method.toLowerCase().includes("efectivo")
+                                        ? "bg-green-500 text-white hover:bg-green-500"
+                                        : method.toLowerCase().includes("tarjeta")
+                                        ? "bg-cyan-500 text-white hover:bg-cyan-500"
+                                        : method
+                                            .toLowerCase()
+                                            .includes("transferencia")
+                                        ? "bg-primary text-primary-foreground hover:bg-primary"
+                                        : "bg-gray-500 text-white hover:bg-gray-500"
+                                    }`}
+                                  >
+                                    {method}
+                                  </Badge>
+                                ))}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="font-semibold">
+                                {order.clientName}
+                              </div>
+                              <small className="text-muted-foreground">
+                                Para: {order.recipientName}
+                              </small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="flex flex-col gap-1">
+                                <div>{order.orderNumber}</div>
+                                <small className="text-muted-foreground">
+                                  {order.itemsCount}{" "}
+                                  {order.itemsCount === 1
+                                    ? "producto"
+                                    : "productos"}
+                                </small>
+                                {order.status === "cancelado" && (
+                                  <Badge className="bg-red-500 text-white hover:bg-red-500 px-2 py-0.5 text-xs font-semibold w-fit">
+                                    CANCELADA
+                                  </Badge>
+                                )}
+                                {order.discount && order.discount > 0 && (
+                                  <Badge className="bg-yellow-500 text-white hover:bg-yellow-500 px-2 py-0.5 text-xs font-semibold w-fit">
+                                    CON DESCUENTO
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              {order.discount && order.discount > 0 ? (
+                                <span className="font-bold text-orange-600">
+                                  {formatCurrency(order.discount)}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <span
+                                className={`font-bold ${
+                                  order.status === "cancelado"
+                                    ? "line-through text-red-500"
+                                    : ""
+                                }`}
+                              >
+                                {formatCurrency(order.advance)}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination controls */}
+                  {summary.ordersByPaymentMethod[methodName].orders.length > 0 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        Mostrando {getPaginatedOrdersForMethod(methodName, paginationState[methodName] || 1).length} de {summary.ordersByPaymentMethod[methodName].orders.length} registros
+                      </div>
+                      {getTotalPagesForMethod(methodName) > 1 && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setPaginationState(prev => ({ ...prev, [methodName]: 1 }))}
+                            disabled={(paginationState[methodName] || 1) === 1}
+                          >
+                            <ChevronsLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setPaginationState(prev => ({ ...prev, [methodName]: (prev[methodName] || 1) - 1 }))}
+                            disabled={(paginationState[methodName] || 1) === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          
+                          {[...Array(getTotalPagesForMethod(methodName))].map((_, index) => {
+                            const pageNumber = index + 1;
+                            const totalPages = getTotalPagesForMethod(methodName);
+                            const currentPage = paginationState[methodName] || 1;
+                            if (
+                              pageNumber === 1 ||
+                              pageNumber === totalPages ||
+                              (pageNumber >= currentPage - 1 &&
+                                pageNumber <= currentPage + 1)
+                            ) {
+                              return (
+                                <Button
+                                  key={pageNumber}
+                                  variant={
+                                    pageNumber === currentPage ? "default" : "outline"
+                                  }
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setPaginationState(prev => ({ ...prev, [methodName]: pageNumber }))}
+                                >
+                                  {pageNumber}
+                                </Button>
+                              );
+                            } else if (
+                              pageNumber === currentPage - 2 ||
+                              pageNumber === currentPage + 2
+                            ) {
+                              return (
+                                <span key={pageNumber} className="px-2 text-muted-foreground">
+                                  ...
+                                </span>
+                              );
+                            }
+                            return null;
+                          })}
+                          
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setPaginationState(prev => ({ ...prev, [methodName]: (prev[methodName] || 1) + 1 }))}
+                            disabled={(paginationState[methodName] || 1) === getTotalPagesForMethod(methodName)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setPaginationState(prev => ({ ...prev, [methodName]: getTotalPagesForMethod(methodName) }))}
+                            disabled={(paginationState[methodName] || 1) === getTotalPagesForMethod(methodName)}
+                          >
+                            <ChevronsRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+              ))
+            ) : (
+              // Fallback: keep the old static tabs structure
+              <>
+                <TabsContent value="regular" className="mt-0">
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
@@ -398,10 +851,10 @@ const CashRegisterSummaryPage: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    getPaginatedData(regularOrders, regularSalesPage).map((order, index) => (
+                    getPaginatedData(regularOrders, paginationState['regular'] || 1).map((order, index) => (
                       <TableRow key={order._id}>
                         <TableCell className="px-4 py-3">
-                          {(regularSalesPage - 1) * ITEMS_PER_PAGE + index + 1}
+                          {((paginationState['regular'] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
                         <TableCell className="px-4 py-3">
                           <small>{formatDate(order.createdAt)}</small>
@@ -487,7 +940,7 @@ const CashRegisterSummaryPage: React.FC = () => {
               {regularOrders.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
                   <div className="text-sm text-muted-foreground">
-                    Mostrando {getPaginatedData(regularOrders, regularSalesPage).length} de {regularOrders.length} registros
+                    Mostrando {getPaginatedData(regularOrders, paginationState['regular'] || 1).length} de {regularOrders.length} registros
                   </div>
                   {getTotalPages(regularOrders) > 1 && (
                     <div className="flex items-center gap-1">
@@ -495,8 +948,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setRegularSalesPage(1)}
-                        disabled={regularSalesPage === 1}
+                        onClick={() => setPaginationState(prev => ({ ...prev, regular: 1 }))}
+                        disabled={(paginationState['regular'] || 1) === 1}
                       >
                         <ChevronsLeft className="h-4 w-4" />
                       </Button>
@@ -504,8 +957,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setRegularSalesPage(regularSalesPage - 1)}
-                        disabled={regularSalesPage === 1}
+                        onClick={() => setPaginationState(prev => ({ ...prev, regular: (prev['regular'] || 1) - 1 }))}
+                        disabled={(paginationState['regular'] || 1) === 1}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -516,25 +969,25 @@ const CashRegisterSummaryPage: React.FC = () => {
                         if (
                           pageNumber === 1 ||
                           pageNumber === totalPages ||
-                          (pageNumber >= regularSalesPage - 1 &&
-                            pageNumber <= regularSalesPage + 1)
+                          (pageNumber >= (paginationState['regular'] || 1) - 1 &&
+                            pageNumber <= (paginationState['regular'] || 1) + 1)
                         ) {
                           return (
                             <Button
                               key={pageNumber}
                               variant={
-                                pageNumber === regularSalesPage ? "default" : "outline"
+                                pageNumber === (paginationState['regular'] || 1) ? "default" : "outline"
                               }
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => setRegularSalesPage(pageNumber)}
+                              onClick={() => setPaginationState(prev => ({ ...prev, regular: pageNumber }))}
                             >
                               {pageNumber}
                             </Button>
                           );
                         } else if (
-                          pageNumber === regularSalesPage - 2 ||
-                          pageNumber === regularSalesPage + 2
+                          pageNumber === (paginationState['regular'] || 1) - 2 ||
+                          pageNumber === (paginationState['regular'] || 1) + 2
                         ) {
                           return (
                             <span key={pageNumber} className="px-2 text-muted-foreground">
@@ -549,8 +1002,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setRegularSalesPage(regularSalesPage + 1)}
-                        disabled={regularSalesPage === getTotalPages(regularOrders)}
+                        onClick={() => setPaginationState(prev => ({ ...prev, regular: (prev['regular'] || 1) + 1 }))}
+                        disabled={(paginationState['regular'] || 1) === getTotalPages(regularOrders)}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -558,8 +1011,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setRegularSalesPage(getTotalPages(regularOrders))}
-                        disabled={regularSalesPage === getTotalPages(regularOrders)}
+                        onClick={() => setPaginationState(prev => ({ ...prev, regular: getTotalPages(regularOrders) }))}
+                        disabled={(paginationState['regular'] || 1) === getTotalPages(regularOrders)}
                       >
                         <ChevronsRight className="h-4 w-4" />
                       </Button>
@@ -611,10 +1064,10 @@ const CashRegisterSummaryPage: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    getPaginatedData(creditOrders, creditSalesPage).map((order, index) => (
+                    getPaginatedData(creditOrders, paginationState['credit'] || 1).map((order, index) => (
                       <TableRow key={order._id}>
                         <TableCell className="px-4 py-3">
-                          {(creditSalesPage - 1) * ITEMS_PER_PAGE + index + 1}
+                          {((paginationState['credit'] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
                         <TableCell className="px-4 py-3">
                           <small>{formatDate(order.createdAt)}</small>
@@ -666,7 +1119,7 @@ const CashRegisterSummaryPage: React.FC = () => {
               {creditOrders.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
                   <div className="text-sm text-muted-foreground">
-                    Mostrando {getPaginatedData(creditOrders, creditSalesPage).length} de {creditOrders.length} registros
+                    Mostrando {getPaginatedData(creditOrders, paginationState['credit'] || 1).length} de {creditOrders.length} registros
                   </div>
                   {getTotalPages(creditOrders) > 1 && (
                     <div className="flex items-center gap-1">
@@ -674,8 +1127,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setCreditSalesPage(1)}
-                        disabled={creditSalesPage === 1}
+                        onClick={() => setPaginationState(prev => ({ ...prev, credit: 1 }))}
+                        disabled={(paginationState['credit'] || 1) === 1}
                       >
                         <ChevronsLeft className="h-4 w-4" />
                       </Button>
@@ -683,8 +1136,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setCreditSalesPage(creditSalesPage - 1)}
-                        disabled={creditSalesPage === 1}
+                        onClick={() => setPaginationState(prev => ({ ...prev, credit: (prev['credit'] || 1) - 1 }))}
+                        disabled={(paginationState['credit'] || 1) === 1}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -695,25 +1148,25 @@ const CashRegisterSummaryPage: React.FC = () => {
                         if (
                           pageNumber === 1 ||
                           pageNumber === totalPages ||
-                          (pageNumber >= creditSalesPage - 1 &&
-                            pageNumber <= creditSalesPage + 1)
+                          (pageNumber >= (paginationState['credit'] || 1) - 1 &&
+                            pageNumber <= (paginationState['credit'] || 1) + 1)
                         ) {
                           return (
                             <Button
                               key={pageNumber}
                               variant={
-                                pageNumber === creditSalesPage ? "default" : "outline"
+                                pageNumber === (paginationState['credit'] || 1) ? "default" : "outline"
                               }
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => setCreditSalesPage(pageNumber)}
+                              onClick={() => setPaginationState(prev => ({ ...prev, credit: pageNumber }))}
                             >
                               {pageNumber}
                             </Button>
                           );
                         } else if (
-                          pageNumber === creditSalesPage - 2 ||
-                          pageNumber === creditSalesPage + 2
+                          pageNumber === (paginationState['credit'] || 1) - 2 ||
+                          pageNumber === (paginationState['credit'] || 1) + 2
                         ) {
                           return (
                             <span key={pageNumber} className="px-2 text-muted-foreground">
@@ -728,8 +1181,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setCreditSalesPage(creditSalesPage + 1)}
-                        disabled={creditSalesPage === getTotalPages(creditOrders)}
+                        onClick={() => setPaginationState(prev => ({ ...prev, credit: (prev['credit'] || 1) + 1 }))}
+                        disabled={(paginationState['credit'] || 1) === getTotalPages(creditOrders)}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -737,8 +1190,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setCreditSalesPage(getTotalPages(creditOrders))}
-                        disabled={creditSalesPage === getTotalPages(creditOrders)}
+                        onClick={() => setPaginationState(prev => ({ ...prev, credit: getTotalPages(creditOrders) }))}
+                        disabled={(paginationState['credit'] || 1) === getTotalPages(creditOrders)}
                       >
                         <ChevronsRight className="h-4 w-4" />
                       </Button>
@@ -747,6 +1200,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                 </div>
               )}
             </TabsContent>
+              </>
+            )}
           </Tabs>
         </CardContent>
       </Card>

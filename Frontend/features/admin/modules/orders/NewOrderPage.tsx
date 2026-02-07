@@ -36,6 +36,7 @@ import { companiesService } from "@/features/admin/modules/companies/services/co
 import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 import { generateDeliveryTicket, DeliveryTicketData } from "./utils/generateDeliveryTicket";
 import { uploadComprobante, uploadArreglo, uploadSaleTicket, uploadDeliveryTicket } from "@/services/firebaseStorage";
+import { convertHtmlToImage } from "@/utils/htmlToImage";
 import { useStorageSocket, StockUpdatePayload } from "@/hooks/useStorageSocket";
 import QRScanner from "@/features/admin/modules/digitalCards/components/QRScanner";
 import ClientPointsDashboardModal from "@/features/admin/modules/clients/components/ClientPointsDashboardModal";
@@ -83,10 +84,13 @@ const NewOrderPage = () => {
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [whatsAppTicketData, setWhatsAppTicketData] = useState<{
     orderNumber: string;
-    clientName: string;
-    clientPhone: string;
-    ticketUrl: string;
-    ticketType: 'sale' | 'delivery';
+    clientName?: string;
+    clientPhone?: string;
+    clientEmail?: string;
+    saleTicketUrl?: string;
+    deliveryDriverName?: string;
+    deliveryDriverPhone?: string;
+    deliveryTicketUrl?: string;
   } | null>(null);
 
   const [formData, setFormData] = useState<CreateOrderData>({
@@ -98,6 +102,7 @@ const NewOrderPage = () => {
       email: "",
     },
     salesChannel: "tienda",
+    salesChannelId: "", // Inicializar como string vacío (requerido)
     items: [],
     shippingType: "tienda",
     anonymous: false,
@@ -123,6 +128,7 @@ const NewOrderPage = () => {
     sendToProduction: false,
     isSocialMediaOrder: false,
     socialMedia: null,
+    deliveryDriver: undefined,
   });
 
   const [loading, setLoading] = useState(false);
@@ -952,6 +958,14 @@ const NewOrderPage = () => {
 
       // Generar HTML del ticket
       const ticketHTML = generateSaleTicket(ticketData);
+      
+      // Convertir HTML a imagen usando html-to-image en el navegador
+      console.log("Convirtiendo ticket de venta a imagen en el navegador...");
+      const saleTicketBlob = await convertHtmlToImage(ticketHTML, {
+        width: 600,
+        backgroundColor: 'white'
+      });
+      console.log("Ticket de venta convertido a imagen exitosamente, tamaño:", saleTicketBlob.size);
 
       // Variables para guardar las URLs de los tickets
       let saleTicketUrl: string | null = null;
@@ -970,7 +984,7 @@ const NewOrderPage = () => {
         }
         
         const saleTicketResult = await uploadSaleTicket(
-          ticketHTML,
+          saleTicketBlob,
           companyId,
           branchId,
           orderId
@@ -1005,9 +1019,13 @@ const NewOrderPage = () => {
         printWindow.document.write(ticketHTML);
         printWindow.document.close();
 
-        // Esperar a que se cargue el contenido
+        // Esperar a que se cargue el contenido y luego imprimir
         printWindow.onload = () => {
           printWindow.focus();
+          // Pequeño delay para asegurar que el contenido esté completamente renderizado
+          setTimeout(() => {
+            printWindow.print();
+          }, 100);
         };
       } else {
         toast.error(
@@ -1043,13 +1061,21 @@ const NewOrderPage = () => {
 
           // Generar HTML del ticket de delivery
           const deliveryTicketHTML = generateDeliveryTicket(deliveryTicketData);
+          
+          // Convertir HTML a imagen usando html-to-image en el navegador
+          console.log("Convirtiendo ticket de envío a imagen en el navegador...");
+          const deliveryTicketBlob = await convertHtmlToImage(deliveryTicketHTML, {
+            width: 500,
+            backgroundColor: 'white'
+          });
+          console.log("Ticket de envío convertido a imagen exitosamente, tamaño:", deliveryTicketBlob.size);
 
           // Subir ticket de envío a Firebase y guardar en base de datos
           try {
             console.log("Iniciando subida de ticket de envío a Firebase...");
             
             const deliveryTicketResult = await uploadDeliveryTicket(
-              deliveryTicketHTML,
+              deliveryTicketBlob,
               companyId,
               branchId,
               orderId
@@ -1084,16 +1110,20 @@ const NewOrderPage = () => {
               deliveryPrintWindow.document.write(deliveryTicketHTML);
               deliveryPrintWindow.document.close();
 
-              // Esperar a que se cargue el contenido
+              // Esperar a que se cargue el contenido y luego imprimir
               deliveryPrintWindow.onload = () => {
                 deliveryPrintWindow.focus();
+                // Pequeño delay para asegurar que el contenido esté completamente renderizado
+                setTimeout(() => {
+                  deliveryPrintWindow.print();
+                }, 100);
               };
             } else {
               toast.warning(
                 "No se pudo abrir la ventana para el ticket de entrega. Verifica los popups del navegador."
               );
             }
-          }, 1000); // Esperar 1 segundo antes de abrir el segundo ticket
+          }, 1500); // Esperar 1.5 segundos antes de abrir el segundo ticket
         } catch (deliveryError) {
           console.error("Error generando ticket de delivery:", deliveryError);
           // No mostrar error, solo log ya que el ticket principal se generó
@@ -1101,14 +1131,20 @@ const NewOrderPage = () => {
       }
 
       // Después de generar los tickets, verificar si se puede enviar por WhatsApp
-      if (orderData.clientInfo.phone && saleTicketUrl) {
-        // Preparar datos para el modal
+      const hasWhatsAppData = (orderData.clientInfo.phone && saleTicketUrl) || 
+                             (orderData.deliveryDriverDetails && deliveryTicketUrl);
+      
+      if (hasWhatsAppData) {
+        // Preparar datos para el modal con ambos tickets si están disponibles
         setWhatsAppTicketData({
           orderNumber: orderData.orderNumber,
           clientName: orderData.clientInfo.name,
           clientPhone: orderData.clientInfo.phone,
-          ticketUrl: saleTicketUrl,
-          ticketType: 'sale'
+          clientEmail: orderData.clientInfo.email || undefined,
+          saleTicketUrl: saleTicketUrl || undefined,
+          deliveryDriverName: orderData.deliveryDriverDetails?.name,
+          deliveryDriverPhone: orderData.deliveryDriverDetails?.phone,
+          deliveryTicketUrl: deliveryTicketUrl || undefined
         });
         // Mostrar modal
         setShowWhatsAppModal(true);
@@ -1166,6 +1202,11 @@ const NewOrderPage = () => {
         throw new Error("Debes seleccionar un método de pago");
       }
 
+      // Validar que se haya seleccionado un canal de ventas
+      if (!formData.salesChannelId) {
+        throw new Error("Debes seleccionar un canal de ventas");
+      }
+
       // Validar que usuarios de Redes hayan seleccionado una sucursal
       if (isSocialMedia && !formData.branchId) {
         throw new Error(
@@ -1186,8 +1227,11 @@ const NewOrderPage = () => {
         // Para usuarios Cajero, forzar salesChannel a 'tienda'
         // Para usuarios Redes, mantener el salesChannel del formData (sincronizado con plataforma)
         salesChannel: isCashier ? "tienda" : formData.salesChannel,
+        salesChannelId: formData.salesChannelId, // Incluir el ID del canal de ventas
         hasPendingDiscountAuth, // Enviar flag al backend
         discountRequestMessage: discountRequestMessage || null, // Enviar mensaje de solicitud de descuento
+        deliveryDriver: formData.deliveryDriver || null, // Incluir repartidor si está seleccionado
+        deliveryDriverDetails: formData.deliveryDriverDetails || null, // Incluir detalles del repartidor para WhatsApp
       };
 
       const response = await ordersService.createOrder(orderData);
@@ -1304,6 +1348,7 @@ const NewOrderPage = () => {
             email: "",
           },
           salesChannel: isSocialMedia ? "whatsapp" : "tienda",
+          salesChannelId: "", // Resetear canal de ventas
           items: [],
           shippingType: isSocialMedia ? "redes_sociales" : "tienda",
           anonymous: false,
@@ -1329,6 +1374,7 @@ const NewOrderPage = () => {
           sendToProduction: false,
           isSocialMediaOrder: isSocialMedia,
           socialMedia: isSocialMedia ? "whatsapp" : null,
+          deliveryDriver: undefined,
         });
         setHasPendingDiscountAuth(false);
         setDiscountRequestMessage("");
@@ -1606,11 +1652,14 @@ const NewOrderPage = () => {
           orderNumber={whatsAppTicketData.orderNumber}
           clientName={whatsAppTicketData.clientName}
           clientPhone={whatsAppTicketData.clientPhone}
-          ticketUrl={whatsAppTicketData.ticketUrl}
-          ticketType={whatsAppTicketData.ticketType}
+          clientEmail={whatsAppTicketData.clientEmail}
+          saleTicketUrl={whatsAppTicketData.saleTicketUrl}
+          deliveryDriverName={whatsAppTicketData.deliveryDriverName}
+          deliveryDriverPhone={whatsAppTicketData.deliveryDriverPhone}
+          deliveryTicketUrl={whatsAppTicketData.deliveryTicketUrl}
           onSuccess={() => {
             // Opcional: acciones adicionales después de enviar exitosamente
-            console.log('Ticket enviado por WhatsApp exitosamente');
+            console.log('Tickets enviados por WhatsApp exitosamente');
           }}
         />
       )}

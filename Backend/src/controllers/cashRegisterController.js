@@ -739,7 +739,7 @@ const getCashRegisterSummary = async (req, res) => {
       }
     });
 
-    // Buscar todos los pagos de OrderPayment
+    // Buscar todos los pagos de OrderPayment con información completa
     const allPayments = await OrderPayment.find({
       _id: { $in: paymentIds }
     })
@@ -750,6 +750,10 @@ const getCashRegisterSummary = async (req, res) => {
       .populate({
         path: 'orderId',
         select: 'orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod'
+      })
+      .populate({
+        path: 'registeredBy',
+        select: 'username email profile'
       });
     
     // Buscar órdenes que no tienen pagos (órdenes a crédito)
@@ -874,6 +878,124 @@ const getCashRegisterSummary = async (req, res) => {
       .populate('managerId', 'username email profile')
       .sort({ createdAt: -1 });
 
+    // Agrupar PAGOS por método de pago (en lugar de órdenes)
+    const paymentsByMethod = {};
+    
+    // Procesar todos los pagos
+    allPayments.forEach(payment => {
+      if (!payment.paymentMethod || !payment.orderId) return;
+      
+      const methodName = payment.paymentMethod.name || 'Sin método';
+      
+      if (!paymentsByMethod[methodName]) {
+        paymentsByMethod[methodName] = {
+          payments: [],
+          total: 0,
+          count: 0
+        };
+      }
+      
+      // Crear objeto de pago con información completa
+      const paymentData = {
+        _id: payment._id,
+        orderId: payment.orderId._id,
+        orderNumber: payment.orderId.orderNumber,
+        amount: payment.amount,
+        date: payment.date || payment.createdAt,
+        notes: payment.notes || '',
+        isAdvance: payment.isAdvance || false,
+        clientName: payment.orderId.clientInfo?.name || 'N/A',
+        recipientName: payment.orderId.deliveryData?.recipientName || 'N/A',
+        orderStatus: payment.orderId.status,
+        registeredBy: payment.registeredBy?.profile?.fullName || payment.registeredBy?.username || 'N/A'
+      };
+      
+      paymentsByMethod[methodName].payments.push(paymentData);
+      paymentsByMethod[methodName].total += payment.amount;
+      paymentsByMethod[methodName].count += 1;
+    });
+    
+    // Mantener la estructura anterior para compatibilidad
+    const ordersByPaymentMethod = {};
+    
+    ordersArray.forEach(order => {
+      // Obtener los métodos de pago únicos para esta orden
+      const paymentMethods = Array.from(order.paymentMethods);
+      
+      // Si no hay métodos de pago, usar "Sin método"
+      if (paymentMethods.length === 0) {
+        const methodName = 'Sin método';
+        if (!ordersByPaymentMethod[methodName]) {
+          ordersByPaymentMethod[methodName] = {
+            orders: [],
+            total: 0,
+            count: 0
+          };
+        }
+        
+        const orderData = {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          clientName: order.clientName,
+          recipientName: order.recipientName,
+          total: order.total,
+          advance: order.totalPaid,
+          discount: order.discount,
+          discountType: order.discountType,
+          shippingType: order.shippingType,
+          paymentMethod: 'Sin método',
+          status: order.status,
+          createdAt: order.createdAt,
+          itemsCount: order.itemsCount,
+          sendToProduction: order.sendToProduction || false
+        };
+        
+        ordersByPaymentMethod[methodName].orders.push(orderData);
+        ordersByPaymentMethod[methodName].total += order.totalPaid;
+        ordersByPaymentMethod[methodName].count += 1;
+      } else {
+        // Para cada método de pago en esta orden
+        paymentMethods.forEach(methodName => {
+          if (!ordersByPaymentMethod[methodName]) {
+            ordersByPaymentMethod[methodName] = {
+              orders: [],
+              total: 0,
+              count: 0
+            };
+          }
+          
+          // Crear objeto de orden con el método de pago combinado
+          const orderData = {
+            _id: order._id,
+            orderNumber: order.orderNumber,
+            clientName: order.clientName,
+            recipientName: order.recipientName,
+            total: order.total,
+            advance: order.totalPaid,
+            discount: order.discount,
+            discountType: order.discountType,
+            shippingType: order.shippingType,
+            paymentMethod: paymentMethods.join(', '),
+            status: order.status,
+            createdAt: order.createdAt,
+            itemsCount: order.itemsCount,
+            sendToProduction: order.sendToProduction || false
+          };
+          
+          // Verificar si esta orden ya fue agregada a este método de pago
+          const existingOrder = ordersByPaymentMethod[methodName].orders.find(
+            o => o._id.toString() === order._id.toString()
+          );
+          
+          if (!existingOrder) {
+            ordersByPaymentMethod[methodName].orders.push(orderData);
+            ordersByPaymentMethod[methodName].total += order.totalPaid;
+            ordersByPaymentMethod[methodName].count += 1;
+          }
+        });
+      }
+    });
+
     const summary = {
       cashRegister: {
         _id: cashRegister._id,
@@ -890,6 +1012,7 @@ const getCashRegisterSummary = async (req, res) => {
         totalExpenses,
         currentBalance: cashRegister.currentBalance
       },
+      // Mantener el array orders para compatibilidad, pero también agregar ordersByPaymentMethod
       orders: ordersArray.map(order => ({
         _id: order._id,
         orderNumber: order.orderNumber,
@@ -906,6 +1029,8 @@ const getCashRegisterSummary = async (req, res) => {
         itemsCount: order.itemsCount,
         sendToProduction: order.sendToProduction || false
       })),
+      ordersByPaymentMethod, // Nueva estructura agrupada por método de pago
+      paymentsByMethod, // Nueva estructura con pagos individuales agrupados por método
       expenses: expensesFromDB.map(expense => ({
         _id: expense._id,
         folio: expense.folio,
