@@ -19,7 +19,7 @@ import {
 
 export const clientsService = {
   getAllClients: async (filters: ClientFilters = {}): Promise<GetClientsResponse> => {
-    const { page = 1, limit = 10, name, lastName, clientNumber, phoneNumber, status, companyId, branchId } = filters;
+    const { page = 1, limit = 10, name, lastName, clientNumber, phoneNumber, gender, status, companyId, branchId } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -30,6 +30,7 @@ export const clientsService = {
     if (lastName) searchParams.append('lastName', lastName);
     if (clientNumber) searchParams.append('clientNumber', clientNumber);
     if (phoneNumber) searchParams.append('phoneNumber', phoneNumber);
+    if (gender) searchParams.append('gender', gender);
     if (status !== undefined) searchParams.append('status', status.toString());
     if (companyId) searchParams.append('companyId', companyId);
     if (branchId) searchParams.append('branchId', branchId);

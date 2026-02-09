@@ -14,6 +14,7 @@ export interface Client {
   clientNumber: string;
   phoneNumber: string;
   email: string;
+  gender: 'masculino' | 'femenino' | 'otro';
   points: number;
   status: boolean;
   company: string;
@@ -28,6 +29,7 @@ export interface CreateClientData {
   lastName: string;
   phoneNumber: string;
   email?: string;
+  gender: 'masculino' | 'femenino' | 'otro';
   points?: number;
   status?: boolean;
   company: string;
@@ -38,6 +40,7 @@ export interface UpdateClientData {
   lastName?: string;
   phoneNumber?: string;
   email?: string;
+  gender?: 'masculino' | 'femenino' | 'otro';
   points?: number;
   status?: boolean;
 }
@@ -65,12 +68,13 @@ export interface ClientFilters {
   lastName?: string;
   clientNumber?: string;
   phoneNumber?: string;
+  gender?: 'masculino' | 'femenino' | 'otro';
   status?: boolean;
   companyId?: string;
   branchId?: string;
 }
 
-export type FilterType = 'name' | 'lastName' | 'clientNumber' | 'phoneNumber';
+export type FilterType = 'name' | 'lastName' | 'clientNumber' | 'phoneNumber' | 'gender';
 
 export interface FilterOption {
   value: FilterType;

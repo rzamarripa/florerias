@@ -73,6 +73,45 @@ const CashRegisterSummaryPage: React.FC = () => {
 
       if (response.success && response.data) {
         setSummary(response.data);
+        
+        // LOG DETALLADO DE MÉTODOS DE PAGO EN FRONTEND
+        console.log('\n========== MÉTODOS DE PAGO RECIBIDOS EN FRONTEND ==========');
+        console.log('Caja:', response.data.cashRegister.name);
+        console.log('ID de caja:', cashRegisterId);
+        
+        if (response.data.paymentsByMethod) {
+          const paymentsByMethod = response.data.paymentsByMethod;
+          const methodNames = Object.keys(paymentsByMethod);
+          
+          console.log('\nMétodos de pago encontrados:', methodNames.length);
+          console.log('Lista de métodos:', methodNames);
+          console.log('\nDesglose detallado:');
+          console.log('----------------------------');
+          
+          let totalGeneral = 0;
+          methodNames.forEach((method) => {
+            const data = paymentsByMethod[method];
+            console.log(`\n💳 ${method}:`);
+            console.log(`   - Cantidad de pagos: ${data.count}`);
+            console.log(`   - Monto total: $${data.total.toFixed(2)}`);
+            console.log(`   - Promedio: $${(data.total / data.count).toFixed(2)}`);
+            console.log(`   - Primeros 3 pagos:`, data.payments.slice(0, 3).map(p => ({
+              orden: p.orderNumber,
+              monto: p.amount,
+              cliente: p.clientName
+            })));
+            totalGeneral += data.total;
+          });
+          
+          console.log('\n----------------------------');
+          console.log('Total general de todos los métodos: $' + totalGeneral.toFixed(2));
+          console.log('Total de ventas reportado:', response.data.totals.totalSales);
+          console.log('Diferencia:', (totalGeneral - response.data.totals.totalSales).toFixed(2));
+        } else {
+          console.log('\n⚠️ No se encontraron datos de paymentsByMethod');
+        }
+        
+        console.log('============================================\n');
       }
     } catch (error: any) {
       toast.error(error.message || "Error al cargar el resumen de la caja");

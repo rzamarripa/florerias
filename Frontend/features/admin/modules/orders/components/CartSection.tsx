@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Gift } from "lucide-react";
 import { OrderItem } from "../types";
 import { ProductCategory } from "@/features/admin/modules/productCategories/types";
 import { Storage } from "@/features/admin/modules/storage/types";
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CartSectionProps {
   items: OrderItem[];
@@ -85,19 +86,24 @@ const CartSection: React.FC<CartSectionProps> = ({
     unitPrice: 0,
     amount: 0,
     productCategory: null,
+    isPromotional: false,
   });
   const [selectedProductCategory, setSelectedProductCategory] =
     useState<string>("");
+  const [isPromotional, setIsPromotional] = useState<boolean>(false);
 
   // Calcular importe del item actual
   const calculateItemAmount = () => {
+    // Si es promocional, el importe siempre es 0
+    if (isPromotional) return 0;
     return currentItem.quantity * currentItem.unitPrice;
   };
 
   // Agregar item a la lista
   const handleAddItem = () => {
-    if (!currentProductName || currentItem.unitPrice <= 0) {
-      toast.error("Por favor completa el nombre del producto y el precio");
+    // Si es promocional, no requiere validación de precio
+    if (!currentProductName || (!isPromotional && currentItem.unitPrice <= 0)) {
+      toast.error("Por favor completa el nombre del producto" + (!isPromotional ? " y el precio" : ""));
       return;
     }
 
@@ -110,8 +116,10 @@ const CartSection: React.FC<CartSectionProps> = ({
       ...currentItem,
       isProduct: false,
       productName: currentProductName,
-      amount: calculateItemAmount(),
+      unitPrice: isPromotional ? 0 : currentItem.unitPrice,
+      amount: isPromotional ? 0 : calculateItemAmount(),
       productCategory: selectedProductCategory,
+      isPromotional: isPromotional,
     };
 
     onAddItem(newItem);
@@ -124,9 +132,11 @@ const CartSection: React.FC<CartSectionProps> = ({
       unitPrice: 0,
       amount: 0,
       productCategory: null,
+      isPromotional: false,
     });
     setCurrentProductName("");
     setSelectedProductCategory("");
+    setIsPromotional(false);
   };
 
   return (
@@ -172,14 +182,15 @@ const CartSection: React.FC<CartSectionProps> = ({
                   min="0"
                   step="0.01"
                   placeholder="Precio"
-                  value={currentItem.unitPrice || ""}
+                  value={isPromotional ? "0" : (currentItem.unitPrice || "")}
                   onChange={(e) =>
                     setCurrentItem({
                       ...currentItem,
                       unitPrice: parseFloat(e.target.value) || 0,
                     })
                   }
-                  className="py-2"
+                  disabled={isPromotional}
+                  className={`py-2 ${isPromotional ? 'bg-gray-100' : ''}`}
                 />
               </div>
               <div className="col-span-12">
@@ -207,13 +218,46 @@ const CartSection: React.FC<CartSectionProps> = ({
                 </Select>
               </div>
               <div className="col-span-12">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="promotional"
+                    checked={isPromotional}
+                    onCheckedChange={(checked) => {
+                      setIsPromotional(checked as boolean);
+                      if (checked) {
+                        setCurrentItem({
+                          ...currentItem,
+                          unitPrice: 0,
+                        });
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="promotional"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
+                  >
+                    <Gift size={16} className="text-green-600" />
+                    Producto promocional (regalo)
+                  </label>
+                </div>
+              </div>
+              <div className="col-span-12">
                 <Button
                   variant="outline"
                   onClick={handleAddItem}
                   className="w-full"
                 >
-                  <Plus size={16} className="mr-2" />
-                  Agregar (${calculateItemAmount().toFixed(2)})
+                  {isPromotional ? (
+                    <>
+                      <Gift size={16} className="mr-2" />
+                      Agregar Regalo
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} className="mr-2" />
+                      Agregar (${calculateItemAmount().toFixed(2)})
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -246,6 +290,14 @@ const CartSection: React.FC<CartSectionProps> = ({
                             >
                               {item.isProduct ? "Catalogo" : "Manual"}
                             </Badge>
+                            {item.isPromotional && (
+                              <Badge
+                                variant="default"
+                                className="ml-1 bg-green-600"
+                              >
+                                Regalo
+                              </Badge>
+                            )}
                           </div>
                         </td>
                         <td className="text-right font-bold py-2">

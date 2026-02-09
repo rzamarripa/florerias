@@ -457,6 +457,17 @@ const createOrder = async (req, res) => {
 
     // Validar que los productos del catálogo existan y haya stock disponible
     for (const item of items) {
+      // Validar productos promocionales (regalos)
+      if (item.isPromotional === true) {
+        // Los productos promocionales deben tener precio 0
+        if (item.unitPrice !== 0 || item.amount !== 0) {
+          return res.status(400).json({
+            success: false,
+            message: `El producto promocional "${item.productName}" debe tener precio 0`
+          });
+        }
+      }
+
       // Solo requerir categoría para productos manuales (no del catálogo)
       // Los productos del catálogo ya tienen categoría en su modelo Product
       if (!item.productCategory && item.isProduct === false) {
@@ -694,7 +705,7 @@ const createOrder = async (req, res) => {
     // Si hay un anticipo (advance > 0) o un pago con Stripe, crear el registro en OrderPayment
     // Para órdenes de e-commerce sin caja registradora, permitir crear el pago sin cashRegisterId
     if ((advance && advance > 0 && (cashRegisterId || eOrder)) || stripePaymentIntentId) {
-      const paymentAmount = stripePaymentIntentId ? total : advance; // Si es Stripe, es pago completo
+      const paymentAmount = advance || 0; // Siempre usar advance, sin importar si es Stripe o no
       const orderPayment = new OrderPayment({
         orderId: savedOrder._id,
         amount: paymentAmount,
@@ -868,11 +879,11 @@ const createOrder = async (req, res) => {
         // Caso 1: Orden con pago inmediato (advance > 0) - NO Stripe
         if (advance > 0 && paymentMethod && !stripePaymentIntentId) {
           // Determinar si se debe actualizar el balance:
-          // Para cajas normales: si el pago es en efectivo O crédito Y el tipo de envío es 'tienda'
+          // Para cajas normales: SOLO si el pago es en efectivo Y el tipo de envío es 'tienda'
           // Para cajas de redes sociales: todos los pagos EXCEPTO efectivo
           const shouldUpdateBalance = cashRegister?.isSocialMediaBox
             ? !isEffectivo  // Cajas de redes: actualizar si NO es efectivo
-            : ((isEffectivo || isCredito) && savedOrder.shippingType === 'tienda');  // Cajas normales: efectivo o crédito Y en tienda
+            : (isEffectivo && savedOrder.shippingType === 'tienda');  // Cajas normales: SOLO efectivo Y en tienda
 
           // Actualizar el balance de la caja si corresponde
           if (shouldUpdateBalance && savedPaymentId) {
@@ -924,6 +935,25 @@ const createOrder = async (req, res) => {
               }
             }
           );
+          orderRegistered = true;
+        }
+        
+        // Caso 3: Orden con pago con Stripe - SIEMPRE registrar en lastRegistry
+        if (stripePaymentIntentId && savedPaymentId && !orderRegistered) {
+          // Registrar el pago de Stripe en lastRegistry (sin actualizar balance porque las tarjetas no afectan el efectivo en caja)
+          await CashRegister.findByIdAndUpdate(
+            cashRegisterId,
+            {
+              $push: {
+                lastRegistry: {
+                  orderId: savedOrder._id,
+                  paymentIds: [savedPaymentId], // Incluir el ID del pago de Stripe
+                  saleDate: new Date()
+                }
+              }
+            }
+          );
+          orderRegistered = true;
         }
       } catch (cashRegisterError) {
         // No fallar la orden si hay error al actualizar la caja

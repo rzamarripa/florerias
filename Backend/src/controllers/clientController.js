@@ -41,6 +41,10 @@ export const getAllClients = async (req, res) => {
     const phoneNumberFilter = createSafeRegexFilter(req.query.phoneNumber);
     if (phoneNumberFilter) filters.phoneNumber = phoneNumberFilter;
 
+    if (req.query.gender) {
+      filters.gender = req.query.gender.toLowerCase();
+    }
+
     if (req.query.status !== undefined) {
       filters.status = req.query.status === "true";
     }
@@ -81,13 +85,13 @@ export const getAllClients = async (req, res) => {
 
 export const createClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, points, status, company } = req.body;
+    const { name, lastName, phoneNumber, email, gender, points, status, company } = req.body;
 
     // Validaciones básicas
-    if (!name || !lastName || !phoneNumber) {
+    if (!name || !lastName || !phoneNumber || !gender) {
       return res.status(400).json({
         success: false,
-        message: "Name, lastName, and phoneNumber are required",
+        message: "Name, lastName, phoneNumber, and gender are required",
       });
     }
 
@@ -95,6 +99,15 @@ export const createClient = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Company is required",
+      });
+    }
+
+    // Validar género
+    const validGenders = ['masculino', 'femenino', 'otro'];
+    if (!validGenders.includes(gender.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: "Gender must be: masculino, femenino, or otro",
       });
     }
 
@@ -112,6 +125,7 @@ export const createClient = async (req, res) => {
       lastName,
       phoneNumber,
       email: email || "",
+      gender: gender.toLowerCase(),
       points: points || 0,
       status: status !== undefined ? status : true,
       company,
@@ -155,6 +169,7 @@ export const createClient = async (req, res) => {
           clientNumber: updatedClient.clientNumber,
           phoneNumber: updatedClient.phoneNumber,
           email: updatedClient.email,
+          gender: updatedClient.gender,
           points: updatedClient.points,
           status: updatedClient.status,
           purchases: updatedClient.purchases,
@@ -204,13 +219,23 @@ export const getClientById = async (req, res) => {
 
 export const updateClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, points, status } = req.body;
+    const { name, lastName, phoneNumber, email, gender, points, status } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
     if (lastName) updateData.lastName = lastName;
     if (phoneNumber) updateData.phoneNumber = phoneNumber;
     if (email !== undefined) updateData.email = email;
+    if (gender) {
+      const validGenders = ['masculino', 'femenino', 'otro'];
+      if (!validGenders.includes(gender.toLowerCase())) {
+        return res.status(400).json({
+          success: false,
+          message: "Gender must be: masculino, femenino, or otro",
+        });
+      }
+      updateData.gender = gender.toLowerCase();
+    }
     if (points !== undefined) updateData.points = points;
     if (status !== undefined) updateData.status = status;
 

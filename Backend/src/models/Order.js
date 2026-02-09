@@ -134,6 +134,10 @@ const orderItemSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: null
+  },
+  isPromotional: {
+    type: Boolean,
+    default: false
   }
 }, { _id: true });
 

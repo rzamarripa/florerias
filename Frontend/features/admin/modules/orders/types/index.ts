@@ -36,6 +36,7 @@ export interface OrderItem {
   insumos?: OrderItemInsumo[];
   isReward?: boolean; // true si es un item de recompensa
   rewardCode?: string; // código de la recompensa usada
+  isPromotional?: boolean; // true si es un producto promocional (regalo)
 }
 
 export interface OrderMaterial {

@@ -739,6 +739,15 @@ const getCashRegisterSummary = async (req, res) => {
       }
     });
 
+    console.log('\n========== DEBUG EXTRACCIÓN DE PAGOS ==========');
+    console.log('Total registros en lastRegistry:', cashRegister.lastRegistry.length);
+    console.log('Detalle de registros:');
+    cashRegister.lastRegistry.forEach((reg, index) => {
+      console.log(`  Registro ${index + 1}: ${reg.paymentIds?.length || 0} pagos`);
+    });
+    console.log('Total paymentIds extraídos:', paymentIds.length);
+    console.log('================================================\n');
+
     // Buscar todos los pagos de OrderPayment con información completa
     const allPayments = await OrderPayment.find({
       _id: { $in: paymentIds }
@@ -755,6 +764,22 @@ const getCashRegisterSummary = async (req, res) => {
         path: 'registeredBy',
         select: 'username email profile'
       });
+    
+    console.log('\n========== PAGOS ENCONTRADOS EN BD ==========');
+    console.log('Pagos solicitados:', paymentIds.length);
+    console.log('Pagos encontrados:', allPayments.length);
+    if (paymentIds.length !== allPayments.length) {
+      console.log('⚠️ ADVERTENCIA: No se encontraron todos los pagos!');
+      const foundIds = allPayments.map(p => p._id.toString());
+      const missingIds = paymentIds.filter(id => 
+        !foundIds.includes(id.toString())
+      );
+      console.log('IDs faltantes:', missingIds);
+    }
+    allPayments.forEach(payment => {
+      console.log(`  Pago ${payment._id}: ${payment.paymentMethod?.name || 'Sin método'} - $${payment.amount}`);
+    });
+    console.log('==============================================\n');
     
     // Buscar órdenes que no tienen pagos (órdenes a crédito)
     const { default: Order } = await import('../models/Order.js');
@@ -778,26 +803,32 @@ const getCashRegisterSummary = async (req, res) => {
       // Para cajas de redes sociales, totalSales incluye todos los pagos no-efectivo
       totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     } else {
-      // Cajas normales: TODOS los pagos de ventas en tienda (cualquier método de pago)
+      // Cajas normales: pagos de ventas en tienda
       relevantPayments = allPayments.filter(payment => {
-        const shippingType = payment.orderId?.shippingType || '';
+        // Si el pago no tiene orderId poblado, incluirlo de todos modos
+        // porque está en lastRegistry
+        if (!payment.orderId) {
+          console.log('⚠️ Pago sin orderId:', payment._id);
+          return true; // Incluir el pago aunque no tenga orden
+        }
+        const shippingType = payment.orderId.shippingType || '';
         return shippingType === 'tienda';
       });
       
-      // Para el balance de caja, mantener solo efectivo y crédito de tienda
+      // Para el balance de caja físico, solo efectivo afecta el dinero en caja
       cashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
-        const shippingType = payment.orderId?.shippingType || '';
-        return paymentMethodName.includes('efectivo') && shippingType === 'tienda';
+        return paymentMethodName.includes('efectivo');
       });
       
+      // Crédito de tienda (no tarjetas de crédito)
       creditPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
-        const shippingType = payment.orderId?.shippingType || '';
-        return (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito')) && shippingType === 'tienda';
+        return (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito')) && 
+               !paymentMethodName.includes('tarjeta'); // Excluir tarjetas de crédito
       });
       
-      // Balance solo cuenta efectivo + crédito
+      // Balance físico solo cuenta efectivo + crédito de tienda (no tarjetas)
       totalSales = [...cashPayments, ...creditPayments].reduce((sum, payment) => sum + (payment.amount || 0), 0);
     }
 
@@ -882,8 +913,8 @@ const getCashRegisterSummary = async (req, res) => {
     // Agrupar PAGOS por método de pago (en lugar de órdenes)
     const paymentsByMethod = {};
     
-    // Procesar todos los pagos
-    allPayments.forEach(payment => {
+    // Procesar solo los pagos relevantes según el tipo de caja
+    relevantPayments.forEach(payment => {
       if (!payment.paymentMethod || !payment.orderId) return;
       
       const methodName = payment.paymentMethod.name || 'Sin método';
@@ -915,6 +946,26 @@ const getCashRegisterSummary = async (req, res) => {
       paymentsByMethod[methodName].total += payment.amount;
       paymentsByMethod[methodName].count += 1;
     });
+    
+    // LOG DETALLADO DE MÉTODOS DE PAGO
+    console.log('\n========== RESUMEN DE MÉTODOS DE PAGO - CAJA:', cashRegister.name, '==========');
+    console.log('Tipo de caja:', cashRegister.isSocialMediaBox ? 'Redes Sociales' : 'Normal');
+    console.log('Total de pagos relevantes procesados:', relevantPayments.length);
+    console.log('\nDesglose por método de pago:');
+    console.log('----------------------------');
+    
+    Object.entries(paymentsByMethod).forEach(([method, data]) => {
+      console.log(`\n📝 ${method}:`);
+      console.log(`   - Cantidad de pagos: ${data.count}`);
+      console.log(`   - Monto total: $${data.total.toFixed(2)}`);
+      console.log(`   - Promedio por pago: $${(data.total / data.count).toFixed(2)}`);
+    });
+    
+    console.log('\n----------------------------');
+    console.log('Total general de todos los métodos: $' + 
+      Object.values(paymentsByMethod).reduce((sum, data) => sum + data.total, 0).toFixed(2)
+    );
+    console.log('========================================\n');
     
     // Mantener la estructura anterior para compatibilidad
     const ordersByPaymentMethod = {};

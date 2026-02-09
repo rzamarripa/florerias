@@ -19,6 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ClientModalProps {
   show: boolean;
@@ -41,9 +48,10 @@ const ClientModal: React.FC<ClientModalProps> = ({
     lastName: "",
     phoneNumber: "",
     email: "",
+    gender: "masculino",
     points: 0,
     status: true,
-    branch: "",
+    company: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -58,9 +66,10 @@ const ClientModal: React.FC<ClientModalProps> = ({
         lastName: client.lastName,
         phoneNumber: client.phoneNumber,
         email: client.email || "",
+        gender: client.gender || "masculino",
         points: client.points,
         status: client.status,
-        branch: client.branch?._id || "",
+        company: client.company || "",
       });
       if (client._id) {
         checkDigitalCard(client._id);
@@ -71,9 +80,10 @@ const ClientModal: React.FC<ClientModalProps> = ({
         lastName: "",
         phoneNumber: "",
         email: "",
+        gender: "masculino",
         points: 0,
         status: true,
-        branch: "",
+        company: "",
       });
       setDigitalCard(null);
       setShowCardActions(false);
@@ -99,6 +109,9 @@ const ClientModal: React.FC<ClientModalProps> = ({
     }
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = "El teléfono es requerido";
+    }
+    if (!formData.gender) {
+      newErrors.gender = "El género es requerido";
     }
     if (formData.points !== undefined && formData.points < 0) {
       newErrors.points = "Los puntos no pueden ser negativos";
@@ -257,6 +270,28 @@ const ClientModal: React.FC<ClientModalProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="gender">
+                  Género <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.gender}
+                  onValueChange={(value: 'masculino' | 'femenino' | 'otro') => handleChange("gender", value)}
+                >
+                  <SelectTrigger className={errors.gender ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Selecciona el género" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="femenino">Femenino</SelectItem>
+                    <SelectItem value="otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.gender && (
+                  <p className="text-sm text-destructive">{errors.gender}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="points">Puntos Iniciales</Label>
                 <Input
                   id="points"
@@ -273,15 +308,15 @@ const ClientModal: React.FC<ClientModalProps> = ({
                   <p className="text-sm text-destructive">{errors.points}</p>
                 )}
               </div>
+            </div>
 
-              <div className="flex items-center space-x-2 pt-8">
-                <Switch
-                  id="status"
-                  checked={formData.status}
-                  onCheckedChange={(checked) => handleChange("status", checked)}
-                />
-                <Label htmlFor="status">Cliente Activo</Label>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="status"
+                checked={formData.status}
+                onCheckedChange={(checked) => handleChange("status", checked)}
+              />
+              <Label htmlFor="status">Cliente Activo</Label>
             </div>
           </div>
 

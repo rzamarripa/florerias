@@ -60,6 +60,7 @@ const filterOptions: FilterOption[] = [
   { value: "lastName", label: "Apellidos" },
   { value: "clientNumber", label: "Número de Cliente" },
   { value: "phoneNumber", label: "Teléfono" },
+  { value: "gender", label: "Género" },
 ];
 
 const ClientsPage: React.FC = () => {
@@ -68,6 +69,7 @@ const ClientsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filterType, setFilterType] = useState<FilterType>("name");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
@@ -163,6 +165,10 @@ const ClientsPage: React.FC = () => {
         filters.status = statusFilter === "true";
       }
 
+      if (genderFilter && genderFilter !== "all") {
+        filters.gender = genderFilter as 'masculino' | 'femenino' | 'otro';
+      }
+
       if (companyId) {
         filters.companyId = companyId;
       }
@@ -188,7 +194,7 @@ const ClientsPage: React.FC = () => {
     if (companyId) {
       loadClients(true, 1);
     }
-  }, [searchTerm, filterType, statusFilter, companyId]);
+  }, [searchTerm, filterType, statusFilter, genderFilter, companyId]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
@@ -201,6 +207,10 @@ const ClientsPage: React.FC = () => {
 
   const handleStatusFilterChange = (value: string): void => {
     setStatusFilter(value);
+  };
+
+  const handleGenderFilterChange = (value: string): void => {
+    setGenderFilter(value);
   };
 
   const handlePageChange = (page: number) => {
@@ -341,6 +351,18 @@ const ClientsPage: React.FC = () => {
                 <SelectItem value="false">Inactivos</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select value={genderFilter} onValueChange={handleGenderFilterChange}>
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder="Género" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="masculino">Masculino</SelectItem>
+                <SelectItem value="femenino">Femenino</SelectItem>
+                <SelectItem value="otro">Otro</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
@@ -357,6 +379,7 @@ const ClientsPage: React.FC = () => {
                     <TableHead>No. Cliente</TableHead>
                     <TableHead>Teléfono</TableHead>
                     <TableHead>Correo</TableHead>
+                    <TableHead>Género</TableHead>
                     <TableHead>Puntos</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Fecha Registro</TableHead>
@@ -367,7 +390,7 @@ const ClientsPage: React.FC = () => {
                   {clients.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={9}
+                        colSpan={10}
                         className="text-center py-12 text-muted-foreground"
                       >
                         <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -408,6 +431,11 @@ const ClientsPage: React.FC = () => {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="capitalize">
+                            {client.gender || 'No especificado'}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{client.points} pts</Badge>

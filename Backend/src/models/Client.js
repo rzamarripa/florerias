@@ -41,6 +41,16 @@ const clientSchema = new Schema(
       default: "",
       match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Por favor ingresa un correo válido']
     },
+    gender: {
+      type: String,
+      required: [true, "El género es requerido"],
+      enum: {
+        values: ['masculino', 'femenino', 'otro'],
+        message: 'El género debe ser: masculino, femenino u otro'
+      },
+      lowercase: true,
+      trim: true
+    },
     points: {
       type: Number,
       required: true,
@@ -124,6 +134,7 @@ const clientSchema = new Schema(
 clientSchema.index({ phoneNumber: 1 });
 clientSchema.index({ status: 1 });
 clientSchema.index({ company: 1 });
+clientSchema.index({ gender: 1 });
 
 // Method to get full name
 clientSchema.methods.getFullName = function() {

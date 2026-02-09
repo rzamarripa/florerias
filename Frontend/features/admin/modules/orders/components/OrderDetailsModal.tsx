@@ -782,8 +782,13 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     // Verificar si el metodo de pago seleccionado es tarjeta
     const selectedMethod = paymentMethods.find(m => m._id === formData.paymentMethod);
     if (selectedMethod && isCardPaymentMethod(selectedMethod.name)) {
-      // Si es pago con tarjeta, guardar datos y abrir modal de Stripe
-      setPendingOrderData(orderData);
+      // Si es pago con tarjeta, asegurar que advance tenga el valor correcto
+      // Si no hay anticipo especificado o es 0, usar el total como anticipo (pago completo)
+      const stripeOrderData = {
+        ...orderData,
+        advance: orderData.advance > 0 ? orderData.advance : orderData.total
+      };
+      setPendingOrderData(stripeOrderData);
       setPendingFiles({ comprobante: comprobanteFile, arreglo: arregloFile });
       setShowStripeModal(true);
     } else {
