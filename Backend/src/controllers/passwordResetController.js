@@ -1,6 +1,6 @@
 import { User } from "../models/User.js";
 import { PasswordResetCode } from "../models/PasswordResetCode.js";
-import { sendPasswordResetCode, sendPasswordChangeConfirmation } from "../services/emailService.js";
+// El envío de emails se maneja desde el Frontend con Resend
 
 // Generate 6-digit code
 const generateResetCode = () => {
@@ -70,14 +70,17 @@ export const sendResetCode = async (req, res) => {
     const savedCode = await resetCode.save();
     console.log("Código guardado en BD con ID:", savedCode._id);
 
-    // Send email to the user's actual email address
-    console.log("Enviando email a:", userEmail, "con código:", code);
-    await sendPasswordResetCode(userEmail, code);
-    console.log("Email enviado exitosamente");
+    // El Frontend se encargará de enviar el email
+    console.log("Código generado:", code, "para email:", userEmail);
 
     return res.status(200).json({
       success: true,
-      message: "Código de recuperación enviado al correo electrónico"
+      message: "Código de recuperación generado exitosamente",
+      data: {
+        code: code, // Enviar el código al Frontend para que lo incluya en el email
+        email: userEmail, // Email real del usuario
+        username: user.username
+      }
     });
 
   } catch (error) {
@@ -218,12 +221,16 @@ export const resetPassword = async (req, res) => {
     // Mark code as used
     await resetCode.markAsUsed();
 
-    // Send confirmation email
-    await sendPasswordChangeConfirmation(user.email, user.username);
+    // El Frontend se encargará de enviar el email de confirmación
+    console.log("Contraseña actualizada para:", user.username);
 
     return res.status(200).json({
       success: true,
-      message: "Contraseña actualizada exitosamente"
+      message: "Contraseña actualizada exitosamente",
+      data: {
+        email: user.email,
+        username: user.username
+      }
     });
 
   } catch (error) {

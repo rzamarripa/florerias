@@ -170,6 +170,23 @@ const PizarronEnvioPage: React.FC = () => {
     }
   };
 
+  const handleFinalizeOrder = async (order: Order) => {
+    try {
+      // Actualizar el status de la orden a 'finalizado'
+      await ordersService.updateOrderStatus(order._id, {
+        status: 'finalizado'
+      });
+
+      // Remover la orden de la lista local (ya no aparecerá en el pizarrón)
+      setOrders(prevOrders => prevOrders.filter(o => o._id !== order._id));
+
+      toast.success("Orden finalizada correctamente");
+    } catch (error: any) {
+      toast.error(error.message || "Error al finalizar la orden");
+      console.error("Error finalizing order:", error);
+    }
+  };
+
   // Convertir stages a columnas de kanban
   const createColumnsFromStages = (stages: StageCatalog[]): KanbanColumnType[] => {
     return stages.map(stage => ({
@@ -227,6 +244,11 @@ const PizarronEnvioPage: React.FC = () => {
   };
 
   const shippingColumns = createColumnsFromStages(shippingStages);
+  
+  // Identificar la última etapa (el stageNumber más alto)
+  const lastStageNumber = shippingStages.length > 0 
+    ? Math.max(...shippingStages.map(stage => stage.stageNumber))
+    : 0;
 
   return (
     <div className="container mx-auto py-1 px-4">
@@ -295,8 +317,10 @@ const PizarronEnvioPage: React.FC = () => {
                   orders={getOrdersByStage(column.id)}
                   color={getRGBAColor(column.color)}
                   status={column.id}
+                  isLastShippingStage={column.stageNumber === lastStageNumber}
                   onViewDetails={handleViewDetails}
                   onChangeStatus={handleChangeStage}
+                  onFinalizeOrder={handleFinalizeOrder}
                 />
               </div>
             ))}

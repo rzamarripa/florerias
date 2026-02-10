@@ -3,8 +3,12 @@ import { Purchase } from "../models/Purchase.js";
 import { Branch } from "../models/Branch.js";
 import { Company } from "../models/Company.js";
 import { PointsReward } from "../models/PointsReward.js";
+import { DigitalCard } from "../models/DigitalCard.js";
+import { CardTransaction } from "../models/CardTransaction.js";
 import clientPointsService from "../services/clientPointsService.js";
 import { createSafeRegexFilter } from "../utils/sanitize.js";
+import qrCodeService from "../services/digitalCards/qrCodeService.js";
+import { v4 as uuidv4 } from "uuid";
 
 // Function to generate unique redemption code
 const generateRedemptionCode = () => {
@@ -85,7 +89,7 @@ export const getAllClients = async (req, res) => {
 
 export const createClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, gender, points, status, company } = req.body;
+    const { name, lastName, phoneNumber, email, gender, points, status, company, generateDigitalCard, howDidYouHearAboutUs } = req.body;
 
     // Validaciones básicas
     if (!name || !lastName || !phoneNumber || !gender) {
@@ -129,6 +133,7 @@ export const createClient = async (req, res) => {
       points: points || 0,
       status: status !== undefined ? status : true,
       company,
+      howDidYouHearAboutUs: howDidYouHearAboutUs || null,
     };
 
     const client = await Client.create(clientData);
@@ -155,11 +160,75 @@ export const createClient = async (req, res) => {
     }
 
     // Obtener cliente actualizado con puntos
-    const updatedClient = await Client.findById(client._id);
+    const updatedClient = await Client.findById(client._id).populate("company");
+
+    // Generar tarjeta digital si se solicita
+    let digitalCardInfo = null;
+    if (generateDigitalCard) {
+      try {
+        console.log(`🎫 Generando tarjeta digital para el nuevo cliente ${updatedClient._id}`);
+        
+        // Generar código QR y datos encriptados
+        const tempPassSerialNumber = uuidv4();
+        const { qrCode, qrData } = await qrCodeService.generateQRCode({
+          clientId: updatedClient._id,
+          clientNumber: updatedClient.clientNumber,
+          passSerialNumber: tempPassSerialNumber,
+          companyId: company,
+        });
+
+        // Generar código de barras
+        const barcode = await qrCodeService.generateBarcode(updatedClient.clientNumber);
+
+        // Crear la tarjeta digital
+        const digitalCard = new DigitalCard({
+          clientId: updatedClient._id,
+          cardType: "generic",
+          lastPointsBalance: updatedClient.points,
+          companyId: company,
+          passSerialNumber: tempPassSerialNumber,
+          qrData: qrData,
+          barcode: barcode,
+          metadata: {
+            logoText: updatedClient.company?.tradeName || updatedClient.company?.legalName || "Corazón Violeta",
+          },
+        });
+
+        await digitalCard.save();
+
+        // Registrar la generación en las transacciones
+        await CardTransaction.create({
+          digitalCardId: digitalCard._id,
+          clientId: updatedClient._id,
+          transactionType: "card_generated",
+          balanceAfter: updatedClient.points,
+          locationData: {
+            companyId: company,
+          },
+        });
+
+        digitalCardInfo = {
+          _id: digitalCard._id,
+          passSerialNumber: digitalCard.passSerialNumber,
+          barcode: digitalCard.barcode,
+          tempQrCode: qrCode, // Enviar QR temporal para que el frontend lo suba a Firebase
+          message: "Tarjeta digital generada exitosamente",
+        };
+
+        console.log(`✅ Tarjeta digital creada para el cliente ${updatedClient._id}`);
+      } catch (cardError) {
+        console.error("Error generando tarjeta digital:", cardError);
+        // No fallar la creación del cliente si hay error al generar la tarjeta
+        digitalCardInfo = {
+          error: cardError.message,
+          message: "Cliente creado pero hubo un error al generar la tarjeta digital",
+        };
+      }
+    }
 
     res.status(201).json({
       success: true,
-      message: "Client created successfully",
+      message: generateDigitalCard ? "Cliente y tarjeta digital creados exitosamente" : "Cliente creado exitosamente",
       data: {
         client: {
           _id: updatedClient._id,
@@ -177,6 +246,7 @@ export const createClient = async (req, res) => {
           updatedAt: updatedClient.updatedAt,
         },
         registrationPoints: registrationPointsInfo,
+        digitalCard: digitalCardInfo,
       },
     });
   } catch (error) {
@@ -219,7 +289,7 @@ export const getClientById = async (req, res) => {
 
 export const updateClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, gender, points, status } = req.body;
+    const { name, lastName, phoneNumber, email, gender, points, status, howDidYouHearAboutUs } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
@@ -238,6 +308,17 @@ export const updateClient = async (req, res) => {
     }
     if (points !== undefined) updateData.points = points;
     if (status !== undefined) updateData.status = status;
+    if (howDidYouHearAboutUs !== undefined) {
+      // Validar que sea un valor válido del enum
+      const validOptions = ['redes_sociales', 'recomendacion', 'google_busqueda', 'pasando_por_local', 'volante_publicidad', 'otro', null];
+      if (howDidYouHearAboutUs !== null && !validOptions.includes(howDidYouHearAboutUs)) {
+        return res.status(400).json({
+          success: false,
+          message: "El valor de 'Cómo se enteró de nosotros' no es válido",
+        });
+      }
+      updateData.howDidYouHearAboutUs = howDidYouHearAboutUs;
+    }
 
     // Verificar si el número de teléfono ya existe en otro cliente
     if (phoneNumber) {

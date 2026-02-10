@@ -780,19 +780,39 @@ const redeemAuthorizationForOrder = async (req, res) => {
 
     const companyId = branch.companyId._id;
 
-    // Buscar el primer stage de Producción (stageNumber = 1, boardType = 'Produccion')
-    const firstProductionStage = await StageCatalog.findOne({
-      company: companyId,
-      stageNumber: 1,
-      boardType: 'Produccion',
-      isActive: true
-    });
+    // Determinar qué etapa asignar basándose en las características de la orden
+    let stageToAssign;
 
-    if (!firstProductionStage) {
-      return res.status(400).json({
-        success: false,
-        message: 'No se encontró una etapa inicial de Producción activa para esta empresa.'
+    // Si es venta rápida con envío, buscar primera etapa de Envío
+    if (order.quickSale === true && order.shippingType === 'envio') {
+      stageToAssign = await StageCatalog.findOne({
+        company: companyId,
+        stageNumber: 1,
+        boardType: 'Envio',
+        isActive: true
       });
+      
+      if (!stageToAssign) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se encontró una etapa inicial de Envío activa para ventas rápidas con envío.'
+        });
+      }
+    } else {
+      // Comportamiento por defecto: primera etapa de Producción
+      stageToAssign = await StageCatalog.findOne({
+        company: companyId,
+        stageNumber: 1,
+        boardType: 'Produccion',
+        isActive: true
+      });
+      
+      if (!stageToAssign) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se encontró una etapa inicial de Producción activa para esta empresa.'
+        });
+      }
     }
 
     // Marcar la autorización como canjeada
@@ -804,7 +824,7 @@ const redeemAuthorizationForOrder = async (req, res) => {
       orderId,
       {
         sendToProduction: true,
-        stage: firstProductionStage._id
+        stage: stageToAssign._id
       },
       { new: true, runValidators: true }
     )
@@ -841,8 +861,8 @@ const redeemAuthorizationForOrder = async (req, res) => {
           authFolio,
           discountValue: discountAuth.discountValue,
           discountType: discountAuth.discountType,
-          stageId: firstProductionStage._id,
-          stageName: firstProductionStage.name
+          stageId: stageToAssign._id,
+          stageName: stageToAssign.name
         }
       );
     } catch (logError) {

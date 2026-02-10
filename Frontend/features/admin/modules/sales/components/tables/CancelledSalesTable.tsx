@@ -146,6 +146,15 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
       );
     }
 
+    // Si no tiene anticipo o el status es sinAnticipo
+    if (sale.advance === 0 || sale.status === 'sinAnticipo') {
+      return (
+        <Badge className="px-3 py-1 rounded-full font-medium bg-orange-500 hover:bg-orange-500/90 text-white">
+          Sin Anticipo
+        </Badge>
+      );
+    }
+
     // Si no esta cancelada, verificar el saldo (aunque en esta tabla todas deberian estar canceladas)
     if (sale.remainingBalance === 0) {
       return (
@@ -162,8 +171,18 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
     }
   };
 
-  const getStageBadge = (stage: Sale["stage"]) => {
-    if (!stage) {
+  const getStageBadge = (sale: Sale) => {
+    if (!sale.stage) {
+      // Si no tiene etapa pero el status es finalizado, mostrar badge verde
+      if (sale.status === 'finalizado') {
+        return (
+          <Badge
+            className="px-3 py-1 rounded-full font-medium bg-green-500 hover:bg-green-500/90 text-white"
+          >
+            Finalizado
+          </Badge>
+        );
+      }
       return (
         <Badge
           variant="secondary"
@@ -174,19 +193,19 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
       );
     }
 
-    const backgroundColor = `rgba(${stage.color.r}, ${stage.color.g}, ${stage.color.b}, ${stage.color.a})`;
+    const backgroundColor = `rgba(${sale.stage.color.r}, ${sale.stage.color.g}, ${sale.stage.color.b}, ${sale.stage.color.a})`;
 
     const stageBadge = (
       <Badge
         className="px-3 py-1 rounded-full font-medium text-white"
         style={{ backgroundColor }}
       >
-        {stage.name}
+        {sale.stage.name}
       </Badge>
     );
 
     // Si está en el pizarrón de envío, mostrar badge adicional
-    if (stage.boardType === 'Envio') {
+    if (sale.stage.boardType === 'Envio') {
       return (
         <>
           {stageBadge}
@@ -278,7 +297,7 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
                     "N/A"
                   )}
                 </TableCell>
-                <TableCell className="px-4 py-3">{getStageBadge(sale.stage)}</TableCell>
+                <TableCell className="px-4 py-3">{getStageBadge(sale)}</TableCell>
                 <TableCell className="px-4 py-3">
                   {getPaymentStatusBadge(sale)}
                 </TableCell>

@@ -32,15 +32,20 @@ export const ordersService = {
 
   updateOrderStatus: async (
     orderId: string,
-    status: string
+    data: { status: string; cancellationReason?: string }
   ): Promise<{ success: boolean; data: Order; message: string }> => {
     const response = await apiCall<Order>(
       `/orders/${orderId}/status`,
       {
         method: "PUT",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(data),
       }
     );
+    
+    if (!response.success) {
+      throw new Error(response.message || 'Error al actualizar el estado de la orden');
+    }
+    
     return {
       success: response.success,
       data: response.data,

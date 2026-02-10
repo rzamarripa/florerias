@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Save, User, QrCode, Download, Loader2 } from "lucide-react";
-import { Client, CreateClientData, UpdateClientData } from "../types";
+import { X, Save, User, QrCode, Download, Loader2, CreditCard } from "lucide-react";
+import { Client, CreateClientData, UpdateClientData, HowDidYouHearAboutUs } from "../types";
 import { useRouter } from "next/navigation";
 import digitalCardService from "../../digitalCards/services/digitalCardService";
 import { toast } from "sonner";
+import { uploadDigitalCardQR } from "@/services/firebaseStorage";
+import { branchesService } from "../../branches/services/branches";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,13 +28,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ClientModalProps {
   show: boolean;
   onHide: () => void;
   client?: Client | null;
-  onSave: (data: CreateClientData | UpdateClientData) => void;
+  onSave: (data: CreateClientData | UpdateClientData, generateCard?: boolean) => Promise<void>;
   loading?: boolean;
+  companyId?: string | null;
 }
 
 const ClientModal: React.FC<ClientModalProps> = ({
@@ -41,6 +54,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
   client,
   onSave,
   loading = false,
+  companyId,
 }) => {
   const router = useRouter();
   const [formData, setFormData] = useState<CreateClientData>({
@@ -52,12 +66,15 @@ const ClientModal: React.FC<ClientModalProps> = ({
     points: 0,
     status: true,
     company: "",
+    howDidYouHearAboutUs: null,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generatingCard, setGeneratingCard] = useState(false);
   const [digitalCard, setDigitalCard] = useState<any>(null);
   const [showCardActions, setShowCardActions] = useState(false);
+  const [showCardConfirmation, setShowCardConfirmation] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<CreateClientData | null>(null);
 
   useEffect(() => {
     if (client) {
@@ -70,6 +87,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         points: client.points,
         status: client.status,
         company: client.company || "",
+        howDidYouHearAboutUs: client.howDidYouHearAboutUs || null,
       });
       if (client._id) {
         checkDigitalCard(client._id);
@@ -84,6 +102,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         points: 0,
         status: true,
         company: "",
+        howDidYouHearAboutUs: null,
       });
       setDigitalCard(null);
       setShowCardActions(false);
@@ -121,10 +140,33 @@ const ClientModal: React.FC<ClientModalProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSave(formData);
+      if (!client) {
+        // Para cliente nuevo, mostrar confirmación de tarjeta digital
+        setPendingFormData(formData);
+        setShowCardConfirmation(true);
+      } else {
+        // Para edición, guardar directamente
+        await onSave(formData);
+      }
+    }
+  };
+
+  const handleConfirmWithCard = async () => {
+    if (pendingFormData) {
+      setShowCardConfirmation(false);
+      await onSave(pendingFormData, true);
+      setPendingFormData(null);
+    }
+  };
+
+  const handleConfirmWithoutCard = async () => {
+    if (pendingFormData) {
+      setShowCardConfirmation(false);
+      await onSave(pendingFormData, false);
+      setPendingFormData(null);
     }
   };
 
@@ -310,6 +352,27 @@ const ClientModal: React.FC<ClientModalProps> = ({
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="howDidYouHearAboutUs">¿Cómo se enteró de nosotros?</Label>
+              <Select
+                value={formData.howDidYouHearAboutUs || "no_especificado"}
+                onValueChange={(value) => handleChange("howDidYouHearAboutUs", value === "no_especificado" ? null : value as HowDidYouHearAboutUs)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una opción (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no_especificado">Sin especificar</SelectItem>
+                  <SelectItem value="redes_sociales">Redes Sociales (Facebook, Instagram, etc.)</SelectItem>
+                  <SelectItem value="recomendacion">Recomendación de amigo/familiar</SelectItem>
+                  <SelectItem value="google_busqueda">Google/Búsqueda en internet</SelectItem>
+                  <SelectItem value="pasando_por_local">Pasando por el local</SelectItem>
+                  <SelectItem value="volante_publicidad">Volante/Publicidad impresa</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-center space-x-2">
               <Switch
                 id="status"
@@ -390,6 +453,34 @@ const ClientModal: React.FC<ClientModalProps> = ({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Modal de confirmación para generar tarjeta digital */}
+      <AlertDialog open={showCardConfirmation} onOpenChange={setShowCardConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              ¿Generar Tarjeta Digital?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">El cliente ha sido creado exitosamente.</span>
+              <span className="block font-medium">¿Desea generar una tarjeta digital con código QR para este cliente?</span>
+              <span className="block text-sm text-muted-foreground">
+                La tarjeta digital permite al cliente acumular y canjear puntos escaneando su código QR.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleConfirmWithoutCard}>
+              No, solo crear cliente
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmWithCard} className="bg-primary">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Sí, generar tarjeta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

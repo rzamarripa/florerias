@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, Calendar, Phone, CreditCard, Award, ShoppingBag } from "lucide-react";
-import { Client } from "../types";
+import { User, Calendar, Phone, CreditCard, Award, ShoppingBag, Info } from "lucide-react";
+import { Client, HowDidYouHearAboutUs } from "../types";
 
 interface ClientViewModalProps {
   client: Client;
@@ -33,6 +33,18 @@ const ClientViewModal: React.FC<ClientViewModalProps> = ({
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const getHowDidYouHearAboutUsLabel = (value: HowDidYouHearAboutUs): string => {
+    const labels: Record<string, string> = {
+      'redes_sociales': 'Redes Sociales (Facebook, Instagram, etc.)',
+      'recomendacion': 'Recomendación de amigo/familiar',
+      'google_busqueda': 'Google/Búsqueda en internet',
+      'pasando_por_local': 'Pasando por el local',
+      'volante_publicidad': 'Volante/Publicidad impresa',
+      'otro': 'Otro',
+    };
+    return value ? labels[value] || 'No especificado' : 'No especificado';
   };
 
   return (
@@ -107,6 +119,14 @@ const ClientViewModal: React.FC<ClientViewModalProps> = ({
                   {client.phoneNumber}
                 </div>
               </div>
+              <div className="mb-2">
+                <small className="text-muted-foreground">Email</small>
+                <div className="font-medium">{client.email || 'No especificado'}</div>
+              </div>
+              <div className="mb-2">
+                <small className="text-muted-foreground">Género</small>
+                <div className="font-medium capitalize">{client.gender || 'No especificado'}</div>
+              </div>
             </div>
 
             {/* Points Program */}
@@ -134,6 +154,19 @@ const ClientViewModal: React.FC<ClientViewModalProps> = ({
                   {client.purchases.length}
                 </div>
                 <small className="text-muted-foreground">Compras Realizadas</small>
+              </div>
+            </div>
+
+            {/* Source Info - Full Width */}
+            <div className="col-span-1 md:col-span-2 border rounded-lg p-3 bg-blue-50/50">
+              <div className="flex items-center mb-3">
+                <Info className="text-blue-500 mr-2" size={20} />
+                <h6 className="mb-0 font-semibold">¿Cómo se enteró de nosotros?</h6>
+              </div>
+              <div className="font-medium">
+                <Badge variant="outline" className="text-base px-3 py-2">
+                  {getHowDidYouHearAboutUsLabel(client.howDidYouHearAboutUs || null)}
+                </Badge>
               </div>
             </div>
 

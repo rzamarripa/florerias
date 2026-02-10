@@ -28,6 +28,7 @@ import { clientsService } from '../clients/services/clients';
 import { branchesService } from '../branches/services/branches';
 import { companiesService } from '../companies/services/companies';
 import { uploadDigitalCardQR, uploadDigitalCardHero } from '@/services/firebaseStorage';
+import { sendAppleWalletCard, sendGoogleWalletCard } from '@/services/emailService';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import { useUserRoleStore } from '@/stores/userRoleStore';
 import { useActiveBranchStore } from '@/stores/activeBranchStore';
@@ -677,6 +678,25 @@ const DigitalCardsPage: React.FC = () => {
               document.body.removeChild(a);
               
               toast.success('Apple Wallet Pass descargado correctamente');
+              
+              // Enviar email si el cliente tiene correo
+              if (selectedClient?.email) {
+                try {
+                  const downloadUrl = `${apiUrl}/api/digital-cards/download/apple/${digitalCard._id}`;
+                  await sendAppleWalletCard({
+                    to: selectedClient.email,
+                    clientName: `${selectedClient.name} ${selectedClient.lastName}`,
+                    clientNumber: selectedClient.clientNumber,
+                    points: selectedClient.points,
+                    downloadUrl: downloadUrl,
+                    companyName: 'Corazón Violeta'
+                  });
+                  toast.success('Email enviado con la tarjeta');
+                } catch (emailError) {
+                  console.error('Error enviando email:', emailError);
+                  // No mostrar error al usuario si el email falla, ya se descargó la tarjeta
+                }
+              }
             } catch (error: any) {
               console.error('Error descargando Apple Wallet:', error);
               toast.error(error.message || 'Error al descargar Apple Wallet Pass');
@@ -696,6 +716,24 @@ const DigitalCardsPage: React.FC = () => {
                   // Abrir URL de Google Wallet en nueva pestaña
                   window.open(data.saveUrl, '_blank');
                   toast.success('Abriendo Google Wallet...');
+                  
+                  // Enviar email si el cliente tiene correo
+                  if (selectedClient?.email) {
+                    try {
+                      await sendGoogleWalletCard({
+                        to: selectedClient.email,
+                        clientName: `${selectedClient.name} ${selectedClient.lastName}`,
+                        clientNumber: selectedClient.clientNumber,
+                        points: selectedClient.points,
+                        saveUrl: data.saveUrl,
+                        companyName: 'Corazón Violeta'
+                      });
+                      toast.success('Email enviado con el enlace de Google Wallet');
+                    } catch (emailError) {
+                      console.error('Error enviando email:', emailError);
+                      // No mostrar error al usuario si el email falla, ya se abrió el enlace
+                    }
+                  }
                 } else if (data.isDevelopment) {
                   toast.info('Modo desarrollo: Configure las credenciales de Google Wallet');
                   console.log('Instrucciones:', data.data?.instructions);

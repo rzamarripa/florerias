@@ -4,7 +4,7 @@ import { CardTransaction } from "../models/CardTransaction.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import appleWalletService from "../services/digitalCards/appleWalletService.js";
 import googleWalletService from "../services/digitalCards/googleWalletService.js";
-import { sendGoogleWalletCard, sendAppleWalletCard } from "../services/emailService.js";
+// No importamos servicios de email - el Frontend se encarga de enviar emails
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -246,32 +246,12 @@ export const downloadAppleWallet = async (req, res) => {
         },
       });
 
-      // Enviar por correo SOLO si NO viene del email (para evitar doble envío)
+      // El Frontend se encargará de enviar el email si es necesario
+      // Solo registramos si es una descarga desde email para evitar loops
       const isFromEmail = req.query.email === 'sent';
-      if (clientData.email && !isFromEmail) {
-        try {
-          const companyName = digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta";
-          console.log("\n📧 Enviando Apple Wallet Pass por correo a:", clientData.email);
-          const emailResult = await sendAppleWalletCard(
-            clientData,
-            passBuffer,
-            companyName,
-            digitalCard._id
-          );
-          
-          if (emailResult.success) {
-            console.log("✅ Apple Wallet Pass enviado por correo exitosamente a:", clientData.email);
-          } else {
-            console.error("❌ Error enviando correo de Apple Wallet:", emailResult.error);
-          }
-        } catch (emailError) {
-          console.error("Error enviando correo de Apple Wallet:", emailError);
-        }
-      } else if (isFromEmail) {
-        console.log("📨 Descarga desde link de email detectada - No se enviará otro correo");
+      if (isFromEmail) {
+        console.log("📨 Descarga desde link de email detectada");
         console.log("👤 Usuario descargando desde email:", clientData.email);
-      } else {
-        console.log("⚠️ Cliente sin email registrado");
       }
 
       // Enviar el archivo .pkpass como respuesta
@@ -807,24 +787,7 @@ export const downloadGoogleWallet = async (req, res) => {
         },
       });
 
-      // Enviar correo con el enlace de Google Wallet
-      if (clientData.email && result.saveUrl) {
-        try {
-          const emailResult = await sendGoogleWalletCard(
-            clientData,
-            result.saveUrl,
-            companyName
-          );
-          
-          if (emailResult.success) {
-            console.log("Correo de Google Wallet enviado exitosamente con saveUrl:", result.saveUrl);
-          } else {
-            console.error("Error enviando correo:", emailResult.error);
-          }
-        } catch (emailError) {
-          console.error("Error enviando correo de Google Wallet:", emailError);
-        }
-      }
+      // El Frontend se encargará de enviar el email con la saveUrl
 
       // Retornar la URL para guardar en Google Wallet
       res.status(200).json({

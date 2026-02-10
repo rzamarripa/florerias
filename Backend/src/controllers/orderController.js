@@ -571,15 +571,21 @@ const createOrder = async (req, res) => {
     // Variable para indicar si se debe enviar a envío
     let shouldSendToShipping = false;
 
-    // Verificar si es una venta rápida
-    if (quickSale) {
+    // PRIORIDAD: Si hay descuento pendiente de autorización, NO asignar etapa
+    if (hasPendingDiscountAuth) {
+      // Cualquier orden con descuento pendiente: sin etapa y status pendiente
+      stageId = null;
+      orderStatus = 'pendiente';
+      shouldSendToShipping = false;
+    } else if (quickSale) {
+      // Verificar si es una venta rápida (solo si NO hay descuento pendiente)
       // Venta rápida - no enviar a producción
       shouldSendToProduction = false;
       
       if (shippingType === 'tienda') {
-        // Caso 1: Venta rápida en tienda - directamente entregada
+        // Caso 1: Venta rápida en tienda - directamente finalizado
         stageId = null;
-        orderStatus = 'entregada';
+        orderStatus = 'finalizado';
         shouldSendToShipping = false;
       } else {
         // Caso 2: Venta rápida con envío - asignar primera etapa de Envío
@@ -612,12 +618,12 @@ const createOrder = async (req, res) => {
         }
 
         stageId = firstShippingStage._id;
-        orderStatus = 'envio';
+        orderStatus = 'pendiente';
       }
     } else {
-      // Caso 3: Lógica normal (sin venta rápida)
-      // Asignar etapa si: sendToProduction = true O (advance > 0 Y NO hay descuento pendiente)
-      if (shouldSendToProduction || (advance && advance > 0 && !hasPendingDiscountAuth)) {
+      // Caso 3: Lógica normal (sin venta rápida y sin descuento pendiente)
+      // Asignar etapa si: sendToProduction = true O advance > 0
+      if (shouldSendToProduction || (advance && advance > 0)) {
         // Obtener la empresa a través de la sucursal
         const branchWithCompany = await Branch.findById(branchId).populate('companyId');
 
@@ -649,9 +655,8 @@ const createOrder = async (req, res) => {
         orderStatus = 'pendiente'; // Con stage asignado, status = 'pendiente'
       } else {
         // Si NO tiene anticipo Y NO se envía a producción
-        // O si tiene descuento pendiente de autorización
-        // Asignar status = 'sinAnticipo' (o 'pendiente' si tiene descuento pendiente) y stage = null
-        orderStatus = hasPendingDiscountAuth ? 'pendiente' : 'sinAnticipo';
+        // Asignar status = 'sinAnticipo' y stage = null
+        orderStatus = 'sinAnticipo';
         stageId = null;
       }
     }
@@ -725,9 +730,14 @@ const createOrder = async (req, res) => {
       const savedPayment = await orderPayment.save();
       savedPaymentId = savedPayment._id;
       
-      // Si es pago con Stripe y fue exitoso, actualizar el remainingBalance a 0
+      // Si es pago con Stripe y fue exitoso, calcular el remainingBalance correctamente
       if (stripePaymentIntentId && stripePaymentStatus === 'succeeded') {
-        savedOrder.remainingBalance = 0;
+        // Para pagos parciales con tarjeta, calcular el saldo restante
+        if (advance >= total) {
+          savedOrder.remainingBalance = 0;
+        } else {
+          savedOrder.remainingBalance = total - advance;
+        }
       }
 
       // Agregar la referencia del pago a la orden
@@ -1369,7 +1379,7 @@ const updateOrderStatus = async (req, res) => {
       }
     }
 
-    const validStatuses = ['pendiente', 'en-proceso', 'completado', 'cancelado', 'entregada', 'envio'];
+    const validStatuses = ['pendiente', 'en-proceso', 'completado', 'cancelado', 'entregada', 'envio', 'finalizado'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -1379,6 +1389,7 @@ const updateOrderStatus = async (req, res) => {
 
     // Obtener la orden antes de actualizarla para saber su estado anterior
     const existingOrder = await Order.findById(id);
+    
     if (!existingOrder) {
       return res.status(404).json({
         success: false,
@@ -1563,8 +1574,29 @@ const updateOrderStatus = async (req, res) => {
       }
     }
 
+    // Si la orden fue finalizada, crear log
+    if (status === 'finalizado' && previousStatus !== 'finalizado') {
+      try {
+        const finalizedByUser = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+        await orderLogService.createLog(
+          id,
+          'order_completed',
+          `Orden finalizada - Entrega completada`,
+          req.user._id,
+          finalizedByUser?.profile?.fullName || finalizedByUser?.name || 'Usuario',
+          finalizedByUser?.role?.name || 'Usuario',
+          {
+            previousStatus,
+            newStatus: 'finalizado',
+            orderNumber: order.orderNumber
+          }
+        );
+      } catch (logError) {
+      }
+    }
+
     // Para otros cambios de status
-    if (status !== 'cancelado' && status !== 'completado' && previousStatus !== status) {
+    if (status !== 'cancelado' && status !== 'completado' && status !== 'finalizado' && previousStatus !== status) {
       try {
         const user = await mongoose.model('cs_user').findById(req.user._id).populate('role');
         await orderLogService.createLog(

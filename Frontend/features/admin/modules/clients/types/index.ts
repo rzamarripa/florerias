@@ -6,6 +6,8 @@ export interface ClientComment {
   fechaCreacion: string;
 }
 
+export type HowDidYouHearAboutUs = 'redes_sociales' | 'recomendacion' | 'google_busqueda' | 'pasando_por_local' | 'volante_publicidad' | 'otro' | null;
+
 export interface Client {
   _id: string;
   name: string;
@@ -20,6 +22,7 @@ export interface Client {
   company: string;
   purchases: string[];
   comentarios: ClientComment[];
+  howDidYouHearAboutUs?: HowDidYouHearAboutUs;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +36,7 @@ export interface CreateClientData {
   points?: number;
   status?: boolean;
   company: string;
+  howDidYouHearAboutUs?: HowDidYouHearAboutUs;
 }
 
 export interface UpdateClientData {
@@ -43,6 +47,7 @@ export interface UpdateClientData {
   gender?: 'masculino' | 'femenino' | 'otro';
   points?: number;
   status?: boolean;
+  howDidYouHearAboutUs?: HowDidYouHearAboutUs;
 }
 
 export interface CreateClientResponseData {

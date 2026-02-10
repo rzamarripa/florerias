@@ -12,9 +12,11 @@ interface KanbanColumnProps {
   status: string;
   isLastProductionStage?: boolean;
   hasShippingStages?: boolean;
+  isLastShippingStage?: boolean;
   onViewDetails?: (order: Order) => void;
   onChangeStatus?: (order: Order, newStatus: string) => void;
   onSendToShipping?: (order: Order) => void;
+  onFinalizeOrder?: (order: Order) => void;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -25,9 +27,11 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   status,
   isLastProductionStage = false,
   hasShippingStages = false,
+  isLastShippingStage = false,
   onViewDetails,
   onChangeStatus,
   onSendToShipping,
+  onFinalizeOrder,
 }) => {
   // Configurar drop zone
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
@@ -108,7 +112,9 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               onViewDetails={onViewDetails}
               isLastProductionStage={isLastProductionStage}
               hasShippingStages={hasShippingStages}
+              isLastShippingStage={isLastShippingStage}
               onSendToShipping={onSendToShipping}
+              onFinalizeOrder={onFinalizeOrder}
               stageName={title}
               stageColor={color}
             />

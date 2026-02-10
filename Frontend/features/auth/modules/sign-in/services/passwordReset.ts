@@ -1,8 +1,14 @@
 import { env } from "@/config/env";
+import { sendPasswordResetCode, sendPasswordChangeConfirmation } from "@/services/emailService";
 
 export interface SendResetCodeResponse {
   success: boolean;
   message: string;
+  data?: {
+    code: string;
+    email: string;
+    username: string;
+  };
 }
 
 export interface VerifyCodeResponse {
@@ -17,6 +23,10 @@ export interface VerifyCodeResponse {
 export interface ResetPasswordResponse {
   success: boolean;
   message: string;
+  data?: {
+    email: string;
+    username: string;
+  };
 }
 
 // Send reset code to email
@@ -37,6 +47,41 @@ export const sendResetCode = async (email: string): Promise<SendResetCodeRespons
     console.log("Respuesta status:", response.status);
     const data = await response.json();
     console.log("Datos recibidos:", data);
+    
+    // Si el Backend generó el código exitosamente, enviar el email desde el Frontend
+    if (data.success && data.data?.code && data.data?.email) {
+      try {
+        console.log("Enviando email con código desde Frontend...");
+        const emailResult = await sendPasswordResetCode({
+          to: data.data.email,
+          code: data.data.code,
+          userName: data.data.username || 'Usuario',
+          companyName: 'Corazón Violeta'
+        });
+        
+        if (!emailResult.success) {
+          console.error("Error enviando email:", emailResult.error);
+          // Aunque el email falle, el código ya fue generado
+          return {
+            success: true,
+            message: "Código generado. Si el correo existe en nuestro sistema, recibirás un código de recuperación."
+          };
+        }
+        
+        console.log("Email enviado exitosamente");
+        return {
+          success: true,
+          message: "Código de recuperación enviado al correo electrónico"
+        };
+      } catch (emailError) {
+        console.error("Error enviando email:", emailError);
+        return {
+          success: true,
+          message: "Código generado. Si el correo existe en nuestro sistema, recibirás un código de recuperación."
+        };
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error("Error sending reset code:", error);
@@ -94,6 +139,23 @@ export const resetPassword = async (
     });
 
     const data = await response.json();
+    
+    // Si el password se actualizó exitosamente, enviar email de confirmación
+    if (data.success && data.data?.email) {
+      try {
+        console.log("Enviando email de confirmación desde Frontend...");
+        await sendPasswordChangeConfirmation({
+          to: data.data.email,
+          userName: data.data.username || 'Usuario',
+          companyName: 'Corazón Violeta'
+        });
+        console.log("Email de confirmación enviado exitosamente");
+      } catch (emailError) {
+        console.error("Error enviando email de confirmación:", emailError);
+        // No afectar el resultado aunque el email de confirmación falle
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error("Error resetting password:", error);

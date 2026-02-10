@@ -122,7 +122,17 @@ const clientSchema = new Schema(
         ref: "Order",
         default: null
       }
-    }]
+    }],
+    howDidYouHearAboutUs: {
+      type: String,
+      enum: {
+        values: ['redes_sociales', 'recomendacion', 'google_busqueda', 'pasando_por_local', 'volante_publicidad', 'otro', null],
+        message: 'El valor debe ser uno de: redes_sociales, recomendacion, google_busqueda, pasando_por_local, volante_publicidad, otro'
+      },
+      default: null,
+      lowercase: true,
+      trim: true
+    }
   },
   {
     timestamps: true,

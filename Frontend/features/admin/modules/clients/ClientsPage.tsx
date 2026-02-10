@@ -20,6 +20,9 @@ import {
   CreateClientData,
   UpdateClientData,
 } from "./types";
+import digitalCardService from "../digitalCards/services/digitalCardService";
+import { uploadDigitalCardQR } from "@/services/firebaseStorage";
+import { branchesService as digitalCardBranchesService } from "../branches/services/branches";
 import { useRouter } from "next/navigation";
 import ClientModal from "./components/ClientModal";
 import ClientPointsDashboardModal from "./components/ClientPointsDashboardModal";
@@ -242,7 +245,8 @@ const ClientsPage: React.FC = () => {
   };
 
   const handleSaveClient = async (
-    data: CreateClientData | UpdateClientData
+    data: CreateClientData | UpdateClientData,
+    generateCard?: boolean
   ) => {
     try {
       setModalLoading(true);
@@ -257,10 +261,57 @@ const ClientsPage: React.FC = () => {
 
         const clientData = { 
           ...data, 
-          company: companyId
-        } as CreateClientData;
-        await clientsService.createClient(clientData);
-        toast.success("Cliente creado exitosamente");
+          company: companyId,
+          generateDigitalCard: generateCard
+        } as CreateClientData & { generateDigitalCard?: boolean };
+        
+        const response = await clientsService.createClient(clientData);
+        
+        if (response.data?.client) {
+          const newClient = response.data.client;
+          
+          // Si se solicitó generar tarjeta digital y el cliente fue creado
+          if (generateCard) {
+            try {
+              toast.info("Generando tarjeta digital...");
+              
+              // Generar la tarjeta digital
+              const cardResponse = await digitalCardService.generateDigitalCard(newClient._id);
+              
+              if (cardResponse && cardResponse.tempQrCode) {
+                // Subir QR a Firebase si viene con QR temporal
+                try {
+                  toast.info("Subiendo código QR a la nube...");
+                  
+                  // Determinar el branchId para el path de Firebase
+                  const branchIdForCard = activeBranch?._id || branchId || 'default';
+                  
+                  const { url, path } = await uploadDigitalCardQR(
+                    cardResponse.tempQrCode,
+                    companyId,
+                    branchIdForCard,
+                    newClient._id
+                  );
+                  
+                  // Actualizar la tarjeta con las URLs de Firebase
+                  await digitalCardService.updateQRUrls(cardResponse._id, url, path);
+                  
+                  toast.success("Cliente y tarjeta digital creados exitosamente");
+                } catch (uploadError) {
+                  console.error("Error subiendo QR a Firebase:", uploadError);
+                  toast.warning("Cliente y tarjeta creados, pero hubo un error al subir el QR");
+                }
+              } else {
+                toast.success("Cliente y tarjeta digital creados exitosamente");
+              }
+            } catch (cardError) {
+              console.error("Error generando tarjeta digital:", cardError);
+              toast.warning("Cliente creado, pero hubo un error al generar la tarjeta digital");
+            }
+          } else {
+            toast.success("Cliente creado exitosamente");
+          }
+        }
       }
       setShowModal(false);
       loadClients(false);
@@ -505,6 +556,7 @@ const ClientsPage: React.FC = () => {
         client={selectedClient}
         onSave={handleSaveClient}
         loading={modalLoading}
+        companyId={companyId}
       />
 
       <ClientPointsDashboardModal

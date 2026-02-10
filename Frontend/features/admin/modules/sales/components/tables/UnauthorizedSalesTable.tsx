@@ -203,6 +203,15 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
       );
     }
 
+    // Si no tiene anticipo o el status es sinAnticipo
+    if (sale.advance === 0 || sale.status === 'sinAnticipo') {
+      return (
+        <Badge className="px-3 py-1 rounded-full font-medium bg-orange-500 hover:bg-orange-500/90 text-white">
+          Sin Anticipo
+        </Badge>
+      );
+    }
+
     // Si no esta cancelada, verificar el saldo
     if (sale.remainingBalance === 0) {
       return (

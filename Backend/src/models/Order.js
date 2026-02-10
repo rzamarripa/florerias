@@ -254,7 +254,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pendiente', 'en-proceso', 'completado', 'cancelado', 'sinAnticipo', 'entregada', 'envio'],
+    enum: ['pendiente', 'en-proceso', 'completado', 'cancelado', 'sinAnticipo', 'entregada', 'envio', 'finalizado'],
     default: 'pendiente'
   },
   stage: {

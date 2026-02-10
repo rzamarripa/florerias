@@ -192,7 +192,7 @@ const clientPointsService = {
   },
 
   /**
-   * Verifica si es la primera compra del cliente
+   * Verifica si es la primera compra del cliente en una sucursal específica
    * @param {string} clientId - ID del cliente
    * @param {string} branchId - ID de la sucursal
    * @returns {boolean} true si es la primera compra
@@ -209,6 +209,33 @@ const clientPointsService = {
       return existingOrders <= 1;
     } catch (error) {
       console.error("Error al verificar primera compra:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Verifica si es la primera compra del cliente a nivel empresa (en cualquier sucursal)
+   * @param {string} clientId - ID del cliente
+   * @param {string} companyId - ID de la empresa
+   * @returns {boolean} true si es la primera compra en toda la empresa
+   */
+  async isFirstPurchaseInCompany(clientId, companyId) {
+    try {
+      // Obtener todas las sucursales de la empresa
+      const branches = await Branch.find({ companyId }).select('_id');
+      const branchIds = branches.map(b => b._id);
+      
+      // Buscar órdenes del cliente en cualquier sucursal de la empresa
+      const existingOrders = await Order.countDocuments({
+        "clientInfo.clientId": clientId,
+        branchId: { $in: branchIds },
+        status: { $ne: "cancelado" },
+      });
+
+      // Si no hay órdenes previas (o solo hay 1 que es la actual), es primera compra
+      return existingOrders <= 1;
+    } catch (error) {
+      console.error("Error al verificar primera compra a nivel empresa:", error);
       return false;
     }
   },
@@ -406,12 +433,105 @@ const clientPointsService = {
       }
     }
 
+    // 3. Puntos por primera compra
+    if (config.pointsForFirstPurchase?.enabled) {
+      let isFirstPurchase = false;
+      
+      if (source === "branch") {
+        // Config SUCURSAL: verificar primera compra en ESTA sucursal
+        isFirstPurchase = await this.isFirstPurchase(clientId, branchId);
+      } else if (source === "global") {
+        // Config GLOBAL: verificar primera compra en TODA LA EMPRESA
+        isFirstPurchase = await this.isFirstPurchaseInCompany(clientId, companyId);
+      }
+      
+      if (isFirstPurchase && config.pointsForFirstPurchase.points > 0) {
+        const firstPurchasePoints = config.pointsForFirstPurchase.points;
+        const result = await this.addPointsToClient({
+          clientId,
+          points: firstPurchasePoints,
+          type: "earned",
+          reason: "first_purchase",
+          branchId,
+          orderId,
+          description: `Bono por primera compra${descriptionSuffix}`,
+          registeredBy,
+          configSource: source,
+          companyId
+        });
+
+        if (result.success) {
+          total += firstPurchasePoints;
+          details.push({
+            reason: "first_purchase",
+            points: firstPurchasePoints,
+            source,
+            description: `Puntos por primera compra${descriptionSuffix}`
+          });
+        }
+      }
+    }
+
+    // 4. Puntos por visita a sucursal
+    if (config.pointsForBranchVisit?.enabled) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
+      let visitQuery = {
+        "clientInfo.clientId": clientId,
+        createdAt: { $gte: todayStart },
+        status: { $ne: "cancelado" }
+      };
+      
+      // Determinar scope de la visita según la configuración
+      if (source === "branch") {
+        // Config SUCURSAL: contar visitas solo a ESTA sucursal
+        visitQuery.branchId = branchId;
+      } else if (source === "global") {
+        // Config GLOBAL: contar visitas a CUALQUIER sucursal de la empresa
+        const branches = await Branch.find({ companyId }).select('_id');
+        const branchIds = branches.map(b => b._id);
+        visitQuery.branchId = { $in: branchIds };
+      }
+      
+      const visitsToday = await Order.countDocuments(visitQuery);
+      
+      // Si no excede el límite de visitas diarias
+      if (visitsToday <= config.pointsForBranchVisit.maxVisitsPerDay) {
+        const visitPoints = config.pointsForBranchVisit.points;
+        const result = await this.addPointsToClient({
+          clientId,
+          points: visitPoints,
+          type: "earned",
+          reason: "branch_visit",
+          branchId,
+          orderId,
+          description: `Puntos por visita del día${descriptionSuffix}`,
+          registeredBy,
+          configSource: source,
+          companyId
+        });
+
+        if (result.success) {
+          total += visitPoints;
+          details.push({
+            reason: "branch_visit",
+            points: visitPoints,
+            source,
+            description: `Puntos por visita${descriptionSuffix}`
+          });
+        }
+      }
+    }
+
+    // Nota: pointsForClientRegistration NO se procesa aquí, solo al registrar cliente
+
     return { total, details };
   },
 
   /**
    * Procesa los puntos para una orden creada
-   * NO incluye puntos por primera compra (se manejará desde otro lugar)
+   * Incluye todas las opciones de configuración de puntos (excepto registro de cliente)
    * Solo procesa puntos si la orden tiene anticipo o fue enviada a producción
    * @param {Object} params - Parámetros
    * @param {string} params.clientId - ID del cliente
@@ -513,9 +633,6 @@ const clientPointsService = {
     }
 
     console.error(`✅ [Puntos Procesados] Total: ${totalPoints} puntos de ${configsUsed.length} configuracion(es)`);
-
-    // NOTA: NO se incluyen puntos por primera compra aquí
-    // Se manejarán desde otra parte del sistema según lo solicitado
 
     return {
       success: true,

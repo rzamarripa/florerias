@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Package, Send } from "lucide-react";
+import { Calendar, User, Package, Send, CheckCircle } from "lucide-react";
 import { useDrag } from "react-dnd";
 import { Order } from "../types";
 
@@ -10,20 +10,24 @@ interface KanbanCardProps {
   order: Order;
   isLastProductionStage?: boolean;
   hasShippingStages?: boolean;
+  isLastShippingStage?: boolean;
   stageName?: string;
   stageColor?: string;
   onViewDetails?: (order: Order) => void;
   onSendToShipping?: (order: Order) => void;
+  onFinalizeOrder?: (order: Order) => void;
 }
 
 const KanbanCard: React.FC<KanbanCardProps> = ({
   order,
   isLastProductionStage = false,
   hasShippingStages = false,
+  isLastShippingStage = false,
   stageName,
   stageColor,
   onViewDetails,
-  onSendToShipping
+  onSendToShipping,
+  onFinalizeOrder
 }) => {
   // Configurar drag - no permitir drag si el estado es "completado"
   const canDrag = order.status !== "completado";
@@ -183,6 +187,25 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
               >
                 <Send size={16} />
                 Enviar a Envio
+              </Button>
+            </div>
+          )}
+
+          {/* Finalize Order Button - Only show in last shipping stage */}
+          {isLastShippingStage && onFinalizeOrder && (
+            <div className="mt-3">
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full flex items-center justify-center gap-2 text-xs font-semibold rounded-lg bg-green-600 hover:bg-green-700"
+                onClick={(e) => {
+                  e.stopPropagation(); // Evitar que se abra el modal de detalles
+                  onFinalizeOrder(order);
+                }}
+                title="Finalizar entrega de la orden"
+              >
+                <CheckCircle size={16} />
+                Finalizar
               </Button>
             </div>
           )}
