@@ -176,6 +176,15 @@ const ClientsPage: React.FC = () => {
         filters.companyId = companyId;
       }
 
+      // Si es gerente, filtrar por su sucursal
+      if (isManager && branchId) {
+        filters.branchId = branchId;
+      }
+      // Si es admin y tiene sucursal activa, puede filtrar por ella
+      else if (isAdmin && activeBranch) {
+        filters.branchId = activeBranch._id;
+      }
+
       const response = await clientsService.getAllClients(filters);
 
       if (response.data) {
@@ -262,6 +271,7 @@ const ClientsPage: React.FC = () => {
         const clientData = { 
           ...data, 
           company: companyId,
+          branch: isManager ? branchId : (isAdmin && activeBranch ? activeBranch._id : undefined),
           generateDigitalCard: generateCard
         } as CreateClientData & { generateDigitalCard?: boolean };
         

@@ -1,14 +1,16 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, User, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, User, Loader2, Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cashiersService } from "./services/cashiers";
 import {
   Cashier,
   CashierFilters,
+  CreateCashierData,
   UpdateCashierData,
 } from "./types";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 import Actions from "./components/Actions";
 import CashierModal from "./components/CashierModal";
 
@@ -34,6 +36,8 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 
 const CashiersPage: React.FC = () => {
+  const { getIsAdmin, getIsManager } = useUserRoleStore();
+  const canCreateCashier = getIsAdmin() || getIsManager();
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -103,7 +107,10 @@ const CashiersPage: React.FC = () => {
     loadCashiers(true, page);
   };
 
-  // Función handleCreateCashier eliminada - Los cajeros se crean desde el módulo de branches
+  const handleCreateCashier = () => {
+    setSelectedCashier(null);
+    setShowModal(true);
+  };
 
   const handleEditCashier = (cashier: Cashier) => {
     setSelectedCashier(cashier);
@@ -126,18 +133,23 @@ const CashiersPage: React.FC = () => {
   };
 
   const handleSaveCashier = async (
-    data: UpdateCashierData
+    data: CreateCashierData | UpdateCashierData
   ) => {
     try {
       setModalLoading(true);
       if (selectedCashier) {
-        await cashiersService.updateCashier(selectedCashier._id, data);
+        // Modo edición
+        await cashiersService.updateCashier(selectedCashier._id, data as UpdateCashierData);
         toast.success("Cajero actualizado exitosamente");
-        setShowModal(false);
-        loadCashiers(false);
+      } else {
+        // Modo creación
+        await cashiersService.createCashier(data as CreateCashierData);
+        toast.success("Cajero creado exitosamente");
       }
+      setShowModal(false);
+      loadCashiers(false);
     } catch (error: any) {
-      toast.error(error.message || "Error al actualizar el cajero");
+      toast.error(error.message || `Error al ${selectedCashier ? 'actualizar' : 'crear'} el cajero`);
     } finally {
       setModalLoading(false);
     }
@@ -188,6 +200,11 @@ const CashiersPage: React.FC = () => {
       <PageHeader
         title="Cajeros"
         description="Gestiona los cajeros del sistema"
+        action={canCreateCashier ? {
+          label: "Nuevo Cajero",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleCreateCashier,
+        } : undefined}
       />
 
       {/* Filters & Table */}

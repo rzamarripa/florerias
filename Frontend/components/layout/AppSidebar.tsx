@@ -48,19 +48,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { MenuItemType } from "@/types/menu";
-import {
-  originalMenuItems,
-  userDropdownItems,
-} from "@/config/constants";
+import { userDropdownItems } from "@/config/constants";
 import { useUserModulesStore } from "@/stores/userModulesStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
-import {
-  canAccessPage,
-  isSuperAdmin,
-  getPagePathFromRoute,
-} from "@/utils/pagePermissions";
+import { isSuperAdmin } from "@/utils/pagePermissions";
+import { buildMenuFromPermissions } from "@/utils/menuBuilder";
 
 import logo from "@/assets/images/logo.png";
 import logoSm from "@/assets/images/logo-sm.png";
@@ -366,49 +360,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const filteredMenuItems = React.useMemo(() => {
     const isAdmin = isSuperAdmin(role);
-
-    const filterMenuItem = (item: MenuItemType): MenuItemType | null => {
-      if (item.isTitle) {
-        return item;
-      }
-
-      if (item.children && item.children.length > 0) {
-        const filteredChildren = item.children
-          .map((child) => filterMenuItem(child))
-          .filter((child) => child !== null) as MenuItemType[];
-
-        if (filteredChildren.length === 0) {
-          return null;
-        }
-
-        return {
-          ...item,
-          children: filteredChildren,
-        };
-      }
-
-      // SuperAdmin tiene acceso completo
-      if (isAdmin) {
-        return item;
-      }
-
-      // Para todos los demás roles, filtrar basado en permisos de la base de datos
-      if (item.url) {
-        const pagePath = getPagePathFromRoute(item.url);
-        if (canAccessPage(allowedModules, pagePath)) {
-          return item;
-        }
-        return null;
-      }
-
-      return item;
-    };
-
-    // Usar originalMenuItems para TODOS los roles
-    // SuperAdmin lo obtiene sin filtros, otros roles con filtros basados en permisos
-    return originalMenuItems
-      .map((item) => filterMenuItem(item))
-      .filter((item) => item !== null) as MenuItemType[];
+    
+    // Usar la nueva función para construir el menú dinámicamente
+    return buildMenuFromPermissions(allowedModules, isAdmin);
   }, [allowedModules, role]);
 
   // Group menu items by title sections

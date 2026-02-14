@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Save, User, Eye, EyeOff, Building2, Loader2 } from "lucide-react";
+import { Save, User, Eye, EyeOff, Building2, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { Cashier, UpdateCashierData } from "../types";
+import { Cashier, CreateCashierData, UpdateCashierData } from "../types";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
+import { apiCall } from "@/utils/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,7 @@ interface CashierModalProps {
   show: boolean;
   onHide: () => void;
   cashier: Cashier | null;
-  onSave: (data: UpdateCashierData) => void;
+  onSave: (data: CreateCashierData | UpdateCashierData) => void;
   loading?: boolean;
 }
 
@@ -62,23 +63,68 @@ const CashierModal: React.FC<CashierModalProps> = ({
   const [loadingUserCompany, setLoadingUserCompany] = useState(false);
   const [branches, setBranches] = useState<any[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
+  const [managerBranch, setManagerBranch] = useState<any>(null);
+  const [cashierRoleId, setCashierRoleId] = useState<string | null>(null);
+  const [loadingRole, setLoadingRole] = useState(false);
 
-  // Load user company for Admin/Manager
-  const loadUserCompany = async () => {
+  // Load Cajero role ID
+  const loadCashierRole = async () => {
+    setLoadingRole(true);
+    try {
+      const response = await apiCall<{ success: boolean; data: any[] }>(
+        "/roles?estatus=true"
+      );
+      const cashierRole = response.data?.find(
+        (role) => role.name.toLowerCase() === "cajero"
+      );
+      if (cashierRole) {
+        setCashierRoleId(cashierRole._id);
+      } else {
+        toast.error("No se encontró el rol de Cajero en el sistema");
+      }
+    } catch (err: any) {
+      console.error("Error loading cashier role:", err);
+      toast.error("Error al cargar el rol de Cajero");
+    } finally {
+      setLoadingRole(false);
+    }
+  };
+
+  // Load user company and branches for Admin/Manager
+  const loadUserCompanyAndBranches = async () => {
     if (!isAdminOrManager) return;
 
     setLoadingUserCompany(true);
     try {
-      const response = await companiesService.getUserCompany();
-      if (response.success && response.data) {
-        setUserCompany(response.data);
-        // Load branches for this company
-        await loadBranches(response.data._id);
+      // Si es gerente, obtener su sucursal directamente
+      if (getIsManager()) {
+        const branchResponse = await branchesService.getUserBranches();
+        if (branchResponse.success && branchResponse.data && branchResponse.data.length > 0) {
+          const branch = branchResponse.data[0];
+          setManagerBranch(branch);
+          setFormData((prev: any) => ({ ...prev, branch: branch._id }));
+          
+          // Obtener la empresa a través de la sucursal
+          if (branch.companyId && typeof branch.companyId === 'object') {
+            setUserCompany(branch.companyId);
+          }
+        } else {
+          toast.error("No se encontró una sucursal asignada para el gerente");
+        }
+      } 
+      // Si es admin, cargar empresa y sucursales
+      else if (getIsAdmin()) {
+        const response = await companiesService.getUserCompany();
+        if (response.success && response.data) {
+          setUserCompany(response.data);
+          // Load branches for this company
+          await loadBranches(response.data._id);
+        }
       }
     } catch (err: any) {
-      console.error("Error loading user company:", err);
+      console.error("Error loading user data:", err);
       if (!err.message?.includes("no tiene una empresa asignada")) {
-        toast.error(err.message || "Error al cargar la empresa del usuario");
+        toast.error(err.message || "Error al cargar los datos del usuario");
       }
     } finally {
       setLoadingUserCompany(false);
@@ -106,8 +152,14 @@ const CashierModal: React.FC<CashierModalProps> = ({
   };
 
   useEffect(() => {
-    if (show && isAdminOrManager) {
-      loadUserCompany();
+    if (show) {
+      if (!cashier) {
+        // En modo creación, cargar el rol de Cajero
+        loadCashierRole();
+      }
+      if (isAdminOrManager) {
+        loadUserCompanyAndBranches();
+      }
     }
   }, [show, isAdminOrManager]);
 
@@ -179,8 +231,14 @@ const CashierModal: React.FC<CashierModalProps> = ({
     if (!formData.profile.lastName.trim()) {
       newErrors["profile.lastName"] = "El apellido es requerido";
     }
-    // La contraseña no es requerida en edición
-    // La sucursal no se puede cambiar en edición
+    // Contraseña requerida solo en creación
+    if (!cashier && !formData.password.trim()) {
+      newErrors.password = "La contraseña es requerida";
+    }
+    // Sucursal requerida solo en creación
+    if (!cashier && !formData.branch) {
+      newErrors.branch = "La sucursal es requerida";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -188,23 +246,38 @@ const CashierModal: React.FC<CashierModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cashier) return; // Solo funciona en modo edición
     
     if (validateForm()) {
-      // For update, only send changed fields
-      const updateData: any = {
-        username: formData.username,
-        email: formData.email,
-        phone: formData.phone,
-        profile: {
-          name: formData.profile.name,
-          lastName: formData.profile.lastName,
-        },
-      };
-      if (formData.password.trim()) {
-        updateData.password = formData.password;
+      if (cashier) {
+        // Modo edición: enviar solo campos modificados
+        const updateData: UpdateCashierData = {
+          username: formData.username,
+          email: formData.email,
+          phone: formData.phone,
+          profile: {
+            name: formData.profile.name,
+            lastName: formData.profile.lastName,
+          },
+        };
+        if (formData.password.trim()) {
+          updateData.password = formData.password;
+        }
+        onSave(updateData);
+      } else {
+        // Modo creación: enviar todos los campos
+        const createData: CreateCashierData = {
+          username: formData.username,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          profile: {
+            name: formData.profile.name,
+            lastName: formData.profile.lastName,
+          },
+          branch: formData.branch,
+        };
+        onSave(createData);
       }
-      onSave(updateData);
     }
   };
 
@@ -215,11 +288,15 @@ const CashierModal: React.FC<CashierModalProps> = ({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-primary" />
-            Editar Cajero
+            {isEditing ? (
+              <User className="h-5 w-5 text-primary" />
+            ) : (
+              <UserPlus className="h-5 w-5 text-primary" />
+            )}
+            {isEditing ? "Editar Cajero" : "Nuevo Cajero"}
           </DialogTitle>
           <DialogDescription>
-            Actualiza la información del cajero
+            {isEditing ? "Actualiza la información del cajero" : "Completa la información para crear un nuevo cajero"}
           </DialogDescription>
         </DialogHeader>
 
@@ -324,9 +401,13 @@ const CashierModal: React.FC<CashierModalProps> = ({
             <div className="space-y-2">
               <Label htmlFor="password">
                 Contraseña
-                <span className="text-muted-foreground text-xs ml-1">
-                  (Dejar vacío para mantener actual)
-                </span>
+                {isEditing ? (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (Dejar vacío para mantener actual)
+                  </span>
+                ) : (
+                  <span className="text-destructive"> *</span>
+                )}
               </Label>
               <div className="relative">
                 <Input
@@ -353,39 +434,60 @@ const CashierModal: React.FC<CashierModalProps> = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="branch">
-                Sucursal <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={formData.branch}
-                onValueChange={(value) => handleChange("branch", value)}
-                disabled={loadingBranches || isEditing}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      loadingBranches ? "Cargando sucursales..." : "Selecciona una sucursal"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch._id} value={branch._id}>
-                      {branch.branchName} ({branch.branchCode})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.branch && (
-                <p className="text-sm text-destructive">{errors.branch}</p>
-              )}
-              {isEditing && (
-                <p className="text-sm text-muted-foreground">
-                  La sucursal no se puede cambiar al editar un cajero
-                </p>
-              )}
-            </div>
+            {!isEditing && (
+              <div className="space-y-2">
+                <Label htmlFor="branch">
+                  Sucursal <span className="text-destructive">*</span>
+                </Label>
+                {getIsManager() && managerBranch ? (
+                  <div className="p-3 border rounded-md bg-muted/50">
+                    <div className="font-medium">{managerBranch.branchName}</div>
+                    {managerBranch.branchCode && (
+                      <div className="text-sm text-muted-foreground">Código: {managerBranch.branchCode}</div>
+                    )}
+                  </div>
+                ) : getIsAdmin() ? (
+                  <Select
+                    value={formData.branch}
+                    onValueChange={(value) => handleChange("branch", value)}
+                    disabled={loadingBranches}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          loadingBranches ? "Cargando sucursales..." : "Selecciona una sucursal"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch._id} value={branch._id}>
+                          {branch.branchName} {branch.branchCode ? `(${branch.branchCode})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                {errors.branch && (
+                  <p className="text-sm text-destructive">{errors.branch}</p>
+                )}
+              </div>
+            )}
+            
+            {isEditing && cashier?.branch && (
+              <div className="space-y-2">
+                <Label>Sucursal Asignada</Label>
+                <div className="p-3 border rounded-md bg-muted/50">
+                  <div className="font-medium">{cashier.branch.branchName}</div>
+                  {cashier.branch.branchCode && (
+                    <div className="text-sm text-muted-foreground">Código: {cashier.branch.branchCode}</div>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-2">
+                    La sucursal no se puede cambiar al editar un cajero
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -394,7 +496,7 @@ const CashierModal: React.FC<CashierModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={loading || loadingUserCompany || loadingBranches}
+              disabled={loading || loadingUserCompany || loadingBranches || loadingRole || (!cashier && !cashierRoleId)}
             >
               {loading ? (
                 <>
@@ -403,8 +505,12 @@ const CashierModal: React.FC<CashierModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Actualizar Cajero
+                  {isEditing ? (
+                    <Save className="h-4 w-4 mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {isEditing ? "Actualizar Cajero" : "Crear Cajero"}
                 </>
               )}
             </Button>

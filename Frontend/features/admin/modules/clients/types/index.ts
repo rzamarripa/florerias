@@ -20,6 +20,11 @@ export interface Client {
   points: number;
   status: boolean;
   company: string;
+  branch?: {
+    _id: string;
+    branchName: string;
+    branchCode?: string;
+  } | string | null;
   purchases: string[];
   comentarios: ClientComment[];
   howDidYouHearAboutUs?: HowDidYouHearAboutUs;
@@ -36,6 +41,7 @@ export interface CreateClientData {
   points?: number;
   status?: boolean;
   company: string;
+  branch?: string;
   howDidYouHearAboutUs?: HowDidYouHearAboutUs;
 }
 

@@ -221,6 +221,40 @@ const approveRejectDiscountAuth = async (req, res) => {
       }
 
       discountAuth.authFolio = folio;
+      
+      // Si se aprueba y hay una orden asociada, actualizar su estado
+      if (discountAuth.orderId) {
+        try {
+          const order = await Order.findById(discountAuth.orderId);
+          
+          if (order && order.status === 'sinAutorizar') {
+            // Cambiar estado a pendiente
+            order.status = 'pendiente';
+            
+            // Asignar etapa según tipo de envío
+            const boardType = order.shippingType === 'envio' ? 'delivery' : 'production';
+            const firstStage = await StageCatalog.findOne({ 
+              stageNumber: 1,
+              boardType: boardType 
+            }).sort({ createdAt: 1 });
+            
+            if (firstStage) {
+              order.stage = firstStage._id;
+            }
+            
+            // Si tiene anticipo, enviar a producción
+            if (order.advance > 0) {
+              order.sendToProduction = true;
+            }
+            
+            await order.save();
+            console.log(`Orden ${order.orderNumber} actualizada: status=pendiente, stage=${firstStage?.name}, sendToProduction=${order.sendToProduction}`);
+          }
+        } catch (orderUpdateError) {
+          console.error('Error al actualizar orden tras aprobación de descuento:', orderUpdateError);
+          // No fallar la operación principal si hay error al actualizar la orden
+        }
+      }
     } else {
       // Si se rechaza, cancelar la orden vinculada y revertir cambios
       if (discountAuth.orderId) {

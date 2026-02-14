@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAllCashiers,
   getCashierById,
+  createCashier,
   updateCashier,
   deleteCashier,
   activateCashier,
@@ -15,8 +16,8 @@ const router = Router();
 
 // Rutas para cajeros
 router.route('/')
-  .get(getAllCashiers);        // GET /api/cashiers - Obtener todos los cajeros
-  // POST eliminado - Los cajeros se crean desde el módulo de branches
+  .get(getAllCashiers)        // GET /api/cashiers - Obtener todos los cajeros
+  .post(createCashier);        // POST /api/cashiers - Crear nuevo cajero
 
 router.route('/:id')
   .get(getCashierById)        // GET /api/cashiers/:id - Obtener cajero por ID

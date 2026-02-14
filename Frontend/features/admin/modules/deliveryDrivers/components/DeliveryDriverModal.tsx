@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Save, Truck, Eye, EyeOff, Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { DeliveryDriver, UpdateDeliveryDriverData } from "../types";
+import { DeliveryDriver, CreateDeliveryDriverData, UpdateDeliveryDriverData } from "../types";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
@@ -30,7 +30,7 @@ interface DeliveryDriverModalProps {
   show: boolean;
   onHide: () => void;
   driver: DeliveryDriver | null;
-  onSave: (data: UpdateDeliveryDriverData) => void;
+  onSave: (data: CreateDeliveryDriverData | UpdateDeliveryDriverData) => void;
   loading?: boolean;
 }
 
@@ -62,6 +62,8 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
   const [loadingUserCompany, setLoadingUserCompany] = useState(false);
   const [branches, setBranches] = useState<any[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
+  const [userBranch, setUserBranch] = useState<any>(null);
+  const [loadingUserBranch, setLoadingUserBranch] = useState(false);
 
   // Load user company for Admin/Manager
   const loadUserCompany = async () => {
@@ -82,6 +84,26 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
       }
     } finally {
       setLoadingUserCompany(false);
+    }
+  };
+
+  // Load user branch for Manager
+  const loadUserBranch = async () => {
+    if (!getIsManager()) return;
+
+    setLoadingUserBranch(true);
+    try {
+      const response = await branchesService.getUserBranch();
+      if (response.success && response.data) {
+        setUserBranch(response.data);
+        // Set the branch directly in form data
+        setFormData(prev => ({ ...prev, branch: response.data._id }));
+      }
+    } catch (err: any) {
+      console.error("Error loading user branch:", err);
+      toast.error(err.message || "Error al cargar la sucursal del usuario");
+    } finally {
+      setLoadingUserBranch(false);
     }
   };
 
@@ -106,10 +128,16 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
   };
 
   useEffect(() => {
-    if (show && isAdminOrManager) {
+    if (show && !driver) {
+      if (getIsManager()) {
+        loadUserBranch();
+      } else if (getIsAdmin()) {
+        loadUserCompany();
+      }
+    } else if (show && driver && getIsAdmin()) {
       loadUserCompany();
     }
-  }, [show, isAdminOrManager]);
+  }, [show, driver]);
 
   useEffect(() => {
     if (driver) {
@@ -179,8 +207,16 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
     if (!formData.profile.lastName.trim()) {
       newErrors["profile.lastName"] = "El apellido es requerido";
     }
-    // La contraseña no es requerida en edición
-    // La sucursal no se puede cambiar en edición
+    
+    // Password is required for creation
+    if (!driver && !formData.password.trim()) {
+      newErrors.password = "La contraseña es requerida";
+    }
+    
+    // Branch is required for creation
+    if (!driver && !formData.branch) {
+      newErrors.branch = "La sucursal es requerida";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -188,23 +224,38 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!driver) return; // Solo funciona en modo edición
     
     if (validateForm()) {
-      // For update, only send changed fields
-      const updateData: any = {
-        username: formData.username,
-        email: formData.email,
-        phone: formData.phone,
-        profile: {
-          name: formData.profile.name,
-          lastName: formData.profile.lastName,
-        },
-      };
-      if (formData.password.trim()) {
-        updateData.password = formData.password;
+      if (driver) {
+        // For update, only send changed fields
+        const updateData: UpdateDeliveryDriverData = {
+          username: formData.username,
+          email: formData.email,
+          phone: formData.phone,
+          profile: {
+            name: formData.profile.name,
+            lastName: formData.profile.lastName,
+          },
+        };
+        if (formData.password.trim()) {
+          updateData.password = formData.password;
+        }
+        onSave(updateData);
+      } else {
+        // For creation, send all required fields
+        const createData: CreateDeliveryDriverData = {
+          username: formData.username,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          profile: {
+            name: formData.profile.name,
+            lastName: formData.profile.lastName,
+          },
+          branch: formData.branch,
+        };
+        onSave(createData);
       }
-      onSave(updateData);
     }
   };
 
@@ -216,10 +267,10 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5 text-primary" />
-            Editar Repartidor
+            {isEditing ? "Editar Repartidor" : "Nuevo Repartidor"}
           </DialogTitle>
           <DialogDescription>
-            Actualiza la información del repartidor
+            {isEditing ? "Actualiza la información del repartidor" : "Registra un nuevo repartidor en el sistema"}
           </DialogDescription>
         </DialogHeader>
 
@@ -324,9 +375,13 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
             <div className="space-y-2">
               <Label htmlFor="password">
                 Contraseña
-                <span className="text-muted-foreground text-xs ml-1">
-                  (Dejar vacío para mantener actual)
-                </span>
+                {isEditing ? (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (Dejar vacío para mantener actual)
+                  </span>
+                ) : (
+                  <span className="text-destructive"> *</span>
+                )}
               </Label>
               <div className="relative">
                 <Input
@@ -353,39 +408,57 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="branch">
-                Sucursal <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={formData.branch}
-                onValueChange={(value) => handleChange("branch", value)}
-                disabled={loadingBranches || isEditing}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      loadingBranches ? "Cargando sucursales..." : "Selecciona una sucursal"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch._id} value={branch._id}>
-                      {branch.branchName} ({branch.branchCode})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.branch && (
-                <p className="text-sm text-destructive">{errors.branch}</p>
-              )}
-              {isEditing && (
-                <p className="text-sm text-muted-foreground">
-                  La sucursal no se puede cambiar al editar un repartidor
-                </p>
-              )}
-            </div>
+            {!isEditing && (
+              <div className="space-y-2">
+                <Label htmlFor="branch">
+                  Sucursal <span className="text-destructive">*</span>
+                </Label>
+                {getIsManager() ? (
+                  <div className="p-2 border rounded-md bg-muted">
+                    <p className="text-sm font-medium">
+                      {userBranch ? `${userBranch.branchName} (${userBranch.branchCode})` : "Cargando sucursal..."}
+                    </p>
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.branch}
+                    onValueChange={(value) => handleChange("branch", value)}
+                    disabled={loadingBranches}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          loadingBranches ? "Cargando sucursales..." : "Selecciona una sucursal"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch._id} value={branch._id}>
+                          {branch.branchName} ({branch.branchCode})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {errors.branch && (
+                  <p className="text-sm text-destructive">{errors.branch}</p>
+                )}
+              </div>
+            )}
+            {isEditing && driver?.branch && (
+              <div className="space-y-2">
+                <Label>Sucursal</Label>
+                <div className="p-2 border rounded-md bg-muted">
+                  <p className="text-sm font-medium">
+                    {driver.branch.branchName} ({driver.branch.branchCode})
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    La sucursal no se puede cambiar al editar un repartidor
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -394,7 +467,7 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={loading || loadingUserCompany || loadingBranches}
+              disabled={loading || loadingUserCompany || loadingBranches || loadingUserBranch}
             >
               {loading ? (
                 <>
@@ -404,7 +477,7 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
               ) : (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  Actualizar Repartidor
+                  {isEditing ? "Actualizar Repartidor" : "Crear Repartidor"}
                 </>
               )}
             </Button>

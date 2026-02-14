@@ -1,12 +1,13 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, Truck, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Truck, Loader2, Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { deliveryDriversService } from "./services/deliveryDrivers";
 import {
   DeliveryDriver,
   DeliveryDriverFilters,
+  CreateDeliveryDriverData,
   UpdateDeliveryDriverData,
 } from "./types";
 import Actions from "./components/Actions";
@@ -32,8 +33,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 const DeliveryDriversPage: React.FC = () => {
+  const { getIsAdmin, getIsManager } = useUserRoleStore();
+  const isAdminOrManager = getIsAdmin() || getIsManager();
+
   const [drivers, setDrivers] = useState<DeliveryDriver[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -103,7 +108,10 @@ const DeliveryDriversPage: React.FC = () => {
     loadDeliveryDrivers(true, page);
   };
 
-  // Función handleCreateDriver eliminada - Los repartidores se crean desde el módulo de branches
+  const handleCreateDriver = () => {
+    setSelectedDriver(null);
+    setShowModal(true);
+  };
 
   const handleEditDriver = (driver: DeliveryDriver) => {
     setSelectedDriver(driver);
@@ -126,18 +134,22 @@ const DeliveryDriversPage: React.FC = () => {
   };
 
   const handleSaveDriver = async (
-    data: UpdateDeliveryDriverData
+    data: CreateDeliveryDriverData | UpdateDeliveryDriverData
   ) => {
     try {
       setModalLoading(true);
       if (selectedDriver) {
-        await deliveryDriversService.updateDeliveryDriver(selectedDriver._id, data);
+        await deliveryDriversService.updateDeliveryDriver(selectedDriver._id, data as UpdateDeliveryDriverData);
         toast.success("Repartidor actualizado exitosamente");
-        setShowModal(false);
-        loadDeliveryDrivers(false);
+      } else {
+        await deliveryDriversService.createDeliveryDriver(data as CreateDeliveryDriverData);
+        toast.success("Repartidor creado exitosamente");
       }
+      setShowModal(false);
+      setSelectedDriver(null);
+      loadDeliveryDrivers(false);
     } catch (error: any) {
-      toast.error(error.message || "Error al actualizar el repartidor");
+      toast.error(error.message || `Error al ${selectedDriver ? "actualizar" : "crear"} el repartidor`);
     } finally {
       setModalLoading(false);
     }
@@ -188,7 +200,14 @@ const DeliveryDriversPage: React.FC = () => {
       <PageHeader
         title="Repartidores"
         description="Gestiona los repartidores del sistema"
-      />
+      >
+        {isAdminOrManager && (
+          <Button onClick={handleCreateDriver}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Repartidor
+          </Button>
+        )}
+      </PageHeader>
 
       {/* Filters & Table */}
       <Card>

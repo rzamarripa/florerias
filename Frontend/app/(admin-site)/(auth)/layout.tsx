@@ -2,8 +2,10 @@
 
 import { useUserSessionStore } from "@/stores";
 import { useUserRoleStore } from "@/stores/userRoleStore";
+import { useUserModulesStore } from "@/stores/userModulesStore";
 import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
+import { getFirstAvailableRoute } from "@/utils/menuBuilder";
 
 export default function AuthLayout({
   children,
@@ -12,43 +14,26 @@ export default function AuthLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useUserSessionStore();
-  const {
-    getIsAdmin,
-    getIsManager,
-    getIsSocialMedia,
-    getIsDistributor,
-    getIsSuperAdmin,
-  } = useUserRoleStore();
+  const { getIsSuperAdmin, role } = useUserRoleStore();
+  const { allowedModules } = useUserModulesStore();
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       const isSuperAdmin = getIsSuperAdmin();
-      const isAdmin = getIsAdmin();
-      const isManager = getIsManager();
-      const isSocialMedia = getIsSocialMedia();
-      const isDistributor = getIsDistributor();
-
-      if (isSuperAdmin) {
-        router.push("/gestion/roles");
-      } else if (isAdmin || isManager) {
-        router.push("/finanzas/dashboard-analitico");
-      } else if (isDistributor) {
-        router.push("/gestion/empresas/dashboard");
-      } else if (isSocialMedia) {
-        router.push("/sucursal/ventas");
-      } else {
-        router.push("/sucursal/ventas");
-      }
+      
+      // Obtener la primera ruta disponible basándose en los permisos del usuario
+      const firstRoute = getFirstAvailableRoute(allowedModules, isSuperAdmin);
+      
+      // Redirigir a la primera ruta disponible
+      router.push(firstRoute);
     }
   }, [
     isAuthenticated,
     isLoading,
     router,
-    getIsAdmin,
-    getIsManager,
-    getIsSocialMedia,
-    getIsDistributor,
     getIsSuperAdmin,
+    allowedModules,
+    role
   ]);
 
   return children;

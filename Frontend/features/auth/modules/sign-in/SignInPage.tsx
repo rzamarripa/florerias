@@ -85,10 +85,12 @@ const SignInPage = () => {
 
         if (roleLower === "super admin" || roleLower === "superadmin") {
           router.push("/gestion/roles");
+        } else if (userRole === "Gerente" || roleLower === "gerente") {
+          router.push("/sucursal/ventas");
         } else if (userRole === "Cajero" || userRole === "Redes") {
           router.push("/sucursal/ventas");
         } else {
-          router.push("/dashboard");
+          router.push("/sucursal/ventas");
         }
       } else {
         setError(response.message || "Error en el inicio de sesión");
@@ -132,7 +134,8 @@ const SignInPage = () => {
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <Label htmlFor="username">
-                    Nombre de Usuario <span className="text-destructive">*</span>
+                    Nombre de Usuario{" "}
+                    <span className="text-destructive">*</span>
                   </Label>
                   <div className="flex mt-1">
                     <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">

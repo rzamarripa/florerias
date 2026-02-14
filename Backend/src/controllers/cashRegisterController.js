@@ -789,46 +789,38 @@ const getCashRegisterSummary = async (req, res) => {
       .populate('paymentMethod', 'name')
       .select('orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod');
 
-    // Determinar qué pagos contar según el tipo de caja
-    let relevantPayments = [];
+    // Ahora TODOS los pagos están en lastRegistry, así que los procesamos todos
+    // relevantPayments incluye TODOS los pagos registrados
+    let relevantPayments = allPayments;
     let cashPayments = [];
     let creditPayments = [];
     
     if (cashRegister.isSocialMediaBox) {
-      // Cajas de redes sociales: todos los pagos EXCEPTO efectivo
-      relevantPayments = allPayments.filter(payment => {
+      // Cajas de redes sociales: para el balance, solo contar pagos NO efectivo
+      const nonCashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         return !paymentMethodName.includes('efectivo');
       });
       // Para cajas de redes sociales, totalSales incluye todos los pagos no-efectivo
-      totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+      totalSales = nonCashPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     } else {
-      // Cajas normales: pagos de ventas en tienda
-      relevantPayments = allPayments.filter(payment => {
-        // Si el pago no tiene orderId poblado, incluirlo de todos modos
-        // porque está en lastRegistry
-        if (!payment.orderId) {
-          console.log('⚠️ Pago sin orderId:', payment._id);
-          return true; // Incluir el pago aunque no tenga orden
-        }
-        const shippingType = payment.orderId.shippingType || '';
-        return shippingType === 'tienda';
-      });
-      
-      // Para el balance de caja físico, solo efectivo afecta el dinero en caja
+      // Cajas normales: para el BALANCE físico, solo efectivo de ventas en tienda
       cashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
-        return paymentMethodName.includes('efectivo');
+        const shippingType = payment.orderId?.shippingType || '';
+        // Solo pagos en efectivo de ventas en tienda afectan el balance físico
+        return paymentMethodName.includes('efectivo') && shippingType === 'tienda';
       });
       
-      // Crédito de tienda (no tarjetas de crédito)
+      // Crédito de tienda (no tarjetas de crédito) - también afecta el balance en algunos casos
       creditPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
-        return (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito')) && 
-               !paymentMethodName.includes('tarjeta'); // Excluir tarjetas de crédito
+        const shippingType = payment.orderId?.shippingType || '';
+        return ((paymentMethodName.includes('crédito') || paymentMethodName.includes('credito')) && 
+               !paymentMethodName.includes('tarjeta')) && shippingType === 'tienda';
       });
       
-      // Balance físico solo cuenta efectivo + crédito de tienda (no tarjetas)
+      // Balance físico solo cuenta efectivo + crédito de tienda (ambos de ventas en tienda)
       totalSales = [...cashPayments, ...creditPayments].reduce((sum, payment) => sum + (payment.amount || 0), 0);
     }
 
@@ -874,11 +866,11 @@ const getCashRegisterSummary = async (req, res) => {
       }
     });
     
-    // Añadir las órdenes a crédito (sin pagos) - solo si son ventas en tienda
+    // Añadir las órdenes a crédito (sin pagos) - ahora incluimos TODAS las órdenes a crédito
     creditOrders.forEach(creditOrder => {
       const orderId = creditOrder._id.toString();
-      // Solo incluir órdenes a crédito que sean de tipo tienda
-      if (!ordersMap.has(orderId) && creditOrder.shippingType === 'tienda') {
+      // Incluir TODAS las órdenes a crédito, no solo las de tienda
+      if (!ordersMap.has(orderId)) {
         ordersMap.set(orderId, {
           _id: creditOrder._id,
           orderNumber: creditOrder.orderNumber,
@@ -1276,40 +1268,36 @@ const closeCashRegister = async (req, res) => {
       .populate('paymentMethod', 'name')
       .select('orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod');
 
-    // Determinar qué pagos contar según el tipo de caja
-    let relevantPayments = [];
+    // TODOS los pagos registrados se incluyen en el log
+    let relevantPayments = allPayments;
     let cashPayments = [];
     let creditPayments = [];
     let totalSales = 0;
     
+    // Calcular el totalSales basado en el tipo de caja y método de pago
+    // (la lógica de balance se mantiene, pero el log incluye TODO)
     if (cashRegister.isSocialMediaBox) {
-      // Cajas de redes sociales: todos los pagos EXCEPTO efectivo
-      relevantPayments = allPayments.filter(payment => {
+      // Cajas de redes sociales: totalSales incluye todos los pagos EXCEPTO efectivo
+      const nonCashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         return !paymentMethodName.includes('efectivo');
       });
-      // Para cajas de redes sociales, totalSales incluye todos los pagos no-efectivo
-      totalSales = relevantPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+      totalSales = nonCashPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     } else {
-      // Cajas normales: separar pagos en efectivo y crédito, y filtrar por tipo de envío
+      // Cajas normales: totalSales solo incluye pagos en efectivo de ventas en tienda (para el balance)
       cashPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         const shippingType = payment.orderId?.shippingType || '';
-        // Solo pagos en efectivo de ventas en tienda
         return paymentMethodName.includes('efectivo') && shippingType === 'tienda';
       });
       
       creditPayments = allPayments.filter(payment => {
         const paymentMethodName = payment.paymentMethod?.name?.toLowerCase() || '';
         const shippingType = payment.orderId?.shippingType || '';
-        // Solo pagos a crédito de ventas en tienda
         return (paymentMethodName.includes('crédito') || paymentMethodName.includes('credito')) && shippingType === 'tienda';
       });
       
-      // Incluir tanto pagos en efectivo como crédito en el log (solo de ventas en tienda)
-      relevantPayments = [...cashPayments, ...creditPayments];
-      
-      // Para el balance de caja, contar pagos en efectivo y crédito en tienda
+      // Para el balance de caja normal, contar solo pagos en efectivo y crédito en tienda
       totalSales = [...cashPayments, ...creditPayments].reduce((sum, payment) => sum + (payment.amount || 0), 0);
     }
 
@@ -1382,11 +1370,11 @@ const closeCashRegister = async (req, res) => {
       }
     });
     
-    // Añadir las órdenes a crédito (sin pagos) al log - solo si son ventas en tienda
+    // Añadir TODAS las órdenes a crédito (sin pagos) al log
     creditOrders.forEach(creditOrder => {
       const orderId = creditOrder._id.toString();
-      // Solo incluir órdenes a crédito que sean de tipo tienda
-      if (!ordersMapForLog.has(orderId) && creditOrder.shippingType === 'tienda') {
+      // Incluir TODAS las órdenes a crédito, sin importar el shippingType
+      if (!ordersMapForLog.has(orderId)) {
         ordersMapForLog.set(orderId, {
           orderId: creditOrder._id,
           orderNumber: creditOrder.orderNumber,

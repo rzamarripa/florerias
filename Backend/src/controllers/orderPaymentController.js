@@ -127,11 +127,29 @@ export const createOrderPayment = async (req, res) => {
 
     await order.save();
 
-    // Actualizar el balance de la caja SOLO si el método de pago es efectivo Y hay caja
-    if (isEffectivo && cashRegister) {
-      cashRegister.currentBalance += amount;
+    // Actualizar la caja registradora si existe
+    if (cashRegister) {
+      // Determinar si se debe actualizar el balance
+      // La lógica del balance se mantiene:
+      // - Cajas normales: SOLO efectivo afecta el balance
+      // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo afectan el balance
+      let shouldUpdateBalance = false;
+      
+      if (cashRegister.isSocialMediaBox) {
+        // Cajas de redes: actualizar balance si NO es efectivo
+        shouldUpdateBalance = !isEffectivo;
+      } else {
+        // Cajas normales: actualizar balance SOLO si es efectivo
+        // Nota: Para pagos posteriores no verificamos el tipo de envío
+        shouldUpdateBalance = isEffectivo;
+      }
 
-      // Buscar si ya existe un registro de esta orden en lastRegistry
+      // Actualizar el balance si corresponde
+      if (shouldUpdateBalance) {
+        cashRegister.currentBalance += amount;
+      }
+
+      // SIEMPRE actualizar lastRegistry, sin importar el método de pago
       const existingRegistryIndex = cashRegister.lastRegistry.findIndex(
         reg => reg.orderId.toString() === orderId.toString()
       );
@@ -140,7 +158,7 @@ export const createOrderPayment = async (req, res) => {
         // Si ya existe, agregar el nuevo paymentId al array
         cashRegister.lastRegistry[existingRegistryIndex].paymentIds.push(payment._id);
       } else {
-        // Si no existe, crear nuevo registro (aunque normalmente ya debería existir)
+        // Si no existe, crear nuevo registro (puede pasar si la orden se creó sin anticipo)
         cashRegister.lastRegistry.push({
           orderId: orderId,
           paymentIds: [payment._id],

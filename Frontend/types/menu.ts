@@ -14,4 +14,6 @@ export interface MenuItemType {
     variant: string;
     text: string;
   };
+  roleKey?: string; // Para compatibilidad con roles específicos
+  permissions?: string[]; // Permisos asociados a este item del menú
 }

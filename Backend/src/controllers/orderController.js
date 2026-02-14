@@ -573,9 +573,9 @@ const createOrder = async (req, res) => {
 
     // PRIORIDAD: Si hay descuento pendiente de autorización, NO asignar etapa
     if (hasPendingDiscountAuth) {
-      // Cualquier orden con descuento pendiente: sin etapa y status pendiente
+      // Cualquier orden con descuento pendiente: sin etapa y status sinAutorizar
       stageId = null;
-      orderStatus = 'pendiente';
+      orderStatus = 'sinAutorizar';
       shouldSendToShipping = false;
     } else if (quickSale) {
       // Verificar si es una venta rápida (solo si NO hay descuento pendiente)
@@ -880,93 +880,48 @@ const createOrder = async (req, res) => {
         // Obtener el método de pago para verificar el tipo
         const paymentMethodDoc = await PaymentMethod.findById(paymentMethod);
         const isEffectivo = paymentMethodDoc?.name?.toLowerCase().includes('efectivo') || false;
-        const isCredito = paymentMethodDoc?.name?.toLowerCase().includes('crédito') || 
-                         paymentMethodDoc?.name?.toLowerCase().includes('credito') || false;
 
-        // Variable para controlar si ya se registró la orden
-        let orderRegistered = false;
+        // SIEMPRE registrar la orden en lastRegistry, sin importar el tipo de pago o envío
+        const registryData = {
+          orderId: savedOrder._id,
+          paymentIds: savedPaymentId ? [savedPaymentId] : [], // Si hay pago, incluirlo; si no, array vacío
+          saleDate: new Date()
+        };
 
-        // Caso 1: Orden con pago inmediato (advance > 0) - NO Stripe
-        if (advance > 0 && paymentMethod && !stripePaymentIntentId) {
-          // Determinar si se debe actualizar el balance:
-          // Para cajas normales: SOLO si el pago es en efectivo Y el tipo de envío es 'tienda'
-          // Para cajas de redes sociales: todos los pagos EXCEPTO efectivo
-          const shouldUpdateBalance = cashRegister?.isSocialMediaBox
-            ? !isEffectivo  // Cajas de redes: actualizar si NO es efectivo
-            : (isEffectivo && savedOrder.shippingType === 'tienda');  // Cajas normales: SOLO efectivo Y en tienda
-
-          // Actualizar el balance de la caja si corresponde
-          if (shouldUpdateBalance && savedPaymentId) {
-            await CashRegister.findByIdAndUpdate(
-              cashRegisterId,
-              {
-                $inc: { currentBalance: advance },
-                $push: {
-                  lastRegistry: {
-                    orderId: savedOrder._id,
-                    paymentIds: [savedPaymentId], // Agregar el ID del pago en el array
-                    saleDate: new Date()
-                  }
-                }
-              }
-            );
-            orderRegistered = true;
-          }
-          // Si no se actualizó el balance pero hay pago (ej: crédito con anticipo o envío a domicilio)
-          else if (savedPaymentId) {
-            await CashRegister.findByIdAndUpdate(
-              cashRegisterId,
-              {
-                $push: {
-                  lastRegistry: {
-                    orderId: savedOrder._id,
-                    paymentIds: [savedPaymentId],
-                    saleDate: new Date()
-                  }
-                }
-              }
-            );
-            orderRegistered = true;
+        // Determinar si se debe actualizar el balance de la caja
+        // La lógica del balance se mantiene igual:
+        // - Cajas normales: SOLO efectivo Y ventas en tienda afectan el balance
+        // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo afectan el balance
+        let shouldUpdateBalance = false;
+        
+        if (advance > 0 && savedPaymentId) {
+          if (cashRegister?.isSocialMediaBox) {
+            // Cajas de redes: actualizar balance si NO es efectivo
+            shouldUpdateBalance = !isEffectivo;
+          } else {
+            // Cajas normales: actualizar balance SOLO si es efectivo Y venta en tienda
+            shouldUpdateBalance = isEffectivo && savedOrder.shippingType === 'tienda';
           }
         }
-        
-        // Caso 2: Si es orden a crédito sin anticipo, registrarla también
-        if (isCredito && (!advance || advance === 0) && !orderRegistered) {
-          // Registrar la orden en lastRegistry sin actualizar el balance
-          await CashRegister.findByIdAndUpdate(
-            cashRegisterId,
-            {
-              $push: {
-                lastRegistry: {
-                  orderId: savedOrder._id,
-                  paymentIds: [], // Array vacío porque no hay pago inmediato
-                  saleDate: new Date()
-                }
-              }
-            }
-          );
-          orderRegistered = true;
+
+        // Construir la operación de actualización
+        const updateOperation = {
+          $push: {
+            lastRegistry: registryData
+          }
+        };
+
+        // Si corresponde, también actualizar el balance
+        if (shouldUpdateBalance) {
+          updateOperation.$inc = { currentBalance: advance };
         }
+
+        // Ejecutar la actualización - SIEMPRE registrar en lastRegistry
+        await CashRegister.findByIdAndUpdate(cashRegisterId, updateOperation);
         
-        // Caso 3: Orden con pago con Stripe - SIEMPRE registrar en lastRegistry
-        if (stripePaymentIntentId && savedPaymentId && !orderRegistered) {
-          // Registrar el pago de Stripe en lastRegistry (sin actualizar balance porque las tarjetas no afectan el efectivo en caja)
-          await CashRegister.findByIdAndUpdate(
-            cashRegisterId,
-            {
-              $push: {
-                lastRegistry: {
-                  orderId: savedOrder._id,
-                  paymentIds: [savedPaymentId], // Incluir el ID del pago de Stripe
-                  saleDate: new Date()
-                }
-              }
-            }
-          );
-          orderRegistered = true;
-        }
       } catch (cashRegisterError) {
         // No fallar la orden si hay error al actualizar la caja
+        console.error('Error al actualizar caja registradora:', cashRegisterError);
       }
     }
 

@@ -32,6 +32,11 @@ export const getAllClients = async (req, res) => {
       filters.company = req.query.companyId;
     }
 
+    // Filtro por sucursal basado en branchId del query
+    if (req.query.branchId) {
+      filters.branch = req.query.branchId;
+    }
+
     // Filtros opcionales - usando sanitización para prevenir ReDoS
     const nameFilter = createSafeRegexFilter(req.query.name);
     if (nameFilter) filters.name = nameFilter;
@@ -56,6 +61,7 @@ export const getAllClients = async (req, res) => {
     const clients = await Client.find(filters)
       .populate("purchases")
       .populate("company")
+      .populate("branch", "branchName branchCode")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -89,7 +95,7 @@ export const getAllClients = async (req, res) => {
 
 export const createClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, gender, points, status, company, generateDigitalCard, howDidYouHearAboutUs } = req.body;
+    const { name, lastName, phoneNumber, email, gender, points, status, company, branch, generateDigitalCard, howDidYouHearAboutUs } = req.body;
 
     // Validaciones básicas
     if (!name || !lastName || !phoneNumber || !gender) {
@@ -115,6 +121,18 @@ export const createClient = async (req, res) => {
       });
     }
 
+    // Validar que si se proporciona branch, pertenezca a la empresa
+    if (branch) {
+      const { Branch } = await import("../models/Branch.js");
+      const branchExists = await Branch.findOne({ _id: branch, companyId: company, isActive: true });
+      if (!branchExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Branch does not exist or does not belong to the specified company",
+        });
+      }
+    }
+
     // Verificar si ya existe un cliente con el mismo número de teléfono en la misma empresa
     const existingClient = await Client.findOne({ phoneNumber, company });
     if (existingClient) {
@@ -133,6 +151,7 @@ export const createClient = async (req, res) => {
       points: points || 0,
       status: status !== undefined ? status : true,
       company,
+      branch: branch || null,
       howDidYouHearAboutUs: howDidYouHearAboutUs || null,
     };
 
@@ -160,7 +179,9 @@ export const createClient = async (req, res) => {
     }
 
     // Obtener cliente actualizado con puntos
-    const updatedClient = await Client.findById(client._id).populate("company");
+    const updatedClient = await Client.findById(client._id)
+      .populate("company")
+      .populate("branch", "branchName branchCode");
 
     // Generar tarjeta digital si se solicita
     let digitalCardInfo = null;
@@ -241,6 +262,7 @@ export const createClient = async (req, res) => {
           gender: updatedClient.gender,
           points: updatedClient.points,
           status: updatedClient.status,
+          branch: updatedClient.branch,
           purchases: updatedClient.purchases,
           createdAt: updatedClient.createdAt,
           updatedAt: updatedClient.updatedAt,
@@ -261,7 +283,8 @@ export const getClientById = async (req, res) => {
   try {
     const client = await Client.findById(req.params.id)
       .populate("purchases")
-      .populate("company");
+      .populate("company")
+      .populate("branch", "branchName branchCode");
 
     if (!client) {
       return res.status(404).json({

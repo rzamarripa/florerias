@@ -67,6 +67,11 @@ const clientSchema = new Schema(
       ref: "cv_company",
       required: [true, "La empresa es requerida"]
     },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: "cv_branch",
+      default: null
+    },
     purchases: [{
       type: Schema.Types.ObjectId,
       ref: "cc_purchases"
@@ -144,6 +149,7 @@ const clientSchema = new Schema(
 clientSchema.index({ phoneNumber: 1 });
 clientSchema.index({ status: 1 });
 clientSchema.index({ company: 1 });
+clientSchema.index({ branch: 1 });
 clientSchema.index({ gender: 1 });
 
 // Method to get full name

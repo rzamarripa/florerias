@@ -134,6 +134,15 @@ const CancelledSalesTable: React.FC<CancelledSalesTableProps> = ({
   };
 
   const getPaymentStatusBadge = (sale: Sale) => {
+    // Si el status es sinAutorizar, mostrar badge amarillo
+    if (sale.status === 'sinAutorizar') {
+      return (
+        <Badge className="px-3 py-1 rounded-full font-medium bg-yellow-500 hover:bg-yellow-500/90 text-white">
+          Sin Autorizar
+        </Badge>
+      );
+    }
+
     // Para ventas canceladas, siempre mostrar badge rojo
     if (sale.status === "cancelado") {
       return (

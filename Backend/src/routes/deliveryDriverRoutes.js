@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAllDeliveryDrivers,
   getDeliveryDriverById,
+  createDeliveryDriver,
   updateDeliveryDriver,
   deleteDeliveryDriver,
   activateDeliveryDriver,
@@ -15,8 +16,8 @@ const router = Router();
 
 // Rutas para repartidores
 router.route('/')
-  .get(getAllDeliveryDrivers);        // GET /api/delivery-drivers - Obtener todos los repartidores
-  // POST eliminado - Los repartidores se crean desde el módulo de branches
+  .get(getAllDeliveryDrivers)        // GET /api/delivery-drivers - Obtener todos los repartidores
+  .post(createDeliveryDriver);       // POST /api/delivery-drivers - Crear nuevo repartidor
 
 router.route('/:id')
   .get(getDeliveryDriverById)        // GET /api/delivery-drivers/:id - Obtener repartidor por ID
