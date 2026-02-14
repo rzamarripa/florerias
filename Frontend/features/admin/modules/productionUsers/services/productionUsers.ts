@@ -2,6 +2,8 @@ import { apiCall } from "@/utils/api";
 import {
   ProductionUser,
   ProductionUserFilters,
+  CreateProductionUserData,
+  CreateProductionUserResponseData,
   GetProductionUsersResponse,
   UpdateProductionUserData,
 } from "../types";
@@ -25,6 +27,14 @@ export const productionUsersService = {
 
   getProductionUserById: async (userId: string): Promise<{ success: boolean; data: ProductionUser }> => {
     const response = await apiCall<ProductionUser>(`/production-users/${userId}`);
+    return response as any;
+  },
+
+  createProductionUser: async (userData: CreateProductionUserData): Promise<CreateProductionUserResponseData> => {
+    const response = await apiCall<ProductionUser>("/production-users", {
+      method: "POST",
+      body: JSON.stringify(userData),
+    });
     return response as any;
   },
 

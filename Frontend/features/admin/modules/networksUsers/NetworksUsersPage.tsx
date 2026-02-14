@@ -3,16 +3,16 @@
 import { Search, ChevronLeft, ChevronRight, Wrench, Loader2, Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { productionUsersService } from "./services/productionUsers";
+import { networksUsersService } from "./services/networksUsers";
 import {
-  ProductionUser,
-  ProductionUserFilters,
-  CreateProductionUserData,
-  UpdateProductionUserData,
+  NetworksUser,
+  NetworksUserFilters,
+  CreateNetworksUserData,
+  UpdateNetworksUserData,
 } from "./types";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import Actions from "./components/Actions";
-import ProductionUserModal from "./components/ProductionUserModal";
+import NetworksUserModal from "./components/NetworksUserModal";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,15 +35,15 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
 
-const ProductionUsersPage: React.FC = () => {
+const NetworksUsersPage: React.FC = () => {
   const { getIsAdmin, getIsManager } = useUserRoleStore();
-  const canCreateProductionUser = getIsAdmin() || getIsManager();
-  const [users, setUsers] = useState<ProductionUser[]>([]);
+  const canCreateNetworksUser = getIsAdmin() || getIsManager();
+  const [users, setUsers] = useState<NetworksUser[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [selectedUser, setSelectedUser] = useState<ProductionUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<NetworksUser | null>(null);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -52,7 +52,7 @@ const ProductionUsersPage: React.FC = () => {
     pages: 0,
   });
 
-  const loadProductionUsers = async (
+  const loadNetworksUsers = async (
     isInitial: boolean,
     page: number = pagination.page
   ) => {
@@ -61,7 +61,7 @@ const ProductionUsersPage: React.FC = () => {
         setLoading(true);
       }
 
-      const filters: ProductionUserFilters = {
+      const filters: NetworksUserFilters = {
         page,
         limit: pagination.limit,
       };
@@ -74,7 +74,7 @@ const ProductionUsersPage: React.FC = () => {
         filters.estatus = statusFilter === "true";
       }
 
-      const response = await productionUsersService.getAllProductionUsers(filters);
+      const response = await networksUsersService.getAllNetworksUsers(filters);
 
       if (response.data) {
         setUsers(response.data);
@@ -84,7 +84,7 @@ const ProductionUsersPage: React.FC = () => {
         setPagination(response.pagination);
       }
     } catch (error: any) {
-      toast.error(error.message || "Error al cargar los usuarios de producción");
+      toast.error(error.message || "Error al cargar los usuarios de redes");
       console.error("Error loading production users:", error);
     } finally {
       setLoading(false);
@@ -92,7 +92,7 @@ const ProductionUsersPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadProductionUsers(true, 1);
+    loadNetworksUsers(true, 1);
   }, [searchTerm, statusFilter]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -104,50 +104,50 @@ const ProductionUsersPage: React.FC = () => {
   };
 
   const handlePageChange = (page: number) => {
-    loadProductionUsers(true, page);
+    loadNetworksUsers(true, page);
   };
 
-  const handleCreateProductionUser = () => {
+  const handleCreateNetworksUser = () => {
     setSelectedUser(null);
     setShowModal(true);
   };
 
-  const handleEditUser = (user: ProductionUser) => {
+  const handleEditUser = (user: NetworksUser) => {
     setSelectedUser(user);
     setShowModal(true);
   };
 
-  const handleToggleStatus = async (user: ProductionUser) => {
+  const handleToggleStatus = async (user: NetworksUser) => {
     try {
       if (user.profile.estatus) {
-        await productionUsersService.deactivateProductionUser(user._id);
-        toast.success("Usuario de producción desactivado exitosamente");
+        await networksUsersService.deactivateNetworksUser(user._id);
+        toast.success("Usuario de redes desactivado exitosamente");
       } else {
-        await productionUsersService.activateProductionUser(user._id);
-        toast.success("Usuario de producción activado exitosamente");
+        await networksUsersService.activateNetworksUser(user._id);
+        toast.success("Usuario de redes activado exitosamente");
       }
-      loadProductionUsers(false);
+      loadNetworksUsers(false);
     } catch (error: any) {
       toast.error(error.message || "Error al cambiar el estado del usuario");
     }
   };
 
   const handleSaveUser = async (
-    data: CreateProductionUserData | UpdateProductionUserData
+    data: CreateNetworksUserData | UpdateNetworksUserData
   ) => {
     try {
       setModalLoading(true);
       if (selectedUser) {
         // Modo edición
-        await productionUsersService.updateProductionUser(selectedUser._id, data as UpdateProductionUserData);
-        toast.success("Usuario de producción actualizado exitosamente");
+        await networksUsersService.updateNetworksUser(selectedUser._id, data as UpdateNetworksUserData);
+        toast.success("Usuario de redes actualizado exitosamente");
       } else {
         // Modo creación
-        await productionUsersService.createProductionUser(data as CreateProductionUserData);
-        toast.success("Usuario de producción creado exitosamente");
+        await networksUsersService.createNetworksUser(data as CreateNetworksUserData);
+        toast.success("Usuario de redes creado exitosamente");
       }
       setShowModal(false);
-      loadProductionUsers(false);
+      loadNetworksUsers(false);
     } catch (error: any) {
       toast.error(error.message || `Error al ${selectedUser ? 'actualizar' : 'crear'} el usuario`);
     } finally {
@@ -198,12 +198,12 @@ const ProductionUsersPage: React.FC = () => {
     <div className="space-y-4">
       {/* Header */}
       <PageHeader
-        title="Usuarios de Producción"
-        description="Gestiona los usuarios del área de producción"
-        action={canCreateProductionUser ? {
-          label: "Nuevo Usuario de Producción",
+        title="Usuarios de Redes"
+        description="Gestiona los usuarios del área de redes y marketing"
+        action={canCreateNetworksUser ? {
+          label: "Nuevo Usuario de Redes",
           icon: <Plus className="h-4 w-4" />,
-          onClick: handleCreateProductionUser,
+          onClick: handleCreateNetworksUser,
         } : undefined}
       />
 
@@ -215,7 +215,7 @@ const ProductionUsersPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Buscar usuarios de producción..."
+                placeholder="Buscar usuarios de redes..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="pl-10"
@@ -238,7 +238,7 @@ const ProductionUsersPage: React.FC = () => {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground mt-3">Cargando usuarios de producción...</p>
+              <p className="text-muted-foreground mt-3">Cargando usuarios de redes...</p>
             </div>
           ) : (
             <>
@@ -263,7 +263,7 @@ const ProductionUsersPage: React.FC = () => {
                         className="text-center py-12 text-muted-foreground"
                       >
                         <Wrench className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <div>No se encontraron usuarios de producción</div>
+                        <div>No se encontraron usuarios de redes</div>
                         <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
                       </TableCell>
                     </TableRow>
@@ -354,7 +354,7 @@ const ProductionUsersPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <ProductionUserModal
+      <NetworksUserModal
         show={showModal}
         onHide={() => setShowModal(false)}
         user={selectedUser}
@@ -365,4 +365,4 @@ const ProductionUsersPage: React.FC = () => {
   );
 };
 
-export default ProductionUsersPage;
+export default NetworksUsersPage;

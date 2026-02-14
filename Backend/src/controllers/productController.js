@@ -190,7 +190,9 @@ const createProduct = async (req, res) => {
       descripcion,
       productCategory,
       orden,
-      imagen,
+      imagen, // Mantener para compatibilidad temporal
+      imageUrl,
+      imagePath,
       insumos,
       labour,
       precioVentaFinal,
@@ -305,7 +307,9 @@ const createProduct = async (req, res) => {
       descripcion: descripcion?.trim() || '',
       productCategory: productCategory || null,
       orden: orden || 0,
-      imagen: imagen || '',
+      imagen: imagen || '', // Mantener para compatibilidad
+      imageUrl: imageUrl || '',
+      imagePath: imagePath || '',
       insumos: insumosLimpios,
       labour: labour || 0,
       totalCosto,
@@ -354,6 +358,8 @@ const updateProduct = async (req, res) => {
       productCategory,
       orden,
       imagen,
+      imageUrl,
+      imagePath,
       insumos,
       labour,
       precioVentaFinal,
@@ -377,6 +383,8 @@ const updateProduct = async (req, res) => {
     if (productCategory !== undefined) updateData.productCategory = productCategory || null;
     if (orden !== undefined) updateData.orden = orden;
     if (imagen !== undefined) updateData.imagen = imagen;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+    if (imagePath !== undefined) updateData.imagePath = imagePath;
     if (insumos !== undefined) {
       // Validar y limpiar insumos antes de actualizar
       updateData.insumos = insumos.map(insumo => {
@@ -624,6 +632,50 @@ const getProductStats = async (req, res) => {
   }
 };
 
+// Actualizar solo la imagen del producto
+const updateProductImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { imageUrl, imagePath } = req.body;
+
+    // Verificar si el producto existe
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
+      });
+    }
+
+    // Actualizar solo los campos de imagen
+    const updateData = {};
+    if (imageUrl) updateData.imageUrl = imageUrl;
+    if (imagePath) updateData.imagePath = imagePath;
+    // Limpiar la imagen base64 si existe
+    updateData.imagen = '';
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('productCategory', 'name description')
+      .populate('company', 'legalName tradeName');
+
+    res.status(200).json({
+      success: true,
+      data: updatedProduct,
+      message: 'Imagen del producto actualizada exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al actualizar imagen del producto:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 export {
   getAllProducts,
   getProductById,
@@ -632,5 +684,6 @@ export {
   deleteProduct,
   activateProduct,
   deactivateProduct,
-  getProductStats
+  getProductStats,
+  updateProductImage
 };

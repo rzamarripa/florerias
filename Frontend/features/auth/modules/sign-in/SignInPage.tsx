@@ -80,11 +80,14 @@ const SignInPage = () => {
           storedToken ? "Presente" : "Ausente"
         );
 
+        // Redirigir según el rol del usuario
         const userRole = response.data.role;
         const roleLower = userRole?.toLowerCase();
 
         if (roleLower === "super admin" || roleLower === "superadmin") {
           router.push("/gestion/roles");
+        } else if (roleLower === "distribuidor") {
+          router.push("/gestion/empresas");
         } else if (userRole === "Gerente" || roleLower === "gerente") {
           router.push("/sucursal/ventas");
         } else if (userRole === "Cajero" || userRole === "Redes") {

@@ -1,4 +1,4 @@
-export interface ProductionUser {
+export interface NetworksUser {
   _id: string;
   username: string;
   email: string;
@@ -24,7 +24,7 @@ export interface ProductionUser {
   updatedAt?: string;
 }
 
-export interface CreateProductionUserData {
+export interface CreateNetworksUserData {
   username: string;
   email: string;
   phone: string;
@@ -36,7 +36,7 @@ export interface CreateProductionUserData {
   branch: string;
 }
 
-export interface UpdateProductionUserData {
+export interface UpdateNetworksUserData {
   username?: string;
   email?: string;
   phone?: string;
@@ -48,15 +48,15 @@ export interface UpdateProductionUserData {
   estatus?: boolean;
 }
 
-export interface CreateProductionUserResponseData {
+export interface CreateNetworksUserResponseData {
   success: boolean;
-  data: ProductionUser;
+  data: NetworksUser;
   message: string;
 }
 
-export interface GetProductionUsersResponse {
+export interface GetNetworksUsersResponse {
   success: boolean;
-  data: ProductionUser[];
+  data: NetworksUser[];
   pagination: {
     page: number;
     limit: number;
@@ -65,7 +65,7 @@ export interface GetProductionUsersResponse {
   };
 }
 
-export interface ProductionUserFilters {
+export interface NetworksUserFilters {
   page?: number;
   limit?: number;
   search?: string;

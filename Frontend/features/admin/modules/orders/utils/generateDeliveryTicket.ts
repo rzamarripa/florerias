@@ -1,6 +1,7 @@
 export interface DeliveryTicketData {
   order: {
     orderNumber: string;
+    anonymous?: boolean;
     clientInfo: {
       name: string;
       phone: string;
@@ -201,7 +202,7 @@ export const generateDeliveryTicket = (data: DeliveryTicketData): string => {
 
         <div class="field-row">
             <span class="field-label">CLIENTE:</span>
-            <span class="field-value">${order.clientInfo.name.toUpperCase()}</span>
+            <span class="field-value">${order.anonymous ? 'ANÓNIMO' : order.clientInfo.name.toUpperCase()}</span>
         </div>
 
         <div class="field-row">

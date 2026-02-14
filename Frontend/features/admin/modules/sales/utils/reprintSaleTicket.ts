@@ -35,6 +35,7 @@ export const reprintSaleTicket = async (
       order: {
         orderNumber: sale.orderNumber || sale._id,
         createdAt: sale.createdAt,
+        anonymous: sale.anonymous || false,
         clientInfo: {
           name: sale.clientInfo?.name || "Sin nombre",
           phone: sale.clientInfo?.phone || "",

@@ -889,8 +889,8 @@ const createOrder = async (req, res) => {
         };
 
         // Determinar si se debe actualizar el balance de la caja
-        // La lógica del balance se mantiene igual:
-        // - Cajas normales: SOLO efectivo Y ventas en tienda afectan el balance
+        // La lógica del balance corregida:
+        // - Cajas normales: SOLO efectivo afecta el balance (sin importar tipo de envío)
         // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo afectan el balance
         let shouldUpdateBalance = false;
         
@@ -899,8 +899,8 @@ const createOrder = async (req, res) => {
             // Cajas de redes: actualizar balance si NO es efectivo
             shouldUpdateBalance = !isEffectivo;
           } else {
-            // Cajas normales: actualizar balance SOLO si es efectivo Y venta en tienda
-            shouldUpdateBalance = isEffectivo && savedOrder.shippingType === 'tienda';
+            // Cajas normales: actualizar balance SOLO si es efectivo (sin importar tipo de envío)
+            shouldUpdateBalance = isEffectivo;
           }
         }
 

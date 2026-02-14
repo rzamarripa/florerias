@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Save, Wrench, Eye, EyeOff, Building2, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { ProductionUser, CreateProductionUserData, UpdateProductionUserData } from "../types";
+import { NetworksUser, CreateNetworksUserData, UpdateNetworksUserData } from "../types";
 import { apiCall } from "@/utils/api";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
@@ -27,15 +27,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface ProductionUserModalProps {
+interface NetworksUserModalProps {
   show: boolean;
   onHide: () => void;
-  user: ProductionUser | null;
-  onSave: (data: CreateProductionUserData | UpdateProductionUserData) => void;
+  user: NetworksUser | null;
+  onSave: (data: CreateNetworksUserData | UpdateNetworksUserData) => void;
   loading?: boolean;
 }
 
-const ProductionUserModal: React.FC<ProductionUserModalProps> = ({
+const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
   show,
   onHide,
   user,
@@ -64,27 +64,27 @@ const ProductionUserModal: React.FC<ProductionUserModalProps> = ({
   const [branches, setBranches] = useState<any[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [managerBranch, setManagerBranch] = useState<any>(null);
-  const [productionRoleId, setProductionRoleId] = useState<string | null>(null);
+  const [redesRoleId, setRedesRoleId] = useState<string | null>(null);
   const [loadingRole, setLoadingRole] = useState(false);
 
-  // Load Production role ID
-  const loadProductionRole = async () => {
+  // Load Redes role ID
+  const loadRedesRole = async () => {
     setLoadingRole(true);
     try {
       const response = await apiCall<{ success: boolean; data: any[] }>(
         "/roles?estatus=true"
       );
-      const productionRole = response.data?.find(
-        (role) => role.name.toLowerCase() === "producción" || role.name.toLowerCase() === "produccion"
+      const redesRole = response.data?.find(
+        (role) => role.name.toLowerCase() === "redes"
       );
-      if (productionRole) {
-        setProductionRoleId(productionRole._id);
+      if (redesRole) {
+        setRedesRoleId(redesRole._id);
       } else {
-        toast.error("No se encontró el rol de Producción en el sistema");
+        toast.error("No se encontró el rol de Redes en el sistema");
       }
     } catch (err: any) {
       console.error("Error loading production role:", err);
-      toast.error("Error al cargar el rol de Producción");
+      toast.error("Error al cargar el rol de Redes");
     } finally {
       setLoadingRole(false);
     }
@@ -165,8 +165,8 @@ const ProductionUserModal: React.FC<ProductionUserModalProps> = ({
   useEffect(() => {
     if (show) {
       if (!user) {
-        // En modo creación, cargar el rol de Producción
-        loadProductionRole();
+        // En modo creación, cargar el rol de Redes
+        loadRedesRole();
       }
       if (isAdminOrManager) {
         loadUserCompanyAndBranches();
@@ -263,7 +263,7 @@ const ProductionUserModal: React.FC<ProductionUserModalProps> = ({
     if (validateForm()) {
       if (user) {
         // For update, only send changed fields
-        const updateData: UpdateProductionUserData = {
+        const updateData: UpdateNetworksUserData = {
           username: formData.username,
           email: formData.email,
           phone: formData.phone,
@@ -278,7 +278,7 @@ const ProductionUserModal: React.FC<ProductionUserModalProps> = ({
         onSave(updateData);
       } else {
         // For create, send all required fields
-        const createData: CreateProductionUserData = {
+        const createData: CreateNetworksUserData = {
           username: formData.username,
           email: formData.email,
           phone: formData.phone,
@@ -306,12 +306,12 @@ const ProductionUserModal: React.FC<ProductionUserModalProps> = ({
             ) : (
               <UserPlus className="h-5 w-5 text-primary" />
             )}
-            {isEditing ? "Editar Usuario de Producción" : "Nuevo Usuario de Producción"}
+            {isEditing ? "Editar Usuario de Redes" : "Nuevo Usuario de Redes"}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Actualiza la información del usuario de producción"
-              : "Completa la información para crear un nuevo usuario de producción"}
+              ? "Actualiza la información del usuario de redes"
+              : "Completa la información para crear un nuevo usuario de redes"}
           </DialogDescription>
         </DialogHeader>
 
@@ -488,7 +488,7 @@ const ProductionUserModal: React.FC<ProductionUserModalProps> = ({
               </Select>
               {isEditing && (
                 <p className="text-sm text-muted-foreground">
-                  La sucursal no se puede cambiar al editar un usuario de producción
+                  La sucursal no se puede cambiar al editar un usuario de redes
                 </p>
               )}
               {getIsManager() && !isEditing && managerBranch && (
@@ -529,4 +529,4 @@ const ProductionUserModal: React.FC<ProductionUserModalProps> = ({
   );
 };
 
-export default ProductionUserModal;
+export default NetworksUserModal;

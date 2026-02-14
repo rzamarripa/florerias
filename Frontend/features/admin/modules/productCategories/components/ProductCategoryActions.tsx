@@ -3,6 +3,7 @@ import { Edit2, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { productCategoriesService } from "../services/productCategories";
 import { ProductCategory } from "../types";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +18,8 @@ const ProductCategoryActions: React.FC<ProductCategoryActionsProps> = ({
   onEdit,
   onCategoryUpdated,
 }) => {
+  const { getIsSuperAdmin, getIsAdmin, getIsManager } = useUserRoleStore();
+  const canEditCategory = getIsSuperAdmin() || getIsAdmin() || getIsManager();
   const [isToggling, setIsToggling] = useState<boolean>(false);
 
   const handleEdit = () => {
@@ -44,6 +47,10 @@ const ProductCategoryActions: React.FC<ProductCategoryActionsProps> = ({
       setIsToggling(false);
     }
   };
+
+  if (!canEditCategory) {
+    return null; // No mostrar acciones si el usuario no tiene permisos
+  }
 
   return (
     <div className="flex justify-center gap-2">

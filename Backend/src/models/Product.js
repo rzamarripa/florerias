@@ -68,6 +68,16 @@ const productSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  imageUrl: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  imagePath: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   insumos: [insumoSchema],
   totalCosto: {
     type: Number,

@@ -19,7 +19,9 @@ export interface Product {
     description?: string;
   } | null;
   orden: number;
-  imagen: string;
+  imagen: string; // Base64 (legacy)
+  imageUrl?: string; // URL de Firebase
+  imagePath?: string; // Path en Firebase
   insumos: Insumo[];
   totalCosto: number;
   totalVenta: number;

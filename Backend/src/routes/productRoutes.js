@@ -7,7 +7,8 @@ import {
   deleteProduct,
   activateProduct,
   deactivateProduct,
-  getProductStats
+  getProductStats,
+  updateProductImage
 } from '../controllers/productController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -29,6 +30,9 @@ router.route('/:id')
 // Rutas para activar/desactivar productos
 router.put('/:id/activate', activateProduct);     // PUT /api/products/:id/activate - Activar producto
 router.put('/:id/deactivate', deactivateProduct); // PUT /api/products/:id/deactivate - Desactivar producto
+
+// Ruta para actualizar imagen del producto
+router.put('/:id/image', updateProductImage);     // PUT /api/products/:id/image - Actualizar imagen
 
 // Ruta para obtener estadísticas de ventas
 router.get('/:id/stats', getProductStats);        // GET /api/products/:id/stats - Obtener estadísticas

@@ -200,14 +200,12 @@ const DeliveryDriversPage: React.FC = () => {
       <PageHeader
         title="Repartidores"
         description="Gestiona los repartidores del sistema"
-      >
-        {isAdminOrManager && (
-          <Button onClick={handleCreateDriver}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Repartidor
-          </Button>
-        )}
-      </PageHeader>
+        action={isAdminOrManager ? {
+          label: "Nuevo Repartidor",
+          icon: <Plus className="h-4 w-4" />,
+          onClick: handleCreateDriver,
+        } : undefined}
+      />
 
       {/* Filters & Table */}
       <Card>

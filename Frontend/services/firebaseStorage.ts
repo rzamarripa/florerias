@@ -342,3 +342,19 @@ export const uploadDeliveryTicket = async (
     throw error;
   }
 };
+
+/**
+ * Sube la imagen de un producto a Firebase Storage
+ * @param file - El archivo de imagen del producto
+ * @param companyId - El ID de la empresa
+ * @param productId - El ID del producto
+ * @returns URL de descarga de la imagen y path en Firebase
+ */
+export const uploadProductImage = async (
+  file: File,
+  companyId: string,
+  productId: string
+): Promise<UploadFileResult> => {
+  const folder = `Empresas/${companyId}/products/${productId}/image`;
+  return uploadFile(file, folder);
+};

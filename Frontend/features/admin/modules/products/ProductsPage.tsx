@@ -196,9 +196,9 @@ const ProductsPage: React.FC = () => {
                       <TableCell>{product.orden}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          {product.imagen ? (
+                          {product.imageUrl || product.imagen ? (
                             <img
-                              src={product.imagen}
+                              src={product.imageUrl || product.imagen}
                               alt={product.nombre}
                               className="rounded border w-10 h-10 object-cover min-w-[40px]"
                             />

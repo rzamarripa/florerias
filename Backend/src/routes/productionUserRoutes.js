@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAllProductionUsers,
   getProductionUserById,
+  createProductionUser,
   updateProductionUser,
   deleteProductionUser,
   activateProductionUser,
@@ -15,8 +16,8 @@ const router = Router();
 
 // Rutas para usuarios de producción
 router.route('/')
-  .get(getAllProductionUsers);        // GET /api/production-users - Obtener todos los usuarios de producción
-  // POST eliminado - Los usuarios de producción se crean desde el módulo de branches
+  .get(getAllProductionUsers)         // GET /api/production-users - Obtener todos los usuarios de producción
+  .post(createProductionUser);        // POST /api/production-users - Crear nuevo usuario de producción
 
 router.route('/:id')
   .get(getProductionUserById)         // GET /api/production-users/:id - Obtener usuario por ID

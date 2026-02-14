@@ -74,4 +74,16 @@ export const productsService = {
     const response = await apiCall<{ success: boolean; data: { orderCount: number; totalQuantitySold: number; totalRevenue: number } }>(`/products/${productId}/stats`);
     return response;
   },
+
+  updateProductImage: async (
+    productId: string,
+    imageUrl: string,
+    imagePath: string
+  ): Promise<CreateProductResponseData> => {
+    const response = await apiCall<CreateProductResponseData>(`/products/${productId}/image`, {
+      method: "PUT",
+      body: JSON.stringify({ imageUrl, imagePath }),
+    });
+    return response;
+  },
 };

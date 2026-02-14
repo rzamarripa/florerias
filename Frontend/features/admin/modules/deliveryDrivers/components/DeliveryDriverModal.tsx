@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Save, Truck, Eye, EyeOff, Building2, Loader2 } from "lucide-react";
+import { Save, Truck, Eye, EyeOff, Building2, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { DeliveryDriver, CreateDeliveryDriverData, UpdateDeliveryDriverData } from "../types";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
+import { apiCall } from "@/utils/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,31 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [userBranch, setUserBranch] = useState<any>(null);
   const [loadingUserBranch, setLoadingUserBranch] = useState(false);
+  const [deliveryDriverRoleId, setDeliveryDriverRoleId] = useState<string | null>(null);
+  const [loadingRole, setLoadingRole] = useState(false);
+
+  // Load Repartidor role ID
+  const loadDeliveryDriverRole = async () => {
+    setLoadingRole(true);
+    try {
+      const response = await apiCall<{ success: boolean; data: any[] }>(
+        "/roles?estatus=true"
+      );
+      const deliveryDriverRole = response.data?.find(
+        (role) => role.name.toLowerCase() === "repartidor"
+      );
+      if (deliveryDriverRole) {
+        setDeliveryDriverRoleId(deliveryDriverRole._id);
+      } else {
+        toast.error("No se encontró el rol de Repartidor en el sistema");
+      }
+    } catch (err: any) {
+      console.error("Error loading delivery driver role:", err);
+      toast.error("Error al cargar el rol de Repartidor");
+    } finally {
+      setLoadingRole(false);
+    }
+  };
 
   // Load user company for Admin/Manager
   const loadUserCompany = async () => {
@@ -93,11 +119,21 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
 
     setLoadingUserBranch(true);
     try {
-      const response = await branchesService.getUserBranch();
-      if (response.success && response.data) {
-        setUserBranch(response.data);
+      const response = await branchesService.getUserBranches();
+      if (response.success && response.data && response.data.length > 0) {
+        const branch = response.data[0];
+        setUserBranch(branch);
+        // Set the branch in branches array for validation
+        setBranches([branch]);
         // Set the branch directly in form data
-        setFormData(prev => ({ ...prev, branch: response.data._id }));
+        setFormData(prev => ({ ...prev, branch: branch._id }));
+        
+        // Obtener la empresa a través de la sucursal
+        if (branch.companyId && typeof branch.companyId === 'object') {
+          setUserCompany(branch.companyId);
+        }
+      } else {
+        toast.error("No se encontró una sucursal asignada para el gerente");
       }
     } catch (err: any) {
       console.error("Error loading user branch:", err);
@@ -128,14 +164,19 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
   };
 
   useEffect(() => {
-    if (show && !driver) {
-      if (getIsManager()) {
-        loadUserBranch();
-      } else if (getIsAdmin()) {
+    if (show) {
+      if (!driver) {
+        // En modo creación, cargar el rol de Repartidor
+        loadDeliveryDriverRole();
+        if (getIsManager()) {
+          loadUserBranch();
+        } else if (getIsAdmin()) {
+          loadUserCompany();
+        }
+      } else if (driver && getIsAdmin()) {
+        // En modo edición solo cargar la empresa si es admin
         loadUserCompany();
       }
-    } else if (show && driver && getIsAdmin()) {
-      loadUserCompany();
     }
   }, [show, driver]);
 
@@ -153,6 +194,7 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
         branch: driver.branch?._id || "",
       });
     } else {
+      // For creation mode
       setFormData({
         username: "",
         email: "",
@@ -162,11 +204,11 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
           name: "",
           lastName: "",
         },
-        branch: "",
+        branch: getIsManager() && userBranch ? userBranch._id : "",
       });
     }
     setErrors({});
-  }, [driver, show]);
+  }, [driver, show, userBranch]);
 
   const handleChange = (field: string, value: any) => {
     if (field.startsWith("profile.")) {
@@ -266,7 +308,11 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
+            {isEditing ? (
+              <Truck className="h-5 w-5 text-primary" />
+            ) : (
+              <UserPlus className="h-5 w-5 text-primary" />
+            )}
             {isEditing ? "Editar Repartidor" : "Nuevo Repartidor"}
           </DialogTitle>
           <DialogDescription>
@@ -467,7 +513,7 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={loading || loadingUserCompany || loadingBranches || loadingUserBranch}
+              disabled={loading || loadingUserCompany || loadingBranches || loadingUserBranch || loadingRole || (!driver && !deliveryDriverRoleId)}
             >
               {loading ? (
                 <>
@@ -476,7 +522,11 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  {isEditing ? (
+                    <Save className="h-4 w-4 mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
                   {isEditing ? "Actualizar Repartidor" : "Crear Repartidor"}
                 </>
               )}

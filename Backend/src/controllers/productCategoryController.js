@@ -30,8 +30,8 @@ export const createProductCategory = async (req, res) => {
 
     const userRole = currentUser.role.name;
 
-    // Verificar permisos: solo Super Admin y Administrador pueden crear categorías
-    if (userRole !== "Super Admin" && userRole !== "Administrador") {
+    // Verificar permisos: Super Admin, Administrador y Gerente pueden crear categorías
+    if (userRole !== "Super Admin" && userRole !== "Administrador" && userRole !== "Gerente") {
       return res.status(403).json({
         success: false,
         message: "No tienes permisos para crear categorías de productos",
@@ -360,8 +360,8 @@ export const updateProductCategory = async (req, res) => {
 
     const userRole = currentUser.role.name;
 
-    // Verificar permisos: solo Super Admin y Administrador pueden actualizar categorías
-    if (userRole !== "Super Admin" && userRole !== "Administrador") {
+    // Verificar permisos: Super Admin, Administrador y Gerente pueden actualizar categorías
+    if (userRole !== "Super Admin" && userRole !== "Administrador" && userRole !== "Gerente") {
       return res.status(403).json({
         success: false,
         message: "No tienes permisos para actualizar categorías de productos",
@@ -429,8 +429,8 @@ export const deactivateProductCategory = async (req, res) => {
 
     const userRole = currentUser.role.name;
 
-    // Verificar permisos: solo Super Admin y Administrador pueden desactivar categorías
-    if (userRole !== "Super Admin" && userRole !== "Administrador") {
+    // Verificar permisos: Super Admin, Administrador y Gerente pueden desactivar categorías
+    if (userRole !== "Super Admin" && userRole !== "Administrador" && userRole !== "Gerente") {
       return res.status(403).json({
         success: false,
         message: "No tienes permisos para desactivar categorías de productos",
@@ -489,8 +489,8 @@ export const activateProductCategory = async (req, res) => {
 
     const userRole = currentUser.role.name;
 
-    // Verificar permisos: solo Super Admin y Administrador pueden activar categorías
-    if (userRole !== "Super Admin" && userRole !== "Administrador") {
+    // Verificar permisos: Super Admin, Administrador y Gerente pueden activar categorías
+    if (userRole !== "Super Admin" && userRole !== "Administrador" && userRole !== "Gerente") {
       return res.status(403).json({
         success: false,
         message: "No tienes permisos para activar categorías de productos",

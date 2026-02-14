@@ -921,6 +921,7 @@ const NewOrderPage = () => {
         order: {
           orderNumber: orderData.orderNumber,
           createdAt: orderData.createdAt,
+          anonymous: orderData.anonymous || false,
           clientInfo: {
             name: orderData.clientInfo.name,
             phone: orderData.clientInfo.phone || "",
@@ -1038,6 +1039,7 @@ const NewOrderPage = () => {
           const deliveryTicketData: DeliveryTicketData = {
             order: {
               orderNumber: orderData.orderNumber,
+              anonymous: orderData.anonymous || false,
               clientInfo: {
                 name: orderData.clientInfo.name,
                 phone: orderData.clientInfo.phone || "",

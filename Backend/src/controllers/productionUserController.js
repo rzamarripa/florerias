@@ -141,7 +141,135 @@ const getProductionUserById = async (req, res) => {
   }
 };
 
-// Función createProductionUser eliminada - Los usuarios de producción se crean desde el módulo de branches
+// Crear un nuevo usuario de producción
+const createProductionUser = async (req, res) => {
+  try {
+    const {
+      username,
+      email,
+      phone,
+      password,
+      profile,
+      branch: branchId
+    } = req.body;
+
+    // Validaciones básicas
+    if (!username || !email || !phone || !password || !profile?.name || !profile?.lastName || !branchId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Todos los campos son obligatorios'
+      });
+    }
+
+    // Buscar el rol de Producción (insensible a acentos)
+    const productionRole = await Role.findOne({ name: /^Producci[oó]n$/i });
+    if (!productionRole) {
+      return res.status(404).json({
+        success: false,
+        message: 'No se encontró el rol de Producción'
+      });
+    }
+
+    // Verificar que la sucursal existe
+    const branch = await Branch.findById(branchId);
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sucursal no encontrada'
+      });
+    }
+
+    // Verificar si el username ya existe
+    const usernameExists = await User.findOne({
+      username: { $regex: new RegExp(`^${username}$`, 'i') }
+    });
+    if (usernameExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'El nombre de usuario ya está en uso'
+      });
+    }
+
+    // Verificar si el email ya existe
+    const emailExists = await User.findOne({
+      email: { $regex: new RegExp(`^${email}$`, 'i') }
+    });
+    if (emailExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'El correo electrónico ya está registrado'
+      });
+    }
+
+    // Hashear la contraseña
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Crear el nuevo usuario de producción
+    const newProductionUser = new User({
+      username,
+      email,
+      phone,
+      password: hashedPassword,
+      profile: {
+        name: profile.name,
+        lastName: profile.lastName,
+        fullName: `${profile.name} ${profile.lastName}`,
+        estatus: true
+      },
+      role: productionRole._id
+    });
+
+    await newProductionUser.save();
+
+    // Agregar el usuario de producción a la sucursal
+    branch.employees.push(newProductionUser._id);
+    await branch.save();
+
+    // Obtener el usuario creado con populate
+    const createdProductionUser = await User.findById(newProductionUser._id)
+      .select('-password')
+      .populate('role', 'name description');
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...createdProductionUser.toObject(),
+        branch: {
+          _id: branch._id,
+          branchName: branch.branchName,
+          branchCode: branch.branchCode,
+          companyId: branch.companyId
+        }
+      },
+      message: 'Usuario de producción creado exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al crear usuario de producción:', error);
+    
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Error de validación',
+        errors: Object.values(error.errors).map(err => err.message)
+      });
+    }
+
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        message: `El ${field} ya está registrado`
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
 
 // Actualizar un usuario de producción
 const updateProductionUser = async (req, res) => {
@@ -391,6 +519,7 @@ const deactivateProductionUser = async (req, res) => {
 export {
   getAllProductionUsers,
   getProductionUserById,
+  createProductionUser,
   updateProductionUser,
   deleteProductionUser,
   activateProductionUser,

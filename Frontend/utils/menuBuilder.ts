@@ -361,10 +361,14 @@ const formatPathToLabel = (path: string): string => {
 
 /**
  * Obtiene la primera ruta disponible para el usuario (para redirección inicial)
+ * @param allowedModules - Módulos permitidos del usuario
+ * @param isSuperAdmin - Si el usuario es Super Admin
+ * @param userRole - Rol del usuario (opcional) para priorizar rutas específicas
  */
 export const getFirstAvailableRoute = (
   allowedModules: PageModules[],
-  isSuperAdmin: boolean = false
+  isSuperAdmin: boolean = false,
+  userRole?: string
 ): string => {
   // Para Super Admin, usar ruta por defecto
   if (isSuperAdmin) {
@@ -380,6 +384,18 @@ export const getFirstAvailableRoute = (
     return '/'; // Página por defecto si no hay permisos
   }
 
+  // Priorizar rutas específicas según el rol
+  const roleLower = userRole?.toLowerCase();
+  
+  if (roleLower === 'gerente' || roleLower === 'cajero' || roleLower === 'redes') {
+    // Para estos roles, priorizar /sucursal/ventas si está disponible
+    const ventasPage = viewablePages.find(page => page.path === '/sucursal/ventas');
+    if (ventasPage) {
+      return '/sucursal/ventas';
+    }
+  }
+
+  // Si no hay ruta prioritaria o no se encuentra, ordenar normalmente
   // Ordenar por categoría y orden para obtener la más relevante
   const sortedPages = viewablePages.sort((a, b) => {
     const aMetadata = getMenuMetadata(a.path);

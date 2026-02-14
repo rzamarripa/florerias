@@ -33,7 +33,8 @@ import {
   Wrench,
   UserCircle,
   Receipt,
-  Palette
+  Palette,
+  Globe
 } from "lucide-react";
 
 export interface MenuMetadata {
@@ -210,11 +211,17 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
     category: "Personal",
     order: 4
   },
+  "/panel/usuarios-redes": {
+    label: "Usuarios de Redes",
+    icon: Globe,
+    category: "Personal",
+    order: 5
+  },
   "/gestion/proveedores": {
     label: "Proveedores",
     icon: Building,
     category: "Personal",
-    order: 5
+    order: 6
   },
 
   // Sucursales y Empresas

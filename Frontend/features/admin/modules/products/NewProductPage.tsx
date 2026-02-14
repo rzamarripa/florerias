@@ -18,6 +18,11 @@ import { toast } from "react-toastify";
 import { productsService } from "./services/products";
 import { CreateProductData, Insumo, InsumoType, UnidadType } from "./types";
 import { materialsService } from "../materials/services/materials";
+import { uploadProductImage } from "@/services/firebaseStorage";
+import { companiesService } from "../companies/services/companies";
+import { branchesService } from "../branches/services/branches";
+import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 import { Material } from "../materials/types";
 import { productCategoriesService } from "../productCategories/services/productCategories";
 import { ProductCategory } from "../productCategories/types";
@@ -93,11 +98,18 @@ const NewProductPage: React.FC = () => {
   );
   const [labourType, setLabourType] = useState<"fixed" | "percentage">("fixed");
   const [labourPercentage, setLabourPercentage] = useState<number>(0);
+  const [companyId, setCompanyId] = useState<string>("");
 
-  // Cargar materiales activos y categorias
+  const { user } = useUserSessionStore();
+  const { hasRole } = useUserRoleStore();
+  const isManager = hasRole('Gerente');
+  const isAdmin = hasRole('Administrador') || hasRole('Admin');
+
+  // Cargar materiales activos, categorias y empresa
   useEffect(() => {
     loadMaterials();
     loadProductCategories();
+    loadCompanyId();
   }, []);
 
   // Cargar producto si estamos editando
@@ -146,6 +158,33 @@ const NewProductPage: React.FC = () => {
     }
   };
 
+  const loadCompanyId = async () => {
+    try {
+      // Para Gerentes: obtener empresa a través de su sucursal
+      if (isManager && user?._id) {
+        const branchesResponse = await branchesService.getUserBranches();
+        if (branchesResponse.success && branchesResponse.data && branchesResponse.data.length > 0) {
+          const branch = branchesResponse.data[0];
+          
+          // Obtener la empresa a través de la sucursal
+          const companyResponse = await companiesService.getCompanyByBranchId(branch._id);
+          if (companyResponse.success && companyResponse.data) {
+            setCompanyId(companyResponse.data.companyId);
+          }
+        }
+      } 
+      // Para Admins: obtener empresa directamente
+      else if (isAdmin && user?._id) {
+        const companyResponse = await companiesService.getUserCompany();
+        if (companyResponse.success && companyResponse.data) {
+          setCompanyId(companyResponse.data._id);
+        }
+      }
+    } catch (err: any) {
+      console.error('Error loading company ID:', err);
+    }
+  };
+
   const loadProduct = async () => {
     try {
       setLoading(true);
@@ -171,8 +210,10 @@ const NewProductPage: React.FC = () => {
         setPrecioVentaEditable(product.totalVenta);
       }
 
-      // Establecer preview de imagen si existe
-      if (product.imagen) {
+      // Establecer preview de imagen si existe (preferir imageUrl de Firebase)
+      if (product.imageUrl) {
+        setImagePreview(product.imageUrl);
+      } else if (product.imagen) {
         setImagePreview(product.imagen);
       }
 
@@ -328,20 +369,11 @@ const NewProductPage: React.FC = () => {
       console.log("Archivo seleccionado:", file.name, file.size);
       setImageFile(file);
 
-      // Convertir a base64 y crear preview
+      // Crear preview sin guardar en formData
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        console.log("Base64 generado, longitud:", base64String.length);
         setImagePreview(base64String);
-        setFormData((prev) => {
-          const updated = { ...prev, imagen: base64String };
-          console.log(
-            "FormData actualizado, imagen length:",
-            updated.imagen?.length
-          );
-          return updated;
-        });
       };
       reader.readAsDataURL(file);
     }
@@ -365,38 +397,55 @@ const NewProductPage: React.FC = () => {
         throw new Error("El nombre y la unidad son obligatorios");
       }
 
+      if (!companyId) {
+        throw new Error("No se pudo determinar la empresa. Por favor, recarga la página.");
+      }
+
       // Limpiar y validar insumos antes de enviar
       const insumosValidados = (formData.insumos || []).map(insumo => ({
         ...insumo,
         unidad: (insumo.unidad || "").trim() || "pieza", // Asegurar unidad válida
       }));
       
-      // Los datos del producto con la imagen en base64
+      // Los datos del producto SIN la imagen
       const productData: CreateProductData = {
         ...formData,
         insumos: insumosValidados,
-        imagen: formData.imagen || "",
+        imagen: "", // No enviar imagen base64
         precioVentaFinal: precioVentaEditable,
       };
 
-      console.log("Datos a enviar:", productData);
-      console.log("Imagen URL length:", formData.imagen?.length || 0);
-      console.log("Insumos detalle:", productData.insumos);
-      productData.insumos?.forEach((insumo, index) => {
-        console.log(`Insumo ${index}:`, {
-          nombre: insumo.nombre,
-          unidad: insumo.unidad,
-          unidad_tipo: typeof insumo.unidad,
-          unidad_vacio: insumo.unidad === '',
-          unidad_undefined: insumo.unidad === undefined
-        });
-      });
-
+      let savedProduct;
+      
       if (isEditing) {
-        await productsService.updateProduct(productId, productData);
+        // Actualizar producto existente
+        const response = await productsService.updateProduct(productId, productData);
+        savedProduct = response.data;
+        
+        // Si hay una nueva imagen, subirla a Firebase
+        if (imageFile) {
+          console.log("Subiendo imagen a Firebase para producto existente...");
+          const { url, path } = await uploadProductImage(imageFile, companyId, productId);
+          
+          // Actualizar el producto con la URL de la imagen
+          await productsService.updateProductImage(productId, url, path);
+        }
+        
         toast.success("Producto actualizado exitosamente");
       } else {
-        await productsService.createProduct(productData);
+        // Crear nuevo producto
+        const response = await productsService.createProduct(productData);
+        savedProduct = response.data;
+        
+        // Si hay imagen, subirla a Firebase usando el ID del producto creado
+        if (imageFile && savedProduct._id) {
+          console.log("Subiendo imagen a Firebase para producto nuevo...");
+          const { url, path } = await uploadProductImage(imageFile, companyId, savedProduct._id);
+          
+          // Actualizar el producto con la URL de la imagen
+          await productsService.updateProductImage(savedProduct._id, url, path);
+        }
+        
         toast.success("Producto creado exitosamente");
       }
 

@@ -5,6 +5,7 @@ import { Plus, Search, ChevronLeft, ChevronRight, PackageSearch, Loader2 } from 
 import { toast } from "sonner";
 import { productCategoriesService } from "./services/productCategories";
 import { ProductCategory } from "./types";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 import ProductCategoryActions from "./components/ProductCategoryActions";
 import ProductCategoryModal from "./components/ProductCategoryModal";
 
@@ -23,6 +24,9 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 
 const ProductCategoriesPage: React.FC = () => {
+  const { getIsSuperAdmin, getIsAdmin, getIsManager } = useUserRoleStore();
+  const canCreateCategory = getIsSuperAdmin() || getIsAdmin() || getIsManager();
+  
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -104,11 +108,11 @@ const ProductCategoriesPage: React.FC = () => {
       <PageHeader
         title="Categorías de Productos"
         description="Gestiona las categorías de productos del sistema"
-        action={{
+        action={canCreateCategory ? {
           label: "Nueva Categoría",
           icon: <Plus className="h-4 w-4" />,
           onClick: handleNewCategory,
-        }}
+        } : undefined}
       />
 
       {/* Filters & Table */}

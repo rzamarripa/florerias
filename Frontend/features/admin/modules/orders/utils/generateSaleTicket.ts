@@ -2,6 +2,7 @@ export interface SaleTicketData {
   order: {
     orderNumber: string;
     createdAt: string;
+    anonymous?: boolean;
     clientInfo: {
       name: string;
       phone: string;
@@ -313,7 +314,7 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
             </tr>
             <tr>
                 <td>CLIENTE :</td>
-                <td>${order.clientInfo.name}</td>
+                <td>${order.anonymous ? 'ANÓNIMO' : order.clientInfo.name}</td>
             </tr>
             <tr>
                 <td>TEL :</td>

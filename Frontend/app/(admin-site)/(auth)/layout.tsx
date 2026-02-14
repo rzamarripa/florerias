@@ -20,12 +20,36 @@ export default function AuthLayout({
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       const isSuperAdmin = getIsSuperAdmin();
+      const roleLower = role?.toLowerCase();
       
-      // Obtener la primera ruta disponible basándose en los permisos del usuario
-      const firstRoute = getFirstAvailableRoute(allowedModules, isSuperAdmin);
+      let redirectRoute: string;
       
-      // Redirigir a la primera ruta disponible
-      router.push(firstRoute);
+      // Manejar redirección específica por roles
+      if (isSuperAdmin || roleLower === "super admin" || roleLower === "superadmin") {
+        redirectRoute = "/gestion/roles";
+      } else if (roleLower === "distribuidor") {
+        redirectRoute = "/gestion/empresas";
+      } else if (roleLower === "gerente") {
+        // Verificar si el gerente tiene acceso a /sucursal/ventas
+        const hasVentasAccess = allowedModules.some(
+          module => module.path === "/sucursal/ventas" && 
+          module.modules.some(m => m.name.toLowerCase() === "ver")
+        );
+        redirectRoute = hasVentasAccess ? "/sucursal/ventas" : getFirstAvailableRoute(allowedModules, false, role);
+      } else if (roleLower === "cajero" || roleLower === "redes") {
+        // Verificar si tiene acceso a /sucursal/ventas
+        const hasVentasAccess = allowedModules.some(
+          module => module.path === "/sucursal/ventas" && 
+          module.modules.some(m => m.name.toLowerCase() === "ver")
+        );
+        redirectRoute = hasVentasAccess ? "/sucursal/ventas" : getFirstAvailableRoute(allowedModules, false, role);
+      } else {
+        // Para otros roles, obtener la primera ruta disponible
+        redirectRoute = getFirstAvailableRoute(allowedModules, false, role);
+      }
+      
+      // Redirigir a la ruta determinada
+      router.push(redirectRoute);
     }
   }, [
     isAuthenticated,
