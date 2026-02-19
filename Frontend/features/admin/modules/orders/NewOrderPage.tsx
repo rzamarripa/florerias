@@ -35,7 +35,7 @@ import { useUserSessionStore } from "@/stores/userSessionStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { generateSaleTicket, SaleTicketData } from "./utils/generateSaleTicket";
 import { generateDeliveryTicket, DeliveryTicketData } from "./utils/generateDeliveryTicket";
-import { uploadComprobante, uploadArreglo, uploadSaleTicket, uploadDeliveryTicket } from "@/services/firebaseStorage";
+import { uploadComprobante, uploadArreglo, uploadSaleTicket, uploadSaleTicketHTML, uploadDeliveryTicket } from "@/services/firebaseStorage";
 import { convertHtmlToImage } from "@/utils/htmlToImage";
 import { useStorageSocket, StockUpdatePayload } from "@/hooks/useStorageSocket";
 import QRScanner from "@/features/admin/modules/digitalCards/components/QRScanner";
@@ -958,13 +958,9 @@ const NewOrderPage = () => {
       // Generar HTML del ticket
       const ticketHTML = generateSaleTicket(ticketData);
       
-      // Convertir HTML a imagen usando html-to-image en el navegador
-      console.log("Convirtiendo ticket de venta a imagen en el navegador...");
-      const saleTicketBlob = await convertHtmlToImage(ticketHTML, {
-        width: 600,
-        backgroundColor: 'white'
-      });
-      console.log("Ticket de venta convertido a imagen exitosamente, tamaño:", saleTicketBlob.size);
+      // Ya no convertimos a imagen, guardamos el HTML directamente
+      console.log("Preparando ticket de venta como HTML para guardar...");
+      console.log("HTML length:", ticketHTML.length);
 
       // Variables para guardar las URLs de los tickets
       let saleTicketUrl: string | null = null;
@@ -982,8 +978,9 @@ const NewOrderPage = () => {
           throw new Error("IDs faltantes para subir ticket");
         }
         
-        const saleTicketResult = await uploadSaleTicket(
-          saleTicketBlob,
+        // Guardar el HTML directamente sin conversión
+        const saleTicketResult = await uploadSaleTicketHTML(
+          ticketHTML,
           companyId,
           branchId,
           orderId

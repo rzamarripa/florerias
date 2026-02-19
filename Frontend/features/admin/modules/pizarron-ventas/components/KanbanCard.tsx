@@ -8,6 +8,7 @@ import { Order } from "../types";
 
 interface KanbanCardProps {
   order: Order;
+  canDrag?: boolean;
   isLastProductionStage?: boolean;
   hasShippingStages?: boolean;
   isLastShippingStage?: boolean;
@@ -20,6 +21,7 @@ interface KanbanCardProps {
 
 const KanbanCard: React.FC<KanbanCardProps> = ({
   order,
+  canDrag: canDragProp = true,
   isLastProductionStage = false,
   hasShippingStages = false,
   isLastShippingStage = false,
@@ -29,17 +31,17 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
   onSendToShipping,
   onFinalizeOrder
 }) => {
-  // Configurar drag - no permitir drag si el estado es "completado"
-  const canDrag = order.status !== "completado";
+  // Configurar drag - no permitir drag si el estado es "completado" o si no tiene permisos
+  const canDragCard = canDragProp && order.status !== "completado";
 
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "ORDER_CARD",
     item: { order },
-    canDrag: () => canDrag,
+    canDrag: () => canDragCard,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  }), [order, canDrag]);
+  }), [order, canDragCard]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -83,11 +85,11 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
   };
 
   return (
-    <div ref={canDrag ? drag : null}>
+    <div ref={canDragCard ? drag : null}>
       <Card
         className="mb-3 shadow-sm relative rounded-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
         style={{
-          cursor: canDrag ? "move" : "pointer",
+          cursor: canDragCard ? "move" : "pointer",
           opacity: isDragging ? 0.5 : 1,
           transform: isDragging ? "scale(1.05)" : undefined,
         }}

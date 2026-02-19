@@ -85,6 +85,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
     royaltiesPercentage: 0,
     advertisingBranchPercentage: 0,
     advertisingBrandPercentage: 0,
+    deliveryTracking: { shippingLimit: 0 },
   });
 
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -144,6 +145,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
           royaltiesPercentage: branch.royaltiesPercentage || 0,
           advertisingBranchPercentage: branch.advertisingBranchPercentage || 0,
           advertisingBrandPercentage: branch.advertisingBrandPercentage || 0,
+          deliveryTracking: { shippingLimit: branch.deliveryTracking?.shippingLimit || 0 },
         });
       } else {
         resetForm();
@@ -221,6 +223,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
       royaltiesPercentage: 0,
       advertisingBranchPercentage: 0,
       advertisingBrandPercentage: 0,
+      deliveryTracking: { shippingLimit: 0 },
     });
     setError(null);
   };
@@ -342,6 +345,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
         royaltiesPercentage: formData.royaltiesPercentage,
         advertisingBranchPercentage: formData.advertisingBranchPercentage,
         advertisingBrandPercentage: formData.advertisingBrandPercentage,
+        deliveryTracking: { shippingLimit: formData.deliveryTracking?.shippingLimit || 0 },
       };
 
       if (formData.managerId) {
@@ -721,6 +725,25 @@ const BranchModal: React.FC<BranchModalProps> = ({
                         const value = parseFloat(e.target.value) || 0;
                         if (value >= 0 && value <= 100) {
                           setFormData({ ...formData, advertisingBrandPercentage: value });
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Límite de Envíos Diarios</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="0"
+                      value={formData.deliveryTracking?.shippingLimit || 0}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        if (value >= 0) {
+                          setFormData({
+                            ...formData,
+                            deliveryTracking: { shippingLimit: value },
+                          });
                         }
                       }}
                     />

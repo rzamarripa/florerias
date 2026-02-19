@@ -397,10 +397,10 @@ const BuyModal: React.FC<BuyModalProps> = ({ open, onOpenChange, onSuccess, buy,
             </div>
 
             <div className="space-y-2">
-              <Label className="font-semibold">Descripcion</Label>
+              <Label className="font-semibold">Descripción</Label>
               <Textarea
                 rows={3}
-                placeholder="Descripcion adicional de la compra..."
+                placeholder="Descripción adicional de la compra..."
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })

@@ -281,25 +281,46 @@ export const sendOrderEmail = async ({
     const html = generateOrderEmailHTML(orderNumber, clientName, ticketType);
     const text = generateOrderEmailText(orderNumber, clientName, ticketType);
 
-    // Preparar attachments si hay imagen del ticket
+    // Preparar attachments si hay imagen o HTML del ticket
     let attachments: EmailAttachment[] | undefined;
     
     if (ticketImageUrl) {
       try {
-        console.log('🖼️ Procesando imagen del ticket...');
-        const base64Content = await downloadImageAsBase64(ticketImageUrl);
+        // Detectar si es HTML o imagen
+        const isHtml = ticketImageUrl.includes('.html');
         
-        attachments = [{
-          filename: `ticket_${orderNumber}.png`,
-          content: base64Content,
-          type: 'image/png'
-        }];
-        
-        console.log('✅ Imagen del ticket preparada como attachment');
+        if (isHtml) {
+          console.log('📄 Procesando HTML del ticket...');
+          // Descargar el HTML y adjuntarlo
+          const response = await fetch(ticketImageUrl);
+          const htmlContent = await response.text();
+          
+          // Convertir a base64
+          const base64Content = btoa(unescape(encodeURIComponent(htmlContent)));
+          
+          attachments = [{
+            filename: `ticket_${orderNumber}.html`,
+            content: base64Content,
+            type: 'text/html'
+          }];
+          
+          console.log('✅ HTML del ticket preparado como attachment');
+        } else {
+          console.log('🖼️ Procesando imagen del ticket...');
+          const base64Content = await downloadImageAsBase64(ticketImageUrl);
+          
+          attachments = [{
+            filename: `ticket_${orderNumber}.png`,
+            content: base64Content,
+            type: 'image/png'
+          }];
+          
+          console.log('✅ Imagen del ticket preparada como attachment');
+        }
       } catch (error) {
-        console.error('⚠️ Error procesando imagen del ticket:', error);
+        console.error('⚠️ Error procesando ticket:', error);
         // Continuar sin attachment en caso de error
-        console.log('📧 Continuando envío sin imagen adjunta');
+        console.log('📧 Continuando envío sin archivo adjunto');
       }
     }
 
@@ -375,7 +396,7 @@ export const sendGoogleWalletCard = async ({
   clientNumber,
   points,
   saveUrl,
-  companyName = 'Corazón Violeta'
+  companyName = 'Zolt'
 }: {
   to: string;
   clientName: string;
@@ -388,12 +409,20 @@ export const sendGoogleWalletCard = async ({
     console.log('📧 Enviando Google Wallet Card por email:', {
       to,
       clientName,
-      saveUrl: saveUrl.substring(0, 50) + '...'
+      clientNumber,
+      points,
+      saveUrl: saveUrl.substring(0, 50) + '...',
+      timestamp: new Date().toISOString()
     });
 
     // Validar email
     if (!isValidEmail(to)) {
-      throw new Error('Dirección de email inválida');
+      console.error('❌ Email inválido para Google Wallet:', to);
+      return {
+        success: false,
+        error: `Email inválido: ${to}`,
+        message: 'El formato del email no es válido'
+      };
     }
 
     const subject = `Tu Tarjeta Digital está Lista - ${companyName}`;
@@ -520,13 +549,24 @@ export const sendGoogleWalletCard = async ({
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('❌ Error enviando Google Wallet email:', {
+        status: response.status,
+        error: data.error,
+        details: data.details,
+        to
+      });
       return {
         success: false,
         error: data.error || 'Error al enviar el email',
+        details: data.details
       };
     }
 
-    console.log('✅ Google Wallet Card enviada por email');
+    console.log('✅ Google Wallet Card enviada por email:', {
+      id: data.data?.id,
+      to,
+      timestamp: new Date().toISOString()
+    });
     return {
       success: true,
       data: data.data,
@@ -550,7 +590,7 @@ export const sendAppleWalletCard = async ({
   clientNumber,
   points,
   downloadUrl,
-  companyName = 'Corazón Violeta'
+  companyName = 'Zolt'
 }: {
   to: string;
   clientName: string;
@@ -563,12 +603,20 @@ export const sendAppleWalletCard = async ({
     console.log('📧 Enviando Apple Wallet Card por email:', {
       to,
       clientName,
-      downloadUrl
+      clientNumber,
+      points,
+      downloadUrl,
+      timestamp: new Date().toISOString()
     });
 
     // Validar email
     if (!isValidEmail(to)) {
-      throw new Error('Dirección de email inválida');
+      console.error('❌ Email inválido para Apple Wallet:', to);
+      return {
+        success: false,
+        error: `Email inválido: ${to}`,
+        message: 'El formato del email no es válido'
+      };
     }
 
     const subject = `Tu Tarjeta Digital Apple Wallet - ${companyName}`;
@@ -683,13 +731,24 @@ export const sendAppleWalletCard = async ({
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('❌ Error enviando Apple Wallet email:', {
+        status: response.status,
+        error: data.error,
+        details: data.details,
+        to
+      });
       return {
         success: false,
         error: data.error || 'Error al enviar el email',
+        details: data.details
       };
     }
 
-    console.log('✅ Apple Wallet Card enviada por email');
+    console.log('✅ Apple Wallet Card enviada por email:', {
+      id: data.data?.id,
+      to,
+      timestamp: new Date().toISOString()
+    });
     return {
       success: true,
       data: data.data,
@@ -773,7 +832,7 @@ export const sendPasswordResetCode = async ({
   to,
   code,
   userName = 'Usuario',
-  companyName = 'Corazón Violeta'
+  companyName = 'Zolt'
 }: {
   to: string;
   code: string;
@@ -909,7 +968,6 @@ export const sendPasswordResetCode = async ({
                 <li>No compartas este código con nadie</li>
                 <li>Nuestro equipo nunca te pedirá este código</li>
                 <li>El código solo es válido por 10 minutos</li>
-                <li>Se requiere tu contraseña actual para cambiarla</li>
               </ul>
             </div>
           </div>
@@ -961,7 +1019,7 @@ export const sendPasswordResetCode = async ({
 export const sendPasswordChangeConfirmation = async ({
   to,
   userName = 'Usuario',
-  companyName = 'Corazón Violeta'
+  companyName = 'Zolt'
 }: {
   to: string;
   userName?: string;

@@ -85,14 +85,14 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   };
 
   const shareViaWhatsApp = () => {
-    const message = `Hola ${client.name}, aqui esta tu tarjeta digital de Corazon Violeta`;
+    const message = `Hola ${client.name}, aqui esta tu tarjeta digital de Zolt`;
     const url = `${window.location.origin}/digital-card/view/${card._id}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message + ' ' + url)}`;
     window.open(whatsappUrl, '_blank');
   };
 
   const shareViaEmail = () => {
-    const subject = 'Tu tarjeta digital de Corazon Violeta';
+    const subject = 'Tu tarjeta digital de Zolt';
     const body = `Hola ${client.name} ${client.lastName},\n\nTu tarjeta digital esta disponible en:\n${window.location.origin}/digital-card/view/${card._id}\n\nGracias por ser parte de nuestro programa de fidelidad.`;
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;

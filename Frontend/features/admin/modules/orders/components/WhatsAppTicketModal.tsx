@@ -434,7 +434,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                   htmlFor="sendToClient"
                   className="font-medium cursor-pointer"
                 >
-                  Enviar ticket de venta al cliente
+                  Enviar ticket de venta al cliente {saleTicketUrl.includes('.html') ? '(HTML)' : '(Imagen)'}
                 </Label>
               </div>
               
@@ -596,7 +596,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                     <p><strong>Email:</strong> {clientEmail}</p>
                     <p className="mt-1">
                       Se enviará un correo con la confirmación de la orden
-                      {saleTicketUrl && <span className="text-green-600 font-medium"> incluyendo la imagen del ticket adjunta</span>}
+                      {saleTicketUrl && <span className="text-green-600 font-medium"> incluyendo el ticket adjunto {saleTicketUrl.includes('.html') ? '(HTML)' : '(imagen)'}</span>}
                     </p>
                   </div>
                 </div>
@@ -622,7 +622,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
           {/* Nota informativa */}
           <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
             <AlertDescription className="text-sm space-y-2">
-              <p>Los tickets se enviarán como imágenes visibles directamente en el chat de WhatsApp.</p>
+              <p>Los tickets de venta se enviarán como archivos HTML descargables. Los tickets de envío se enviarán como imágenes visibles en el chat.</p>
               <p className="text-xs text-gray-600 dark:text-gray-400">
                 <strong>Nota:</strong> En modo desarrollo, solo los números autorizados en Meta Business Suite pueden recibir mensajes.
               </p>

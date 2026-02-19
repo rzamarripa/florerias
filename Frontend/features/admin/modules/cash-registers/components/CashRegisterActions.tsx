@@ -121,20 +121,16 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
         {/* Toggle Open/Close Button - Visible para admin, cajeros y gerentes de esta caja */}
         {canToggleOpen() && (
           <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full w-8 h-8"
+            variant={cashRegister.isOpen ? "destructive" : "default"}
+            size="sm"
             onClick={handleToggleOpen}
             disabled={isTogglingOpen || !cashRegister.isActive}
             title={cashRegister.isOpen ? "Cerrar caja" : "Abrir caja"}
           >
             {isTogglingOpen ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : cashRegister.isOpen ? (
-              <DoorClosed size={16} className="text-yellow-500" />
-            ) : (
-              <DoorOpen size={16} className="text-cyan-500" />
-            )}
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            {isTogglingOpen ? "..." : cashRegister.isOpen ? "Cerrar" : "Abrir"}
           </Button>
         )}
       </div>

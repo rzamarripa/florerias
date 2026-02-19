@@ -149,7 +149,7 @@ const clientSchema = new Schema(
 clientSchema.index({ phoneNumber: 1 });
 clientSchema.index({ status: 1 });
 clientSchema.index({ company: 1 });
-clientSchema.index({ branch: 1 });
+// Removed duplicate index for branch - already defined in schema
 clientSchema.index({ gender: 1 });
 
 // Method to get full name

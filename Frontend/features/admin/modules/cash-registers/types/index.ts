@@ -114,12 +114,13 @@ export interface OrderSummary {
   recipientName: string;
   total: number;
   advance: number;
+  discount: number;
+  discountType?: string | null;
   shippingType: string;
   paymentMethod: string;
   status: string;
   createdAt: string;
   itemsCount: number;
-  discount?: number;
   sendToProduction?: boolean;
 }
 
@@ -185,6 +186,8 @@ export interface CashRegisterSummary {
     totalSales: number;
     totalExpenses: number;
     currentBalance: number;
+    finalBalance?: number;
+    remainingBalance?: number;
   };
   salesByPaymentType: {
     efectivo: number;
@@ -200,4 +203,9 @@ export interface CashRegisterSummary {
   discountAuths: DiscountAuthSummary[];
   canceledOrders?: OrderSummary[]; // Órdenes canceladas de la sesión
   authorizedDiscounts?: DiscountAuthSummary[]; // Descuentos autorizados (isAuth=true)
+  logMetadata?: {
+    closedAt: string;
+    openedAt: string | null;
+    logId: string;
+  };
 }

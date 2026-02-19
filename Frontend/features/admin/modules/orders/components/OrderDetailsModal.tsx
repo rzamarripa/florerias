@@ -63,6 +63,7 @@ import StripePaymentModal from "./StripePaymentModal";
 import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
 import { isCardPaymentMethod } from "@/services/stripeService";
 import { neighborhoodsService } from "@/features/admin/modules/neighborhoods/services/neighborhoods";
+import { branchesService } from "@/features/admin/modules/branches/services/branches";
 import { toast } from "react-toastify";
 import {
   setCustomValidationMessage,
@@ -159,6 +160,13 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
   // Estado para cliente invitado
   const [isGuestClient, setIsGuestClient] = useState(false);
+
+  // Estado para límite diario de envíos
+  const [deliveryStatus, setDeliveryStatus] = useState<{
+    shippingLimit: number;
+    todayDeliveries: number;
+    remainingDeliveries: number;
+  } | null>(null);
 
   // Cargar clientes filtrados por empresa (a través de la sucursal)
   const fetchClients = async (branchId?: string) => {
@@ -335,6 +343,14 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       fetchClients(formData.branchId);
       fetchDeliveryDrivers(formData.branchId);
       fetchSalesChannels(formData.branchId);
+      // Cargar estado de envíos diarios
+      branchesService.getDailyDeliveryStatus(formData.branchId)
+        .then((res) => {
+          if (res.success) {
+            setDeliveryStatus(res.data);
+          }
+        })
+        .catch(() => setDeliveryStatus(null));
     }
   }, [formData.branchId, show]);
 
@@ -1132,7 +1148,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                             </Label>
                             <Input
                               type="tel"
-                              placeholder={isGuestClient ? "Teléfono del invitado (opcional)" : "Telefono"}
+                              placeholder={isGuestClient ? "Teléfono del invitado (opcional)" : "Teléfono"}
                               value={formData.clientInfo.phone}
                               onChange={(e) =>
                                 setFormData((prev) => ({
@@ -1249,22 +1265,34 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                       </>
                     ) : (
                       <div className="flex flex-wrap gap-4 items-center">
-                        {["envio", "tienda"].map((tipo) => (
-                          <div key={tipo} className="flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              id={`envio-${tipo}`}
-                              name="envio"
-                              value={tipo}
-                              checked={formData.shippingType === tipo}
-                              onChange={(e) => handleShippingTypeChange(e.target.value as ShippingType)}
-                              className="h-4 w-4"
-                            />
-                            <label htmlFor={`envio-${tipo}`} className="text-sm font-medium">
-                              {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-                            </label>
-                          </div>
-                        ))}
+                        {["envio", "tienda"].map((tipo) => {
+                          const isDeliveryLimitReached = tipo === "envio" &&
+                            deliveryStatus !== null &&
+                            deliveryStatus.shippingLimit > 0 &&
+                            deliveryStatus.remainingDeliveries <= 0;
+                          return (
+                            <div key={tipo} className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                id={`envio-${tipo}`}
+                                name="envio"
+                                value={tipo}
+                                checked={formData.shippingType === tipo}
+                                onChange={(e) => handleShippingTypeChange(e.target.value as ShippingType)}
+                                className="h-4 w-4"
+                                disabled={isDeliveryLimitReached}
+                              />
+                              <label htmlFor={`envio-${tipo}`} className={`text-sm font-medium ${isDeliveryLimitReached ? "text-muted-foreground" : ""}`}>
+                                {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                              </label>
+                            </div>
+                          );
+                        })}
+                        {deliveryStatus && deliveryStatus.shippingLimit > 0 && deliveryStatus.remainingDeliveries <= 0 && (
+                          <span className="text-sm text-destructive">
+                            Se alcanzó el límite diario de envíos ({deliveryStatus.shippingLimit})
+                          </span>
+                        )}
                         <div className="border-l pl-4 flex gap-4">
                           <div className="flex items-center space-x-2">
                             <Checkbox

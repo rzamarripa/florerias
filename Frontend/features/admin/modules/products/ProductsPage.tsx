@@ -124,7 +124,7 @@ const ProductsPage: React.FC = () => {
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-2xl font-bold mb-1">Productos</h2>
-          <p className="text-muted-foreground">Gestiona el catalogo de productos</p>
+          <p className="text-muted-foreground">Gestiona el catálogo de productos</p>
         </div>
         <Button onClick={handleNewProduct} className="flex items-center gap-2 px-4">
           <Plus size={20} />
@@ -174,7 +174,7 @@ const ProductsPage: React.FC = () => {
                 <TableRow className="bg-muted/50">
                   <TableHead className="font-semibold text-muted-foreground">ORDEN</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">NOMBRE</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">DESCRIPCION</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">DESCRIPCIÓN</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">COSTO</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">PRECIO</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">ESTATUS</TableHead>
@@ -187,7 +187,7 @@ const ProductsPage: React.FC = () => {
                     <TableCell colSpan={7} className="text-center py-12">
                       <Package size={48} className="mx-auto mb-3 opacity-50 text-muted-foreground" />
                       <div className="text-muted-foreground">No se encontraron productos</div>
-                      <small className="text-muted-foreground">Intenta ajustar los filtros de busqueda</small>
+                      <small className="text-muted-foreground">Intenta ajustar los filtros de búsqueda</small>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -291,7 +291,7 @@ const ProductsPage: React.FC = () => {
                   <ChevronLeft size={16} />
                 </Button>
                 <span className="px-3 py-1 text-sm">
-                  Pagina {pagination.page} de {pagination.pages}
+                  Página {pagination.page} de {pagination.pages}
                 </span>
                 <Button
                   variant="outline"

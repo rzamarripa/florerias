@@ -20,6 +20,7 @@ export const createBranch = async (req, res) => {
       royaltiesPercentage,
       advertisingBranchPercentage,
       advertisingBrandPercentage,
+      deliveryTracking,
     } = req.body;
 
 
@@ -152,6 +153,9 @@ export const createBranch = async (req, res) => {
       royaltiesPercentage: royaltiesPercentage || 0,
       advertisingBranchPercentage: advertisingBranchPercentage || 0,
       advertisingBrandPercentage: advertisingBrandPercentage || 0,
+      deliveryTracking: {
+        shippingLimit: deliveryTracking?.shippingLimit || 0,
+      },
       employees: employees || [],
     });
 
@@ -366,6 +370,7 @@ export const updateBranch = async (req, res) => {
       royaltiesPercentage,
       advertisingBranchPercentage,
       advertisingBrandPercentage,
+      deliveryTracking,
     } = req.body;
 
     // Si se está actualizando el branchCode, verificar que no exista en otra sucursal
@@ -394,6 +399,7 @@ export const updateBranch = async (req, res) => {
     if (royaltiesPercentage !== undefined) updateData.royaltiesPercentage = royaltiesPercentage;
     if (advertisingBranchPercentage !== undefined) updateData.advertisingBranchPercentage = advertisingBranchPercentage;
     if (advertisingBrandPercentage !== undefined) updateData.advertisingBrandPercentage = advertisingBrandPercentage;
+    if (deliveryTracking?.shippingLimit !== undefined) updateData['deliveryTracking.shippingLimit'] = deliveryTracking.shippingLimit;
 
     // Manejar actualización del gerente
     if (managerId !== undefined) {
@@ -1032,6 +1038,48 @@ export const getBranchesForRedesUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+// Obtener estado diario de envíos de una sucursal
+export const getDailyDeliveryStatus = async (req, res) => {
+  try {
+    const branchId = req.params.id;
+
+    const branch = await Branch.findById(branchId).select('deliveryTracking');
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sucursal no encontrada',
+      });
+    }
+
+    const shippingLimit = branch.deliveryTracking?.shippingLimit || 0;
+    const deliveryLog = branch.deliveryTracking?.deliveryLog || [];
+
+    // Contar envíos de hoy desde el deliveryLog
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const todayDeliveries = deliveryLog.filter(
+      (entry) => new Date(entry.date) >= startOfDay
+    ).length;
+
+    const remainingDeliveries = Math.max(0, shippingLimit - todayDeliveries);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        shippingLimit,
+        todayDeliveries,
+        remainingDeliveries,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };

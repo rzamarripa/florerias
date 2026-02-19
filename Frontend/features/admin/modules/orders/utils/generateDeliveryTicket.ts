@@ -68,7 +68,7 @@ export const generateDeliveryTicket = (data: DeliveryTicketData): string => {
         }
 
         body {
-            font-family: 'Courier New', monospace;
+            font-family: Courier New, Courier, monospace;
             font-size: 14pt;
             line-height: 1.6;
             padding: 20px;

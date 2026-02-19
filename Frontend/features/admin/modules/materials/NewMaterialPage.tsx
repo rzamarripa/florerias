@@ -268,10 +268,10 @@ const NewMaterialPage: React.FC = () => {
               </div>
 
               <div className="md:col-span-2 space-y-2">
-                <Label className="font-semibold">Descripcion</Label>
+                <Label className="font-semibold">Descripción</Label>
                 <Textarea
                   rows={3}
-                  placeholder="Descripcion opcional del material..."
+                  placeholder="Descripción opcional del material..."
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })

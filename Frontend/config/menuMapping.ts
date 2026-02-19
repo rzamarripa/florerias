@@ -341,23 +341,29 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
   },
 
   // E-commerce (especial)
+  "/ecommerce/dashboard": {
+    label: "Dashboard E-commerce",
+    icon: LayoutDashboard,
+    category: "E-commerce",
+    order: 1
+  },
   "/ecommerce/configuracion": {
     label: "Configuración General",
     icon: Settings,
     category: "E-commerce",
-    order: 1
+    order: 2
   },
   "/ecommerce/configuracion/diseno": {
     label: "Diseño",
     icon: Palette,
     category: "E-commerce",
-    order: 2
+    order: 3
   },
   "/ecommerce/catalogo": {
     label: "Catálogo de productos",
     icon: Package,
     category: "E-commerce",
-    order: 3
+    order: 4
   }
 };
 

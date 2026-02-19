@@ -291,7 +291,7 @@ const SocialMediaCashRegistersPage: React.FC = () => {
                   <ChevronLeft size={16} />
                 </Button>
                 <span className="px-3 py-1">
-                  Pagina {pagination.page} de {pagination.pages}
+                  Página {pagination.page} de {pagination.pages}
                 </span>
                 <Button
                   variant="outline"

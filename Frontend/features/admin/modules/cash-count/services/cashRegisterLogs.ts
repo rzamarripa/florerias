@@ -1,5 +1,6 @@
 import { apiCall } from "@/utils/api";
 import { CashRegisterLog, CashRegisterRef } from "../types";
+import { CashRegisterSummary } from "@/features/admin/modules/cash-registers/types";
 
 export interface CashRegisterLogFilters {
   page?: number;
@@ -39,8 +40,8 @@ export const cashRegisterLogsService = {
     return response as any;
   },
 
-  getCashRegisterLogById: async (logId: string): Promise<{ success: boolean; data: CashRegisterLog }> => {
-    const response = await apiCall<{ success: boolean; data: CashRegisterLog }>(`/cash-register-logs/${logId}`);
+  getCashRegisterLogById: async (logId: string): Promise<{ success: boolean; data: CashRegisterSummary }> => {
+    const response = await apiCall<{ success: boolean; data: CashRegisterSummary }>(`/cash-register-logs/${logId}`);
     return response as any;
   },
 

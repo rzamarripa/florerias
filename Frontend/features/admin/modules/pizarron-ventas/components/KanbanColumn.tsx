@@ -13,6 +13,7 @@ interface KanbanColumnProps {
   isLastProductionStage?: boolean;
   hasShippingStages?: boolean;
   isLastShippingStage?: boolean;
+  canMoveOrders?: boolean;
   onViewDetails?: (order: Order) => void;
   onChangeStatus?: (order: Order, newStatus: string) => void;
   onSendToShipping?: (order: Order) => void;
@@ -28,6 +29,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   isLastProductionStage = false,
   hasShippingStages = false,
   isLastShippingStage = false,
+  canMoveOrders = true,
   onViewDetails,
   onChangeStatus,
   onSendToShipping,
@@ -39,6 +41,9 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
     drop: (item: { order: Order }) => {
       // Validar que la orden existe
       if (!item?.order) return;
+      
+      // Verificar si el usuario puede mover órdenes
+      if (!canMoveOrders) return;
 
       // Solo actualizar si el estado es diferente
       if (item.order.status !== status) {
@@ -48,6 +53,9 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
     canDrop: (item: { order: Order }) => {
       // Validar que la orden existe
       if (!item?.order) return false;
+      
+      // No permitir drop si el usuario no tiene permisos
+      if (!canMoveOrders) return false;
 
       // No permitir drop si el orden viene de "completado"
       return item.order.status !== "completado" && item.order.status !== status;
@@ -56,7 +64,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
     }),
-  }), [status, onChangeStatus]);
+  }), [status, onChangeStatus, canMoveOrders]);
 
   // Estilos para feedback visual del drop zone
   const getDropZoneClasses = () => {
@@ -109,6 +117,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             <KanbanCard
               key={order._id}
               order={order}
+              canDrag={canMoveOrders}
               onViewDetails={onViewDetails}
               isLastProductionStage={isLastProductionStage}
               hasShippingStages={hasShippingStages}

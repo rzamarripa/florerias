@@ -211,6 +211,10 @@ export interface OrderFilters {
   status?: string;
   clientName?: string;
   orderNumber?: string;
+  salesChannel?: string;
+  eOrder?: boolean;
+  startDate?: string;
+  endDate?: string;
 }
 
 export type ShippingType = 'envio' | 'tienda' | 'redes_sociales';

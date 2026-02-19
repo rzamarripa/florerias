@@ -329,7 +329,7 @@ const MaterialsPage: React.FC = () => {
                   <ChevronLeft size={16} />
                 </Button>
                 <span className="px-3 py-1 text-sm">
-                  Pagina {pagination.page} de {pagination.pages}
+                  Página {pagination.page} de {pagination.pages}
                 </span>
                 <Button
                   variant="ghost"

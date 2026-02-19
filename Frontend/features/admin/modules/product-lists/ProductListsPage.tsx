@@ -328,7 +328,7 @@ const ProductListsPage: React.FC = () => {
                       <ChevronLeft size={16} />
                     </Button>
                     <div className="flex items-center px-3">
-                      Pagina {pagination.page} de {pagination.pages}
+                      Página {pagination.page} de {pagination.pages}
                     </div>
                     <Button
                       variant="outline"

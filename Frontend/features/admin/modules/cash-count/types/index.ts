@@ -34,11 +34,14 @@ export interface OrderLog {
   recipientName: string;
   total: number;
   advance: number;
+  discount: number;
+  discountType: string | null;
   shippingType: string;
   paymentMethod: string;
   status: string;
   saleDate: string;
   itemsCount: number;
+  sendToProduction: boolean;
 }
 
 export interface ExpenseLog {
@@ -60,6 +63,54 @@ export interface BuyLog {
   provider: string;
   user: string;
   description: string;
+}
+
+export interface DiscountAuthLog {
+  _id?: string;
+  authId: string;
+  orderId: string;
+  orderNumber: string;
+  message: string;
+  requestedBy: string;
+  managerId: string;
+  discountValue: number;
+  discountType: 'porcentaje' | 'cantidad';
+  discountAmount: number;
+  isAuth: boolean | null;
+  authFolio: string | null;
+  isRedeemed: boolean;
+  createdAt: string;
+  approvedAt: string | null;
+}
+
+export interface OrdersByPaymentMethod {
+  [paymentMethodName: string]: {
+    orders: OrderLog[];
+    total: number;
+    count: number;
+  };
+}
+
+export interface PaymentSummary {
+  _id: string;
+  orderId: string;
+  orderNumber: string;
+  amount: number;
+  date: string;
+  notes: string;
+  isAdvance: boolean;
+  clientName: string;
+  recipientName: string;
+  orderStatus: string;
+  registeredBy: string;
+}
+
+export interface PaymentsByMethod {
+  [paymentMethodName: string]: {
+    payments: PaymentSummary[];
+    total: number;
+    count: number;
+  };
 }
 
 export interface CashRegisterLog {
@@ -87,6 +138,11 @@ export interface CashRegisterLog {
   orders: OrderLog[];
   expenses: ExpenseLog[];
   buys: BuyLog[];
+  discountAuths: DiscountAuthLog[];
+  ordersByPaymentMethod?: OrdersByPaymentMethod;
+  paymentsByMethod?: PaymentsByMethod;
+  canceledOrders?: OrderLog[];
+  authorizedDiscounts?: DiscountAuthLog[];
   createdAt: string;
   updatedAt: string;
 }

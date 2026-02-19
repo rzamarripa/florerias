@@ -150,4 +150,16 @@ export const branchesService = {
     const response = await apiCall<{ success: boolean; count: number; data: Branch[]; companyId?: string }>("/branches/user/redes/branches");
     return response as any;
   },
+
+  getDailyDeliveryStatus: async (branchId: string): Promise<{
+    success: boolean;
+    data: {
+      shippingLimit: number;
+      todayDeliveries: number;
+      remainingDeliveries: number;
+    };
+  }> => {
+    const response = await apiCall<any>(`/branches/${branchId}/delivery-status`);
+    return response as any;
+  },
 };

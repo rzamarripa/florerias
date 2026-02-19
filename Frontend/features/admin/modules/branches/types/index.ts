@@ -43,6 +43,16 @@ export interface Company {
   rfc: string;
 }
 
+export interface DeliveryLogEntry {
+  orderId: string;
+  date: string;
+}
+
+export interface DeliveryTracking {
+  shippingLimit: number;
+  deliveryLog: DeliveryLogEntry[];
+}
+
 export interface Branch {
   _id: string;
   branchName: string;
@@ -56,6 +66,7 @@ export interface Branch {
   royaltiesPercentage?: number;
   advertisingBranchPercentage?: number;
   advertisingBrandPercentage?: number;
+  deliveryTracking?: DeliveryTracking;
   employees: Employee[] | string[];
   isActive: boolean;
   createdAt: string;
@@ -97,6 +108,7 @@ export interface CreateBranchData {
   royaltiesPercentage?: number;
   advertisingBranchPercentage?: number;
   advertisingBrandPercentage?: number;
+  deliveryTracking?: { shippingLimit: number };
   employees?: string[];
   employeesData?: EmployeeData[];
 }

@@ -56,7 +56,7 @@ export const sendResetCode = async (email: string): Promise<SendResetCodeRespons
           to: data.data.email,
           code: data.data.code,
           userName: data.data.username || 'Usuario',
-          companyName: 'Corazón Violeta'
+          companyName: 'Zolt'
         });
         
         if (!emailResult.success) {
@@ -147,7 +147,7 @@ export const resetPassword = async (
         await sendPasswordChangeConfirmation({
           to: data.data.email,
           userName: data.data.username || 'Usuario',
-          companyName: 'Corazón Violeta'
+          companyName: 'Zolt'
         });
         console.log("Email de confirmación enviado exitosamente");
       } catch (emailError) {

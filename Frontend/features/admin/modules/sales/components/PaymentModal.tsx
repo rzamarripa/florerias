@@ -198,8 +198,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       return;
     }
 
-    // Solo validar caja si el metodo de pago es efectivo
-    if (isEffectivoSelected() && !selectedCashRegister) {
+    // Validar que siempre se seleccione una caja registradora (para registro en lastRegistry)
+    if (!selectedCashRegister) {
       toast.error("Selecciona una caja registradora");
       return;
     }
@@ -211,7 +211,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         orderId: sale._id,
         amount: amountNum,
         paymentMethod: selectedPaymentMethod,
-        cashRegisterId: isEffectivoSelected() ? selectedCashRegister : null,
+        cashRegisterId: selectedCashRegister, // Siempre enviar cashRegisterId para registro en lastRegistry
         registeredBy: userId,
         notes: notes.trim(),
       });
@@ -398,11 +398,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 Registrar Nuevo Pago
               </h6>
 
-              {cashRegisters.length === 0 && paymentMethods.some(pm => pm.name.toLowerCase() === 'efectivo') ? (
+              {cashRegisters.length === 0 ? (
                 <Alert className="border-yellow-200 bg-yellow-50 mb-4">
                   <AlertCircle className="h-4 w-4 text-yellow-600" />
                   <AlertDescription className="text-yellow-700">
-                    No hay cajas registradoras abiertas en esta sucursal. Las cajas solo son necesarias para pagos en efectivo.
+                    No hay cajas registradoras abiertas en esta sucursal. Debes tener una caja abierta para registrar pagos.
                   </AlertDescription>
                 </Alert>
               ) : null}
@@ -452,14 +452,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
                   <div className="space-y-2">
                     <Label htmlFor="cashRegister" className="font-semibold">
-                      Caja Registradora {isEffectivoSelected() ? <span className="text-red-500">*</span> : "(solo para efectivo)"}
+                      Caja Registradora <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={selectedCashRegister}
                       onValueChange={setSelectedCashRegister}
-                      disabled={!isEffectivoSelected()}
                     >
-                      <SelectTrigger className={!isEffectivoSelected() ? "bg-gray-100" : ""}>
+                      <SelectTrigger>
                         <SelectValue placeholder="Selecciona una caja" />
                       </SelectTrigger>
                       <SelectContent>
@@ -470,11 +469,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    {!isEffectivoSelected() && (
-                      <p className="text-xs text-muted-foreground">
-                        La caja registradora solo se requiere para pagos en efectivo
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Todos los pagos deben registrarse en una caja
+                    </p>
                   </div>
 
                   <div className="space-y-2">

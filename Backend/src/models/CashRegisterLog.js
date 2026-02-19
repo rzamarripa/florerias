@@ -124,6 +124,10 @@ const cashRegisterLogSchema = new Schema(
           type: Number,
           default: 0,
         },
+        sendToProduction: {
+          type: Boolean,
+          default: false,
+        },
       },
     ],
     expenses: [
@@ -229,6 +233,121 @@ const cashRegisterLogSchema = new Schema(
         approvedAt: {
           type: Date,
           default: null,
+        },
+      },
+    ],
+    // Nuevos campos para almacenar datos completos del resumen
+    ordersByPaymentMethod: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+    paymentsByMethod: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+    canceledOrders: [
+      {
+        orderId: {
+          type: Schema.Types.ObjectId,
+          ref: "Order",
+        },
+        orderNumber: {
+          type: String,
+        },
+        clientName: {
+          type: String,
+        },
+        recipientName: {
+          type: String,
+        },
+        total: {
+          type: Number,
+          default: 0,
+        },
+        advance: {
+          type: Number,
+          default: 0,
+        },
+        discount: {
+          type: Number,
+          default: 0,
+        },
+        discountType: {
+          type: String,
+          default: null,
+        },
+        shippingType: {
+          type: String,
+        },
+        paymentMethod: {
+          type: String,
+        },
+        status: {
+          type: String,
+        },
+        createdAt: {
+          type: Date,
+        },
+        itemsCount: {
+          type: Number,
+          default: 0,
+        },
+        sendToProduction: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
+    authorizedDiscounts: [
+      {
+        authId: {
+          type: Schema.Types.ObjectId,
+          ref: "DiscountAuth",
+        },
+        orderId: {
+          type: Schema.Types.ObjectId,
+          ref: "Order",
+        },
+        orderNumber: {
+          type: String,
+        },
+        message: {
+          type: String,
+        },
+        requestedBy: {
+          type: String,
+        },
+        managerId: {
+          type: String,
+        },
+        discountValue: {
+          type: Number,
+          default: 0,
+        },
+        discountType: {
+          type: String,
+          enum: ['porcentaje', 'cantidad'],
+        },
+        discountAmount: {
+          type: Number,
+          default: 0,
+        },
+        isAuth: {
+          type: Boolean,
+          default: true,
+        },
+        authFolio: {
+          type: String,
+        },
+        isRedeemed: {
+          type: Boolean,
+          default: false,
+        },
+        createdAt: {
+          type: Date,
+        },
+        approvedAt: {
+          type: Date,
         },
       },
     ],

@@ -176,17 +176,42 @@ const UnauthorizedSalesTable: React.FC<UnauthorizedSalesTableProps> = ({
     orderId: string,
     authFolio: string
   ) => {
-    const response = await discountAuthService.redeemAuthorizationForOrder(
-      orderId,
-      authFolio
-    );
-
-    if (response.success) {
-      toast.success(
-        response.message || "Folio canjeado y orden enviada a produccion"
+    try {
+      const response = await discountAuthService.redeemAuthorizationForOrder(
+        orderId,
+        authFolio
       );
-      loadSales();
-      onStatsUpdate?.();
+
+      if (response.success) {
+        toast.success(
+          response.message || "Folio canjeado y orden enviada a producción"
+        );
+        loadSales();
+        onStatsUpdate?.();
+      }
+    } catch (error: any) {
+      console.error("Error al canjear folio de autorización:", error);
+      
+      // Manejar diferentes tipos de errores
+      let errorMessage = "Código incorrecto para autorizar venta";
+      
+      if (error.message) {
+        // Mensajes específicos del backend
+        if (error.message.includes("no corresponde a esta orden")) {
+          errorMessage = "Código incorrecto para autorizar venta";
+        } else if (error.message.includes("rechazada")) {
+          errorMessage = "La autorización de descuento fue rechazada";
+        } else if (error.message.includes("ya fue canjeada")) {
+          errorMessage = "Esta autorización ya fue canjeada previamente";
+        } else if (error.message.includes("pendiente de aprobación")) {
+          errorMessage = "La autorización está pendiente de aprobación";
+        } else {
+          // Si hay otro mensaje de error, usarlo
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
     }
   };
 

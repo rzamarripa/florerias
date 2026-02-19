@@ -132,6 +132,11 @@ const NewOrderPage = () => {
   const [selectedItemIndexForExtras, setSelectedItemIndexForExtras] =
     useState<number>(-1);
   const [catalogSearchTerm, setCatalogSearchTerm] = useState("");
+  const [deliveryStatus, setDeliveryStatus] = useState<{
+    shippingLimit: number;
+    todayDeliveries: number;
+    remainingDeliveries: number;
+  } | null>(null);
 
   const [formData, setFormData] = useState<CreateOrderData>({
     branchId: "",
@@ -372,14 +377,23 @@ const NewOrderPage = () => {
     }
   }, [isSocialMedia]);
 
-  // Cargar storage cuando cambia la sucursal
+  // Cargar storage y estado de envíos cuando cambia la sucursal
   useEffect(() => {
     if (formData.branchId) {
       fetchStorageByBranch(formData.branchId);
+      // Cargar estado de envíos diarios
+      branchesService.getDailyDeliveryStatus(formData.branchId)
+        .then((res) => {
+          if (res.success) {
+            setDeliveryStatus(res.data);
+          }
+        })
+        .catch(() => setDeliveryStatus(null));
     } else {
       setStorage(null);
       setSelectedStorageId("");
       setHasNoStorage(false);
+      setDeliveryStatus(null);
     }
   }, [formData.branchId]);
 
@@ -1660,7 +1674,7 @@ const NewOrderPage = () => {
                           </Label>
                           <Input
                             type="tel"
-                            placeholder="Telefono"
+                            placeholder="Teléfono"
                             value={formData.clientInfo.phone}
                             onChange={(e) => {
                               setFormData({
@@ -2029,26 +2043,38 @@ const NewOrderPage = () => {
                   ) : (
                     /* Para usuarios normales, mostrar opciones de envio tradicionales */
                     <div className="flex gap-4 flex-wrap items-center">
-                      {["envio", "tienda"].map((tipo) => (
-                        <div key={tipo} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            id={`envio-${tipo}`}
-                            name="envio"
-                            value={tipo}
-                            checked={formData.shippingType === tipo}
-                            onChange={(e) =>
-                              handleShippingTypeChange(
-                                e.target.value as ShippingType
-                              )
-                            }
-                            className="w-4 h-4"
-                          />
-                          <label htmlFor={`envio-${tipo}`}>
-                            {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-                          </label>
-                        </div>
-                      ))}
+                      {["envio", "tienda"].map((tipo) => {
+                        const isDeliveryLimitReached = tipo === "envio" &&
+                          deliveryStatus !== null &&
+                          deliveryStatus.shippingLimit > 0 &&
+                          deliveryStatus.remainingDeliveries <= 0;
+                        return (
+                          <div key={tipo} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id={`envio-${tipo}`}
+                              name="envio"
+                              value={tipo}
+                              checked={formData.shippingType === tipo}
+                              onChange={(e) =>
+                                handleShippingTypeChange(
+                                  e.target.value as ShippingType
+                                )
+                              }
+                              className="w-4 h-4"
+                              disabled={isDeliveryLimitReached}
+                            />
+                            <label htmlFor={`envio-${tipo}`} className={isDeliveryLimitReached ? "text-muted-foreground" : ""}>
+                              {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                            </label>
+                          </div>
+                        );
+                      })}
+                      {deliveryStatus && deliveryStatus.shippingLimit > 0 && deliveryStatus.remainingDeliveries <= 0 && (
+                        <span className="text-sm text-destructive">
+                          Se alcanzó el límite diario de envíos ({deliveryStatus.shippingLimit})
+                        </span>
+                      )}
 
                       <div className="border-l pl-3 flex gap-3">
                         <div className="flex items-center gap-2">

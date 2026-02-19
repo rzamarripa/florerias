@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparación de Tickets</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .ticket-section {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        .info {
+            background: #f0f0f0;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Comparación de Renderizado de Tickets</h1>
+    
+    <div class="container">
+        <div class="ticket-section">
+            <h2>Ticket de Venta (CORREGIDO)</h2>
+            <div class="info">
+                padding: 20px<br>
+                align-items: flex-start<br>
+                font-size: 14pt<br>
+                line-height: 1.6
+            </div>
+            <iframe id="sale-frame"></iframe>
+        </div>
+        
+        <div class="ticket-section">
+            <h2>Ticket de Envío (FUNCIONA)</h2>
+            <div class="info">
+                padding: 20px<br>
+                align-items: flex-start<br>
+                font-size: 14pt<br>
+                line-height: 1.6
+            </div>
+            <iframe id="delivery-frame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // HTML del ticket de venta CORREGIDO
+        const saleTicketHTML = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Courier New, Courier, monospace;
+            font-size: 14pt;
+            line-height: 1.6;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+        .ticket-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #333;
+            margin-bottom: 20px;
+        }
+        .company-name {
+            font-size: 20pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket-container">
+        <div class="header">
+            <div class="company-name">CORAZÓN VIOLETA</div>
+            <div>RFC: XAXX010101000<br>
+            Calle Principal #123<br>
+            Ciudad, Estado<br>
+            TEL: 123-456-7890</div>
+        </div>
+        <table style="width: 100%; border: 1px solid #ddd;">
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;"><strong>RECIBO NO.:</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd;">ORD-000026</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;"><strong>FECHA:</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd;">18/02/2026</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;"><strong>CLIENTE:</strong></td>
+                <td style="padding: 8px; border: 1px solid #ddd;">Juan Pérez</td>
+            </tr>
+        </table>
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa;">
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14pt;">
+                <span>TOTAL:</span>
+                <span>$500.00</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        // HTML del ticket de envío (ORIGINAL FUNCIONANDO)
+        const deliveryTicketHTML = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Courier New, Courier, monospace;
+            font-size: 14pt;
+            line-height: 1.6;
+            padding: 20px;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+        .ticket-container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .order-number {
+            text-align: right;
+            font-weight: bold;
+            font-size: 16pt;
+            margin-bottom: 15px;
+        }
+        .field-row {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        .field-label {
+            font-weight: bold;
+            font-size: 12pt;
+            margin-bottom: 4px;
+        }
+        .field-value {
+            font-size: 14pt;
+            padding-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket-container">
+        <div class="order-number">ORD-000026</div>
+        <div class="field-row">
+            <span class="field-label">CLIENTE:</span>
+            <span class="field-value">JUAN PÉREZ</span>
+        </div>
+        <div class="field-row">
+            <span class="field-label">TEL:</span>
+            <span class="field-value">123-456-7890</span>
+        </div>
+        <div class="field-row">
+            <span class="field-label">ENTREGAR A:</span>
+            <span class="field-value">MARÍA GARCÍA</span>
+        </div>
+        <div class="field-row">
+            <span class="field-label">FECHA ENTREGA:</span>
+            <span class="field-value">18-02-2026 14:00</span>
+        </div>
+        <div class="field-row">
+            <span class="field-label">DIRECCIÓN:</span>
+            <span class="field-value">Calle Principal #456<br>Col: Centro</span>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        // Cargar los HTML en los iframes
+        document.getElementById('sale-frame').srcdoc = saleTicketHTML;
+        document.getElementById('delivery-frame').srcdoc = deliveryTicketHTML;
+    </script>
+</body>
+</html>

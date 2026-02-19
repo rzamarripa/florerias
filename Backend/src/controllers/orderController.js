@@ -141,6 +141,11 @@ const getAllOrders = async (req, res) => {
       filters.paymentMethod = new mongoose.Types.ObjectId(paymentMethodId);
     }
 
+    // Filtrar por eOrder (órdenes de e-commerce)
+    if (req.query.eOrder !== undefined) {
+      filters.eOrder = req.query.eOrder === 'true';
+    }
+
     // Si se proporciona branchId específico, aplicar ese filtro
     if (branchId) {
       const specificBranchId = new mongoose.Types.ObjectId(branchId);
@@ -591,7 +596,7 @@ const createOrder = async (req, res) => {
         // Caso 2: Venta rápida con envío - asignar primera etapa de Envío
         shouldSendToShipping = true; // Marcar para envío
         // Obtener la empresa a través de la sucursal
-        const branchWithCompany = await Branch.findById(branchId).populate('companyId');
+        const branchWithCompany = await Branch.findById(branchId);
 
         if (!branchWithCompany || !branchWithCompany.companyId) {
           return res.status(400).json({
@@ -600,7 +605,7 @@ const createOrder = async (req, res) => {
           });
         }
 
-        const companyId = branchWithCompany.companyId._id;
+        const companyId = branchWithCompany.companyId;
 
         // Buscar la primera etapa de tipo Envío
         const firstShippingStage = await StageCatalog.findOne({
@@ -625,7 +630,7 @@ const createOrder = async (req, res) => {
       // Asignar etapa si: sendToProduction = true O advance > 0
       if (shouldSendToProduction || (advance && advance > 0)) {
         // Obtener la empresa a través de la sucursal
-        const branchWithCompany = await Branch.findById(branchId).populate('companyId');
+        const branchWithCompany = await Branch.findById(branchId);
 
         if (!branchWithCompany || !branchWithCompany.companyId) {
           return res.status(400).json({
@@ -634,7 +639,7 @@ const createOrder = async (req, res) => {
           });
         }
 
-        const companyId = branchWithCompany.companyId._id;
+        const companyId = branchWithCompany.companyId;
 
         // Buscar la etapa con stageNumber = 1 y boardType = 'Produccion' para esta empresa
         const firstStage = await StageCatalog.findOne({
@@ -703,6 +708,18 @@ const createOrder = async (req, res) => {
     });
 
     const savedOrder = await newOrder.save();
+
+    // Registrar envío en el deliveryLog de la sucursal
+    if (shippingType === 'envio' && branchId) {
+      await Branch.findByIdAndUpdate(branchId, {
+        $push: {
+          'deliveryTracking.deliveryLog': {
+            orderId: savedOrder._id,
+            date: new Date(),
+          },
+        },
+      });
+    }
 
     // Variable para guardar el ID del pago (si se crea uno)
     let savedPaymentId = null;
@@ -1152,6 +1169,29 @@ const updateOrder = async (req, res) => {
     // Guardar stage anterior para comparación
     const previousStage = existingOrder.stage;
     const previousStatus = existingOrder.status;
+
+    // Verificar permisos para cambiar stage si se está intentando actualizar
+    if (updateData.stage && updateData.stage !== previousStage?._id?.toString()) {
+      // Obtener información del usuario con su rol
+      const user = await mongoose.model('cs_user').findById(req.user._id).populate('role');
+      
+      if (!user || !user.role) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuario no autenticado o sin rol asignado'
+        });
+      }
+      
+      const userRole = user.role.name.toLowerCase();
+      
+      // Solo permitir cambio de stage a roles autorizados
+      if (userRole !== 'produccion' && userRole !== 'administrador' && userRole !== 'gerente') {
+        return res.status(403).json({
+          success: false,
+          message: 'Solo usuarios de rol Producción tienen acceso a esta función'
+        });
+      }
+    }
 
     // Si se actualizan items, validar según tipo de producto
     if (updateData.items && updateData.items.length > 0) {
@@ -1893,7 +1933,7 @@ const sendOrderToShipping = async (req, res) => {
     }
 
     // Obtener la empresa a través de la sucursal
-    const branch = await Branch.findById(order.branchId).populate('companyId');
+    const branch = await Branch.findById(order.branchId);
 
     if (!branch || !branch.companyId) {
       return res.status(400).json({
@@ -1902,7 +1942,7 @@ const sendOrderToShipping = async (req, res) => {
       });
     }
 
-    const companyId = branch.companyId._id;
+    const companyId = branch.companyId;
 
     // Buscar el primer stage de Envío (stageNumber = 1, boardType = 'Envio')
     const firstShippingStage = await StageCatalog.findOne({

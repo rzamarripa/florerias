@@ -293,6 +293,63 @@ export const uploadSaleTicket = async (
 };
 
 /**
+ * Sube el ticket de venta como archivo HTML a Firebase Storage
+ * @param htmlContent - El contenido HTML del ticket
+ * @param companyId - El ID de la empresa
+ * @param branchId - El ID de la sucursal
+ * @param orderId - El ID de la orden
+ * @returns URL de descarga del ticket y path en Firebase
+ */
+export const uploadSaleTicketHTML = async (
+  htmlContent: string,
+  companyId: string,
+  branchId: string,
+  orderId: string
+): Promise<UploadFileResult> => {
+  try {
+    console.log("[uploadSaleTicketHTML] Iniciando con params:", { companyId, branchId, orderId });
+    console.log("[uploadSaleTicketHTML] HTML length:", htmlContent.length);
+    
+    // Crear un Blob desde el string HTML
+    const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+    
+    // Crear un File object desde el Blob
+    const file = new File([htmlBlob], 'ticketVenta.html', { type: 'text/html' });
+    
+    // Definir la carpeta de destino
+    const folder = `Empresas/${companyId}/branches/${branchId}/orders/${orderId}/tickets`;
+    
+    // Usar el nombre específico para el ticket de venta HTML
+    const storage = getStorageInstance();
+    console.log("[uploadSaleTicketHTML] Storage instance obtenida");
+    
+    const fileName = 'ticketVenta.html';
+    const filePath = `${folder}/${fileName}`;
+    console.log("[uploadSaleTicketHTML] Path completo:", filePath);
+    
+    const storageRef = ref(storage, filePath);
+    
+    console.log("[uploadSaleTicketHTML] Subiendo HTML a Firebase...");
+    const snapshot = await uploadBytes(storageRef, file, {
+      contentType: 'text/html',
+      cacheControl: 'public, max-age=3600',
+    });
+    console.log("[uploadSaleTicketHTML] HTML subido, obteniendo URL...");
+    
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    console.log("[uploadSaleTicketHTML] URL obtenida:", downloadURL);
+    
+    return {
+      url: downloadURL,
+      path: filePath,
+    };
+  } catch (error) {
+    console.error("[uploadSaleTicketHTML] Error completo:", error);
+    throw error;
+  }
+};
+
+/**
  * Sube el ticket de envío como imagen PNG a Firebase Storage
  * @param imageBlob - La imagen como Blob
  * @param companyId - El ID de la empresa

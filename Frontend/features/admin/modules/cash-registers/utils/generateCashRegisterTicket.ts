@@ -344,186 +344,192 @@ export const generateCashRegisterTicket = (
             </div>
         </div>
 
-        <!-- Detalle de Ventas Regulares -->
-        <div class="section-title">Detalle de Ventas Regulares</div>
+        <!-- Detalle de Pagos por Método de Pago -->
+        ${
+          summary.paymentsByMethod && Object.keys(summary.paymentsByMethod).length > 0 ? 
+          Object.entries(summary.paymentsByMethod).map(([methodName, methodData]: [string, any]) => `
+        <div class="section-title">Pagos - ${methodName} (${methodData.count})</div>
         <table>
             <thead>
                 <tr>
                     <th style="width: 5%;">No.</th>
-                    <th style="width: 15%;">Fecha</th>
-                    <th style="width: 12%;">Forma de Pago</th>
-                    <th style="width: 20%;">Cliente</th>
-                    <th style="width: 15%;">No. Venta</th>
-                    <th style="width: 10%;">Productos</th>
+                    <th style="width: 8%;">Tipo</th>
+                    <th style="width: 14%;">Fecha</th>
+                    <th style="width: 12%;">Orden</th>
+                    <th style="width: 18%;">Cliente</th>
+                    <th style="width: 13%;">Notas</th>
+                    <th style="width: 15%;">Registrado por</th>
                     <th style="width: 15%; text-align: right;">Importe</th>
                 </tr>
             </thead>
             <tbody>
                 ${
-                  (() => {
-                    const regularOrders = summary.orders.filter(order => {
-                      const paymentLower = order.paymentMethod.toLowerCase();
-                      const isStoreCredit = paymentLower === 'crédito' || paymentLower === 'credito' || 
-                                           (paymentLower.includes('crédito') && !paymentLower.includes('tarjeta')) ||
-                                           (paymentLower.includes('credito') && !paymentLower.includes('tarjeta'));
-                      return !isStoreCredit;
-                    });
-                    
-                    return regularOrders.length === 0
-                      ? '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #6c757d;">No se registraron ventas regulares</td></tr>'
-                      : regularOrders
-                          .map(
-                            (order, index) => {
-                            const isCancelled = order.status === 'cancelado';
-                            const isCredit = order.paymentMethod.toLowerCase().includes('crédito') || 
-                                           order.paymentMethod.toLowerCase().includes('credito');
+                  methodData.payments.length === 0
+                    ? `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #6c757d;">No se encontraron pagos con ${methodName}</td></tr>`
+                    : methodData.payments
+                        .map(
+                          (payment: any, index: number) => {
+                            const isCancelled = payment.orderStatus === 'cancelado';
                             
                             return `
                     <tr ${isCancelled ? 'style="background-color: #ffebee;"' : ''}>
                         <td>${index + 1}</td>
-                        <td style="font-size: 8pt;">${formatDate(order.createdAt)}</td>
                         <td>
-                            ${order.paymentMethod.split(', ').map((method: string) => {
-                              let bgColor = '#6c757d'; // default gray
-                              if (method.toLowerCase().includes('efectivo')) {
-                                bgColor = '#28a745'; // green
-                              } else if (method.toLowerCase().includes('tarjeta') || method.toLowerCase().includes('crédito') || method.toLowerCase().includes('credito')) {
-                                bgColor = '#17a2b8'; // info blue
-                              } else if (method.toLowerCase().includes('transferencia')) {
-                                bgColor = '#007bff'; // primary blue
-                              }
-                              return `<span class="payment-badge" style="background-color: ${bgColor}; margin: 2px;">${method}</span>`;
-                            }).join(' ')}
+                            ${payment.isAdvance ? 
+                              '<span style="background-color: #007bff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">ANTICIPO</span>' : 
+                              '<span style="background-color: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">PAGO</span>'}
                         </td>
-                        <td>
-                            <div style="font-weight: 600;">${order.clientName}</div>
-                            <div style="font-size: 8pt; color: #6c757d;">Para: ${order.recipientName}</div>
-                        </td>
+                        <td style="font-size: 8pt;">${formatDate(payment.date)}</td>
                         <td style="font-weight: 600;">
-                            ${order.orderNumber}
-                            ${isCancelled ? '<br><span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">CANCELADA</span>' : ''}
-                            ${isCredit && !isCancelled ? '<br><span style="background-color: #fd7e14; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">CRÉDITO</span>' : ''}
+                            ${payment.orderNumber}
+                            ${isCancelled ? '<br><span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 7pt; font-weight: bold;">CANCELADA</span>' : ''}
                         </td>
-                        <td style="text-align: center;">${order.itemsCount}</td>
-                        <td style="text-align: right; font-weight: bold; ${isCancelled ? 'text-decoration: line-through; color: #dc3545;' : ''}">${formatCurrency(order.advance)}</td>
+                        <td>
+                            <div style="font-weight: 600; font-size: 9pt;">${payment.clientName}</div>
+                            <div style="font-size: 8pt; color: #6c757d;">Para: ${payment.recipientName}</div>
+                        </td>
+                        <td style="font-size: 8pt; color: #6c757d;">${payment.notes || '-'}</td>
+                        <td style="font-size: 8pt;">${payment.registeredBy}</td>
+                        <td style="text-align: right; font-weight: bold; ${isCancelled ? 'text-decoration: line-through; color: #dc3545;' : ''}">${formatCurrency(payment.amount)}</td>
                     </tr>`;
-                            }
-                          )
-                          .join("");
-                  })()
+                          }
+                        )
+                        .join("")
                 }
             </tbody>
+            <tfoot style="background: #f8f9fa;">
+                <tr>
+                    <td colspan="7" style="text-align: right; font-weight: bold; padding: 10px;">Total ${methodName}:</td>
+                    <td style="text-align: right; font-weight: bold; font-size: 12pt; padding: 10px;">${formatCurrency(methodData.total)}</td>
+                </tr>
+            </tfoot>
         </table>
+          `).join('') : 
+          `<div class="section-title">Detalle de Pagos</div>
+           <p style="text-align: center; padding: 20px; color: #6c757d;">No se encontraron pagos registrados</p>`
+        }
 
-        <!-- Detalle de Ventas a Crédito -->
-        <div class="section-title">Detalle de Ventas a Crédito</div>
+        <!-- Sección de Ventas Especiales -->
+        ${
+          (summary.canceledOrders && summary.canceledOrders.length > 0) || 
+          (summary.authorizedDiscounts && summary.authorizedDiscounts.length > 0) ? `
+        <div class="section-title" style="background: #ffeaa7; color: #2d3436; border-color: #fdcb6e;">VENTAS ESPECIALES</div>
+        ` : ''
+        }
+
+        <!-- Ventas Canceladas -->
+        ${
+          summary.canceledOrders && summary.canceledOrders.length > 0 ? `
+        <h3 style="font-size: 12pt; font-weight: bold; margin: 15px 0 10px 0; padding-left: 10px; border-left: 4px solid #dc3545;">Ventas Canceladas (${summary.canceledOrders.length})</h3>
         <table>
             <thead>
                 <tr>
                     <th style="width: 5%;">No.</th>
-                    <th style="width: 15%;">Fecha</th>
-                    <th style="width: 20%;">Cliente</th>
-                    <th style="width: 15%;">No. Venta</th>
-                    <th style="width: 10%;">Productos</th>
-                    <th style="width: 12%; text-align: right;">Total</th>
-                    <th style="width: 12%; text-align: right;">Abonado</th>
-                    <th style="width: 11%; text-align: right;">Saldo</th>
+                    <th style="width: 14%;">Fecha</th>
+                    <th style="width: 12%;">No. Orden</th>
+                    <th style="width: 18%;">Cliente</th>
+                    <th style="width: 18%;">Destinatario</th>
+                    <th style="width: 15%;">Método Pago</th>
+                    <th style="width: 10%;">Total</th>
+                    <th style="width: 8%;">Estado</th>
                 </tr>
             </thead>
             <tbody>
                 ${
-                  (() => {
-                    const creditOrders = summary.orders.filter(order => {
-                      const paymentLower = order.paymentMethod.toLowerCase();
-                      const isStoreCredit = paymentLower === 'crédito' || paymentLower === 'credito' || 
-                                           (paymentLower.includes('crédito') && !paymentLower.includes('tarjeta')) ||
-                                           (paymentLower.includes('credito') && !paymentLower.includes('tarjeta'));
-                      return isStoreCredit;
-                    });
-                    
-                    return creditOrders.length === 0
-                      ? '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #6c757d;">No se registraron ventas a crédito</td></tr>'
-                      : creditOrders
-                          .map(
-                            (order, index) => {
-                              const total = order.total || 0;
-                              const advance = order.advance || 0;
-                              const balance = total - advance;
-                              
-                              return `
-                      <tr>
-                          <td>${index + 1}</td>
-                          <td style="font-size: 8pt;">${formatDate(order.createdAt)}</td>
-                          <td>
-                              <div style="font-weight: 600;">${order.clientName}</div>
-                              <div style="font-size: 8pt; color: #6c757d;">Para: ${order.recipientName}</div>
-                          </td>
-                          <td style="font-weight: 600;">
-                              ${order.orderNumber}
-                              <br><span style="background-color: #fd7e14; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">CRÉDITO</span>
-                          </td>
-                          <td style="text-align: center;">${order.itemsCount}</td>
-                          <td style="text-align: right; font-weight: bold;">${formatCurrency(total)}</td>
-                          <td style="text-align: right; font-weight: bold; color: #28a745;">${formatCurrency(advance)}</td>
-                          <td style="text-align: right; font-weight: bold; color: #dc3545;">${formatCurrency(balance)}</td>
-                      </tr>`;
-                            }
-                          )
-                          .join("");
-                  })()
-                }
-            </tbody>
-        </table>
-
-        <!-- Detalle de Autorizaciones de Descuento -->
-        ${
-          summary.discountAuths && summary.discountAuths.length > 0 ? `
-        <div class="section-title">Autorizaciones de Descuento</div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 12%;">Orden</th>
-                    <th style="width: 15%;">Fecha</th>
-                    <th style="width: 20%;">Solicitante</th>
-                    <th style="width: 15%;">Descuento</th>
-                    <th style="width: 20%;">Mensaje</th>
-                    <th style="width: 10%;">Estado</th>
-                    <th style="width: 8%;">Folio</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${
-                  summary.discountAuths
+                  summary.canceledOrders
                     .map(
-                      (auth) => `
-                <tr>
-                    <td style="font-weight: 600;">${auth.orderNumber}</td>
-                    <td style="font-size: 8pt;">${formatDate(auth.createdAt)}</td>
-                    <td>${auth.requestedBy}</td>
+                      (order: any, index: number) => `
+                <tr style="background-color: #ffebee;">
+                    <td>${index + 1}</td>
+                    <td style="font-size: 8pt;">${formatDate(order.createdAt)}</td>
+                    <td style="font-weight: 600;">${order.orderNumber}</td>
+                    <td style="font-weight: 600;">${order.clientName}</td>
+                    <td>${order.recipientName}</td>
                     <td>
-                        <span style="font-weight: bold; color: #fd7e14;">
-                            ${auth.discountType === 'porcentaje' ? auth.discountValue + '%' : formatCurrency(auth.discountValue)}
-                        </span>
-                        ${auth.discountAmount > 0 ? `<br><small>Total: ${formatCurrency(auth.discountAmount)}</small>` : ''}
+                        ${order.paymentMethod.split(', ').map((method: string) => {
+                          let bgColor = '#6c757d';
+                          if (method.toLowerCase().includes('efectivo')) {
+                            bgColor = '#28a745';
+                          } else if (method.toLowerCase().includes('tarjeta') || method.toLowerCase().includes('crédito')) {
+                            bgColor = '#17a2b8';
+                          } else if (method.toLowerCase().includes('transferencia')) {
+                            bgColor = '#007bff';
+                          }
+                          return `<span class="payment-badge" style="background-color: ${bgColor}; margin: 1px; font-size: 7pt;">${method}</span>`;
+                        }).join(' ')}
                     </td>
-                    <td style="font-size: 8pt;">${auth.message}</td>
+                    <td style="text-align: right; font-weight: bold; text-decoration: line-through; color: #dc3545;">${formatCurrency(order.total)}</td>
                     <td>
-                        ${
-                          auth.isAuth === null
-                            ? '<span style="background-color: #ffc107; color: #212529; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">PENDIENTE</span>'
-                            : auth.isAuth === true
-                            ? '<span style="background-color: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">APROBADO</span>'
-                            : '<span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">RECHAZADO</span>'
-                        }
-                        ${auth.isRedeemed ? '<br><span style="background-color: #007bff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 7pt; font-weight: bold; margin-top: 2px; display: inline-block;">CANJEADO</span>' : ''}
+                        <span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">CANCELADA</span>
                     </td>
-                    <td style="font-weight: 600; color: #007bff;">${auth.authFolio || '-'}</td>
                 </tr>
                 `
                     )
                     .join("")
                 }
             </tbody>
+        </table>
+          ` : ''
+        }
+
+        <!-- Detalle de Descuentos Autorizados -->
+        ${
+          summary.authorizedDiscounts && summary.authorizedDiscounts.length > 0 ? `
+        <h3 style="font-size: 12pt; font-weight: bold; margin: 15px 0 10px 0; padding-left: 10px; border-left: 4px solid #fd7e14;">Descuentos Autorizados (${summary.authorizedDiscounts.length})</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%;">No.</th>
+                    <th style="width: 12%;">Fecha Aprobación</th>
+                    <th style="width: 12%;">No. Orden</th>
+                    <th style="width: 15%;">Solicitado por</th>
+                    <th style="width: 15%;">Autorizado por</th>
+                    <th style="width: 8%;">Tipo</th>
+                    <th style="width: 10%;">Valor</th>
+                    <th style="width: 12%;">Monto Descuento</th>
+                    <th style="width: 11%;">Folio</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${
+                  summary.authorizedDiscounts
+                    .map(
+                      (auth: any, index: number) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td style="font-size: 8pt;">${formatDate(auth.approvedAt || auth.createdAt)}</td>
+                    <td style="font-weight: 600;">${auth.orderNumber}</td>
+                    <td>${auth.requestedBy}</td>
+                    <td>${auth.managerId}</td>
+                    <td>
+                        <span style="background-color: #007bff; color: white; padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: bold;">
+                            ${auth.discountType === 'porcentaje' ? 'PORCENTAJE' : 'CANTIDAD'}
+                        </span>
+                    </td>
+                    <td style="font-weight: 600;">
+                        ${auth.discountType === 'porcentaje' ? auth.discountValue + '%' : formatCurrency(auth.discountValue)}
+                    </td>
+                    <td style="font-weight: bold; color: #fd7e14;">${formatCurrency(auth.discountAmount)}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            <span style="background-color: #28a745; color: white; padding: 2px 4px; border-radius: 3px; font-size: 7pt; font-weight: bold;">AUTORIZADO</span>
+                            <span style="font-weight: 600; color: #007bff; font-size: 9pt;">#${auth.authFolio}</span>
+                        </div>
+                    </td>
+                </tr>
+                `
+                    )
+                    .join("")
+                }
+            </tbody>
+            <tfoot style="background: #fff3cd;">
+                <tr>
+                    <td colspan="7" style="text-align: right; font-weight: bold; padding: 10px;">Total Descuentos Autorizados:</td>
+                    <td colspan="2" style="font-weight: bold; font-size: 11pt; padding: 10px; color: #fd7e14;">
+                        ${formatCurrency(summary.authorizedDiscounts.reduce((sum: number, auth: any) => sum + auth.discountAmount, 0))}
+                    </td>
+                </tr>
+            </tfoot>
         </table>
           ` : ''
         }
@@ -562,6 +568,18 @@ export const generateCashRegisterTicket = (
                         .join("")
                 }
             </tbody>
+            ${
+              summary.expenses.length > 0 ? `
+            <tfoot style="background: #ffebee;">
+                <tr>
+                    <td colspan="4" style="text-align: right; font-weight: bold; padding: 10px;">Total Gastos:</td>
+                    <td style="text-align: right; font-weight: bold; font-size: 11pt; padding: 10px; color: #dc3545;">
+                        ${formatCurrency(summary.expenses.reduce((sum, expense) => sum + expense.total, 0))}
+                    </td>
+                </tr>
+            </tfoot>
+              ` : ''
+            }
         </table>
 
         <!-- Detalle de Compras en Efectivo -->
@@ -600,6 +618,18 @@ export const generateCashRegisterTicket = (
                         .join("")
                 }
             </tbody>
+            ${
+              summary.buys.length > 0 ? `
+            <tfoot style="background: #fff8e1;">
+                <tr>
+                    <td colspan="5" style="text-align: right; font-weight: bold; padding: 10px;">Total Compras:</td>
+                    <td style="text-align: right; font-weight: bold; font-size: 11pt; padding: 10px; color: #856404;">
+                        ${formatCurrency(summary.buys.reduce((sum, buy) => sum + buy.amount, 0))}
+                    </td>
+                </tr>
+            </tfoot>
+              ` : ''
+            }
         </table>
 
         <!-- Firma -->

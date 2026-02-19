@@ -197,7 +197,7 @@ const PettyCashTable: React.FC<PettyCashTableProps> = ({
               Anterior
             </Button>
             <span className="flex items-center px-3">
-              Pagina {currentPage} de {totalPages}
+              Página {currentPage} de {totalPages}
             </span>
             <Button
               variant="outline"

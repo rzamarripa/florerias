@@ -1253,12 +1253,22 @@ const closeCashRegister = async (req, res) => {
       }
     });
 
-    // Buscar todos los pagos de OrderPayment
+    // Buscar todos los pagos de OrderPayment con información completa
     const allPayments = await OrderPayment.find({
       _id: { $in: paymentIds }
     })
-      .populate('paymentMethod', 'name')
-      .populate('orderId', 'orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod');
+      .populate({
+        path: 'paymentMethod',
+        select: 'name'
+      })
+      .populate({
+        path: 'orderId',
+        select: 'orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod sendToProduction'
+      })
+      .populate({
+        path: 'registeredBy',
+        select: 'username email profile'
+      });
     
     // Buscar órdenes que no tienen pagos (órdenes a crédito)
     const { default: Order } = await import('../models/Order.js');
@@ -1266,7 +1276,7 @@ const closeCashRegister = async (req, res) => {
       _id: { $in: orderIdsWithoutPayments }
     })
       .populate('paymentMethod', 'name')
-      .select('orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod');
+      .select('orderNumber total advance discount discountType shippingType clientInfo deliveryData createdAt status items paymentMethod sendToProduction');
 
     // TODOS los pagos registrados se incluyen en el log
     let relevantPayments = allPayments;
@@ -1359,7 +1369,8 @@ const closeCashRegister = async (req, res) => {
             paymentMethods: new Set(),
             status: payment.orderId.status,
             saleDate: payment.orderId.createdAt || payment.date,
-            itemsCount: payment.orderId.items?.length || 0
+            itemsCount: payment.orderId.items?.length || 0,
+            sendToProduction: payment.orderId.sendToProduction || false
           });
         }
         const order = ordersMapForLog.get(orderId);
@@ -1388,7 +1399,8 @@ const closeCashRegister = async (req, res) => {
           paymentMethods: new Set([creditOrder.paymentMethod?.name || 'Crédito']),
           status: creditOrder.status,
           saleDate: creditOrder.createdAt,
-          itemsCount: creditOrder.items?.length || 0
+          itemsCount: creditOrder.items?.length || 0,
+          sendToProduction: creditOrder.sendToProduction || false
         });
       }
     });
@@ -1404,7 +1416,130 @@ const closeCashRegister = async (req, res) => {
       .populate('managerId', 'username email profile')
       .sort({ createdAt: -1 });
 
-    // Crear el log del cierre de caja
+    // Agrupar PAGOS por método de pago (igual que en getCashRegisterSummary)
+    const paymentsByMethod = {};
+    
+    relevantPayments.forEach(payment => {
+      if (!payment.paymentMethod || !payment.orderId) return;
+      
+      const methodName = payment.paymentMethod.name || 'Sin método';
+      
+      if (!paymentsByMethod[methodName]) {
+        paymentsByMethod[methodName] = {
+          payments: [],
+          total: 0,
+          count: 0
+        };
+      }
+      
+      // Crear objeto de pago con información completa
+      const paymentData = {
+        _id: payment._id,
+        orderId: payment.orderId._id,
+        orderNumber: payment.orderId.orderNumber,
+        amount: payment.amount,
+        date: payment.date || payment.createdAt,
+        notes: payment.notes || '',
+        isAdvance: payment.isAdvance || false,
+        clientName: payment.orderId.clientInfo?.name || 'N/A',
+        recipientName: payment.orderId.deliveryData?.recipientName || 'N/A',
+        orderStatus: payment.orderId.status,
+        registeredBy: payment.registeredBy?.profile?.fullName || payment.registeredBy?.username || 'N/A'
+      };
+      
+      paymentsByMethod[methodName].payments.push(paymentData);
+      paymentsByMethod[methodName].total += payment.amount;
+      paymentsByMethod[methodName].count += 1;
+    });
+    
+    // Agrupar ÓRDENES por método de pago (igual que en getCashRegisterSummary)
+    const ordersByPaymentMethod = {};
+    
+    ordersArrayForLog.forEach(order => {
+      // Obtener los métodos de pago únicos para esta orden
+      const paymentMethods = Array.from(order.paymentMethods);
+      
+      // Si no hay métodos de pago, usar "Sin método"
+      if (paymentMethods.length === 0) {
+        const methodName = 'Sin método';
+        if (!ordersByPaymentMethod[methodName]) {
+          ordersByPaymentMethod[methodName] = {
+            orders: [],
+            total: 0,
+            count: 0
+          };
+        }
+        
+        const orderData = {
+          _id: order.orderId,
+          orderNumber: order.orderNumber,
+          clientName: order.clientName,
+          recipientName: order.recipientName,
+          total: order.total,
+          advance: order.advance,
+          discount: order.discount,
+          discountType: order.discountType,
+          shippingType: order.shippingType,
+          paymentMethod: 'Sin método',
+          status: order.status,
+          createdAt: order.saleDate,
+          itemsCount: order.itemsCount,
+          sendToProduction: order.sendToProduction || false
+        };
+        
+        ordersByPaymentMethod[methodName].orders.push(orderData);
+        ordersByPaymentMethod[methodName].total += order.advance;
+        ordersByPaymentMethod[methodName].count += 1;
+      } else {
+        // Para cada método de pago en esta orden
+        paymentMethods.forEach(methodName => {
+          if (!ordersByPaymentMethod[methodName]) {
+            ordersByPaymentMethod[methodName] = {
+              orders: [],
+              total: 0,
+              count: 0
+            };
+          }
+          
+          // Crear objeto de orden con el método de pago combinado
+          const orderData = {
+            _id: order.orderId,
+            orderNumber: order.orderNumber,
+            clientName: order.clientName,
+            recipientName: order.recipientName,
+            total: order.total,
+            advance: order.advance,
+            discount: order.discount,
+            discountType: order.discountType,
+            shippingType: order.shippingType,
+            paymentMethod: paymentMethods.join(', '),
+            status: order.status,
+            createdAt: order.saleDate,
+            itemsCount: order.itemsCount,
+            sendToProduction: order.sendToProduction || false
+          };
+          
+          // Verificar si esta orden ya fue agregada a este método de pago
+          const existingOrder = ordersByPaymentMethod[methodName].orders.find(
+            o => o._id.toString() === order.orderId.toString()
+          );
+          
+          if (!existingOrder) {
+            ordersByPaymentMethod[methodName].orders.push(orderData);
+            ordersByPaymentMethod[methodName].total += order.advance;
+            ordersByPaymentMethod[methodName].count += 1;
+          }
+        });
+      }
+    });
+
+    // Filtrar órdenes canceladas
+    const canceledOrders = ordersArrayForLog.filter(order => order.status === 'cancelado');
+    
+    // Filtrar descuentos autorizados (isAuth = true)
+    const authorizedDiscounts = discountAuths.filter(auth => auth.isAuth === true);
+
+    // Crear el log del cierre de caja con TODOS los datos del resumen
     const cashRegisterLog = new CashRegisterLog({
       cashRegisterId: cashRegister._id,
       cashRegisterName: cashRegister.name,
@@ -1454,6 +1589,41 @@ const closeCashRegister = async (req, res) => {
         description: buy.description || ''
       })),
       discountAuths: discountAuths.map(auth => ({
+        authId: auth._id,
+        orderId: auth.orderId,
+        orderNumber: ordersArrayForLog.find(o => o.orderId?.toString() === auth.orderId?.toString())?.orderNumber || 'N/A',
+        message: auth.message,
+        requestedBy: auth.requestedBy?.profile?.fullName || auth.requestedBy?.username || 'N/A',
+        managerId: auth.managerId?.profile?.fullName || auth.managerId?.username || 'N/A',
+        discountValue: auth.discountValue,
+        discountType: auth.discountType,
+        discountAmount: auth.discountAmount,
+        isAuth: auth.isAuth,
+        authFolio: auth.authFolio,
+        isRedeemed: auth.isRedeemed,
+        createdAt: auth.createdAt,
+        approvedAt: auth.approvedAt
+      })),
+      // NUEVOS CAMPOS con datos completos del resumen
+      ordersByPaymentMethod: ordersByPaymentMethod,
+      paymentsByMethod: paymentsByMethod,
+      canceledOrders: canceledOrders.map(order => ({
+        orderId: order.orderId,
+        orderNumber: order.orderNumber,
+        clientName: order.clientName,
+        recipientName: order.recipientName,
+        total: order.total,
+        advance: order.advance,
+        discount: order.discount,
+        discountType: order.discountType,
+        shippingType: order.shippingType,
+        paymentMethod: Array.from(order.paymentMethods).join(', ') || 'N/A',
+        status: order.status,
+        createdAt: order.saleDate,
+        itemsCount: order.itemsCount,
+        sendToProduction: order.sendToProduction || false
+      })),
+      authorizedDiscounts: authorizedDiscounts.map(auth => ({
         authId: auth._id,
         orderId: auth.orderId,
         orderNumber: ordersArrayForLog.find(o => o.orderId?.toString() === auth.orderId?.toString())?.orderNumber || 'N/A',

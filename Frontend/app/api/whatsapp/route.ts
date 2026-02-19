@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { to, message, imageUrl, documentUrl, documentFilename, useTemplate } = await req.json();
+    const { to, message, imageUrl, documentUrl, documentFilename, htmlUrl, useTemplate } = await req.json();
     
     // Limpiar y validar el número de teléfono
     let phoneNumber = to.toString().replace(/[^0-9]/g, ''); // Remover cualquier carácter no numérico
@@ -91,6 +91,17 @@ export async function POST(req: NextRequest) {
           caption: message || ''
         }
       };
+    } else if (htmlUrl) {
+      // Enviar documento HTML
+      body = {
+        ...body,
+        type: 'document',
+        document: {
+          link: htmlUrl,
+          caption: message || 'Ticket de Compra',
+          filename: 'ticket.html'
+        }
+      };
     } else if (imageUrl) {
       // Enviar imagen
       body = {
@@ -115,7 +126,7 @@ export async function POST(req: NextRequest) {
     console.log('🚀 WhatsApp API Route - Enviando a Meta:', {
       to: phoneNumber,
       apiUrl: API,
-      bodyType: documentUrl ? 'document' : (imageUrl ? 'image' : 'text'),
+      bodyType: htmlUrl ? 'html-document' : (documentUrl ? 'document' : (imageUrl ? 'image' : 'text')),
       fullBody: JSON.stringify(body, null, 2)
     });
     

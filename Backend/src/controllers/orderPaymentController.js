@@ -35,25 +35,26 @@ export const createOrderPayment = async (req, res) => {
 
     const isEffectivo = paymentMethodData.name.toLowerCase() === 'efectivo';
 
-    // Validar que la caja registradora existe SOLO si el pago es en efectivo
+    // Obtener la caja registradora para registrar el pago en lastRegistry
+    // TODOS los pagos deben registrarse en lastRegistry
     let cashRegister = null;
-    if (isEffectivo) {
-      if (!cashRegisterId) {
-        return res.status(400).json({ message: 'La caja registradora es requerida para pagos en efectivo' });
-      }
+    if (cashRegisterId) {
       cashRegister = await CashRegister.findById(cashRegisterId);
       if (!cashRegister) {
         return res.status(404).json({ message: 'Caja registradora no encontrada' });
       }
+    } else {
+      // Si no se proporciona cashRegisterId, es un error ya que necesitamos registrar en lastRegistry
+      return res.status(400).json({ message: 'La caja registradora es requerida para registrar el pago' });
     }
 
-    // Crear el pago (cashRegisterId puede ser null si no es efectivo)
+    // Crear el pago
     // isAdvance: false porque este endpoint es para pagos posteriores, no anticipos
     const payment = new OrderPayment({
       orderId,
       amount,
       paymentMethod,
-      cashRegisterId: cashRegisterId || null,
+      cashRegisterId,
       registeredBy,
       notes,
       date: new Date(),
@@ -304,12 +305,22 @@ export const deleteOrderPayment = async (req, res) => {
     order.payments = order.payments.filter(p => p.toString() !== id);
     await order.save();
 
-    // Revertir el cambio en la caja registradora SOLO si el pago fue en efectivo
+    // Revertir el cambio en la caja registradora
     const cashRegister = await CashRegister.findById(payment.cashRegisterId);
     if (cashRegister) {
-      // Solo revertir el balance si el pago era en efectivo
-      if (isEffectivo) {
-        cashRegister.currentBalance -= payment.amount;
+      // Revertir el balance según el tipo de caja y método de pago
+      // - Cajas normales: solo efectivo afecta el balance
+      // - Cajas de redes sociales: todos los pagos EXCEPTO efectivo afectan el balance
+      if (cashRegister.isSocialMediaBox) {
+        // Cajas de redes: revertir balance si NO es efectivo
+        if (!isEffectivo) {
+          cashRegister.currentBalance -= payment.amount;
+        }
+      } else {
+        // Cajas normales: revertir balance SOLO si es efectivo
+        if (isEffectivo) {
+          cashRegister.currentBalance -= payment.amount;
+        }
       }
 
       // Remover el paymentId del lastRegistry

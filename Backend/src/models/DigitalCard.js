@@ -122,7 +122,7 @@ const digitalCardSchema = new Schema(
       },
       logoText: {
         type: String,
-        default: "Corazón Violeta",
+        default: "Zolt",
       },
     },
     companyId: {
@@ -179,8 +179,7 @@ const digitalCardSchema = new Schema(
 );
 
 // Indexes
-digitalCardSchema.index({ clientId: 1 });
-digitalCardSchema.index({ passSerialNumber: 1 });
+// Removed duplicate indexes for clientId and passSerialNumber - already have unique: true
 digitalCardSchema.index({ companyId: 1 });
 digitalCardSchema.index({ isActive: 1 });
 digitalCardSchema.index({ expiresAt: 1 });

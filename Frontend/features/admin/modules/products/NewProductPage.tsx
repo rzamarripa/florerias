@@ -501,7 +501,7 @@ const NewProductPage: React.FC = () => {
           <CardHeader className="bg-background border-b-0 py-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Package size={20} className="text-primary" />
-              Informacion del Producto
+              Información del Producto
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -522,7 +522,7 @@ const NewProductPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label className="font-semibold">Categoria de Producto</Label>
+                <Label className="font-semibold">Categoría de Producto</Label>
                 <Select
                   value={formData.productCategory || "none"}
                   onValueChange={(value) =>
@@ -533,11 +533,11 @@ const NewProductPage: React.FC = () => {
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecciona una categoria (opcional)" />
+                    <SelectValue placeholder="Selecciona una categoría (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">
-                      Selecciona una categoria (opcional)
+                      Selecciona una categoría (opcional)
                     </SelectItem>
                     {productCategories.map((category) => (
                       <SelectItem key={category._id} value={category._id}>
@@ -590,10 +590,10 @@ const NewProductPage: React.FC = () => {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label className="font-semibold">Descripcion</Label>
+                <Label className="font-semibold">Descripción</Label>
                 <Textarea
                   rows={3}
-                  placeholder="Descripcion del producto"
+                  placeholder="Descripción del producto"
                   value={formData.descripcion}
                   onChange={(e) =>
                     setFormData({ ...formData, descripcion: e.target.value })

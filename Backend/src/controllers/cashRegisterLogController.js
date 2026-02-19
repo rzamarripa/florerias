@@ -116,7 +116,7 @@ const getAllCashRegisterLogs = async (req, res) => {
   }
 };
 
-// Obtener un log específico por ID
+// Obtener un log específico por ID y transformarlo al formato CashRegisterSummary
 const getCashRegisterLogById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -135,9 +135,136 @@ const getCashRegisterLogById = async (req, res) => {
       });
     }
 
+    // Transformar el log al formato CashRegisterSummary para compatibilidad con el frontend
+    const summary = {
+      cashRegister: {
+        _id: log.cashRegisterId?._id || log.cashRegisterId,
+        name: log.cashRegisterName || log.cashRegisterId?.name || 'N/A',
+        branchId: log.branchId,
+        cashierId: log.cashierId,
+        managerId: log.managerId,
+        isOpen: false, // Los logs son de cajas cerradas
+        lastOpen: log.openedAt
+      },
+      totals: {
+        initialBalance: log.totals?.initialBalance || 0,
+        totalSales: log.totals?.totalSales || 0,
+        totalExpenses: log.totals?.totalExpenses || 0,
+        currentBalance: log.totals?.finalBalance || 0,
+        remainingBalance: log.totals?.remainingBalance || 0
+      },
+      salesByPaymentType: log.salesByPaymentType || {
+        efectivo: 0,
+        credito: 0,
+        transferencia: 0,
+        intercambio: 0
+      },
+      // Mapear orders al formato esperado
+      orders: (log.orders || []).map(order => ({
+        _id: order.orderId?._id || order.orderId,
+        orderNumber: order.orderNumber,
+        clientName: order.clientName || 'N/A',
+        recipientName: order.recipientName || 'N/A',
+        total: order.total || 0,
+        advance: order.advance || 0,
+        discount: order.discount || 0,
+        discountType: order.discountType,
+        shippingType: order.shippingType || 'N/A',
+        paymentMethod: order.paymentMethod || 'N/A',
+        status: order.status || 'N/A',
+        createdAt: order.saleDate,
+        itemsCount: order.itemsCount || 0,
+        sendToProduction: order.sendToProduction || false
+      })),
+      // Incluir los nuevos campos si existen
+      ordersByPaymentMethod: log.ordersByPaymentMethod || {},
+      paymentsByMethod: log.paymentsByMethod || {},
+      // Mapear gastos al formato esperado
+      expenses: (log.expenses || []).map(expense => ({
+        _id: expense._id,
+        folio: expense.folio || 0,
+        concept: expense.expenseConcept || 'N/A',
+        conceptDescription: expense.conceptDescription || '',
+        total: expense.amount || 0,
+        paymentDate: expense.expenseDate,
+        user: expense.user || 'N/A',
+        expenseType: expense.expenseType || 'N/A'
+      })),
+      // Mapear compras al formato esperado
+      buys: (log.buys || []).map(buy => ({
+        _id: buy.buyId || buy._id,
+        folio: buy.folio || 0,
+        concept: buy.concept || 'N/A',
+        conceptDescription: buy.conceptDescription || '',
+        amount: buy.amount || 0,
+        paymentDate: buy.paymentDate,
+        paymentMethod: buy.paymentMethod || 'N/A',
+        provider: buy.provider || 'N/A',
+        user: buy.user || 'N/A',
+        description: buy.description || ''
+      })),
+      // Mapear autorizaciones de descuento
+      discountAuths: (log.discountAuths || []).map(auth => ({
+        _id: auth.authId || auth._id,
+        orderId: auth.orderId,
+        orderNumber: auth.orderNumber || 'N/A',
+        message: auth.message || '',
+        requestedBy: auth.requestedBy || 'N/A',
+        managerId: auth.managerId || 'N/A',
+        discountValue: auth.discountValue || 0,
+        discountType: auth.discountType,
+        discountAmount: auth.discountAmount || 0,
+        isAuth: auth.isAuth,
+        authFolio: auth.authFolio,
+        isRedeemed: auth.isRedeemed || false,
+        createdAt: auth.createdAt,
+        approvedAt: auth.approvedAt
+      })),
+      // Incluir órdenes canceladas si existen
+      canceledOrders: (log.canceledOrders || []).map(order => ({
+        _id: order.orderId || order._id,
+        orderNumber: order.orderNumber,
+        clientName: order.clientName || 'N/A',
+        recipientName: order.recipientName || 'N/A',
+        total: order.total || 0,
+        advance: order.advance || 0,
+        discount: order.discount || 0,
+        discountType: order.discountType,
+        shippingType: order.shippingType || 'N/A',
+        paymentMethod: order.paymentMethod || 'N/A',
+        status: order.status || 'cancelado',
+        createdAt: order.createdAt || order.saleDate,
+        itemsCount: order.itemsCount || 0,
+        sendToProduction: order.sendToProduction || false
+      })),
+      // Incluir descuentos autorizados si existen
+      authorizedDiscounts: (log.authorizedDiscounts || []).map(auth => ({
+        _id: auth.authId || auth._id,
+        orderId: auth.orderId,
+        orderNumber: auth.orderNumber || 'N/A',
+        message: auth.message || '',
+        requestedBy: auth.requestedBy || 'N/A',
+        managerId: auth.managerId || 'N/A',
+        discountValue: auth.discountValue || 0,
+        discountType: auth.discountType,
+        discountAmount: auth.discountAmount || 0,
+        isAuth: auth.isAuth !== undefined ? auth.isAuth : true, // Default true para authorized
+        authFolio: auth.authFolio,
+        isRedeemed: auth.isRedeemed || false,
+        createdAt: auth.createdAt,
+        approvedAt: auth.approvedAt
+      })),
+      // Metadata del log
+      logMetadata: {
+        closedAt: log.closedAt,
+        openedAt: log.openedAt,
+        logId: log._id
+      }
+    };
+
     res.status(200).json({
       success: true,
-      data: log
+      data: summary
     });
   } catch (error) {
     console.error('Error al obtener log de caja:', error);

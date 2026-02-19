@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Ticket Generation Fixed</title>
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+</head>
+<body>
+    <h1>Test de Generación de Tickets - Versión Corregida</h1>
+    
+    <!-- Ticket HTML tal como se genera -->
+    <div id="ticket-source" style="display: none;">
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {
+                    font-family: Courier New, Courier, monospace;
+                    padding: 20mm;
+                    background: #f5f5f5;
+                }
+                .ticket-container {
+                    max-width: 500px;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 30px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+                .header {
+                    text-align: center;
+                    padding-bottom: 20px;
+                    border-bottom: 2px solid #333;
+                    margin-bottom: 20px;
+                }
+                .company-name {
+                    font-size: 20pt;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="ticket-container">
+                <div class="header">
+                    <div class="company-name">CORAZON VIOLETA</div>
+                    <div>RFC: XAXX010101000</div>
+                    <div>TEL: 123-456-7890</div>
+                </div>
+                <table style="width: 100%;">
+                    <tr><td><strong>RECIBO NO.:</strong></td><td>ORD-000022</td></tr>
+                    <tr><td><strong>FECHA:</strong></td><td>18/02/2026</td></tr>
+                    <tr><td><strong>CLIENTE:</strong></td><td>Juan Pérez</td></tr>
+                    <tr><td><strong>TOTAL:</strong></td><td>$100.00</td></tr>
+                </table>
+            </div>
+        </body>
+        </html>
+    </div>
+    
+    <button onclick="testWithSkipFonts()">Test con skipFonts</button>
+    <button onclick="testWithoutSkipFonts()">Test sin skipFonts (causará error)</button>
+    <button onclick="testSanitized()">Test con HTML Sanitizado</button>
+    
+    <div id="result" style="margin-top: 20px;"></div>
+    
+    <script>
+        // Función de sanitización similar a la del código
+        function sanitizeFontDeclarations(html) {
+            let sanitized = html.replace(/font-family:\s*['"]([^'"]+)['"]\s*,/g, 'font-family: $1,');
+            sanitized = sanitized.replace(/font-family:\s*([^;]+);/g, (match, fonts) => {
+                const cleanedFonts = fonts.replace(/['"]([^'"]+)['"]/g, '$1');
+                return `font-family: ${cleanedFonts};`;
+            });
+            sanitized = sanitized.replace(/@font-face\s*{[^}]*}/gi, '');
+            return sanitized;
+        }
+        
+        async function testWithSkipFonts() {
+            try {
+                const htmlContent = document.getElementById('ticket-source').innerHTML;
+                
+                // Crear iframe temporal
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.left = '-9999px';
+                iframe.style.width = '600px';
+                iframe.style.height = '800px';
+                document.body.appendChild(iframe);
+                
+                const iframeDoc = iframe.contentDocument;
+                iframeDoc.open();
+                iframeDoc.write(htmlContent);
+                iframeDoc.close();
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const ticketElement = iframeDoc.querySelector('.ticket-container') || iframeDoc.body;
+                
+                // Convertir con skipFonts
+                const dataUrl = await htmlToImage.toPng(ticketElement, {
+                    skipFonts: true,
+                    backgroundColor: '#ffffff'
+                });
+                
+                document.body.removeChild(iframe);
+                
+                // Mostrar resultado
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                img.style.maxWidth = '100%';
+                document.getElementById('result').innerHTML = '<h2 style="color: green;">✅ Éxito con skipFonts</h2>';
+                document.getElementById('result').appendChild(img);
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<h2 style="color: red;">❌ Error con skipFonts:</h2><pre>' + error.toString() + '</pre>';
+                console.error('Error:', error);
+            }
+        }
+        
+        async function testWithoutSkipFonts() {
+            try {
+                const htmlContent = document.getElementById('ticket-source').innerHTML;
+                
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.left = '-9999px';
+                iframe.style.width = '600px';
+                document.body.appendChild(iframe);
+                
+                const iframeDoc = iframe.contentDocument;
+                iframeDoc.open();
+                iframeDoc.write(htmlContent);
+                iframeDoc.close();
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const ticketElement = iframeDoc.querySelector('.ticket-container') || iframeDoc.body;
+                
+                // Convertir SIN skipFonts - debería fallar
+                const dataUrl = await htmlToImage.toPng(ticketElement, {
+                    backgroundColor: '#ffffff'
+                });
+                
+                document.body.removeChild(iframe);
+                
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                img.style.maxWidth = '100%';
+                document.getElementById('result').innerHTML = '<h2 style="color: green;">✅ Éxito sin skipFonts (inesperado)</h2>';
+                document.getElementById('result').appendChild(img);
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<h2 style="color: orange;">⚠️ Error esperado sin skipFonts:</h2><pre>' + error.toString() + '</pre>';
+                console.error('Error esperado:', error);
+            }
+        }
+        
+        async function testSanitized() {
+            try {
+                const htmlContent = sanitizeFontDeclarations(document.getElementById('ticket-source').innerHTML);
+                
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.left = '-9999px';
+                iframe.style.width = '600px';
+                document.body.appendChild(iframe);
+                
+                const iframeDoc = iframe.contentDocument;
+                iframeDoc.open();
+                iframeDoc.write(htmlContent);
+                iframeDoc.close();
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const ticketElement = iframeDoc.querySelector('.ticket-container') || iframeDoc.body;
+                
+                const dataUrl = await htmlToImage.toPng(ticketElement, {
+                    skipFonts: true,
+                    backgroundColor: '#ffffff'
+                });
+                
+                document.body.removeChild(iframe);
+                
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                img.style.maxWidth = '100%';
+                document.getElementById('result').innerHTML = '<h2 style="color: green;">✅ Éxito con HTML sanitizado</h2>';
+                document.getElementById('result').appendChild(img);
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<h2 style="color: red;">❌ Error con HTML sanitizado:</h2><pre>' + error.toString() + '</pre>';
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

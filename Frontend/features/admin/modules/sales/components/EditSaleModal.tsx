@@ -120,7 +120,7 @@ const EditSaleModal: React.FC<EditSaleModalProps> = ({
 
       await salesService.updateSaleDeliveryInfo(sale._id, updateData);
 
-      toast.success("Informacion de entrega actualizada exitosamente");
+      toast.success("Información de entrega actualizada exitosamente");
       onSaleUpdated();
       onHide();
     } catch (error: any) {

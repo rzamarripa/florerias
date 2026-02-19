@@ -13,15 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCartStore } from "../store/cartStore";
 import ClientCartModal from "./ClientCartModal";
 import EcommerceCheckoutModal from "./EcommerceCheckoutModal";
@@ -29,25 +21,6 @@ import { ecommerceConfigService } from "../services/ecommerceConfig";
 import type { StockItem, EcommerceConfig } from "../types";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
-
-// Categorías y marcas simuladas para los filtros
-const categories = [
-  { name: "Electronics", count: 8 },
-  { name: "Computers", count: 6 },
-  { name: "Home & Office", count: 8 },
-  { name: "Accessories", count: 0 },
-  { name: "Gaming", count: 9 },
-  { name: "Mobile Phones", count: 12 },
-  { name: "Appliances", count: 0 },
-];
-
-const brands = [
-  { name: "Apple", count: 14 },
-  { name: "Samsung", count: 38 },
-  { name: "Sony", count: 0 },
-  { name: "Dell", count: 7 },
-  { name: "HP", count: 0 },
-];
 
 export default function EcommerceCatalogPage() {
   const router = useRouter();
@@ -63,11 +36,10 @@ export default function EcommerceCatalogPage() {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
   // Estados para filtros
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState([0, 5000]);
+  const [priceRange, setPriceRange] = useState([0, 0]);
   const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(5000);
+  const [maxPrice, setMaxPrice] = useState(0);
+  const [sliderMax, setSliderMax] = useState(0);
 
   const {
     addToCart,
@@ -142,6 +114,14 @@ export default function EcommerceCatalogPage() {
         initializeStock(
           fullConfig.itemsStock.map((p) => ({ _id: p._id, stock: p.stock }))
         );
+
+        // Calcular rango de precios real de los productos
+        const prices = fullConfig.itemsStock.map((p) => p.precio);
+        const calculatedMax = Math.ceil(Math.max(...prices));
+        setSliderMax(calculatedMax);
+        setMinPrice(0);
+        setMaxPrice(calculatedMax);
+        setPriceRange([0, calculatedMax]);
       }
     } catch (error) {
       console.error("Error al cargar configuración:", error);
@@ -187,21 +167,6 @@ export default function EcommerceCatalogPage() {
 
     setFilteredProducts(filtered);
   }, [config?.itemsStock, searchTerm, sortBy, priceRange]);
-
-  // Helper functions para filtros
-  const toggleCategory = (category: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category]
-    );
-  };
-
-  const toggleBrand = (brand: string) => {
-    setSelectedBrands((prev) =>
-      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
-    );
-  };
 
   const handlePriceRangeChange = (values: number[]) => {
     setPriceRange(values);
@@ -286,19 +251,8 @@ export default function EcommerceCatalogPage() {
             </h1>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Buscar productos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 bg-gray-50 border-gray-200"
-              />
-            </div>
-
-            <div className="flex items-center gap-3 ml-4">
+          <div className="flex items-center justify-end">
+            <div className="flex items-center gap-3">
               <div className="flex rounded-lg border border-gray-200">
                 <Button
                   variant="ghost"
@@ -349,71 +303,20 @@ export default function EcommerceCatalogPage() {
       <div className="flex max-w-[1400px] mx-auto">
         {/* Sidebar Filters */}
         <div className="w-64 p-6 border-r bg-white">
-          {/* Categories */}
+          {/* Search */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-900">
-                Categoría:
-              </h3>
-              <button className="text-xs text-indigo-600 hover:underline">
-                Ver Todo
-              </button>
-            </div>
-            <div className="space-y-3">
-              {categories.map((category) => (
-                <label
-                  key={category.name}
-                  className="flex items-center justify-between cursor-pointer hover:text-gray-700"
-                >
-                  <div className="flex items-center">
-                    <Checkbox
-                      checked={selectedCategories.includes(category.name)}
-                      onCheckedChange={() => toggleCategory(category.name)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-600">
-                      {category.name}
-                    </span>
-                  </div>
-                  {category.count > 0 && (
-                    <span className="text-xs text-gray-400">
-                      ({category.count})
-                    </span>
-                  )}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Brands */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-900">Marcas:</h3>
-              <button className="text-xs text-indigo-600 hover:underline">
-                Ver Todo
-              </button>
-            </div>
-            <div className="space-y-3">
-              {brands.map((brand) => (
-                <label
-                  key={brand.name}
-                  className="flex items-center justify-between cursor-pointer hover:text-gray-700"
-                >
-                  <div className="flex items-center">
-                    <Checkbox
-                      checked={selectedBrands.includes(brand.name)}
-                      onCheckedChange={() => toggleBrand(brand.name)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-600">{brand.name}</span>
-                  </div>
-                  {brand.count > 0 && (
-                    <span className="text-xs text-gray-400">
-                      ({brand.count})
-                    </span>
-                  )}
-                </label>
-              ))}
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+              Buscar:
+            </h3>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar productos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 bg-gray-50 border-gray-200"
+              />
             </div>
           </div>
 
@@ -427,8 +330,8 @@ export default function EcommerceCatalogPage() {
                 value={priceRange}
                 onValueChange={handlePriceRangeChange}
                 min={0}
-                max={5000}
-                step={100}
+                max={sliderMax || 1}
+                step={sliderMax < 500 ? 10 : sliderMax < 5000 ? 50 : 100}
                 className="w-full"
               />
               <div className="flex items-center gap-2">

@@ -81,7 +81,7 @@ export const generateDigitalCard = async (req, res) => {
         qrData: qrData, // Asignar qrData desde el inicio
         barcode: barcode,
         metadata: {
-          logoText: client.company?.tradeName || client.company?.legalName || "Corazón Violeta",
+          logoText: client.company?.tradeName || client.company?.legalName || "Zolt",
         },
       });
 
@@ -200,7 +200,7 @@ export const downloadAppleWallet = async (req, res) => {
       email: digitalCard.clientId.email,
       points: digitalCard.clientId.points,
       passSerialNumber: digitalCard.passSerialNumber,
-      branchName: digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta",
+      branchName: digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Zolt",
       logoUrl: digitalCard.companyId?.logoUrl || null, // Logo dinámico de la empresa
       heroUrl: digitalCard.heroUrl || null, // Imagen hero/banner desde Firebase
     };
@@ -725,7 +725,7 @@ export const downloadGoogleWallet = async (req, res) => {
       email: digitalCard.clientId.email,
       points: digitalCard.clientId.points,
       passSerialNumber: digitalCard.passSerialNumber,
-      branchName: digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta",
+      branchName: digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Zolt",
       qrData: digitalCard.qrData,
       logoUrl: digitalCard.clientId.logoUrl || null, // Logo dinámico si existe
       heroUrl: digitalCard.heroUrl || null, // Imagen hero si existe
@@ -747,7 +747,7 @@ export const downloadGoogleWallet = async (req, res) => {
       }
 
       // Inicializar y crear/actualizar la clase de tarjeta con imagen hero si existe
-      const companyName = digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Corazón Violeta";
+      const companyName = digitalCard.companyId?.tradeName || digitalCard.companyId?.legalName || "Zolt";
       const logoUrl = digitalCard.companyId?.logoUrl || null;
       await googleWalletService.createOrUpdateLoyaltyClass(digitalCard.heroUrl, companyName, logoUrl);
 

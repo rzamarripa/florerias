@@ -32,6 +32,7 @@ import {
   Stars,
   QrCode,
   Store,
+  BarChart3,
 } from "lucide-react";
 
 export interface UserDropdownItem {
@@ -86,6 +87,12 @@ export const ecommerceMenuItems: MenuItemType[] = [
     key: "ecommerce-config",
     label: "Configuración E-commerce",
     isTitle: true,
+  },
+  {
+    key: "ecommerce-dashboard",
+    label: "Dashboard",
+    url: "/ecommerce/dashboard",
+    icon: BarChart3,
   },
   {
     key: "diseno",

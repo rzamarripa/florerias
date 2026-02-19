@@ -111,6 +111,26 @@ const branchSchema = new Schema(
       min: [0, "El porcentaje de publicidad debe ser mayor o igual a 0"],
       max: [100, "El porcentaje de publicidad debe ser menor o igual a 100"],
     },
+    deliveryTracking: {
+      shippingLimit: {
+        type: Number,
+        min: [0, "El límite de envíos debe ser mayor o igual a 0"],
+        default: 0,
+      },
+      deliveryLog: [
+        {
+          orderId: {
+            type: Schema.Types.ObjectId,
+            ref: "cv_order",
+            required: true,
+          },
+          date: {
+            type: Date,
+            required: true,
+          },
+        },
+      ],
+    },
     employees: [
       {
         type: Schema.Types.ObjectId,

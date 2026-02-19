@@ -58,6 +58,8 @@ const PizarronVentasPage: React.FC = () => {
   const { role } = useUserRoleStore();
   const isAdministrator = role?.toLowerCase() === "administrador";
   const isManager = role?.toLowerCase() === "gerente";
+  const isProduction = role?.toLowerCase() === "produccion";
+  const canMoveOrders = isAdministrator || isManager || isProduction;
 
   // Cargar stages del usuario
   const loadUserStages = async () => {
@@ -310,6 +312,12 @@ const PizarronVentasPage: React.FC = () => {
   };
 
   const handleChangeStage = async (order: Order, newStageId: string) => {
+    // Verificar permisos para mover órdenes
+    if (!canMoveOrders) {
+      toast.error("Solo usuarios de rol Producción tienen acceso a esta función");
+      return;
+    }
+
     try {
       // Actualizar el stage de la orden
       await ordersService.updateOrder(order._id, {
@@ -504,6 +512,7 @@ const PizarronVentasPage: React.FC = () => {
                     column.stageNumber === maxProductionStageNumber
                   }
                   hasShippingStages={hasShippingStages}
+                  canMoveOrders={canMoveOrders}
                   onViewDetails={handleViewDetails}
                   onChangeStatus={handleChangeStage}
                   onSendToShipping={handleSendToShipping}

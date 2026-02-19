@@ -38,7 +38,6 @@ const PasswordResetModal = ({
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +56,6 @@ const PasswordResetModal = ({
       setCode("");
       setNewPassword("");
       setConfirmPassword("");
-      setCurrentPassword("");
       setError("");
       setSuccess("");
       setResendTimer(0);
@@ -115,11 +113,6 @@ const PasswordResetModal = ({
   const handleResetPassword = async () => {
     setError("");
 
-    if (!currentPassword) {
-      setError("Por favor ingresa tu contraseña actual");
-      return;
-    }
-
     if (!newPassword || newPassword.length < 3) {
       setError("La nueva contraseña debe tener al menos 3 caracteres");
       return;
@@ -127,11 +120,6 @@ const PasswordResetModal = ({
 
     if (newPassword !== confirmPassword) {
       setError("Las contraseñas no coinciden");
-      return;
-    }
-
-    if (currentPassword === newPassword) {
-      setError("La nueva contraseña debe ser diferente a la actual");
       return;
     }
 
@@ -310,7 +298,7 @@ const PasswordResetModal = ({
             </DialogHeader>
             <div className="py-4">
               <p className="text-muted-foreground mb-4">
-                Ingresa tu contraseña actual y crea una nueva contraseña
+                Crea tu nueva contraseña
               </p>
 
               {error && (
@@ -327,23 +315,6 @@ const PasswordResetModal = ({
               )}
 
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Contraseña Actual</Label>
-                  <div className="flex">
-                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
-                      <TbLock className="text-muted-foreground" />
-                    </span>
-                    <Input
-                      type="password"
-                      placeholder="Contraseña actual"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      disabled={isLoading}
-                      className="rounded-l-none"
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label>Nueva Contraseña</Label>
                   <div className="flex">
@@ -390,7 +361,6 @@ const PasswordResetModal = ({
                 onClick={handleResetPassword}
                 disabled={
                   isLoading ||
-                  !currentPassword ||
                   !newPassword ||
                   !confirmPassword
                 }

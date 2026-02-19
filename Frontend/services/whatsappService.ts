@@ -65,13 +65,16 @@ export const sendTicketViaWhatsApp = async ({
       throw new Error('Número de teléfono inválido');
     }
 
-    // Ahora los tickets son imágenes PNG, no documentos HTML
+    // Detectar si el ticket es HTML o imagen basándose en la extensión
+    const isHtml = ticketUrl && ticketUrl.includes('.html');
+    
     // Preparar el cuerpo de la petición
     const body = {
       to: formattedNumber,
       message,
       ...(ticketUrl && { 
-        documentUrl: ticketUrl // Será tratado como imagen en el API route
+        // Si es HTML, enviar como htmlUrl; si es imagen, como documentUrl
+        [isHtml ? 'htmlUrl' : 'documentUrl']: ticketUrl
       })
     };
     

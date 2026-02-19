@@ -104,13 +104,15 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            padding: 20mm;
+            font-family: Courier New, Courier, monospace;
+            font-size: 14pt;
+            line-height: 1.6;
+            padding: 20px;
             background: #f5f5f5;
             color: #333;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
         }
 
@@ -266,18 +268,13 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
             }
         }
 
-        /* Estilos específicos para centrado en la ventana de visualización */
+        /* Estilos específicos para visualización en pantalla */
         @media screen {
-            html {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: #f5f5f5;
-            }
-            
             body {
-                box-shadow: 0 0 20px rgba(0,0,0,0.1);
+                font-size: 11pt;
+            }
+            .ticket-container {
+                max-width: 500px;
             }
         }
     </style>

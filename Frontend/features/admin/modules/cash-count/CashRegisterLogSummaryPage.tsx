@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { generateCashRegisterTicket } from "@/features/admin/modules/cash-registers/utils/generateCashRegisterTicket";
 import { cashRegisterLogsService } from "./services/cashRegisterLogs";
-import { CashRegisterLog } from "./types";
+import { CashRegisterSummary } from "@/features/admin/modules/cash-registers/types";
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,6 +19,10 @@ import {
   CreditCard,
   TrendingUp,
   AlertCircle,
+  Wallet,
+  Package,
+  X,
+  ReceiptText,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,16 +48,17 @@ const CashRegisterLogSummaryPage: React.FC = () => {
   const router = useRouter();
   const logId = params?.id as string;
 
-  const [log, setLog] = useState<CashRegisterLog | null>(null);
+  const [summary, setSummary] = useState<CashRegisterSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Pagination states for different sections
-  const [regularSalesPage, setRegularSalesPage] = useState(1);
-  const [creditSalesPage, setCreditSalesPage] = useState(1);
-  const [discountAuthsPage, setDiscountAuthsPage] = useState(1);
+  const [paginationState, setPaginationState] = useState<{ [key: string]: number }>({});
   const [expensesPage, setExpensesPage] = useState(1);
-  const [buysPage, setBuysPage] = useState(1);
-  const itemsPerPage = 10;
+  const [purchasesPage, setPurchasesPage] = useState(1);
+  const [discountAuthsPage, setDiscountAuthsPage] = useState(1);
+  const [salesCanceledPage, setSalesCanceledPage] = useState(1);
+  const [salesDiscountsPage, setSalesDiscountsPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     if (logId) {
@@ -65,8 +70,8 @@ const CashRegisterLogSummaryPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await cashRegisterLogsService.getCashRegisterLogById(logId);
-      if (response.success) {
-        setLog(response.data);
+      if (response.success && response.data) {
+        setSummary(response.data);
       }
     } catch (error: any) {
       toast.error(error.message || "Error al cargar el log de caja");
@@ -77,29 +82,47 @@ const CashRegisterLogSummaryPage: React.FC = () => {
   };
 
   const handlePrint = () => {
-    if (!log) return;
+    if (!summary) return;
 
-    const summaryData = {
-      cashRegisterName: log.cashRegisterName,
-      branchId: log.branchId,
-      cashierId: log.cashierId,
-      managerId: log.managerId,
-      openedAt: log.openedAt,
-      closedAt: log.closedAt,
-      totals: log.totals,
-      salesByPaymentType: log.salesByPaymentType,
-      orders: log.orders,
-      expenses: log.expenses,
-      buys: log.buys,
-      discountAuths: log.discountAuths,
-    };
+    try {
+      // Generate unique folio number based on timestamp
+      const folioNumber = `CORTE-${summary.cashRegister._id
+        .slice(-6)
+        .toUpperCase()}-${Date.now().toString().slice(-6)}`;
 
-    const ticketHtml = generateCashRegisterTicket(summaryData);
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(ticketHtml);
-      printWindow.document.close();
-      printWindow.print();
+      // Get cashier name
+      const closedBy = summary.cashRegister.cashierId?.profile?.fullName || "Cajero";
+
+      // Closure date from metadata or current date
+      const closureDate = summary.logMetadata?.closedAt || new Date().toISOString();
+
+      // Generate ticket HTML
+      const ticketHTML = generateCashRegisterTicket(summary, {
+        closedBy,
+        closureDate,
+        folioNumber,
+        remainingBalance: summary.totals.remainingBalance || 0,
+      });
+
+      // Create print window
+      const printWindow = window.open("", "_blank", "width=800,height=600");
+
+      if (printWindow) {
+        printWindow.document.write(ticketHTML);
+        printWindow.document.close();
+
+        // Wait for content to load before printing
+        printWindow.onload = () => {
+          printWindow.focus();
+        };
+      } else {
+        toast.error(
+          "No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador."
+        );
+      }
+    } catch (error) {
+      console.error("Error generando ticket:", error);
+      toast.error("Error al generar el ticket de cierre");
     }
   };
 
@@ -120,36 +143,106 @@ const CashRegisterLogSummaryPage: React.FC = () => {
     });
   };
 
-  // Filter orders by payment type
-  const getRegularOrders = () => {
-    if (!log) return [];
-    return log.orders.filter(order => {
-      const paymentLower = order.paymentMethod?.toLowerCase() || "";
-      const isStoreCredit = paymentLower === 'crédito' || paymentLower === 'credito' || 
-                           (paymentLower.includes('crédito') && !paymentLower.includes('tarjeta'));
+  // Get payment methods from paymentsByMethod or ordersByPaymentMethod
+  // NOTE: This must be before any conditional returns to follow React hooks rules
+  const paymentMethods = React.useMemo(() => {
+    // Prioritize paymentsByMethod if available
+    if (summary?.paymentsByMethod) {
+      return Object.keys(summary.paymentsByMethod).sort();
+    }
+    // Fallback to ordersByPaymentMethod
+    if (summary?.ordersByPaymentMethod) {
+      return Object.keys(summary.ordersByPaymentMethod).sort();
+    }
+    // Final fallback to old logic
+    return ['regular', 'credit'];
+  }, [summary?.paymentsByMethod, summary?.ordersByPaymentMethod]);
+
+  // Initialize pagination state for each payment method
+  React.useEffect(() => {
+    if (paymentMethods.length > 0) {
+      const initialState: { [key: string]: number } = {};
+      paymentMethods.forEach(method => {
+        if (!paginationState[method]) {
+          initialState[method] = 1;
+        }
+      });
+      if (Object.keys(initialState).length > 0) {
+        setPaginationState(prev => ({ ...prev, ...initialState }));
+      }
+    }
+  }, [paymentMethods, paginationState]);
+
+  // Fallback for old logic (if backend doesn't support ordersByPaymentMethod yet)
+  const regularOrders = React.useMemo(() => {
+    if (summary?.ordersByPaymentMethod) return [];
+    if (!summary?.orders) return [];
+    return summary.orders.filter((order) => {
+      const paymentLower = order.paymentMethod.toLowerCase();
+      const isStoreCredit =
+        paymentLower === "crédito" ||
+        paymentLower === "credito" ||
+        (paymentLower.includes("crédito") && !paymentLower.includes("tarjeta"));
       return !isStoreCredit;
     });
-  };
+  }, [summary]);
 
-  const getCreditOrders = () => {
-    if (!log) return [];
-    return log.orders.filter(order => {
-      const paymentLower = order.paymentMethod?.toLowerCase() || "";
-      const isStoreCredit = paymentLower === 'crédito' || paymentLower === 'credito' || 
-                           (paymentLower.includes('crédito') && !paymentLower.includes('tarjeta'));
+  const creditOrders = React.useMemo(() => {
+    if (summary?.ordersByPaymentMethod) return [];
+    if (!summary?.orders) return [];
+    return summary.orders.filter((order) => {
+      const paymentLower = order.paymentMethod.toLowerCase();
+      const isStoreCredit =
+        paymentLower === "crédito" ||
+        paymentLower === "credito" ||
+        (paymentLower.includes("crédito") && !paymentLower.includes("tarjeta"));
       return isStoreCredit;
     });
-  };
+  }, [summary]);
 
-  // Pagination helpers
-  const getPaginatedData = (data: any[], page: number) => {
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
+  // Pagination helper functions
+  const getPaginatedData = <T,>(data: T[], page: number): T[] => {
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
     return data.slice(startIndex, endIndex);
   };
 
-  const getTotalPages = (data: any[]) => {
-    return Math.ceil(data.length / itemsPerPage);
+  const getTotalPages = (data: any[]): number => {
+    return Math.ceil(data.length / ITEMS_PER_PAGE);
+  };
+
+  // Helper function to get paginated payments for a specific payment method
+  const getPaginatedPaymentsForMethod = (methodName: string, page: number) => {
+    if (!summary?.paymentsByMethod || !summary.paymentsByMethod[methodName]) {
+      return [];
+    }
+    const payments = summary.paymentsByMethod[methodName].payments;
+    return getPaginatedData(payments, page);
+  };
+
+  // Helper function to get paginated orders for a specific payment method
+  const getPaginatedOrdersForMethod = (methodName: string, page: number) => {
+    if (!summary?.ordersByPaymentMethod || !summary.ordersByPaymentMethod[methodName]) {
+      return [];
+    }
+    const orders = summary.ordersByPaymentMethod[methodName].orders;
+    return getPaginatedData(orders, page);
+  };
+
+  // Helper function to get total pages for payments of a payment method
+  const getTotalPagesForPaymentsMethod = (methodName: string) => {
+    if (!summary?.paymentsByMethod || !summary.paymentsByMethod[methodName]) {
+      return 0;
+    }
+    return getTotalPages(summary.paymentsByMethod[methodName].payments);
+  };
+
+  // Helper function to get total pages for orders of a payment method
+  const getTotalPagesForMethod = (methodName: string) => {
+    if (!summary?.ordersByPaymentMethod || !summary.ordersByPaymentMethod[methodName]) {
+      return 0;
+    }
+    return getTotalPages(summary.ordersByPaymentMethod[methodName].orders);
   };
 
   const renderPaginationControls = (
@@ -245,7 +338,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
     );
   }
 
-  if (!log) {
+  if (!summary) {
     return (
       <div className="container mx-auto py-1">
         <Card>
@@ -266,9 +359,6 @@ const CashRegisterLogSummaryPage: React.FC = () => {
     );
   }
 
-  const regularOrders = getRegularOrders();
-  const creditOrders = getCreditOrders();
-
   return (
     <div className="container mx-auto py-1">
       {/* Header */}
@@ -284,7 +374,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
           <div>
             <h2 className="text-2xl font-bold">Resumen de Cierre de Caja</h2>
             <p className="text-muted-foreground">
-              {log.cashRegisterName} - {formatDate(log.closedAt)}
+              {summary.cashRegister.name} - {formatDate(summary.logMetadata?.closedAt || new Date().toISOString())}
             </p>
           </div>
         </div>
@@ -307,7 +397,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
           </CardHeader>
           <CardContent className="px-1.5 pb-1">
             <div className="text-base font-bold">
-              {formatCurrency(log.totals.initialBalance)}
+              {formatCurrency(summary.totals.initialBalance)}
             </div>
           </CardContent>
         </Card>
@@ -323,7 +413,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
           </CardHeader>
           <CardContent className="px-1.5 pb-1">
             <div className="text-base font-bold text-green-600">
-              {formatCurrency(log.totals.totalSales)}
+              {formatCurrency(summary.totals.totalSales)}
             </div>
           </CardContent>
         </Card>
@@ -339,7 +429,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
           </CardHeader>
           <CardContent className="px-1.5 pb-1">
             <div className="text-base font-bold text-red-600">
-              {formatCurrency(log.totals.totalExpenses)}
+              {formatCurrency(summary.totals.totalExpenses)}
             </div>
           </CardContent>
         </Card>
@@ -355,17 +445,17 @@ const CashRegisterLogSummaryPage: React.FC = () => {
           </CardHeader>
           <CardContent className="px-1.5 pb-1">
             <div className="text-base font-bold text-primary">
-              {formatCurrency(log.totals.finalBalance)}
+              {formatCurrency(summary.totals.currentBalance || summary.totals.finalBalance || 0)}
             </div>
-            {log.totals.remainingBalance > 0 && (
-              <span className="text-xs text-muted-foreground"> • Restante: {formatCurrency(log.totals.remainingBalance)}</span>
+            {(summary.totals.remainingBalance ?? 0) > 0 && (
+              <span className="text-xs text-muted-foreground"> • Restante: {formatCurrency(summary.totals.remainingBalance || 0)}</span>
             )}
           </CardContent>
         </Card>
       </div>
 
       {/* Sales by Payment Type */}
-      <Card className="mb-2">
+      <Card className="shadow-sm mb-4 rounded-[15px]">
         <CardHeader className="px-2 py-1">
           <CardTitle className="text-sm font-medium">Ventas por Tipo de Pago</CardTitle>
         </CardHeader>
@@ -374,51 +464,210 @@ const CashRegisterLogSummaryPage: React.FC = () => {
             <div>
               <p className="text-xs font-medium text-muted-foreground">Efectivo</p>
               <p className="text-base font-bold">
-                {formatCurrency(log.salesByPaymentType.efectivo)}
+                {formatCurrency(summary.salesByPaymentType?.efectivo || 0)}
               </p>
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Crédito</p>
               <p className="text-base font-bold">
-                {formatCurrency(log.salesByPaymentType.credito)}
+                {formatCurrency(summary.salesByPaymentType?.credito || 0)}
               </p>
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Transferencia</p>
               <p className="text-base font-bold">
-                {formatCurrency(log.salesByPaymentType.transferencia)}
+                {formatCurrency(summary.salesByPaymentType?.transferencia || 0)}
               </p>
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Intercambio</p>
               <p className="text-base font-bold">
-                {formatCurrency(log.salesByPaymentType.intercambio)}
+                {formatCurrency(summary.salesByPaymentType?.intercambio || 0)}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Payments by Payment Method Section */}
+      {summary?.paymentsByMethod && Object.keys(summary.paymentsByMethod).length > 0 && (
+        <Card className="shadow-sm mb-4 rounded-[15px]">
+          <CardContent className="p-0">
+            <div className="p-4 border-b">
+              <h5 className="font-bold mb-0">Pagos por Método de Pago</h5>
+            </div>
+
+            <Tabs defaultValue={paymentMethods[0] || "efectivo"} className="w-full">
+              <div className="px-4 pt-3 border-b">
+                <TabsList className="bg-transparent h-auto p-0 gap-0 flex-wrap">
+                  {paymentMethods.map((methodName) => (
+                    <TabsTrigger
+                      key={methodName}
+                      value={methodName}
+                      className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    >
+                      {methodName} ({summary.paymentsByMethod?.[methodName]?.count || 0})
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+
+              {/* Dynamic Tab Contents for Payments */}
+              {paymentMethods.map((methodName) => (
+                <TabsContent key={methodName} value={methodName} className="mt-0">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          No.
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          TIPO
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          FECHA
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          ORDEN
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          CLIENTE
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          NOTAS
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          REGISTRADO POR
+                        </TableHead>
+                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                          IMPORTE
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(!summary.paymentsByMethod?.[methodName]?.payments || summary.paymentsByMethod[methodName].payments.length === 0) ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="text-center py-12 text-muted-foreground"
+                          >
+                            <Wallet size={48} className="mb-3 opacity-50 mx-auto" />
+                            <p className="mb-0">
+                              No se encontraron pagos con {methodName}
+                            </p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        getPaginatedPaymentsForMethod(methodName, paginationState[methodName] || 1).map((payment, index) => (
+                          <TableRow key={payment._id}>
+                            <TableCell className="px-4 py-3">
+                              {((paginationState[methodName] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              {payment.isAdvance ? (
+                                <Badge className="bg-blue-500 text-white hover:bg-blue-500 px-2 py-0.5 text-xs font-semibold">
+                                  ANTICIPO
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-green-500 text-white hover:bg-green-500 px-2 py-0.5 text-xs font-semibold">
+                                  PAGO
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <small>{formatDate(payment.date)}</small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="font-semibold">
+                                {payment.orderNumber}
+                              </div>
+                              {payment.orderStatus === "cancelado" && (
+                                <Badge className="bg-red-500 text-white hover:bg-red-500 px-2 py-0.5 text-xs font-semibold mt-1">
+                                  CANCELADA
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="font-semibold">
+                                {payment.clientName}
+                              </div>
+                              <small className="text-muted-foreground">
+                                Para: {payment.recipientName}
+                              </small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <small className="text-muted-foreground">
+                                {payment.notes || "-"}
+                              </small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <small className="text-muted-foreground">
+                                {payment.registeredBy}
+                              </small>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <span
+                                className={`font-bold ${
+                                  payment.orderStatus === "cancelado"
+                                    ? "line-through text-red-500"
+                                    : ""
+                                }`}
+                              >
+                                {formatCurrency(payment.amount)}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination controls */}
+                  {summary.paymentsByMethod?.[methodName]?.payments && summary.paymentsByMethod[methodName].payments.length > 0 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        Mostrando {getPaginatedPaymentsForMethod(methodName, paginationState[methodName] || 1).length} de {summary.paymentsByMethod[methodName].payments.length} pagos
+                      </div>
+                      {getTotalPagesForPaymentsMethod(methodName) > 1 && renderPaginationControls(
+                        paginationState[methodName] || 1,
+                        (page) => setPaginationState(prev => ({ ...prev, [methodName]: page })),
+                        summary.paymentsByMethod[methodName].payments
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Sales Section with Tabs */}
-      <Card className="mb-2">
-        <CardHeader className="px-2 py-1">
-          <CardTitle className="text-sm font-medium">Ventas y Descuentos</CardTitle>
-        </CardHeader>
-        <CardContent className="px-2 pb-2">
+      <Card className="shadow-sm mb-4 rounded-[15px]">
+        <CardContent className="p-0">
+          <div className="p-4 border-b">
+            <h5 className="font-bold mb-0">Detalle de Ventas</h5>
+          </div>
+
           <Tabs defaultValue="regular" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-7">
-              <TabsTrigger value="regular" className="text-xs py-1">
-                Ventas Regulares ({regularOrders.length})
-              </TabsTrigger>
-              <TabsTrigger value="credit" className="text-xs py-1">
-                Ventas a Crédito ({creditOrders.length})
-              </TabsTrigger>
-              <TabsTrigger value="discounts" className="text-xs py-1">
-                Autorizaciones de Descuento ({log.discountAuths?.length || 0})
-              </TabsTrigger>
-            </TabsList>
+            <div className="px-4 pt-3 border-b">
+              <TabsList className="bg-transparent h-auto p-0 gap-0">
+                <TabsTrigger
+                  value="regular"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  Ventas Regulares ({regularOrders.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="credit"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                >
+                  Ventas a Crédito ({creditOrders.length})
+                </TabsTrigger>
+              </TabsList>
+            </div>
             
-            <TabsContent value="regular" className="mt-1">
+            <TabsContent value="regular" className="mt-0">
               {regularOrders.length > 0 ? (
                 <>
                   <Table>
@@ -435,8 +684,8 @@ const CashRegisterLogSummaryPage: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getPaginatedData(regularOrders, regularSalesPage).map((order) => (
-                        <TableRow key={order.orderId}>
+                      {getPaginatedData(regularOrders, paginationState['regular'] || 1).map((order) => (
+                        <TableRow key={order._id}>
                           <TableCell className="font-medium py-1 text-sm">{order.orderNumber}</TableCell>
                           <TableCell className="py-1 text-sm">{order.clientName || "N/A"}</TableCell>
                           <TableCell className="py-1 text-sm">{order.recipientName || "N/A"}</TableCell>
@@ -466,7 +715,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell className="py-1 text-sm">
-                            <Badge variant={order.status === "entregado" ? "success" : "default"} className="text-xs">
+                            <Badge variant="default" className="text-xs">
                               {order.status}
                             </Badge>
                           </TableCell>
@@ -474,7 +723,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
-                  {renderPaginationControls(regularSalesPage, setRegularSalesPage, regularOrders)}
+                  {renderPaginationControls(paginationState['regular'] || 1, (page) => setPaginationState(prev => ({ ...prev, regular: page })), regularOrders)}
                 </>
               ) : (
                 <div className="text-center py-1 text-muted-foreground text-xs">
@@ -483,7 +732,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
               )}
             </TabsContent>
             
-            <TabsContent value="credit" className="mt-1">
+            <TabsContent value="credit" className="mt-0">
               {creditOrders.length > 0 ? (
                 <>
                   <Table>
@@ -500,8 +749,8 @@ const CashRegisterLogSummaryPage: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getPaginatedData(creditOrders, creditSalesPage).map((order) => (
-                        <TableRow key={order.orderId}>
+                      {getPaginatedData(creditOrders, paginationState['credit'] || 1).map((order) => (
+                        <TableRow key={order._id}>
                           <TableCell className="font-medium py-1 text-sm">{order.orderNumber}</TableCell>
                           <TableCell className="py-1 text-sm">{order.clientName || "N/A"}</TableCell>
                           <TableCell className="py-1 text-sm">{order.recipientName || "N/A"}</TableCell>
@@ -531,7 +780,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell className="py-1 text-sm">
-                            <Badge variant={order.status === "entregado" ? "success" : "default"} className="text-xs">
+                            <Badge variant="default" className="text-xs">
                               {order.status}
                             </Badge>
                           </TableCell>
@@ -539,7 +788,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
-                  {renderPaginationControls(creditSalesPage, setCreditSalesPage, creditOrders)}
+                  {renderPaginationControls(paginationState['credit'] || 1, (page) => setPaginationState(prev => ({ ...prev, credit: page })), creditOrders)}
                 </>
               ) : (
                 <div className="text-center py-1 text-muted-foreground text-xs">
@@ -547,153 +796,474 @@ const CashRegisterLogSummaryPage: React.FC = () => {
                 </div>
               )}
             </TabsContent>
-            
-            <TabsContent value="discounts" className="mt-1">
-              {log.discountAuths && log.discountAuths.length > 0 ? (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="py-1 text-xs">Orden</TableHead>
-                        <TableHead className="py-1 text-xs">Mensaje</TableHead>
-                        <TableHead className="py-1 text-xs">Solicitado por</TableHead>
-                        <TableHead className="py-1 text-xs">Gerente</TableHead>
-                        <TableHead className="text-right py-1 text-xs">Descuento</TableHead>
-                        <TableHead className="py-1 text-xs">Estado</TableHead>
-                        <TableHead className="py-1 text-xs">Folio</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getPaginatedData(log.discountAuths, discountAuthsPage).map((auth) => (
-                        <TableRow key={auth.authId}>
-                          <TableCell className="font-medium py-1 text-sm">{auth.orderNumber}</TableCell>
-                          <TableCell className="py-1 text-xs">{auth.message}</TableCell>
-                          <TableCell className="py-1 text-xs">{auth.requestedBy}</TableCell>
-                          <TableCell className="py-1 text-xs">{auth.managerId}</TableCell>
-                          <TableCell className="text-right py-1 text-sm">
-                            <span className="text-sm">
-                              {auth.discountType === 'porcentaje' 
-                                ? `${auth.discountValue}%`
-                                : formatCurrency(auth.discountValue)}
-                            </span>
-                            <div className="text-xs text-muted-foreground">
-                              Total: {formatCurrency(auth.discountAmount)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-1 text-sm">
-                            <Badge variant={auth.isAuth ? "success" : auth.isAuth === false ? "destructive" : "secondary"} className="text-xs">
-                              {auth.isAuth ? "Autorizado" : auth.isAuth === false ? "Rechazado" : "Pendiente"}
-                            </Badge>
-                            {auth.isRedeemed && (
-                              <Badge variant="outline" className="ml-1 text-xs">Canjeado</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="py-1 text-xs">{auth.authFolio || "N/A"}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {renderPaginationControls(discountAuthsPage, setDiscountAuthsPage, log.discountAuths)}
-                </>
-              ) : (
-                <div className="text-center py-1 text-muted-foreground text-xs">
-                  No hay autorizaciones de descuento registradas
-                </div>
-              )}
-            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
 
-      {/* Expenses and Purchases Section with Tabs */}
-      {((log.expenses && log.expenses.length > 0) || (log.buys && log.buys.length > 0)) && (
-        <Card className="mb-2">
-          <CardHeader className="px-2 py-1">
-            <CardTitle className="text-sm font-medium">Gastos y Compras</CardTitle>
-          </CardHeader>
-          <CardContent className="px-2 pb-2">
-            <Tabs defaultValue="expenses" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-7">
-                <TabsTrigger value="expenses" className="text-xs py-1">
-                  Gastos ({log.expenses?.length || 0})
-                </TabsTrigger>
-                <TabsTrigger value="purchases" className="text-xs py-1">
-                  Compras en Efectivo ({log.buys?.length || 0})
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="expenses" className="mt-1">
-                {log.expenses && log.expenses.length > 0 ? (
-                  <>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="py-1 text-xs">Concepto</TableHead>
-                          <TableHead className="text-right py-1 text-xs">Monto</TableHead>
-                          <TableHead className="py-1 text-xs">Fecha</TableHead>
+      {/* Sales Special Section with Tabs - Canceled Orders and Authorized Discounts */}
+      {((summary?.canceledOrders && summary.canceledOrders.length > 0) || (summary?.authorizedDiscounts && summary.authorizedDiscounts.length > 0)) && (
+        <Card className="shadow-sm mb-4 rounded-[15px]">
+          <CardContent className="p-0">
+            <div className="p-4 border-b">
+              <h5 className="font-bold mb-0">Detalle de Ventas Especiales</h5>
+            </div>
+
+            <Tabs defaultValue="canceled" className="w-full">
+              <div className="px-4 pt-3 border-b">
+                <TabsList className="bg-transparent h-auto p-0 gap-0">
+                  <TabsTrigger
+                    value="canceled"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <X size={16} className="mr-2" />
+                    Ventas Canceladas ({summary?.canceledOrders?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="discounts"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <ReceiptText size={16} className="mr-2" />
+                    Descuentos Autorizados ({summary?.authorizedDiscounts?.length || 0})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Canceled Orders Tab */}
+              <TabsContent value="canceled" className="mt-0">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        No.
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FECHA
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        NO. ORDEN
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        CLIENTE
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        DESTINATARIO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        MÉTODO PAGO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        TOTAL
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        ESTADO
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(!summary?.canceledOrders || summary.canceledOrders.length === 0) ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center py-12 text-muted-foreground"
+                        >
+                          <X size={48} className="mb-3 opacity-50 mx-auto" />
+                          <p className="mb-0">
+                            No hay ventas canceladas en esta sesión
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getPaginatedData(summary.canceledOrders, salesCanceledPage).map((order, index) => (
+                        <TableRow key={order._id}>
+                          <TableCell className="px-4 py-3">
+                            {(salesCanceledPage - 1) * ITEMS_PER_PAGE + index + 1}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <small>{formatDate(order.createdAt)}</small>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="font-semibold">
+                              {order.orderNumber}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="font-semibold">
+                              {order.clientName}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {order.recipientName}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {order.paymentMethod.split(", ").map((method, idx) => (
+                              <Badge
+                                key={idx}
+                                className={`mr-1 mb-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                  method.toLowerCase().includes("efectivo")
+                                    ? "bg-green-500 text-white hover:bg-green-500"
+                                    : method.toLowerCase().includes("tarjeta")
+                                    ? "bg-cyan-500 text-white hover:bg-cyan-500"
+                                    : method.toLowerCase().includes("transferencia")
+                                    ? "bg-primary text-primary-foreground hover:bg-primary"
+                                    : "bg-gray-500 text-white hover:bg-gray-500"
+                                }`}
+                              >
+                                {method}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="font-bold line-through text-red-500">
+                              {formatCurrency(order.total)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <Badge className="bg-red-500 text-white hover:bg-red-500 px-2 py-0.5 text-xs font-semibold">
+                              CANCELADA
+                            </Badge>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {getPaginatedData(log.expenses, expensesPage).map((expense, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="py-1 text-sm">{expense.expenseConcept}</TableCell>
-                            <TableCell className="text-right text-red-600 py-1 text-sm">
-                              {formatCurrency(expense.amount)}
-                            </TableCell>
-                            <TableCell className="py-1 text-xs">{formatDate(expense.expenseDate)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    {renderPaginationControls(expensesPage, setExpensesPage, log.expenses)}
-                  </>
-                ) : (
-                  <div className="text-center py-1 text-muted-foreground text-xs">
-                    No hay gastos registrados
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination controls for Canceled Orders */}
+                {summary?.canceledOrders && summary.canceledOrders.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando {getPaginatedData(summary.canceledOrders, salesCanceledPage).length} de {summary.canceledOrders.length} registros
+                    </div>
+                    {renderPaginationControls(salesCanceledPage, setSalesCanceledPage, summary.canceledOrders)}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Authorized Discounts Tab */}
+              <TabsContent value="discounts" className="mt-0">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        No.
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        ORDEN
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        MENSAJE
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        SOLICITADO POR
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        GERENTE
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        DESCUENTO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        ESTADO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FOLIO
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(!summary?.authorizedDiscounts || summary.authorizedDiscounts.length === 0) ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center py-12 text-muted-foreground"
+                        >
+                          <ReceiptText size={48} className="mb-3 opacity-50 mx-auto" />
+                          <p className="mb-0">
+                            No hay descuentos autorizados en esta sesión
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getPaginatedData(summary.authorizedDiscounts, salesDiscountsPage).map((auth, index) => (
+                        <TableRow key={auth._id}>
+                          <TableCell className="px-4 py-3">
+                            {(salesDiscountsPage - 1) * ITEMS_PER_PAGE + index + 1}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="font-semibold">
+                              {auth.orderNumber}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <small className="text-muted-foreground">
+                              {auth.message}
+                            </small>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {auth.requestedBy}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {auth.managerId}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div>
+                              <span className="font-semibold">
+                                {auth.discountType === 'porcentaje' 
+                                  ? `${auth.discountValue}%`
+                                  : formatCurrency(auth.discountValue)}
+                              </span>
+                              <div className="text-xs text-muted-foreground">
+                                Total: {formatCurrency(auth.discountAmount)}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <Badge className="bg-green-500 text-white hover:bg-green-500 px-2 py-0.5 text-xs font-semibold">
+                              AUTORIZADO
+                            </Badge>
+                            {auth.isRedeemed && (
+                              <Badge variant="outline" className="ml-1 text-xs">
+                                Canjeado
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <small>{auth.authFolio || "N/A"}</small>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination controls for Authorized Discounts */}
+                {summary?.authorizedDiscounts && summary.authorizedDiscounts.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando {getPaginatedData(summary.authorizedDiscounts, salesDiscountsPage).length} de {summary.authorizedDiscounts.length} registros
+                    </div>
+                    {renderPaginationControls(salesDiscountsPage, setSalesDiscountsPage, summary.authorizedDiscounts)}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Expenses and Purchases Section with Tabs */}
+      {((summary.expenses && summary.expenses.length > 0) || (summary.buys && summary.buys.length > 0)) && (
+        <Card className="shadow-sm mb-4 rounded-[15px]">
+          <CardContent className="p-0">
+            <div className="p-4 border-b">
+              <h5 className="font-bold mb-0">Compras y Gastos</h5>
+            </div>
+
+            <Tabs defaultValue="expenses" className="w-full">
+              <div className="px-4 pt-3 border-b">
+                <TabsList className="bg-transparent h-auto p-0 gap-0">
+                  <TabsTrigger
+                    value="expenses"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <ShoppingCart size={16} className="mr-2" />
+                    Gastos ({summary.expenses?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="purchases"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <Package size={16} className="mr-2" />
+                    Compras en Efectivo ({summary.buys?.length || 0})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <TabsContent value="expenses" className="mt-0">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FOLIO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FECHA
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        CONCEPTO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        USUARIO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        IMPORTE
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!summary.expenses || summary.expenses.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center py-12 text-muted-foreground"
+                        >
+                          <ShoppingCart
+                            size={48}
+                            className="mb-3 opacity-50 mx-auto"
+                          />
+                          <p className="mb-0">No se encontraron gastos</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getPaginatedData(summary.expenses, expensesPage).map((expense) => (
+                        <TableRow key={expense._id}>
+                          <TableCell className="px-4 py-3">
+                            <span className="font-semibold">
+                              #{expense.folio}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <small>{formatDate(expense.paymentDate)}</small>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="font-semibold">{expense.concept}</div>
+                            {expense.conceptDescription && (
+                              <small className="text-muted-foreground">
+                                {expense.conceptDescription}
+                              </small>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="text-muted-foreground">
+                              {expense.user}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="font-bold text-red-600">
+                              {formatCurrency(expense.total)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+                
+                {/* Pagination controls for Expenses */}
+                {summary.expenses && summary.expenses.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando {getPaginatedData(summary.expenses, expensesPage).length} de {summary.expenses.length} registros
+                    </div>
+                    {renderPaginationControls(expensesPage, setExpensesPage, summary.expenses)}
                   </div>
                 )}
               </TabsContent>
               
-              <TabsContent value="purchases" className="mt-1">
-                {log.buys && log.buys.length > 0 ? (
-                  <>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="py-1 text-xs">Folio</TableHead>
-                          <TableHead className="py-1 text-xs">Concepto</TableHead>
-                          <TableHead className="py-1 text-xs">Descripción</TableHead>
-                          <TableHead className="py-1 text-xs">Proveedor</TableHead>
-                          <TableHead className="py-1 text-xs">Usuario</TableHead>
-                          <TableHead className="text-right py-1 text-xs">Monto</TableHead>
-                          <TableHead className="py-1 text-xs">Método de Pago</TableHead>
-                          <TableHead className="py-1 text-xs">Fecha</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {getPaginatedData(log.buys, buysPage).map((buy, index) => (
-                          <TableRow key={buy.buyId || index}>
-                            <TableCell className="font-medium py-1 text-xs">{buy.folio}</TableCell>
-                            <TableCell className="py-1 text-xs">{buy.concept}</TableCell>
-                            <TableCell className="py-1 text-xs">{buy.conceptDescription}</TableCell>
-                            <TableCell className="py-1 text-xs">{buy.provider}</TableCell>
-                            <TableCell className="py-1 text-xs">{buy.user}</TableCell>
-                            <TableCell className="text-right text-red-600 py-1 text-sm">
+              <TabsContent value="purchases" className="mt-0">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FOLIO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        FECHA
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        CONCEPTO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        PROVEEDOR
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        MÉTODO PAGO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        USUARIO
+                      </TableHead>
+                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        IMPORTE
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!summary.buys || summary.buys.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="text-center py-12 text-muted-foreground"
+                        >
+                          <Package
+                            size={48}
+                            className="mb-3 opacity-50 mx-auto"
+                          />
+                          <p className="mb-0">No se encontraron compras</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getPaginatedData(summary.buys, purchasesPage).map((buy) => (
+                        <TableRow key={buy._id}>
+                          <TableCell className="px-4 py-3">
+                            <span className="font-semibold">#{buy.folio}</span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <small>{formatDate(buy.paymentDate)}</small>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="font-semibold">{buy.concept}</div>
+                            {buy.description && (
+                              <small className="text-muted-foreground">
+                                {buy.description}
+                              </small>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="text-muted-foreground">
+                              {buy.provider}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {buy.paymentMethod.split(", ").map((method, idx) => (
+                              <Badge
+                                key={idx}
+                                className={`mr-1 mb-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                  method.toLowerCase().includes("efectivo")
+                                    ? "bg-green-500 text-white hover:bg-green-500"
+                                    : method.toLowerCase().includes("tarjeta")
+                                    ? "bg-cyan-500 text-white hover:bg-cyan-500"
+                                    : method.toLowerCase().includes("transferencia")
+                                    ? "bg-primary text-primary-foreground hover:bg-primary"
+                                    : "bg-gray-500 text-white hover:bg-gray-500"
+                                }`}
+                              >
+                                {method}
+                              </Badge>
+                            ))}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="text-muted-foreground">
+                              {buy.user}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="font-bold text-red-600">
                               {formatCurrency(buy.amount)}
-                            </TableCell>
-                            <TableCell className="py-1 text-sm">
-                              <Badge variant="secondary" className="text-xs">{buy.paymentMethod}</Badge>
-                            </TableCell>
-                            <TableCell className="py-1 text-xs">{formatDate(buy.paymentDate)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    {renderPaginationControls(buysPage, setBuysPage, log.buys)}
-                  </>
-                ) : (
-                  <div className="text-center py-1 text-muted-foreground text-xs">
-                    No hay compras registradas
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+                
+                {/* Pagination controls for Purchases */}
+                {summary.buys && summary.buys.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando {getPaginatedData(summary.buys, purchasesPage).length} de {summary.buys.length} registros
+                    </div>
+                    {renderPaginationControls(purchasesPage, setPurchasesPage, summary.buys)}
                   </div>
                 )}
               </TabsContent>
@@ -703,7 +1273,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
       )}
 
       {/* Staff Information */}
-      <Card>
+      <Card className="shadow-sm rounded-[15px]">
         <CardHeader className="px-2 py-1">
           <CardTitle className="text-sm font-medium">Información del Personal</CardTitle>
         </CardHeader>
@@ -711,19 +1281,19 @@ const CashRegisterLogSummaryPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div>
               <h4 className="font-semibold mb-1 text-sm">Cajero</h4>
-              {log.cashierId ? (
+              {summary.cashRegister.cashierId ? (
                 <div className="space-y-1">
                   <p className="text-sm">
                     <span className="text-muted-foreground">Nombre:</span>{" "}
-                    {log.cashierId.profile.fullName}
+                    {summary.cashRegister.cashierId.profile.fullName}
                   </p>
                   <p className="text-sm">
                     <span className="text-muted-foreground">Usuario:</span>{" "}
-                    {log.cashierId.username}
+                    {summary.cashRegister.cashierId.username}
                   </p>
                   <p className="text-sm">
                     <span className="text-muted-foreground">Email:</span>{" "}
-                    {log.cashierId.email}
+                    {summary.cashRegister.cashierId.email}
                   </p>
                 </div>
               ) : (
@@ -735,15 +1305,15 @@ const CashRegisterLogSummaryPage: React.FC = () => {
               <div className="space-y-1">
                 <p className="text-sm">
                   <span className="text-muted-foreground">Nombre:</span>{" "}
-                  {log.managerId.profile.fullName}
+                  {summary.cashRegister.managerId.profile.fullName}
                 </p>
                 <p className="text-sm">
                   <span className="text-muted-foreground">Usuario:</span>{" "}
-                  {log.managerId.username}
+                  {summary.cashRegister.managerId.username}
                 </p>
                 <p className="text-sm">
                   <span className="text-muted-foreground">Email:</span>{" "}
-                  {log.managerId.email}
+                  {summary.cashRegister.managerId.email}
                 </p>
               </div>
             </div>
