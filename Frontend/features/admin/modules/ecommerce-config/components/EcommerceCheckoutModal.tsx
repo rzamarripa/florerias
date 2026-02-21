@@ -11,7 +11,7 @@ import { ordersService } from "@/features/admin/modules/orders/services/orders";
 import { storageService } from "@/features/admin/modules/storage/services/storage";
 import { generateSaleTicket, SaleTicketData } from "@/features/admin/modules/orders/utils/generateSaleTicket";
 import { generateDeliveryTicket, DeliveryTicketData } from "@/features/admin/modules/orders/utils/generateDeliveryTicket";
-import { uploadSaleTicketHTML, uploadDeliveryTicket } from "@/services/firebaseStorage";
+import { uploadSaleTicket, uploadDeliveryTicket } from "@/services/firebaseStorage";
 import { convertHtmlToImage } from "@/utils/htmlToImage";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
@@ -285,8 +285,14 @@ const EcommerceCheckoutModal: React.FC<EcommerceCheckoutModalProps> = ({
           throw new Error("IDs faltantes para subir ticket");
         }
 
-        const saleTicketResult = await uploadSaleTicketHTML(
-          ticketHTML,
+        // Convertir HTML a imagen PNG (mismo proceso que el ticket de envío)
+        const saleTicketBlob = await convertHtmlToImage(ticketHTML, {
+          width: 500,
+          backgroundColor: 'white'
+        });
+
+        const saleTicketResult = await uploadSaleTicket(
+          saleTicketBlob,
           companyId,
           orderBranchId,
           orderId

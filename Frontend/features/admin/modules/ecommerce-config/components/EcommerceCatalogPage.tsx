@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -5,40 +7,80 @@ import {
   ShoppingCart,
   Package,
   Loader2,
-  Grid,
+  Grid3X3,
   List,
   Star,
   ArrowLeft,
+  LogOut,
+  User,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useCartStore } from "../store/cartStore";
+import { useClientSessionStore } from "@/stores/clientSessionStore";
 import ClientCartModal from "./ClientCartModal";
 import EcommerceCheckoutModal from "./EcommerceCheckoutModal";
 import { ecommerceConfigService } from "../services/ecommerceConfig";
 import type { StockItem, EcommerceConfig } from "../types";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
+import { env } from "@/config/env";
+import { getClientToken } from "../services/clientAuth";
+import type { EcommerceConfigColors } from "../types";
 
 export default function EcommerceCatalogPage() {
   const router = useRouter();
+  const { client, isAuthenticated, logout, getClientFullName } =
+    useClientSessionStore();
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<EcommerceConfig | null>(null);
   const [branchId, setBranchId] = useState<string | null>(null);
   const [filteredProducts, setFilteredProducts] = useState<StockItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "price-asc" | "price-desc">(
-    "name"
-  );
+  const [sortBy, setSortBy] = useState<
+    "name" | "price-asc" | "price-desc" | "rating"
+  >("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [productRatings, setProductRatings] = useState<Record<string, { avgRating: number; count: number }>>({});
 
-  // Estados para filtros
+  const DEFAULT_COLORS: EcommerceConfigColors = {
+    primary: "#6366f1",
+    secondary: "#10b981",
+    background: "#ffffff",
+    text: "#1f2937",
+  };
+
+  // Price filter state
   const [priceRange, setPriceRange] = useState([0, 0]);
-  const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(0);
   const [sliderMax, setSliderMax] = useState(0);
 
   const {
@@ -61,7 +103,6 @@ export default function EcommerceCatalogPage() {
       const response = await ecommerceConfigService.getManagerConfig();
       const { config: configData, branch } = response.data;
 
-      // Guardar el branchId para el checkout
       if (branch?._id) {
         setBranchId(branch._id);
       }
@@ -89,39 +130,53 @@ export default function EcommerceCatalogPage() {
         },
       };
 
-      // Agregar propiedades simuladas a los productos para el diseño mejorado
-      if (fullConfig.itemsStock && fullConfig.itemsStock.length > 0) {
-        fullConfig.itemsStock = fullConfig.itemsStock.map((p) => ({
-          ...p,
-          stock: p.stock || 0, // Asegurar que el stock esté presente
-          discount: Math.floor(Math.random() * 30 + 10), // Descuento entre 10-40%
-          originalPrice: p.precio * (1 + Math.random() * 0.5), // Precio original simulado
-          rating: 3 + Math.random() * 2, // Rating entre 3-5
-          reviews: Math.floor(Math.random() * 100), // Reviews entre 0-100
-        }));
-        
-        // Debug: log para verificar stock
-        console.log("Productos con stock:", fullConfig.itemsStock.map(p => ({
-          nombre: p.nombre,
-          stock: p.stock
-        })));
-      }
-
       setConfig(fullConfig);
 
       // Initialize stock
       if (fullConfig.itemsStock && fullConfig.itemsStock.length > 0) {
         initializeStock(
-          fullConfig.itemsStock.map((p) => ({ _id: p._id, stock: p.stock }))
+          fullConfig.itemsStock.map((p) => ({ _id: p._id, stock: p.stock || 0 }))
         );
 
-        // Calcular rango de precios real de los productos
         const prices = fullConfig.itemsStock.map((p) => p.precio);
         const calculatedMax = Math.ceil(Math.max(...prices));
         setSliderMax(calculatedMax);
-        setMinPrice(0);
-        setMaxPrice(calculatedMax);
         setPriceRange([0, calculatedMax]);
+
+        // Load real review averages
+        const productIds = fullConfig.itemsStock.map((p) => p._id).join(",");
+        try {
+          const ratingsRes = await fetch(
+            `${env.NEXT_PUBLIC_API_URL}/reviews/products/averages?productIds=${productIds}`
+          );
+          const ratingsData = await ratingsRes.json();
+          if (ratingsData.success && ratingsData.data) {
+            const ratingsMap: Record<string, { avgRating: number; count: number }> = {};
+            ratingsData.data.forEach((r: any) => {
+              ratingsMap[r.productId] = { avgRating: r.avgRating, count: r.count };
+            });
+            setProductRatings(ratingsMap);
+          }
+        } catch (err) {
+          console.error("Error al cargar ratings:", err);
+        }
+      }
+
+      // Load categories from backend
+      const clientToken = getClientToken();
+      if (clientToken) {
+        try {
+          const catRes = await fetch(
+            `${env.NEXT_PUBLIC_API_URL}/product-categories/by-company`,
+            { headers: { Authorization: `Bearer ${clientToken}` } }
+          );
+          const catData = await catRes.json();
+          if (catData.success && catData.data) {
+            setCategories(catData.data.map((c: any) => ({ id: c._id, name: c.name })));
+          }
+        } catch (err) {
+          console.error("Error al cargar categorías:", err);
+        }
       }
     } catch (error) {
       console.error("Error al cargar configuración:", error);
@@ -147,6 +202,17 @@ export default function EcommerceCatalogPage() {
       );
     }
 
+    // Filter by category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((p) => {
+        const catId =
+          typeof p.productCategory === "object"
+            ? p.productCategory?._id
+            : p.productCategory;
+        return catId === selectedCategory;
+      });
+    }
+
     // Filter by price range
     filtered = filtered.filter(
       (p) => p.precio >= priceRange[0] && p.precio <= priceRange[1]
@@ -155,7 +221,9 @@ export default function EcommerceCatalogPage() {
     // Sort
     switch (sortBy) {
       case "name":
-        filtered.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+        filtered.sort((a, b) =>
+          (a.nombre || "").localeCompare(b.nombre || "")
+        );
         break;
       case "price-asc":
         filtered.sort((a, b) => (a.precio || 0) - (b.precio || 0));
@@ -163,38 +231,23 @@ export default function EcommerceCatalogPage() {
       case "price-desc":
         filtered.sort((a, b) => (b.precio || 0) - (a.precio || 0));
         break;
+      case "rating":
+        filtered.sort(
+          (a, b) =>
+            (productRatings[b._id]?.avgRating || 0) -
+            (productRatings[a._id]?.avgRating || 0)
+        );
+        break;
     }
 
     setFilteredProducts(filtered);
-  }, [config?.itemsStock, searchTerm, sortBy, priceRange]);
+  }, [config?.itemsStock, searchTerm, sortBy, priceRange, selectedCategory, productRatings]);
 
   const handlePriceRangeChange = (values: number[]) => {
     setPriceRange(values);
-    setMinPrice(values[0]);
-    setMaxPrice(values[1]);
-  };
-
-  // Helper function para renderizar estrellas
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center gap-0.5">
-        {[...Array(5)].map((_, i) => (
-          <Star
-            key={i}
-            size={12}
-            className={cn(
-              i < Math.floor(rating)
-                ? "fill-yellow-400 text-yellow-400"
-                : "fill-gray-200 text-gray-200"
-            )}
-          />
-        ))}
-      </div>
-    );
   };
 
   const handleAddToCart = (product: StockItem) => {
-    // Usar el stock directamente del producto de e-commerce
     if (product.stock <= 0) {
       toast.error("No hay stock disponible");
       return;
@@ -215,6 +268,106 @@ export default function EcommerceCatalogPage() {
 
     toast.success(`${product.nombre} agregado al carrito`);
   };
+
+  const handleLogout = () => {
+    logout();
+    router.push("/ecommerce-preview");
+  };
+
+  // Helper: get category name for a product
+  const getCategoryName = (product: StockItem): string => {
+    if (typeof product.productCategory === "object" && product.productCategory?.name) {
+      return product.productCategory.name;
+    }
+    const catId = typeof product.productCategory === "string" ? product.productCategory : "";
+    const found = categories.find((c) => c.id === catId);
+    return found?.name || "";
+  };
+
+  // Colors shorthand
+  const colors = config?.colors || DEFAULT_COLORS;
+
+  // Reusable filter content for desktop sidebar and mobile sheet
+  const renderFilters = () => (
+    <div className="flex flex-col gap-6">
+      {/* Search */}
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-foreground">
+          Buscar
+        </label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar productos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Categories */}
+      {categories.length > 0 && (
+        <>
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
+              Categorias
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className="rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+                style={
+                  selectedCategory === "all"
+                    ? { backgroundColor: colors.primary, color: "#ffffff" }
+                    : { backgroundColor: "#f1f5f9", color: "#64748b" }
+                }
+              >
+                Todos
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className="rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+                  style={
+                    selectedCategory === cat.id
+                      ? { backgroundColor: colors.primary, color: "#ffffff" }
+                      : { backgroundColor: "#f1f5f9", color: "#64748b" }
+                  }
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Separator />
+        </>
+      )}
+
+      {/* Price Range */}
+      <div>
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
+          Rango de precio
+        </h3>
+        <Slider
+          value={priceRange}
+          onValueChange={handlePriceRangeChange}
+          min={0}
+          max={sliderMax || 1}
+          step={sliderMax < 500 ? 10 : sliderMax < 5000 ? 50 : 100}
+          className="mb-3"
+        />
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>${priceRange[0]}</span>
+          <span>${priceRange[1]}</span>
+        </div>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -238,253 +391,421 @@ export default function EcommerceCatalogPage() {
     );
   }
 
-  const totalProducts = config?.itemsStock?.length || 0;
-
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="border-b">
-        <div className="max-w-[1400px] mx-auto px-6 py-4">
-          <div className="mb-4">
-            <h1 className="text-2xl font-semibold text-gray-900">
+    <div className="min-h-screen" style={{ backgroundColor: colors.background }}>
+      {/* ===== HEADER ===== */}
+      <header
+        className="sticky top-0 z-30 border-b border-border backdrop-blur-sm"
+        style={{ backgroundColor: colors.primary }}
+      >
+        <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 lg:px-8">
+          {/* Left: Back + Title */}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/ecommerce-preview")}
+              style={{ color: "#ffffff" }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Volver</span>
+            </Button>
+            <div className="hidden h-6 w-px sm:block" style={{ backgroundColor: "rgba(255,255,255,0.3)" }} />
+            <h1 className="font-serif text-xl font-bold sm:text-2xl" style={{ color: "#ffffff" }}>
               Realizar Pedido
             </h1>
           </div>
 
-          <div className="flex items-center justify-end">
-            <div className="flex items-center gap-3">
-              <div className="flex rounded-lg border border-gray-200">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                  className={cn(
-                    "rounded-r-none px-3",
-                    viewMode === "grid" && "bg-gray-100"
-                  )}
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                  className={cn(
-                    "rounded-l-none px-3",
-                    viewMode === "list" && "bg-gray-100"
-                  )}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Cart Button */}
-              <Button
-                variant="default"
-                onClick={openCart}
-                className="relative bg-indigo-600 hover:bg-indigo-700"
+          {/* Right: Sort + View + Cart + Client */}
+          <div className="flex items-center gap-2">
+            {/* Sort Select */}
+            <div className="hidden items-center gap-1 md:flex">
+              <Select
+                value={sortBy}
+                onValueChange={(v) =>
+                  setSortBy(v as "name" | "price-asc" | "price-desc" | "rating")
+                }
               >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Carrito
-                {totalItemsInCart > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                <SelectTrigger
+                  className="h-8 w-40 text-xs"
+                  style={{
+                    color: "#ffffff",
+                    backgroundColor: "rgba(255,255,255,0.15)",
+                    borderColor: "rgba(255,255,255,0.3)",
+                  }}
+                >
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Nombre</SelectItem>
+                  <SelectItem value="price-asc">
+                    Precio: menor a mayor
+                  </SelectItem>
+                  <SelectItem value="price-desc">
+                    Precio: mayor a menor
+                  </SelectItem>
+                  <SelectItem value="rating">Mejor valorados</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* View Toggle */}
+            <div
+              className="hidden items-center rounded-lg p-0.5 sm:flex"
+              style={{ backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+            >
+              <button
+                onClick={() => setViewMode("grid")}
+                className="rounded-md p-1.5 transition-colors"
+                style={{
+                  backgroundColor: viewMode === "grid" ? "rgba(255,255,255,0.25)" : "transparent",
+                  color: "#ffffff",
+                }}
+                aria-label="Vista de cuadricula"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className="rounded-md p-1.5 transition-colors"
+                style={{
+                  backgroundColor: viewMode === "list" ? "rgba(255,255,255,0.25)" : "transparent",
+                  color: "#ffffff",
+                }}
+                aria-label="Vista de lista"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Cart Button */}
+            <Button
+              onClick={openCart}
+              variant="ghost"
+              size="sm"
+              className="relative"
+              style={{
+                color: "#ffffff",
+                backgroundColor: "rgba(255,255,255,0.15)",
+                border: "1px solid rgba(255,255,255,0.3)",
+              }}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">Carrito</span>
+              {totalItemsInCart > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full p-0 text-[10px] font-bold"
+                  style={{ backgroundColor: "#ffffff", color: colors.primary }}
+                >
+                  {totalItemsInCart}
+                </Badge>
+              )}
+            </Button>
+
+            {/* Client Dropdown */}
+            {isAuthenticated && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    style={{
+                      color: "#ffffff",
+                      backgroundColor: "rgba(255,255,255,0.15)",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                    }}
                   >
-                    {totalItemsInCart}
-                  </Badge>
-                )}
-              </Button>
-            </div>
+                    <User className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">
+                      {getClientFullName()}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => router.push("/ecommerce-dashboard")}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Mis Pedidos
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar Sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="flex max-w-[1400px] mx-auto">
-        {/* Sidebar Filters */}
-        <div className="w-64 p-6 border-r bg-white">
-          {/* Search */}
-          <div className="mb-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
-              Buscar:
-            </h3>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Buscar productos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 bg-gray-50 border-gray-200"
-              />
-            </div>
+      {/* ===== MAIN CONTENT ===== */}
+      <div className="mx-auto flex max-w-screen-2xl gap-8 px-4 py-6 lg:px-8">
+        {/* Desktop Sidebar */}
+        <aside className="sticky top-20 hidden h-fit w-64 shrink-0 lg:block">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 font-serif text-lg font-semibold text-foreground">
+              Filtros
+            </h2>
+            {renderFilters()}
+          </div>
+          <div className="mt-4 rounded-xl border border-border bg-card p-4">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">
+                {filteredProducts.length}
+              </span>{" "}
+              productos encontrados
+            </p>
+          </div>
+        </aside>
+
+        {/* Product Area */}
+        <main className="flex-1">
+          {/* Mobile filter trigger + product count */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <p className="text-sm text-muted-foreground">
+              {filteredProducts.length} productos
+            </p>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filtros
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80">
+                <SheetHeader>
+                  <SheetTitle className="font-serif">Filtros</SheetTitle>
+                  <SheetDescription>
+                    Filtra productos por categoría y precio
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="p-4">{renderFilters()}</div>
+              </SheetContent>
+            </Sheet>
           </div>
 
-          {/* Price Range */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
-              Precio:
-            </h3>
-            <div className="space-y-4">
-              <Slider
-                value={priceRange}
-                onValueChange={handlePriceRangeChange}
-                min={0}
-                max={sliderMax || 1}
-                step={sliderMax < 500 ? 10 : sliderMax < 5000 ? 50 : 100}
-                className="w-full"
-              />
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    value={minPrice}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setMinPrice(val);
-                      setPriceRange([val, maxPrice]);
-                    }}
-                    className="h-8 text-xs"
-                    placeholder="Min"
-                  />
-                </div>
-                <span className="text-gray-400 text-xs">a</span>
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    value={maxPrice}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setMaxPrice(val);
-                      setPriceRange([minPrice, val]);
-                    }}
-                    className="h-8 text-xs"
-                    placeholder="Max"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Products Grid */}
-        <div className="flex-1 p-6">
+          {/* Products */}
           {filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <Package className="h-16 w-16 text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted">
+                <Package className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="mt-4 font-serif text-xl font-semibold text-foreground">
                 No se encontraron productos
               </h3>
-              <p className="text-gray-500">
-                Intenta ajustar los filtros de búsqueda
+              <p className="mt-2 text-center text-sm text-muted-foreground">
+                Intenta ajustar los filtros o buscar otro término
               </p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {filteredProducts.map((product: any) => {
-                // Usar el stock directamente del producto de e-commerce
                 const isOutOfStock = product.stock <= 0;
-                const discount = product.discount || 15;
-                const originalPrice =
-                  product.originalPrice || product.precio * 1.3;
-                const rating = product.rating || 4;
-                const reviews = product.reviews || 45;
+                const rating = productRatings[product._id]?.avgRating || 0;
+                const reviewCount = productRatings[product._id]?.count || 0;
+                const isLowStock =
+                  product.stock > 0 && product.stock <= 5;
+                const categoryName = getCategoryName(product);
 
                 return (
                   <div
                     key={product._id}
-                    className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 group"
+                    className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:shadow-lg"
                   >
-                    {/* Product Image con Badge de descuento */}
-                    <div className="relative aspect-square bg-gray-50">
-                      {/* Discount Badge */}
-                      <div className="absolute top-2 left-2 z-10">
-                        <Badge className="bg-green-500 text-white border-0 px-2 py-0.5 text-xs">
-                          {discount}% OFF
-                        </Badge>
-                      </div>
-
-                      {/* Stock Badge en esquina superior derecha - Siempre mostrar el stock */}
-                      <Badge
-                        variant={
-                          product.stock === 0 ? "destructive" : 
-                          product.stock <= 5 ? "secondary" : "default"
-                        }
-                        className="absolute top-2 right-2 z-10 text-xs"
-                      >
-                        Stock: {product.stock}
-                      </Badge>
-
-                      {product.imagen ? (
+                    {/* Image */}
+                    <div className="relative aspect-square overflow-hidden bg-muted">
+                      {(product.imagen || product.imageUrl) ? (
                         <img
-                          src={product.imagen}
+                          src={product.imageUrl || product.imagen}
                           alt={product.nombre}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-16 w-16 text-gray-300" />
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Package className="h-16 w-16 text-muted-foreground/30" />
                         </div>
                       )}
+                      <div className="absolute inset-0 bg-foreground/0 transition-colors group-hover:bg-foreground/5" />
 
+                      {/* Low Stock Badge */}
+                      {isLowStock && (
+                        <Badge
+                          variant="outline"
+                          className="absolute top-3 right-3 border-destructive/30 bg-card/90 text-destructive text-xs backdrop-blur-sm"
+                        >
+                          Quedan {product.stock}
+                        </Badge>
+                      )}
+
+                      {/* Out of Stock Overlay */}
                       {isOutOfStock && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <span className="text-white font-semibold text-lg">
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                          <span className="text-lg font-semibold text-muted-foreground">
                             Agotado
                           </span>
                         </div>
                       )}
-
-                      {/* Botón de carrito en hover */}
-                      <button
-                        onClick={() => handleAddToCart(product)}
-                        className="absolute bottom-2 right-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        disabled={isOutOfStock}
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                      </button>
                     </div>
 
-                    {/* Product Info con ratings */}
-                    <div className="p-4">
-                      <h3 className="font-medium text-sm text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem]">
+                    {/* Info */}
+                    <div className="flex flex-1 flex-col gap-2 p-4">
+                      {categoryName && (
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                          {categoryName}
+                        </p>
+                      )}
+                      <h3 className="font-serif text-base font-semibold leading-tight text-card-foreground line-clamp-2 min-h-[2.5rem]">
                         {product.nombre}
                       </h3>
 
-                      {/* Rating y Reviews */}
-                      <div className="flex items-center gap-2 mb-2">
-                        {renderStars(rating)}
-                        <span className="text-xs text-gray-500">
-                          ({reviews})
+                      {/* Rating */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={cn(
+                              "h-3 w-3",
+                              i < Math.floor(rating)
+                                ? "fill-chart-4 text-chart-4"
+                                : "fill-muted text-muted"
+                            )}
+                          />
+                        ))}
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          ({reviewCount})
                         </span>
                       </div>
 
-                      {/* Precios */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-400 line-through text-sm">
-                          ${originalPrice.toFixed(2)}
-                        </span>
-                        <span className="text-lg font-semibold text-indigo-600">
-                          ${product.precio.toFixed(2)}
-                        </span>
-                      </div>
+                      {/* Stock indicator */}
+                      {!isOutOfStock && !isLowStock && (
+                        <p className="text-xs text-emerald-600 font-medium">
+                          {product.stock} disponibles
+                        </p>
+                      )}
 
-                      {/* Stock disponible */}
-                      <div className="text-xs text-gray-600 mt-1">
-                        Stock disponible: {product.stock} unidades
+                      {/* Price + Add to Cart */}
+                      <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+                        <div>
+                          <p className="text-xl font-bold" style={{ color: colors.primary }}>
+                            ${product.precio.toFixed(2)}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddToCart(product)}
+                          disabled={isOutOfStock}
+                          style={{ backgroundColor: colors.primary, color: "#ffffff" }}
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                          <span className="sr-only md:not-sr-only">
+                            Agregar
+                          </span>
+                        </Button>
                       </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* List View */
+            <div className="flex flex-col gap-4">
+              {filteredProducts.map((product: any) => {
+                const isOutOfStock = product.stock <= 0;
+                const rating = productRatings[product._id]?.avgRating || 0;
+                const reviewCount = productRatings[product._id]?.count || 0;
+                const isLowStock =
+                  product.stock > 0 && product.stock <= 5;
+                const categoryName = getCategoryName(product);
 
-                      {/* Botón agregar al carrito (mantener el existente también) */}
+                return (
+                  <div
+                    key={product._id}
+                    className="group flex items-center gap-6 rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md"
+                  >
+                    {/* Thumbnail */}
+                    <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      {(product.imagen || product.imageUrl) ? (
+                        <img
+                          src={product.imageUrl || product.imagen}
+                          alt={product.nombre}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Package className="h-8 w-8 text-muted-foreground/30" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Details */}
+                    <div className="flex flex-1 flex-col gap-2">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          {categoryName && (
+                            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                              {categoryName}
+                            </p>
+                          )}
+                          <h3 className="font-serif text-lg font-semibold text-card-foreground">
+                            {product.nombre}
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold" style={{ color: colors.primary }}>
+                            ${product.precio.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                i < Math.floor(rating)
+                                  ? "fill-chart-4 text-chart-4"
+                                  : "fill-muted text-muted"
+                              )}
+                            />
+                          ))}
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            ({reviewCount})
+                          </span>
+                        </div>
+                        {isLowStock && (
+                          <div className="flex items-center gap-1.5">
+                            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs font-medium text-destructive">
+                              Quedan {product.stock}
+                            </span>
+                          </div>
+                        )}
+                        {!isOutOfStock && !isLowStock && (
+                          <span className="text-xs text-emerald-600 font-medium">
+                            {product.stock} disponibles
+                          </span>
+                        )}
+                      </div>
                       <Button
-                        className="w-full text-xs mt-3"
                         size="sm"
-                        disabled={isOutOfStock}
                         onClick={() => handleAddToCart(product)}
-                        style={{
-                          backgroundColor: isOutOfStock ? "#9ca3af" : "#6366f1",
-                        }}
+                        disabled={isOutOfStock}
+                        className="mt-1 w-fit"
+                        style={{ backgroundColor: colors.primary, color: "#ffffff" }}
                       >
-                        {isOutOfStock ? "Agotado" : "Agregar al carrito"}
+                        <ShoppingCart className="h-4 w-4" />
+                        {isOutOfStock
+                          ? "Agotado"
+                          : "Agregar al carrito"}
                       </Button>
                     </div>
                   </div>
@@ -492,7 +813,7 @@ export default function EcommerceCatalogPage() {
               })}
             </div>
           )}
-        </div>
+        </main>
       </div>
 
       {/* Cart Modal */}
@@ -512,7 +833,6 @@ export default function EcommerceCatalogPage() {
             setShowCheckoutModal(false);
           }}
           onOrderCreated={() => {
-            // Recargar configuración para actualizar stock después de crear orden exitosamente
             loadConfig();
           }}
           branchId={branchId}

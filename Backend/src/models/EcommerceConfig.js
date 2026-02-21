@@ -235,8 +235,10 @@ const ecommerceConfigSchema = new mongoose.Schema({
       default: 0
     },
     imagen: String,
+    imageUrl: String,
     productCategory: {
-      type: mongoose.Schema.Types.Mixed
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'cv_product_category'
     },
     originalPrice: Number,
     discountPercentage: Number,

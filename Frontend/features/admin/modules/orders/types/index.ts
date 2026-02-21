@@ -215,6 +215,7 @@ export interface OrderFilters {
   eOrder?: boolean;
   startDate?: string;
   endDate?: string;
+  clientId?: string;
 }
 
 export type ShippingType = 'envio' | 'tienda' | 'redes_sociales';

@@ -43,6 +43,7 @@ export interface CreateClientData {
   company: string;
   branch?: string;
   howDidYouHearAboutUs?: HowDidYouHearAboutUs;
+  password?: string;
 }
 
 export interface UpdateClientData {
@@ -54,6 +55,7 @@ export interface UpdateClientData {
   points?: number;
   status?: boolean;
   howDidYouHearAboutUs?: HowDidYouHearAboutUs;
+  password?: string;
 }
 
 export interface CreateClientResponseData {

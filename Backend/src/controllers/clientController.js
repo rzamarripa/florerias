@@ -95,7 +95,7 @@ export const getAllClients = async (req, res) => {
 
 export const createClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, gender, points, status, company, branch, generateDigitalCard, howDidYouHearAboutUs } = req.body;
+    const { name, lastName, phoneNumber, email, gender, points, status, company, branch, generateDigitalCard, howDidYouHearAboutUs, password } = req.body;
 
     // Validaciones básicas
     if (!name || !lastName || !phoneNumber || !gender) {
@@ -154,6 +154,10 @@ export const createClient = async (req, res) => {
       branch: branch || null,
       howDidYouHearAboutUs: howDidYouHearAboutUs || null,
     };
+
+    if (password) {
+      clientData.password = password;
+    }
 
     const client = await Client.create(clientData);
 
@@ -312,7 +316,7 @@ export const getClientById = async (req, res) => {
 
 export const updateClient = async (req, res) => {
   try {
-    const { name, lastName, phoneNumber, email, gender, points, status, howDidYouHearAboutUs } = req.body;
+    const { name, lastName, phoneNumber, email, gender, points, status, howDidYouHearAboutUs, password } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
@@ -356,6 +360,34 @@ export const updateClient = async (req, res) => {
           message: "Phone number already exists",
         });
       }
+    }
+
+    // Si se incluye password, usar findById + save para activar el pre-save hook de bcrypt
+    if (password) {
+      const client = await Client.findById(req.params.id);
+      if (!client) {
+        return res.status(404).json({
+          success: false,
+          message: "Client not found",
+        });
+      }
+
+      Object.assign(client, updateData);
+      client.password = password;
+      await client.save();
+
+      const populatedClient = await Client.findById(client._id).populate("purchases");
+
+      return res.status(200).json({
+        success: true,
+        message: "Client updated successfully",
+        data: {
+          client: {
+            ...populatedClient.toObject(),
+            fullName: populatedClient.getFullName(),
+          },
+        },
+      });
     }
 
     const client = await Client.findByIdAndUpdate(

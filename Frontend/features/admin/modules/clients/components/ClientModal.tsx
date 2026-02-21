@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Save, User, QrCode, Download, Loader2, CreditCard } from "lucide-react";
+import { X, Save, User, QrCode, Download, Loader2, CreditCard, Eye, EyeOff } from "lucide-react";
 import { Client, CreateClientData, UpdateClientData, HowDidYouHearAboutUs } from "../types";
 import { useRouter } from "next/navigation";
 import digitalCardService from "../../digitalCards/services/digitalCardService";
@@ -67,9 +67,13 @@ const ClientModal: React.FC<ClientModalProps> = ({
     status: true,
     company: "",
     howDidYouHearAboutUs: null,
+    password: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [generatingCard, setGeneratingCard] = useState(false);
   const [digitalCard, setDigitalCard] = useState<any>(null);
   const [showCardActions, setShowCardActions] = useState(false);
@@ -88,6 +92,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
         status: client.status,
         company: client.company || "",
         howDidYouHearAboutUs: client.howDidYouHearAboutUs || null,
+        password: "",
       });
       if (client._id) {
         checkDigitalCard(client._id);
@@ -103,10 +108,14 @@ const ClientModal: React.FC<ClientModalProps> = ({
         status: true,
         company: "",
         howDidYouHearAboutUs: null,
+        password: "",
       });
       setDigitalCard(null);
       setShowCardActions(false);
     }
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setErrors({});
   }, [client, show]);
 
@@ -136,6 +145,29 @@ const ClientModal: React.FC<ClientModalProps> = ({
       newErrors.points = "Los puntos no pueden ser negativos";
     }
 
+    // Validación de contraseña
+    if (!client) {
+      // Creación: contraseña obligatoria
+      if (!formData.password || !formData.password.trim()) {
+        newErrors.password = "La contraseña es requerida";
+      } else if (formData.password.length < 6) {
+        newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+      }
+      if (formData.password !== confirmPassword) {
+        newErrors.confirmPassword = "Las contraseñas no coinciden";
+      }
+    } else {
+      // Edición: solo validar si se ingresó algo
+      if (formData.password && formData.password.trim()) {
+        if (formData.password.length < 6) {
+          newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+        }
+        if (formData.password !== confirmPassword) {
+          newErrors.confirmPassword = "Las contraseñas no coinciden";
+        }
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -148,8 +180,10 @@ const ClientModal: React.FC<ClientModalProps> = ({
         setPendingFormData(formData);
         setShowCardConfirmation(true);
       } else {
-        // Para edición, guardar directamente
-        await onSave(formData);
+        // Para edición, excluir password si está vacío
+        const { password, ...rest } = formData;
+        const editData = password && password.trim() ? { ...rest, password } : rest;
+        await onSave(editData);
       }
     }
   };
@@ -348,6 +382,67 @@ const ClientModal: React.FC<ClientModalProps> = ({
                 />
                 {errors.points && (
                   <p className="text-sm text-destructive">{errors.points}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  Contraseña {!isEditing && <span className="text-destructive">*</span>}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder={isEditing ? "Dejar vacío para no cambiar" : "Mínimo 6 caracteres"}
+                    value={formData.password || ""}
+                    onChange={(e) => handleChange("password", e.target.value)}
+                    className={errors.password ? "border-destructive pr-10" : "pr-10"}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">
+                  Confirmar Contraseña {!isEditing && <span className="text-destructive">*</span>}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Repite la contraseña"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (errors.confirmPassword) {
+                        setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+                      }
+                    }}
+                    className={errors.confirmPassword ? "border-destructive pr-10" : "pr-10"}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-sm text-destructive">{errors.confirmPassword}</p>
                 )}
               </div>
             </div>

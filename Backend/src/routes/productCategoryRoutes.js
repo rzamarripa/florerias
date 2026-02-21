@@ -7,10 +7,14 @@ import {
   deactivateProductCategory,
   activateProductCategory,
   deleteProductCategory,
+  getCategoriesByCompany,
 } from "../controllers/productCategoryController.js";
 import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// Ruta para clientes: obtener categorías por empresa
+router.get("/by-company", protect, getCategoriesByCompany);
 
 // Rutas protegidas con autenticación
 router.get("/", protect, getAllProductCategories);

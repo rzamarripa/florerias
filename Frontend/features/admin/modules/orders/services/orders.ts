@@ -10,7 +10,7 @@ import {
 
 export const ordersService = {
   getAllOrders: async (filters: OrderFilters = {}): Promise<GetOrdersResponse> => {
-    const { page = 1, limit = 10, status, salesChannel, clientName, orderNumber, eOrder, startDate, endDate } = filters;
+    const { page = 1, limit = 10, status, salesChannel, clientName, orderNumber, eOrder, startDate, endDate, clientId } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -24,6 +24,7 @@ export const ordersService = {
     if (eOrder) searchParams.append('eOrder', 'true');
     if (startDate) searchParams.append('startDate', startDate);
     if (endDate) searchParams.append('endDate', endDate);
+    if (clientId) searchParams.append('clientId', clientId);
 
     const response = await apiCall<GetOrdersResponse>(`/orders?${searchParams}`);
     return response;

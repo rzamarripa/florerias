@@ -8,18 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { ecommerceConfigService } from "./services/ecommerceConfig";
 import EcommerceView from "./components/EcommerceView";
 import ClientCartModal from "./components/ClientCartModal";
+import ClientLoginModal from "./components/ClientLoginModal";
 import { useCartStore } from "./store/cartStore";
+import { useClientSessionStore } from "@/stores/clientSessionStore";
 import type { EcommerceConfig } from "./types";
 
 export default function EcommerceFullView() {
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<EcommerceConfig | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const preview = searchParams.get("preview") === "true";
 
   const { getTotalItems } = useCartStore();
   const totalItemsInCart = getTotalItems();
+
+  const { client, isAuthenticated, logout } = useClientSessionStore();
 
   useEffect(() => {
     loadConfig();
@@ -96,6 +101,14 @@ export default function EcommerceFullView() {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
+  const handleDashboardClick = () => {
+    router.push("/ecommerce-dashboard");
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -140,12 +153,23 @@ export default function EcommerceFullView() {
           typography={config.typography}
         />
 
+        {/* Login Modal */}
+        <ClientLoginModal
+          open={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+          colors={config.colors}
+        />
+
         <EcommerceView
           header={config.header}
           colors={config.colors}
           typography={config.typography}
           featuredElements={config.featuredElements}
           itemsStock={config.itemsStock}
+          onLoginClick={() => setShowLoginModal(true)}
+          clientSession={isAuthenticated ? client : null}
+          onLogout={handleLogout}
+          onDashboardClick={handleDashboardClick}
         />
       </div>
     );
@@ -175,6 +199,13 @@ export default function EcommerceFullView() {
       {/* Cart Modal */}
       <ClientCartModal colors={config.colors} typography={config.typography} />
 
+      {/* Login Modal */}
+      <ClientLoginModal
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        colors={config.colors}
+      />
+
       {/* Main Ecommerce View */}
       <EcommerceView
         header={config.header}
@@ -182,6 +213,10 @@ export default function EcommerceFullView() {
         typography={config.typography}
         featuredElements={config.featuredElements}
         itemsStock={config.itemsStock}
+        onLoginClick={() => setShowLoginModal(true)}
+        clientSession={isAuthenticated ? client : null}
+        onLogout={handleLogout}
+        onDashboardClick={handleDashboardClick}
       />
     </div>
   );

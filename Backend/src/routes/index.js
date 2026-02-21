@@ -53,6 +53,8 @@ import scannerRoutes from "./scannerRoutes.js";
 import stripeRoutes from "./stripeRoutes.js";
 import ticketRoutes from "./ticketRoutes.js";
 import salesChannelRoutes from "./salesChannelRoutes.js";
+import clientAuthRoutes from "./clientAuthRoutes.js";
+import reviewRoutes from "./reviewRoutes.js";
 
 const router = Router();
 
@@ -109,5 +111,7 @@ router.use("/scanner", scannerRoutes);
 router.use("/stripe", stripeRoutes);
 router.use("/tickets", ticketRoutes);
 router.use("/sales-channels", salesChannelRoutes);
+router.use("/client-auth", clientAuthRoutes);
+router.use("/reviews", reviewRoutes);
 
 export default router;

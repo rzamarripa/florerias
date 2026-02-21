@@ -65,6 +65,11 @@ const embeddedProductSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  imageUrl: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   insumos: [embeddedInsumoSchema],
   cantidad: {
     type: Number,

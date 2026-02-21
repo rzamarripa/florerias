@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 const { Schema } = mongoose;
 
 // Function to generate alphanumeric client number
@@ -128,6 +129,10 @@ const clientSchema = new Schema(
         default: null
       }
     }],
+    password: {
+      type: String,
+      select: false
+    },
     howDidYouHearAboutUs: {
       type: String,
       enum: {
@@ -144,6 +149,19 @@ const clientSchema = new Schema(
     strictPopulate: false
   }
 );
+
+// Hash password before saving
+clientSchema.pre("save", async function (next) {
+  if (!this.isModified("password") || !this.password) return next();
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Compare password method
+clientSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 // Indexes for search optimization (clientNumber already has index from unique: true)
 clientSchema.index({ phoneNumber: 1 });

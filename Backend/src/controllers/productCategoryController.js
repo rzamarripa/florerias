@@ -526,6 +526,41 @@ export const activateProductCategory = async (req, res) => {
   }
 };
 
+// Obtener categorías por empresa del cliente autenticado
+export const getCategoriesByCompany = async (req, res) => {
+  try {
+    if (!req.isClient || !req.client) {
+      return res.status(403).json({
+        success: false,
+        message: "Solo los clientes pueden consultar categorías por empresa",
+      });
+    }
+
+    const companyId = req.client.company;
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        message: "El cliente no tiene empresa asignada",
+      });
+    }
+
+    const categories = await ProductCategory.find({
+      company: companyId,
+      isActive: true,
+    }).sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: categories,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // Eliminar categoría de producto (físicamente)
 export const deleteProductCategory = async (req, res) => {
   try {

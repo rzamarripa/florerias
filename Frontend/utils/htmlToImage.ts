@@ -1,6 +1,26 @@
 import { toPng } from 'html-to-image';
 
 /**
+ * Extrae el contenido del <body> de un HTML completo
+ */
+const extractBodyContent = (html: string): string => {
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return bodyMatch ? bodyMatch[1] : html;
+};
+
+/**
+ * Extrae los estilos <style> de un HTML completo
+ */
+const extractStyles = (html: string): string => {
+  const styleMatches = html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+  if (!styleMatches) return '';
+  return styleMatches.map(s => {
+    const content = s.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    return content ? content[1] : '';
+  }).join('\n');
+};
+
+/**
  * Sanitiza las declaraciones de font-family en el HTML para evitar problemas con html-to-image
  */
 const sanitizeFontDeclarations = (html: string): string => {
@@ -294,7 +314,8 @@ const convertHtmlToImageFallback = async (
     
     // Sanitizar el HTML primero
     const sanitizedHtml = sanitizeFontDeclarations(htmlString);
-    
+    const hasCompleteHtml = htmlString.includes('<!DOCTYPE') || htmlString.includes('<html');
+
     // Crear un contenedor directamente en el DOM (sin iframe)
     const container = document.createElement('div');
     container.style.position = 'fixed';
@@ -304,9 +325,20 @@ const convertHtmlToImageFallback = async (
     container.style.backgroundColor = options?.backgroundColor || 'white';
     container.style.padding = '20px';
     container.style.fontFamily = 'monospace';
-    
-    // Insertar el HTML sanitizado
-    container.innerHTML = sanitizedHtml;
+
+    // Si es HTML completo, extraer body y styles por separado para evitar que <style> se muestre como texto
+    if (hasCompleteHtml) {
+      const styles = extractStyles(sanitizedHtml);
+      const bodyContent = extractBodyContent(sanitizedHtml);
+      if (styles) {
+        const styleEl = document.createElement('style');
+        styleEl.textContent = styles;
+        container.appendChild(styleEl);
+      }
+      container.insertAdjacentHTML('beforeend', bodyContent);
+    } else {
+      container.innerHTML = sanitizedHtml;
+    }
     document.body.appendChild(container);
 
     // Esperar a que se renderice
@@ -378,9 +410,22 @@ const convertWithCanvas = async (
       container.style.left = '-9999px';
       container.style.width = `${options?.width || 600}px`;
       container.style.backgroundColor = options?.backgroundColor || 'white';
-      
-      // Sanitizar e insertar HTML
-      container.innerHTML = sanitizeFontDeclarations(htmlString);
+
+      // Sanitizar e insertar HTML — extraer body/styles si es HTML completo
+      const sanitizedHtml = sanitizeFontDeclarations(htmlString);
+      const hasCompleteHtml = htmlString.includes('<!DOCTYPE') || htmlString.includes('<html');
+      if (hasCompleteHtml) {
+        const styles = extractStyles(sanitizedHtml);
+        const bodyContent = extractBodyContent(sanitizedHtml);
+        if (styles) {
+          const styleEl = document.createElement('style');
+          styleEl.textContent = styles;
+          container.appendChild(styleEl);
+        }
+        container.insertAdjacentHTML('beforeend', bodyContent);
+      } else {
+        container.innerHTML = sanitizedHtml;
+      }
       document.body.appendChild(container);
       
       // Crear un canvas del tamaño apropiado
@@ -409,7 +454,7 @@ const convertWithCanvas = async (
       
       // Extraer texto básico del HTML
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlString;
+      tempDiv.innerHTML = hasCompleteHtml ? extractBodyContent(htmlString) : htmlString;
       const textContent = tempDiv.textContent || tempDiv.innerText || '';
       
       // Dibujar el texto línea por línea

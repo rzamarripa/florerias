@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { TbTruck, TbTag, TbClock, TbMapPin, TbShoppingCart, TbStar, TbArrowRight, TbCheck, TbPhone, TbMail } from 'react-icons/tb';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { User, ShoppingBag, LogOut, ChevronDown } from 'lucide-react';
 import type { EcommerceConfigFeaturedElements, EcommerceConfigColors, EcommerceConfigTypography, EcommerceConfigHeader, StockItem } from '../types';
+import type { ClientSession } from '@/stores/clientSessionStore';
 
 interface EcommerceViewProps {
   header: EcommerceConfigHeader;
@@ -8,6 +11,10 @@ interface EcommerceViewProps {
   typography: EcommerceConfigTypography;
   featuredElements: EcommerceConfigFeaturedElements;
   itemsStock?: StockItem[];
+  onLoginClick?: () => void;
+  clientSession?: ClientSession | null;
+  onLogout?: () => void;
+  onDashboardClick?: () => void;
 }
 
 const EcommerceView: React.FC<EcommerceViewProps> = ({
@@ -15,7 +22,11 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
   colors,
   typography,
   featuredElements,
-  itemsStock = []
+  itemsStock = [],
+  onLoginClick,
+  clientSession,
+  onLogout,
+  onDashboardClick,
 }) => {
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [currentBannerSlide, setCurrentBannerSlide] = useState(0);
@@ -105,12 +116,44 @@ const EcommerceView: React.FC<EcommerceViewProps> = ({
                   0
                 </span>
               </button>
-              <button 
-                className="px-4 py-2 rounded-lg text-white font-medium text-sm transition-all hover:shadow-lg"
-                style={{ backgroundColor: colors?.primary || '#6366f1' }}
-              >
-                Ingresar
-              </button>
+              {clientSession ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium text-sm transition-all hover:shadow-lg"
+                      style={{ backgroundColor: colors?.primary || '#6366f1' }}
+                    >
+                      <User size={16} />
+                      <span>{clientSession.name}</span>
+                      <ChevronDown size={14} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel className="font-normal">
+                      <p className="text-sm font-medium">{clientSession.name} {clientSession.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{clientSession.email}</p>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onDashboardClick} className="cursor-pointer">
+                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      Mis Pedidos
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-red-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Cerrar Sesión
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <button
+                  className="px-4 py-2 rounded-lg text-white font-medium text-sm transition-all hover:shadow-lg"
+                  style={{ backgroundColor: colors?.primary || '#6366f1' }}
+                  onClick={onLoginClick}
+                >
+                  Ingresar
+                </button>
+              )}
             </div>
           </div>
         </div>

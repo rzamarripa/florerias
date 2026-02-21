@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
+import { Client } from "../models/Client.js";
 
 const protect = async (req, res, next) => {
   try {
@@ -20,6 +21,26 @@ const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Handle client tokens
+    if (decoded.role === "client") {
+      const client = await Client.findById(decoded.id);
+      if (!client) {
+        return res.status(401).json({
+          success: false,
+          message: "Token is not valid",
+        });
+      }
+      if (!client.status) {
+        return res.status(401).json({
+          success: false,
+          message: "Client account is deactivated",
+        });
+      }
+      req.client = client;
+      req.isClient = true;
+      return next();
+    }
 
     const user = await User.findById(decoded.id).populate({
       path: "role",

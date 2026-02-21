@@ -958,10 +958,6 @@ const NewOrderPage = () => {
       // Generar HTML del ticket
       const ticketHTML = generateSaleTicket(ticketData);
       
-      // Ya no convertimos a imagen, guardamos el HTML directamente
-      console.log("Preparando ticket de venta como HTML para guardar...");
-      console.log("HTML length:", ticketHTML.length);
-
       // Variables para guardar las URLs de los tickets
       let saleTicketUrl: string | null = null;
       let saleTicketPath: string | null = null;
@@ -970,17 +966,21 @@ const NewOrderPage = () => {
 
       // Subir ticket de venta a Firebase y guardar en base de datos
       try {
-        console.log("Iniciando subida de ticket de venta a Firebase...");
-        console.log("HTML length:", ticketHTML.length);
-        
         if (!companyId || !branchId || !orderId) {
           console.error("Faltan IDs requeridos:", { companyId, branchId, orderId });
           throw new Error("IDs faltantes para subir ticket");
         }
-        
-        // Guardar el HTML directamente sin conversión
-        const saleTicketResult = await uploadSaleTicketHTML(
-          ticketHTML,
+
+        // Convertir HTML a imagen PNG (mismo proceso que el ticket de envío)
+        console.log("Convirtiendo ticket de venta a imagen PNG...");
+        const saleTicketBlob = await convertHtmlToImage(ticketHTML, {
+          width: 500,
+          backgroundColor: 'white'
+        });
+        console.log("Ticket de venta convertido a imagen, tamaño:", saleTicketBlob.size);
+
+        const saleTicketResult = await uploadSaleTicket(
+          saleTicketBlob,
           companyId,
           branchId,
           orderId

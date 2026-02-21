@@ -144,7 +144,8 @@ export default function EcommerceCatalogPage() {
                 precio: product.totalVenta || product.precio || 0, // totalVenta es el precio
                 stock: stockItem?.quantity || 0,
                 productCategory: product.productCategory,
-                imagen: product.imagen,
+                imagen: product.imagen || product.imageUrl || "",
+                imageUrl: product.imageUrl || product.imagen || "",
               };
             })
             .filter((p: ProductWithStock) => p.stock > 0); // Filtrar productos sin stock
@@ -296,7 +297,8 @@ export default function EcommerceCatalogPage() {
           precio: product.precio,
           // Si ya existe, sumar el stock del storage al existente
           stock: existingItem ? (existingItem.stock + product.stock) : product.stock,
-          imagen: product.imagen,
+          imagen: product.imagen || product.imageUrl || "",
+          imageUrl: product.imageUrl || product.imagen || "",
           productCategory: typeof product.productCategory === 'string'
             ? product.productCategory
             : product.productCategory?._id,

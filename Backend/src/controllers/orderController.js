@@ -30,6 +30,41 @@ const getAllOrders = async (req, res) => {
       paymentMethodId
     } = req.query;
 
+    // Si es un cliente autenticado, solo retornar sus propias ordenes
+    if (req.isClient && req.client) {
+      const clientFilters = {
+        'clientInfo.clientId': req.client._id,
+      };
+      if (req.query.eOrder !== undefined) {
+        clientFilters.eOrder = req.query.eOrder === 'true';
+      }
+      if (status) clientFilters.status = status;
+      if (startDate || endDate) {
+        clientFilters.createdAt = {};
+        if (startDate) clientFilters.createdAt.$gte = new Date(startDate + 'T00:00:00');
+        if (endDate) clientFilters.createdAt.$lte = new Date(endDate + 'T23:59:59');
+      }
+
+      const total = await Order.countDocuments(clientFilters);
+      const orders = await Order.find(clientFilters)
+        .sort({ createdAt: -1 })
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .limit(parseInt(limit))
+        .populate('branchId', 'branchName')
+        .populate('paymentMethod', 'nombre');
+
+      return res.status(200).json({
+        success: true,
+        data: orders,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      });
+    }
+
     // Obtener el ID del usuario autenticado
     const userId = req.user?._id;
 
@@ -144,6 +179,11 @@ const getAllOrders = async (req, res) => {
     // Filtrar por eOrder (órdenes de e-commerce)
     if (req.query.eOrder !== undefined) {
       filters.eOrder = req.query.eOrder === 'true';
+    }
+
+    // Filtrar por clientId (pedidos de un cliente específico)
+    if (req.query.clientId) {
+      filters['clientInfo.clientId'] = new mongoose.Types.ObjectId(req.query.clientId);
     }
 
     // Si se proporciona branchId específico, aplicar ese filtro

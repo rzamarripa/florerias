@@ -172,6 +172,7 @@ const createProductList = async (req, res) => {
           descripcion: product.descripcion,
           orden: product.orden,
           imagen: product.imagen,
+          imageUrl: product.imageUrl || '',
           insumos: mappedInsumos,
           cantidad: cantidad,
           totalCosto: product.totalCosto,
@@ -321,6 +322,7 @@ const updateProductList = async (req, res) => {
             descripcion: product.descripcion,
             orden: product.orden,
             imagen: product.imagen,
+            imageUrl: product.imageUrl || '',
             insumos: product.insumos.map(insumo => ({
               materialId: insumo.materialId || insumo._id, // Fallback al _id si no existe materialId
               nombre: insumo.nombre,
