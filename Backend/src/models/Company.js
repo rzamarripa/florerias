@@ -123,6 +123,10 @@ const companySchema = new Schema(
       type: Boolean,
       default: false,
     },
+    activeWhatsApp: {
+      type: Boolean,
+      default: false,
+    },
     isActive: {
       type: Boolean,
       default: true,

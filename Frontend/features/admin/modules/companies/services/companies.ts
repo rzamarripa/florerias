@@ -1,5 +1,5 @@
 import { apiCall } from "@/utils/api";
-import { Company, CreateCompanyData, Distributor, RedesUser } from "../types";
+import { Company, CreateCompanyData, Distributor, RedesUser, WhatsappCompanyConfig, UpsertWhatsappConfigData } from "../types";
 
 export interface CompanyFilters {
   page?: number;
@@ -286,6 +286,29 @@ export const companiesService = {
         }>;
       };
     }>(url);
+    return response;
+  },
+
+  getWhatsappConfig: async (
+    companyId: string
+  ): Promise<{ success: boolean; data: WhatsappCompanyConfig | null }> => {
+    const response = await apiCall<{ success: boolean; data: WhatsappCompanyConfig | null }>(
+      `/whatsapp-config/company/${companyId}`
+    );
+    return response;
+  },
+
+  upsertWhatsappConfig: async (
+    companyId: string,
+    data: UpsertWhatsappConfigData
+  ): Promise<{ success: boolean; data: WhatsappCompanyConfig; message: string }> => {
+    const response = await apiCall<{ success: boolean; data: WhatsappCompanyConfig; message: string }>(
+      `/whatsapp-config/company/${companyId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    );
     return response;
   },
 };

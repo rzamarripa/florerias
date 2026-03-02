@@ -17,6 +17,7 @@ export const createCompany = async (req, res) => {
       administratorData,
       redesIds,
       isFranchise,
+      activeWhatsApp,
     } = req.body;
 
     // Verificar si ya existe una empresa con el mismo RFC
@@ -152,6 +153,7 @@ export const createCompany = async (req, res) => {
       distributor: req.user._id,
       redes: validatedRedesIds,
       isFranchise: isFranchise || false,
+      activeWhatsApp: activeWhatsApp || false,
     });
 
     // Popular el distribuidor, administrador y redes para la respuesta
@@ -381,6 +383,7 @@ export const updateCompany = async (req, res) => {
       administratorData,
       redesIds,
       isFranchise,
+      activeWhatsApp,
     } = req.body;
 
     // Si se está actualizando el RFC, verificar que no exista en otra empresa
@@ -406,6 +409,7 @@ export const updateCompany = async (req, res) => {
     if (fiscalAddress) updateData.fiscalAddress = fiscalAddress;
     if (primaryContact) updateData.primaryContact = primaryContact;
     if (isFranchise !== undefined) updateData.isFranchise = isFranchise;
+    if (activeWhatsApp !== undefined) updateData.activeWhatsApp = activeWhatsApp;
 
     // Manejar actualización de logo
     if (req.body.logoUrl !== undefined) updateData.logoUrl = req.body.logoUrl;

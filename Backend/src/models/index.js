@@ -22,3 +22,4 @@ import "./OrderLog.js";
 import "./PaymentMethod.js";
 import "./Product.js";
 import "./CashRegister.js";
+import "./WhatsappCompanyConfig.js";

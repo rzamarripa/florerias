@@ -55,6 +55,7 @@ import ticketRoutes from "./ticketRoutes.js";
 import salesChannelRoutes from "./salesChannelRoutes.js";
 import clientAuthRoutes from "./clientAuthRoutes.js";
 import reviewRoutes from "./reviewRoutes.js";
+import whatsappCompanyConfigRoutes from "./whatsappCompanyConfigRoutes.js";
 
 const router = Router();
 
@@ -113,5 +114,6 @@ router.use("/tickets", ticketRoutes);
 router.use("/sales-channels", salesChannelRoutes);
 router.use("/client-auth", clientAuthRoutes);
 router.use("/reviews", reviewRoutes);
+router.use("/whatsapp-config", whatsappCompanyConfigRoutes);
 
 export default router;

@@ -41,6 +41,7 @@ export interface Company {
   logoUrl?: string | null;
   logoPath?: string | null;
   isFranchise?: boolean;
+  activeWhatsApp?: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -87,6 +88,7 @@ export interface CreateCompanyData {
   logoUrl?: string | null;
   logoPath?: string | null;
   isFranchise?: boolean;
+  activeWhatsApp?: boolean;
 }
 
 export interface Distributor {
@@ -111,4 +113,44 @@ export interface RedesUser {
     lastName: string;
     fullName: string;
   };
+}
+
+export type WhatsAppVertical =
+  | "Retail"
+  | "Servicios"
+  | "Restaurantes"
+  | "Educacion"
+  | "Salud"
+  | "Tecnologia"
+  | "Otro";
+
+export interface WhatsappCompanyConfig {
+  _id: string;
+  companyId: string;
+  adminId: string;
+  legalName: string;
+  website?: string;
+  businessCountry: string;
+  businessAddress: string;
+  vertical: WhatsAppVertical;
+  contactName: string;
+  contactEmail: string;
+  facebookAccount?: string;
+  phoneNumber: string;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertWhatsappConfigData {
+  legalName: string;
+  website?: string;
+  businessCountry: string;
+  businessAddress: string;
+  vertical: WhatsAppVertical;
+  contactName: string;
+  contactEmail: string;
+  facebookAccount?: string;
+  phoneNumber: string;
+  displayName: string;
 }

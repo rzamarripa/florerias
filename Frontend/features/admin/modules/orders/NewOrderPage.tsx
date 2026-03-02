@@ -335,6 +335,16 @@ const NewOrderPage = () => {
     }
   }, [formData.branchId]);
 
+  // Cargar cajas de redes sociales cuando cambia la sucursal (igual que el catálogo)
+  useEffect(() => {
+    if (isSocialMedia && formData.branchId) {
+      fetchAvailableCashRegisters(formData.branchId);
+    } else if (isSocialMedia) {
+      setAvailableCashRegisters([]);
+      setSelectedCashRegisterId("");
+    }
+  }, [formData.branchId]);
+
   // Función para manejar cambio de sucursal por usuario Redes
   // Obtener cajas de redes sociales disponibles para una sucursal
   const fetchAvailableCashRegisters = async (branchId: string) => {
@@ -386,11 +396,7 @@ const NewOrderPage = () => {
       cashRegisterId: null, // Limpiar la caja seleccionada al cambiar de sucursal
     }));
     setSelectedCashRegisterId(""); // Limpiar selector de caja
-
-    // Para usuarios Redes, cargar cajas disponibles de la sucursal
-    if (isSocialMedia && branchId) {
-      fetchAvailableCashRegisters(branchId);
-    }
+    // Las cajas de redes se cargan automáticamente via useEffect al cambiar formData.branchId
   };
 
   // Manejar selección de caja registradora
@@ -877,15 +883,21 @@ const NewOrderPage = () => {
     }
   };
 
-  // Generar e imprimir ticket de venta
-  const generateAndPrintSaleTicket = async (orderData: any) => {
+  // Generar e imprimir ticket de venta (y de envío si aplica) usando ventanas pre-abiertas
+  const generateAndPrintSaleTicket = async (
+    orderData: any,
+    printWindow: Window | null,
+    deliveryPrintWindow: Window | null
+  ) => {
     if (!user) {
       console.error("No hay usuario logueado");
+      if (printWindow) printWindow.close();
+      if (deliveryPrintWindow) deliveryPrintWindow.close();
       return;
     }
 
     try {
-      // Obtener datos de la empresa/sucursal
+      // 1. Obtener datos de la empresa/sucursal
       const companyResponse = await companiesService.getCompanyByBranchId(
         orderData.branchId._id
       );
@@ -895,8 +907,8 @@ const NewOrderPage = () => {
       }
 
       const companyId = companyResponse.data.companyId;
-      const branchId = typeof orderData.branchId === "string" 
-        ? orderData.branchId 
+      const branchId = typeof orderData.branchId === "string"
+        ? orderData.branchId
         : orderData.branchId._id;
       const orderId = orderData._id;
 
@@ -916,7 +928,7 @@ const NewOrderPage = () => {
             : orderData.paymentMethod._id)
       );
 
-      // Construir datos para el ticket
+      // 2. Construir datos y generar HTML de ambos tickets
       const ticketData: SaleTicketData = {
         order: {
           orderNumber: orderData.orderNumber,
@@ -955,23 +967,48 @@ const NewOrderPage = () => {
         payments: orderData.payments || [],
       };
 
-      // Generar HTML del ticket
       const ticketHTML = generateSaleTicket(ticketData);
-      
-      // Variables para guardar las URLs de los tickets
+
+      let deliveryTicketHTML: string | null = null;
+      if (orderData.shippingType === "envio") {
+        const deliveryTicketData: DeliveryTicketData = {
+          order: {
+            orderNumber: orderData.orderNumber,
+            anonymous: orderData.anonymous || false,
+            clientInfo: {
+              name: orderData.clientInfo.name,
+              phone: orderData.clientInfo.phone || "",
+            },
+            deliveryData: {
+              recipientName: orderData.deliveryData.recipientName,
+              deliveryDateTime: orderData.deliveryData.deliveryDateTime,
+              street: orderData.deliveryData.street || "",
+              neighborhoodName: orderData.deliveryData.neighborhoodId?.name || "",
+              reference: orderData.deliveryData.reference || "",
+              message: orderData.deliveryData.message || "",
+            },
+            branchInfo: {
+              city: orderData.branchId?.city || companyResponse.data?.address?.city || "",
+              state: orderData.branchId?.state || companyResponse.data?.address?.state || "",
+            },
+          },
+        };
+        deliveryTicketHTML = generateDeliveryTicket(deliveryTicketData);
+      }
+
+      // 3. Subir AMBOS tickets a Firebase ANTES de mostrar/imprimir
       let saleTicketUrl: string | null = null;
       let saleTicketPath: string | null = null;
       let deliveryTicketUrl: string | null = null;
       let deliveryTicketPath: string | null = null;
 
-      // Subir ticket de venta a Firebase y guardar en base de datos
+      // Upload ticket de venta
       try {
         if (!companyId || !branchId || !orderId) {
           console.error("Faltan IDs requeridos:", { companyId, branchId, orderId });
           throw new Error("IDs faltantes para subir ticket");
         }
 
-        // Convertir HTML a imagen PNG (mismo proceso que el ticket de envío)
         console.log("Convirtiendo ticket de venta a imagen PNG...");
         const saleTicketBlob = await convertHtmlToImage(ticketHTML, {
           width: 500,
@@ -990,8 +1027,7 @@ const NewOrderPage = () => {
         console.log("✅ Ticket de venta guardado exitosamente en Firebase:");
         console.log("  URL:", saleTicketUrl);
         console.log("  Path:", saleTicketPath);
-        
-        // Guardar ticket de venta en la base de datos
+
         await createTicket({
           orderId,
           branchId,
@@ -1004,62 +1040,12 @@ const NewOrderPage = () => {
         console.error("❌ Error al subir ticket de venta:", uploadError);
         console.error("  Mensaje:", uploadError.message);
         console.error("  Stack:", uploadError.stack);
-        // No interrumpir el flujo, solo loggear el error
-        toast.warning("No se pudo guardar el ticket en la nube, pero se generó correctamente para imprimir");
+        toast.warning("No se pudo guardar el ticket de venta en la nube, pero se generó correctamente para imprimir");
       }
 
-      // Crear ventana para imprimir
-      const printWindow = window.open("", "_blank", "width=800,height=600");
-
-      if (printWindow) {
-        printWindow.document.write(ticketHTML);
-        printWindow.document.close();
-
-        // Esperar a que se cargue el contenido y luego imprimir
-        printWindow.onload = () => {
-          printWindow.focus();
-          // Pequeño delay para asegurar que el contenido esté completamente renderizado
-          setTimeout(() => {
-            printWindow.print();
-          }, 100);
-        };
-      } else {
-        toast.error(
-          "No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador."
-        );
-      }
-
-      // Si es una orden de tipo envío, generar también el ticket de delivery
-      if (orderData.shippingType === "envio") {
+      // Upload ticket de delivery (si aplica)
+      if (deliveryTicketHTML) {
         try {
-          // Preparar datos para el ticket de delivery
-          const deliveryTicketData: DeliveryTicketData = {
-            order: {
-              orderNumber: orderData.orderNumber,
-              anonymous: orderData.anonymous || false,
-              clientInfo: {
-                name: orderData.clientInfo.name,
-                phone: orderData.clientInfo.phone || "",
-              },
-              deliveryData: {
-                recipientName: orderData.deliveryData.recipientName,
-                deliveryDateTime: orderData.deliveryData.deliveryDateTime,
-                street: orderData.deliveryData.street || "",
-                neighborhoodName: orderData.deliveryData.neighborhoodId?.name || "",
-                reference: orderData.deliveryData.reference || "",
-                message: orderData.deliveryData.message || "",
-              },
-              branchInfo: {
-                city: orderData.branchId?.city || companyResponse.data?.address?.city || "",
-                state: orderData.branchId?.state || companyResponse.data?.address?.state || "",
-              },
-            },
-          };
-
-          // Generar HTML del ticket de delivery
-          const deliveryTicketHTML = generateDeliveryTicket(deliveryTicketData);
-          
-          // Convertir HTML a imagen usando html-to-image en el navegador
           console.log("Convirtiendo ticket de envío a imagen en el navegador...");
           const deliveryTicketBlob = await convertHtmlToImage(deliveryTicketHTML, {
             width: 500,
@@ -1067,72 +1053,75 @@ const NewOrderPage = () => {
           });
           console.log("Ticket de envío convertido a imagen exitosamente, tamaño:", deliveryTicketBlob.size);
 
-          // Subir ticket de envío a Firebase y guardar en base de datos
-          try {
-            console.log("Iniciando subida de ticket de envío a Firebase...");
-            
-            const deliveryTicketResult = await uploadDeliveryTicket(
-              deliveryTicketBlob,
-              companyId,
-              branchId,
-              orderId
-            );
-            deliveryTicketUrl = deliveryTicketResult.url;
-            deliveryTicketPath = deliveryTicketResult.path;
-            console.log("✅ Ticket de envío guardado exitosamente en Firebase:");
-            console.log("  URL:", deliveryTicketUrl);
-            console.log("  Path:", deliveryTicketPath);
-            
-            // Guardar ticket de envío en la base de datos
-            await createTicket({
-              orderId,
-              branchId,
-              url: deliveryTicketUrl,
-              path: deliveryTicketPath,
-              isStoreTicket: false
-            });
-            console.log("✅ Ticket de envío registrado en base de datos");
-          } catch (uploadError: any) {
-            console.error("❌ Error al subir ticket de envío:", uploadError);
-            console.error("  Mensaje:", uploadError.message);
-            // No interrumpir el flujo, solo loggear el error
-          }
+          const deliveryTicketResult = await uploadDeliveryTicket(
+            deliveryTicketBlob,
+            companyId,
+            branchId,
+            orderId
+          );
+          deliveryTicketUrl = deliveryTicketResult.url;
+          deliveryTicketPath = deliveryTicketResult.path;
+          console.log("✅ Ticket de envío guardado exitosamente en Firebase:");
+          console.log("  URL:", deliveryTicketUrl);
+          console.log("  Path:", deliveryTicketPath);
 
-          // Crear ventana para imprimir ticket de delivery
-          // Usar setTimeout para evitar que el navegador bloquee múltiples popups
-          setTimeout(() => {
-            const deliveryPrintWindow = window.open("", "_blank", "width=400,height=600");
-
-            if (deliveryPrintWindow) {
-              deliveryPrintWindow.document.write(deliveryTicketHTML);
-              deliveryPrintWindow.document.close();
-
-              // Esperar a que se cargue el contenido y luego imprimir
-              deliveryPrintWindow.onload = () => {
-                deliveryPrintWindow.focus();
-                // Pequeño delay para asegurar que el contenido esté completamente renderizado
-                setTimeout(() => {
-                  deliveryPrintWindow.print();
-                }, 100);
-              };
-            } else {
-              toast.warning(
-                "No se pudo abrir la ventana para el ticket de entrega. Verifica los popups del navegador."
-              );
-            }
-          }, 1500); // Esperar 1.5 segundos antes de abrir el segundo ticket
-        } catch (deliveryError) {
-          console.error("Error generando ticket de delivery:", deliveryError);
-          // No mostrar error, solo log ya que el ticket principal se generó
+          await createTicket({
+            orderId,
+            branchId,
+            url: deliveryTicketUrl,
+            path: deliveryTicketPath,
+            isStoreTicket: false
+          });
+          console.log("✅ Ticket de envío registrado en base de datos");
+        } catch (uploadError: any) {
+          console.error("❌ Error al subir ticket de envío:", uploadError);
+          console.error("  Mensaje:", uploadError.message);
+          toast.warning("No se pudo guardar el ticket de envío en la nube, pero se generó correctamente para imprimir");
         }
       }
 
-      // Después de generar los tickets, verificar si se puede enviar por WhatsApp
-      const hasWhatsAppData = (orderData.clientInfo.phone && saleTicketUrl) || 
+      // 4. Mostrar ticket de venta en la ventana pre-abierta y lanzar impresión
+      if (printWindow) {
+        try {
+          printWindow.document.write(ticketHTML);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => {
+            printWindow.print();
+          }, 300);
+        } catch (printError) {
+          console.error("Error al escribir en la ventana de impresión (venta):", printError);
+          toast.error("No se pudo mostrar el ticket de venta en la ventana de impresión.");
+        }
+      } else {
+        toast.error(
+          "No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador."
+        );
+      }
+
+      // 5. Mostrar ticket de delivery en la segunda ventana pre-abierta (si aplica)
+      if (deliveryTicketHTML && deliveryPrintWindow) {
+        try {
+          deliveryPrintWindow.document.write(deliveryTicketHTML);
+          deliveryPrintWindow.document.close();
+          deliveryPrintWindow.focus();
+          setTimeout(() => {
+            deliveryPrintWindow.print();
+          }, 600);
+        } catch (printError) {
+          console.error("Error al escribir en la ventana de impresión (delivery):", printError);
+          toast.error("No se pudo mostrar el ticket de envío en la ventana de impresión.");
+        }
+      } else if (deliveryPrintWindow) {
+        // No es envío pero la ventana se abrió — cerrarla
+        deliveryPrintWindow.close();
+      }
+
+      // 6. Verificar si se puede enviar por WhatsApp
+      const hasWhatsAppData = (orderData.clientInfo.phone && saleTicketUrl) ||
                              (orderData.deliveryDriverDetails && deliveryTicketUrl);
-      
+
       if (hasWhatsAppData) {
-        // Preparar datos para el modal con ambos tickets si están disponibles
         setWhatsAppTicketData({
           orderNumber: orderData.orderNumber,
           clientName: orderData.clientInfo.name,
@@ -1143,12 +1132,13 @@ const NewOrderPage = () => {
           deliveryDriverPhone: orderData.deliveryDriverDetails?.phone,
           deliveryTicketUrl: deliveryTicketUrl || undefined
         });
-        // Mostrar modal
         setShowWhatsAppModal(true);
       }
     } catch (error) {
       console.error("Error generando ticket de venta:", error);
       toast.error("Error al generar el ticket de venta");
+      if (printWindow) printWindow.close();
+      if (deliveryPrintWindow) deliveryPrintWindow.close();
     }
   };
 
@@ -1218,6 +1208,14 @@ const NewOrderPage = () => {
         );
       }
 
+      // Pre-abrir ventana(s) de impresión DENTRO del gesto del usuario (antes de cualquier await)
+      // Esto evita que el navegador bloquee los popups
+      // IMPORTANTE: No usar document.write/close aquí — el document debe quedar abierto
+      const printWindow = window.open("about:blank", "_blank", "width=800,height=600");
+      const deliveryPrintWindow = formData.shippingType === "envio"
+        ? window.open("about:blank", "_blank", "width=800,height=600")
+        : null;
+
       const orderData = {
         ...formData,
         storageId: selectedStorageId || null, // Puede ser null si solo hay productos manuales
@@ -1228,15 +1226,26 @@ const NewOrderPage = () => {
         deliveryDriverDetails: formData.deliveryDriverDetails || null, // Incluir detalles del repartidor para WhatsApp
       };
 
-      const response = await ordersService.createOrder(orderData);
+      let response;
+      try {
+        response = await ordersService.createOrder(orderData);
+      } catch (createErr) {
+        if (printWindow) printWindow.close();
+        if (deliveryPrintWindow) deliveryPrintWindow.close();
+        throw createErr;
+      }
 
       // Validar que la respuesta sea exitosa
       if (!response || !response.success) {
+        if (printWindow) printWindow.close();
+        if (deliveryPrintWindow) deliveryPrintWindow.close();
         throw new Error(response?.message || "Error al crear la orden");
       }
 
       // Validar que la respuesta tenga datos
       if (!response.data) {
+        if (printWindow) printWindow.close();
+        if (deliveryPrintWindow) deliveryPrintWindow.close();
         throw new Error("No se recibió respuesta del servidor");
       }
 
@@ -1320,8 +1329,8 @@ const NewOrderPage = () => {
         `¡Orden ${response.data.orderNumber || ""} creada exitosamente!`
       );
 
-      // Generar e imprimir ticket de venta
-      generateAndPrintSaleTicket(response.data);
+      // Generar e imprimir ticket(s) (las ventanas ya están pre-abiertas)
+      await generateAndPrintSaleTicket(response.data, printWindow, deliveryPrintWindow);
 
       setSuccess(true);
 

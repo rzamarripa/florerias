@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CreateOrderData, ShippingType, AppliedRewardInfo } from "../types";
-import { Client, AvailableRewardItem } from "@/features/admin/modules/clients/types";
+import { Client, AvailableRewardItem, CreateClientData, UpdateClientData } from "@/features/admin/modules/clients/types";
 import { PaymentMethod } from "@/features/admin/modules/payment-methods/types";
 import { CashRegister } from "@/features/admin/modules/cash-registers/types";
 import { Neighborhood } from "@/features/admin/modules/neighborhoods/types";
@@ -60,11 +60,14 @@ import { SalesChannel } from "@/features/admin/modules/salesChannels/types";
 import ClientRewardsModal from "./ClientRewardsModal";
 import ClientRedeemedRewardsModal from "@/features/admin/modules/clients/components/ClientRedeemedRewardsModal";
 import StripePaymentModal from "./StripePaymentModal";
+import ClientModal from "@/features/admin/modules/clients/components/ClientModal";
+import digitalCardService from "@/features/admin/modules/digitalCards/services/digitalCardService";
+import { uploadDigitalCardQR } from "@/services/firebaseStorage";
 import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
 import { isCardPaymentMethod } from "@/services/stripeService";
 import { neighborhoodsService } from "@/features/admin/modules/neighborhoods/services/neighborhoods";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import {
   setCustomValidationMessage,
   resetCustomValidationMessage,
@@ -132,6 +135,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [clientModalLoading, setClientModalLoading] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
@@ -184,6 +190,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           if (companyResponse.success && companyResponse.data) {
             // Filtrar por empresa (companyId) en lugar de sucursal
             filters.companyId = companyResponse.data.companyId;
+            setCompanyId(companyResponse.data.companyId);
           } else {
             // Si no se puede obtener la empresa, no cargar clientes
             setClients([]);
@@ -385,6 +392,17 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   }, [shouldSubmitOrder, formData.stripePaymentIntentId]);
 
+  // Para usuarios Redes, el anticipo siempre es el total (pago completo)
+  useEffect(() => {
+    if (isSocialMedia && formData.total > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        advance: prev.total,
+        remainingBalance: 0,
+      }));
+    }
+  }, [isSocialMedia, formData.total]);
+
   // Manejar seleccion de cliente
   const handleClientSelect = (clientId: string) => {
     // No hacer nada si está en modo invitado
@@ -509,6 +527,84 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         appliedRewardCode: null,
         appliedReward: null,
       }));
+    }
+  };
+
+  // Manejar creacion de nuevo cliente desde el modal
+  const handleSaveNewClient = async (
+    data: CreateClientData | UpdateClientData,
+    generateCard?: boolean
+  ) => {
+    try {
+      setClientModalLoading(true);
+
+      if (!companyId) {
+        toast.error("No se ha encontrado la empresa para crear el cliente");
+        return;
+      }
+
+      const clientData = {
+        ...data,
+        company: companyId,
+        branch: formData.branchId || undefined,
+        generateDigitalCard: generateCard,
+      } as CreateClientData & { generateDigitalCard?: boolean };
+
+      const response = await clientsService.createClient(clientData) as any;
+
+      if (!response.success) {
+        const errorMsg = response.message || "Error al crear el cliente";
+        console.error("Error creando cliente:", errorMsg);
+        toast.error(errorMsg);
+        setClientModalLoading(false);
+        return;
+      }
+
+      if (response.data?.client) {
+        const newClient = response.data.client;
+
+        if (generateCard) {
+          try {
+            const cardResponse = await digitalCardService.generateDigitalCard(newClient._id);
+            if (cardResponse && cardResponse.tempQrCode) {
+              try {
+                const branchIdForCard = formData.branchId || "default";
+                const { url, path } = await uploadDigitalCardQR(
+                  cardResponse.tempQrCode,
+                  companyId,
+                  branchIdForCard,
+                  newClient._id
+                );
+                await digitalCardService.updateQRUrls(cardResponse._id, url, path);
+                toast.success("Cliente y tarjeta digital creados exitosamente");
+              } catch (uploadError) {
+                console.error("Error subiendo QR a Firebase:", uploadError);
+                toast.warning("Cliente creado, pero hubo un error al subir el QR");
+              }
+            } else {
+              toast.success("Cliente y tarjeta digital creados exitosamente");
+            }
+          } catch (cardError) {
+            console.error("Error generando tarjeta digital:", cardError);
+            toast.warning("Cliente creado, pero hubo un error al generar la tarjeta digital");
+          }
+        } else {
+          toast.success("Cliente creado exitosamente");
+        }
+
+        // Cerrar modal y refrescar lista
+        setShowClientModal(false);
+        await fetchClients(formData.branchId);
+        handleClientSelect(newClient._id);
+      }
+    } catch (error: any) {
+      console.error("Error en handleSaveNewClient:", error);
+      const errorMsg = error?.response?.data?.message
+        || error?.message
+        || "Error al crear el cliente";
+      toast.error(errorMsg);
+    } finally {
+      setClientModalLoading(false);
     }
   };
 
@@ -795,26 +891,23 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       ? { ...formData, eOrder: true }
       : formData;
 
-    // Verificar si el metodo de pago seleccionado es tarjeta
-    const selectedMethod = paymentMethods.find(m => m._id === formData.paymentMethod);
-    if (selectedMethod && isCardPaymentMethod(selectedMethod.name)) {
-      // Si es pago con tarjeta, asegurar que advance tenga el valor correcto
-      // Si no hay anticipo especificado o es 0, usar el total como anticipo (pago completo)
-      const stripeOrderData = {
-        ...orderData,
-        advance: orderData.advance > 0 ? orderData.advance : orderData.total
-      };
-      setPendingOrderData(stripeOrderData);
-      setPendingFiles({ comprobante: comprobanteFile, arreglo: arregloFile });
-      setShowStripeModal(true);
-    } else {
-      // Si no es tarjeta, proceder con el flujo normal
-      // Asegurar que formData tenga eOrder si es e-commerce
+    // STRIPE TEMPORALMENTE DESHABILITADO
+    // const selectedMethod = paymentMethods.find(m => m._id === formData.paymentMethod);
+    // if (selectedMethod && isCardPaymentMethod(selectedMethod.name)) {
+    //   const stripeOrderData = {
+    //     ...orderData,
+    //     advance: orderData.advance > 0 ? orderData.advance : orderData.total
+    //   };
+    //   setPendingOrderData(stripeOrderData);
+    //   setPendingFiles({ comprobante: comprobanteFile, arreglo: arregloFile });
+    //   setShowStripeModal(true);
+    // } else {
+      // Proceder con el flujo normal sin importar el método de pago
       if (isEcommerceOrder && !formData.eOrder) {
         setFormData(prev => ({ ...prev, eOrder: true }));
       }
       onSubmit(e, { comprobante: comprobanteFile, arreglo: arregloFile });
-    }
+    // }
   };
 
   // Manejar exito del pago con Stripe
@@ -937,6 +1030,17 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowClientModal(true)}
+                          className="flex items-center gap-2"
+                          title="Registrar nuevo cliente"
+                          disabled={!companyId || isGuestClient}
+                        >
+                          <Plus size={16} />
+                          Registrar
+                        </Button>
                         <Button
                           type="button"
                           variant={isGuestClient ? "default" : "outline"}
@@ -1759,6 +1863,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           step="0.01"
                           value={formData.advance}
                           onChange={(e) => handleAdvanceChange(parseFloat(e.target.value) || 0)}
+                          disabled={isSocialMedia}
+                          className={isSocialMedia ? "bg-gray-50" : ""}
                         />
                       </div>
                       <div>
@@ -1892,6 +1998,16 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
           client={selectedClientForRewards}
         />
       )}
+
+      {/* Modal para registrar nuevo cliente */}
+      <ClientModal
+        show={showClientModal}
+        onHide={() => setShowClientModal(false)}
+        client={null}
+        onSave={handleSaveNewClient}
+        loading={clientModalLoading}
+        companyId={companyId}
+      />
     </Dialog>
   );
 };

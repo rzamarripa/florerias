@@ -68,6 +68,7 @@ const NewCompanyPage: React.FC = () => {
       },
     },
     isFranchise: false,
+    activeWhatsApp: false,
   });
 
   const [distributors, setDistributors] = useState<Distributor[]>([]);
@@ -133,6 +134,7 @@ const NewCompanyPage: React.FC = () => {
               },
             },
         isFranchise: company.isFranchise || false,
+        activeWhatsApp: company.activeWhatsApp || false,
       });
     } catch (err: any) {
       toast.error(err.message || "Error al cargar la empresa");
@@ -328,6 +330,7 @@ const NewCompanyPage: React.FC = () => {
         fiscalAddress: formData.fiscalAddress,
         primaryContact: formData.primaryContact,
         isFranchise: formData.isFranchise || false,
+        activeWhatsApp: formData.activeWhatsApp || false,
       };
 
       if (finalAdministratorId) {
@@ -549,6 +552,20 @@ const NewCompanyPage: React.FC = () => {
                 />
                 <Label htmlFor="isFranchise" className="font-semibold">
                   Es Franquicia
+                </Label>
+              </div>
+
+              {/* WhatsApp Active Checkbox */}
+              <div className="flex items-center space-x-2 mt-4">
+                <Checkbox
+                  id="activeWhatsApp"
+                  checked={formData.activeWhatsApp || false}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, activeWhatsApp: checked as boolean })
+                  }
+                />
+                <Label htmlFor="activeWhatsApp" className="font-semibold">
+                  WhatsApp Activo
                 </Label>
               </div>
             </div>

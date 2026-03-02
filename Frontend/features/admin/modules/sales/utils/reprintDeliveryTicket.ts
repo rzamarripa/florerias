@@ -61,10 +61,8 @@ export const reprintDeliveryTicket = async (sale: Sale) => {
       printWindow.document.write(deliveryTicketHTML);
       printWindow.document.close();
 
-      // Esperar a que se cargue el contenido y luego imprimir
       printWindow.onload = () => {
         printWindow.focus();
-        // Pequeño delay para asegurar que el contenido esté completamente renderizado
         setTimeout(() => {
           printWindow.print();
         }, 100);

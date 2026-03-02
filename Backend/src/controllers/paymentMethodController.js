@@ -111,6 +111,37 @@ const getAllPaymentMethods = async (req, res) => {
             }
           });
         }
+      } else if (userRole === 'Redes') {
+        // Para Redes, buscar la empresa donde están asignados
+        const userCompany = await Company.findOne({ redes: userId });
+        if (userCompany) {
+          const branches = await Branch.find({ companyId: userCompany._id }).select('_id');
+          if (branches.length > 0) {
+            filters.branch = { $in: branches.map(b => b._id) };
+          } else {
+            return res.status(200).json({
+              success: true,
+              data: [],
+              pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: 0,
+                pages: 0
+              }
+            });
+          }
+        } else {
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
       } else if (userRole !== 'Super Admin') {
         // Otros roles no tienen acceso
         return res.status(403).json({

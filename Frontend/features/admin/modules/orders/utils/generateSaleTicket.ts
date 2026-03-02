@@ -430,12 +430,6 @@ export const generateSaleTicket = (data: SaleTicketData): string => {
         </div>
     </div>
 
-    <script>
-        // Cerrar ventana después de imprimir
-        window.onafterprint = function() {
-            window.close();
-        };
-    </script>
 </body>
 </html>
   `.trim();
