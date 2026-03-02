@@ -28,7 +28,6 @@ import { clientsService } from '../clients/services/clients';
 import { branchesService } from '../branches/services/branches';
 import { companiesService } from '../companies/services/companies';
 import { uploadDigitalCardQR, uploadDigitalCardHero } from '@/services/firebaseStorage';
-import { sendAppleWalletCard, sendGoogleWalletCard, isValidEmail } from '@/services/emailService';
 import { useUserSessionStore } from '@/stores/userSessionStore';
 import { useUserRoleStore } from '@/stores/userRoleStore';
 import { useActiveBranchStore } from '@/stores/activeBranchStore';
@@ -678,40 +677,6 @@ const DigitalCardsPage: React.FC = () => {
               document.body.removeChild(a);
               
               toast.success('Apple Wallet Pass descargado correctamente');
-              
-              // Enviar email si el cliente tiene correo válido
-              if (selectedClient?.email) {
-                // Validar formato del email antes de enviar
-                if (isValidEmail(selectedClient.email)) {
-                  try {
-                    console.log('📧 Enviando Apple Wallet por email a:', selectedClient.email);
-                    const downloadUrl = `${apiUrl}/api/digital-cards/download/apple/${digitalCard._id}`;
-                    const emailResponse = await sendAppleWalletCard({
-                      to: selectedClient.email,
-                      clientName: `${selectedClient.name} ${selectedClient.lastName}`,
-                      clientNumber: selectedClient.clientNumber,
-                      points: selectedClient.points,
-                      downloadUrl: downloadUrl,
-                      companyName: 'Zolt'
-                    });
-                    
-                    if (emailResponse.success) {
-                      toast.success('Email enviado con la tarjeta');
-                    } else {
-                      console.error('Error en respuesta de email:', emailResponse.error);
-                      toast.warning('La tarjeta se descargó pero hubo un problema al enviar el email');
-                    }
-                  } catch (emailError) {
-                    console.error('Error enviando email de Apple Wallet:', emailError);
-                    toast.warning('La tarjeta se descargó pero no se pudo enviar el email');
-                  }
-                } else {
-                  console.warn('⚠️ Email inválido, no se enviará:', selectedClient.email);
-                  toast.warning(`El email "${selectedClient.email}" no es válido. La tarjeta se descargó pero no se envió por email.`);
-                }
-              } else {
-                console.log('Cliente sin email registrado');
-              }
             } catch (error: any) {
               console.error('Error descargando Apple Wallet:', error);
               toast.error(error.message || 'Error al descargar Apple Wallet Pass');
@@ -731,39 +696,6 @@ const DigitalCardsPage: React.FC = () => {
                   // Abrir URL de Google Wallet en nueva pestaña
                   window.open(data.saveUrl, '_blank');
                   toast.success('Abriendo Google Wallet...');
-                  
-                  // Enviar email si el cliente tiene correo válido
-                  if (selectedClient?.email) {
-                    // Validar formato del email antes de enviar
-                    if (isValidEmail(selectedClient.email)) {
-                      try {
-                        console.log('📧 Enviando Google Wallet por email a:', selectedClient.email);
-                        const emailResponse = await sendGoogleWalletCard({
-                          to: selectedClient.email,
-                          clientName: `${selectedClient.name} ${selectedClient.lastName}`,
-                          clientNumber: selectedClient.clientNumber,
-                          points: selectedClient.points,
-                          saveUrl: data.saveUrl,
-                          companyName: 'Zolt'
-                        });
-                        
-                        if (emailResponse.success) {
-                          toast.success('Email enviado con el enlace de Google Wallet');
-                        } else {
-                          console.error('Error en respuesta de email:', emailResponse.error);
-                          toast.warning('Se abrió Google Wallet pero hubo un problema al enviar el email');
-                        }
-                      } catch (emailError) {
-                        console.error('Error enviando email de Google Wallet:', emailError);
-                        toast.warning('Se abrió Google Wallet pero no se pudo enviar el email');
-                      }
-                    } else {
-                      console.warn('⚠️ Email inválido, no se enviará:', selectedClient.email);
-                      toast.warning(`El email "${selectedClient.email}" no es válido. Se abrió Google Wallet pero no se envió por email.`);
-                    }
-                  } else {
-                    console.log('Cliente sin email registrado');
-                  }
                 } else if (data.isDevelopment) {
                   toast.info('Modo desarrollo: Configure las credenciales de Google Wallet');
                   console.log('Instrucciones:', data.data?.instructions);

@@ -4,7 +4,10 @@ import { CardTransaction } from "../models/CardTransaction.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import appleWalletService from "../services/digitalCards/appleWalletService.js";
 import googleWalletService from "../services/digitalCards/googleWalletService.js";
-// No importamos servicios de email - el Frontend se encarga de enviar emails
+import {
+  sendAppleWalletCard,
+  sendGoogleWalletCard,
+} from "../services/emailService.js";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -246,12 +249,28 @@ export const downloadAppleWallet = async (req, res) => {
         },
       });
 
-      // El Frontend se encargará de enviar el email si es necesario
-      // Solo registramos si es una descarga desde email para evitar loops
+      // Enviar email con link de descarga si el cliente tiene email
+      // No enviar si la descarga viene de un link de email (evitar loop)
       const isFromEmail = req.query.email === 'sent';
-      if (isFromEmail) {
-        console.log("📨 Descarga desde link de email detectada");
-        console.log("👤 Usuario descargando desde email:", clientData.email);
+      if (clientData.email && !isFromEmail) {
+        try {
+          const baseUrl = process.env.FRONTEND_URL
+            ? process.env.FRONTEND_URL.replace(/\/$/, "").replace(/\/+$/, "")
+            : `${req.protocol}://${req.get("host")}`;
+          const downloadUrl = `${baseUrl}/api/digital-cards/download/apple/${cardId}`;
+
+          await sendAppleWalletCard({
+            to: clientData.email,
+            clientName: `${clientData.name} ${clientData.lastName}`,
+            clientNumber: clientData.clientNumber,
+            points: clientData.points,
+            downloadUrl,
+            companyName: clientData.branchName,
+          });
+          console.log("Email de Apple Wallet enviado a:", clientData.email);
+        } catch (emailError) {
+          console.error("Error enviando email de Apple Wallet:", emailError);
+        }
       }
 
       // Enviar el archivo .pkpass como respuesta
@@ -787,7 +806,24 @@ export const downloadGoogleWallet = async (req, res) => {
         },
       });
 
-      // El Frontend se encargará de enviar el email con la saveUrl
+      // Enviar email con saveUrl si el cliente tiene email
+      let emailSent = false;
+      if (clientData.email) {
+        try {
+          await sendGoogleWalletCard({
+            to: clientData.email,
+            clientName: `${clientData.name} ${clientData.lastName}`,
+            clientNumber: clientData.clientNumber,
+            points: clientData.points,
+            saveUrl: result.saveUrl,
+            companyName: clientData.branchName,
+          });
+          emailSent = true;
+          console.log("Email de Google Wallet enviado a:", clientData.email);
+        } catch (emailError) {
+          console.error("Error enviando email de Google Wallet:", emailError);
+        }
+      }
 
       // Retornar la URL para guardar en Google Wallet
       res.status(200).json({
@@ -795,7 +831,7 @@ export const downloadGoogleWallet = async (req, res) => {
         saveUrl: result.saveUrl,
         objectId: result.objectId,
         message: "Tarjeta lista para agregar a Google Wallet",
-        emailSent: clientData.email ? true : false,
+        emailSent,
       });
     } catch (serviceError) {
       console.error("Error con Google Wallet Service:", serviceError);

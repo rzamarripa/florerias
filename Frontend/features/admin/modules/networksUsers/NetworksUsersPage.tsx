@@ -139,11 +139,19 @@ const NetworksUsersPage: React.FC = () => {
       setModalLoading(true);
       if (selectedUser) {
         // Modo edición
-        await networksUsersService.updateNetworksUser(selectedUser._id, data as UpdateNetworksUserData);
+        const result = await networksUsersService.updateNetworksUser(selectedUser._id, data as UpdateNetworksUserData);
+        if (!result.success) {
+          toast.error(result.message || "Error al actualizar el usuario");
+          return;
+        }
         toast.success("Usuario de redes actualizado exitosamente");
       } else {
         // Modo creación
-        await networksUsersService.createNetworksUser(data as CreateNetworksUserData);
+        const result = await networksUsersService.createNetworksUser(data as CreateNetworksUserData);
+        if (!result.success) {
+          toast.error(result.message || "Error al crear el usuario");
+          return;
+        }
         toast.success("Usuario de redes creado exitosamente");
       }
       setShowModal(false);
@@ -250,7 +258,7 @@ const NetworksUsersPage: React.FC = () => {
                     <TableHead>Usuario</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Teléfono</TableHead>
-                    <TableHead>Sucursal</TableHead>
+                    <TableHead>Empresa</TableHead>
                     <TableHead>Estatus</TableHead>
                     <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
@@ -289,15 +297,15 @@ const NetworksUsersPage: React.FC = () => {
                         </TableCell>
                         <TableCell>{user.phone}</TableCell>
                         <TableCell>
-                          {user.branch ? (
+                          {user.company ? (
                             <div>
-                              <div className="font-medium">{user.branch.branchName}</div>
+                              <div className="font-medium">{user.company.tradeName || user.company.legalName}</div>
                               <div className="text-sm text-muted-foreground">
-                                {user.branch.branchCode}
+                                {user.company.rfc}
                               </div>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground">Sin sucursal</span>
+                            <span className="text-muted-foreground">Sin empresa</span>
                           )}
                         </TableCell>
                         <TableCell>

@@ -14,11 +14,11 @@ export interface NetworksUser {
     name: string;
     description?: string;
   };
-  branch: {
+  company: {
     _id: string;
-    branchName: string;
-    branchCode: string;
-    companyId: string;
+    legalName: string;
+    tradeName?: string;
+    rfc: string;
   } | null;
   createdAt: string;
   updatedAt?: string;
@@ -33,7 +33,7 @@ export interface CreateNetworksUserData {
     name: string;
     lastName: string;
   };
-  branch: string;
+  companyId: string;
 }
 
 export interface UpdateNetworksUserData {
@@ -70,5 +70,5 @@ export interface NetworksUserFilters {
   limit?: number;
   search?: string;
   estatus?: boolean;
-  branchId?: string;
+  companyId?: string;
 }

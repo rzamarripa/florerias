@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Edit2, CheckCircle, XCircle, Building2, Users, Loader2 } from "lucide-react";
+import { Edit2, CheckCircle, XCircle, Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { companiesService } from "../services/companies";
 import { Company } from "../types";
 import BranchesModal from "./BranchesModal";
-import AssignRedesModal from "./AssignRedesModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
   const router = useRouter();
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [showBranchesModal, setShowBranchesModal] = useState<boolean>(false);
-  const [showRedesModal, setShowRedesModal] = useState<boolean>(false);
   const { getIsAdmin } = useUserRoleStore();
 
   const handleEdit = () => {
@@ -62,19 +60,6 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
 
   const handleCloseBranchesModal = () => {
     setShowBranchesModal(false);
-  };
-
-  const handleOpenRedesModal = () => {
-    // Validar que solo administradores puedan asignar usuarios redes
-    if (!getIsAdmin()) {
-      toast.warning("Solo usuarios con rol Administrador o Super Admin pueden asignar usuarios redes");
-      return;
-    }
-    setShowRedesModal(true);
-  };
-
-  const handleCloseRedesModal = () => {
-    setShowRedesModal(false);
   };
 
   return (
@@ -122,18 +107,6 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
           </Button>
         )}
 
-        {/* Assign Redes Button - Solo visible para Administradores */}
-        {getIsAdmin() && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleOpenRedesModal}
-            title="Asignar usuarios redes"
-          >
-            <Users className="h-4 w-4 text-blue-500" />
-          </Button>
-        )}
       </div>
 
       {/* Branches Modal */}
@@ -146,15 +119,6 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
         />
       )}
 
-      {/* Assign Redes Modal */}
-      {getIsAdmin() && (
-        <AssignRedesModal
-          show={showRedesModal}
-          onHide={handleCloseRedesModal}
-          company={company}
-          onRedesUpdated={onCompanyUpdated}
-        />
-      )}
     </>
   );
 };

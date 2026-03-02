@@ -5,7 +5,7 @@ import { NetworksUser, CreateNetworksUserData, UpdateNetworksUserData } from "..
 import { apiCall } from "@/utils/api";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
-import { branchesService } from "@/features/admin/modules/branches/services/branches";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,13 +19,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface NetworksUserModalProps {
   show: boolean;
@@ -54,16 +47,12 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
       name: "",
       lastName: "",
     },
-    branch: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [userCompany, setUserCompany] = useState<any>(null);
   const [loadingUserCompany, setLoadingUserCompany] = useState(false);
-  const [branches, setBranches] = useState<any[]>([]);
-  const [loadingBranches, setLoadingBranches] = useState(false);
-  const [managerBranch, setManagerBranch] = useState<any>(null);
   const [redesRoleId, setRedesRoleId] = useState<string | null>(null);
   const [loadingRole, setLoadingRole] = useState(false);
 
@@ -90,86 +79,33 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
     }
   };
 
-  // Load user company and branches for Admin/Manager
-  const loadUserCompanyAndBranches = async () => {
+  // Load user company
+  const loadUserCompany = async () => {
     if (!isAdminOrManager) return;
 
     setLoadingUserCompany(true);
     try {
-      // Si es gerente, obtener su sucursal directamente
-      if (getIsManager()) {
-        const branchResponse = await branchesService.getUserBranches();
-        if (branchResponse.success && branchResponse.data && branchResponse.data.length > 0) {
-          const branch = branchResponse.data[0];
-          setManagerBranch(branch);
-          setBranches([branch]); // Establecer solo la sucursal del gerente
-          setFormData((prev: any) => ({ ...prev, branch: branch._id }));
-          
-          // Obtener la empresa a través de la sucursal
-          if (branch.companyId && typeof branch.companyId === 'object') {
-            setUserCompany(branch.companyId);
-          } else if (branch.companyId && typeof branch.companyId === 'string') {
-            // Si companyId es un string, buscar la empresa
-            try {
-              const companyResponse = await companiesService.getCompanyById(branch.companyId);
-              if (companyResponse.success && companyResponse.data) {
-                setUserCompany(companyResponse.data);
-              }
-            } catch (error) {
-              console.error("Error loading company from branch:", error);
-            }
-          }
-        } else {
-          toast.error("No se encontró una sucursal asignada para el gerente");
-        }
-      } 
-      // Si es admin, cargar empresa y sucursales
-      else if (getIsAdmin()) {
-        const response = await companiesService.getUserCompany();
-        if (response.success && response.data) {
-          setUserCompany(response.data);
-          // Load branches for this company
-          await loadBranches(response.data._id);
-        }
+      const response = await companiesService.getUserCompany();
+      if (response.success && response.data) {
+        setUserCompany(response.data);
       }
     } catch (err: any) {
-      console.error("Error loading user data:", err);
+      console.error("Error loading user company:", err);
       if (!err.message?.includes("no tiene una empresa asignada")) {
-        toast.error(err.message || "Error al cargar los datos del usuario");
+        toast.error(err.message || "Error al cargar la empresa");
       }
     } finally {
       setLoadingUserCompany(false);
     }
   };
 
-  // Load branches for the company
-  const loadBranches = async (companyId: string) => {
-    setLoadingBranches(true);
-    try {
-      const response = await branchesService.getAllBranches({
-        companyId,
-        isActive: true,
-        limit: 100,
-      });
-      if (response.success && response.data) {
-        setBranches(response.data);
-      }
-    } catch (err: any) {
-      console.error("Error loading branches:", err);
-      toast.error(err.message || "Error al cargar las sucursales");
-    } finally {
-      setLoadingBranches(false);
-    }
-  };
-
   useEffect(() => {
     if (show) {
       if (!user) {
-        // En modo creación, cargar el rol de Redes
         loadRedesRole();
       }
       if (isAdminOrManager) {
-        loadUserCompanyAndBranches();
+        loadUserCompany();
       }
     }
   }, [show, isAdminOrManager]);
@@ -185,7 +121,6 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
           name: user.profile.name,
           lastName: user.profile.lastName,
         },
-        branch: user.branch?._id || "",
       });
     } else {
       setFormData({
@@ -197,11 +132,10 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
           name: "",
           lastName: "",
         },
-        branch: getIsManager() && managerBranch ? managerBranch._id : "",
       });
     }
     setErrors({});
-  }, [user, show, managerBranch]);
+  }, [user, show]);
 
   const handleChange = (field: string, value: any) => {
     if (field.startsWith("profile.")) {
@@ -242,14 +176,14 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
     if (!formData.profile.lastName.trim()) {
       newErrors["profile.lastName"] = "El apellido es requerido";
     }
-    
-    // En modo creación, la contraseña y sucursal son requeridas
+
+    // En modo creación, la contraseña es requerida
     if (!user) {
       if (!formData.password.trim()) {
         newErrors.password = "La contraseña es requerida";
       }
-      if (!formData.branch) {
-        newErrors.branch = "La sucursal es requerida";
+      if (!userCompany) {
+        newErrors.company = "No se encontró una empresa asignada";
       }
     }
 
@@ -259,10 +193,9 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
       if (user) {
-        // For update, only send changed fields
         const updateData: UpdateNetworksUserData = {
           username: formData.username,
           email: formData.email,
@@ -277,7 +210,6 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
         }
         onSave(updateData);
       } else {
-        // For create, send all required fields
         const createData: CreateNetworksUserData = {
           username: formData.username,
           email: formData.email,
@@ -287,7 +219,7 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
             name: formData.profile.name,
             lastName: formData.profile.lastName,
           },
-          branch: formData.branch,
+          companyId: userCompany._id,
         };
         onSave(createData);
       }
@@ -449,57 +381,9 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="branch">
-                Sucursal
-                {!isEditing && <span className="text-destructive"> *</span>}
-              </Label>
-              <Select
-                value={formData.branch}
-                onValueChange={(value) => handleChange("branch", value)}
-                disabled={isEditing || loadingBranches || loadingUserCompany}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      loadingBranches || loadingUserCompany
-                        ? "Cargando sucursales..."
-                        : isEditing
-                        ? "Sucursal asignada"
-                        : branches.length === 0
-                        ? "No hay sucursales disponibles"
-                        : "Selecciona una sucursal"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.length > 0 ? (
-                    branches.map((branch) => (
-                      <SelectItem key={branch._id} value={branch._id}>
-                        {branch.branchName} ({branch.branchCode})
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-branches" disabled>
-                      No hay sucursales disponibles
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              {isEditing && (
-                <p className="text-sm text-muted-foreground">
-                  La sucursal no se puede cambiar al editar un usuario de redes
-                </p>
-              )}
-              {getIsManager() && !isEditing && managerBranch && (
-                <p className="text-sm text-muted-foreground">
-                  Los usuarios serán asignados a tu sucursal: {managerBranch.branchName}
-                </p>
-              )}
-              {errors.branch && (
-                <p className="text-sm text-destructive">{errors.branch}</p>
-              )}
-            </div>
+            {errors.company && (
+              <p className="text-sm text-destructive">{errors.company}</p>
+            )}
           </div>
 
           <DialogFooter>
@@ -508,7 +392,7 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={loading || loadingUserCompany || loadingBranches || loadingRole}
+              disabled={loading || loadingUserCompany || loadingRole}
             >
               {loading ? (
                 <>

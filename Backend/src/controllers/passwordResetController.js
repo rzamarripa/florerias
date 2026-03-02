@@ -1,6 +1,9 @@
 import { User } from "../models/User.js";
 import { PasswordResetCode } from "../models/PasswordResetCode.js";
-// El envío de emails se maneja desde el Frontend con Resend
+import {
+  sendPasswordResetCode as sendResetEmail,
+  sendPasswordChangeConfirmation,
+} from "../services/emailService.js";
 
 // Generate 6-digit code
 const generateResetCode = () => {
@@ -70,17 +73,22 @@ export const sendResetCode = async (req, res) => {
     const savedCode = await resetCode.save();
     console.log("Código guardado en BD con ID:", savedCode._id);
 
-    // El Frontend se encargará de enviar el email
-    console.log("Código generado:", code, "para email:", userEmail);
+    // Enviar email con el código desde el Backend
+    try {
+      await sendResetEmail({
+        to: userEmail,
+        code,
+        userName: user.username || "Usuario",
+      });
+      console.log("Email de recuperación enviado a:", userEmail);
+    } catch (emailError) {
+      console.error("Error enviando email de recuperación:", emailError);
+      // El código ya fue generado, informar al usuario
+    }
 
     return res.status(200).json({
       success: true,
-      message: "Código de recuperación generado exitosamente",
-      data: {
-        code: code, // Enviar el código al Frontend para que lo incluya en el email
-        email: userEmail, // Email real del usuario
-        username: user.username
-      }
+      message: "Si el correo existe en nuestro sistema, recibirás un código de recuperación",
     });
 
   } catch (error) {
@@ -221,16 +229,22 @@ export const resetPassword = async (req, res) => {
     // Mark code as used
     await resetCode.markAsUsed();
 
-    // El Frontend se encargará de enviar el email de confirmación
+    // Enviar email de confirmación desde el Backend
+    try {
+      await sendPasswordChangeConfirmation({
+        to: user.email,
+        userName: user.username || "Usuario",
+      });
+      console.log("Email de confirmación enviado a:", user.email);
+    } catch (emailError) {
+      console.error("Error enviando email de confirmación:", emailError);
+    }
+
     console.log("Contraseña actualizada para:", user.username);
 
     return res.status(200).json({
       success: true,
       message: "Contraseña actualizada exitosamente",
-      data: {
-        email: user.email,
-        username: user.username
-      }
     });
 
   } catch (error) {

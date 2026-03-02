@@ -10,7 +10,7 @@ import {
 
 export const networksUsersService = {
   getAllNetworksUsers: async (filters: NetworksUserFilters = {}): Promise<GetNetworksUsersResponse> => {
-    const { page = 1, limit = 10, search, estatus, branchId } = filters;
+    const { page = 1, limit = 10, search, estatus, companyId } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -19,7 +19,7 @@ export const networksUsersService = {
 
     if (search) searchParams.append('search', search);
     if (estatus !== undefined) searchParams.append('estatus', estatus.toString());
-    if (branchId) searchParams.append('branchId', branchId);
+    if (companyId) searchParams.append('companyId', companyId);
 
     const response = await apiCall<NetworksUser[]>(`/networks-users?${searchParams}`);
     return response as any;

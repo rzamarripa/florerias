@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { Edit2, CheckCircle, XCircle, UserPlus, Users, Loader2 } from "lucide-react";
+import { Edit2, CheckCircle, XCircle, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { branchesService } from "../services/branches";
 import { Branch } from "../types";
 import BranchModal from "./BranchModal";
-import EmployeesModal from "./EmployeesModal";
 import ViewEmployeesModal from "./ViewEmployeesModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 
@@ -23,7 +22,6 @@ const BranchActions: React.FC<BranchActionsProps> = ({
 }) => {
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
-  const [showEmployeesModal, setShowEmployeesModal] = useState<boolean>(false);
   const [showViewEmployeesModal, setShowViewEmployeesModal] = useState<boolean>(false);
   const { getIsAdmin } = useUserRoleStore();
   const isAdmin = getIsAdmin();
@@ -97,16 +95,6 @@ const BranchActions: React.FC<BranchActionsProps> = ({
           <Users className="h-4 w-4 text-blue-500" />
         </Button>
 
-        {/* Add Employees Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setShowEmployeesModal(true)}
-          title="Agregar empleados"
-        >
-          <UserPlus className="h-4 w-4 text-primary" />
-        </Button>
       </div>
 
       {/* Edit Modal - Solo para Administradores */}
@@ -119,14 +107,6 @@ const BranchActions: React.FC<BranchActionsProps> = ({
           userCompany={userCompany}
         />
       )}
-
-      {/* Employees Modal */}
-      <EmployeesModal
-        show={showEmployeesModal}
-        onHide={() => setShowEmployeesModal(false)}
-        branch={branch}
-        onEmployeesUpdated={onBranchUpdated}
-      />
 
       {/* View Employees Modal */}
       <ViewEmployeesModal
