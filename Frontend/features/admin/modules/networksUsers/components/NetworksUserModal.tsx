@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Save, Wrench, Eye, EyeOff, Building2, Loader2, UserPlus } from "lucide-react";
+import { Save, Wrench, Eye, EyeOff, Building2, Loader2, UserPlus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { NetworksUser, CreateNetworksUserData, UpdateNetworksUserData } from "../types";
 import { apiCall } from "@/utils/api";
+import { usersService } from "@/features/admin/modules/users/services/users";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 
@@ -51,10 +52,22 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
 
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [userCompany, setUserCompany] = useState<any>(null);
   const [loadingUserCompany, setLoadingUserCompany] = useState(false);
   const [redesRoleId, setRedesRoleId] = useState<string | null>(null);
   const [loadingRole, setLoadingRole] = useState(false);
+
+  const checkUsername = async (value: string) => {
+    if (!value || value.trim().length < 2) { setUsernameAvailable(null); return; }
+    setCheckingUsername(true);
+    try {
+      const result = await usersService.checkUsernameAvailability(value.trim());
+      setUsernameAvailable(result.available);
+    } catch { setUsernameAvailable(null); }
+    finally { setCheckingUsername(false); }
+  };
 
   // Load Redes role ID
   const loadRedesRole = async () => {
@@ -135,6 +148,7 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
       });
     }
     setErrors({});
+    setUsernameAvailable(null);
   }, [user, show]);
 
   const handleChange = (field: string, value: any) => {
@@ -305,11 +319,14 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
                   type="text"
                   placeholder="Ingresa el nombre de usuario"
                   value={formData.username}
-                  onChange={(e) => handleChange("username", e.target.value)}
+                  onChange={(e) => { setUsernameAvailable(null); handleChange("username", e.target.value); }}
+                  onBlur={() => { if (!user) checkUsername(formData.username); }}
                 />
                 {errors.username && (
                   <p className="text-sm text-destructive">{errors.username}</p>
                 )}
+                {checkingUsername && <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Verificando disponibilidad...</p>}
+                {usernameAvailable === false && !checkingUsername && <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Este nombre de usuario no está disponible</p>}
               </div>
 
               <div className="space-y-2">
@@ -392,7 +409,7 @@ const NetworksUserModal: React.FC<NetworksUserModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={loading || loadingUserCompany || loadingRole}
+              disabled={loading || loadingUserCompany || loadingRole || usernameAvailable === false || checkingUsername}
             >
               {loading ? (
                 <>

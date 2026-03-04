@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Role } from "./src/models/Roles.js";
 import { Module } from "./src/models/Module.js";
 import { Page } from "./src/models/Page.js";
+import { User } from "./src/models/User.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -321,6 +322,24 @@ const seedRoles = async () => {
 
       console.log(`  ✓ ${rd.name} — ${roleModuleIds.length} módulos`);
     }
+
+    // ── Paso 3: Crear usuario Super Admin ──
+    const superAdminRole = await Role.findOne({ name: "Super Admin" });
+    const adminUser = await User.create({
+      username: "admin",
+      email: "admin@floriSoft.com",
+      phone: "555-0001",
+      password: "123qwe",
+      profile: {
+        name: "Administrador",
+        lastName: "Sistema",
+        fullName: "Administrador del Sistema",
+        path: "/admin/profile",
+        estatus: true,
+      },
+      role: superAdminRole._id,
+    });
+    console.log(`\n👤 Usuario Super Admin creado: ${adminUser.username}`);
 
     // ── Resumen ──
     console.log("\n" + "═".repeat(60));

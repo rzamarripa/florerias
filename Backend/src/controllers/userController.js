@@ -635,6 +635,21 @@ export const assignRoles = async (req, res) => {
 };
 
 
+export const checkUsernameAvailability = async (req, res) => {
+  try {
+    const { username } = req.query;
+    if (!username) {
+      return res.status(400).json({ success: false, message: "Username requerido" });
+    }
+    const existing = await User.findOne({
+      username: { $regex: new RegExp(`^${username}$`, "i") },
+    });
+    res.json({ success: true, available: !existing });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Nueva función para actualizar solo la portada (profile.path)
 export const updateUserCover = async (req, res) => {
   try {

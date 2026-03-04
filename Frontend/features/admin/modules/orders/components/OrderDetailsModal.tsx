@@ -595,7 +595,35 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         // Cerrar modal y refrescar lista
         setShowClientModal(false);
         await fetchClients(formData.branchId);
-        handleClientSelect(newClient._id);
+
+        // Auto-select and auto-fill using the response data directly
+        // (avoids stale closure issue with clients array)
+        setSelectedClientId(newClient._id);
+        setSelectedClientForRewards(newClient);
+        setAppliedReward(null);
+
+        const manualDiscountAmount =
+          formData.discountType === "porcentaje"
+            ? (formData.subtotal * (formData.discount || 0)) / 100
+            : formData.discount || 0;
+        const deliveryPrice = formData.deliveryData.deliveryPrice || 0;
+        const newTotal = Math.max(0, formData.subtotal - manualDiscountAmount + deliveryPrice);
+        const remainingBalance = newTotal - (formData.advance || 0);
+
+        setFormData((prev) => ({
+          ...prev,
+          clientInfo: {
+            clientId: newClient._id,
+            name: `${newClient.name} ${newClient.lastName}`,
+            phone: newClient.phoneNumber,
+            email: newClient.email || "",
+            isGuest: false,
+          },
+          total: newTotal,
+          remainingBalance,
+          appliedRewardCode: null,
+          appliedReward: null,
+        }));
       }
     } catch (error: any) {
       console.error("Error en handleSaveNewClient:", error);

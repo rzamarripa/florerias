@@ -14,11 +14,13 @@ import {
   redeemReward,
   verifyRewardCode,
   getClientRewards,
+  checkClientNameAvailability,
 } from "../controllers/clientController.js";
 
 const router = express.Router();
 
 // GET routes
+router.get("/check-name", checkClientNameAvailability);
 router.get("/", getAllClients);
 router.get("/:id", getClientById);
 router.get("/:id/points-history", getClientPointsHistory);

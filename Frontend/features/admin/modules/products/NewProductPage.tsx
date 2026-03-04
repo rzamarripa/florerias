@@ -12,6 +12,7 @@ import {
   X,
   Loader2,
   AlertCircle,
+  DollarSign,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -30,7 +31,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -497,16 +500,16 @@ const NewProductPage: React.FC = () => {
 
       <form onSubmit={handleSubmit}>
         {/* Informacion Basica */}
-        <Card className="mb-4 shadow-sm">
-          <CardHeader className="bg-background border-b-0 py-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
+        <Card className="mb-2 shadow-sm">
+          <CardHeader className="bg-white py-2">
+            <div className="flex items-center gap-2">
               <Package size={20} className="text-primary" />
-              Información del Producto
-            </CardTitle>
+              <h5 className="mb-0 font-bold">Información del Producto</h5>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-3 pb-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div>
                 <Label className="font-semibold">
                   Nombre <span className="text-destructive">*</span>
                 </Label>
@@ -518,10 +521,11 @@ const NewProductPage: React.FC = () => {
                     setFormData({ ...formData, nombre: e.target.value })
                   }
                   required
+                  className="py-2"
                 />
               </div>
 
-              <div className="space-y-2">
+              <div>
                 <Label className="font-semibold">Categoría de Producto</Label>
                 <Select
                   value={formData.productCategory || "none"}
@@ -532,7 +536,7 @@ const NewProductPage: React.FC = () => {
                     })
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="py-2">
                     <SelectValue placeholder="Selecciona una categoría (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
@@ -548,7 +552,7 @@ const NewProductPage: React.FC = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div>
                 <Label className="font-semibold">
                   Unidad <span className="text-destructive">*</span>
                 </Label>
@@ -561,7 +565,7 @@ const NewProductPage: React.FC = () => {
                     })
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="py-2">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -574,7 +578,7 @@ const NewProductPage: React.FC = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div>
                 <Label className="font-semibold">Orden</Label>
                 <Input
                   type="number"
@@ -586,10 +590,11 @@ const NewProductPage: React.FC = () => {
                       orden: parseInt(e.target.value) || 0,
                     })
                   }
+                  className="py-2"
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="md:col-span-2">
                 <Label className="font-semibold">Descripción</Label>
                 <Textarea
                   rows={3}
@@ -605,21 +610,22 @@ const NewProductPage: React.FC = () => {
         </Card>
 
         {/* Imagen */}
-        <Card className="mb-4 shadow-sm">
-          <CardHeader className="bg-background border-b-0 py-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
+        <Card className="mb-2 shadow-sm">
+          <CardHeader className="bg-white py-2">
+            <div className="flex items-center gap-2">
               <Upload size={20} className="text-primary" />
-              Imagen del Producto
-            </CardTitle>
+              <h5 className="mb-0 font-bold">Imagen del Producto</h5>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2 space-y-2">
+          <CardContent className="pt-3 pb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div>
                 <Label className="font-semibold">Subir Imagen</Label>
                 <Input
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
+                  className="py-2"
                 />
                 <p className="text-sm text-muted-foreground">
                   Selecciona una imagen para el producto (JPG, PNG, etc.)
@@ -628,8 +634,7 @@ const NewProductPage: React.FC = () => {
 
               <div>
                 {imagePreview && (
-                  <div className="space-y-2">
-                    <Label className="font-semibold">Vista previa</Label>
+                  <div className="flex items-center gap-3">
                     <div className="relative inline-block">
                       <img
                         src={imagePreview}
@@ -654,14 +659,14 @@ const NewProductPage: React.FC = () => {
         </Card>
 
         {/* Insumos */}
-        <Card className="mb-4 shadow-sm">
-          <CardHeader className="bg-background border-b-0 py-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
+        <Card className="mb-2 shadow-sm">
+          <CardHeader className="bg-white py-2">
+            <div className="flex items-center gap-2">
               <Package size={20} className="text-primary" />
-              Insumos
-            </CardTitle>
+              <h5 className="mb-0 font-bold">Insumos</h5>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-3 pb-3">
             {/* Mensaje informativo cuando se esta editando */}
             {editingInsumoIndex !== null && (
               <Alert className="mb-4 border-blue-200 bg-blue-50">
@@ -697,7 +702,7 @@ const NewProductPage: React.FC = () => {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full py-2">
                     <SelectValue placeholder="Seleccionar material" />
                   </SelectTrigger>
                   <SelectContent>
@@ -729,6 +734,7 @@ const NewProductPage: React.FC = () => {
                       cantidad: parseFloat(e.target.value) || 0,
                     })
                   }
+                  className="py-2"
                 />
               </div>
 
@@ -743,7 +749,7 @@ const NewProductPage: React.FC = () => {
                     })
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full py-2">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -767,6 +773,7 @@ const NewProductPage: React.FC = () => {
                   onChange={(e) =>
                     setUnitCost(parseFloat(e.target.value) || 0)
                   }
+                  className="py-2"
                 />
               </div>
 
@@ -781,6 +788,7 @@ const NewProductPage: React.FC = () => {
                   onChange={(e) =>
                     setUnitPrice(parseFloat(e.target.value) || 0)
                   }
+                  className="py-2"
                 />
               </div>
 
@@ -895,23 +903,21 @@ const NewProductPage: React.FC = () => {
         </Card>
 
         {/* Mano de Obra */}
-        <Card className="mb-4 shadow-sm">
-          <CardHeader className="bg-background border-b-0 py-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
+        <Card className="mb-2 shadow-sm">
+          <CardHeader className="bg-white py-2">
+            <div className="flex items-center gap-2">
               <Package size={20} className="text-primary" />
-              Mano de Obra
-            </CardTitle>
+              <h5 className="mb-0 font-bold">Mano de Obra</h5>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label className="font-semibold">Tipo de Calculo</Label>
+          <CardContent className="pt-3 pb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="font-semibold">Tipo de Cálculo</Label>
                 <Select
                   value={labourType}
                   onValueChange={(value: "fixed" | "percentage") => {
                     setLabourType(value);
-                    // Si cambia a fijo, mantener el valor actual de labour
-                    // Si cambia a porcentaje, calcular el porcentaje basado en labour actual
                     if (
                       value === "percentage" &&
                       totalVenta > 0 &&
@@ -922,7 +928,7 @@ const NewProductPage: React.FC = () => {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="py-2">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -933,7 +939,7 @@ const NewProductPage: React.FC = () => {
               </div>
 
               {labourType === "fixed" ? (
-                <div className="md:col-span-2 space-y-2">
+                <div>
                   <Label className="font-semibold">Costo de Mano de Obra</Label>
                   <Input
                     type="number"
@@ -947,13 +953,14 @@ const NewProductPage: React.FC = () => {
                         labour: parseFloat(e.target.value) || 0,
                       })
                     }
+                    className="py-2"
                   />
                   <p className="text-sm text-muted-foreground">
                     Ingresa el monto fijo de mano de obra
                   </p>
                 </div>
               ) : (
-                <div className="md:col-span-2 space-y-2">
+                <div>
                   <Label className="font-semibold">Porcentaje de Mano de Obra</Label>
                   <div className="flex gap-2 items-center">
                     <Input
@@ -966,7 +973,6 @@ const NewProductPage: React.FC = () => {
                       onChange={(e) => {
                         const percentage = parseFloat(e.target.value) || 0;
                         setLabourPercentage(percentage);
-                        // Calcular labour basado en el porcentaje del total de venta
                         const calculatedLabour =
                           (totalVenta * percentage) / 100;
                         setFormData({
@@ -974,16 +980,14 @@ const NewProductPage: React.FC = () => {
                           labour: parseFloat(calculatedLabour.toFixed(2)),
                         });
                       }}
+                      className="py-2"
                     />
                     <span className="font-bold">%</span>
                   </div>
                   {labourPercentage > 0 ? (
-                    <div className="mt-2 p-2 bg-muted rounded">
-                      <span className="text-lg font-bold text-primary">
-                        {labourPercentage}% de ${formatNumber(totalVenta)} = $
-                        {formatNumber(formData.labour)}
-                      </span>
-                    </div>
+                    <p className="text-sm text-primary font-semibold mt-1">
+                      {labourPercentage}% de ${formatNumber(totalVenta)} = ${formatNumber(formData.labour)}
+                    </p>
                   ) : (
                     <p className="text-sm text-muted-foreground">
                       Ingresa el porcentaje sobre el total de venta de insumos
@@ -996,94 +1000,66 @@ const NewProductPage: React.FC = () => {
         </Card>
 
         {/* Precio de Venta Final */}
-        <Card className="mb-4">
-          <CardHeader className="bg-green-600 text-white py-3 rounded-t-lg">
-            <CardTitle className="flex items-center gap-2">
-              <Package size={20} />
-              Precio de Venta Final
-            </CardTitle>
+        <Card className="mb-2 shadow-sm">
+          <CardHeader className="bg-white py-2">
+            <div className="flex items-center gap-2">
+              <DollarSign size={20} className="text-primary" />
+              <h5 className="mb-0 font-bold">Precio de Venta Final</h5>
+            </div>
           </CardHeader>
-          <CardContent className="pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold">Total Insumos:</span>
-                  <span className="text-lg text-green-600">
-                    ${formatNumber(totalCosto)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold">Mano de Obra:</span>
-                  <span className="text-lg text-yellow-600">
-                    ${formatNumber(formData.labour)}
-                  </span>
-                </div>
-                <hr className="my-2" />
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-xl">Precio de Venta Final:</span>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={precioVentaEditable}
-                      onChange={(e) =>
-                        setPrecioVentaEditable(parseFloat(e.target.value) || 0)
+          <CardContent className="pt-3 pb-3">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold">Total Insumos</span>
+                <span className="text-sm text-green-600 font-medium">${formatNumber(totalCosto)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold">Mano de Obra</span>
+                <span className="text-sm text-yellow-600 font-medium">${formatNumber(formData.labour)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between items-center">
+                <span className="font-bold">Precio de Venta Final</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-primary">$</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={precioVentaEditable}
+                    onChange={(e) =>
+                      setPrecioVentaEditable(parseFloat(e.target.value) || 0)
+                    }
+                    className="py-2 w-32 text-right font-bold text-primary"
+                  />
+                  {precioVentaEditable !== precioVentaCalculado && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPrecioVentaEditable(precioVentaCalculado)
                       }
-                      className="text-2xl font-bold text-green-600 w-36 text-right border-green-500"
-                    />
-                    <span className="text-2xl font-bold text-green-600">$</span>
-                    {precioVentaEditable !== precioVentaCalculado && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setPrecioVentaEditable(precioVentaCalculado)
-                        }
-                        title="Resetear al precio calculado"
-                      >
-                        <X size={16} />
-                      </Button>
-                    )}
-                  </div>
+                      title="Resetear al precio calculado"
+                    >
+                      <X size={16} />
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="text-center">
-                <div className="p-4 bg-muted rounded">
-                  <h6 className="text-muted-foreground mb-2">Desglose del Precio</h6>
-                  <div className="text-base">
-                    <div className="mb-1">
-                      <span className="text-green-600">Insumos:</span> $
-                      {formatNumber(totalCosto)}
-                    </div>
-                    <div className="mb-1">
-                      <span className="text-yellow-600">Mano de Obra:</span> $
-                      {formatNumber(formData.labour)}
-                    </div>
-                    <hr className="my-2" />
-                    <div className="font-bold text-green-600">
-                      <span>Total:</span> ${formatNumber(precioVentaFinal)}
-                    </div>
-                    {precioVentaEditable !== precioVentaCalculado && (
-                      <div className="mt-2 p-2 bg-yellow-100 rounded">
-                        <small className="text-yellow-700">
-                          <strong>Ajuste:</strong> +$
-                          {formatNumber(
-                            precioVentaEditable - precioVentaCalculado
-                          )}
-                        </small>
-                      </div>
-                    )}
-                  </div>
+              {precioVentaEditable !== precioVentaCalculado && (
+                <div className="flex justify-end">
+                  <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">
+                    Ajuste: +${formatNumber(precioVentaEditable - precioVentaCalculado)}
+                  </Badge>
                 </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Botones */}
-        <div className="flex justify-between gap-2 mb-4">
+        <div className="flex justify-between gap-2 mb-3">
           <Button
             type="button"
             variant="outline"

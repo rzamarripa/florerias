@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Save, Truck, Eye, EyeOff, Building2, Loader2, UserPlus } from "lucide-react";
+import { Save, Truck, Eye, EyeOff, Building2, Loader2, UserPlus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { DeliveryDriver, CreateDeliveryDriverData, UpdateDeliveryDriverData } from "../types";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { companiesService } from "@/features/admin/modules/companies/services/companies";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
 import { apiCall } from "@/utils/api";
+import { usersService } from "@/features/admin/modules/users/services/users";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,8 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
 
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [userCompany, setUserCompany] = useState<any>(null);
   const [loadingUserCompany, setLoadingUserCompany] = useState(false);
   const [branches, setBranches] = useState<any[]>([]);
@@ -67,6 +70,16 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
   const [loadingUserBranch, setLoadingUserBranch] = useState(false);
   const [deliveryDriverRoleId, setDeliveryDriverRoleId] = useState<string | null>(null);
   const [loadingRole, setLoadingRole] = useState(false);
+
+  const checkUsername = async (value: string) => {
+    if (!value || value.trim().length < 2) { setUsernameAvailable(null); return; }
+    setCheckingUsername(true);
+    try {
+      const result = await usersService.checkUsernameAvailability(value.trim());
+      setUsernameAvailable(result.available);
+    } catch { setUsernameAvailable(null); }
+    finally { setCheckingUsername(false); }
+  };
 
   // Load Repartidor role ID
   const loadDeliveryDriverRole = async () => {
@@ -208,6 +221,7 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
       });
     }
     setErrors({});
+    setUsernameAvailable(null);
   }, [driver, show, userBranch]);
 
   const handleChange = (field: string, value: any) => {
@@ -378,11 +392,14 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
                   type="text"
                   placeholder="Ingresa el nombre de usuario"
                   value={formData.username}
-                  onChange={(e) => handleChange("username", e.target.value)}
+                  onChange={(e) => { setUsernameAvailable(null); handleChange("username", e.target.value); }}
+                  onBlur={() => { if (!driver) checkUsername(formData.username); }}
                 />
                 {errors.username && (
                   <p className="text-sm text-destructive">{errors.username}</p>
                 )}
+                {checkingUsername && <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Verificando disponibilidad...</p>}
+                {usernameAvailable === false && !checkingUsername && <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Este nombre de usuario no está disponible</p>}
               </div>
 
               <div className="space-y-2">
@@ -513,7 +530,7 @@ const DeliveryDriverModal: React.FC<DeliveryDriverModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={loading || loadingUserCompany || loadingBranches || loadingUserBranch || loadingRole || (!driver && !deliveryDriverRoleId)}
+              disabled={loading || loadingUserCompany || loadingBranches || loadingUserBranch || loadingRole || (!driver && !deliveryDriverRoleId) || usernameAvailable === false || checkingUsername}
             >
               {loading ? (
                 <>

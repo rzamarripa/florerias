@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Save, User, QrCode, Download, Loader2, CreditCard, Eye, EyeOff } from "lucide-react";
+import { X, Save, User, QrCode, Download, Loader2, CreditCard, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Client, CreateClientData, UpdateClientData, HowDidYouHearAboutUs } from "../types";
 import { useRouter } from "next/navigation";
 import digitalCardService from "../../digitalCards/services/digitalCardService";
 import { toast } from "sonner";
 import { uploadDigitalCardQR } from "@/services/firebaseStorage";
 import { branchesService } from "../../branches/services/branches";
+import { clientsService } from "../services/clients";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,6 +80,8 @@ const ClientModal: React.FC<ClientModalProps> = ({
   const [showCardActions, setShowCardActions] = useState(false);
   const [showCardConfirmation, setShowCardConfirmation] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<CreateClientData | null>(null);
+  const [nameAvailable, setNameAvailable] = useState<boolean | null>(null);
+  const [checkingName, setCheckingName] = useState(false);
 
   useEffect(() => {
     if (client) {
@@ -117,7 +120,18 @@ const ClientModal: React.FC<ClientModalProps> = ({
     setShowPassword(false);
     setShowConfirmPassword(false);
     setErrors({});
+    setNameAvailable(null);
   }, [client, show]);
+
+  const checkName = async (value: string) => {
+    if (!value || value.trim().length < 2) { setNameAvailable(null); return; }
+    setCheckingName(true);
+    try {
+      const result = await clientsService.checkClientNameAvailability(value.trim());
+      setNameAvailable(result.available);
+    } catch { setNameAvailable(null); }
+    finally { setCheckingName(false); }
+  };
 
   const handleChange = (field: keyof CreateClientData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -284,12 +298,15 @@ const ClientModal: React.FC<ClientModalProps> = ({
                   type="text"
                   placeholder="Ingresa el nombre"
                   value={formData.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
+                  onChange={(e) => { setNameAvailable(null); handleChange("name", e.target.value); }}
+                  onBlur={() => { if (!client) checkName(formData.name); }}
                   className={errors.name ? "border-destructive" : ""}
                 />
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name}</p>
                 )}
+                {checkingName && <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Verificando disponibilidad...</p>}
+                {nameAvailable === false && !checkingName && <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Este nombre ya está registrado</p>}
               </div>
 
               <div className="space-y-2">
@@ -531,7 +548,7 @@ const ClientModal: React.FC<ClientModalProps> = ({
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || nameAvailable === false || checkingName}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -131,8 +131,11 @@ export const branchesService = {
     return response as any;
   },
 
-  getAvailableManagers: async (): Promise<{ success: boolean; data: Employee[]; message?: string }> => {
-    const response = await apiCall<{ success: boolean; data: Employee[]; message?: string }>("/branches/available-managers");
+  getAvailableManagers: async (companyId?: string): Promise<{ success: boolean; data: Employee[]; message?: string }> => {
+    const url = companyId
+      ? `/branches/available-managers?companyId=${companyId}`
+      : `/branches/available-managers`;
+    const response = await apiCall<{ success: boolean; data: Employee[]; message?: string }>(url);
     return response as any;
   },
 
@@ -148,6 +151,13 @@ export const branchesService = {
 
   getBranchesForRedesUser: async (): Promise<{ success: boolean; count: number; data: Branch[]; companyId?: string }> => {
     const response = await apiCall<{ success: boolean; count: number; data: Branch[]; companyId?: string }>("/branches/user/redes/branches");
+    return response as any;
+  },
+
+  checkUsernameAvailability: async (username: string): Promise<{ success: boolean; available: boolean }> => {
+    const response = await apiCall<{ success: boolean; available: boolean }>(
+      `/users/check-username?username=${encodeURIComponent(username)}`
+    );
     return response as any;
   },
 

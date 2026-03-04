@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Save, Users, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Save, Users, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { Manager, CreateManagerData, UpdateManagerData } from "../types";
+import { usersService } from "@/features/admin/modules/users/services/users";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,18 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
 
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  const checkUsername = async (value: string) => {
+    if (!value || value.trim().length < 2) { setUsernameAvailable(null); return; }
+    setCheckingUsername(true);
+    try {
+      const result = await usersService.checkUsernameAvailability(value.trim());
+      setUsernameAvailable(result.available);
+    } catch { setUsernameAvailable(null); }
+    finally { setCheckingUsername(false); }
+  };
 
   useEffect(() => {
     if (manager) {
@@ -78,6 +91,7 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
       });
     }
     setErrors({});
+    setUsernameAvailable(null);
   }, [manager, show]);
 
   const handleChange = (field: keyof CreateManagerData, value: any) => {
@@ -257,11 +271,14 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
                   type="text"
                   placeholder="Ingresa el nombre de usuario"
                   value={formData.usuario}
-                  onChange={(e) => handleChange("usuario", e.target.value)}
+                  onChange={(e) => { setUsernameAvailable(null); handleChange("usuario", e.target.value); }}
+                  onBlur={() => { if (!manager) checkUsername(formData.usuario); }}
                 />
                 {errors.usuario && (
                   <p className="text-sm text-destructive">{errors.usuario}</p>
                 )}
+                {checkingUsername && <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Verificando disponibilidad...</p>}
+                {usernameAvailable === false && !checkingUsername && <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Este nombre de usuario no está disponible</p>}
               </div>
 
               <div className="space-y-2">
@@ -335,7 +352,7 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
             <Button type="button" variant="outline" onClick={onHide} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || usernameAvailable === false || checkingUsername}>
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

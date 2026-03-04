@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Plus, Upload, X, Pencil, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Plus, Upload, X, Pencil, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -46,6 +46,8 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [removedExistingImage, setRemovedExistingImage] =
     useState<boolean>(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   const isEditing = Boolean(user);
   const { getIsSuperAdmin } = useUserRoleStore();
@@ -76,6 +78,16 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     reset,
     setValue,
   } = form;
+
+  const checkUsername = async (value: string) => {
+    if (!value || value.trim().length < 2) { setUsernameAvailable(null); return; }
+    setCheckingUsername(true);
+    try {
+      const result = await usersService.checkUsernameAvailability(value.trim());
+      setUsernameAvailable(result.available);
+    } catch { setUsernameAvailable(null); }
+    finally { setCheckingUsername(false); }
+  };
 
   const getUserImageUrl = (user: User): string | null => {
     if (user?.profile?.image?.data) {
@@ -274,6 +286,8 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
     setSelectedImage(null);
     setImagePreview(null);
     setRemovedExistingImage(false);
+    setUsernameAvailable(null);
+    setCheckingUsername(false);
     setIsOpen(false);
   };
 
@@ -474,6 +488,8 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                     id="username"
                     placeholder="Ingresa el nombre de usuario"
                     {...register("username")}
+                    onChange={(e) => { register("username").onChange(e); setUsernameAvailable(null); }}
+                    onBlur={(e) => { register("username").onBlur(e); if (!isEditing) checkUsername(e.target.value); }}
                     disabled={loading}
                     className={errors.username ? "border-destructive" : ""}
                   />
@@ -482,6 +498,8 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
                       {errors.username.message}
                     </p>
                   )}
+                  {checkingUsername && <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Verificando disponibilidad...</p>}
+                  {usernameAvailable === false && !checkingUsername && <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Este nombre de usuario no está disponible</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -610,7 +628,7 @@ const UsersModal: React.FC<UsersModalProps> = ({ user, roles, onSuccess }) => {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading || usernameAvailable === false || checkingUsername}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

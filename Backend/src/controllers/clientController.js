@@ -101,14 +101,14 @@ export const createClient = async (req, res) => {
     if (!name || !lastName || !phoneNumber || !gender) {
       return res.status(400).json({
         success: false,
-        message: "Name, lastName, phoneNumber, and gender are required",
+        message: "Nombre, apellido, teléfono y género son requeridos",
       });
     }
 
     if (!company) {
       return res.status(400).json({
         success: false,
-        message: "Company is required",
+        message: "La empresa es requerida",
       });
     }
 
@@ -117,7 +117,7 @@ export const createClient = async (req, res) => {
     if (!validGenders.includes(gender.toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: "Gender must be: masculino, femenino, or otro",
+        message: "El género debe ser: masculino, femenino u otro",
       });
     }
 
@@ -128,7 +128,7 @@ export const createClient = async (req, res) => {
       if (!branchExists) {
         return res.status(400).json({
           success: false,
-          message: "Branch does not exist or does not belong to the specified company",
+          message: "La sucursal no existe o no pertenece a la empresa especificada",
         });
       }
     }
@@ -138,7 +138,7 @@ export const createClient = async (req, res) => {
     if (existingClient) {
       return res.status(400).json({
         success: false,
-        message: "A client with this phone number already exists in this company",
+        message: "Ya existe un cliente con este número de teléfono en esta empresa",
       });
     }
 
@@ -293,7 +293,7 @@ export const getClientById = async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client not found",
+        message: "Cliente no encontrado",
       });
     }
 
@@ -328,7 +328,7 @@ export const updateClient = async (req, res) => {
       if (!validGenders.includes(gender.toLowerCase())) {
         return res.status(400).json({
           success: false,
-          message: "Gender must be: masculino, femenino, or otro",
+          message: "El género debe ser: masculino, femenino u otro",
         });
       }
       updateData.gender = gender.toLowerCase();
@@ -357,7 +357,7 @@ export const updateClient = async (req, res) => {
       if (existingClient) {
         return res.status(400).json({
           success: false,
-          message: "Phone number already exists",
+          message: "Este número de teléfono ya está registrado en otro cliente",
         });
       }
     }
@@ -368,7 +368,7 @@ export const updateClient = async (req, res) => {
       if (!client) {
         return res.status(404).json({
           success: false,
-          message: "Client not found",
+          message: "Cliente no encontrado",
         });
       }
 
@@ -380,7 +380,7 @@ export const updateClient = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: "Client updated successfully",
+        message: "Cliente actualizado correctamente",
         data: {
           client: {
             ...populatedClient.toObject(),
@@ -402,13 +402,13 @@ export const updateClient = async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client not found",
+        message: "Cliente no encontrado",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Client updated successfully",
+      message: "Cliente actualizado correctamente",
       data: {
         client: {
           ...client.toObject(),
@@ -435,13 +435,13 @@ export const deleteClient = async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client not found",
+        message: "Cliente no encontrado",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Client deactivated successfully",
+      message: "Cliente desactivado correctamente",
       data: client,
     });
   } catch (error) {
@@ -463,13 +463,13 @@ export const activateClient = async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client not found",
+        message: "Cliente no encontrado",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Client activated successfully",
+      message: "Cliente activado correctamente",
       data: client,
     });
   } catch (error) {
@@ -487,7 +487,7 @@ export const addPointsToClient = async (req, res) => {
     if (!points || points <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Points must be a positive number",
+        message: "Los puntos deben ser un número positivo",
       });
     }
 
@@ -496,7 +496,7 @@ export const addPointsToClient = async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client not found",
+        message: "Cliente no encontrado",
       });
     }
 
@@ -504,7 +504,7 @@ export const addPointsToClient = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Points added successfully",
+      message: "Puntos agregados correctamente",
       data: {
         client: {
           ...client.toObject(),
@@ -527,7 +527,7 @@ export const usePointsFromClient = async (req, res) => {
     if (!points || points <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Points must be a positive number",
+        message: "Los puntos deben ser un número positivo",
       });
     }
 
@@ -536,7 +536,7 @@ export const usePointsFromClient = async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client not found",
+        message: "Cliente no encontrado",
       });
     }
 
@@ -545,7 +545,7 @@ export const usePointsFromClient = async (req, res) => {
 
       res.status(200).json({
         success: true,
-        message: "Points used successfully",
+        message: "Puntos utilizados correctamente",
         data: {
           client: {
             ...client.toObject(),
@@ -576,7 +576,7 @@ export const getClientPointsHistory = async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client not found",
+        message: "Cliente no encontrado",
       });
     }
 
@@ -616,7 +616,7 @@ export const addCommentToClient = async (req, res) => {
     if (!comentario || !tipo || !usuario) {
       return res.status(400).json({
         success: false,
-        message: "Comentario, tipo, and usuario are required",
+        message: "Comentario, tipo y usuario son requeridos",
       });
     }
 
@@ -624,7 +624,7 @@ export const addCommentToClient = async (req, res) => {
     if (!['positive', 'negative'].includes(tipo.toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: "Tipo must be either 'positive' or 'negative'",
+        message: "El tipo debe ser 'positive' o 'negative'",
       });
     }
 
@@ -632,7 +632,7 @@ export const addCommentToClient = async (req, res) => {
     if (comentario.length > 500) {
       return res.status(400).json({
         success: false,
-        message: "Comentario cannot exceed 500 characters",
+        message: "El comentario no puede exceder los 500 caracteres",
       });
     }
 
@@ -641,7 +641,7 @@ export const addCommentToClient = async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: "Client not found",
+        message: "Cliente no encontrado",
       });
     }
 
@@ -662,7 +662,7 @@ export const addCommentToClient = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Comment added successfully",
+      message: "Comentario agregado correctamente",
       data: {
         client: {
           ...updatedClient.toObject(),
@@ -955,5 +955,20 @@ export const redeemReward = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+export const checkClientNameAvailability = async (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name) {
+      return res.status(400).json({ success: false, message: "Nombre requerido" });
+    }
+    const existing = await Client.findOne({
+      name: { $regex: new RegExp(`^${name}$`, "i") },
+    });
+    res.json({ success: true, available: !existing });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

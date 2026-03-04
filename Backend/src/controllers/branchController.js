@@ -757,7 +757,12 @@ export const getAvailableManagers = async (req, res) => {
     }
 
     // Obtener IDs de gerentes que ya tienen sucursal asignada
-    const branchesWithManagers = await Branch.find({ manager: { $ne: null } }).select("manager");
+    const { companyId } = req.query;
+    const branchFilter = { manager: { $ne: null } };
+    if (companyId) {
+      branchFilter.companyId = companyId;
+    }
+    const branchesWithManagers = await Branch.find(branchFilter).select("manager");
     const assignedManagerIds = branchesWithManagers.map(b => b.manager);
 
     // Buscar gerentes activos que NO estén en la lista de asignados

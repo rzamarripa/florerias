@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Save, UserPlus, X, Loader2 } from "lucide-react";
+import { AlertCircle, Save, UserPlus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Branch, CreateBranchData, Manager } from "../types";
 import { branchesService } from "../services/branches";
@@ -94,6 +94,8 @@ const BranchModal: React.FC<BranchModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   useEffect(() => {
     if (show) {
@@ -174,9 +176,25 @@ const BranchModal: React.FC<BranchModalProps> = ({
     }
   };
 
+  const checkUsername = async (username: string) => {
+    if (!username || username.trim().length < 2) {
+      setUsernameAvailable(null);
+      return;
+    }
+    setCheckingUsername(true);
+    try {
+      const result = await branchesService.checkUsernameAvailability(username.trim());
+      setUsernameAvailable(result.available);
+    } catch {
+      setUsernameAvailable(null);
+    } finally {
+      setCheckingUsername(false);
+    }
+  };
+
   const loadManagers = async () => {
     try {
-      const response = await branchesService.getAvailableManagers();
+      const response = await branchesService.getAvailableManagers(userCompany?._id);
       setManagers(response.data || []);
 
       if (response.message) {
@@ -226,9 +244,11 @@ const BranchModal: React.FC<BranchModalProps> = ({
       deliveryTracking: { shippingLimit: 0 },
     });
     setError(null);
+    setUsernameAvailable(null);
   };
 
   const handleManagerChange = (value: string) => {
+    setUsernameAvailable(null);
     if (value === "" || value === "none") {
       setFormData({
         ...formData,
@@ -266,6 +286,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
   };
 
   const handleClearManager = () => {
+    setUsernameAvailable(null);
     setFormData({
       ...formData,
       managerId: "",
@@ -624,11 +645,29 @@ const BranchModal: React.FC<BranchModalProps> = ({
                     <Input
                       placeholder="Ingresa el nombre de usuario"
                       value={formData.managerData?.username || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        managerData: formData.managerData ? { ...formData.managerData, username: e.target.value } : undefined,
-                      })}
+                      onChange={(e) => {
+                        setUsernameAvailable(null);
+                        setFormData({
+                          ...formData,
+                          managerData: formData.managerData ? { ...formData.managerData, username: e.target.value } : undefined,
+                        });
+                      }}
+                      onBlur={() => {
+                        if (!formData.managerId) {
+                          checkUsername(formData.managerData?.username || "");
+                        }
+                      }}
                     />
+                    {checkingUsername && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Verificando disponibilidad...
+                      </p>
+                    )}
+                    {usernameAvailable === false && !checkingUsername && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> Este nombre de usuario no está disponible
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>
@@ -758,7 +797,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
           <Button variant="outline" onClick={handleClose} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving || loading || !formData.companyId}>
+          <Button onClick={handleSave} disabled={saving || loading || !formData.companyId || usernameAvailable === false || checkingUsername}>
             {saving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

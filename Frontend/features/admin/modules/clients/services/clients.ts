@@ -171,4 +171,11 @@ export const clientsService = {
     const response = await apiCall<any>(`/clients/${clientId}/rewards`);
     return response;
   },
+
+  checkClientNameAvailability: async (name: string): Promise<{ success: boolean; available: boolean }> => {
+    const response = await apiCall<{ success: boolean; available: boolean }>(
+      `/clients/check-name?name=${encodeURIComponent(name)}`
+    );
+    return response as any;
+  },
 };

@@ -12,6 +12,7 @@
     "seed:production": "node seedProduction.js",
     "seed:superadmin": "node seedSuperAdmin.js",
     "seedpages": "node seedPages.js",
+    "mainSeed": "dotenv -e .env.production node seedRoles.js",
     "clear": "node clearCollections.js --force",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -3,6 +3,7 @@ import {
   activateUser,
   assignRoles,
   changePassword,
+  checkUsernameAvailability,
   deleteUser,
   getAllUsers,
   getUserById,
@@ -18,6 +19,7 @@ import { authLimiter } from "../middleware/rateLimiter.js";
 const router = express.Router();
 
 router.get("/", protect, getAllUsers);
+router.get("/check-username", protect, checkUsernameAvailability);
 router.get("/:id", protect, getUserById);
 
 router.post("/register", protect, uploadSingle("image"), registerUser);

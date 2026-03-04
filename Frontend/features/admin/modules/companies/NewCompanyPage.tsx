@@ -31,7 +31,7 @@ import { toast } from "react-toastify";
 import { companiesService } from "./services/companies";
 import { CreateCompanyData, Distributor } from "./types";
 import { legalForms } from "./schemas/companySchema";
-import { uploadCompanyLogo } from "@/services/firebaseStorage";
+
 import { usersService } from "@/features/admin/modules/users/services/users";
 
 const NewCompanyPage: React.FC = () => {
@@ -76,6 +76,8 @@ const NewCompanyPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   useEffect(() => {
     loadDistributors();
@@ -86,6 +88,16 @@ const NewCompanyPage: React.FC = () => {
       loadCompany();
     }
   }, [companyId]);
+
+  const checkUsername = async (value: string) => {
+    if (!value || value.trim().length < 2) { setUsernameAvailable(null); return; }
+    setCheckingUsername(true);
+    try {
+      const result = await usersService.checkUsernameAvailability(value.trim());
+      setUsernameAvailable(result.available);
+    } catch { setUsernameAvailable(null); }
+    finally { setCheckingUsername(false); }
+  };
 
   const loadDistributors = async () => {
     try {
@@ -145,6 +157,7 @@ const NewCompanyPage: React.FC = () => {
   };
 
   const handleDistributorChange = (selectedId: string) => {
+    setUsernameAvailable(null);
     if (selectedId === "") {
       setFormData({
         ...formData,
@@ -192,6 +205,7 @@ const NewCompanyPage: React.FC = () => {
   };
 
   const handleClearDistributor = () => {
+    setUsernameAvailable(null);
     setFormData({
       ...formData,
       administratorId: "",
@@ -366,6 +380,7 @@ const NewCompanyPage: React.FC = () => {
         try {
           const savedCompanyId = response.data._id;
 
+          const { uploadCompanyLogo } = await import("@/services/firebaseStorage");
           const logoResult = await uploadCompanyLogo(logoFile, savedCompanyId);
           logoUrl = logoResult.url;
           logoPath = logoResult.path;
@@ -853,7 +868,8 @@ const NewCompanyPage: React.FC = () => {
                   type="text"
                   placeholder="Ingresa el nombre de usuario"
                   value={formData.administratorData?.username || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setUsernameAvailable(null);
                     setFormData({
                       ...formData,
                       administratorData: formData.administratorData
@@ -862,10 +878,15 @@ const NewCompanyPage: React.FC = () => {
                             username: e.target.value,
                           }
                         : undefined,
-                    })
-                  }
+                    });
+                  }}
+                  onBlur={() => {
+                    if (!formData.administratorId) checkUsername(formData.administratorData?.username || "");
+                  }}
                   className="py-2"
                 />
+                {checkingUsername && <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Verificando disponibilidad...</p>}
+                {usernameAvailable === false && !checkingUsername && <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Este nombre de usuario no está disponible</p>}
               </div>
 
               {/* Role - Always Administrator */}
@@ -1036,7 +1057,7 @@ const NewCompanyPage: React.FC = () => {
             type="submit"
             variant="default"
             size="lg"
-            disabled={loading || uploadingLogo}
+            disabled={loading || uploadingLogo || usernameAvailable === false || checkingUsername}
             className="flex items-center gap-2 px-5"
           >
             <Save size={18} />
