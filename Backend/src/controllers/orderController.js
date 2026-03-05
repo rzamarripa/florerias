@@ -365,7 +365,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    if (!salesChannelId) {
+    if (!salesChannelId && !req.body.isSocialMediaOrder) {
       return res.status(400).json({
         success: false,
         message: 'El canal de ventas es obligatorio'
@@ -712,7 +712,7 @@ const createOrder = async (req, res) => {
       cashRegisterId: cashRegisterId || null,
       cashier: req.user._id, // Guardar el ID del usuario (cajero) que crea la orden
       clientInfo,
-      salesChannelId: salesChannelId, // ID del canal de ventas (requerido)
+      salesChannelId: salesChannelId || null,
       items,
       shippingType: shippingType || 'tienda',
       anonymous: anonymous || false,

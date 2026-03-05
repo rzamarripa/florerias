@@ -5,8 +5,8 @@ import { author, currentYear } from "@/helpers";
 import { useUserModulesStore } from "@/stores/userModulesStore";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores/userSessionStore";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,18 @@ import loginBg from "@/assets/images/login-bg.png";
 
 const SignInPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
+
+  useEffect(() => {
+    if (searchParams.get("demo") === "true") {
+      setFormData({ username: "demo", password: "123qwe" });
+    }
+  }, [searchParams]);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);

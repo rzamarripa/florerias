@@ -317,7 +317,7 @@ const NewOrderPage = () => {
     if (isSocialMedia) {
       setFormData((prev) => ({
         ...prev,
-        shippingType: "redes_sociales",
+        shippingType: "tienda",
         isSocialMediaOrder: true,
         socialMedia: "whatsapp", // Valor por defecto
       }));
@@ -1189,8 +1189,8 @@ const NewOrderPage = () => {
         throw new Error("Debes seleccionar un método de pago");
       }
 
-      // Validar que se haya seleccionado un canal de ventas
-      if (!formData.salesChannelId) {
+      // Validar que se haya seleccionado un canal de ventas (no aplica para Redes)
+      if (!formData.salesChannelId && !isSocialMedia) {
         throw new Error("Debes seleccionar un canal de ventas");
       }
 
@@ -1352,7 +1352,7 @@ const NewOrderPage = () => {
           },
           salesChannelId: "", // Resetear canal de ventas
           items: [],
-          shippingType: isSocialMedia ? "redes_sociales" : "tienda",
+          shippingType: "tienda",
           anonymous: false,
           quickSale: false,
           deliveryData: {

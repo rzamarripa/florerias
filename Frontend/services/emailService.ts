@@ -35,7 +35,8 @@ export const isValidEmail = (email: string): boolean => {
 export const generateOrderEmailHTML = (
   orderNumber: string,
   clientName: string,
-  ticketType: 'sale' | 'delivery' = 'sale'
+  ticketType: 'sale' | 'delivery' = 'sale',
+  companyName: string = 'Empresa'
 ): string => {
   const baseStyles = `
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -100,7 +101,7 @@ export const generateOrderEmailHTML = (
       <div style="${baseStyles}">
         <div style="${containerStyles}">
           <div style="${logoStyles}">
-            🌸 Zolt Florería 🌸
+            🌸 ${companyName} 🌸
           </div>
           <h2 style="${headerStyles}">¡Gracias por tu compra, ${clientName}!</h2>
           
@@ -124,7 +125,7 @@ export const generateOrderEmailHTML = (
           </div>
           
           <div style="${footerStyles}">
-            <p><strong>Zolt Florería</strong> 💜</p>
+            <p><strong>${companyName}</strong> 💜</p>
             <p style="font-size: 12px; color: #999;">
               Este es un correo automático, por favor no respondas a este mensaje.
             </p>
@@ -137,7 +138,7 @@ export const generateOrderEmailHTML = (
       <div style="${baseStyles}">
         <div style="${containerStyles}">
           <div style="${logoStyles}">
-            🚚 Zolt Florería - Envío 🚚
+            🚚 ${companyName} - Envío 🚚
           </div>
           <h2 style="${headerStyles}">Orden de envío lista, ${clientName}</h2>
           
@@ -161,7 +162,7 @@ export const generateOrderEmailHTML = (
           </div>
           
           <div style="${footerStyles}">
-            <p><strong>Zolt Florería</strong> 💜</p>
+            <p><strong>${companyName}</strong> 💜</p>
             <p style="font-size: 12px; color: #999;">
               Este es un correo automático, por favor no respondas a este mensaje.
             </p>
@@ -178,7 +179,8 @@ export const generateOrderEmailHTML = (
 export const generateOrderEmailText = (
   orderNumber: string,
   clientName: string,
-  ticketType: 'sale' | 'delivery' = 'sale'
+  ticketType: 'sale' | 'delivery' = 'sale',
+  companyName: string = 'Empresa'
 ): string => {
   if (ticketType === 'sale') {
     return `Hola ${clientName}! 🌸
@@ -194,7 +196,7 @@ Hemos recibido tu pedido y lo estamos preparando con mucho cariño.
 
 ¡Gracias por tu preferencia!
 
-Zolt Florería 💜`;
+${companyName} 💜`;
   } else {
     return `Hola ${clientName}! 🚚
 
@@ -207,40 +209,7 @@ Información importante:
 - Te contactaremos al acercarse
 - Tu arreglo llegará fresco y hermoso
 
-Zolt Florería 💜`;
-  }
-};
-
-/**
- * Descarga una imagen desde URL y la convierte a Base64
- */
-const downloadImageAsBase64 = async (imageUrl: string): Promise<string> => {
-  try {
-    console.log('📥 Descargando imagen desde:', imageUrl);
-    
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const blob = await response.blob();
-    console.log('📁 Imagen descargada, tamaño:', blob.size, 'bytes');
-    
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result as string;
-        // Remover el prefijo data:image/...;base64,
-        const base64Content = base64.split(',')[1];
-        console.log('🔄 Imagen convertida a Base64, tamaño:', base64Content.length, 'caracteres');
-        resolve(base64Content);
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error('❌ Error descargando imagen:', error);
-    throw error;
+${companyName} 💜`;
   }
 };
 
@@ -252,13 +221,15 @@ export const sendOrderEmail = async ({
   orderNumber,
   clientName,
   ticketType = 'sale',
-  ticketImageUrl
+  ticketImageUrl,
+  companyName = 'Empresa'
 }: {
   to: string;
   orderNumber: string;
   clientName: string;
   ticketType?: 'sale' | 'delivery';
   ticketImageUrl?: string;
+  companyName?: string;
 }): Promise<EmailResponse> => {
   try {
     console.log('🚀 Email Service - Iniciando envío de email');
@@ -274,55 +245,12 @@ export const sendOrderEmail = async ({
     }
 
     // Generar el contenido del email
-    const subject = ticketType === 'sale' 
-      ? `✨ Confirmación de tu orden #${orderNumber} - Zolt Florería`
-      : `🚚 Tu envío #${orderNumber} está en camino - Zolt Florería`;
-    
-    const html = generateOrderEmailHTML(orderNumber, clientName, ticketType);
-    const text = generateOrderEmailText(orderNumber, clientName, ticketType);
+    const subject = ticketType === 'sale'
+      ? `✨ Confirmación de tu orden #${orderNumber} - ${companyName}`
+      : `🚚 Tu envío #${orderNumber} está en camino - ${companyName}`;
 
-    // Preparar attachments si hay imagen o HTML del ticket
-    let attachments: EmailAttachment[] | undefined;
-    
-    if (ticketImageUrl) {
-      try {
-        // Detectar si es HTML o imagen
-        const isHtml = ticketImageUrl.includes('.html');
-        
-        if (isHtml) {
-          console.log('📄 Procesando HTML del ticket...');
-          // Descargar el HTML y adjuntarlo
-          const response = await fetch(ticketImageUrl);
-          const htmlContent = await response.text();
-          
-          // Convertir a base64
-          const base64Content = btoa(unescape(encodeURIComponent(htmlContent)));
-          
-          attachments = [{
-            filename: `ticket_${orderNumber}.html`,
-            content: base64Content,
-            type: 'text/html'
-          }];
-          
-          console.log('✅ HTML del ticket preparado como attachment');
-        } else {
-          console.log('🖼️ Procesando imagen del ticket...');
-          const base64Content = await downloadImageAsBase64(ticketImageUrl);
-          
-          attachments = [{
-            filename: `ticket_${orderNumber}.png`,
-            content: base64Content,
-            type: 'image/png'
-          }];
-          
-          console.log('✅ Imagen del ticket preparada como attachment');
-        }
-      } catch (error) {
-        console.error('⚠️ Error procesando ticket:', error);
-        // Continuar sin attachment en caso de error
-        console.log('📧 Continuando envío sin archivo adjunto');
-      }
-    }
+    const html = generateOrderEmailHTML(orderNumber, clientName, ticketType, companyName);
+    const text = generateOrderEmailText(orderNumber, clientName, ticketType, companyName);
 
     // Preparar el cuerpo de la petición
     const body = {
@@ -330,7 +258,8 @@ export const sendOrderEmail = async ({
       subject,
       html,
       text,
-      ...(attachments && { attachments })
+      ...(ticketImageUrl && { ticketImageUrl }),
+      companyName
     };
 
     console.log('📤 Email Service - Enviando petición al API route');
@@ -396,7 +325,7 @@ export const sendGoogleWalletCard = async ({
   clientNumber,
   points,
   saveUrl,
-  companyName = 'Zolt'
+  companyName = 'Empresa'
 }: {
   to: string;
   clientName: string;
@@ -590,7 +519,7 @@ export const sendAppleWalletCard = async ({
   clientNumber,
   points,
   downloadUrl,
-  companyName = 'Zolt'
+  companyName = 'Empresa'
 }: {
   to: string;
   clientName: string;
@@ -832,7 +761,7 @@ export const sendPasswordResetCode = async ({
   to,
   code,
   userName = 'Usuario',
-  companyName = 'Zolt'
+  companyName = 'Empresa'
 }: {
   to: string;
   code: string;
@@ -1019,7 +948,7 @@ export const sendPasswordResetCode = async ({
 export const sendPasswordChangeConfirmation = async ({
   to,
   userName = 'Usuario',
-  companyName = 'Zolt'
+  companyName = 'Empresa'
 }: {
   to: string;
   userName?: string;

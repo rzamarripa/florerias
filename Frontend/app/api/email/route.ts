@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { to, subject, html, text, replyTo, attachments } = await req.json();
+    const { to, subject, html, text, replyTo, attachments, ticketImageUrl, companyName } = await req.json();
 
     console.log('📨 Email API Route - Request recibido:', {
       timestamp: new Date().toISOString(),
@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
       hasText: !!text,
       replyTo,
       hasAttachments: !!attachments,
-      attachmentsCount: attachments?.length || 0
+      attachmentsCount: attachments?.length || 0,
+      hasTicketImageUrl: !!ticketImageUrl
     });
 
     // Validar campos requeridos
@@ -49,15 +50,49 @@ export async function POST(req: NextRequest) {
     }
 
     // Preparar attachments si existen
-    const resendAttachments = attachments?.map((attachment: any) => ({
+    let resendAttachments = attachments?.map((attachment: any) => ({
       filename: attachment.filename,
-      content: attachment.content, // Base64 content
+      content: attachment.content,
       type: attachment.type || 'application/octet-stream'
     }));
 
+    // Download ticket image server-side if URL provided (avoids CORS issues)
+    if (ticketImageUrl) {
+      try {
+        console.log('📥 Descargando ticket image server-side:', ticketImageUrl);
+        const imgResponse = await fetch(ticketImageUrl);
+        if (!imgResponse.ok) {
+          throw new Error(`HTTP ${imgResponse.status}`);
+        }
+        const arrayBuffer = await imgResponse.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        console.log('✅ Ticket image descargada, tamaño:', buffer.length, 'bytes');
+
+        const orderMatch = subject?.match(/#(\w+)/);
+        const orderNum = orderMatch ? orderMatch[1] : 'order';
+
+        const ticketAttachment = {
+          filename: `ticket_${orderNum}.png`,
+          content: buffer,
+        };
+
+        resendAttachments = resendAttachments
+          ? [...resendAttachments, ticketAttachment]
+          : [ticketAttachment];
+      } catch (imgError: any) {
+        console.error('⚠️ Error descargando ticket image, enviando sin adjunto:', imgError.message);
+      }
+    }
+
     // Enviar email usando Resend
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Zolt Florería <onboarding@resend.dev>', // Usar EMAIL_FROM si está configurado
+      from: (() => {
+        const fromEmail = process.env.EMAIL_FROM?.match(/<(.+)>/)?.[1]
+          || process.env.EMAIL_FROM
+          || 'onboarding@resend.dev';
+        const senderName = companyName || 'Empresa';
+        return `${senderName} <${fromEmail}>`;
+      })(),
       to: Array.isArray(to) ? to : [to],
       subject,
       html: html || undefined,

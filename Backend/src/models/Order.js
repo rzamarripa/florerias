@@ -165,7 +165,8 @@ const orderSchema = new mongoose.Schema({
   salesChannelId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'cv_sales_channel',
-    required: [true, 'El canal de ventas es requerido']
+    required: false,
+    default: null
   },
   items: {
     type: [orderItemSchema],

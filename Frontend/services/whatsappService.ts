@@ -137,7 +137,8 @@ export const sendTicketViaWhatsApp = async ({
 export const generateTicketMessage = (
   orderNumber: string,
   recipientName: string,
-  ticketType: 'sale' | 'delivery' = 'sale'
+  ticketType: 'sale' | 'delivery' = 'sale',
+  companyName: string = 'Empresa'
 ): string => {
   if (ticketType === 'sale') {
     return `Hola ${recipientName}! 🌸
@@ -146,7 +147,7 @@ Tu orden #${orderNumber} ha sido confirmada exitosamente.
 
 Te adjuntamos tu ticket de compra. ¡Gracias por tu preferencia!
 
-Zolt Florería 💜`;
+${companyName} 💜`;
   } else {
     return `Hola ${recipientName}! 🌸
 
@@ -154,6 +155,6 @@ Tu orden de envío #${orderNumber} está lista.
 
 Te adjuntamos el ticket con los detalles de entrega.
 
-Zolt Florería 💜`;
+${companyName} 💜`;
   }
 };

@@ -318,7 +318,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       // Pasar el branchId del formulario para filtrar metodos de pago
       fetchPaymentMethods(formData.branchId);
       fetchNeighborhoods();
-      fetchSalesChannels(formData.branchId);
+      if (!isSocialMedia) {
+        fetchSalesChannels(formData.branchId);
+      }
       if (formData.branchId) {
         fetchClients(formData.branchId);
         fetchDeliveryDrivers(formData.branchId);
@@ -349,7 +351,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     if (show && formData.branchId) {
       fetchClients(formData.branchId);
       fetchDeliveryDrivers(formData.branchId);
-      fetchSalesChannels(formData.branchId);
+      if (!isSocialMedia) {
+        fetchSalesChannels(formData.branchId);
+      }
       // Cargar estado de envíos diarios
       branchesService.getDailyDeliveryStatus(formData.branchId)
         .then((res) => {
@@ -1313,31 +1317,33 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           />
                         </div>
 
-                        {/* Canal de Ventas - Campo obligatorio */}
-                        <div>
-                          <Label className="font-semibold flex items-center gap-1 mb-2">
-                            <Store size={16} />
-                            Canal de Ventas <span className="text-red-500">*</span>
-                          </Label>
-                          <Select
-                            value={formData.salesChannelId}
-                            onValueChange={(value) =>
-                              setFormData((prev) => ({ ...prev, salesChannelId: value }))
-                            }
-                            disabled={loadingSalesChannels}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={loadingSalesChannels ? "Cargando canales..." : "Seleccionar canal de venta..."} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {salesChannels.map((channel) => (
-                                <SelectItem key={channel._id} value={channel._id}>
-                                  {channel.name} ({channel.abbreviation})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* Canal de Ventas - Campo obligatorio (no aplica para Redes) */}
+                        {!isSocialMedia && (
+                          <div>
+                            <Label className="font-semibold flex items-center gap-1 mb-2">
+                              <Store size={16} />
+                              Canal de Ventas <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={formData.salesChannelId}
+                              onValueChange={(value) =>
+                                setFormData((prev) => ({ ...prev, salesChannelId: value }))
+                              }
+                              disabled={loadingSalesChannels}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={loadingSalesChannels ? "Cargando canales..." : "Seleccionar canal de venta..."} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {salesChannels.map((channel) => (
+                                  <SelectItem key={channel._id} value={channel._id}>
+                                    {channel.name} ({channel.abbreviation})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
 
                       </>
                     )}
@@ -1353,50 +1359,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {isSocialMedia ? (
-                      <>
-                        <Alert className="bg-blue-50 border-blue-200">
-                          <AlertDescription>
-                            Como usuario de Redes Sociales, solo puedes crear ordenes de tipo "Redes Sociales"
-                          </AlertDescription>
-                        </Alert>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label className="font-semibold flex items-center gap-1 mb-2">
-                              <Store size={16} />
-                              Tipo de Envio
-                            </Label>
-                            <Input type="text" value="Redes Sociales" disabled className="bg-gray-50" />
-                          </div>
-                          <div>
-                            <Label className="font-semibold flex items-center gap-1 mb-2">
-                              <Store size={16} />
-                              Plataforma
-                            </Label>
-                            <Select
-                              value={formData.socialMedia || "whatsapp"}
-                              onValueChange={(value) => {
-                                const platform = value as "whatsapp" | "facebook" | "instagram";
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  socialMedia: platform,
-                                }));
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                                <SelectItem value="facebook">Facebook</SelectItem>
-                                <SelectItem value="instagram">Instagram</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex flex-wrap gap-4 items-center">
+                    <div className="flex flex-wrap gap-4 items-center">
                         {["envio", "tienda"].map((tipo) => {
                           const isDeliveryLimitReached = tipo === "envio" &&
                             deliveryStatus !== null &&
@@ -1451,6 +1414,32 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                             </label>
                           </div>
                         </div>
+                      </div>
+                    {isSocialMedia && (
+                      <div>
+                        <Label className="font-semibold flex items-center gap-1 mb-2">
+                          <Store size={16} />
+                          Plataforma
+                        </Label>
+                        <Select
+                          value={formData.socialMedia || "whatsapp"}
+                          onValueChange={(value) => {
+                            const platform = value as "whatsapp" | "facebook" | "instagram";
+                            setFormData((prev) => ({
+                              ...prev,
+                              socialMedia: platform,
+                            }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                            <SelectItem value="facebook">Facebook</SelectItem>
+                            <SelectItem value="instagram">Instagram</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
 
@@ -1965,7 +1954,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 uploadingFiles ||
                 formData.items.length === 0 ||
                 !formData.paymentMethod ||
-                !formData.salesChannelId || // Requerir canal de ventas
+                (!formData.salesChannelId && !isSocialMedia) || // Requerir canal de ventas (no aplica para Redes)
                 (!isEcommerceOrder && !cashRegister) || // Solo requerir caja si NO es e-commerce
                 (formData.items.some((item) => item.isProduct === true) && !isEcommerceOrder && !selectedStorageId) || // Solo requerir storage si NO es e-commerce
                 (isSocialMedia && !formData.branchId) ||

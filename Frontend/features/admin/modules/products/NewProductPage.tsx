@@ -509,7 +509,7 @@ const NewProductPage: React.FC = () => {
           </CardHeader>
           <CardContent className="pt-3 pb-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-1">
                 <Label className="font-semibold">
                   Nombre <span className="text-destructive">*</span>
                 </Label>
@@ -525,7 +525,7 @@ const NewProductPage: React.FC = () => {
                 />
               </div>
 
-              <div>
+              <div className="space-y-1">
                 <Label className="font-semibold">Categoría de Producto</Label>
                 <Select
                   value={formData.productCategory || "none"}
@@ -552,7 +552,7 @@ const NewProductPage: React.FC = () => {
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-1">
                 <Label className="font-semibold">
                   Unidad <span className="text-destructive">*</span>
                 </Label>
@@ -578,7 +578,7 @@ const NewProductPage: React.FC = () => {
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-1">
                 <Label className="font-semibold">Orden</Label>
                 <Input
                   type="number"
@@ -594,7 +594,7 @@ const NewProductPage: React.FC = () => {
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div className="space-y-1 md:col-span-2">
                 <Label className="font-semibold">Descripción</Label>
                 <Textarea
                   rows={3}
@@ -619,7 +619,7 @@ const NewProductPage: React.FC = () => {
           </CardHeader>
           <CardContent className="pt-3 pb-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-              <div>
+              <div className="space-y-1">
                 <Label className="font-semibold">Subir Imagen</Label>
                 <Input
                   type="file"
@@ -902,158 +902,155 @@ const NewProductPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Mano de Obra */}
-        <Card className="mb-2 shadow-sm">
-          <CardHeader className="bg-white py-2">
-            <div className="flex items-center gap-2">
-              <Package size={20} className="text-primary" />
-              <h5 className="mb-0 font-bold">Mano de Obra</h5>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-3 pb-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="font-semibold">Tipo de Cálculo</Label>
-                <Select
-                  value={labourType}
-                  onValueChange={(value: "fixed" | "percentage") => {
-                    setLabourType(value);
-                    if (
-                      value === "percentage" &&
-                      totalVenta > 0 &&
-                      formData.labour > 0
-                    ) {
-                      const percentage = (formData.labour / totalVenta) * 100;
-                      setLabourPercentage(parseFloat(percentage.toFixed(2)));
-                    }
-                  }}
-                >
-                  <SelectTrigger className="py-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fixed">Monto Fijo</SelectItem>
-                    <SelectItem value="percentage">Porcentaje</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {labourType === "fixed" ? (
-                <div>
-                  <Label className="font-semibold">Costo de Mano de Obra</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.labour}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        labour: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="py-2"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Ingresa el monto fijo de mano de obra
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <Label className="font-semibold">Porcentaje de Mano de Obra</Label>
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      placeholder="0"
-                      value={labourPercentage}
-                      onChange={(e) => {
-                        const percentage = parseFloat(e.target.value) || 0;
-                        setLabourPercentage(percentage);
-                        const calculatedLabour =
-                          (totalVenta * percentage) / 100;
-                        setFormData({
-                          ...formData,
-                          labour: parseFloat(calculatedLabour.toFixed(2)),
-                        });
-                      }}
-                      className="py-2"
-                    />
-                    <span className="font-bold">%</span>
-                  </div>
-                  {labourPercentage > 0 ? (
-                    <p className="text-sm text-primary font-semibold mt-1">
-                      {labourPercentage}% de ${formatNumber(totalVenta)} = ${formatNumber(formData.labour)}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Ingresa el porcentaje sobre el total de venta de insumos
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Precio de Venta Final */}
+        {/* Mano de Obra + Precio de Venta Final */}
         <Card className="mb-2 shadow-sm">
           <CardHeader className="bg-white py-2">
             <div className="flex items-center gap-2">
               <DollarSign size={20} className="text-primary" />
-              <h5 className="mb-0 font-bold">Precio de Venta Final</h5>
+              <h5 className="mb-0 font-bold">Mano de Obra y Precio Final</h5>
             </div>
           </CardHeader>
           <CardContent className="pt-3 pb-3">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-semibold">Total Insumos</span>
-                <span className="text-sm text-green-600 font-medium">${formatNumber(totalCosto)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-semibold">Mano de Obra</span>
-                <span className="text-sm text-yellow-600 font-medium">${formatNumber(formData.labour)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between items-center">
-                <span className="font-bold">Precio de Venta Final</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-primary">$</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={precioVentaEditable}
-                    onChange={(e) =>
-                      setPrecioVentaEditable(parseFloat(e.target.value) || 0)
-                    }
-                    className="py-2 w-32 text-right font-bold text-primary"
-                  />
-                  {precioVentaEditable !== precioVentaCalculado && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setPrecioVentaEditable(precioVentaCalculado)
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Lado izquierdo: Mano de Obra */}
+              <div className="space-y-3">
+                <h6 className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Mano de Obra</h6>
+                <div className="space-y-1">
+                  <Label className="font-semibold">Tipo de Cálculo</Label>
+                  <Select
+                    value={labourType}
+                    onValueChange={(value: "fixed" | "percentage") => {
+                      setLabourType(value);
+                      if (
+                        value === "percentage" &&
+                        totalVenta > 0 &&
+                        formData.labour > 0
+                      ) {
+                        const percentage = (formData.labour / totalVenta) * 100;
+                        setLabourPercentage(parseFloat(percentage.toFixed(2)));
                       }
-                      title="Resetear al precio calculado"
-                    >
-                      <X size={16} />
-                    </Button>
+                    }}
+                  >
+                    <SelectTrigger className="py-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Monto Fijo</SelectItem>
+                      <SelectItem value="percentage">Porcentaje</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {labourType === "fixed" ? (
+                  <div className="space-y-1">
+                    <Label className="font-semibold">Costo de Mano de Obra</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.labour}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          labour: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="py-2"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Ingresa el monto fijo de mano de obra
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Label className="font-semibold">Porcentaje de Mano de Obra</Label>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="0"
+                        value={labourPercentage}
+                        onChange={(e) => {
+                          const percentage = parseFloat(e.target.value) || 0;
+                          setLabourPercentage(percentage);
+                          const calculatedLabour =
+                            (totalVenta * percentage) / 100;
+                          setFormData({
+                            ...formData,
+                            labour: parseFloat(calculatedLabour.toFixed(2)),
+                          });
+                        }}
+                        className="py-2"
+                      />
+                      <span className="font-bold">%</span>
+                    </div>
+                    {labourPercentage > 0 ? (
+                      <p className="text-sm text-primary font-semibold mt-1">
+                        {labourPercentage}% de ${formatNumber(totalVenta)} = ${formatNumber(formData.labour)}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Ingresa el porcentaje sobre el total de venta de insumos
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Lado derecho: Precio de Venta Final */}
+              <div className="space-y-3">
+                <h6 className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Precio de Venta</h6>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold">Total Insumos</span>
+                    <span className="text-sm text-green-600 font-medium">${formatNumber(totalCosto)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold">Mano de Obra</span>
+                    <span className="text-sm text-yellow-600 font-medium">${formatNumber(formData.labour)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold">Total</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-primary">$</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={precioVentaEditable}
+                        onChange={(e) =>
+                          setPrecioVentaEditable(parseFloat(e.target.value) || 0)
+                        }
+                        className="py-2 w-32 text-right font-bold text-primary"
+                      />
+                      {precioVentaEditable !== precioVentaCalculado && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setPrecioVentaEditable(precioVentaCalculado)
+                          }
+                          title="Resetear al precio calculado"
+                        >
+                          <X size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {precioVentaEditable !== precioVentaCalculado && (
+                    <div className="flex justify-end">
+                      <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">
+                        Ajuste: +${formatNumber(precioVentaEditable - precioVentaCalculado)}
+                      </Badge>
+                    </div>
                   )}
                 </div>
               </div>
-              {precioVentaEditable !== precioVentaCalculado && (
-                <div className="flex justify-end">
-                  <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">
-                    Ajuste: +${formatNumber(precioVentaEditable - precioVentaCalculado)}
-                  </Badge>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>

@@ -37,6 +37,7 @@ import {
 } from '@/services/whatsappService';
 import { toast } from 'react-toastify';
 import { sendOrderEmail } from '@/services/emailService';
+import { useActiveBranchStore } from '@/stores/activeBranchStore';
 
 interface WhatsAppTicketModalProps {
   isOpen: boolean;
@@ -70,6 +71,11 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   deliveryTicketUrl,
   onSuccess,
 }) => {
+  const { activeBranch } = useActiveBranchStore();
+  const companyName = typeof activeBranch?.companyId === 'object'
+    ? activeBranch.companyId.tradeName || activeBranch.companyId.legalName
+    : 'Empresa';
+
   // Estados
   // Checkboxes para cada ticket
   const [sendToClient, setSendToClient] = useState(false);
@@ -272,7 +278,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
             orderNumber
           });
           
-          const message = generateTicketMessage(orderNumber, clientName, 'sale');
+          const message = generateTicketMessage(orderNumber, clientName, 'sale', companyName);
           
           const result = await sendTicketViaWhatsApp({
             phoneNumber: fullPhoneNumber,
@@ -309,7 +315,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
             deliveryDriverName: deliveryDriverName || 'NOMBRE NO DISPONIBLE'
           });
           
-          const message = generateTicketMessage(orderNumber, deliveryDriverName || 'Repartidor', 'delivery');
+          const message = generateTicketMessage(orderNumber, deliveryDriverName || 'Repartidor', 'delivery', companyName);
           
           const result = await sendTicketViaWhatsApp({
             phoneNumber: fullPhoneNumber,
@@ -345,7 +351,8 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
             orderNumber,
             clientName: clientName || 'Cliente',
             ticketType: 'sale',
-            ticketImageUrl: saleTicketUrl // Pasar la URL de la imagen del ticket
+            ticketImageUrl: saleTicketUrl, // Pasar la URL de la imagen del ticket
+            companyName,
           });
 
           if (result.success) {
@@ -621,11 +628,8 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
           {/* Nota informativa */}
           <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-            <AlertDescription className="text-sm space-y-2">
+            <AlertDescription className="text-sm">
               <p>Los tickets se enviarán como imágenes visibles en el chat de WhatsApp.</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                <strong>Nota:</strong> En modo desarrollo, solo los números autorizados en Meta Business Suite pueden recibir mensajes.
-              </p>
             </AlertDescription>
           </Alert>
         </div>
