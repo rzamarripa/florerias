@@ -153,7 +153,7 @@ export default function CompanySalesPage() {
   }, [branchesSales]);
 
   return (
-    <div className="container mx-auto py-1">
+    <div className="py-1">
       {/* Header */}
       <div className="mb-1">
         <div className="flex justify-between items-start">

@@ -146,6 +146,7 @@ export const companiesService = {
         phone: string;
         email: string;
         branchName: string;
+        activeWhatsApp?: boolean;
       }
     }>(`/companies/branch/${branchId}`);
     return response as any;

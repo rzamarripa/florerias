@@ -340,7 +340,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
 
   if (!summary) {
     return (
-      <div className="container mx-auto py-1">
+      <div className="py-1">
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
@@ -360,7 +360,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-1">
+    <div className="py-1">
       {/* Header */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-4">

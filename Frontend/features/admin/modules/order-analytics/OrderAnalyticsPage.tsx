@@ -240,7 +240,7 @@ const OrderAnalyticsPage: React.FC = () => {
   // Loading Skeleton
   if (loading && !dashboardData) {
     return (
-      <div className="container mx-auto py-4">
+      <div className="py-4">
         <div
           className="flex justify-center items-center"
           style={{ minHeight: "400px" }}
@@ -264,7 +264,7 @@ const OrderAnalyticsPage: React.FC = () => {
     dashboardData?.monthlyComparison?.percentageChange?.revenue || 0;
 
   return (
-    <div className="container mx-auto py-4 px-4">
+    <div className="py-4 px-4">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div>

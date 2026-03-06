@@ -47,7 +47,7 @@ const FinancePage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-4 px-4">
+    <div className="py-4 px-4">
       {/* Header */}
       <PageHeader
         title="Finanzas"
@@ -67,29 +67,29 @@ const FinancePage: React.FC = () => {
       <Card className="shadow-sm rounded-[15px]">
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="px-4 pt-3 border-b-2 border-muted">
+            <div className="px-4 pt-3 border-b">
               <TabsList className="bg-transparent h-auto p-0 gap-0">
                 <TabsTrigger
                   value="pagos-realizados"
-                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   Pagos Realizados
                 </TabsTrigger>
                 <TabsTrigger
                   value="ventas-descuento"
-                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   Ventas con Descuento
                 </TabsTrigger>
                 <TabsTrigger
                   value="compras"
-                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   Compras
                 </TabsTrigger>
                 <TabsTrigger
                   value="gastos"
-                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   Gastos
                 </TabsTrigger>

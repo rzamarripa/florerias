@@ -135,7 +135,7 @@ const SocialMediaCashRegistersPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-4">
+    <div className="py-4">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div>

@@ -575,7 +575,7 @@ const SalesPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-2 px-4">
+    <div className="py-2 px-4">
       {/* Header */}
       <div className="mb-2">
         <div className="flex justify-between items-start">

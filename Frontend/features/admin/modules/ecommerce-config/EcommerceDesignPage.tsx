@@ -604,17 +604,19 @@ export default function EcommerceDesignPage() {
           <CardContent className="p-0 flex flex-col h-full">
             <Tabs value={activeKey} onValueChange={setActiveKey} className="flex flex-col h-full">
               {/* Tabs Navigation */}
-              <TabsList className="w-full justify-start rounded-none border-b bg-transparent h-auto p-0">
+              <div className="px-4 pt-3 border-b">
+              <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-0">
                 {tabs.map((tab) => (
                   <TabsTrigger
                     key={tab.key}
                     value={tab.key}
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
                     {tab.label}
                   </TabsTrigger>
                 ))}
               </TabsList>
+              </div>
 
               {/* Tab Content */}
               <div className="p-4 overflow-auto flex-grow">

@@ -25,8 +25,6 @@ import {
   Calendar,
   MapPinHouse,
   LogOut,
-  LockKeyhole,
-  HelpCircle,
   ChartPie,
   Box,
   Stars,
@@ -45,17 +43,7 @@ export interface UserDropdownItem {
 }
 
 export const userDropdownItems: UserDropdownItem[] = [
-  { label: "Bienvenido!", isHeader: true },
-  { label: "Mi cuenta", url: "/pages/profile", icon: User, class: "" },
-  { label: "Configuración", url: "/pages/setting", icon: Settings, class: "" },
-  { label: "Soporte", url: "/pages/support", icon: HelpCircle, class: "" },
-  { isDivider: true, label: "" },
-  {
-    label: "Cambiar contraseña",
-    url: "/pages/change-password",
-    icon: LockKeyhole,
-    class: "",
-  },
+  { label: "Mi cuenta", url: "/mi-cuenta", icon: User, class: "" },
   { isDivider: true, label: "" },
   {
     label: "Cerrar sesión",

@@ -195,7 +195,7 @@ const ProductionListPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-2">
+    <div className="py-2">
       {/* Header */}
       <div className="mb-3">
         <div className="flex justify-between items-start">
@@ -263,24 +263,24 @@ const ProductionListPage: React.FC = () => {
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="px-3 pt-2 border-b">
-              <TabsList className="bg-transparent">
+              <TabsList className="bg-transparent h-auto p-0 gap-0">
                 <TabsTrigger
                   value="hoy"
-                  className="px-4 py-2 font-semibold flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="px-4 py-2 font-semibold flex items-center gap-1 rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   <CalendarDays size={14} />
                   Hoy
                 </TabsTrigger>
                 <TabsTrigger
                   value="manana"
-                  className="px-4 py-2 font-semibold flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="px-4 py-2 font-semibold flex items-center gap-1 rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   <Calendar size={14} />
                   Manana
                 </TabsTrigger>
                 <TabsTrigger
                   value="posteriores"
-                  className="px-4 py-2 font-semibold flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="px-4 py-2 font-semibold flex items-center gap-1 rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   <CalendarDays size={14} />
                   Posteriores

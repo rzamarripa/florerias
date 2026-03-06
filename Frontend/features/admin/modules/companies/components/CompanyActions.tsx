@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Edit2, CheckCircle, XCircle, Building2, Loader2, MessageSquare } from "lucide-react";
+import { Edit2, CheckCircle, XCircle, Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { companiesService } from "../services/companies";
 import { Company } from "../types";
 import BranchesModal from "./BranchesModal";
-import WhatsAppConfigModal from "./WhatsAppConfigModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
   const router = useRouter();
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [showBranchesModal, setShowBranchesModal] = useState<boolean>(false);
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState<boolean>(false);
   const { getIsAdmin } = useUserRoleStore();
 
   const handleEdit = () => {
@@ -109,19 +107,6 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
           </Button>
         )}
 
-        {/* WhatsApp Config Button - Solo visible si activeWhatsApp y es Admin */}
-        {company.activeWhatsApp && getIsAdmin() && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setShowWhatsAppModal(true)}
-            title="Configuración WhatsApp"
-          >
-            <MessageSquare className="h-4 w-4 text-green-600" />
-          </Button>
-        )}
-
       </div>
 
       {/* Branches Modal */}
@@ -131,16 +116,6 @@ const CompanyActions: React.FC<CompanyActionsProps> = ({
           onHide={handleCloseBranchesModal}
           company={company}
           onBranchesUpdated={onCompanyUpdated}
-        />
-      )}
-
-      {/* WhatsApp Config Modal */}
-      {company.activeWhatsApp && getIsAdmin() && (
-        <WhatsAppConfigModal
-          show={showWhatsAppModal}
-          onHide={() => setShowWhatsAppModal(false)}
-          company={company}
-          onCallback={onCompanyUpdated}
         />
       )}
 

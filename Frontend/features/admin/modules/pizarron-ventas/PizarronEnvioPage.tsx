@@ -251,7 +251,7 @@ const PizarronEnvioPage: React.FC = () => {
     : 0;
 
   return (
-    <div className="container mx-auto py-1 px-4">
+    <div className="py-1 px-4">
       {/* Header */}
       <div className="mb-2">
         <h2 className="font-bold text-2xl mb-1">Pizarron de Envio</h2>

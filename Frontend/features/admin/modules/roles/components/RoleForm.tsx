@@ -104,7 +104,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ roleId, onSave }) => {
   };
 
   return (
-    <div className="container mx-auto">
+    <div>
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card>
           <CardHeader>

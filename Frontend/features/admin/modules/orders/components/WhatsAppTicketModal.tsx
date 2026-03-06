@@ -55,6 +55,7 @@ interface WhatsAppTicketModalProps {
   deliveryDriverPhone?: string;
   deliveryTicketUrl?: string;
   
+  activeWhatsApp?: boolean;
   onSuccess?: () => void;
 }
 
@@ -69,6 +70,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   deliveryDriverName = '',
   deliveryDriverPhone = '',
   deliveryTicketUrl,
+  activeWhatsApp = false,
   onSuccess,
 }) => {
   const { activeBranch } = useActiveBranchStore();
@@ -139,8 +141,8 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
       }
       
       // Activar checkboxes según tickets disponibles
-      setSendToClient(!!saleTicketUrl && !!clientPhone);
-      setSendToDriver(!!deliveryTicketUrl && !!deliveryDriverPhone);
+      setSendToClient(activeWhatsApp && !!saleTicketUrl && !!clientPhone);
+      setSendToDriver(activeWhatsApp && !!deliveryTicketUrl && !!deliveryDriverPhone);
       setSendEmailToClient(!!clientEmail); // Activar email si el cliente tiene email
       
       // Si hay número de cliente, procesarlo
@@ -430,12 +432,13 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
           {/* Opción 1: Enviar ticket de venta al cliente */}
           {saleTicketUrl && (
-            <div className="border rounded-lg p-4 space-y-3">
+            <div className={`border rounded-lg p-4 space-y-3 ${!activeWhatsApp ? 'opacity-50' : ''}`}>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="sendToClient"
                   checked={sendToClient}
                   onCheckedChange={(checked) => setSendToClient(checked as boolean)}
+                  disabled={!activeWhatsApp}
                 />
                 <Label
                   htmlFor="sendToClient"
@@ -444,7 +447,10 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                   Enviar ticket de venta al cliente (Imagen)
                 </Label>
               </div>
-              
+              {!activeWhatsApp && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">WhatsApp no está activo para esta empresa</p>
+              )}
+
               {sendToClient && (
                 <div className="pl-6 space-y-3">
                   {/* Selector de país para cliente */}
@@ -506,12 +512,13 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
 
           {/* Opción 2: Enviar ticket de envío al repartidor */}
           {deliveryTicketUrl && (
-            <div className="border rounded-lg p-4 space-y-3">
+            <div className={`border rounded-lg p-4 space-y-3 ${!activeWhatsApp ? 'opacity-50' : ''}`}>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="sendToDriver"
                   checked={sendToDriver}
                   onCheckedChange={(checked) => setSendToDriver(checked as boolean)}
+                  disabled={!activeWhatsApp}
                 />
                 <Label
                   htmlFor="sendToDriver"
@@ -520,7 +527,10 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
                   Enviar ticket de envío al repartidor
                 </Label>
               </div>
-              
+              {!activeWhatsApp && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">WhatsApp no está activo para esta empresa</p>
+              )}
+
               {sendToDriver && (
                 <div className="pl-6 space-y-3">
                   {/* Selector de país para repartidor */}

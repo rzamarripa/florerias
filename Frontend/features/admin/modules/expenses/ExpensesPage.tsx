@@ -64,13 +64,13 @@ const ExpensesPage: React.FC = () => {
               <TabsList className="bg-transparent h-auto p-0 gap-0">
                 <TabsTrigger
                   value="check_transfer"
-                  className="px-4 py-2 font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none data-[state=active]:bg-transparent"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   Cheque / Transferencia
                 </TabsTrigger>
                 <TabsTrigger
                   value="petty_cash"
-                  className="px-4 py-2 font-medium data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none data-[state=active]:bg-transparent"
+                  className="px-4 py-2 font-semibold rounded-none border-b-2 border-b-transparent data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   Caja Chica
                 </TabsTrigger>

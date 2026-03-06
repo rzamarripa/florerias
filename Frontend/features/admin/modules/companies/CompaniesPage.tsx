@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { companiesService } from "./services/companies";
 import { Company } from "./types";
 import CompanyActions from "./components/CompanyActions";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ import { PageHeader } from "@/components/ui/page-header";
 
 const CompaniesPage: React.FC = () => {
   const router = useRouter();
+  const { getIsSuperAdmin } = useUserRoleStore();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -118,11 +120,11 @@ const CompaniesPage: React.FC = () => {
       <PageHeader
         title="Empresas"
         description="Gestiona las empresas del sistema"
-        action={{
+        action={getIsSuperAdmin() ? {
           label: "Nueva Empresa",
           icon: <Plus className="h-4 w-4" />,
           onClick: handleNewCompany,
-        }}
+        } : undefined}
       />
 
       {/* Filters & Table */}

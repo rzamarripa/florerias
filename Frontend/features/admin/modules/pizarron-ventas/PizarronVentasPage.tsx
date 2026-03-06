@@ -437,7 +437,7 @@ const PizarronVentasPage: React.FC = () => {
   const hasShippingStages = shippingStages && shippingStages.length > 0;
 
   return (
-    <div className="container mx-auto py-1">
+    <div className="py-1">
       {/* Header */}
       <div className="mb-2">
         <h2 className="font-bold mb-1 text-xl">Pizarron de Produccion</h2>

@@ -191,7 +191,7 @@ const BuysPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-2">
+    <div className="py-2">
       {/* Header */}
       <div className="flex justify-between items-center mb-2">
         <div>

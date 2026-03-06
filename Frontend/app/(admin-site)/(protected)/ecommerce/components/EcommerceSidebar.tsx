@@ -178,7 +178,7 @@ export function EcommerceSidebar({ ...props }: React.ComponentProps<typeof Sideb
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/dashboard">
+              <Link href="/ecommerce/dashboard">
                 <div className="flex aspect-square size-8 items-center justify-center">
                   <Image
                     src={logoSm.src}

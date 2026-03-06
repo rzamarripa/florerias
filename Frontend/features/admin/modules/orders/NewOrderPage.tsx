@@ -91,6 +91,7 @@ const NewOrderPage = () => {
     deliveryDriverName?: string;
     deliveryDriverPhone?: string;
     deliveryTicketUrl?: string;
+    activeWhatsApp?: boolean;
   } | null>(null);
 
   const [formData, setFormData] = useState<CreateOrderData>({
@@ -1117,11 +1118,12 @@ const NewOrderPage = () => {
         deliveryPrintWindow.close();
       }
 
-      // 6. Verificar si se puede enviar por WhatsApp
+      // 6. Verificar si se puede enviar por WhatsApp o Email
       const hasWhatsAppData = (orderData.clientInfo.phone && saleTicketUrl) ||
                              (orderData.deliveryDriverDetails && deliveryTicketUrl);
+      const hasEmailData = !!orderData.clientInfo.email;
 
-      if (hasWhatsAppData) {
+      if (hasWhatsAppData || hasEmailData) {
         setWhatsAppTicketData({
           orderNumber: orderData.orderNumber,
           clientName: orderData.clientInfo.name,
@@ -1130,7 +1132,8 @@ const NewOrderPage = () => {
           saleTicketUrl: saleTicketUrl || undefined,
           deliveryDriverName: orderData.deliveryDriverDetails?.name,
           deliveryDriverPhone: orderData.deliveryDriverDetails?.phone,
-          deliveryTicketUrl: deliveryTicketUrl || undefined
+          deliveryTicketUrl: deliveryTicketUrl || undefined,
+          activeWhatsApp: companyResponse.data.activeWhatsApp || false,
         });
         setShowWhatsAppModal(true);
       }
@@ -1659,6 +1662,7 @@ const NewOrderPage = () => {
           deliveryDriverName={whatsAppTicketData.deliveryDriverName}
           deliveryDriverPhone={whatsAppTicketData.deliveryDriverPhone}
           deliveryTicketUrl={whatsAppTicketData.deliveryTicketUrl}
+          activeWhatsApp={whatsAppTicketData.activeWhatsApp}
           onSuccess={() => {
             // Opcional: acciones adicionales después de enviar exitosamente
             console.log('Tickets enviados por WhatsApp exitosamente');

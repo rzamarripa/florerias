@@ -222,6 +222,22 @@ const rolesData = [
       "/sucursal/ventas",
     ],
   },
+  {
+    name: "demo",
+    description: "Rol de demostración con acceso de solo lectura",
+    onlyModules: ["ver"],
+    pages: [
+      "/sucursal/ventas",
+      "/produccion/pizarron-ventas",
+      "/ventas/listado-produccion",
+      "/finanzas/finanzas",
+      "/panel/config-puntos",
+      "/catalogos/etapas",
+      "/catalogos/listas-productos",
+      "/gestion/roles",
+      "/ecommerce/configuracion/diseno",
+    ],
+  },
 ];
 
 // ─── Funciones principales ───────────────────────────────────────────────────

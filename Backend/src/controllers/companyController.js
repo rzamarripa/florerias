@@ -1095,7 +1095,7 @@ export const getCompanyByBranchId = async (req, res) => {
 
     // Buscar la empresa asociada a la sucursal
     const company = await Company.findById(branch.companyId).select(
-      "legalName tradeName rfc fiscalAddress primaryContact logoUrl logoPath"
+      "legalName tradeName rfc fiscalAddress primaryContact logoUrl logoPath activeWhatsApp"
     );
 
     if (!company) {
@@ -1124,6 +1124,7 @@ export const getCompanyByBranchId = async (req, res) => {
       branchName: branch.branchName,
       logoUrl: company.logoUrl || null,
       logoPath: company.logoPath || null,
+      activeWhatsApp: company.activeWhatsApp || false,
     };
 
     res.status(200).json({

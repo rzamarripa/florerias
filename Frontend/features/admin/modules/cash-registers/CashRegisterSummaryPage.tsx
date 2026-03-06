@@ -339,7 +339,7 @@ const CashRegisterSummaryPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-4">
+      <div className="py-4">
         <div className="text-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-muted-foreground mt-3">
@@ -352,7 +352,7 @@ const CashRegisterSummaryPage: React.FC = () => {
 
   if (!summary) {
     return (
-      <div className="container mx-auto py-4">
+      <div className="py-4">
         <div className="text-center py-12">
           <p className="text-muted-foreground">
             No se pudo cargar el resumen de la caja
@@ -366,7 +366,7 @@ const CashRegisterSummaryPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-4">
+    <div className="py-4">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">

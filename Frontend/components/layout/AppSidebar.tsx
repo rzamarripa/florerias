@@ -192,7 +192,7 @@ function NavItem({ item }: { item: MenuItemType }) {
               disabled={item.isDisabled}
             >
               {item.icon && <item.icon />}
-              <span>{item.label}</span>
+              <span title={item.label}>{item.label}</span>
               <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
             </SidebarMenuButton>
           </CollapsibleTrigger>
@@ -209,7 +209,7 @@ function NavItem({ item }: { item: MenuItemType }) {
                     >
                       <Link href={child.url || "#"}>
                         {child.icon && <child.icon />}
-                        <span>{child.label}</span>
+                        <span title={child.label}>{child.label}</span>
                       </Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
@@ -232,7 +232,7 @@ function NavItem({ item }: { item: MenuItemType }) {
       >
         <Link href={item.url || "#"}>
           {item.icon && <item.icon />}
-          <span>{item.label}</span>
+          <span title={item.label}>{item.label}</span>
           {item.badge && (
             <Badge variant="secondary" className="ml-auto">
               {item.badge.text}
