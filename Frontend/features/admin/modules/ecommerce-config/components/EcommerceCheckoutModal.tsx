@@ -59,6 +59,7 @@ const EcommerceCheckoutModal: React.FC<EcommerceCheckoutModalProps> = ({
     deliveryDriverName?: string;
     deliveryDriverPhone?: string;
     deliveryTicketUrl?: string;
+    companyName: string;
   } | null>(null);
 
   // Convertir items del carrito al formato de OrderItem
@@ -429,6 +430,7 @@ const EcommerceCheckoutModal: React.FC<EcommerceCheckoutModalProps> = ({
           deliveryDriverName: orderData.deliveryDriverDetails?.name,
           deliveryDriverPhone: orderData.deliveryDriverDetails?.phone,
           deliveryTicketUrl: deliveryTicketUrl || undefined,
+          companyName: companyResponse.data.companyName,
         });
         setShowWhatsAppModal(true);
       }
@@ -642,6 +644,7 @@ const EcommerceCheckoutModal: React.FC<EcommerceCheckoutModalProps> = ({
           deliveryDriverName={whatsAppTicketData.deliveryDriverName}
           deliveryDriverPhone={whatsAppTicketData.deliveryDriverPhone}
           deliveryTicketUrl={whatsAppTicketData.deliveryTicketUrl}
+          companyName={whatsAppTicketData.companyName}
           onSuccess={() => {
             console.log("Tickets enviados por WhatsApp exitosamente");
           }}

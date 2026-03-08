@@ -199,15 +199,23 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
               <Button
                 variant="default"
                 size="sm"
-                className="w-full flex items-center justify-center gap-2 text-xs font-semibold rounded-lg bg-green-600 hover:bg-green-700"
+                className={`w-full flex items-center justify-center gap-2 text-xs font-semibold rounded-lg ${
+                  order.remainingBalance > 0
+                    ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+                disabled={order.remainingBalance > 0}
                 onClick={(e) => {
-                  e.stopPropagation(); // Evitar que se abra el modal de detalles
+                  e.stopPropagation();
                   onFinalizeOrder(order);
                 }}
-                title="Finalizar entrega de la orden"
+                title={order.remainingBalance > 0 ? "La orden tiene saldo pendiente" : "Finalizar entrega de la orden"}
               >
-                <CheckCircle size={16} />
-                Finalizar
+                {order.remainingBalance > 0 ? (
+                  <>Saldo pendiente</>
+                ) : (
+                  <><CheckCircle size={16} /> Finalizar</>
+                )}
               </Button>
             </div>
           )}

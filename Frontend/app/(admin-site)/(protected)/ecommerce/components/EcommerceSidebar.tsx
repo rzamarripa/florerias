@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Settings } from "lucide-react";
+import { ArrowLeft, Settings } from "lucide-react";
 import { TbBuildingStore } from "react-icons/tb";
 
 import {
@@ -33,6 +33,8 @@ import { ecommerceMenuItems, userDropdownItems } from "@/config/constants";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 import { useUserSessionStore } from "@/stores";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
+import { useUserModulesStore } from "@/stores/userModulesStore";
+import { getFirstAvailableRoute } from "@/utils/menuBuilder";
 
 import logoSm from "@/assets/images/logo-sm.png";
 import { Fragment, useState } from "react";
@@ -148,6 +150,19 @@ function NavUser() {
 
 export function EcommerceSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const { role } = useUserRoleStore();
+  const { allowedModules } = useUserModulesStore();
+
+  const mainPanelRoute = React.useMemo(() => {
+    const roleLower = role?.toLowerCase();
+    if (roleLower === "super admin" || roleLower === "superadmin") {
+      return "/gestion/roles";
+    }
+    if (roleLower === "distribuidor") {
+      return "/gestion/empresas";
+    }
+    return getFirstAvailableRoute(allowedModules, false, role);
+  }, [role, allowedModules]);
 
   // Group menu items by title sections
   const groupedItems = React.useMemo(() => {
@@ -194,6 +209,14 @@ export function EcommerceSidebar({ ...props }: React.ComponentProps<typeof Sideb
                     Configuración
                   </span>
                 </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Volver al Panel">
+              <Link href={mainPanelRoute} className="text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="size-4" />
+                <span>Volver al Panel</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

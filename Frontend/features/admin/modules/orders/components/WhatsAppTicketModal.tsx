@@ -37,24 +37,23 @@ import {
 } from '@/services/whatsappService';
 import { toast } from 'react-toastify';
 import { sendOrderEmail } from '@/services/emailService';
-import { useActiveBranchStore } from '@/stores/activeBranchStore';
-
 interface WhatsAppTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
   orderNumber: string;
-  
+  companyName: string;
+
   // Sale ticket data
   clientName?: string;
   clientPhone?: string;
   clientEmail?: string;
   saleTicketUrl?: string;
-  
+
   // Delivery ticket data
   deliveryDriverName?: string;
   deliveryDriverPhone?: string;
   deliveryTicketUrl?: string;
-  
+
   activeWhatsApp?: boolean;
   onSuccess?: () => void;
 }
@@ -63,6 +62,7 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   isOpen,
   onClose,
   orderNumber,
+  companyName,
   clientName = '',
   clientPhone = '',
   clientEmail = '',
@@ -73,10 +73,6 @@ const WhatsAppTicketModal: React.FC<WhatsAppTicketModalProps> = ({
   activeWhatsApp = false,
   onSuccess,
 }) => {
-  const { activeBranch } = useActiveBranchStore();
-  const companyName = typeof activeBranch?.companyId === 'object'
-    ? activeBranch.companyId.tradeName || activeBranch.companyId.legalName
-    : 'Empresa';
 
   // Estados
   // Checkboxes para cada ticket
