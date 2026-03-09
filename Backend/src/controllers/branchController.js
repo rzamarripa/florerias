@@ -57,23 +57,52 @@ export const createBranch = async (req, res) => {
       });
     }
 
-    // Verificar que el branchCode sea único si se proporciona
+    // Verificar que branchCode sea único dentro de la empresa (si se proporciona)
     if (branchCode) {
-      const existingBranch = await Branch.findOne({ branchCode });
-      if (existingBranch) {
+      const existingByCode = await Branch.findOne({ branchCode, companyId });
+      if (existingByCode) {
         return res.status(400).json({
           success: false,
-          message: "Ya existe una sucursal con este código",
+          message: "Ya existe una sucursal con este código en la empresa",
         });
       }
     }
 
-    let finalManagerId = managerId;
+    // Verificar que branchName sea único dentro de la empresa
+    const existingByName = await Branch.findOne({ branchName, companyId });
+    if (existingByName) {
+      return res.status(400).json({
+        success: false,
+        message: "Ya existe una sucursal con este nombre en la empresa",
+      });
+    }
 
-    // Si no se proporciona managerId, crear un nuevo usuario gerente
+    // Verificar que rfc sea único dentro de la empresa
+    const existingByRfc = await Branch.findOne({ rfc, companyId });
+    if (existingByRfc) {
+      return res.status(400).json({
+        success: false,
+        message: "Ya existe una sucursal con este RFC en la empresa",
+      });
+    }
+
+    let finalManagerId = managerId;
+    let needsNewManager = false;
+    let managerRole = null;
+
+    // Validaciones previas del manager (sin crear usuario aún)
     if (!managerId && managerData) {
+      // Verificar que el username no esté en uso (global)
+      const existingUser = await User.findOne({ username: managerData.username });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: "El nombre de usuario del gerente ya está en uso",
+        });
+      }
+
       // Buscar el rol de Gerente
-      const managerRole = await Role.findOne({ name: /^Gerente$/i });
+      managerRole = await Role.findOne({ name: /^Gerente$/i });
       if (!managerRole) {
         return res.status(400).json({
           success: false,
@@ -81,22 +110,8 @@ export const createBranch = async (req, res) => {
         });
       }
 
-      // Crear el nuevo usuario gerente
-      const newManager = await User.create({
-        username: managerData.username,
-        email: managerData.email,
-        phone: managerData.phone,
-        password: managerData.password,
-        profile: {
-          name: managerData.profile.name,
-          lastName: managerData.profile.lastName,
-          fullName: `${managerData.profile.name} ${managerData.profile.lastName}`,
-          estatus: true,
-        },
-        role: managerRole._id,
-      });
-
-      finalManagerId = newManager._id;
+      needsNewManager = true;
+      finalManagerId = undefined; // Se creará después de la sucursal
     } else if (managerId) {
       // Verificar que el usuario existe y tiene rol de gerente
       const managerUser = await User.findById(managerId).populate("role");
@@ -140,6 +155,7 @@ export const createBranch = async (req, res) => {
       }
     }
 
+    // Crear la sucursal PRIMERO (sin manager si es nuevo)
     const branch = await Branch.create({
       branchName,
       branchCode,
@@ -159,6 +175,32 @@ export const createBranch = async (req, res) => {
       employees: employees || [],
     });
 
+    // DESPUÉS crear el nuevo usuario gerente y asignarlo a la sucursal
+    if (needsNewManager) {
+      try {
+        const newManager = await User.create({
+          username: managerData.username,
+          email: managerData.email,
+          phone: managerData.phone,
+          password: managerData.password,
+          profile: {
+            name: managerData.profile.name,
+            lastName: managerData.profile.lastName,
+            fullName: `${managerData.profile.name} ${managerData.profile.lastName}`,
+            estatus: true,
+          },
+          role: managerRole._id,
+        });
+
+        branch.manager = newManager._id;
+        await branch.save();
+      } catch (managerError) {
+        // Si falla la creación del manager, eliminar la sucursal para no dejarla huérfana
+        await Branch.findByIdAndDelete(branch._id);
+        throw managerError;
+      }
+    }
+
     // Agregar la sucursal al array de branches de la empresa
     await Company.findByIdAndUpdate(companyId, {
       $push: { branches: branch._id },
@@ -177,10 +219,16 @@ export const createBranch = async (req, res) => {
     });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "Ya existe una sucursal con este código",
-      });
+      const duplicateField = Object.keys(error.keyPattern || {})[0];
+      const fieldMessages = {
+        branchCode: "Ya existe una sucursal con este código",
+        branchName: "Ya existe una sucursal con este nombre",
+        rfc: "Ya existe una sucursal con este RFC",
+        username: "El nombre de usuario del gerente ya está en uso",
+      };
+      const message = fieldMessages[duplicateField] || `El campo "${duplicateField}" ya está en uso`;
+      console.log(message);
+      return res.status(400).json({ success: false, message });
     }
 
     res.status(500).json({
@@ -373,17 +421,61 @@ export const updateBranch = async (req, res) => {
       deliveryTracking,
     } = req.body;
 
-    // Si se está actualizando el branchCode, verificar que no exista en otra sucursal
+    // Obtener la sucursal actual para conocer su companyId
+    const currentBranch = await Branch.findById(req.params.id);
+    if (!currentBranch) {
+      return res.status(404).json({
+        success: false,
+        message: "Sucursal no encontrada",
+      });
+    }
+
+    const currentCompanyId = currentBranch.companyId;
+
+    // Si se está actualizando el branchCode, verificar que no exista en otra sucursal de la misma empresa
     if (branchCode) {
-      const existingBranch = await Branch.findOne({
+      const existingByCode = await Branch.findOne({
         branchCode,
+        companyId: currentCompanyId,
         _id: { $ne: req.params.id },
       });
 
-      if (existingBranch) {
+      if (existingByCode) {
         return res.status(400).json({
           success: false,
-          message: "Ya existe otra sucursal con este código",
+          message: "Ya existe otra sucursal con este código en la empresa",
+        });
+      }
+    }
+
+    // Si se está actualizando el branchName, verificar unicidad dentro de la empresa
+    if (branchName) {
+      const existingByName = await Branch.findOne({
+        branchName,
+        companyId: currentCompanyId,
+        _id: { $ne: req.params.id },
+      });
+
+      if (existingByName) {
+        return res.status(400).json({
+          success: false,
+          message: "Ya existe otra sucursal con este nombre en la empresa",
+        });
+      }
+    }
+
+    // Si se está actualizando el rfc, verificar unicidad dentro de la empresa
+    if (rfc) {
+      const existingByRfc = await Branch.findOne({
+        rfc,
+        companyId: currentCompanyId,
+        _id: { $ne: req.params.id },
+      });
+
+      if (existingByRfc) {
+        return res.status(400).json({
+          success: false,
+          message: "Ya existe otra sucursal con este RFC en la empresa",
         });
       }
     }
@@ -439,7 +531,16 @@ export const updateBranch = async (req, res) => {
         updateData.manager = managerId;
       }
     } else if (managerData) {
-      // Crear nuevo gerente si se proporcionan datos
+      // Verificar que el username no esté en uso (global)
+      const existingUser = await User.findOne({ username: managerData.username });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: "El nombre de usuario del gerente ya está en uso",
+        });
+      }
+
+      // Validar que existe el rol de Gerente (sin crear usuario aún)
       const managerRole = await Role.findOne({ name: /^Gerente$/i });
       if (!managerRole) {
         return res.status(400).json({
@@ -448,21 +549,9 @@ export const updateBranch = async (req, res) => {
         });
       }
 
-      const newManager = await User.create({
-        username: managerData.username,
-        email: managerData.email,
-        phone: managerData.phone,
-        password: managerData.password,
-        profile: {
-          name: managerData.profile.name,
-          lastName: managerData.profile.lastName,
-          fullName: `${managerData.profile.name} ${managerData.profile.lastName}`,
-          estatus: true,
-        },
-        role: managerRole._id,
-      });
-
-      updateData.manager = newManager._id;
+      // Marcar que se necesita crear manager después del update
+      updateData._needsNewManager = true;
+      updateData._managerRole = managerRole;
     }
 
     // Verificar que los empleados existen si se proporcionan
@@ -478,13 +567,17 @@ export const updateBranch = async (req, res) => {
       }
     }
 
-    const branch = await Branch.findByIdAndUpdate(req.params.id, updateData, {
+    // Extraer flags temporales antes del update
+    const needsNewManager = updateData._needsNewManager;
+    const managerRole = updateData._managerRole;
+    delete updateData._needsNewManager;
+    delete updateData._managerRole;
+
+    // Actualizar la sucursal PRIMERO
+    let branch = await Branch.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
-    })
-      .populate("companyId", "legalName tradeName rfc")
-      .populate("manager", "username email profile")
-      .populate("employees", "username email profile.name profile.lastName");
+    });
 
     if (!branch) {
       return res.status(404).json({
@@ -493,6 +586,31 @@ export const updateBranch = async (req, res) => {
       });
     }
 
+    // DESPUÉS crear el nuevo gerente y asignarlo
+    if (needsNewManager) {
+      const newManager = await User.create({
+        username: managerData.username,
+        email: managerData.email,
+        phone: managerData.phone,
+        password: managerData.password,
+        profile: {
+          name: managerData.profile.name,
+          lastName: managerData.profile.lastName,
+          fullName: `${managerData.profile.name} ${managerData.profile.lastName}`,
+          estatus: true,
+        },
+        role: managerRole._id,
+      });
+
+      branch.manager = newManager._id;
+      await branch.save();
+    }
+
+    // Re-popular para la respuesta
+    await branch.populate("companyId", "legalName tradeName rfc");
+    await branch.populate("manager", "username email profile");
+    await branch.populate("employees", "username email profile.name profile.lastName");
+
     res.status(200).json({
       success: true,
       message: "Sucursal actualizada exitosamente",
@@ -500,10 +618,15 @@ export const updateBranch = async (req, res) => {
     });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "Ya existe una sucursal con este código",
-      });
+      const duplicateField = Object.keys(error.keyPattern || {})[0];
+      const fieldMessages = {
+        branchCode: "Ya existe una sucursal con este código",
+        branchName: "Ya existe una sucursal con este nombre",
+        rfc: "Ya existe una sucursal con este RFC",
+        username: "El nombre de usuario del gerente ya está en uso",
+      };
+      const message = fieldMessages[duplicateField] || `El campo "${duplicateField}" ya está en uso`;
+      return res.status(400).json({ success: false, message });
     }
 
     res.status(500).json({

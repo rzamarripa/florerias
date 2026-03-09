@@ -39,7 +39,7 @@ import { PageHeader } from "@/components/ui/page-header";
 
 const CompaniesPage: React.FC = () => {
   const router = useRouter();
-  const { getIsSuperAdmin } = useUserRoleStore();
+  const { getIsSuperAdmin, getIsDistributor } = useUserRoleStore();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -120,7 +120,7 @@ const CompaniesPage: React.FC = () => {
       <PageHeader
         title="Empresas"
         description="Gestiona las empresas del sistema"
-        action={getIsSuperAdmin() ? {
+        action={(getIsSuperAdmin() || getIsDistributor()) ? {
           label: "Nueva Empresa",
           icon: <Plus className="h-4 w-4" />,
           onClick: handleNewCompany,

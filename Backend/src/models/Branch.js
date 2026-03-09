@@ -12,8 +12,6 @@ const branchSchema = new Schema(
       type: String,
       trim: true,
       uppercase: true,
-      unique: true,
-      sparse: true, // Permite que sea opcional pero único si se proporciona
     },
     rfc: {
       type: String,
@@ -76,7 +74,6 @@ const branchSchema = new Schema(
     manager: {
       type: Schema.Types.ObjectId,
       ref: "cs_user",
-      required: [true, "El gerente es requerido"],
     },
     contactPhone: {
       type: String,
