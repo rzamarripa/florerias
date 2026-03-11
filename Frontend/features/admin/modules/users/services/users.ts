@@ -143,10 +143,12 @@ export const usersService = {
     return response;
   },
 
-  checkUsernameAvailability: async (username: string): Promise<{ success: boolean; available: boolean }> => {
-    const response = await apiCall<{ success: boolean; available: boolean }>(
-      `/users/check-username?username=${encodeURIComponent(username)}`
-    );
+  checkUsernameAvailability: async (username: string, excludeUserId?: string): Promise<{ success: boolean; available: boolean }> => {
+    let url = `/users/check-username?username=${encodeURIComponent(username)}`;
+    if (excludeUserId) {
+      url += `&excludeUserId=${encodeURIComponent(excludeUserId)}`;
+    }
+    const response = await apiCall<{ success: boolean; available: boolean }>(url);
     return response as any;
   },
 

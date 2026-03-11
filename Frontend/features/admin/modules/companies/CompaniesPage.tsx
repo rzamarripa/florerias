@@ -198,7 +198,20 @@ const CompaniesPage: React.FC = () => {
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </TableCell>
                         <TableCell className="font-semibold">
-                          {company.legalName}
+                          <div className="flex items-center gap-3">
+                            {company.logoUrl ? (
+                              <img
+                                src={company.logoUrl}
+                                alt={company.tradeName || company.legalName}
+                                className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            {company.legalName}
+                          </div>
                         </TableCell>
                         <TableCell>{company.rfc}</TableCell>
                         <TableCell>{company.tradeName || "-"}</TableCell>

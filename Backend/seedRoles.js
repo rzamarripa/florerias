@@ -9,8 +9,7 @@ dotenv.config();
 
 // ─── 46 Páginas exactas de producción ────────────────────────────────────────
 // modules: array con los 4 nombres de módulo que usa cada página
-const STANDARD = ["ver", "crear", "editar", "eliminar"];
-const WITH_ACTUALIZAR = ["ver", "crear", "actualizar", "eliminar"];
+const STANDARD = ["ver", "crear", "actualizar", "eliminar"];
 
 const pagesData = [
   // Gestión
@@ -53,7 +52,7 @@ const pagesData = [
   { name: "Configuración de Puntos", path: "/panel/config-puntos", modules: STANDARD },
 
   // Catálogos
-  { name: "Canales de venta", path: "/catalogos/canales-venta", modules: WITH_ACTUALIZAR },
+  { name: "Canales de venta", path: "/catalogos/canales-venta", modules: STANDARD },
   { name: "Etapas de Ventas", path: "/catalogos/etapas", modules: STANDARD },
   { name: "Productos", path: "/catalogos/productos", modules: STANDARD },
   { name: "Categorías de Productos", path: "/catalogos/categorias-productos", modules: STANDARD },
@@ -71,13 +70,13 @@ const pagesData = [
   { name: "Finanzas", path: "/finanzas/finanzas", modules: STANDARD },
 
   // E-commerce
-  { name: "diseno de ecommerce", path: "/ecommerce/configuracion/diseno", modules: WITH_ACTUALIZAR },
-  { name: "catalogo de productos de ecommerce", path: "/ecommerce/catalogo", modules: WITH_ACTUALIZAR },
-  { name: "ecommerce dashboard page", path: "/ecommerce/dashboard", modules: WITH_ACTUALIZAR },
+  { name: "diseno de ecommerce", path: "/ecommerce/configuracion/diseno", modules: STANDARD },
+  { name: "catalogo de productos de ecommerce", path: "/ecommerce/catalogo", modules: STANDARD },
+  { name: "ecommerce dashboard page", path: "/ecommerce/dashboard", modules: STANDARD },
 
   // Usuarios especiales
-  { name: "usuarios de produccion", path: "/panel/produccion-usuarios", modules: WITH_ACTUALIZAR },
-  { name: "usuarios de redes", path: "/panel/usuarios-redes", modules: WITH_ACTUALIZAR },
+  { name: "usuarios de produccion", path: "/panel/produccion-usuarios", modules: STANDARD },
+  { name: "usuarios de redes", path: "/panel/usuarios-redes", modules: STANDARD },
 ];
 
 // ─── 9 Roles con sus páginas exactas ─────────────────────────────────────────

@@ -8,24 +8,22 @@ import {
   activateDeliveryDriver,
   deactivateDeliveryDriver
 } from '../controllers/deliveryDriverController.js';
+import { protect } from '../middleware/auth.js';
 
 const router = Router();
 
-// Middleware de autenticación (descomenta si tienes middleware de auth)
-// const { protect } = require('../middleware/auth');
-
 // Rutas para repartidores
 router.route('/')
-  .get(getAllDeliveryDrivers)        // GET /api/delivery-drivers - Obtener todos los repartidores
-  .post(createDeliveryDriver);       // POST /api/delivery-drivers - Crear nuevo repartidor
+  .get(protect, getAllDeliveryDrivers)        // GET /api/delivery-drivers - Obtener todos los repartidores
+  .post(protect, createDeliveryDriver);       // POST /api/delivery-drivers - Crear nuevo repartidor
 
 router.route('/:id')
-  .get(getDeliveryDriverById)        // GET /api/delivery-drivers/:id - Obtener repartidor por ID
-  .put(updateDeliveryDriver)         // PUT /api/delivery-drivers/:id - Actualizar repartidor
-  .delete(deleteDeliveryDriver);     // DELETE /api/delivery-drivers/:id - Eliminar repartidor
+  .get(protect, getDeliveryDriverById)        // GET /api/delivery-drivers/:id - Obtener repartidor por ID
+  .put(protect, updateDeliveryDriver)         // PUT /api/delivery-drivers/:id - Actualizar repartidor
+  .delete(protect, deleteDeliveryDriver);     // DELETE /api/delivery-drivers/:id - Eliminar repartidor
 
 // Rutas para activar/desactivar repartidores
-router.put('/:id/activate', activateDeliveryDriver);     // PUT /api/delivery-drivers/:id/activate - Activar repartidor
-router.put('/:id/deactivate', deactivateDeliveryDriver); // PUT /api/delivery-drivers/:id/deactivate - Desactivar repartidor
+router.put('/:id/activate', protect, activateDeliveryDriver);     // PUT /api/delivery-drivers/:id/activate - Activar repartidor
+router.put('/:id/deactivate', protect, deactivateDeliveryDriver); // PUT /api/delivery-drivers/:id/deactivate - Desactivar repartidor
 
 export default router;

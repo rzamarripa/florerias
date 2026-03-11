@@ -8,24 +8,22 @@ import {
   activateCashier,
   deactivateCashier
 } from '../controllers/cashierController.js';
+import { protect } from '../middleware/auth.js';
 
 const router = Router();
 
-// Middleware de autenticación (descomenta si tienes middleware de auth)
-// const { protect } = require('../middleware/auth');
-
 // Rutas para cajeros
 router.route('/')
-  .get(getAllCashiers)        // GET /api/cashiers - Obtener todos los cajeros
-  .post(createCashier);        // POST /api/cashiers - Crear nuevo cajero
+  .get(protect, getAllCashiers)        // GET /api/cashiers - Obtener todos los cajeros
+  .post(protect, createCashier);       // POST /api/cashiers - Crear nuevo cajero
 
 router.route('/:id')
-  .get(getCashierById)        // GET /api/cashiers/:id - Obtener cajero por ID
-  .put(updateCashier)         // PUT /api/cashiers/:id - Actualizar cajero
-  .delete(deleteCashier);     // DELETE /api/cashiers/:id - Eliminar cajero
+  .get(protect, getCashierById)        // GET /api/cashiers/:id - Obtener cajero por ID
+  .put(protect, updateCashier)         // PUT /api/cashiers/:id - Actualizar cajero
+  .delete(protect, deleteCashier);     // DELETE /api/cashiers/:id - Eliminar cajero
 
 // Rutas para activar/desactivar cajeros
-router.put('/:id/activate', activateCashier);     // PUT /api/cashiers/:id/activate - Activar cajero
-router.put('/:id/deactivate', deactivateCashier); // PUT /api/cashiers/:id/deactivate - Desactivar cajero
+router.put('/:id/activate', protect, activateCashier);     // PUT /api/cashiers/:id/activate - Activar cajero
+router.put('/:id/deactivate', protect, deactivateCashier); // PUT /api/cashiers/:id/deactivate - Desactivar cajero
 
 export default router;

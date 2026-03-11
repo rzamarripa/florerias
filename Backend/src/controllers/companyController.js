@@ -1109,6 +1109,7 @@ export const getCompanyByBranchId = async (req, res) => {
     const ticketData = {
       companyId: company._id, // Agregado para Firebase Storage
       companyName: company.tradeName || company.legalName,
+      legalName: company.legalName,
       rfc: company.rfc,
       address: {
         street: branch.address.street,

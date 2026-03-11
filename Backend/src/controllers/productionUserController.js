@@ -41,6 +41,26 @@ const getAllProductionUsers = async (req, res) => {
       filters['profile.estatus'] = estatus === 'true';
     }
 
+    // Filtro por sucursal del Gerente
+    const userRoleName = req.user?.role?.name?.toLowerCase();
+    if (userRoleName === 'gerente') {
+      const managerBranch = await Branch.findOne({ manager: req.user._id }).select('employees');
+      if (managerBranch) {
+        filters._id = { $in: managerBranch.employees };
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    }
+
     // Calcular skip para paginación
     const skip = (parseInt(page) - 1) * parseInt(limit);
 

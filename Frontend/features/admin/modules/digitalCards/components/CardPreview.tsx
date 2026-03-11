@@ -56,48 +56,48 @@ const CardPreview: React.FC<CardPreviewProps> = ({
   const memberCode = `TC-${new Date().getFullYear()}-${client.clientNumber.slice(-5) || '78523'}`;
 
   return (
-    <div className={`w-full max-w-sm mx-auto ${className}`}>
-      <Card className="rounded-xl border shadow-sm overflow-hidden">
+    <div className={`w-full max-w-xs mx-auto ${className}`}>
+      <Card className="rounded-xl border shadow-sm overflow-hidden text-sm">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 pt-5 pb-3 border-b">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground text-sm font-bold">
+        <div className="flex items-center gap-2 px-4 pt-4 pb-2 border-b">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground text-xs font-bold">
               {branch.name ? branch.name.charAt(0).toUpperCase() : 'Z'}
             </span>
           </div>
-          <span className="text-foreground font-semibold text-base">
+          <span className="text-foreground font-semibold text-sm">
             {branch.name || 'TechCorp'}
           </span>
         </div>
 
         {/* Points Section */}
-        <div className="px-5 pt-4 pb-3">
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">
+        <div className="px-4 pt-3 pb-2">
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">
               PUNTOS ACUMULADOS
             </p>
             <div className="flex items-center gap-2">
-              <p className="text-foreground font-bold text-2xl">
+              <p className="text-foreground font-bold text-xl">
                 {client.points.toLocaleString('es-MX')}
               </p>
-              <Badge variant="secondary">pts</Badge>
+              <Badge variant="secondary" className="text-[10px]">pts</Badge>
             </div>
           </div>
         </div>
 
         {/* User Info */}
-        <div className="px-5 pb-3">
-          <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">
+        <div className="px-4 pb-2">
+          <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-1">
             USUARIO
           </p>
-          <p className="text-foreground text-lg font-medium">
+          <p className="text-foreground text-base font-medium">
             {client.name} {client.lastName}
           </p>
         </div>
 
         {/* QR Code Section */}
-        <div className="mx-5 mb-4 border rounded-lg p-3 flex flex-col items-center">
-          <div className="p-1 mb-2">
+        <div className="mx-4 mb-3 border rounded-lg p-2 flex flex-col items-center">
+          <div className="p-1 mb-1">
             {digitalCard.qrCodeUrl || digitalCard.qrCode ? (
               <Image
                 src={digitalCard.qrCodeUrl || digitalCard.qrCode || ''}
@@ -214,13 +214,13 @@ const CardPreview: React.FC<CardPreviewProps> = ({
               </svg>
             )}
           </div>
-          <p className="text-muted-foreground text-sm font-mono tracking-wider">
+          <p className="text-muted-foreground text-xs font-mono tracking-wider">
             {memberCode}
           </p>
         </div>
 
         {/* Decorative Image */}
-        <div className="relative h-36 overflow-hidden">
+        <div className="relative h-28 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-t from-transparent to-background/30 z-10" />
           {digitalCard.heroUrl ? (
             <Image

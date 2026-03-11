@@ -502,27 +502,23 @@ const DigitalCardsPage: React.FC = () => {
       {/* Modal de vista previa de tarjeta */}
       <Dialog open={showCardModal} onOpenChange={setShowCardModal}>
         <DialogContent
-          className="max-w-3xl p-0 overflow-hidden"
+          className="max-w-sm p-0 overflow-y-auto max-h-[90vh]"
           style={{
-            background: 'linear-gradient(to bottom right, rgb(15, 23, 42), rgb(30, 41, 59), rgb(15, 23, 42))',
-            borderColor: 'rgb(51, 65, 85)',
             borderRadius: '0.75rem',
           }}
         >
           {/* Custom Header */}
           <DialogHeader
             className="flex flex-row items-center justify-between px-4 py-3 border-b"
-            style={{ borderColor: 'rgba(51, 65, 85, 0.5)' }}
           >
             <div className="flex items-center gap-2">
-              <CreditCard size={20} style={{ color: '#06b6d4' }} />
-              <DialogTitle className="text-white">Tarjeta Digital</DialogTitle>
+              <CreditCard size={20} />
+              <DialogTitle>Tarjeta Digital</DialogTitle>
             </div>
             <button
               type="button"
               className="p-0 hover:opacity-80 transition-opacity"
               onClick={() => setShowCardModal(false)}
-              style={{ color: '#94a3b8' }}
             >
               <X size={20} />
             </button>
@@ -533,31 +529,33 @@ const DigitalCardsPage: React.FC = () => {
               <CardPreview
                 digitalCard={digitalCard}
                 client={selectedClient}
-                branch={selectedClient.branch}
+                branch={{
+                  ...selectedClient.branch,
+                  name: digitalCard.legalName
+                    || (typeof digitalCard.companyId === 'object' && digitalCard.companyId !== null
+                        ? (digitalCard.companyId as any).legalName
+                        : '')
+                    || selectedClient.branch.name
+                }}
               />
             )}
           </div>
 
           {/* Sección para subir imagen hero */}
-          <div className="px-4 py-3 border-t" style={{ borderColor: 'rgba(51, 65, 85, 0.5)' }}>
+          <div className="px-4 py-3 border-t">
             <div className="flex flex-col md:flex-row gap-4 items-center">
               <div className="flex-1">
-                <h4 className="text-sm font-medium text-white mb-1 flex items-center gap-2">
-                  <ImageIcon size={16} style={{ color: '#06b6d4' }} />
+                <h4 className="text-sm font-medium mb-1 flex items-center gap-2">
+                  <ImageIcon size={16} />
                   Imagen Decorativa
                 </h4>
-                <p className="text-xs text-gray-400 mb-2">
+                <p className="text-xs text-muted-foreground mb-2">
                   Personaliza la tarjeta con una imagen en la parte inferior
                 </p>
                 <div className="flex items-center gap-3">
-                  <label 
+                  <label
                     htmlFor="hero-image-modal"
-                    className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md transition-colors"
-                    style={{
-                      backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                      color: '#06b6d4',
-                      border: '1px solid rgba(6, 182, 212, 0.3)'
-                    }}
+                    className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border transition-colors"
                   >
                     <Upload size={14} />
                     Seleccionar Imagen
@@ -580,10 +578,7 @@ const DigitalCardsPage: React.FC = () => {
                       onClick={handleUploadHeroImage}
                       disabled={uploadingHero}
                       className="h-7 px-3 text-xs"
-                      style={{
-                        background: uploadingHero ? 'gray' : 'linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))'
-                      }}
-                    >
+                      >
                       {uploadingHero ? (
                         <>
                           <Loader2 className="animate-spin mr-1" size={12} />
@@ -597,7 +592,7 @@ const DigitalCardsPage: React.FC = () => {
                 </div>
               </div>
               {heroImagePreview && (
-                <div className="w-24 h-16 rounded-md overflow-hidden border" style={{ borderColor: 'rgba(51, 65, 85, 0.5)' }}>
+                <div className="w-24 h-16 rounded-md overflow-hidden border">
                   <img 
                     src={heroImagePreview} 
                     alt="Preview" 
@@ -609,34 +604,17 @@ const DigitalCardsPage: React.FC = () => {
           </div>
 
           {/* Custom Footer */}
-          <DialogFooter
-            className="flex gap-3 px-4 py-3 border-t"
-            style={{
-              backgroundColor: 'rgb(15, 23, 42)',
-              borderColor: 'rgb(51, 65, 85)'
-            }}
-          >
+          <DialogFooter className="flex gap-3 px-4 py-3 border-t">
             <Button
               variant="outline"
-              className="flex-1 border"
+              className="flex-1"
               onClick={() => setShowCardModal(false)}
-              style={{
-                borderColor: 'rgb(71, 85, 105)',
-                color: '#cbd5e1',
-                backgroundColor: 'transparent'
-              }}
             >
               Cerrar
             </Button>
             <Button
               className="flex-1 flex items-center justify-center gap-2"
               onClick={handleDownload}
-              style={{
-                background: 'linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))',
-                color: 'white',
-                border: 'none',
-                boxShadow: '0 10px 15px -3px rgba(6, 182, 212, 0.2)'
-              }}
             >
               <Download size={16} />
               Descargar

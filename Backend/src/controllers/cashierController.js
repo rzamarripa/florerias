@@ -1,7 +1,6 @@
 import { User } from '../models/User.js';
 import { Branch } from '../models/Branch.js';
 import { Role } from '../models/Roles.js';
-import bcrypt from 'bcryptjs';
 
 // Obtener todos los cajeros (usuarios con rol Cajero) con filtros y paginación
 const getAllCashiers = async (req, res) => {
@@ -39,6 +38,21 @@ const getAllCashiers = async (req, res) => {
 
     if (estatus !== undefined) {
       filters['profile.estatus'] = estatus === 'true';
+    }
+
+    // Si el usuario es Gerente, filtrar por su sucursal
+    const userRoleName = req.user?.role?.name?.toLowerCase();
+    if (userRoleName === 'gerente') {
+      const managerBranch = await Branch.findOne({ manager: req.user._id }).select('employees');
+      if (managerBranch) {
+        filters._id = { $in: managerBranch.employees };
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: { page: parseInt(page), limit: parseInt(limit), total: 0, pages: 0 }
+        });
+      }
     }
 
     // Calcular skip para paginación
@@ -214,16 +228,12 @@ const createCashier = async (req, res) => {
       });
     }
 
-    // Hashear la contraseña
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Crear el nuevo cajero
+    // Crear el nuevo cajero (el hook pre-save de User.js hashea la contraseña)
     const newCashier = new User({
       username,
       email,
       phone,
-      password: hashedPassword,
+      password,
       profile: {
         name: profile.name,
         lastName: profile.lastName,
@@ -386,17 +396,20 @@ const updateCashier = async (req, res) => {
       };
     }
 
-    // Si se proporciona una nueva contraseña, hashearla
+    // Asignar campos actualizados al documento existente
+    Object.assign(existingCashier, updateData);
+
+    // Si se proporciona una nueva contraseña, asignarla en texto plano
+    // (el hook pre-save de User.js la hashea)
     if (password && password.trim()) {
-      const salt = await bcrypt.genSalt(12);
-      updateData.password = await bcrypt.hash(password, salt);
+      existingCashier.password = password;
     }
 
-    const updatedCashier = await User.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).select('-password').populate('role', 'name description');
+    await existingCashier.save();
+
+    const updatedCashier = await User.findById(id)
+      .select('-password')
+      .populate('role', 'name description');
 
     // Obtener la sucursal del cajero
     const branch = await Branch.findOne({

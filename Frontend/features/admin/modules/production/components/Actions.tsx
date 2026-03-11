@@ -35,9 +35,9 @@ const Actions: React.FC<ActionsProps> = ({ production, onEdit, onToggleStatus })
 
         <DropdownMenuItem
           onClick={() => onToggleStatus(production)}
-          className={production.estatus ? "text-destructive" : "text-green-600"}
+          className={production.profile?.estatus ? "text-destructive" : "text-green-600"}
         >
-          {production.estatus ? (
+          {production.profile?.estatus ? (
             <>
               <PowerOff className="h-4 w-4 mr-2" />
               Desactivar

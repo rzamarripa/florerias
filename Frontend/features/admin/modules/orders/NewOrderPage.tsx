@@ -1135,7 +1135,7 @@ const NewOrderPage = () => {
           deliveryDriverPhone: orderData.deliveryDriverDetails?.phone,
           deliveryTicketUrl: deliveryTicketUrl || undefined,
           activeWhatsApp: companyResponse.data.activeWhatsApp || false,
-          companyName: companyResponse.data.companyName,
+          companyName: companyResponse.data.legalName || companyResponse.data.companyName,
         });
         setShowWhatsAppModal(true);
       }

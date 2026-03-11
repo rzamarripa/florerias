@@ -42,6 +42,40 @@ const getAllNetworksUsers = async (req, res) => {
       filters['profile.estatus'] = estatus === 'true';
     }
 
+    // Filtro por empresa de la sucursal del Gerente
+    const userRoleName = req.user?.role?.name?.toLowerCase();
+    if (userRoleName === 'gerente') {
+      const managerBranch = await Branch.findOne({ manager: req.user._id }).select('companyId');
+      if (managerBranch && managerBranch.companyId) {
+        const managerCompany = await Company.findById(managerBranch.companyId).select('redes');
+        if (managerCompany && managerCompany.redes && managerCompany.redes.length > 0) {
+          filters._id = { $in: managerCompany.redes };
+        } else {
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    }
+
     // Si se especifica companyId, filtrar solo usuarios de esa empresa
     if (companyId) {
       const company = await Company.findById(companyId).select('redes');

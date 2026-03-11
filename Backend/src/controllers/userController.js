@@ -372,17 +372,17 @@ export const updateUser = async (req, res) => {
     if (password) updateData.password = password;
 
     if (profile) {
+      const existingUser = await User.findById(req.params.id);
+      const existingProfile = existingUser?.profile?.toObject?.() || existingUser?.profile || {};
       updateData.profile = {
+        ...existingProfile,
         name: profile.name,
         lastName: profile.lastName,
         fullName: profile.fullName,
-        path: profile.path,
-        estatus: profile.estatus,
       };
-      const existingUser = await User.findById(req.params.id);
-      if (existingUser && existingUser.profile.image) {
-        updateData.profile.image = existingUser.profile.image;
-      }
+      // Solo sobreescribir path/estatus si vienen explícitamente
+      if (profile.path !== undefined) updateData.profile.path = profile.path;
+      if (profile.estatus !== undefined) updateData.profile.estatus = profile.estatus;
     }
 
     if (req.file) {
@@ -637,13 +637,16 @@ export const assignRoles = async (req, res) => {
 
 export const checkUsernameAvailability = async (req, res) => {
   try {
-    const { username } = req.query;
+    const { username, excludeUserId } = req.query;
     if (!username) {
       return res.status(400).json({ success: false, message: "Username requerido" });
     }
-    const existing = await User.findOne({
-      username: { $regex: new RegExp(`^${username}$`, "i") },
-    });
+    const escapedUsername = username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const query = { username: { $regex: new RegExp(`^${escapedUsername}$`, "i") } };
+    if (excludeUserId) {
+      query._id = { $ne: excludeUserId };
+    }
+    const existing = await User.findOne(query);
     res.json({ success: true, available: !existing });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Save, Truck, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Save, Truck, Eye, EyeOff, Loader2, UserPlus, Building2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Delivery, CreateDeliveryData, UpdateDeliveryData } from "../types";
+import { useUserRoleStore } from "@/stores/userRoleStore";
+import { companiesService } from "@/features/admin/modules/companies/services/companies";
+import { branchesService } from "@/features/admin/modules/branches/services/branches";
+import { usersService } from "@/features/admin/modules/users/services/users";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +19,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DeliveryModalProps {
   show: boolean;
@@ -30,88 +42,174 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
   onSave,
   loading = false,
 }) => {
-  const [formData, setFormData] = useState<CreateDeliveryData>({
-    nombre: "",
-    apellidoPaterno: "",
-    apellidoMaterno: "",
-    direccion: "",
-    telefono: "",
-    correo: "",
-    usuario: "",
-    contrasena: "",
-    foto: "",
-    estatus: true,
+  const { getIsAdmin, getIsManager } = useUserRoleStore();
+  const isAdminOrManager = getIsAdmin() || getIsManager();
+
+  const [formData, setFormData] = useState<any>({
+    username: "",
+    email: "",
+    phone: "",
+    password: "",
+    profile: {
+      name: "",
+      lastName: "",
+    },
+    branch: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [userCompany, setUserCompany] = useState<any>(null);
+  const [loadingUserCompany, setLoadingUserCompany] = useState(false);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [managerBranch, setManagerBranch] = useState<any>(null);
+
+  const checkUsername = async (value: string) => {
+    if (!value || value.trim().length < 2) { setUsernameAvailable(null); return; }
+    setCheckingUsername(true);
+    try {
+      const result = await usersService.checkUsernameAvailability(value.trim());
+      setUsernameAvailable(result.available);
+    } catch { setUsernameAvailable(null); }
+    finally { setCheckingUsername(false); }
+  };
+
+  const loadUserCompanyAndBranches = async () => {
+    if (!isAdminOrManager) return;
+
+    setLoadingUserCompany(true);
+    try {
+      if (getIsManager()) {
+        const branchResponse = await branchesService.getUserBranches();
+        if (branchResponse.success && branchResponse.data && branchResponse.data.length > 0) {
+          const branch = branchResponse.data[0];
+          setManagerBranch(branch);
+          setFormData((prev: any) => ({ ...prev, branch: branch._id }));
+          if (branch.companyId && typeof branch.companyId === 'object') {
+            setUserCompany(branch.companyId);
+          }
+        } else {
+          toast.error("No se encontró una sucursal asignada para el gerente");
+        }
+      } else if (getIsAdmin()) {
+        const response = await companiesService.getUserCompany();
+        if (response.success && response.data) {
+          setUserCompany(response.data);
+          await loadBranches(response.data._id);
+        }
+      }
+    } catch (err: any) {
+      console.error("Error loading user data:", err);
+      if (!err.message?.includes("no tiene una empresa asignada")) {
+        toast.error(err.message || "Error al cargar los datos del usuario");
+      }
+    } finally {
+      setLoadingUserCompany(false);
+    }
+  };
+
+  const loadBranches = async (companyId: string) => {
+    setLoadingBranches(true);
+    try {
+      const response = await branchesService.getAllBranches({
+        companyId,
+        isActive: true,
+        limit: 100,
+      });
+      if (response.success && response.data) {
+        setBranches(response.data);
+      }
+    } catch (err: any) {
+      console.error("Error loading branches:", err);
+      toast.error(err.message || "Error al cargar las sucursales");
+    } finally {
+      setLoadingBranches(false);
+    }
+  };
+
+  useEffect(() => {
+    if (show && isAdminOrManager) {
+      loadUserCompanyAndBranches();
+    }
+  }, [show, isAdminOrManager]);
 
   useEffect(() => {
     if (delivery) {
       setFormData({
-        nombre: delivery.nombre,
-        apellidoPaterno: delivery.apellidoPaterno,
-        apellidoMaterno: delivery.apellidoMaterno,
-        direccion: delivery.direccion,
-        telefono: delivery.telefono,
-        correo: delivery.correo,
-        usuario: delivery.usuario,
-        contrasena: "",
-        foto: delivery.foto || "",
-        estatus: delivery.estatus,
+        username: delivery.username,
+        email: delivery.email,
+        phone: delivery.phone,
+        password: "",
+        profile: {
+          name: delivery.profile.name,
+          lastName: delivery.profile.lastName,
+        },
+        branch: delivery.branch?._id || "",
       });
     } else {
       setFormData({
-        nombre: "",
-        apellidoPaterno: "",
-        apellidoMaterno: "",
-        direccion: "",
-        telefono: "",
-        correo: "",
-        usuario: "",
-        contrasena: "",
-        foto: "",
-        estatus: true,
+        username: "",
+        email: "",
+        phone: "",
+        password: "",
+        profile: {
+          name: "",
+          lastName: "",
+        },
+        branch: "",
       });
     }
     setErrors({});
+    setUsernameAvailable(null);
   }, [delivery, show]);
 
-  const handleChange = (field: keyof CreateDeliveryData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleChange = (field: string, value: any) => {
+    if (field.startsWith("profile.")) {
+      const profileField = field.split(".")[1];
+      setFormData((prev: any) => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          [profileField]: value,
+        },
+      }));
+    } else {
+      setFormData((prev: any) => ({ ...prev, [field]: value }));
+    }
+
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.nombre.trim()) {
-      newErrors.nombre = "El nombre es requerido";
+    if (!formData.username.trim()) {
+      newErrors.username = "El nombre de usuario es requerido";
     }
-    if (!formData.apellidoPaterno.trim()) {
-      newErrors.apellidoPaterno = "El apellido paterno es requerido";
+    if (!formData.email.trim()) {
+      newErrors.email = "El correo electrónico es requerido";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "El correo no es válido";
     }
-    if (!formData.apellidoMaterno.trim()) {
-      newErrors.apellidoMaterno = "El apellido materno es requerido";
+    if (!formData.phone.trim()) {
+      newErrors.phone = "El teléfono es requerido";
     }
-    if (!formData.direccion.trim()) {
-      newErrors.direccion = "La dirección es requerida";
+    if (!formData.profile.name.trim()) {
+      newErrors["profile.name"] = "El nombre es requerido";
     }
-    if (!formData.telefono.trim()) {
-      newErrors.telefono = "El teléfono es requerido";
+    if (!formData.profile.lastName.trim()) {
+      newErrors["profile.lastName"] = "El apellido es requerido";
     }
-    if (!formData.correo.trim()) {
-      newErrors.correo = "El correo es requerido";
-    } else if (!/\S+@\S+\.\S+/.test(formData.correo)) {
-      newErrors.correo = "El correo no es válido";
+    if (!delivery && !formData.password.trim()) {
+      newErrors.password = "La contraseña es requerida";
     }
-    if (!formData.usuario.trim()) {
-      newErrors.usuario = "El usuario es requerido";
-    }
-    if (!delivery && !formData.contrasena.trim()) {
-      newErrors.contrasena = "La contraseña es requerida";
+    if (!delivery && !formData.branch) {
+      newErrors.branch = "La sucursal es requerida";
     }
 
     setErrors(newErrors);
@@ -120,8 +218,36 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (validateForm()) {
-      onSave(formData);
+      if (delivery) {
+        const updateData: UpdateDeliveryData = {
+          username: formData.username,
+          email: formData.email,
+          phone: formData.phone,
+          profile: {
+            name: formData.profile.name,
+            lastName: formData.profile.lastName,
+          },
+        };
+        if (formData.password.trim()) {
+          updateData.password = formData.password;
+        }
+        onSave(updateData);
+      } else {
+        const createData: CreateDeliveryData = {
+          username: formData.username,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          profile: {
+            name: formData.profile.name,
+            lastName: formData.profile.lastName,
+          },
+          branch: formData.branch,
+        };
+        onSave(createData);
+      }
     }
   };
 
@@ -129,10 +255,14 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
 
   return (
     <Dialog open={show} onOpenChange={(open) => !loading && !open && onHide()}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
+            {isEditing ? (
+              <Truck className="h-5 w-5 text-primary" />
+            ) : (
+              <UserPlus className="h-5 w-5 text-primary" />
+            )}
             {isEditing ? "Editar Repartidor" : "Nuevo Repartidor"}
           </DialogTitle>
           <DialogDescription>
@@ -142,197 +272,207 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
+        {isAdminOrManager && userCompany && (
+          <Alert>
+            <Building2 className="h-4 w-4" />
+            <AlertDescription>
+              <div className="font-semibold">
+                {userCompany.tradeName || userCompany.legalName}
+              </div>
+              <div className="text-sm text-muted-foreground">RFC: {userCompany.rfc}</div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nombre">
+                <Label htmlFor="profile.name">
                   Nombre <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="nombre"
+                  id="profile.name"
                   type="text"
                   placeholder="Ingresa el nombre"
-                  value={formData.nombre}
-                  onChange={(e) => handleChange("nombre", e.target.value)}
+                  value={formData.profile.name}
+                  onChange={(e) => handleChange("profile.name", e.target.value)}
                 />
-                {errors.nombre && (
-                  <p className="text-sm text-destructive">{errors.nombre}</p>
+                {errors["profile.name"] && (
+                  <p className="text-sm text-destructive">{errors["profile.name"]}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="apellidoPaterno">
-                  Apellido Paterno <span className="text-destructive">*</span>
+                <Label htmlFor="profile.lastName">
+                  Apellido <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="apellidoPaterno"
+                  id="profile.lastName"
                   type="text"
-                  placeholder="Ingresa el apellido paterno"
-                  value={formData.apellidoPaterno}
-                  onChange={(e) => handleChange("apellidoPaterno", e.target.value)}
+                  placeholder="Ingresa el apellido"
+                  value={formData.profile.lastName}
+                  onChange={(e) => handleChange("profile.lastName", e.target.value)}
                 />
-                {errors.apellidoPaterno && (
-                  <p className="text-sm text-destructive">{errors.apellidoPaterno}</p>
+                {errors["profile.lastName"] && (
+                  <p className="text-sm text-destructive">{errors["profile.lastName"]}</p>
                 )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="apellidoMaterno">
-                  Apellido Materno <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="apellidoMaterno"
-                  type="text"
-                  placeholder="Ingresa el apellido materno"
-                  value={formData.apellidoMaterno}
-                  onChange={(e) => handleChange("apellidoMaterno", e.target.value)}
-                />
-                {errors.apellidoMaterno && (
-                  <p className="text-sm text-destructive">{errors.apellidoMaterno}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="direccion">
-                Dirección <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="direccion"
-                type="text"
-                placeholder="Ingresa la dirección completa"
-                value={formData.direccion}
-                onChange={(e) => handleChange("direccion", e.target.value)}
-              />
-              {errors.direccion && (
-                <p className="text-sm text-destructive">{errors.direccion}</p>
-              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="telefono">
+                <Label htmlFor="username">
+                  Nombre de Usuario <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Ingresa el nombre de usuario"
+                  value={formData.username}
+                  onChange={(e) => { setUsernameAvailable(null); handleChange("username", e.target.value); }}
+                  onBlur={() => { if (!delivery) checkUsername(formData.username); }}
+                />
+                {errors.username && (
+                  <p className="text-sm text-destructive">{errors.username}</p>
+                )}
+                {checkingUsername && <p className="text-sm text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Verificando disponibilidad...</p>}
+                {usernameAvailable === false && !checkingUsername && <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Este nombre de usuario no está disponible</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">
                   Teléfono <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="telefono"
+                  id="phone"
                   type="tel"
                   placeholder="Ingresa el número de teléfono"
-                  value={formData.telefono}
-                  onChange={(e) => handleChange("telefono", e.target.value)}
+                  value={formData.phone}
+                  onChange={(e) => handleChange("phone", e.target.value)}
                 />
-                {errors.telefono && (
-                  <p className="text-sm text-destructive">{errors.telefono}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="correo">
-                  Correo Electrónico <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="correo"
-                  type="email"
-                  placeholder="Ingresa el correo electrónico"
-                  value={formData.correo}
-                  onChange={(e) => handleChange("correo", e.target.value)}
-                />
-                {errors.correo && (
-                  <p className="text-sm text-destructive">{errors.correo}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="usuario">
-                  Usuario <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="usuario"
-                  type="text"
-                  placeholder="Ingresa el nombre de usuario"
-                  value={formData.usuario}
-                  onChange={(e) => handleChange("usuario", e.target.value)}
-                />
-                {errors.usuario && (
-                  <p className="text-sm text-destructive">{errors.usuario}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contrasena">
-                  Contraseña {!isEditing && <span className="text-destructive">*</span>}
-                  {isEditing && (
-                    <span className="text-muted-foreground text-xs ml-1">
-                      (Dejar vacío para mantener actual)
-                    </span>
-                  )}
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="contrasena"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Ingresa la contraseña"
-                    value={formData.contrasena}
-                    onChange={(e) => handleChange("contrasena", e.target.value)}
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPassword(!showPassword)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                {errors.contrasena && (
-                  <p className="text-sm text-destructive">{errors.contrasena}</p>
+                {errors.phone && (
+                  <p className="text-sm text-destructive">{errors.phone}</p>
                 )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="foto">Foto</Label>
+              <Label htmlFor="email">
+                Correo Electrónico <span className="text-destructive">*</span>
+              </Label>
               <Input
-                id="foto"
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0];
-                  if (file) {
-                    handleChange("foto", file.name);
-                  }
-                }}
+                id="email"
+                type="email"
+                placeholder="Ingresa el correo electrónico"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
               />
-              {formData.foto && (
-                <p className="text-sm text-muted-foreground">
-                  Archivo seleccionado: {formData.foto}
-                </p>
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
               )}
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="estatus"
-                checked={formData.estatus}
-                onCheckedChange={(checked) => handleChange("estatus", checked)}
-              />
-              <Label htmlFor="estatus" className="cursor-pointer">
-                Activo
+            <div className="space-y-2">
+              <Label htmlFor="password">
+                Contraseña
+                {isEditing ? (
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (Dejar vacío para mantener actual)
+                  </span>
+                ) : (
+                  <span className="text-destructive"> *</span>
+                )}
               </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Ingresa la contraseña"
+                  value={formData.password}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
             </div>
+
+            {!isEditing && (
+              <div className="space-y-2">
+                <Label htmlFor="branch">
+                  Sucursal <span className="text-destructive">*</span>
+                </Label>
+                {getIsManager() && managerBranch ? (
+                  <div className="p-3 border rounded-md bg-muted/50">
+                    <div className="font-medium">{managerBranch.branchName}</div>
+                    {managerBranch.branchCode && (
+                      <div className="text-sm text-muted-foreground">Código: {managerBranch.branchCode}</div>
+                    )}
+                  </div>
+                ) : getIsAdmin() ? (
+                  <Select
+                    value={formData.branch}
+                    onValueChange={(value) => handleChange("branch", value)}
+                    disabled={loadingBranches}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          loadingBranches ? "Cargando sucursales..." : "Selecciona una sucursal"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch._id} value={branch._id}>
+                          {branch.branchName} {branch.branchCode ? `(${branch.branchCode})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                {errors.branch && (
+                  <p className="text-sm text-destructive">{errors.branch}</p>
+                )}
+              </div>
+            )}
+
+            {isEditing && delivery?.branch && (
+              <div className="space-y-2">
+                <Label>Sucursal Asignada</Label>
+                <div className="p-3 border rounded-md bg-muted/50">
+                  <div className="font-medium">{delivery.branch.branchName}</div>
+                  {delivery.branch.branchCode && (
+                    <div className="text-sm text-muted-foreground">Código: {delivery.branch.branchCode}</div>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-2">
+                    La sucursal no se puede cambiar al editar
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onHide} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button
+              type="submit"
+              disabled={loading || loadingUserCompany || loadingBranches || usernameAvailable === false || checkingUsername}
+            >
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -340,7 +480,11 @@ const DeliveryModal: React.FC<DeliveryModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  {isEditing ? (
+                    <Save className="h-4 w-4 mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
                   {isEditing ? "Actualizar" : "Crear"} Repartidor
                 </>
               )}

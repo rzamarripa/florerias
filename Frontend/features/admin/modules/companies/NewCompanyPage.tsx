@@ -27,7 +27,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { companiesService } from "./services/companies";
 import { CreateCompanyData, Distributor } from "./types";
 import { legalForms } from "./schemas/companySchema";
@@ -71,8 +71,10 @@ const NewCompanyPage: React.FC = () => {
     activeWhatsApp: false,
   });
 
+  const [originalFormData, setOriginalFormData] = useState<CreateCompanyData | null>(null);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -89,11 +91,11 @@ const NewCompanyPage: React.FC = () => {
     }
   }, [companyId]);
 
-  const checkUsername = async (value: string) => {
+  const checkUsername = async (value: string, excludeUserId?: string) => {
     if (!value || value.trim().length < 2) { setUsernameAvailable(null); return; }
     setCheckingUsername(true);
     try {
-      const result = await usersService.checkUsernameAvailability(value.trim());
+      const result = await usersService.checkUsernameAvailability(value.trim(), excludeUserId);
       setUsernameAvailable(result.available);
     } catch { setUsernameAvailable(null); }
     finally { setCheckingUsername(false); }
@@ -110,13 +112,13 @@ const NewCompanyPage: React.FC = () => {
 
   const loadCompany = async () => {
     try {
-      setLoading(true);
+      setInitialLoading(true);
       const response = await companiesService.getCompanyById(companyId);
       const company = response.data;
 
       const administratorId = company.administrator?._id || "";
 
-      setFormData({
+      const loadedData: CreateCompanyData = {
         legalName: company.legalName,
         tradeName: company.tradeName || "",
         rfc: company.rfc,
@@ -147,12 +149,14 @@ const NewCompanyPage: React.FC = () => {
             },
         isFranchise: company.isFranchise || false,
         activeWhatsApp: company.activeWhatsApp || false,
-      });
+      };
+      setFormData(loadedData);
+      setOriginalFormData(JSON.parse(JSON.stringify(loadedData)));
     } catch (err: any) {
       toast.error(err.message || "Error al cargar la empresa");
       router.push("/gestion/empresas");
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -284,127 +288,166 @@ const NewCompanyPage: React.FC = () => {
     setLoading(true);
 
     try {
-      let finalAdministratorId = formData.administratorId;
-
-      if (isEditing && formData.administratorId && formData.administratorData) {
-        const userDataToUpdate = {
-          username: formData.administratorData.username,
-          email: formData.administratorData.email,
-          phone: formData.administratorData.phone,
-          profile: {
-            name: formData.administratorData.profile.name,
-            lastName: formData.administratorData.profile.lastName,
-            fullName: `${formData.administratorData.profile.name} ${formData.administratorData.profile.lastName}`,
-          },
-        };
-
-        if (formData.administratorData.password && formData.administratorData.password.trim() !== "") {
-          (userDataToUpdate as any).password = formData.administratorData.password;
-        }
-
-        await usersService.updateUser(formData.administratorId, userDataToUpdate);
-      }
-
-      if (isEditing && !formData.administratorId && formData.administratorData) {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-        const rolesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/roles?name=Administrador`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        const rolesData = await rolesResponse.json();
-        const adminRole = rolesData.data?.find((r: any) => r.name === "Administrador");
-
-        if (!adminRole) {
-          throw new Error("No se encontró el rol de Administrador");
-        }
-
-        const newUserData = {
-          username: formData.administratorData.username,
-          email: formData.administratorData.email,
-          phone: formData.administratorData.phone,
-          password: formData.administratorData.password,
-          profile: {
-            name: formData.administratorData.profile.name,
-            lastName: formData.administratorData.profile.lastName,
-            fullName: `${formData.administratorData.profile.name} ${formData.administratorData.profile.lastName}`,
-          },
-          role: adminRole._id,
-        };
-
-        const createUserResponse = await usersService.createUser(newUserData);
-        finalAdministratorId = createUserResponse.data.user._id;
-      }
-
-      const dataToSend: CreateCompanyData = {
-        legalName: formData.legalName,
-        tradeName: formData.tradeName || undefined,
-        rfc: formData.rfc.toUpperCase(),
-        legalForm: formData.legalForm,
-        fiscalAddress: formData.fiscalAddress,
-        primaryContact: formData.primaryContact,
-        isFranchise: formData.isFranchise || false,
-        activeWhatsApp: formData.activeWhatsApp || false,
-      };
-
-      if (finalAdministratorId) {
-        dataToSend.administratorId = finalAdministratorId;
-      }
-
-      if (!isEditing && !finalAdministratorId && formData.administratorData) {
-        dataToSend.administratorData = formData.administratorData;
-      }
-
-      let response;
-
       if (isEditing) {
-        response = await companiesService.updateCompany(companyId, dataToSend);
-      } else {
-        response = await companiesService.createCompany(dataToSend);
-      }
+        // Update admin user
+        if (formData.administratorId && formData.administratorData) {
+          const userDataToUpdate = {
+            username: formData.administratorData.username,
+            email: formData.administratorData.email,
+            phone: formData.administratorData.phone,
+            profile: {
+              name: formData.administratorData.profile.name,
+              lastName: formData.administratorData.profile.lastName,
+              fullName: `${formData.administratorData.profile.name} ${formData.administratorData.profile.lastName}`,
+            },
+          };
 
-      if (!response.success) {
-        if ((response as any).permissionDenied) {
-          return;
+          if (formData.administratorData.password && formData.administratorData.password.trim() !== "") {
+            (userDataToUpdate as any).password = formData.administratorData.password;
+          }
+
+          await usersService.updateUser(formData.administratorId, userDataToUpdate);
         }
-        throw new Error(response.message || "Error al guardar la empresa");
-      }
 
-      let logoUrl: string | null = null;
-      let logoPath: string | null = null;
-
-      if (logoFile) {
-        setUploadingLogo(true);
-        toast.info("Subiendo logo a Firebase Storage...");
-
-        try {
-          const savedCompanyId = response.data._id;
-
-          const { uploadCompanyLogo } = await import("@/services/firebaseStorage");
-          const logoResult = await uploadCompanyLogo(logoFile, savedCompanyId);
-          logoUrl = logoResult.url;
-          logoPath = logoResult.path;
-
-          await companiesService.updateCompany(savedCompanyId, {
-            logoUrl,
-            logoPath,
+        // Create new admin user in edit mode if no administratorId
+        if (!formData.administratorId && formData.administratorData) {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+          const rolesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/roles?name=Administrador`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
           });
+          const rolesData = await rolesResponse.json();
+          const adminRole = rolesData.data?.find((r: any) => r.name === "Administrador");
 
-          toast.success("Logo subido exitosamente");
-        } catch (uploadError: any) {
-          console.error("Error al subir logo:", uploadError);
-          toast.warning("Empresa guardada pero hubo un error al subir el logo. Puedes intentar subirlo después.");
-        } finally {
-          setUploadingLogo(false);
+          if (!adminRole) {
+            throw new Error("No se encontró el rol de Administrador");
+          }
+
+          const newUserData = {
+            username: formData.administratorData.username,
+            email: formData.administratorData.email,
+            phone: formData.administratorData.phone,
+            password: formData.administratorData.password,
+            profile: {
+              name: formData.administratorData.profile.name,
+              lastName: formData.administratorData.profile.lastName,
+              fullName: `${formData.administratorData.profile.name} ${formData.administratorData.profile.lastName}`,
+            },
+            role: adminRole._id,
+          };
+
+          const createUserResponse = await usersService.createUser(newUserData);
+          formData.administratorId = createUserResponse.data.user._id;
         }
-      }
 
-      toast.success(
-        isEditing
-          ? "Empresa actualizada exitosamente"
-          : "Empresa creada exitosamente"
-      );
-      router.push("/gestion/empresas");
+        // Update company
+        const dataToSend: CreateCompanyData = {
+          legalName: formData.legalName,
+          tradeName: formData.tradeName || undefined,
+          rfc: formData.rfc.toUpperCase(),
+          legalForm: formData.legalForm,
+          fiscalAddress: formData.fiscalAddress,
+          primaryContact: formData.primaryContact,
+          isFranchise: formData.isFranchise || false,
+          activeWhatsApp: formData.activeWhatsApp || false,
+        };
+
+        if (formData.administratorId) {
+          dataToSend.administratorId = formData.administratorId;
+        }
+
+        const response = await companiesService.updateCompany(companyId, dataToSend);
+
+        if (!response.success) {
+          if ((response as any).permissionDenied) return;
+          throw new Error(response.message || "Error al guardar la empresa");
+        }
+
+        // Upload logo if new file selected
+        if (logoFile) {
+          setUploadingLogo(true);
+          toast.info("Subiendo logo a Firebase Storage...");
+
+          try {
+            const { uploadCompanyLogo } = await import("@/services/firebaseStorage");
+            const logoResult = await uploadCompanyLogo(logoFile, companyId);
+
+            await companiesService.updateCompany(companyId, {
+              logoUrl: logoResult.url,
+              logoPath: logoResult.path,
+            });
+
+            toast.success("Logo subido exitosamente");
+          } catch (uploadError: any) {
+            console.error("Error al subir logo:", uploadError);
+            toast.warning("Empresa guardada pero hubo un error al subir el logo. Puedes intentar subirlo después.");
+          } finally {
+            setUploadingLogo(false);
+          }
+        }
+
+        toast.success("Empresa actualizada exitosamente");
+        router.push("/gestion/empresas");
+        return;
+      } else {
+        // CREATE mode
+        let finalAdministratorId = formData.administratorId;
+
+        const dataToSend: CreateCompanyData = {
+          legalName: formData.legalName,
+          tradeName: formData.tradeName || undefined,
+          rfc: formData.rfc.toUpperCase(),
+          legalForm: formData.legalForm,
+          fiscalAddress: formData.fiscalAddress,
+          primaryContact: formData.primaryContact,
+          isFranchise: formData.isFranchise || false,
+          activeWhatsApp: formData.activeWhatsApp || false,
+        };
+
+        if (finalAdministratorId) {
+          dataToSend.administratorId = finalAdministratorId;
+        }
+
+        if (!finalAdministratorId && formData.administratorData) {
+          dataToSend.administratorData = formData.administratorData;
+        }
+
+        const response = await companiesService.createCompany(dataToSend);
+
+        if (!response.success) {
+          if ((response as any).permissionDenied) return;
+          throw new Error(response.message || "Error al guardar la empresa");
+        }
+
+        if (logoFile) {
+          setUploadingLogo(true);
+          toast.info("Subiendo logo a Firebase Storage...");
+
+          try {
+            const savedCompanyId = response.data._id;
+
+            const { uploadCompanyLogo } = await import("@/services/firebaseStorage");
+            const logoResult = await uploadCompanyLogo(logoFile, savedCompanyId);
+
+            await companiesService.updateCompany(savedCompanyId, {
+              logoUrl: logoResult.url,
+              logoPath: logoResult.path,
+            });
+
+            toast.success("Logo subido exitosamente");
+          } catch (uploadError: any) {
+            console.error("Error al subir logo:", uploadError);
+            toast.warning("Empresa guardada pero hubo un error al subir el logo. Puedes intentar subirlo después.");
+          } finally {
+            setUploadingLogo(false);
+          }
+        }
+
+        toast.success("Empresa creada exitosamente");
+        router.push("/gestion/empresas");
+        return;
+      }
     } catch (err: any) {
       setError(err.message || "Error al guardar la empresa");
       toast.error(err.message || "Error al guardar la empresa");
@@ -413,7 +456,7 @@ const NewCompanyPage: React.FC = () => {
     }
   };
 
-  if (loading && isEditing) {
+  if (initialLoading && isEditing) {
     return (
       <div
         className="flex justify-center items-center"
@@ -881,7 +924,12 @@ const NewCompanyPage: React.FC = () => {
                     });
                   }}
                   onBlur={() => {
-                    if (!formData.administratorId) checkUsername(formData.administratorData?.username || "");
+                    const currentUsername = formData.administratorData?.username || "";
+                    if (isEditing && originalFormData?.administratorData?.username?.toLowerCase() === currentUsername.toLowerCase()) {
+                      setUsernameAvailable(null);
+                      return;
+                    }
+                    checkUsername(currentUsername, formData.administratorId || undefined);
                   }}
                   className="py-2"
                 />

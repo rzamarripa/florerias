@@ -1,153 +1,73 @@
 export interface Delivery {
   _id: string;
-  nombre: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  direccion: string;
-  telefono: string;
-  correo: string;
-  usuario: string;
-  contrasena?: string;
-  foto: string;
-  estatus: boolean;
+  username: string;
+  email: string;
+  phone: string;
+  profile: {
+    name: string;
+    lastName: string;
+    fullName: string;
+    estatus: boolean;
+  };
+  role: {
+    _id: string;
+    name: string;
+    description?: string;
+  };
+  branch: {
+    _id: string;
+    branchName: string;
+    branchCode: string;
+    companyId: string;
+  } | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateDeliveryData {
-  nombre: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  direccion: string;
-  telefono: string;
-  correo: string;
-  usuario: string;
-  contrasena: string;
-  foto?: string;
-  estatus?: boolean;
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  profile: {
+    name: string;
+    lastName: string;
+  };
+  branch: string;
 }
 
 export interface UpdateDeliveryData {
-  nombre?: string;
-  apellidoPaterno?: string;
-  apellidoMaterno?: string;
-  direccion?: string;
-  telefono?: string;
-  correo?: string;
-  usuario?: string;
-  contrasena?: string;
-  foto?: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  profile?: {
+    name?: string;
+    lastName?: string;
+  };
   estatus?: boolean;
 }
 
 export interface CreateDeliveryResponseData {
-  delivery: Delivery;
+  success: boolean;
+  data: Delivery;
+  message: string;
 }
 
 export interface GetDeliveryResponse {
   success: boolean;
-  count: number;
+  data: Delivery[];
   pagination: {
     page: number;
     limit: number;
     total: number;
     pages: number;
   };
-  data: Delivery[];
 }
 
 export interface DeliveryFilters {
   page?: number;
   limit?: number;
-  nombre?: string;
-  apellidoPaterno?: string;
-  usuario?: string;
-  correo?: string;
-  telefono?: string;
+  search?: string;
   estatus?: boolean;
-}
-
-export type FilterType = 'nombre' | 'apellidoPaterno' | 'usuario' | 'correo' | 'telefono';
-
-export interface FilterOption {
-  value: FilterType;
-  label: string;
-}
-
-// Dealer interfaces
-export interface Dealer {
-  _id: string;
-  nombre: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  direccion: string;
-  telefono: string;
-  correo: string;
-  usuario: string;
-  contrasena?: string;
-  foto: string;
-  estatus: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateDealerData {
-  nombre: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  direccion: string;
-  telefono: string;
-  correo: string;
-  usuario: string;
-  contrasena: string;
-  foto?: string;
-  estatus?: boolean;
-}
-
-export interface UpdateDealerData {
-  nombre?: string;
-  apellidoPaterno?: string;
-  apellidoMaterno?: string;
-  direccion?: string;
-  telefono?: string;
-  correo?: string;
-  usuario?: string;
-  contrasena?: string;
-  foto?: string;
-  estatus?: boolean;
-}
-
-export interface CreateDealerResponseData {
-  success: boolean;
-  data: Dealer;
-  message: string;
-}
-
-export interface GetDealersResponse {
-  success: boolean;
-  data: Dealer[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-export interface DealerFilters {
-  page?: number;
-  limit?: number;
-  nombre?: string;
-  apellidoPaterno?: string;
-  usuario?: string;
-  correo?: string;
-  telefono?: string;
-  estatus?: boolean;
-}
-
-export type DealerFilterType = 'nombre' | 'apellidoPaterno' | 'usuario' | 'correo' | 'telefono';
-
-export interface DealerFilterOption {
-  value: DealerFilterType;
-  label: string;
 }

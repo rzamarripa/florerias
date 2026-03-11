@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Branch, CreateBranchData, Manager } from "../types";
 import { branchesService } from "../services/branches";
 import { companiesService } from "../../companies/services/companies";
+import { usersService } from "../../users/services/users";
 import { useBranchModalStore } from "@/stores/branchModalStore";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
@@ -355,49 +356,124 @@ const BranchModal: React.FC<BranchModalProps> = ({
         return;
       }
 
-      const dataToSend: CreateBranchData = {
-        branchName: formData.branchName,
-        branchCode: formData.branchCode || undefined,
-        rfc: formData.rfc,
-        companyId: formData.companyId,
-        address: formData.address,
-        contactPhone: formData.contactPhone,
-        contactEmail: formData.contactEmail,
-        royaltiesPercentage: formData.royaltiesPercentage,
-        advertisingBranchPercentage: formData.advertisingBranchPercentage,
-        advertisingBrandPercentage: formData.advertisingBrandPercentage,
-        deliveryTracking: { shippingLimit: formData.deliveryTracking?.shippingLimit || 0 },
-      };
-
-      if (formData.managerId) {
-        dataToSend.managerId = formData.managerId;
-      }
-
-      if (!formData.managerId && formData.managerData) {
-        dataToSend.managerData = formData.managerData;
-      }
-
-      let response;
-
       if (isEditing && branch) {
-        response = await branchesService.updateBranch(branch._id, dataToSend);
+        let managerError: string | null = null;
+        let branchError: string | null = null;
+
+        // Update manager user (independiente)
+        if (formData.managerId && formData.managerData) {
+          try {
+            const userDataToUpdate: any = {
+              username: formData.managerData.username,
+              email: formData.managerData.email,
+              phone: formData.managerData.phone,
+              profile: {
+                name: formData.managerData.profile.name,
+                lastName: formData.managerData.profile.lastName,
+                fullName: `${formData.managerData.profile.name} ${formData.managerData.profile.lastName}`,
+              },
+            };
+
+            if (formData.managerData.password && formData.managerData.password.trim() !== "") {
+              userDataToUpdate.password = formData.managerData.password;
+            }
+
+            const managerResult = await usersService.updateUser(formData.managerId, userDataToUpdate);
+            if (!managerResult.success) {
+              managerError = managerResult.message || "Error al actualizar el gerente";
+            }
+          } catch (err: any) {
+            managerError = err.message || "Error al actualizar el gerente";
+          }
+        }
+
+        // Update branch (independiente)
+        try {
+          const dataToSend: CreateBranchData = {
+            branchName: formData.branchName,
+            branchCode: formData.branchCode || undefined,
+            rfc: formData.rfc,
+            companyId: formData.companyId,
+            address: formData.address,
+            contactPhone: formData.contactPhone,
+            contactEmail: formData.contactEmail,
+            royaltiesPercentage: formData.royaltiesPercentage,
+            advertisingBranchPercentage: formData.advertisingBranchPercentage,
+            advertisingBrandPercentage: formData.advertisingBrandPercentage,
+            deliveryTracking: { shippingLimit: formData.deliveryTracking?.shippingLimit || 0 },
+          };
+
+          if (formData.managerId) {
+            dataToSend.managerId = formData.managerId;
+          }
+
+          if (!formData.managerId && formData.managerData) {
+            dataToSend.managerData = formData.managerData;
+          }
+
+          const response = await branchesService.updateBranch(branch._id, dataToSend);
+
+          if (!response.success) {
+            branchError = response.message || "Error al actualizar la sucursal";
+          }
+        } catch (err: any) {
+          branchError = err.message || "Error al actualizar la sucursal";
+        }
+
+        // Report results
+        if (managerError && branchError) {
+          setError(`${managerError}. ${branchError}`);
+          toast.error("Error al actualizar");
+          setSaving(false);
+          return;
+        }
+        if (managerError) {
+          toast.warning(`Sucursal actualizada, pero: ${managerError}`);
+        } else if (branchError) {
+          setError(branchError);
+          toast.error(branchError);
+          setSaving(false);
+          return;
+        } else {
+          toast.success("Sucursal actualizada exitosamente");
+        }
       } else {
-        response = await branchesService.createBranch(dataToSend);
+        // CREATE mode
+        const dataToSend: CreateBranchData = {
+          branchName: formData.branchName,
+          branchCode: formData.branchCode || undefined,
+          rfc: formData.rfc,
+          companyId: formData.companyId,
+          address: formData.address,
+          contactPhone: formData.contactPhone,
+          contactEmail: formData.contactEmail,
+          royaltiesPercentage: formData.royaltiesPercentage,
+          advertisingBranchPercentage: formData.advertisingBranchPercentage,
+          advertisingBrandPercentage: formData.advertisingBrandPercentage,
+          deliveryTracking: { shippingLimit: formData.deliveryTracking?.shippingLimit || 0 },
+        };
+
+        if (formData.managerId) {
+          dataToSend.managerId = formData.managerId;
+        }
+
+        if (!formData.managerId && formData.managerData) {
+          dataToSend.managerData = formData.managerData;
+        }
+
+        const response = await branchesService.createBranch(dataToSend);
+
+        if (!response.success) {
+          const errorMsg = response.message || "Error al crear la sucursal";
+          setError(errorMsg);
+          toast.error(errorMsg);
+          setSaving(false);
+          return;
+        }
+
+        toast.success("Sucursal creada exitosamente");
       }
 
-      if (!response.success) {
-        const errorMsg = response.message || "Error al guardar la sucursal";
-        setError(errorMsg);
-        toast.error(errorMsg);
-        setSaving(false);
-        return;
-      }
-
-      toast.success(
-        isEditing
-          ? "Sucursal actualizada exitosamente"
-          : "Sucursal creada exitosamente"
-      );
       onBranchSaved?.();
       onHide();
 

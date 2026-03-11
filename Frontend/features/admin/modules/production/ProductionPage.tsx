@@ -4,7 +4,7 @@ import { Search, ChevronLeft, ChevronRight, Plus, User, Loader2 } from "lucide-r
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { productionService } from "./services/production";
-import { Production, ProductionFilters, FilterType, FilterOption, CreateProductionData, UpdateProductionData } from "./types";
+import { Production, ProductionFilters, CreateProductionData, UpdateProductionData } from "./types";
 import Actions from "./components/Actions";
 import ProductionModal from "./components/ProductionModal";
 
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -30,19 +29,10 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
 
-const filterOptions: FilterOption[] = [
-  { value: "nombre", label: "Nombre" },
-  { value: "apellidoPaterno", label: "Apellido Paterno" },
-  { value: "usuario", label: "Usuario" },
-  { value: "correo", label: "Correo" },
-  { value: "telefono", label: "Teléfono" },
-];
-
 const ProductionPage: React.FC = () => {
   const [production, setProduction] = useState<Production[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [filterType, setFilterType] = useState<FilterType>("nombre");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedProduction, setSelectedProduction] = useState<Production | null>(null);
@@ -69,7 +59,7 @@ const ProductionPage: React.FC = () => {
       };
 
       if (searchTerm) {
-        filters[filterType] = searchTerm;
+        filters.search = searchTerm;
       }
 
       if (statusFilter) {
@@ -95,15 +85,10 @@ const ProductionPage: React.FC = () => {
 
   useEffect(() => {
     loadProduction(true, 1);
-  }, [searchTerm, filterType, statusFilter]);
+  }, [searchTerm, statusFilter]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
-  };
-
-  const handleFilterTypeChange = (value: string): void => {
-    setFilterType(value as FilterType);
-    setSearchTerm("");
   };
 
   const handleStatusFilterChange = (value: string): void => {
@@ -126,7 +111,7 @@ const ProductionPage: React.FC = () => {
 
   const handleToggleStatus = async (production: Production) => {
     try {
-      if (production.estatus) {
+      if (production.profile.estatus) {
         await productionService.deactivateProduction(production._id);
         toast.success("Personal de producción desactivado exitosamente");
       } else {
@@ -166,10 +151,6 @@ const ProductionPage: React.FC = () => {
     });
   };
 
-  const getFullName = (production: Production) => {
-    return `${production.nombre} ${production.apellidoPaterno} ${production.apellidoMaterno}`.trim();
-  };
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -187,32 +168,16 @@ const ProductionPage: React.FC = () => {
       <Card>
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
-            <Select value={filterType} onValueChange={handleFilterTypeChange}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filtrar por" />
-              </SelectTrigger>
-              <SelectContent>
-                {filterOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder={`Buscar por ${filterOptions
-                  .find((opt) => opt.value === filterType)
-                  ?.label.toLowerCase()}...`}
+                placeholder="Buscar personal de producción..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="pl-10"
               />
             </div>
-
             <Select
               value={statusFilter || "all"}
               onValueChange={(value) => handleStatusFilterChange(value === "all" ? "" : value)}
@@ -238,12 +203,11 @@ const ProductionPage: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
-                    <TableHead>Foto</TableHead>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead>Nombre Completo</TableHead>
                     <TableHead>Usuario</TableHead>
-                    <TableHead>Dirección</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Teléfono</TableHead>
-                    <TableHead>Correo</TableHead>
+                    <TableHead>Sucursal</TableHead>
                     <TableHead>Estatus</TableHead>
                     <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
@@ -252,7 +216,7 @@ const ProductionPage: React.FC = () => {
                   {production.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={9}
+                        colSpan={8}
                         className="text-center py-12 text-muted-foreground"
                       >
                         <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -267,34 +231,35 @@ const ProductionPage: React.FC = () => {
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </TableCell>
                         <TableCell>
-                          <Avatar>
-                            <AvatarImage src={person.foto} alt={getFullName(person)} />
-                            <AvatarFallback>
-                              {person.nombre.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell>
                           <div>
-                            <div className="font-medium">{getFullName(person)}</div>
+                            <div className="font-medium">{person.profile.fullName}</div>
                             <div className="text-sm text-muted-foreground">
                               {formatDate(person.createdAt)}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary">@{person.usuario}</Badge>
+                          <Badge variant="secondary">@{person.username}</Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="truncate max-w-[200px]">{person.direccion}</div>
+                          <div className="truncate max-w-[200px]">{person.email}</div>
                         </TableCell>
-                        <TableCell>{person.telefono}</TableCell>
+                        <TableCell>{person.phone}</TableCell>
                         <TableCell>
-                          <div className="truncate max-w-[180px]">{person.correo}</div>
+                          {person.branch ? (
+                            <div>
+                              <div className="font-medium">{person.branch.branchName}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {person.branch.branchCode}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Sin sucursal</span>
+                          )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={person.estatus ? "default" : "destructive"}>
-                            {person.estatus ? "Activo" : "Inactivo"}
+                          <Badge variant={person.profile.estatus ? "default" : "destructive"}>
+                            {person.profile.estatus ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
                         <TableCell>

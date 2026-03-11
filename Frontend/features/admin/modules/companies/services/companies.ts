@@ -133,6 +133,7 @@ export const companiesService = {
       data: {
         companyId: string;
         companyName: string;
+        legalName?: string;
         rfc: string;
         address: {
           street: string;
