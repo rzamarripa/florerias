@@ -5,8 +5,6 @@ import { Plus, Search, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, Credit
 import { toast } from "sonner";
 import { paymentMethodsService } from "./services/paymentMethods";
 import { PaymentMethod, PaymentMethodFilters, CreatePaymentMethodData } from "./types";
-import { useUserSessionStore } from "@/stores/userSessionStore";
-import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,10 +55,6 @@ const PaymentMethodsPage: React.FC = () => {
     total: 0,
     pages: 0,
   });
-
-  const { user } = useUserSessionStore();
-  const { activeBranch } = useActiveBranchStore();
-  const isGerente = user?.role?.name === "Gerente";
 
   const loadPaymentMethods = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -142,22 +136,10 @@ const PaymentMethodsPage: React.FC = () => {
 
     try {
       if (editingPaymentMethod) {
-        const { branch, ...updateData } = formData;
-        await paymentMethodsService.updatePaymentMethod(editingPaymentMethod._id, updateData);
+        await paymentMethodsService.updatePaymentMethod(editingPaymentMethod._id, formData);
         toast.success("Método de pago actualizado exitosamente");
       } else {
-        let finalData = { ...formData };
-
-        if (isGerente) {
-          delete finalData.branch;
-        } else if (activeBranch) {
-          finalData.branch = activeBranch._id;
-        } else {
-          toast.error("Por favor selecciona una sucursal");
-          return;
-        }
-
-        await paymentMethodsService.createPaymentMethod(finalData);
+        await paymentMethodsService.createPaymentMethod(formData);
         toast.success("Método de pago creado exitosamente");
       }
       handleCloseModal();

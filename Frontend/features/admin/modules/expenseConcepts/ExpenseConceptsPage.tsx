@@ -4,12 +4,9 @@ import React, { useEffect, useState } from "react";
 import { Plus, Search, ChevronLeft, ChevronRight, PackageSearch, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { expenseConceptsService } from "./services/expenseConcepts";
-import { branchesService } from "../branches/services/branches";
 import { ExpenseConcept } from "./types";
 import ExpenseConceptActions from "./components/ExpenseConceptActions";
 import ExpenseConceptModal from "./components/ExpenseConceptModal";
-import { useUserSessionStore } from "@/stores/userSessionStore";
-import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +36,6 @@ const ExpenseConceptsPage: React.FC = () => {
   const [concepts, setConcepts] = useState<ExpenseConcept[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [branchId, setBranchId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedConcept, setSelectedConcept] = useState<ExpenseConcept | null>(null);
   const [pagination, setPagination] = useState({
@@ -48,37 +44,6 @@ const ExpenseConceptsPage: React.FC = () => {
     total: 0,
     pages: 0,
   });
-  const { user } = useUserSessionStore();
-  const { activeBranch } = useActiveBranchStore();
-
-  useEffect(() => {
-    const determineBranchId = async () => {
-      if (!user) return;
-
-      const userRole = user.role?.name;
-
-      if (userRole === "Administrador") {
-        if (activeBranch) {
-          setBranchId(activeBranch._id);
-        }
-      } else if (userRole === "Gerente") {
-        try {
-          const response = await branchesService.getAllBranches({ limit: 1000 });
-          const managerBranch = response.data.find(
-            (branch) => branch.manager === user._id
-          );
-          if (managerBranch) {
-            setBranchId(managerBranch._id);
-          }
-        } catch (error: any) {
-          console.error("Error fetching manager branch:", error);
-          toast.error("Error al obtener la sucursal del gerente");
-        }
-      }
-    };
-
-    determineBranchId();
-  }, [user, activeBranch]);
 
   const loadConcepts = async (isInitial: boolean, page: number = pagination.page) => {
     try {
@@ -93,10 +58,6 @@ const ExpenseConceptsPage: React.FC = () => {
 
       if (searchTerm) {
         filters.search = searchTerm;
-      }
-
-      if (branchId) {
-        filters.branch = branchId;
       }
 
       const response = await expenseConceptsService.getAllExpenseConcepts(filters);
@@ -117,10 +78,8 @@ const ExpenseConceptsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (branchId) {
-      loadConcepts(true, 1);
-    }
-  }, [searchTerm, branchId]);
+    loadConcepts(true, 1);
+  }, [searchTerm]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
@@ -191,7 +150,6 @@ const ExpenseConceptsPage: React.FC = () => {
                     <TableHead>Nombre</TableHead>
                     <TableHead>Descripción</TableHead>
                     <TableHead>Departamento</TableHead>
-                    <TableHead>Sucursal</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
@@ -199,7 +157,7 @@ const ExpenseConceptsPage: React.FC = () => {
                 <TableBody>
                   {concepts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
+                      <TableCell colSpan={6} className="text-center py-12">
                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
                           <PackageSearch className="h-12 w-12 opacity-50" />
                           <p>No se encontraron conceptos de gastos</p>
@@ -222,16 +180,6 @@ const ExpenseConceptsPage: React.FC = () => {
                           <Badge className="bg-info text-info-foreground">
                             {DEPARTMENT_LABELS[concept.department] || concept.department}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{concept.branch.branchName}</div>
-                            {concept.branch.branchCode && (
-                              <p className="text-sm text-muted-foreground">
-                                {concept.branch.branchCode}
-                              </p>
-                            )}
-                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={concept.isActive ? "default" : "destructive"}>

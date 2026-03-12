@@ -6,7 +6,6 @@ export interface ExpenseConceptFilters {
   limit?: number;
   search?: string;
   isActive?: boolean;
-  branch?: string;
   department?: string;
 }
 
@@ -24,7 +23,7 @@ export interface GetExpenseConceptsResponse {
 
 export const expenseConceptsService = {
   getAllExpenseConcepts: async (filters: ExpenseConceptFilters = {}): Promise<GetExpenseConceptsResponse> => {
-    const { page = 1, limit = 10, search, isActive, branch, department } = filters;
+    const { page = 1, limit = 10, search, isActive, department } = filters;
 
     const searchParams = new URLSearchParams({
       page: page.toString(),
@@ -33,7 +32,6 @@ export const expenseConceptsService = {
 
     if (search) searchParams.append('search', search);
     if (isActive !== undefined) searchParams.append('isActive', isActive.toString());
-    if (branch) searchParams.append('branch', branch);
     if (department) searchParams.append('department', department);
 
     const response = await apiCall<GetExpenseConceptsResponse>(`/expense-concepts?${searchParams}`);

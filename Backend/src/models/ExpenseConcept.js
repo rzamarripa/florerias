@@ -20,12 +20,12 @@ const expenseConceptSchema = new Schema(
     branch: {
       type: Schema.Types.ObjectId,
       ref: "cv_branch",
-      required: [true, "La sucursal es requerida"],
+      required: false,
     },
     company: {
       type: Schema.Types.ObjectId,
       ref: "cv_company",
-      required: false,
+      required: [true, "La empresa es requerida"],
     },
     isActive: {
       type: Boolean,
@@ -51,10 +51,11 @@ expenseConceptSchema.pre("save", function (next) {
   next();
 });
 
+// Índice compuesto para unicidad por empresa
+expenseConceptSchema.index({ name: 1, company: 1 }, { unique: true });
+
 // Índices para búsquedas rápidas
-expenseConceptSchema.index({ name: 1 });
 expenseConceptSchema.index({ department: 1 });
-expenseConceptSchema.index({ branch: 1 });
 expenseConceptSchema.index({ company: 1 });
 expenseConceptSchema.index({ isActive: 1 });
 expenseConceptSchema.index({ createdAt: -1 });

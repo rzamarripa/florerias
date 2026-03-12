@@ -10,8 +10,7 @@ const getAllPaymentMethods = async (req, res) => {
       page = 1,
       limit = 10,
       status,
-      name,
-      branchId
+      name
     } = req.query;
 
     const userId = req.user?._id;
@@ -40,117 +39,116 @@ const getAllPaymentMethods = async (req, res) => {
     // Construir filtros
     const filters = {};
 
-    // Si se proporciona un branchId específico, usarlo directamente
-    if (branchId) {
-      filters.branch = branchId;
-    } else {
-      // Si no se proporciona branchId, filtrar por sucursal según el rol del usuario
-      if (userRole === 'Administrador') {
-        // Buscar las sucursales del administrador
-        const branches = await Branch.find({
-          administrator: userId,
-        });
+    // Filtrar por empresa según el rol del usuario
+    if (userRole === 'Administrador') {
+      const company = await Company.findOne({ administrator: userId });
 
-        if (branches.length > 0) {
-          filters.branch = { $in: branches.map(b => b._id) };
-        } else {
-          // Si no tiene sucursales, no retornar ningún método de pago
-          return res.status(200).json({
-            success: true,
-            data: [],
-            pagination: {
-              page: parseInt(page),
-              limit: parseInt(limit),
-              total: 0,
-              pages: 0
-            }
-          });
-        }
-      } else if (userRole === 'Gerente') {
-        // Buscar la sucursal del gerente
-        const managerBranch = await Branch.findOne({
-          manager: userId,
-        });
-
-        if (managerBranch) {
-          filters.branch = managerBranch._id;
-        } else {
-          // Si no tiene sucursal, no retornar ningún método de pago
-          return res.status(200).json({
-            success: true,
-            data: [],
-            pagination: {
-              page: parseInt(page),
-              limit: parseInt(limit),
-              total: 0,
-              pages: 0
-            }
-          });
-        }
-      } else if (userRole === 'Cajero' || userRole === 'Cashier') {
-        // Para cajeros, buscar en qué sucursal están asignados
-        const cashierBranch = await Branch.findOne({
-          $or: [
-            { cashiers: userId },
-            { employees: userId }
-          ]
-        });
-
-        if (cashierBranch) {
-          filters.branch = cashierBranch._id;
-        } else {
-          // Si no tiene sucursal, no retornar ningún método de pago
-          return res.status(200).json({
-            success: true,
-            data: [],
-            pagination: {
-              page: parseInt(page),
-              limit: parseInt(limit),
-              total: 0,
-              pages: 0
-            }
-          });
-        }
-      } else if (userRole === 'Redes') {
-        // Para Redes, buscar la empresa donde están asignados
-        const userCompany = await Company.findOne({ redes: userId });
-        if (userCompany) {
-          const branches = await Branch.find({ companyId: userCompany._id }).select('_id');
-          if (branches.length > 0) {
-            filters.branch = { $in: branches.map(b => b._id) };
-          } else {
-            return res.status(200).json({
-              success: true,
-              data: [],
-              pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: 0,
-                pages: 0
-              }
-            });
+      if (company) {
+        filters.company = company._id;
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
           }
-        } else {
-          return res.status(200).json({
-            success: true,
-            data: [],
-            pagination: {
-              page: parseInt(page),
-              limit: parseInt(limit),
-              total: 0,
-              pages: 0
-            }
-          });
-        }
-      } else if (userRole !== 'Super Admin') {
-        // Otros roles no tienen acceso
-        return res.status(403).json({
-          success: false,
-          message: 'No tienes permisos para ver métodos de pago'
         });
       }
-      // Super Admin puede ver todos los métodos de pago (no se agrega filtro de branch)
+    } else if (userRole === 'Gerente') {
+      const managerBranch = await Branch.findOne({ manager: userId });
+
+      if (managerBranch) {
+        const company = await Company.findOne({ branches: managerBranch._id });
+
+        if (company) {
+          filters.company = company._id;
+        } else {
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    } else if (userRole === 'Cajero' || userRole === 'Cashier') {
+      const cashierBranch = await Branch.findOne({
+        $or: [
+          { cashiers: userId },
+          { employees: userId }
+        ]
+      });
+
+      if (cashierBranch) {
+        const company = await Company.findOne({ branches: cashierBranch._id });
+
+        if (company) {
+          filters.company = company._id;
+        } else {
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total: 0,
+              pages: 0
+            }
+          });
+        }
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    } else if (userRole === 'Redes') {
+      const userCompany = await Company.findOne({ redes: userId });
+      if (userCompany) {
+        filters.company = userCompany._id;
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        });
+      }
+    } else if (userRole !== 'Super Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes permisos para ver métodos de pago'
+      });
     }
+    // Super Admin puede ver todos los métodos de pago (no se agrega filtro de company)
 
     if (status !== undefined) {
       filters.status = status === 'true';
@@ -167,7 +165,6 @@ const getAllPaymentMethods = async (req, res) => {
 
     // Obtener métodos de pago con paginación
     const paymentMethods = await PaymentMethod.find(filters)
-      .populate('branch', 'branchName branchCode')
       .populate('company', 'legalName tradeName')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -205,7 +202,6 @@ const getPaymentMethodById = async (req, res) => {
     const { id } = req.params;
 
     const paymentMethod = await PaymentMethod.findById(id)
-      .populate('branch', 'branchName branchCode')
       .populate('company', 'legalName tradeName');
 
     if (!paymentMethod) {
@@ -232,7 +228,7 @@ const getPaymentMethodById = async (req, res) => {
 // Crear un nuevo método de pago
 const createPaymentMethod = async (req, res) => {
   try {
-    const { name, abbreviation, branch: branchId } = req.body;
+    const { name, abbreviation } = req.body;
     const userId = req.user?._id;
 
     if (!userId) {
@@ -262,103 +258,42 @@ const createPaymentMethod = async (req, res) => {
 
     const userRole = currentUser.role.name;
 
-    // Determinar la sucursal y empresa según el rol
-    let finalBranchId = branchId;
+    // Determinar la empresa según el rol
     let companyId = null;
 
-    if (userRole === 'Gerente') {
-      // Para Gerente, buscar su sucursal automáticamente
+    if (userRole === 'Administrador') {
+      const company = await Company.findOne({ administrator: userId });
+      if (company) {
+        companyId = company._id;
+      }
+    } else if (userRole === 'Gerente') {
       const managerBranch = await Branch.findOne({ manager: userId });
       if (managerBranch) {
-        finalBranchId = managerBranch._id;
-        
-        // Buscar la empresa asociada
-        const company = await Company.findOne({
-          branches: managerBranch._id,
-        });
+        const company = await Company.findOne({ branches: managerBranch._id });
         if (company) {
           companyId = company._id;
         }
-      } else {
-        return res.status(404).json({
-          success: false,
-          message: 'No se encontró una sucursal asignada al gerente'
-        });
       }
-    } else if (userRole === 'Administrador') {
-      // Para Administrador, debe venir el branchId
-      if (!finalBranchId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Debe especificar una sucursal'
-        });
-      }
-
-      // Verificar que la sucursal existe y le pertenece
-      const branch = await Branch.findById(finalBranchId);
-      if (!branch) {
-        return res.status(404).json({
-          success: false,
-          message: 'Sucursal no encontrada'
-        });
-      }
-
-      if (branch.administrator.toString() !== userId.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: 'No tienes permisos para crear métodos de pago en esta sucursal'
-        });
-      }
-
-      // Buscar la empresa
-      const company = await Company.findOne({
-        administrator: userId,
-      });
-      if (company) {
-        companyId = company._id;
-      }
-    } else if (userRole === 'Super Admin') {
-      // Super Admin debe especificar sucursal
-      if (!finalBranchId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Debe especificar una sucursal'
-        });
-      }
-
-      // Verificar que la sucursal existe
-      const branch = await Branch.findById(finalBranchId);
-      if (!branch) {
-        return res.status(404).json({
-          success: false,
-          message: 'Sucursal no encontrada'
-        });
-      }
-
-      // Buscar la empresa asociada
-      const company = await Company.findOne({
-        branches: finalBranchId,
-      });
-      if (company) {
-        companyId = company._id;
-      }
-    } else {
+    } else if (userRole !== 'Super Admin') {
       return res.status(403).json({
         success: false,
         message: 'No tienes permisos para crear métodos de pago'
       });
     }
+    // Super Admin: companyId queda como null
 
-    // Verificar que no exista un método de pago con el mismo nombre en la misma sucursal
-    const existingPaymentMethod = await PaymentMethod.findOne({
-      name: name.trim(),
-      branch: finalBranchId
-    });
+    // Verificar que no exista un método de pago con el mismo nombre en la misma empresa
+    const duplicateFilter = { name: name.trim() };
+    if (companyId) {
+      duplicateFilter.company = companyId;
+    }
+
+    const existingPaymentMethod = await PaymentMethod.findOne(duplicateFilter);
 
     if (existingPaymentMethod) {
       return res.status(400).json({
         success: false,
-        message: 'Ya existe un método de pago con este nombre en esta sucursal'
+        message: 'Ya existe un método de pago con este nombre en esta empresa'
       });
     }
 
@@ -366,14 +301,12 @@ const createPaymentMethod = async (req, res) => {
     const newPaymentMethod = new PaymentMethod({
       name,
       abbreviation,
-      branch: finalBranchId,
       company: companyId,
     });
 
     const savedPaymentMethod = await newPaymentMethod.save();
 
-    // Popular la sucursal y empresa para la respuesta
-    await savedPaymentMethod.populate('branch', 'branchName branchCode');
+    // Popular la empresa para la respuesta
     await savedPaymentMethod.populate('company', 'legalName tradeName');
 
     res.status(201).json({
@@ -395,7 +328,7 @@ const createPaymentMethod = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Ya existe un método de pago con ese nombre'
+        message: 'Ya existe un método de pago con ese nombre en esta empresa'
       });
     }
 
@@ -426,8 +359,7 @@ const updatePaymentMethod = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate('branch', 'branchName branchCode')
-      .populate('company', 'legalName tradeName');
+    ).populate('company', 'legalName tradeName');
 
     res.status(200).json({
       success: true,
@@ -448,7 +380,7 @@ const updatePaymentMethod = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'Ya existe un método de pago con ese nombre'
+        message: 'Ya existe un método de pago con ese nombre en esta empresa'
       });
     }
 

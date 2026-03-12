@@ -139,11 +139,19 @@ const CashiersPage: React.FC = () => {
       setModalLoading(true);
       if (selectedCashier) {
         // Modo edición
-        await cashiersService.updateCashier(selectedCashier._id, data as UpdateCashierData);
+        const result = await cashiersService.updateCashier(selectedCashier._id, data as UpdateCashierData);
+        if (!result.success) {
+          toast.error(result.message || "Error al actualizar el cajero");
+          return;
+        }
         toast.success("Cajero actualizado exitosamente");
       } else {
         // Modo creación
-        await cashiersService.createCashier(data as CreateCashierData);
+        const result = await cashiersService.createCashier(data as CreateCashierData);
+        if (!result.success) {
+          toast.error(result.message || "Error al crear el cajero");
+          return;
+        }
         toast.success("Cajero creado exitosamente");
       }
       setShowModal(false);

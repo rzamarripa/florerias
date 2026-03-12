@@ -336,7 +336,7 @@ export const getAllBranches = async (req, res) => {
       .populate("manager", "username email phone profile.name profile.lastName profile.fullName")
       .populate({
         path: "employees",
-        select: "username email phone profile.name profile.lastName profile.fullName role",
+        select: "username email phone profile.name profile.lastName profile.fullName profile.estatus role",
         populate: {
           path: "role",
           select: "name"
@@ -376,7 +376,7 @@ export const getBranchById = async (req, res) => {
       .populate("manager", "username email phone profile.name profile.lastName profile.fullName")
       .populate({
         path: "employees",
-        select: "username email phone profile.name profile.lastName profile.fullName role",
+        select: "username email phone profile.name profile.lastName profile.fullName profile.estatus role",
         populate: {
           path: "role",
           select: "name"

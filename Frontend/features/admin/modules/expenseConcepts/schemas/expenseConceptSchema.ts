@@ -10,7 +10,6 @@ export const expenseConceptSchema = z.object({
       errorMap: () => ({ message: "Selecciona un departamento válido" }),
     }
   ),
-  branch: z.string().optional(), // La sucursal se determina automáticamente según el rol
 });
 
 export type ExpenseConceptFormData = z.infer<typeof expenseConceptSchema>;

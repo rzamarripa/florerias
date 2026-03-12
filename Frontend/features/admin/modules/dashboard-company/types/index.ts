@@ -21,6 +21,7 @@ export interface BranchStats {
       name: string;
       lastName: string;
       fullName: string;
+      estatus: boolean;
       image?: string;
     };
     role: {

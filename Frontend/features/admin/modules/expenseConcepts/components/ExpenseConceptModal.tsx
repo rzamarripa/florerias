@@ -8,8 +8,6 @@ import { Loader2 } from "lucide-react";
 import { expenseConceptSchema, ExpenseConceptFormData } from "../schemas/expenseConceptSchema";
 import { expenseConceptsService } from "../services/expenseConcepts";
 import { ExpenseConcept } from "../types";
-import { useUserSessionStore } from "@/stores/userSessionStore";
-import { useActiveBranchStore } from "@/stores/activeBranchStore";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,9 +53,6 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
   concept,
 }) => {
   const [loading, setLoading] = useState(false);
-  const { user } = useUserSessionStore();
-  const { activeBranch } = useActiveBranchStore();
-  const isGerente = user?.role?.name === "Gerente";
 
   const {
     control,
@@ -95,26 +90,11 @@ const ExpenseConceptModal: React.FC<ExpenseConceptModalProps> = ({
     try {
       setLoading(true);
 
-      let finalData = { ...data };
-
-      if (!concept) {
-        if (isGerente) {
-          delete finalData.branch;
-        } else if (activeBranch) {
-          finalData.branch = activeBranch._id;
-        } else {
-          toast.error("Por favor selecciona una sucursal");
-          setLoading(false);
-          return;
-        }
-      }
-
       if (concept) {
-        const { branch, ...updateData } = finalData;
-        await expenseConceptsService.updateExpenseConcept(concept._id, updateData);
+        await expenseConceptsService.updateExpenseConcept(concept._id, data);
         toast.success("Concepto actualizado exitosamente");
       } else {
-        await expenseConceptsService.createExpenseConcept(finalData);
+        await expenseConceptsService.createExpenseConcept(data);
         toast.success("Concepto creado exitosamente");
       }
 
