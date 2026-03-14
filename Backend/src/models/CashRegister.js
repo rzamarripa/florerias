@@ -13,7 +13,7 @@ const cashRegisterSchema = new Schema(
       ref: "cv_branch",
       required: [true, "La sucursal es requerida"],
     },
-    cashierId: {
+    activeUser: {
       type: Schema.Types.ObjectId,
       ref: "cs_user",
       required: false, // Campo temporal que se asigna al abrir la caja
@@ -93,7 +93,7 @@ const cashRegisterSchema = new Schema(
 
 // Índices para búsquedas rápidas
 cashRegisterSchema.index({ branchId: 1 });
-cashRegisterSchema.index({ cashierId: 1 });
+cashRegisterSchema.index({ activeUser: 1 });
 cashRegisterSchema.index({ managerId: 1 });
 cashRegisterSchema.index({ isOpen: 1 });
 cashRegisterSchema.index({ isActive: 1 });

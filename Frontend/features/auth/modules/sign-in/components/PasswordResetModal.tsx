@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import { TbMail, TbLock, TbShieldLock } from "react-icons/tb";
 import {
   sendResetCode,
@@ -42,6 +43,8 @@ const PasswordResetModal = ({
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -134,6 +137,7 @@ const PasswordResetModal = ({
 
     if (response.success) {
       setSuccess("Contraseña actualizada exitosamente");
+      toast.success("Contraseña actualizada exitosamente");
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -322,13 +326,24 @@ const PasswordResetModal = ({
                       <TbLock className="text-muted-foreground" />
                     </span>
                     <Input
-                      type="password"
+                      type={showNewPassword ? "text" : "password"}
                       placeholder="Nueva contraseña"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       disabled={isLoading}
-                      className="rounded-l-none"
+                      className="rounded-none border-r-0"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted hover:bg-muted/80"
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Mínimo 3 caracteres
@@ -342,13 +357,24 @@ const PasswordResetModal = ({
                       <TbLock className="text-muted-foreground" />
                     </span>
                     <Input
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirmar contraseña"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       disabled={isLoading}
-                      className="rounded-l-none"
+                      className="rounded-none border-r-0"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted hover:bg-muted/80"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

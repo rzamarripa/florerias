@@ -77,7 +77,7 @@ export interface CashRegister {
   _id: string;
   name: string;
   branchId: Branch | string;
-  cashierId: User | string | null; // Campo temporal asignado al abrir la caja
+  activeUser: User | string | null; // Campo temporal asignado al abrir la caja
   managerId: User | string;
   currentBalance: number;
   initialBalance: number;
@@ -94,7 +94,7 @@ export interface CashRegister {
 export interface CreateCashRegisterData {
   name: string;
   branchId: string;
-  cashierId?: string | null; // Opcional, se asigna temporalmente al abrir la caja
+  activeUser?: string | null; // Opcional, se asigna temporalmente al abrir la caja
   managerId: string;
   initialBalance?: number;
   isSocialMediaBox?: boolean;
@@ -103,7 +103,7 @@ export interface CreateCashRegisterData {
 export interface UpdateCashRegisterData {
   name?: string;
   branchId?: string;
-  cashierId?: string;
+  activeUser?: string;
   managerId?: string;
 }
 
@@ -176,7 +176,7 @@ export interface CashRegisterSummary {
     _id: string;
     name: string;
     branchId: Branch;
-    cashierId: User | null;
+    activeUser: User | null;
     managerId: User;
     isOpen: boolean;
     lastOpen: string | null;

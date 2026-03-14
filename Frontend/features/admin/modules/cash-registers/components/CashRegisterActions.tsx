@@ -22,10 +22,11 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
   const [isTogglingOpen, setIsTogglingOpen] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
 
-  const { getIsAdmin, getIsCashier, getIsSocialMedia } = useUserRoleStore();
+  const { getIsAdmin, getIsCashier, getIsSocialMedia, getIsManager } = useUserRoleStore();
   const isAdmin = getIsAdmin();
   const isCashier = getIsCashier();
   const isSocialMedia = getIsSocialMedia();
+  const isManager = getIsManager();
 
   // Verificar si el usuario actual puede abrir/cerrar esta caja
   // - Cajeros pueden abrir/cerrar cajas normales
@@ -35,8 +36,8 @@ const CashRegisterActions: React.FC<CashRegisterActionsProps> = ({
     if (cashRegister.isSocialMediaBox) {
       return isSocialMedia;
     }
-    // Si es caja normal, solo cajeros pueden abrirla
-    return isCashier;
+    // Si es caja normal, cajeros y gerentes pueden abrirla
+    return isCashier || isManager;
   };
 
   const handleToggleActive = async () => {

@@ -1455,8 +1455,8 @@ const NewOrderPage = () => {
                             <SelectItem key={cr._id} value={cr._id}>
                               {cr.name} -{" "}
                               {cr.isOpen ? "Abierta" : "Cerrada"}
-                              {cr.cashierId
-                                ? ` (${cr.cashierId.username})`
+                              {cr.activeUser
+                                ? ` (${cr.activeUser.username})`
                                 : ""}
                             </SelectItem>
                           ))}

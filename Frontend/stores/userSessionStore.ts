@@ -2,6 +2,7 @@ import type { User } from "@/features/admin/modules/users/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useActiveBranchStore } from "./activeBranchStore";
+import { apiCall } from "@/utils/api";
 
 interface UserSessionState {
   user: User | null;
@@ -68,6 +69,9 @@ export const useUserSessionStore = create<UserSessionStore>()(
       },
 
       logout: () => {
+        // Cerrar sesión en el backend (fire and forget)
+        apiCall("/user-session-logs/close", { method: "PUT" }).catch(() => {});
+
         // Limpiar la sucursal activa al cerrar sesión
         useActiveBranchStore.getState().clearActiveBranch();
 

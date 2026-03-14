@@ -61,7 +61,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
   const [formData, setFormData] = useState<CreateCashRegisterData>({
     name: "",
     branchId: "",
-    cashierId: null,
+    activeUser: null,
     managerId: "",
     initialBalance: 0,
     isSocialMediaBox: false,
@@ -92,10 +92,10 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
             typeof cashRegister.branchId === "string"
               ? cashRegister.branchId
               : cashRegister.branchId._id,
-          cashierId: cashRegister.cashierId
-            ? typeof cashRegister.cashierId === "string"
-              ? cashRegister.cashierId
-              : cashRegister.cashierId._id
+          activeUser: cashRegister.activeUser
+            ? typeof cashRegister.activeUser === "string"
+              ? cashRegister.activeUser
+              : cashRegister.activeUser._id
             : null,
           managerId:
             typeof cashRegister.managerId === "string"
@@ -194,7 +194,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
     setFormData({
       name: "",
       branchId: "",
-      cashierId: null,
+      activeUser: null,
       managerId: "",
       initialBalance: 0,
       isSocialMediaBox: false,
@@ -261,8 +261,8 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
       setSaving(true);
 
       if (isEditing && cashRegister) {
-        // Al editar, no enviar cashierId ni isSocialMediaBox para no modificarlo (inmutable)
-        const { cashierId, isSocialMediaBox, ...updateData } = formData;
+        // Al editar, no enviar activeUser ni isSocialMediaBox para no modificarlo (inmutable)
+        const { activeUser, isSocialMediaBox, ...updateData } = formData;
         await cashRegistersService.updateCashRegister(
           cashRegister._id,
           updateData
@@ -270,7 +270,7 @@ const CashRegisterModal: React.FC<CashRegisterModalProps> = ({
         toast.success("Caja registradora actualizada exitosamente");
       } else {
         // Al crear, enviar los datos con isSocialMediaBox segun el tipo seleccionado
-        // El cashierId siempre sera null, se asignara cuando se abra la caja
+        // El activeUser siempre sera null, se asignara cuando se abra la caja
         await cashRegistersService.createCashRegister(formData);
         toast.success("Caja registradora creada exitosamente");
       }

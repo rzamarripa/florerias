@@ -15,6 +15,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   X,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { cashRegistersService } from "./services/cashRegisters";
@@ -24,6 +25,7 @@ import { useUserSessionStore } from "@/stores/userSessionStore";
 import CloseConfirmDialog from "./components/CloseConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -54,6 +56,11 @@ const CashRegisterSummaryPage: React.FC = () => {
   const [salesCanceledPage, setSalesCanceledPage] = useState(1);
   const [salesDiscountsPage, setSalesDiscountsPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+
+  // Verificar si el usuario actual es quien abrió la caja
+  const canCloseCashRegister = !summary?.cashRegister.activeUser ||
+    (typeof summary.cashRegister.activeUser === 'object' &&
+     summary.cashRegister.activeUser._id === user?._id);
 
   useEffect(() => {
     if (cashRegisterId) {
@@ -2116,11 +2123,19 @@ const CashRegisterSummaryPage: React.FC = () => {
 
       {/* Close Cash Register Button */}
       <div className="text-center mb-4">
+        {!canCloseCashRegister && (
+          <Alert className="mb-3 max-w-md mx-auto bg-yellow-50 border-yellow-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Solo el usuario que abrió esta caja puede cerrarla
+            </AlertDescription>
+          </Alert>
+        )}
         <Button
           variant="destructive"
           size="lg"
           onClick={() => setShowCloseDialog(true)}
-          disabled={closing}
+          disabled={closing || !canCloseCashRegister}
           className="px-8 py-6 rounded-xl font-semibold shadow-lg"
         >
           <DoorClosed size={20} className="mr-2" />

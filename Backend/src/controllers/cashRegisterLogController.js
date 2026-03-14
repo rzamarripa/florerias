@@ -35,16 +35,8 @@ const getAllCashRegisterLogs = async (req, res) => {
       // Los cajeros y usuarios de redes ven solo sus propios logs (filtrados por cashierId)
       filters.cashierId = userId;
     } else if (userRole === 'gerente' || userRole === 'manager') {
-      // Los gerentes ven logs de cajas de su sucursal
-      const userBranches = await Branch.find({ employees: userId }).select('_id');
-      const branchIds = userBranches.map(branch => branch._id);
-
-      if (branchIds.length > 0) {
-        filters.branchId = { $in: branchIds };
-      } else {
-        // Si no tiene sucursales asignadas, no ver ningún log
-        filters._id = null;
-      }
+      // Los gerentes ven logs de cajas donde son managerId
+      filters.managerId = userId;
     } else if (userRole === 'admin' || userRole === 'administrador') {
       // Los administradores ven logs de todas sus sucursales
       const userBranches = await Branch.find({ adminId: userId }).select('_id');
@@ -296,8 +288,8 @@ const getUserCashRegisters = async (req, res) => {
     const filters = { isActive: true };
 
     // Aplicar filtros según el rol
-    if (userRole === 'cajero' || userRole === 'cashier' || userRole === 'gerente' || userRole === 'manager') {
-      // Cajeros y gerentes ven cajas de su sucursal
+    if (userRole === 'cajero' || userRole === 'cashier') {
+      // Cajeros ven cajas de su sucursal
       const userBranches = await Branch.find({ employees: userId }).select('_id');
       const branchIds = userBranches.map(branch => branch._id);
 
@@ -306,6 +298,9 @@ const getUserCashRegisters = async (req, res) => {
       } else {
         filters._id = null;
       }
+    } else if (userRole === 'gerente' || userRole === 'manager') {
+      // Gerentes ven cajas donde son managerId
+      filters.managerId = userId;
     } else if (userRole === 'admin' || userRole === 'administrador') {
       // Administradores ven cajas de sus sucursales
       const userBranches = await Branch.find({ adminId: userId }).select('_id');

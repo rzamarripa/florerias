@@ -8,7 +8,7 @@ export interface CashRegister {
     branchName: string;
     branchCode: string;
   };
-  cashierId?: {
+  activeUser?: {
     _id: string;
     username: string;
     email: string;

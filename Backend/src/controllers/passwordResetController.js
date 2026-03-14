@@ -10,6 +10,22 @@ const generateResetCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+// Find user by email, username, or the local part of an email as username
+const findUserByEmailOrUsername = async (input) => {
+  const lower = input.toLowerCase();
+  const localPart = lower.includes("@") ? lower.split("@")[0] : null;
+
+  const orConditions = [
+    { email: lower },
+    { username: lower }
+  ];
+  if (localPart) {
+    orConditions.push({ username: localPart });
+  }
+
+  return User.findOne({ $or: orConditions });
+};
+
 // Send password reset code
 export const sendResetCode = async (req, res) => {
   try {
@@ -25,34 +41,15 @@ export const sendResetCode = async (req, res) => {
       });
     }
 
-    console.log("Buscando usuario con email o username:", email.toLowerCase());
-    
-    // Find user by email OR username (since users might enter either)
-    const user = await User.findOne({
-      $or: [
-        { email: email.toLowerCase() },
-        { username: email.toLowerCase() }
-      ]
-    });
+    const targetEmail = email.toLowerCase();
+
+    // Optionally find user for greeting name and to store userId (but don't block if not found)
+    const user = await findUserByEmailOrUsername(targetEmail);
     console.log("Usuario encontrado:", user ? "Sí" : "No");
-    
-    if (!user) {
-      console.log("Usuario no encontrado para email:", email);
-      // Don't reveal if email exists for security
-      return res.status(200).json({
-        success: true,
-        message: "Si el correo existe en nuestro sistema, recibirás un código de recuperación"
-      });
-    }
 
-    console.log("Usuario encontrado:", user.username, "Email real:", user.email);
-    
-    // IMPORTANTE: Usar el email real del usuario, no lo que ingresó
-    const userEmail = user.email;
-
-    // Invalidate any existing codes for this user's email
+    // Invalidate any existing codes for this email
     await PasswordResetCode.updateMany(
-      { email: userEmail.toLowerCase(), used: false },
+      { email: targetEmail, used: false },
       { $set: { expired: true } }
     );
 
@@ -61,9 +58,10 @@ export const sendResetCode = async (req, res) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     console.log("Código generado:", code);
 
-    // Save code to database with the user's actual email
+    // Save code to database with the entered email and userId if found
     const resetCode = new PasswordResetCode({
-      email: userEmail.toLowerCase(),
+      email: targetEmail,
+      userId: user?._id || null,
       code,
       expiresAt,
       used: false,
@@ -73,22 +71,21 @@ export const sendResetCode = async (req, res) => {
     const savedCode = await resetCode.save();
     console.log("Código guardado en BD con ID:", savedCode._id);
 
-    // Enviar email con el código desde el Backend
+    // Send email with the code to the entered email
     try {
       await sendResetEmail({
-        to: userEmail,
+        to: targetEmail,
         code,
-        userName: user.username || "Usuario",
+        userName: user?.username || "Usuario",
       });
-      console.log("Email de recuperación enviado a:", userEmail);
+      console.log("Email de recuperación enviado a:", targetEmail);
     } catch (emailError) {
       console.error("Error enviando email de recuperación:", emailError);
-      // El código ya fue generado, informar al usuario
     }
 
     return res.status(200).json({
       success: true,
-      message: "Si el correo existe en nuestro sistema, recibirás un código de recuperación",
+      message: "Se ha enviado un código de recuperación al correo proporcionado",
     });
 
   } catch (error) {
@@ -112,24 +109,9 @@ export const verifyResetCode = async (req, res) => {
       });
     }
 
-    // First find the user (could be by username or email)
-    const user = await User.findOne({
-      $or: [
-        { email: email.toLowerCase() },
-        { username: email.toLowerCase() }
-      ]
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "Código inválido"
-      });
-    }
-
-    // Find the reset code using the user's actual email
+    // Find the reset code directly by the entered email
     const resetCode = await PasswordResetCode.findOne({
-      email: user.email.toLowerCase(),
+      email: email.toLowerCase(),
       code: code.trim()
     });
 
@@ -153,7 +135,7 @@ export const verifyResetCode = async (req, res) => {
       success: true,
       message: "Código válido",
       data: {
-        email: user.email,  // Return the user's actual email
+        email: resetCode.email,
         codeId: resetCode._id
       }
     });
@@ -194,24 +176,9 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // First find the user (could be by username or email)
-    const user = await User.findOne({
-      $or: [
-        { email: email.toLowerCase() },
-        { username: email.toLowerCase() }
-      ]
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Usuario no encontrado"
-      });
-    }
-
-    // Find and validate the reset code using the user's actual email
+    // Find and validate the reset code by the entered email
     const resetCode = await PasswordResetCode.findOne({
-      email: user.email.toLowerCase(),
+      email: email.toLowerCase(),
       code: code.trim()
     });
 
@@ -222,7 +189,23 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Update password (user already found above)
+    // Find the user: first by userId stored in the code, then fallback to email/username
+    let user = null;
+    if (resetCode.userId) {
+      user = await User.findById(resetCode.userId);
+    }
+    if (!user) {
+      user = await findUserByEmailOrUsername(email);
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado"
+      });
+    }
+
+    // Update password
     user.password = newPassword;
     await user.save(); // This will trigger the pre-save hook to hash the password
 

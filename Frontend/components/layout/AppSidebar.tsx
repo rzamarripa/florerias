@@ -12,6 +12,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  KeyRound,
 } from "lucide-react";
 import { TbBuildingStore } from "react-icons/tb";
 
@@ -60,6 +61,7 @@ import logo from "@/assets/images/logo.png";
 import logoSm from "@/assets/images/logo-sm.png";
 import { Fragment, useState, useEffect } from "react";
 import BranchSelectionModal from "@/components/branches/BranchSelectionModal";
+import PasswordResetModal from "@/features/auth/modules/sign-in/components/PasswordResetModal";
 
 // Search button component
 function SearchButton() {
@@ -250,6 +252,7 @@ function NavUser() {
   const { role } = useUserRoleStore();
   const { activeBranch } = useActiveBranchStore();
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -315,6 +318,14 @@ function NavUser() {
                   )}
                 </Fragment>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowPasswordReset(true)}
+                className="cursor-pointer"
+              >
+                <KeyRound className="mr-2" size={17} />
+                <span>Cambiar Contraseña</span>
+              </DropdownMenuItem>
               {isAdministrator && (
                 <>
                   <DropdownMenuSeparator />
@@ -347,6 +358,10 @@ function NavUser() {
       <BranchSelectionModal
         show={showBranchModal}
         onHide={() => setShowBranchModal(false)}
+      />
+      <PasswordResetModal
+        show={showPasswordReset}
+        onClose={() => setShowPasswordReset(false)}
       />
     </>
   );

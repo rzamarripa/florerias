@@ -52,6 +52,12 @@ export interface MenuMetadata {
  */
 export const MENU_METADATA: Record<string, MenuMetadata> = {
   // Dashboard / Inicio
+  "/gestion/dashboard-super-admin": {
+    label: "Dashboard Super Admin",
+    icon: LayoutDashboard,
+    category: "Dashboard / Inicio",
+    order: 0
+  },
   "/gestion/dashboard-empresa": {
     label: "Dashboard Empresa",
     icon: LayoutDashboard,

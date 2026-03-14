@@ -4,6 +4,7 @@ import { User } from "../models/User.js";
 import { getAllCompanies } from "./companyController.js";
 import { Company } from "../models/Company.js";
 import { Branch } from "../models/Branch.js";
+import { createSessionLog } from "./userSessionLogController.js";
 
 export const generateToken = (userId, role, branchIds = []) => {
   return jwt.sign(
@@ -219,6 +220,13 @@ export const loginUser = async (req, res) => {
 
     const token = generateToken(user._id, user.role?.name || null, branchIds);
     console.log(`   Token generado con branchIds incluidos\n`);
+
+    // Registrar sesión de usuario (fire and forget)
+    try {
+      await createSessionLog(user._id, userRoleName);
+    } catch (err) {
+      console.error("[Login] Error registrando session log:", err.message);
+    }
 
     res.status(200).json({
       success: true,

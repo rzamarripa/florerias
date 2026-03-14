@@ -96,13 +96,13 @@ const CashRegistersPage: React.FC = () => {
   };
 
   const getCashierName = (cashRegister: CashRegister): string => {
-    if (!cashRegister.cashierId) {
+    if (!cashRegister.activeUser) {
       return "Sin asignar";
     }
-    if (typeof cashRegister.cashierId === "string") {
+    if (typeof cashRegister.activeUser === "string") {
       return "N/A";
     }
-    return cashRegister.cashierId.profile.fullName;
+    return cashRegister.activeUser.profile.fullName;
   };
 
   const getManagerName = (cashRegister: CashRegister): string => {

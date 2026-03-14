@@ -73,7 +73,7 @@ const getAllCashRegisters = async (req, res) => {
     // Obtener cajas registradoras con paginación
     const cashRegisters = await CashRegister.find(filters)
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('lastRegistry.orderId', 'orderNumber total')
       .sort({ createdAt: -1 })
@@ -111,7 +111,7 @@ const getCashRegisterById = async (req, res) => {
 
     const cashRegister = await CashRegister.findById(id)
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('lastRegistry.orderId', 'orderNumber total');
 
@@ -147,7 +147,7 @@ const createCashRegister = async (req, res) => {
       isSocialMediaBox
     } = req.body;
 
-    // Validar campos requeridos (cashierId es opcional, se asigna al abrir la caja)
+    // Validar campos requeridos (activeUser es opcional, se asigna al abrir la caja)
     if (!name || !branchId || !managerId) {
       return res.status(400).json({
         success: false,
@@ -211,11 +211,11 @@ const createCashRegister = async (req, res) => {
       }
     }
 
-    // Crear nueva caja registradora (cashierId se asigna al abrir la caja)
+    // Crear nueva caja registradora (activeUser se asigna al abrir la caja)
     const newCashRegister = new CashRegister({
       name,
       branchId,
-      cashierId: null,
+      activeUser: null,
       managerId,
       currentBalance: parsedInitialBalance,
       initialBalance: parsedInitialBalance,
@@ -231,7 +231,7 @@ const createCashRegister = async (req, res) => {
     // Popular la caja registradora guardada antes de devolverla
     const populatedCashRegister = await CashRegister.findById(savedCashRegister._id)
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('companyId', 'legalName tradeName')
       .populate('lastRegistry.orderId', 'orderNumber total');
@@ -292,7 +292,7 @@ const updateCashRegister = async (req, res) => {
       { new: true, runValidators: true }
     )
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('lastRegistry.orderId', 'orderNumber total');
 
@@ -339,7 +339,7 @@ const toggleActiveCashRegister = async (req, res) => {
       { new: true, runValidators: true }
     )
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('lastRegistry.orderId', 'orderNumber total');
 
@@ -393,12 +393,21 @@ const toggleOpenCashRegister = async (req, res) => {
 
     // Si se está abriendo la caja (isOpen = true), asignar el usuario actual como cajero
     if (isOpen === true) {
-      updateData.cashierId = userId;
+      updateData.activeUser = userId;
     }
 
-    // Si se está cerrando la caja (isOpen = false), limpiar cashierId y actualizar lastOpen
+    // Si se está cerrando la caja (isOpen = false), verificar usuario y limpiar activeUser
     if (isOpen === false) {
-      updateData.cashierId = null;
+      // Verificar que el usuario que cierra es quien abrió la caja
+      const cashRegisterToClose = await CashRegister.findById(id);
+      if (cashRegisterToClose && cashRegisterToClose.activeUser &&
+          cashRegisterToClose.activeUser.toString() !== userId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Solo el usuario que abrió la caja puede cerrarla'
+        });
+      }
+      updateData.activeUser = null;
       updateData.lastOpen = new Date();
     }
 
@@ -408,7 +417,7 @@ const toggleOpenCashRegister = async (req, res) => {
       { new: true, runValidators: true }
     )
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('lastRegistry.orderId', 'orderNumber total');
 
@@ -647,13 +656,13 @@ const getUserCashRegister = async (req, res) => {
     // Buscar caja donde el usuario es cajero o gerente
     let cashRegister = await CashRegister.findOne({
       $or: [
-        { cashierId: userId },
+        { activeUser: userId },
         { managerId: userId }
       ],
       isActive: true
     })
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile');
 
     // Si no se encuentra, retornar null pero con success true
@@ -687,7 +696,7 @@ const getCashRegisterSummary = async (req, res) => {
     // Obtener la caja registradora
     const cashRegister = await CashRegister.findById(id)
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate({
         path: 'lastRegistry.orderId',
@@ -1051,7 +1060,7 @@ const getCashRegisterSummary = async (req, res) => {
         _id: cashRegister._id,
         name: cashRegister.name,
         branchId: cashRegister.branchId,
-        cashierId: cashRegister.cashierId,
+        activeUser: cashRegister.activeUser,
         managerId: cashRegister.managerId,
         isOpen: cashRegister.isOpen,
         lastOpen: cashRegister.lastOpen
@@ -1195,7 +1204,7 @@ const closeCashRegister = async (req, res) => {
     // Obtener la caja registradora con todos los datos necesarios para el log
     const cashRegister = await CashRegister.findById(id)
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate({
         path: 'lastRegistry.orderId',
@@ -1234,6 +1243,16 @@ const closeCashRegister = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'La caja ya está cerrada'
+      });
+    }
+
+    // Verificar que el usuario que cierra es quien abrió la caja
+    const closingUserId = req.user?._id;
+    if (cashRegister.activeUser &&
+        cashRegister.activeUser._id.toString() !== closingUserId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el usuario que abrió la caja puede cerrarla'
       });
     }
 
@@ -1544,7 +1563,7 @@ const closeCashRegister = async (req, res) => {
       cashRegisterId: cashRegister._id,
       cashRegisterName: cashRegister.name,
       branchId: cashRegister.branchId._id,
-      cashierId: cashRegister.cashierId?._id || null,
+      cashierId: cashRegister.activeUser?._id || null,
       managerId: cashRegister.managerId._id,
       openedAt: cashRegister.lastOpen,
       closedAt: new Date(),
@@ -1646,7 +1665,7 @@ const closeCashRegister = async (req, res) => {
 
     // Actualizar caja registradora - cerrar y reiniciar datos con el saldo restante
     cashRegister.isOpen = false;
-    cashRegister.cashierId = null;
+    cashRegister.activeUser = null;
     cashRegister.currentBalance = parsedRemainingBalance;
     cashRegister.initialBalance = parsedRemainingBalance;
     cashRegister.lastRegistry = [];
@@ -1659,7 +1678,7 @@ const closeCashRegister = async (req, res) => {
     // Popular la caja registradora actualizada
     const updatedCashRegister = await CashRegister.findById(id)
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('lastRegistry.orderId', 'orderNumber total');
 
@@ -1743,7 +1762,7 @@ const registerExpense = async (req, res) => {
     // Popular la caja registradora actualizada
     const updatedCashRegister = await CashRegister.findById(id)
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('lastRegistry.orderId', 'orderNumber total');
 
@@ -1790,9 +1809,9 @@ const getOpenCashRegistersByBranch = async (req, res) => {
       isActive: true
     })
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
-      .select('_id name branchId cashierId managerId currentBalance isOpen')
+      .select('_id name branchId activeUser managerId currentBalance isOpen')
       .sort({ name: 1 });
 
     // Filtrar manualmente las cajas con saldo > 0 (para evitar problemas de tipos)
@@ -1900,7 +1919,7 @@ const getSocialMediaCashRegisters = async (req, res) => {
     // Obtener cajas registradoras con paginación
     const cashRegisters = await CashRegister.find(filters)
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('companyId', 'legalName tradeName')
       .populate('lastRegistry.orderId', 'orderNumber total')
@@ -1951,10 +1970,10 @@ const getSocialMediaCashRegistersByBranch = async (req, res) => {
       isActive: true
     })
       .populate('branchId', 'branchName branchCode')
-      .populate('cashierId', 'username email profile')
+      .populate('activeUser', 'username email profile')
       .populate('managerId', 'username email profile')
       .populate('companyId', 'legalName tradeName')
-      .select('_id name branchId cashierId managerId currentBalance isOpen isSocialMediaBox companyId')
+      .select('_id name branchId activeUser managerId currentBalance isOpen isSocialMediaBox companyId')
       .sort({ name: 1 });
 
     res.status(200).json({

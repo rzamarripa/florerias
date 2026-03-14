@@ -56,6 +56,7 @@ import salesChannelRoutes from "./salesChannelRoutes.js";
 import clientAuthRoutes from "./clientAuthRoutes.js";
 import reviewRoutes from "./reviewRoutes.js";
 import whatsappCompanyConfigRoutes from "./whatsappCompanyConfigRoutes.js";
+import userSessionLogRoutes from "./userSessionLogRoutes.js";
 
 const router = Router();
 
@@ -115,5 +116,6 @@ router.use("/sales-channels", salesChannelRoutes);
 router.use("/client-auth", clientAuthRoutes);
 router.use("/reviews", reviewRoutes);
 router.use("/whatsapp-config", whatsappCompanyConfigRoutes);
+router.use("/user-session-logs", userSessionLogRoutes);
 
 export default router;

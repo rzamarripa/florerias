@@ -7,6 +7,11 @@ const passwordResetCodeSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "cs_user",
+    default: null
+  },
   code: {
     type: String,
     required: true

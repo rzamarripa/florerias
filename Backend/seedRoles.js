@@ -77,6 +77,9 @@ const pagesData = [
   // Usuarios especiales
   { name: "usuarios de produccion", path: "/panel/produccion-usuarios", modules: STANDARD },
   { name: "usuarios de redes", path: "/panel/usuarios-redes", modules: STANDARD },
+
+  // Dashboard Super Admin
+  { name: "Dashboard Super Admin", path: "/gestion/dashboard-super-admin", modules: STANDARD },
 ];
 
 // ─── 9 Roles con sus páginas exactas ─────────────────────────────────────────

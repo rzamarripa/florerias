@@ -91,7 +91,7 @@ const CashRegisterLogSummaryPage: React.FC = () => {
         .toUpperCase()}-${Date.now().toString().slice(-6)}`;
 
       // Get cashier name
-      const closedBy = summary.cashRegister.cashierId?.profile?.fullName || "Cajero";
+      const closedBy = summary.cashRegister.activeUser?.profile?.fullName || "Cajero";
 
       // Closure date from metadata or current date
       const closureDate = summary.logMetadata?.closedAt || new Date().toISOString();
@@ -1281,19 +1281,19 @@ const CashRegisterLogSummaryPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div>
               <h4 className="font-semibold mb-1 text-sm">Cajero</h4>
-              {summary.cashRegister.cashierId ? (
+              {summary.cashRegister.activeUser ? (
                 <div className="space-y-1">
                   <p className="text-sm">
                     <span className="text-muted-foreground">Nombre:</span>{" "}
-                    {summary.cashRegister.cashierId.profile.fullName}
+                    {summary.cashRegister.activeUser.profile.fullName}
                   </p>
                   <p className="text-sm">
                     <span className="text-muted-foreground">Usuario:</span>{" "}
-                    {summary.cashRegister.cashierId.username}
+                    {summary.cashRegister.activeUser.username}
                   </p>
                   <p className="text-sm">
                     <span className="text-muted-foreground">Email:</span>{" "}
-                    {summary.cashRegister.cashierId.email}
+                    {summary.cashRegister.activeUser.email}
                   </p>
                 </div>
               ) : (
