@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { PermissionProvider } from "@/components/providers/PermissionProvider";
 import { LayoutProvider } from "@/context/useLayoutContext";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const AppWrapper = ({ children }: ChildrenType) => {
   return (
@@ -19,6 +20,7 @@ const AppWrapper = ({ children }: ChildrenType) => {
           <div>
             {children}
             <Toaster position="top-right" richColors />
+            <CommandPalette />
           </div>
         </PermissionProvider>
       </LayoutProvider>

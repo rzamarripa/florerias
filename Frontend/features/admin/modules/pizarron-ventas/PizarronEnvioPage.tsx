@@ -495,16 +495,25 @@ const PizarronEnvioPage: React.FC = () => {
                         </div>
                       </>
                     )}
-                    {selectedOrder.remainingBalance > 0 && (
-                      <>
-                        <div className="text-red-500 text-sm font-bold">
-                          Saldo Pendiente:
-                        </div>
-                        <div className="text-right text-red-500 font-bold">
-                          {formatCurrency(selectedOrder.remainingBalance)}
-                        </div>
-                      </>
-                    )}
+                    {(() => {
+                      const saldo =
+                        selectedOrder.remainingBalance ??
+                        selectedOrder.total - (selectedOrder.advance || 0);
+                      return (
+                        <>
+                          <div
+                            className={`text-sm font-bold ${saldo > 0 ? "text-red-500" : "text-green-600"}`}
+                          >
+                            {saldo > 0 ? "Saldo Pendiente:" : "Saldo:"}
+                          </div>
+                          <div
+                            className={`text-right font-bold ${saldo > 0 ? "text-red-500" : "text-green-600"}`}
+                          >
+                            {formatCurrency(saldo)}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </>

@@ -1229,6 +1229,14 @@ const NewOrderPage = () => {
         discountRequestMessage: discountRequestMessage || null, // Enviar mensaje de solicitud de descuento
         deliveryDriver: formData.deliveryDriver || null, // Incluir repartidor si está seleccionado
         deliveryDriverDetails: formData.deliveryDriverDetails || null, // Incluir detalles del repartidor para WhatsApp
+        deliveryData: {
+          ...formData.deliveryData,
+          // En "tienda" el nombre de quien recibe es opcional: usar el del cliente
+          recipientName:
+            formData.shippingType === "tienda" && !formData.deliveryData.recipientName
+              ? formData.clientInfo.name
+              : formData.deliveryData.recipientName,
+        },
       };
 
       let response;

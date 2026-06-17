@@ -688,25 +688,33 @@ const PizarronVentasPage: React.FC = () => {
                     const advancePayment = orderPayments.find(
                       (p) => p.isAdvance
                     );
-                    return advancePayment ? (
+                    const advanceAmount = advancePayment?.amount || 0;
+                    const saldo =
+                      selectedOrder.remainingBalance ??
+                      selectedOrder.total - advanceAmount;
+                    return (
                       <>
-                        <div className="text-muted-foreground text-sm">Anticipo:</div>
-                        <div className="text-right text-green-600">
-                          {formatCurrency(advancePayment.amount)}
+                        {advancePayment ? (
+                          <>
+                            <div className="text-muted-foreground text-sm">Anticipo:</div>
+                            <div className="text-right text-green-600">
+                              {formatCurrency(advanceAmount)}
+                            </div>
+                          </>
+                        ) : null}
+                        <div
+                          className={`text-sm font-bold ${saldo > 0 ? "text-red-500" : "text-green-600"}`}
+                        >
+                          {saldo > 0 ? "Saldo Pendiente:" : "Saldo:"}
+                        </div>
+                        <div
+                          className={`text-right font-bold ${saldo > 0 ? "text-red-500" : "text-green-600"}`}
+                        >
+                          {formatCurrency(saldo)}
                         </div>
                       </>
-                    ) : null;
+                    );
                   })()}
-                  {selectedOrder.remainingBalance > 0 && (
-                    <>
-                      <div className="text-red-500 text-sm font-bold">
-                        Saldo Pendiente:
-                      </div>
-                      <div className="text-right text-red-500 font-bold">
-                        {formatCurrency(selectedOrder.remainingBalance)}
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
             </div>

@@ -454,10 +454,27 @@ const createOrder = async (req, res) => {
     }
 
     // Validar deliveryData
-    if (!deliveryData || !deliveryData.recipientName || !deliveryData.deliveryDateTime) {
+    // En "tienda" (recoge el cliente) el nombre de quien recibe no es obligatorio:
+    // se usa el nombre del cliente como respaldo.
+    const resolvedShippingType = shippingType || 'tienda';
+    const resolvedRecipientName =
+      deliveryData?.recipientName?.trim() ||
+      (resolvedShippingType === 'tienda' ? clientInfo?.name?.trim() : '');
+
+    if (!deliveryData || !deliveryData.deliveryDateTime) {
       return res.status(400).json({
         success: false,
-        message: 'Los datos de entrega (nombre de quien recibe y fecha/hora) son obligatorios'
+        message: 'La fecha y hora de entrega son obligatorias'
+      });
+    }
+
+    if (!resolvedRecipientName) {
+      return res.status(400).json({
+        success: false,
+        message:
+          resolvedShippingType === 'tienda'
+            ? 'El nombre del cliente es obligatorio para recoger en tienda'
+            : 'El nombre de quien recibe es obligatorio'
       });
     }
 
@@ -718,7 +735,7 @@ const createOrder = async (req, res) => {
       anonymous: anonymous || false,
       quickSale: quickSale || false,
       deliveryData: {
-        recipientName: deliveryData.recipientName,
+        recipientName: resolvedRecipientName,
         deliveryDateTime: deliveryData.deliveryDateTime,
         message: deliveryData.message || '',
         street: deliveryData.street || null,
