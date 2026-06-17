@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateTimeSeparatedInput } from "@/components/ui/datetime-separated-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2136,21 +2137,19 @@ const NewOrderPage = () => {
                         <Calendar size={16} />
                         Fecha y Hora de Entrega
                       </Label>
-                      <Input
-                        type="datetime-local"
+                      <DateTimeSeparatedInput
                         value={formData.deliveryData.deliveryDateTime}
-                        onChange={(e) => {
+                        onChange={(value) => {
                           setFormData({
                             ...formData,
                             deliveryData: {
                               ...formData.deliveryData,
-                              deliveryDateTime: e.target.value,
+                              deliveryDateTime: value,
                             },
                           });
                         }}
-                        min={new Date().toISOString().slice(0, 16)}
+                        minDate={new Date().toISOString().slice(0, 10)}
                         required
-                        className="py-2"
                       />
                     </div>
                   </div>
@@ -2319,17 +2318,15 @@ const NewOrderPage = () => {
                         <Calendar size={16} />
                         Fecha y Hora de Orden
                       </Label>
-                      <Input
-                        type="datetime-local"
+                      <DateTimeSeparatedInput
                         value={formData.orderDate}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setFormData({
                             ...formData,
-                            orderDate: e.target.value,
+                            orderDate: value,
                           })
                         }
                         required
-                        className="py-2"
                       />
                     </div>
                   </div>

@@ -66,7 +66,7 @@ export const convertHtmlToImage = async (
     }
 
     // Esperar a que el iframe renderice el contenido
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     // Obtener el elemento objetivo dentro del iframe
     const targetElement = (
@@ -82,7 +82,7 @@ export const convertHtmlToImage = async (
     // Renderizar con html2canvas (el iframe aísla de los estilos oklch del documento principal)
     const canvas = await html2canvas(targetElement, {
       backgroundColor: bgColor,
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
       width: width,
       logging: false,

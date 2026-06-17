@@ -124,11 +124,16 @@ export const apiCall = async <T>(
     }
 
     // Solo loggear errores que no sean 404 de tarjetas digitales
-    const isDigitalCard404 = response.status === 404 && 
-                            url.includes('/digital-cards/') && 
+    const isDigitalCard404 = response.status === 404 &&
+                            url.includes('/digital-cards/') &&
                             data?.message?.toLowerCase().includes('no encontrada');
-    
-    if (!isDigitalCard404) {
+
+    // 404 esperado: sucursal sin lista de productos asignada (estado normal,
+    // el llamador lo maneja mostrando el catálogo vacío)
+    const isProductListByBranch404 = response.status === 404 &&
+                            url.includes('/product-lists/by-branch/');
+
+    if (!isDigitalCard404 && !isProductListByBranch404) {
       console.error("Error en la petición:", {
         status: response.status,
         statusText: response.statusText,

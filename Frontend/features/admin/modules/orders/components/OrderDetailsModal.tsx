@@ -57,6 +57,7 @@ import { companiesService } from "@/features/admin/modules/companies/services/co
 import { deliveryDriversService, DeliveryDriver } from "@/services/deliveryDriversService";
 import { salesChannelsService } from "@/features/admin/modules/salesChannels/services/salesChannels";
 import { SalesChannel } from "@/features/admin/modules/salesChannels/types";
+import { DateTimeSeparatedInput } from "@/components/ui/datetime-separated-input";
 import ClientRewardsModal from "./ClientRewardsModal";
 import ClientRedeemedRewardsModal from "@/features/admin/modules/clients/components/ClientRedeemedRewardsModal";
 import StripePaymentModal from "./StripePaymentModal";
@@ -295,14 +296,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
       const response = await salesChannelsService.getAllSalesChannels(filters);
       setSalesChannels(response.data);
-      
-      // Si no hay canal seleccionado y hay canales disponibles, seleccionar el primero
-      if (response.data.length > 0 && !formData.salesChannelId) {
-        setFormData((prev) => ({
-          ...prev,
-          salesChannelId: response.data[0]._id,
-        }));
-      }
     } catch (err) {
       console.error("Error al cargar los canales de venta:", err);
       toast.error("Error al cargar los canales de venta");
@@ -1332,7 +1325,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                               disabled={loadingSalesChannels}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder={loadingSalesChannels ? "Cargando canales..." : "Seleccionar canal de venta..."} />
+                                <SelectValue placeholder={loadingSalesChannels ? "Cargando canales..." : "Seleccione"} />
                               </SelectTrigger>
                               <SelectContent>
                                 {salesChannels.map((channel) => (
@@ -1446,7 +1439,12 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                     {/* Nombre receptor y Fecha - paired */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="font-semibold mb-2 block">Nombre de quien recibe</Label>
+                        <Label className="font-semibold mb-2 block">
+                          Nombre de quien recibe
+                          {formData.shippingType !== "tienda" && (
+                            <span className="text-red-500"> *</span>
+                          )}
+                        </Label>
                         <Input
                           type="text"
                           placeholder="Nombre del receptor"
@@ -1459,23 +1457,21 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                             }));
                           }}
                           onInvalid={(e) => setCustomValidationMessage(e as any)}
-                          required
+                          required={formData.shippingType !== "tienda"}
                         />
                       </div>
                       <div>
                         <Label className="font-semibold mb-2 block">Fecha y hora de entrega</Label>
-                        <Input
-                          type="datetime-local"
+                        <DateTimeSeparatedInput
                           value={formData.deliveryData.deliveryDateTime}
-                          onChange={(e) => {
-                            resetCustomValidationMessage(e as any);
+                          onChange={(value) =>
                             setFormData((prev) => ({
                               ...prev,
-                              deliveryData: { ...prev.deliveryData, deliveryDateTime: e.target.value },
-                            }));
-                          }}
+                              deliveryData: { ...prev.deliveryData, deliveryDateTime: value },
+                            }))
+                          }
                           onInvalid={(e) => setCustomValidationMessage(e as any)}
-                          min={new Date().toISOString().slice(0, 16)}
+                          minDate={new Date().toISOString().slice(0, 10)}
                           required
                         />
                       </div>

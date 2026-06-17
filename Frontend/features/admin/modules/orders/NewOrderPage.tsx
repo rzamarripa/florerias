@@ -1254,90 +1254,100 @@ const NewOrderPage = () => {
         throw new Error("No se recibió respuesta del servidor");
       }
 
-      // Subir archivos a Firebase Storage DESPUÉS de crear la orden
-      let comprobanteUrl: string | null = null;
-      let comprobantePath: string | null = null;
-      let arregloUrl: string | null = null;
-      let arregloPath: string | null = null;
-
-      if (comprobanteFile || arregloFile) {
-        setUploadingFiles(true);
-        toast.info("Subiendo archivos a Firebase Storage...");
-
-        try {
-          const orderId = response.data._id;
-          const branchId =
-            typeof response.data.branchId === "string"
-              ? response.data.branchId
-              : response.data.branchId._id;
-
-          // Obtener companyId a través de la sucursal
-          const companyResponse = await companiesService.getCompanyByBranchId(
-            branchId
-          );
-
-          if (
-            !companyResponse.success ||
-            !companyResponse.data ||
-            !companyResponse.data.companyId
-          ) {
-            throw new Error("No se pudo obtener la empresa de la sucursal");
-          }
-
-          const companyId = companyResponse.data.companyId;
-
-          // Subir comprobante
-          if (comprobanteFile) {
-            const comprobanteResult = await uploadComprobante(
-              comprobanteFile,
-              companyId,
-              branchId,
-              orderId
-            );
-            comprobanteUrl = comprobanteResult.url;
-            comprobantePath = comprobanteResult.path;
-          }
-
-          // Subir arreglo
-          if (arregloFile) {
-            const arregloResult = await uploadArreglo(
-              arregloFile,
-              companyId,
-              branchId,
-              orderId
-            );
-            arregloUrl = arregloResult.url;
-            arregloPath = arregloResult.path;
-          }
-
-          // Actualizar la orden con las URLs de los archivos
-          await ordersService.updateOrder(orderId, {
-            comprobanteUrl,
-            comprobantePath,
-            arregloUrl,
-            arregloPath,
-          });
-
-          toast.success("Archivos subidos exitosamente");
-        } catch (uploadError: any) {
-          console.error("Error al subir archivos:", uploadError);
-          toast.warning(
-            "Orden creada pero hubo un error al subir los archivos. Puedes intentar subirlos después."
-          );
-        } finally {
-          setUploadingFiles(false);
-        }
-      }
-
-      // Mostrar toast de éxito (el DiscountAuth ya se creó en el backend antes de emitir el socket)
+      // La orden ya está creada: mostrar éxito y liberar el botón de inmediato.
+      // La subida de archivos, la generación/impresión del ticket y WhatsApp se
+      // procesan en segundo plano para no bloquear al cajero (antes "se quedaba
+      // pensando" mientras se generaba la imagen del ticket y se subía a Firebase).
       toast.success(
         `¡Orden ${response.data.orderNumber || ""} creada exitosamente!`
       );
-
-      // Generar e imprimir ticket(s) (las ventanas ya están pre-abiertas)
-      await generateAndPrintSaleTicket(response.data, printWindow, deliveryPrintWindow);
-
       setSuccess(true);
+      setLoading(false);
+
+      void (async () => {
+        try {
+          // Subir archivos a Firebase Storage DESPUÉS de crear la orden
+          if (comprobanteFile || arregloFile) {
+            setUploadingFiles(true);
+            try {
+              const orderId = response.data._id;
+              const branchId =
+                typeof response.data.branchId === "string"
+                  ? response.data.branchId
+                  : response.data.branchId._id;
+
+              // Obtener companyId a través de la sucursal
+              const companyResponse =
+                await companiesService.getCompanyByBranchId(branchId);
+
+              if (
+                !companyResponse.success ||
+                !companyResponse.data ||
+                !companyResponse.data.companyId
+              ) {
+                throw new Error("No se pudo obtener la empresa de la sucursal");
+              }
+
+              const companyId = companyResponse.data.companyId;
+              let comprobanteUrl: string | null = null;
+              let comprobantePath: string | null = null;
+              let arregloUrl: string | null = null;
+              let arregloPath: string | null = null;
+
+              if (comprobanteFile) {
+                const comprobanteResult = await uploadComprobante(
+                  comprobanteFile,
+                  companyId,
+                  branchId,
+                  orderId
+                );
+                comprobanteUrl = comprobanteResult.url;
+                comprobantePath = comprobanteResult.path;
+              }
+
+              if (arregloFile) {
+                const arregloResult = await uploadArreglo(
+                  arregloFile,
+                  companyId,
+                  branchId,
+                  orderId
+                );
+                arregloUrl = arregloResult.url;
+                arregloPath = arregloResult.path;
+              }
+
+              // Actualizar la orden con las URLs de los archivos
+              await ordersService.updateOrder(orderId, {
+                comprobanteUrl,
+                comprobantePath,
+                arregloUrl,
+                arregloPath,
+              });
+
+              toast.success("Archivos subidos exitosamente");
+            } catch (uploadError: any) {
+              console.error("Error al subir archivos:", uploadError);
+              toast.warning(
+                "Orden creada pero hubo un error al subir los archivos. Puedes intentar subirlos después."
+              );
+            } finally {
+              setUploadingFiles(false);
+            }
+          }
+
+          // Generar e imprimir ticket(s) (las ventanas ya están pre-abiertas)
+          await generateAndPrintSaleTicket(
+            response.data,
+            printWindow,
+            deliveryPrintWindow
+          );
+        } catch (bgError) {
+          console.error(
+            "Error en el procesamiento posterior a la orden:",
+            bgError
+          );
+        }
+      })();
 
       // Reset form after 2 seconds
       setTimeout(() => {

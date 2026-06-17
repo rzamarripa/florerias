@@ -68,11 +68,13 @@ const ProductCatalog: React.FC<ProductCatalogProps> = ({
       setProducts(response.data.products);
       console.log("Productos cargados:", response.data.products);
     } catch (error: any) {
-      console.error("Error al cargar productos:", error);
-      if (
-        error.message !==
-        "No se encontró una lista de productos para esta sucursal"
-      ) {
+      // 404 esperado: la sucursal aún no tiene lista de productos asignada.
+      // No es un error real, solo se muestra el catálogo vacío.
+      const sinListaAsignada =
+        error.message ===
+        "No se encontró una lista de productos para esta sucursal";
+      if (!sinListaAsignada) {
+        console.error("Error al cargar productos:", error);
         toast.error("Error al cargar los productos de la sucursal");
       }
       setProducts([]);
