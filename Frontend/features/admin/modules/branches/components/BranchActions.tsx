@@ -8,6 +8,16 @@ import ViewEmployeesModal from "./ViewEmployeesModal";
 import { useUserRoleStore } from "@/stores/userRoleStore";
 
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface BranchActionsProps {
   branch: Branch;
@@ -23,6 +33,7 @@ const BranchActions: React.FC<BranchActionsProps> = ({
   const [isToggling, setIsToggling] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [showViewEmployeesModal, setShowViewEmployeesModal] = useState<boolean>(false);
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState<boolean>(false);
   const { getIsAdmin } = useUserRoleStore();
   const isAdmin = getIsAdmin();
 
@@ -70,7 +81,9 @@ const BranchActions: React.FC<BranchActionsProps> = ({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={handleToggleStatus}
+            onClick={() =>
+              branch.isActive ? setShowDeactivateConfirm(true) : handleToggleStatus()
+            }
             disabled={isToggling}
             title={branch.isActive ? "Desactivar sucursal" : "Activar sucursal"}
           >
@@ -114,6 +127,39 @@ const BranchActions: React.FC<BranchActionsProps> = ({
         onHide={() => setShowViewEmployeesModal(false)}
         branch={branch}
       />
+
+      {/* Modal de confirmación para desactivar */}
+      <AlertDialog open={showDeactivateConfirm} onOpenChange={setShowDeactivateConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Desactivar sucursal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La sucursal <strong>{branch.branchName}</strong> quedará inactiva y dejará de
+              estar disponible para operaciones. Podrás reactivarla después.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isToggling}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isToggling}
+              onClick={(e) => {
+                e.preventDefault();
+                handleToggleStatus().then(() => setShowDeactivateConfirm(false));
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isToggling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Desactivando...
+                </>
+              ) : (
+                "Desactivar"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

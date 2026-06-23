@@ -50,6 +50,17 @@ export const getAllClients = async (req, res) => {
     const phoneNumberFilter = createSafeRegexFilter(req.query.phoneNumber);
     if (phoneNumberFilter) filters.phoneNumber = phoneNumberFilter;
 
+    // Búsqueda unificada: coincide en nombre, apellido, teléfono o número de cliente
+    const searchFilter = createSafeRegexFilter(req.query.search);
+    if (searchFilter) {
+      filters.$or = [
+        { name: searchFilter },
+        { lastName: searchFilter },
+        { phoneNumber: searchFilter },
+        { clientNumber: searchFilter },
+      ];
+    }
+
     if (req.query.gender) {
       filters.gender = req.query.gender.toLowerCase();
     }

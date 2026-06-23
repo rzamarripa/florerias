@@ -74,6 +74,16 @@ const DigitalCardsPage: React.FC = () => {
     loadCompanyAndClients();
   }, [user, activeBranch]);
 
+  // Recargar (server-side) al buscar. Guard de companyId evita doble carga inicial.
+  useEffect(() => {
+    if (!companyId) return;
+    const handle = setTimeout(() => {
+      loadCompanyAndClients();
+    }, 400);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
   const loadCompanyAndClients = async () => {
     try {
       setLoading(true);
@@ -133,9 +143,11 @@ const DigitalCardsPage: React.FC = () => {
         setCurrentBranchId(currentBranchId);
       }
 
-      // Cargar clientes de la empresa
+      // Cargar clientes de la empresa (búsqueda server-side sobre toda la base)
+      const term = searchTerm.trim();
       const response = await clientsService.getAllClients({
         companyId: currentCompanyId,
+        ...(term.length >= 2 ? { search: term } : {}),
         limit: 100
       });
 
@@ -378,16 +390,8 @@ const DigitalCardsPage: React.FC = () => {
     console.log('Cliente escaneado:', scanData?.client?.fullName);
   };
 
-  const filteredClients = clients.filter(client => {
-    const fullName = `${client.name} ${client.lastName}`.toLowerCase();
-    const clientNumber = client.clientNumber.toLowerCase();
-    const phone = client.phoneNumber.toLowerCase();
-    const term = searchTerm.toLowerCase();
-
-    return fullName.includes(term) ||
-           clientNumber.includes(term) ||
-           phone.includes(term);
-  });
+  // La búsqueda ahora es server-side; la lista ya viene filtrada.
+  const filteredClients = clients;
 
   return (
     <div className="container-fluid px-4">

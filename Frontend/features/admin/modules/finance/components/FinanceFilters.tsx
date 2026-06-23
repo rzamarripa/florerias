@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import Select from "react-select";
+import AsyncSelect from "react-select/async";
 import { clientsService } from "../../clients/services/clients";
 import { paymentMethodsService } from "../../payment-methods/services/paymentMethods";
 import { branchesService } from "../../branches/services/branches";
@@ -176,6 +177,25 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
     label: `${client.name} ${client.lastName}`,
   }));
 
+  // Búsqueda server-side de clientes (sobre toda la base, no solo los precargados)
+  const loadClientOptions = async (inputValue: string) => {
+    const term = inputValue.trim();
+    if (term.length < 2) return clientOptions;
+    try {
+      const response = await clientsService.getAllClients({
+        search: term,
+        status: true,
+        limit: 50,
+      });
+      return response.data.map((client) => ({
+        value: client._id,
+        label: `${client.name} ${client.lastName} - ${client.phoneNumber}`,
+      }));
+    } catch {
+      return [];
+    }
+  };
+
   const paymentMethodOptions = paymentMethods.map((method) => ({
     value: method._id,
     label: method.name,
@@ -327,14 +347,21 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
             <Label className="font-semibold text-muted-foreground text-sm">
               Cliente
             </Label>
-            <Select
+            <AsyncSelect
               isMulti
-              options={clientOptions}
+              cacheOptions
+              defaultOptions={clientOptions}
+              loadOptions={loadClientOptions}
               value={selectedClients}
               onChange={(selected) => setSelectedClients(selected as any[])}
-              placeholder="Selecciona cliente(s)"
+              placeholder="Busca cliente(s) por nombre, teléfono o número"
               styles={customStyles}
-              noOptionsMessage={() => "No hay clientes disponibles"}
+              loadingMessage={() => "Buscando..."}
+              noOptionsMessage={({ inputValue }) =>
+                inputValue && inputValue.trim().length < 2
+                  ? "Escribe al menos 2 caracteres..."
+                  : "No se encontraron clientes"
+              }
             />
           </div>
 

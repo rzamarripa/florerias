@@ -142,6 +142,12 @@ const buildCompleteMenu = (): MenuItemType[] => {
             return aOrder - bOrder;
           });
 
+          // Catálogos: aplanar — los items de subcategoría van directos (sin grupo extra)
+          if (categoryName === "Catálogos") {
+            processedItems.push(...sortedSubItems);
+            return;
+          }
+
           // Crear item de subcategoría con children
           const subCategoryItem: MenuItemType = {
             key: `subcategory-${categoryName}-${subCatName}`.toLowerCase().replace(/\s+/g, '-'),
@@ -163,6 +169,13 @@ const buildCompleteMenu = (): MenuItemType[] => {
           }
         }
       });
+    }
+
+    // Si la categoría tiene un solo item hoja (sin hijos), mostrarlo como enlace
+    // directo en vez de un grupo desplegable de un solo elemento.
+    if (processedItems.length === 1 && !processedItems[0].children) {
+      menuItems.push(processedItems[0]);
+      return;
     }
 
     // Crear el elemento padre de la categoría con sus hijos
@@ -286,6 +299,12 @@ const buildRestrictedMenu = (allowedModules: PageModules[]): MenuItemType[] => {
             return aOrder - bOrder;
           });
 
+          // Catálogos: aplanar — los items de subcategoría van directos (sin grupo extra)
+          if (categoryName === "Catálogos") {
+            processedItems.push(...sortedSubItems);
+            return;
+          }
+
           // Crear item de subcategoría con children
           const subCategoryItem: MenuItemType = {
             key: `subcategory-${categoryName}-${subCatName}`.toLowerCase().replace(/\s+/g, '-'),
@@ -308,8 +327,14 @@ const buildRestrictedMenu = (allowedModules: PageModules[]): MenuItemType[] => {
       });
     }
 
-    // Siempre mantener la estructura jerárquica, sin colapsar categorías
     if (processedItems.length > 0) {
+      // Si la categoría tiene un solo item hoja (sin hijos), mostrarlo como enlace
+      // directo en vez de un grupo desplegable de un solo elemento.
+      if (processedItems.length === 1 && !processedItems[0].children) {
+        menuItems.push(processedItems[0]);
+        return;
+      }
+
       // Crear el elemento padre de la categoría con sus hijos
       const categoryItem: MenuItemType = {
         key: `category-${categoryName.toLowerCase().replace(/\s+/g, '-')}`,
@@ -386,7 +411,15 @@ export const getFirstAvailableRoute = (
 
   // Priorizar rutas específicas según el rol
   const roleLower = userRole?.toLowerCase();
-  
+
+  if (roleLower === 'administrador') {
+    // El administrador aterriza en el Dashboard de Empresa si está disponible
+    const dashPage = viewablePages.find(page => page.path === '/gestion/dashboard-empresa');
+    if (dashPage) {
+      return '/gestion/dashboard-empresa';
+    }
+  }
+
   if (roleLower === 'gerente' || roleLower === 'cajero' || roleLower === 'redes') {
     // Para estos roles, priorizar /sucursal/ventas si está disponible
     const ventasPage = viewablePages.find(page => page.path === '/sucursal/ventas');
@@ -401,9 +434,12 @@ export const getFirstAvailableRoute = (
     const aMetadata = getMenuMetadata(a.path);
     const bMetadata = getMenuMetadata(b.path);
     
-    const aCategoryIndex = CATEGORY_ORDER.indexOf(aMetadata?.category || 'General');
-    const bCategoryIndex = CATEGORY_ORDER.indexOf(bMetadata?.category || 'General');
-    
+    // Páginas sin metadata/categoría conocida van al final (no deben "ganar" el aterrizaje)
+    const rawA = CATEGORY_ORDER.indexOf(aMetadata?.category || 'General');
+    const rawB = CATEGORY_ORDER.indexOf(bMetadata?.category || 'General');
+    const aCategoryIndex = rawA === -1 ? 999 : rawA;
+    const bCategoryIndex = rawB === -1 ? 999 : rawB;
+
     if (aCategoryIndex !== bCategoryIndex) {
       return aCategoryIndex - bCategoryIndex;
     }

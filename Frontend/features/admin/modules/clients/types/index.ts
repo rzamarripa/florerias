@@ -81,13 +81,15 @@ export interface ClientFilters {
   lastName?: string;
   clientNumber?: string;
   phoneNumber?: string;
+  /** Búsqueda unificada (nombre, apellido, teléfono o número de cliente) */
+  search?: string;
   gender?: 'masculino' | 'femenino' | 'otro';
   status?: boolean;
   companyId?: string;
   branchId?: string;
 }
 
-export type FilterType = 'name' | 'lastName' | 'clientNumber' | 'phoneNumber' | 'gender';
+export type FilterType = 'general' | 'name' | 'lastName' | 'clientNumber' | 'phoneNumber' | 'gender';
 
 export interface FilterOption {
   value: FilterType;

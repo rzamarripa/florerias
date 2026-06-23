@@ -117,21 +117,21 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
 
   // Operaciones > Cajas (subcategoría)
   "/ventas/cajas": {
-    label: "Cajas Registradoras",
+    label: "Registradoras",
     icon: Wallet,
     category: "Operaciones",
     subcategory: "Cajas",
     order: 1
   },
   "/panel-de-control/cajas/historial": {
-    label: "Historial de Cajas",
+    label: "Historial",
     icon: History,
     category: "Operaciones",
     subcategory: "Cajas",
     order: 2
   },
   "/ventas/cajas-redes-sociales": {
-    label: "Cajas de Redes Sociales",
+    label: "Redes Sociales",
     icon: Wallet,
     category: "Operaciones",
     subcategory: "Cajas",
@@ -186,7 +186,7 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
     order: 2
   },
   "/panel/config-puntos": {
-    label: "Configuración de Puntos",
+    label: "Config. de Puntos",
     icon: Stars,
     category: "Clientes y Lealtad",
     order: 3
@@ -212,7 +212,7 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
     order: 3
   },
   "/panel/produccion-usuarios": {
-    label: "Usuarios de Producción",
+    label: "Usuarios Producción",
     icon: Package,
     category: "Personal",
     order: 4
@@ -261,14 +261,14 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
     order: 1
   },
   "/catalogos/categorias-productos": {
-    label: "Categorías de Productos",
+    label: "Categorías",
     icon: Package,
     category: "Catálogos",
     subcategory: "Productos",
     order: 2
   },
   "/catalogos/listas-productos": {
-    label: "Listas de Productos",
+    label: "Listas",
     icon: ClipboardList,
     category: "Catálogos",
     subcategory: "Productos",
@@ -282,14 +282,14 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
     order: 4
   },
   "/catalogos/gestion-materiales": {
-    label: "Gestión de Materiales",
+    label: "Gestión de Insumos",
     icon: Package2,
     category: "Catálogos",
     subcategory: "Productos",
     order: 5
   },
   "/catalogos/unidades-medida": {
-    label: "Unidades de Medida",
+    label: "Unidades",
     icon: Scale,
     category: "Catálogos",
     subcategory: "Productos",
@@ -305,7 +305,7 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
     order: 1
   },
   "/catalogos/conceptos-gastos": {
-    label: "Conceptos de Gastos",
+    label: "Conceptos de Gasto",
     icon: Receipt,
     category: "Catálogos",
     subcategory: "Configuración",
@@ -340,7 +340,7 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
     order: 2
   },
   "/gestion/usuarios": {
-    label: "Usuarios del Sistema",
+    label: "Usuarios Sistema",
     icon: Users,
     category: "Gestión del Sistema", 
     order: 3

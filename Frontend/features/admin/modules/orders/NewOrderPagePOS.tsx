@@ -58,6 +58,7 @@ import ProductCatalog from "./components/ProductCatalog";
 import AddExtrasModal from "./components/AddExtrasModal";
 import { clientsService } from "@/features/admin/modules/clients/services/clients";
 import { Client } from "@/features/admin/modules/clients/types";
+import ClientAutocomplete from "@/features/admin/modules/clients/components/ClientAutocomplete";
 import { paymentMethodsService } from "@/features/admin/modules/payment-methods/services/paymentMethods";
 import { PaymentMethod } from "@/features/admin/modules/payment-methods/types";
 import { branchesService } from "@/features/admin/modules/branches/services/branches";
@@ -491,7 +492,7 @@ const NewOrderPage = () => {
     }
   };
 
-  // Actualizar fecha y hora cuando se activa "Venta Rapida"
+  // Actualizar fecha y hora cuando se activa "Venta Rápida"
   useEffect(() => {
     if (formData.quickSale) {
       const now = new Date();
@@ -536,7 +537,7 @@ const NewOrderPage = () => {
   };
 
   // Manejar seleccion de cliente
-  const handleClientSelect = (clientId: string) => {
+  const handleClientSelect = (clientId: string, clientObj?: Client) => {
     setSelectedClientId(clientId);
 
     if (!clientId || clientId === "new") {
@@ -551,7 +552,7 @@ const NewOrderPage = () => {
       return;
     }
 
-    const selectedClient = clients.find((c) => c._id === clientId);
+    const selectedClient = clientObj || clients.find((c) => c._id === clientId);
     if (selectedClient) {
       setFormData({
         ...formData,
@@ -1558,24 +1559,15 @@ const NewOrderPage = () => {
                       <Search size={16} />
                       Buscar Cliente Existente
                     </Label>
-                    <Select
-                      value={selectedClientId}
-                      onValueChange={(value) => handleClientSelect(value)}
+                    <ClientAutocomplete
+                      value={selectedClientId === "new" ? "" : selectedClientId}
+                      branchId={formData.branchId || undefined}
                       disabled={loadingClients}
-                    >
-                      <SelectTrigger className="py-2">
-                        <SelectValue placeholder="Seleccionar cliente o ingresar nuevo..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">Seleccionar cliente o ingresar nuevo...</SelectItem>
-                        {clients.map((client) => (
-                          <SelectItem key={client._id} value={client._id}>
-                            {client.name} {client.lastName} -{" "}
-                            {client.phoneNumber}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onSelect={(client) =>
+                        handleClientSelect(client?._id || "new", client || undefined)
+                      }
+                      placeholder="Seleccionar cliente o ingresar nuevo..."
+                    />
                   </div>
 
                   {/* Informacion de caja registradora - Solo para usuarios Cajero */}
@@ -1671,7 +1663,7 @@ const NewOrderPage = () => {
                         <div>
                           <Label className="font-semibold flex items-center gap-2 mb-2">
                             <Phone size={16} />
-                            Telefono
+                            Teléfono
                           </Label>
                           <Input
                             type="tel"
@@ -1978,12 +1970,12 @@ const NewOrderPage = () => {
               </CardContent>
             </Card>
 
-            {/* Tipo de Envio */}
+            {/* Tipo de Envío */}
             <Card className="mb-4 shadow-sm">
               <CardHeader className="bg-white py-3">
                 <div className="flex items-center gap-2">
                   <Send size={20} className="text-primary" />
-                  <h5 className="mb-0 font-bold">Tipo de Envio</h5>
+                  <h5 className="mb-0 font-bold">Tipo de Envío</h5>
                 </div>
               </CardHeader>
               <CardContent>
@@ -2001,7 +1993,7 @@ const NewOrderPage = () => {
                         <div>
                           <Label className="font-semibold flex items-center gap-2 mb-2">
                             <Store size={16} />
-                            Tipo de Envio
+                            Tipo de Envío
                           </Label>
                           <Input
                             type="text"
@@ -2066,7 +2058,7 @@ const NewOrderPage = () => {
                               disabled={isDeliveryLimitReached}
                             />
                             <label htmlFor={`envio-${tipo}`} className={isDeliveryLimitReached ? "text-muted-foreground" : ""}>
-                              {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                              {tipo === "envio" ? "Envío" : "Tienda"}
                             </label>
                           </div>
                         );
@@ -2089,7 +2081,7 @@ const NewOrderPage = () => {
                               })
                             }
                           />
-                          <label htmlFor="anonimo-check">Anonimo</label>
+                          <label htmlFor="anonimo-check">Anónimo</label>
                         </div>
                         <div className="flex items-center gap-2">
                           <Checkbox
@@ -2102,7 +2094,7 @@ const NewOrderPage = () => {
                               })
                             }
                           />
-                          <label htmlFor="venta-rapida-check">Venta Rapida</label>
+                          <label htmlFor="venta-rapida-check">Venta Rápida</label>
                         </div>
                       </div>
                     </div>
@@ -2333,7 +2325,7 @@ const NewOrderPage = () => {
 
                   <div>
                     <Label className="font-semibold mb-2">
-                      Metodo de Pago
+                      Método de Pago
                     </Label>
                     <div className="flex gap-2 flex-wrap">
                       {loadingPaymentMethods ? (
@@ -2490,7 +2482,7 @@ const NewOrderPage = () => {
                       {formData.shippingType === "envio" &&
                         (formData.deliveryData.deliveryPrice || 0) > 0 && (
                           <div className="flex justify-between items-center mb-2">
-                            <span className="text-muted-foreground">Costo de Envio:</span>
+                            <span className="text-muted-foreground">Costo de Envío:</span>
                             <span className="text-green-500 font-bold">
                               +$
                               {(formData.deliveryData.deliveryPrice || 0).toFixed(
@@ -2575,7 +2567,7 @@ const NewOrderPage = () => {
                         })
                       }
                     />
-                    <label htmlFor="enviar-produccion">Enviar a produccion</label>
+                    <label htmlFor="enviar-produccion">Enviar a producción</label>
                   </div>
                 </div>
               </CardContent>

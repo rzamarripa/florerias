@@ -203,8 +203,8 @@ const CartSection: React.FC<CartSectionProps> = ({
                     <SelectValue
                       placeholder={
                         loadingProductCategories
-                          ? "Cargando categorias..."
-                          : "-- Categoria --"
+                          ? "Cargando categorías..."
+                          : "-- Categoría --"
                       }
                     />
                   </SelectTrigger>
@@ -267,7 +267,7 @@ const CartSection: React.FC<CartSectionProps> = ({
           {items.length === 0 ? (
             <Alert className="mb-0">
               <AlertDescription>
-                Aun no hay productos. Agrega desde el catalogo.
+                Aún no hay productos. Agrega desde el catálogo.
               </AlertDescription>
             </Alert>
           ) : (
@@ -288,7 +288,7 @@ const CartSection: React.FC<CartSectionProps> = ({
                               variant={item.isProduct ? "default" : "secondary"}
                               className="ml-2"
                             >
-                              {item.isProduct ? "Catalogo" : "Manual"}
+                              {item.isProduct ? "Catálogo" : "Manual"}
                             </Badge>
                             {item.isPromotional && (
                               <Badge
@@ -381,7 +381,7 @@ const CartSection: React.FC<CartSectionProps> = ({
             </span>
           </div>
           <div className="flex justify-between mb-2">
-            <span className="text-muted-foreground">Envio</span>
+            <span className="text-muted-foreground">Envío</span>
             <span className="text-green-600 font-semibold">
               +${(deliveryPrice || 0).toFixed(2)}
             </span>

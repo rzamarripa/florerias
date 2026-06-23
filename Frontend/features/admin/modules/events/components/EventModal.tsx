@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { eventsService } from "../services/events";
 import { Event, CreateEventData, PaymentMethod } from "../types";
 import { clientsService } from "../../clients/services/clients";
+import ClientAutocomplete from "../../clients/components/ClientAutocomplete";
 import { paymentMethodsService } from "../../payment-methods/services/paymentMethods";
 import { branchesService } from "../../branches/services/branches";
 import { useActiveBranchStore } from "@/stores/activeBranchStore";
@@ -248,21 +249,18 @@ const EventModal: React.FC<EventModalProps> = ({ show, onHide, onSuccess, event 
                 <Label className="font-semibold">
                   Cliente <span className="text-destructive">*</span>
                 </Label>
-                <Select
+                <ClientAutocomplete
                   value={formData.client}
-                  onValueChange={(value) => setFormData({ ...formData, client: value })}
-                >
-                  <SelectTrigger className="w-full bg-muted/50 rounded-[10px] h-11">
-                    <SelectValue placeholder="Seleccionar cliente..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client._id} value={client._id}>
-                        {client.name} {client.lastName} - {client.phoneNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  selectedClient={
+                    event && typeof event.client !== "string" ? event.client : null
+                  }
+                  branchId={activeBranch?._id}
+                  onSelect={(client) =>
+                    setFormData({ ...formData, client: client?._id || "" })
+                  }
+                  className="bg-muted/50 rounded-[10px] h-11"
+                  placeholder="Seleccionar cliente..."
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

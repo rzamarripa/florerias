@@ -643,7 +643,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
                   <Select
                     value={formData.managerId || "none"}
                     onValueChange={handleManagerChange}
-                    disabled={managers.length === 0}
+                    disabled={managers.length === 0 && !formData.managerId}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un gerente existente o cree uno nuevo" />
@@ -654,6 +654,15 @@ const BranchModal: React.FC<BranchModalProps> = ({
                           ? `-- ${managersMessage} --`
                           : "-- Seleccione un gerente existente o cree uno nuevo --"}
                       </SelectItem>
+                      {/* Gerente actual (al editar): puede no venir en "disponibles" porque ya está asignado */}
+                      {formData.managerId &&
+                        !managers.some((m) => m._id === formData.managerId) &&
+                        formData.managerData && (
+                          <SelectItem value={formData.managerId}>
+                            {formData.managerData.profile.name}{" "}
+                            {formData.managerData.profile.lastName} ({formData.managerData.email})
+                          </SelectItem>
+                        )}
                       {managers.map((manager) => (
                         <SelectItem key={manager._id} value={manager._id}>
                           {manager.profile.fullName} ({manager.email})

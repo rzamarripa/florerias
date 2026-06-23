@@ -59,6 +59,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const filterOptions: FilterOption[] = [
+  { value: "general", label: "General" },
   { value: "name", label: "Nombre" },
   { value: "lastName", label: "Apellidos" },
   { value: "clientNumber", label: "Número de Cliente" },
@@ -70,7 +71,7 @@ const ClientsPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [filterType, setFilterType] = useState<FilterType>("name");
+  const [filterType, setFilterType] = useState<FilterType>("general");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -161,7 +162,12 @@ const ClientsPage: React.FC = () => {
       };
 
       if (searchTerm) {
-        filters[filterType] = searchTerm;
+        if (filterType === "general") {
+          // Búsqueda unificada: nombre, apellido, teléfono o número de cliente
+          filters.search = searchTerm;
+        } else {
+          filters[filterType] = searchTerm;
+        }
       }
 
       if (statusFilter && statusFilter !== "all") {
@@ -393,9 +399,13 @@ const ClientsPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder={`Buscar por ${filterOptions
-                  .find((opt) => opt.value === filterType)
-                  ?.label.toLowerCase()}...`}
+                placeholder={
+                  filterType === "general"
+                    ? "Buscar por nombre, apellido, teléfono o número..."
+                    : `Buscar por ${filterOptions
+                        .find((opt) => opt.value === filterType)
+                        ?.label.toLowerCase()}...`
+                }
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="pl-10"

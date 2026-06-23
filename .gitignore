@@ -2,3 +2,16 @@
 Thumbs.db
 
 Backend/certificates/google-service-account.json
+
+# Backups / dumps de base de datos
+*.archive
+*.archive.gz
+
+# Dependencias y build (por si acaso)
+node_modules/
+.next/
+
+# Variables de entorno
+.env
+.env.local
+.env.production

@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import {
   User,
   Phone,
@@ -45,6 +58,7 @@ import {
   Plus,
   Edit2,
   UserPlus,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CreateOrderData, ShippingType, AppliedRewardInfo } from "../types";
@@ -136,6 +150,14 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientSearchResults, setClientSearchResults] = useState<Client[]>([]);
+  const [searchingClients, setSearchingClients] = useState(false);
+  // Cliente actualmente seleccionado (se conserva aunque se limpie la búsqueda)
+  const [pickedClient, setPickedClient] = useState<Client | null>(null);
+  // Número de recompensas disponibles del cliente (para ocultar la sección si no hay)
+  const [availableRewardsCount, setAvailableRewardsCount] = useState(0);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [showClientModal, setShowClientModal] = useState(false);
   const [clientModalLoading, setClientModalLoading] = useState(false);
@@ -143,6 +165,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(false);
+  const [neighborhoodPopoverOpen, setNeighborhoodPopoverOpen] = useState(false);
+  const [neighborhoodSearch, setNeighborhoodSearch] = useState("");
   const [deliveryDrivers, setDeliveryDrivers] = useState<DeliveryDriver[]>([]);
   const [loadingDeliveryDrivers, setLoadingDeliveryDrivers] = useState(false);
   const [salesChannels, setSalesChannels] = useState<SalesChannel[]>([]);
@@ -211,7 +235,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   };
 
-  // Cargar metodos de pago filtrados por sucursal si hay una seleccionada
+  // Cargar métodos de pago filtrados por sucursal si hay una seleccionada
   const fetchPaymentMethods = async (branchId?: string) => {
     setLoadingPaymentMethods(true);
     try {
@@ -236,7 +260,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         }));
       }
     } catch (err) {
-      toast.error("Error al cargar los metodos de pago");
+      toast.error("Error al cargar los métodos de pago");
     } finally {
       setLoadingPaymentMethods(false);
     }
@@ -308,7 +332,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   // Cargar datos al montar o cuando se abre el modal
   useEffect(() => {
     if (show) {
-      // Pasar el branchId del formulario para filtrar metodos de pago
+      // Pasar el branchId del formulario para filtrar métodos de pago
       fetchPaymentMethods(formData.branchId);
       fetchNeighborhoods();
       if (!isSocialMedia) {
@@ -366,6 +390,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       // Solo limpiar el cliente si no hay uno escaneado
       if (!scannedClientId) {
         setSelectedClientId("");
+        setPickedClient(null);
       }
       setAppliedReward(null);
       setShowRewardsModal(false);
@@ -400,6 +425,101 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     }
   }, [isSocialMedia, formData.total]);
 
+  // Cliente seleccionado actualmente (para mostrar en el botón del autocomplete)
+  // Lista combinada (precargados + resultados del servidor) sin duplicados,
+  // para resolver el cliente seleccionado aunque venga de la búsqueda remota
+  const allClients = useMemo(() => {
+    const map = new Map<string, Client>();
+    [...clients, ...clientSearchResults, ...(pickedClient ? [pickedClient] : [])].forEach(
+      (c) => map.set(c._id, c)
+    );
+    return Array.from(map.values());
+  }, [clients, clientSearchResults, pickedClient]);
+
+  const selectedClient = useMemo(
+    () => allClients.find((c) => c._id === selectedClientId),
+    [allClients, selectedClientId]
+  );
+
+  const sortByName = (a: Client, b: Client) =>
+    `${a.name} ${a.lastName}`.localeCompare(`${b.name} ${b.lastName}`, "es", {
+      sensitivity: "base",
+    });
+
+  // Lista mostrada en el autocomplete: si hay término de búsqueda usa los
+  // resultados del servidor (busca en TODOS los clientes, no solo los 1000
+  // precargados); si no, muestra los precargados.
+  const filteredClients = useMemo(() => {
+    const term = clientSearch.trim();
+    const source = term.length >= 2 ? clientSearchResults : clients;
+    return [...source].sort(sortByName).slice(0, 100);
+  }, [clients, clientSearchResults, clientSearch]);
+
+  // Búsqueda server-side de clientes con debounce
+  useEffect(() => {
+    const term = clientSearch.trim();
+    if (term.length < 2) {
+      setClientSearchResults([]);
+      setSearchingClients(false);
+      return;
+    }
+    setSearchingClients(true);
+    const handle = setTimeout(async () => {
+      try {
+        const response = await clientsService.getAllClients({
+          search: term,
+          status: true,
+          limit: 50,
+          ...(companyId ? { companyId } : {}),
+        });
+        setClientSearchResults(response.data);
+      } catch {
+        setClientSearchResults([]);
+      } finally {
+        setSearchingClients(false);
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [clientSearch, companyId]);
+
+  // Cargar cuántas recompensas disponibles tiene el cliente seleccionado
+  useEffect(() => {
+    const clientId = selectedClientId || formData.clientInfo.clientId;
+    if (!clientId || isGuestClient) {
+      setAvailableRewardsCount(0);
+      return;
+    }
+    let cancelled = false;
+    clientsService
+      .getAvailableRewards(clientId)
+      .then((res) => {
+        if (!cancelled) setAvailableRewardsCount(res?.data?.length || 0);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableRewardsCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClientId, formData.clientInfo.clientId, isGuestClient]);
+
+  // Colonia seleccionada (para mostrar en el botón del autocomplete)
+  const selectedNeighborhood = useMemo(
+    () => neighborhoods.find((n) => n._id === formData.deliveryData.neighborhoodId),
+    [neighborhoods, formData.deliveryData.neighborhoodId]
+  );
+
+  // Lista de colonias filtrada por búsqueda y ordenada ascendente
+  const filteredNeighborhoods = useMemo(() => {
+    const term = neighborhoodSearch.trim().toLowerCase();
+    const list = term
+      ? neighborhoods.filter((n) => n.name.toLowerCase().includes(term))
+      : neighborhoods;
+    return [...list]
+      .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }))
+      .slice(0, 100);
+  }, [neighborhoods, neighborhoodSearch]);
+
   // Manejar seleccion de cliente
   const handleClientSelect = (clientId: string) => {
     // No hacer nada si está en modo invitado
@@ -412,6 +532,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     setSelectedClientForRewards(null);
 
     if (!clientId) {
+      setPickedClient(null);
       // Recalcular total sin recompensa si habia una aplicada
       const manualDiscountAmount =
         formData.discountType === "porcentaje"
@@ -437,8 +558,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       return;
     }
 
-    const selectedClient = clients.find((c) => c._id === clientId);
+    const selectedClient = allClients.find((c) => c._id === clientId);
     if (selectedClient) {
+      setPickedClient(selectedClient);
       setSelectedClientForRewards(selectedClient);
       // Recalcular total sin recompensa si habia una aplicada
       const manualDiscountAmount =
@@ -472,7 +594,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       // Desactivar modo invitado
       setIsGuestClient(false);
       setSelectedClientId("");
-      
+      setPickedClient(null);
+
       // Limpiar datos del cliente
       setFormData((prev) => ({
         ...prev,
@@ -491,7 +614,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
       // Activar modo invitado
       setIsGuestClient(true);
       setSelectedClientId("");
-      
+      setPickedClient(null);
+
       // Limpiar cliente seleccionado y establecer modo invitado
       setFormData((prev) => ({
         ...prev,
@@ -596,6 +720,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         // Auto-select and auto-fill using the response data directly
         // (avoids stale closure issue with clients array)
         setSelectedClientId(newClient._id);
+        setPickedClient(newClient);
         setSelectedClientForRewards(newClient);
         setAppliedReward(null);
 
@@ -965,18 +1090,45 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     setShowStripeModal(false);
   };
 
-  return (
-    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
-      <DialogContent className="!w-[80vw] !max-w-none max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard size={20} />
-              Datos del pedido
-            </DialogTitle>
-          </DialogHeader>
+  // Requisitos faltantes para poder confirmar (mostrado en el resumen)
+  const missingReasons: string[] = [];
+  if (formData.items.length === 0) missingReasons.push("agregar productos");
+  if (!formData.paymentMethod) missingReasons.push("método de pago");
+  if (!formData.salesChannelId && !isSocialMedia) missingReasons.push("canal de venta");
+  if (!isEcommerceOrder && !cashRegister) missingReasons.push("caja registradora");
+  if (
+    formData.items.some((item) => item.isProduct === true) &&
+    !isEcommerceOrder &&
+    !selectedStorageId
+  )
+    missingReasons.push("almacén");
+  if (isSocialMedia && !formData.branchId) missingReasons.push("sucursal");
+  if (formData.shippingType === "envio" && !formData.deliveryDriver)
+    missingReasons.push("repartidor");
 
-          <div className="py-4">
+  const submitDisabled = loading || uploadingFiles || missingReasons.length > 0;
+
+  const submitLabel = uploadingFiles
+    ? "Subiendo archivos..."
+    : loading
+    ? "Procesando..."
+    : isEcommerceOrder
+    ? "Confirmar pedido"
+    : "Confirmar venta";
+
+  return (
+    <>
+      <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
+        <DialogContent className="!w-[85vw] !max-w-[1300px] max-h-[92vh] p-0 gap-0 flex flex-col overflow-hidden">
+          <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+            <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
+              <DialogTitle className="flex items-center gap-2">
+                <CreditCard size={20} />
+                Datos del pedido
+              </DialogTitle>
+            </DialogHeader>
+
+          <div className="px-6 py-4 overflow-y-auto flex-1 min-h-0">
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription className="flex justify-between items-center">
@@ -998,10 +1150,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
               </Alert>
             )}
 
-            {/* Main 2-column layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column: Cliente + Tipo de Envio */}
-              <div className="space-y-6">
+            {/* Layout: formulario (izq) + resumen fijo (der) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              {/* Columna formulario */}
+              <div className="lg:col-span-2 space-y-4">
                 {/* Cliente Card */}
                 <Card className="border shadow-sm">
                   <CardHeader className="pb-3">
@@ -1039,22 +1191,74 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                         Buscar cliente existente
                       </Label>
                       <div className="flex gap-2">
-                        <Select
-                          value={selectedClientId}
-                          onValueChange={(value) => handleClientSelect(value)}
-                          disabled={loadingClients || isGuestClient}
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder={isGuestClient ? "Cliente invitado activo" : "Seleccionar cliente o ingresar nuevo..."} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {clients.map((client) => (
-                              <SelectItem key={client._id} value={client._id}>
-                                {client.name} {client.lastName} - {client.phoneNumber}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={clientPopoverOpen}
+                              disabled={loadingClients || isGuestClient}
+                              className="flex-1 justify-between font-normal"
+                            >
+                              <span className={cn("truncate", !selectedClient && "text-muted-foreground")}>
+                                {isGuestClient
+                                  ? "Cliente invitado activo"
+                                  : selectedClient
+                                  ? `${selectedClient.name} ${selectedClient.lastName} - ${selectedClient.phoneNumber}`
+                                  : loadingClients
+                                  ? "Cargando clientes..."
+                                  : "Seleccionar cliente o ingresar nuevo..."}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="p-0"
+                            align="start"
+                            style={{ width: "var(--radix-popover-trigger-width)" }}
+                          >
+                            <Command shouldFilter={false}>
+                              <CommandInput
+                                placeholder="Buscar por nombre, teléfono o número..."
+                                value={clientSearch}
+                                onValueChange={setClientSearch}
+                              />
+                              <CommandList>
+                                <CommandEmpty>
+                                  {searchingClients
+                                    ? "Buscando..."
+                                    : loadingClients
+                                    ? "Cargando clientes..."
+                                    : clientSearch.trim().length === 1
+                                    ? "Escribe al menos 2 caracteres..."
+                                    : "No se encontraron clientes."}
+                                </CommandEmpty>
+                                <CommandGroup>
+                                  {filteredClients.map((client) => (
+                                    <CommandItem
+                                      key={client._id}
+                                      value={client._id}
+                                      onSelect={(value) => {
+                                        handleClientSelect(value);
+                                        setClientPopoverOpen(false);
+                                        setClientSearch("");
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          selectedClientId === client._id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {client.name} {client.lastName} - {client.phoneNumber}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <Button
                           type="button"
                           variant="outline"
@@ -1086,8 +1290,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                       )}
                     </div>
 
-                    {/* Recompensa - Solo mostrar si hay cliente seleccionado y no es invitado */}
-                    {(selectedClientId || formData.clientInfo.clientId) && !isGuestClient && (
+                    {/* Recompensa - Solo si hay cliente, no es invitado y tiene recompensas */}
+                    {(selectedClientId || formData.clientInfo.clientId) &&
+                      !isGuestClient &&
+                      (appliedReward || availableRewardsCount > 0) && (
                       <div>
                         <Label className="font-semibold flex items-center gap-1 mb-2">
                           <Gift size={16} />
@@ -1185,56 +1391,45 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                       </div>
                     )}
 
-                    {/* Caja registradora - Ocultar para órdenes de e-commerce */}
+                    {/* Caja registradora - label compacto */}
                     {!isSocialMedia && !isEcommerceOrder && (
-                      <div>
-                        <Label className="font-semibold flex items-center gap-1 mb-2">
-                          <CreditCard size={16} />
-                          Caja registradora
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="text"
-                            value={
-                              loadingCashRegister
-                                ? "Cargando..."
-                                : cashRegister
-                                ? cashRegister.name
-                                : "No hay caja asignada"
-                            }
-                            readOnly
-                            disabled
-                            className="bg-gray-50 flex-1"
-                          />
-                          {cashRegister ? (
-                            <Badge
-                              variant={cashRegister.isOpen ? "default" : "secondary"}
-                              className={`flex items-center justify-center px-3 min-w-[100px] ${
-                                cashRegister.isOpen ? "bg-green-500" : ""
-                              }`}
+                      <div className="flex items-center gap-2 text-sm">
+                        <CreditCard size={14} className="text-muted-foreground" />
+                        <span className="text-muted-foreground">Caja:</span>
+                        <span className="font-medium">
+                          {loadingCashRegister
+                            ? "Cargando..."
+                            : cashRegister
+                            ? cashRegister.name
+                            : "No hay caja asignada"}
+                        </span>
+                        {cashRegister ? (
+                          <Badge
+                            variant={cashRegister.isOpen ? "default" : "secondary"}
+                            className={cashRegister.isOpen ? "bg-green-500" : ""}
+                          >
+                            {cashRegister.isOpen ? "Abierta" : "Cerrada"}
+                          </Badge>
+                        ) : (
+                          !loadingCashRegister && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              type="button"
+                              onClick={() => router.push("/ventas/cajas")}
+                              className="h-auto p-0 text-primary flex items-center gap-1"
                             >
-                              {cashRegister.isOpen ? "Abierta" : "Cerrada"}
-                            </Badge>
-                          ) : (
-                            !loadingCashRegister && (
-                              <Button
-                                variant="default"
-                                type="button"
-                                onClick={() => router.push("/ventas/cajas")}
-                                className="flex items-center gap-2"
-                              >
-                                <ExternalLink size={16} />
-                                Ir a Cajas
-                              </Button>
-                            )
-                          )}
-                        </div>
+                              <ExternalLink size={14} />
+                              Ir a Cajas
+                            </Button>
+                          )
+                        )}
                       </div>
                     )}
 
                     {showClientInfo && (
                       <>
-                        {/* Nombre y Telefono - paired fields */}
+                        {/* Nombre y Teléfono - paired fields */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="font-semibold flex justify-between items-center mb-2">
@@ -1273,7 +1468,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           <div>
                             <Label className="font-semibold flex items-center gap-1 mb-2">
                               <Phone size={16} />
-                              Telefono
+                              Teléfono
                             </Label>
                             <Input
                               type="tel"
@@ -1290,65 +1485,66 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Correo - full width */}
-                        <div>
-                          <Label className="font-semibold flex items-center gap-1 mb-2">
-                            <Mail size={16} />
-                            Correo
-                          </Label>
-                          <Input
-                            type="email"
-                            placeholder={isGuestClient ? "Correo del invitado (opcional)" : "Correo electronico"}
-                            value={formData.clientInfo.email}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                clientInfo: { ...prev.clientInfo, email: e.target.value },
-                              }))
-                            }
-                            className={isGuestClient ? "border-blue-300 bg-blue-50/30" : ""}
-                          />
-                        </div>
-
-                        {/* Canal de Ventas - Campo obligatorio (no aplica para Redes) */}
-                        {!isSocialMedia && (
+                        {/* Correo + Canal de Ventas - en la misma fila (Canal no aplica para Redes) */}
+                        <div className={`grid gap-4 ${!isSocialMedia ? "grid-cols-2" : "grid-cols-1"}`}>
                           <div>
                             <Label className="font-semibold flex items-center gap-1 mb-2">
-                              <Store size={16} />
-                              Canal de Ventas <span className="text-red-500">*</span>
+                              <Mail size={16} />
+                              Correo
                             </Label>
-                            <Select
-                              value={formData.salesChannelId}
-                              onValueChange={(value) =>
-                                setFormData((prev) => ({ ...prev, salesChannelId: value }))
+                            <Input
+                              type="email"
+                              placeholder={isGuestClient ? "Correo del invitado (opcional)" : "Correo electronico"}
+                              value={formData.clientInfo.email}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  clientInfo: { ...prev.clientInfo, email: e.target.value },
+                                }))
                               }
-                              disabled={loadingSalesChannels}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={loadingSalesChannels ? "Cargando canales..." : "Seleccione"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {salesChannels.map((channel) => (
-                                  <SelectItem key={channel._id} value={channel._id}>
-                                    {channel.name} ({channel.abbreviation})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              className={isGuestClient ? "border-blue-300 bg-blue-50/30" : ""}
+                            />
                           </div>
-                        )}
+
+                          {!isSocialMedia && (
+                            <div>
+                              <Label className="font-semibold flex items-center gap-1 mb-2">
+                                <Store size={16} />
+                                Canal de Ventas <span className="text-red-500">*</span>
+                              </Label>
+                              <Select
+                                value={formData.salesChannelId}
+                                onValueChange={(value) =>
+                                  setFormData((prev) => ({ ...prev, salesChannelId: value }))
+                                }
+                                disabled={loadingSalesChannels}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder={loadingSalesChannels ? "Cargando canales..." : "Seleccione"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {salesChannels.map((channel) => (
+                                    <SelectItem key={channel._id} value={channel._id}>
+                                      {channel.name} ({channel.abbreviation})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
 
                       </>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Tipo de Envio Card */}
+                {/* Tipo de Envío Card */}
                 <Card className="border shadow-sm">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <Send size={18} className="text-primary" />
-                      <h6 className="font-bold text-base">Tipo de Envio</h6>
+                      <h6 className="font-bold text-base">Tipo de Envío</h6>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1371,7 +1567,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                                 disabled={isDeliveryLimitReached}
                               />
                               <label htmlFor={`envio-${tipo}`} className={`text-sm font-medium ${isDeliveryLimitReached ? "text-muted-foreground" : ""}`}>
-                                {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                                {tipo === "envio" ? "Envío" : "Tienda"}
                               </label>
                             </div>
                           );
@@ -1391,7 +1587,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                               }
                             />
                             <label htmlFor="anonimo-check" className="text-sm font-medium">
-                              Anonimo
+                              Anónimo
                             </label>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -1403,7 +1599,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                               }
                             />
                             <label htmlFor="venta-rapida-check" className="text-sm font-medium">
-                              Venta Rapida
+                              Venta Rápida
                             </label>
                           </div>
                         </div>
@@ -1498,7 +1694,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                         {/* Calle y Colonia - paired */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label className="font-semibold mb-2 block">Calle y numero</Label>
+                            <Label className="font-semibold mb-2 block">Calle y número</Label>
                             <Input
                               type="text"
                               placeholder="Ej: Av. Principal #123"
@@ -1514,22 +1710,68 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                           <div>
                             <Label className="font-semibold mb-2 block">Colonia</Label>
                             <div className="flex gap-2">
-                              <Select
-                                value={formData.deliveryData.neighborhoodId}
-                                onValueChange={(value) => handleNeighborhoodChange(value)}
-                                disabled={loadingNeighborhoods || isEditingDeliveryPrice}
-                              >
-                                <SelectTrigger className="flex-1">
-                                  <SelectValue placeholder="Seleccionar colonia..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {neighborhoods.map((neighborhood) => (
-                                    <SelectItem key={neighborhood._id} value={neighborhood._id}>
-                                      {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Popover open={neighborhoodPopoverOpen} onOpenChange={setNeighborhoodPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={neighborhoodPopoverOpen}
+                                    disabled={loadingNeighborhoods || isEditingDeliveryPrice}
+                                    className="flex-1 justify-between font-normal"
+                                  >
+                                    <span className={cn("truncate", !selectedNeighborhood && "text-muted-foreground")}>
+                                      {selectedNeighborhood
+                                        ? `${selectedNeighborhood.name} - $${selectedNeighborhood.priceDelivery.toFixed(2)}`
+                                        : loadingNeighborhoods
+                                        ? "Cargando colonias..."
+                                        : "Seleccionar colonia..."}
+                                    </span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="p-0"
+                                  align="start"
+                                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                                >
+                                  <Command shouldFilter={false}>
+                                    <CommandInput
+                                      placeholder="Buscar colonia..."
+                                      value={neighborhoodSearch}
+                                      onValueChange={setNeighborhoodSearch}
+                                    />
+                                    <CommandList>
+                                      <CommandEmpty>
+                                        {loadingNeighborhoods ? "Cargando..." : "No se encontraron colonias."}
+                                      </CommandEmpty>
+                                      <CommandGroup>
+                                        {filteredNeighborhoods.map((neighborhood) => (
+                                          <CommandItem
+                                            key={neighborhood._id}
+                                            value={neighborhood._id}
+                                            onSelect={(value) => {
+                                              handleNeighborhoodChange(value);
+                                              setNeighborhoodPopoverOpen(false);
+                                              setNeighborhoodSearch("");
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                formData.deliveryData.neighborhoodId === neighborhood._id
+                                                  ? "opacity-100"
+                                                  : "opacity-0"
+                                              )}
+                                            />
+                                            {neighborhood.name} - ${neighborhood.priceDelivery.toFixed(2)}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                               <Button
                                 type="button"
                                 size="icon"
@@ -1620,7 +1862,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
                         {/* Referencias - full width */}
                         <div>
-                          <Label className="font-semibold mb-2 block">Senas o referencias</Label>
+                          <Label className="font-semibold mb-2 block">Señas o referencias</Label>
                           <Textarea
                             rows={2}
                             placeholder="Ej: Casa blanca con porton negro..."
@@ -1679,11 +1921,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                     </div>
                   </CardContent>
                 </Card>
-              </div>
 
-              {/* Right Column: Forma de Pago */}
-              <div>
-                <Card className="border shadow-sm h-full">
+                {/* Forma de Pago Card */}
+                <Card className="border shadow-sm">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <CreditCard size={18} className="text-primary" />
@@ -1691,15 +1931,15 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Metodo de Pago */}
+                    {/* Método de Pago */}
                     <div>
-                      <Label className="font-semibold mb-2 block">Metodo de Pago</Label>
+                      <Label className="font-semibold mb-2 block">Método de Pago</Label>
                       <div className="flex gap-2 flex-wrap">
                         {loadingPaymentMethods ? (
-                          <div className="text-muted-foreground">Cargando metodos de pago...</div>
+                          <div className="text-muted-foreground">Cargando métodos de pago...</div>
                         ) : paymentMethods.length === 0 ? (
                           <Alert variant="destructive" className="w-full">
-                            <AlertDescription>No hay metodos de pago disponibles.</AlertDescription>
+                            <AlertDescription>No hay métodos de pago disponibles.</AlertDescription>
                           </Alert>
                         ) : (
                           paymentMethods.map((method) => {
@@ -1816,54 +2056,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                         <AlertDescription>
                           <small>
                             {hasPendingDiscountAuth
-                              ? "Descuento pendiente de autorizacion."
-                              : "Ingresa el descuento y solicita autorizacion antes de crear la orden."}
+                              ? "Descuento pendiente de autorización."
+                              : "Ingresa el descuento y solicita autorización antes de crear la orden."}
                           </small>
                         </AlertDescription>
                       </Alert>
-                    </div>
-
-                    {/* Price Summary */}
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span className="font-semibold">${formData.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Descuento</span>
-                        <span className="text-red-500 font-semibold">
-                          -$
-                          {(formData.discountType === "porcentaje"
-                            ? (formData.subtotal * (formData.discount || 0)) / 100
-                            : formData.discount || 0
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-                      {appliedReward && appliedReward.rewardValue > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <Gift size={12} />
-                            Recompensa
-                          </span>
-                          <span className="text-green-500 font-semibold">
-                            -$
-                            {(appliedReward.isPercentage
-                              ? (formData.subtotal * appliedReward.rewardValue) / 100
-                              : appliedReward.rewardValue
-                            ).toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Envio</span>
-                        <span className="text-green-500 font-semibold">
-                          +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center border-t pt-3 mt-2">
-                        <span className="text-lg font-bold">Total</span>
-                        <span className="text-2xl font-bold text-primary">${formData.total.toFixed(2)}</span>
-                      </div>
                     </div>
 
                     {/* Anticipo y Pago - paired */}
@@ -1914,7 +2111,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Enviar a produccion */}
+                    {/* Enviar a producción */}
                     <div className="flex items-center space-x-2 pt-2">
                       <Checkbox
                         id="enviar-produccion"
@@ -1924,50 +2121,145 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                         }
                       />
                       <label htmlFor="enviar-produccion" className="text-sm font-medium">
-                        Enviar a produccion
+                        Enviar a producción
                       </label>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>{/* fin columna formulario */}
+
+              {/* Columna resumen fijo */}
+              <div className="lg:col-span-1 lg:sticky lg:top-0 self-start">
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CreditCard size={18} className="text-primary" />
+                        <h6 className="font-bold text-base">Resumen</h6>
+                      </div>
+                      <Badge variant="default">{formData.items.length}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Items */}
+                    {formData.items.length === 0 ? (
+                      <Alert>
+                        <AlertDescription className="text-sm">
+                          Aún no hay productos.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto divide-y">
+                        {formData.items.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between gap-2 py-1.5 text-sm"
+                          >
+                            <span className="truncate">
+                              <span className="text-muted-foreground">
+                                {item.quantity}×{" "}
+                              </span>
+                              {item.productName}
+                              {item.isPromotional && (
+                                <Badge className="ml-1 bg-green-600 text-[10px]">
+                                  Regalo
+                                </Badge>
+                              )}
+                            </span>
+                            <span className="whitespace-nowrap font-semibold">
+                              ${item.amount.toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Totales */}
+                    <div className="space-y-1.5 border-t pt-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="font-semibold">
+                          ${formData.subtotal.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Descuento</span>
+                        <span className="font-semibold text-red-500">
+                          -$
+                          {(formData.discountType === "porcentaje"
+                            ? (formData.subtotal * (formData.discount || 0)) / 100
+                            : formData.discount || 0
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                      {appliedReward && appliedReward.rewardValue > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Gift size={12} />
+                            Recompensa
+                          </span>
+                          <span className="font-semibold text-green-500">
+                            -$
+                            {(appliedReward.isPercentage
+                              ? (formData.subtotal * appliedReward.rewardValue) / 100
+                              : appliedReward.rewardValue
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Envío</span>
+                        <span className="font-semibold text-green-600">
+                          +${(formData.deliveryData.deliveryPrice || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between border-t pt-2">
+                        <span className="text-lg font-bold">Total</span>
+                        <span className="text-2xl font-bold text-primary">
+                          ${formData.total.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Estado de validación */}
+                    {!submitDisabled ? (
+                      <div className="text-xs font-medium text-green-600">
+                        ✓ Listo para confirmar
+                      </div>
+                    ) : missingReasons.length > 0 ? (
+                      <div className="text-xs text-amber-600">
+                        Falta: {missingReasons.join(", ")}
+                      </div>
+                    ) : null}
+
+                    {/* Acciones */}
+                    <div className="grid gap-2 pt-1">
+                      <Button
+                        type="submit"
+                        size="lg"
+                        disabled={submitDisabled}
+                        className="w-full"
+                      >
+                        {submitLabel}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={onHide}
+                        disabled={loading || uploadingFiles}
+                        className="w-full"
+                      >
+                        Seguir agregando
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </div>
           </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={onHide}
-              disabled={loading || uploadingFiles}
-            >
-              Seguir agregando
-            </Button>
-            <Button
-              type="submit"
-              size="lg"
-              disabled={
-                loading ||
-                uploadingFiles ||
-                formData.items.length === 0 ||
-                !formData.paymentMethod ||
-                (!formData.salesChannelId && !isSocialMedia) || // Requerir canal de ventas (no aplica para Redes)
-                (!isEcommerceOrder && !cashRegister) || // Solo requerir caja si NO es e-commerce
-                (formData.items.some((item) => item.isProduct === true) && !isEcommerceOrder && !selectedStorageId) || // Solo requerir storage si NO es e-commerce
-                (isSocialMedia && !formData.branchId) ||
-                (formData.shippingType === 'envio' && !formData.deliveryDriver) // Requerir repartidor para envíos
-              }
-            >
-              {uploadingFiles
-                ? "Subiendo archivos..."
-                : loading
-                ? "Procesando..."
-                : isEcommerceOrder
-                ? "Confirmar pedido"
-                : "Confirmar venta"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de pago con Stripe */}
       {showStripeModal && (
@@ -2021,7 +2313,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         loading={clientModalLoading}
         companyId={companyId}
       />
-    </Dialog>
+    </>
   );
 };
 
